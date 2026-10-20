@@ -250,12 +250,18 @@ class ContourEngineTest {
     }
 
     @Test
-    fun `the voice roster and the five timbral controls have ordinary defaults`() {
+    fun `the voice roster retains its original controls and adds neutral independent shaping`() {
         assertEquals(listOf("BASS", "KEY", "PLUCK", "LEAD", "HOLLOW", "SWELL"), ContourVoice.entries.map { it.name })
+        val shaping = listOf("BODY", "EDGE", "ATTACK", "DECAY", "RATE", "RESO", "ENV")
         for (voice in ContourVoice.entries) {
             val specs = ContourEngine.macrosFor(voice)
-            assertEquals(listOf("TUNE") + timbre + "HOLD", specs.map { it.name })
+            assertEquals(listOf("TUNE") + timbre + "HOLD" + shaping, specs.map { it.name })
             for (name in timbre) assertTrue(ContourEngine.defaults(voice).getValue(name) in .1f.. .8f, "$voice $name")
+            for (name in shaping) {
+                val spec = specs.single { it.name == name }
+                assertEquals(.5f, spec.default, "$voice $name must preserve the saved recipe by default")
+                assertEquals(.5f, spec.neutral, "$voice $name must have a neutral starting point")
+            }
         }
     }
 

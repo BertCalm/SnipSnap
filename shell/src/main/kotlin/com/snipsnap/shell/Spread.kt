@@ -9,6 +9,16 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.StoopPatch
 import kotlin.math.roundToInt
 
 /**
@@ -79,6 +89,22 @@ object Spread {
         val est = Pitch.detect(snip) ?: return null
         if (est.confidence < Tuner.MIN_CONFIDENCE) return null
         return Scales.hzToMidi(est.hz)
+    }
+
+    /**
+     * Use the authored note when a recipe guarantees it. Strong upper modes,
+     * chords or octave layers can outweigh that root in audio detection, and
+     * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
+     */
+    fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is StoopPatch -> patch.midi.toFloat()
+        is FlockPatch -> patch.midi.toFloat()
+        is OpenSkyPatch -> patch.midi.toFloat()
+        is ObbligatoPatch -> patch.midi.toFloat()
+        is CreasePatch -> patch.midi.toFloat()
+        is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
+        else -> detect(snip)
     }
 
     /**
@@ -171,6 +197,10 @@ object Spread {
      * so the octaves read at a glance. The caller saves.
      */
     fun apply(model: KitBuilderModel, snip: Snip, plan: Plan, sound: Sound): List<Note> {
+        // SPREAD renames the main WAV and lands single-sample pads. Carrying
+        // an active board's old file inventory would strand REMOVE/UNDO.
+        require(sound.recipe?.entries?.containsKey("boardPad") != true &&
+            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SPREAD }
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {

@@ -10,6 +10,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
+import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Mpc3Exporter
 import com.snipsnap.mpc3.Mpc3Clip
@@ -33,6 +34,8 @@ object EmbouchureAuditionGenerator {
     // One declared PCM headroom gain preserves relative raw amplitudes across every diagnostic.
     // Acoustic pressure units are not PCM units: the finite BRASS forte source peaks at 1.002.
     private const val RAW_EXPORT_GAIN = .5f
+    private const val SOFT_VELOCITY = .35f
+    private const val FORTE_VELOCITY = 1f
     private val controls = listOf("EFFORT", "REED", "SHAPE", "GRAIN", "LENGTH")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
     private val interactionPairs = listOf(
@@ -52,10 +55,22 @@ object EmbouchureAuditionGenerator {
         val grid: Map<String, Any?>? = null,
         val comparison: Map<String, String>? = null,
         val referenceId: String? = null,
+        val parentPresetId: String? = null,
+        val velocityRole: String? = null,
+        val velocityComparison: Map<String, Any?>? = null,
     )
 
     private data class ReferencePack(val directory: File, val manifest: Map<String, JsonValue>,
                                      val clips: Map<String, Map<String, JsonValue>>)
+
+    private data class KitSpec(val id: String, val name: String, val patches: List<EmbouchurePatch>,
+                               val presets: List<EmbouchurePatch>, val noteSlots: List<Int>,
+                               val render: () -> List<ArrangedPad?>)
+    private data class HeldKey(val voice: EmbouchureVoice, val macros: Map<String, Float>, val midi: Int,
+                               val velocity: Float, val gesture: EmbouchureGesture, val model: Int)
+    private data class HeldAudio(val measured: Embouchure.LoopRender, val audio: Snip, val cut: Int,
+                                 var raw: Snip? = null)
+    private val heldCache = mutableMapOf<HeldKey, HeldAudio>()
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -65,7 +80,8 @@ object EmbouchureAuditionGenerator {
             "Usage: EmbouchureAuditionGenerator [output-directory] [--quick] [--reference-dir=verified-model1-pack]"
         }
         val quick = "--quick" in args
-        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/embouchure-audition-model2")
+        val root = File(args.firstOrNull { !it.startsWith("--") } ?: "../testkit/embouchure-preset-audition")
+        heldCache.clear()
         val reference = args.firstOrNull { it.startsWith("--reference-dir=") }?.substringAfter('=')?.let {
             val directory = File(it)
             require(directory.canonicalFile != root.canonicalFile) { "reference pack must differ from output directory" }
@@ -79,6 +95,7 @@ object EmbouchureAuditionGenerator {
         val audio = File(root, "audio").also { it.mkdirs() }
         // Only this generator's WAV namespace is replaced; the listening page is copied last.
         audio.listFiles()?.filter { it.isFile && it.extension == "wav" }?.forEach { it.delete() }
+        root.listFiles()?.filter { it.isFile && it.extension == "zip" }?.forEach { it.delete() }
         val groups = mutableListOf<Map<String, Any?>>()
         val specs = mutableListOf<Spec>()
         fun group(id: String, title: String, description: String) {
@@ -99,10 +116,30 @@ object EmbouchureAuditionGenerator {
                 feedback = feedback, comparisonFiles = comparisonFiles, sweep = sweep, grid = grid)
         }
 
-        group("PRESETS", "Eight starting gestures", "Eight dry starting points for owner listening. Held Effort is a settled loop; the other presets play a finite gesture.")
-        EmbouchurePresets.legacy().forEach { p ->
+        val presets = EmbouchurePresets.all()
+        val initial = EmbouchurePresets.initial()
+        val initialNames = initial.map { it.name }.toSet()
+        require(initialNames.size == initial.size && presets.map { it.name }.toSet().size == presets.size) { "duplicate preset name" }
+        require(initialNames.all { name -> presets.any { it.name == name } }) { "historical preset missing from bank" }
+        group("PRESETS", "${presets.size} dry presets", "The owner accepted Model2 voices and controls. The original eight presets are retained unchanged; expanded bank settings await listening review. Held presets contain settled loops without finite attacks.")
+        presets.forEach { p ->
+            val id = "preset_${slug(p.name)}"
+            val velocityComparison = linkedMapOf("softId" to "${id}_soft", "forteId" to "${id}_forte",
+                "softVelocity" to SOFT_VELOCITY, "forteVelocity" to FORTE_VELOCITY)
             specs += Spec("preset_${slug(p.name)}", p.name, "PRESETS",
-                presetDescription(p.name), p, preset = p.name)
+                presetDescription(p.name), p, preset = p.name, velocityComparison = velocityComparison)
+        }
+        group("PRESET_VELOCITY", "Soft and forte", "Every preset is played at native input velocities 0.35 and 1.0. Compare production levels, common-gain raw captures, or equal audition loudness. Held captures use their genuine settled region.")
+        presets.forEach { p ->
+            val id = "preset_${slug(p.name)}"
+            val velocityComparison = linkedMapOf("softId" to "${id}_soft", "forteId" to "${id}_forte",
+                "softVelocity" to SOFT_VELOCITY, "forteVelocity" to FORTE_VELOCITY)
+            listOf("soft" to SOFT_VELOCITY, "forte" to FORTE_VELOCITY).forEach { (role, velocity) ->
+                specs += Spec("${id}_$role", "${p.name} · $role", "PRESET_VELOCITY",
+                    "The ${p.name} recipe at $role input energy; every macro, note and gesture stays fixed.",
+                    p.copy(velocity = velocity), comparisonFiles = true, parentPresetId = id,
+                    velocityRole = role, velocityComparison = velocityComparison)
+            }
         }
         group("VOICES", "Six dry voices", "One root-bearing modeled instrument and a virtual player. WHISTLE is a clear-tone air/reed approximation.")
         EmbouchureVoice.entries.forEach { voice ->
@@ -203,7 +240,8 @@ object EmbouchureAuditionGenerator {
 
         // Pair the exact same stored controls, player and note across the frozen and revised models.
         val referenceIndices = specs.indices.filter {
-            specs[it].group in setOf("PRESETS", "VOICES") || specs[it].sweep != null
+            (specs[it].group == "PRESETS" && specs[it].preset in initialNames) ||
+                specs[it].group == "VOICES" || specs[it].sweep != null
         }
         val originals = referenceIndices.map { index ->
             val revised = specs[index]
@@ -213,13 +251,18 @@ object EmbouchureAuditionGenerator {
             revised.copy(id = originalId, title = "Original · ${revised.title}", group = "ORIGINAL",
                 description = "Model1 reference at the same macros, note, velocity and gesture as the revised clip. ${revised.description}",
                 patch = revised.patch.copy(model = 1), preset = null, comparison = comparison,
-                referenceId = revised.id,
+                referenceId = revised.id, velocityComparison = null,
                 sweep = revised.sweep?.let { it + ("baseId" to "original_voice_${revised.patch.voice.name.lowercase()}") })
         }
         group("ORIGINAL", "Original model1 references",
             "The original eight presets, six voice defaults and control sweeps preserve model1. Original and revised pairs use identical stored inputs and excitation seeds.")
         specs += originals
-        if (!quick) require(specs.size == 529 && originals.size == 164) { "unexpected full model comparison matrix size" }
+        val expectedReferences = initial.size + EmbouchureVoice.entries.size +
+            sweepVoices.size * controls.size * (if (quick) 2 else steps.size)
+        require(originals.size == expectedReferences) { "unexpected historical reference collection size" }
+        require(specs.count { it.preset != null } == presets.size &&
+            specs.count { it.parentPresetId != null } == presets.size * 2) { "incomplete preset velocity matrix" }
+        val expectedWavs = specs.size + 2 * specs.count { it.comparisonFiles }
         if (reference != null) originals.forEach { verifyOriginalInputs(it, reference) }
 
         require(specs.map { it.id }.toSet().size == specs.size) { "duplicate audition clip id" }
@@ -231,7 +274,10 @@ object EmbouchureAuditionGenerator {
             println("[${index + 1}/${specs.size}] ${spec.id}")
             row
         }
-        val kit = exportKit(root)
+        require(audio.listFiles().orEmpty().count { it.extension == "wav" } == expectedWavs) { "audition WAV roster differs from rendered specs" }
+        val kits = kitSpecs().map { exportKit(root, it) }
+        attachBanks(rows, kits)
+        val kit = kits.first()
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "Embouchure", "modelVersion" to Embouchure.MODEL_VERSION,
             "models" to listOf(linkedMapOf("version" to 1, "label" to "Original"),
@@ -242,10 +288,19 @@ object EmbouchureAuditionGenerator {
                 "publishedRendererFingerprint" to reference?.manifest?.get("rendererFingerprint")),
             "rendererFingerprint" to renderer,
             "sampleRate" to Dsp.RATE, "channels" to 1, "format" to "PCM16", "quick" to quick,
-            "completeMatrix" to !quick, "acceptance" to "Owner listening verdict pending",
-            "sourceUrl" to "https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-engine", "bundlePath" to "embouchure-audition.zip",
-            "bundleDescription" to "Curated starter pack: eight revised presets, six revised voices, their fourteen original references, selected held/velocity/feedback clips and the sixteen-pad MPC 2/3 kit",
-            "groups" to groups, "clips" to rows, "kit" to kit,
+            "completeMatrix" to !quick, "acceptance" to "Model2 identity accepted; expanded preset bank listening pending",
+            "review" to linkedMapOf("acceptedModel2Identity" to true, "acceptedControls" to true,
+                "retainedInitialPresets" to initial.size,
+                "ownerFeedback" to "Sounds good", "expandedBank" to "listening-pending",
+                "expandedPresetCount" to presets.size - initial.size),
+            "sourceUrl" to "https://github.com/BertCalm/SnipSnap/tree/codex/embouchure-preset-bank",
+            "bundlePath" to null, "bundles" to emptyList<Any>(),
+            "bundleDescription" to "Preset listening collections and complete MPC 2/3 kits; each download stays below 25 MiB",
+            "groups" to groups, "clips" to rows, "kit" to kit, "kits" to kits,
+            "counts" to linkedMapOf("presets" to presets.size, "initialPresets" to initial.size,
+                "presetVelocityClips" to presets.size * 2, "originalReferences" to originals.size,
+                "clips" to rows.size, "auditionWavs" to expectedWavs, "heldClips" to rows.count { it["loop"] == true },
+                "kits" to kits.size, "kitSamples" to kits.sumOf { it["pads"] as Int }),
             "normalization" to linkedMapOf("default" to "shared-melodic", "sharedLoudnessTarget" to Dsp.MELODIC_LOUDNESS_TARGET,
                 "matchedLoudnessTarget" to .03f, "velocityGain" to "Production notes and held loops apply velocity^0.60 after forte-reference leveling",
                 "rawExportGain" to RAW_EXPORT_GAIN, "rawExportGainDb" to -6.020599913279624,
@@ -258,9 +313,13 @@ object EmbouchureAuditionGenerator {
                 "HOLD WAVs contain a settled repeating region without the finite onset.",
                 "Pitch estimates are numerical probes with a 40–1200 Hz detector range, not listening verdicts.",
                 "The existing classifier labels clips longer than 1.5 seconds LOOP independent of pitched identity.",
-                "Preset expansion awaits owner sonic approval.",
+                "The owner accepted Model2 voices and controls; the additional bank presets remain listening candidates.",
             ),
         )
+        copyPage(root, Json.write(json(manifest)))
+        val bundles = bundles(root, manifest, rows, kits)
+        manifest["bundles"] = bundles
+        manifest["bundlePath"] = bundles.firstOrNull { it["id"] == "all-presets" }?.get("path")
         val manifestText = Json.write(json(manifest))
         File(root, "manifest.json").writeText(manifestText + "\n")
         File(root, "measurements.json").writeText(Json.write(json(linkedMapOf(
@@ -269,12 +328,12 @@ object EmbouchureAuditionGenerator {
             "clips" to rows.size, "wavFiles" to audio.listFiles().orEmpty().count { it.extension == "wav" },
             "totalRenderMs" to (System.nanoTime() - started) / 1_000_000.0,
             "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain; mean and RMS use the whole buffer",
-            "listeningVerdict" to "Owner listening verdict pending",
+            "listeningVerdict" to "Model2 identity accepted; expanded preset bank listening pending",
             "rows" to rows.map(::measurementRow),
         ))) + "\n")
         copyPage(root, manifestText)
-        bundle(root, manifest, rows)
-        println("Wrote ${rows.size} clips, manifest, measurements and download bundle under ${root.absolutePath}")
+        heldCache.clear()
+        println("Wrote ${rows.size} clips, $expectedWavs audition WAVs, ${kits.size} kits and ${bundles.size} download bundles under ${root.absolutePath}")
         if (quick) println("Development pack only: run without --quick for the complete matrix.")
     }
 
@@ -283,13 +342,14 @@ object EmbouchureAuditionGenerator {
         val held = Embouchure.isLoop(p.macros.getValue("HOLD"))
         require(spec.feedback || !held) { "feedback ablation is a finite diagnostic" }
         val start = System.nanoTime()
-        val played = if (spec.comparisonFiles || !spec.feedback) {
+        val heldAudio = if (held) heldAudio(p, spec.comparisonFiles) else null
+        val played = if (!held && (spec.comparisonFiles || !spec.feedback)) {
             Embouchure.play(p.voice, p.macros, Embouchure.Probe(
                 midi = p.midi, velocity = p.velocity, gesture = p.gesture, feedback = spec.feedback, record = false,
                 model = p.model))
         } else null
-        val raw = played?.let { Snip(Embouchure.finish(it.raw, normalize = false, rate = it.rate), 1, Dsp.RATE) }
-        val snip = if (spec.feedback) p.render() else {
+        val raw = heldAudio?.raw ?: played?.let { Snip(Embouchure.finish(it.raw, normalize = false, rate = it.rate), 1, Dsp.RATE) }
+        val snip = if (heldAudio != null) heldAudio.audio else if (spec.feedback) p.render() else {
             val source = requireNotNull(played)
             Snip(Embouchure.finish(source.raw, normalize = true, rate = source.rate), 1, Dsp.RATE)
         }
@@ -314,6 +374,24 @@ object EmbouchureAuditionGenerator {
             "renderMs" to (System.nanoTime() - start) / 1_000_000.0,
         )
         spec.preset?.let { row["preset"] = it }
+        spec.parentPresetId?.let { row["presetId"] = it; row["presetName"] = p.name }
+        spec.velocityRole?.let { row["velocityRole"] = it }
+        spec.velocityComparison?.let { row["velocityComparison"] = it }
+        val metadata = EmbouchurePresets.metadataFor(p.name)
+        if (metadata != null) {
+            row["role"] = metadata.role.id
+            row["roleLabel"] = metadata.role.label
+            row["category"] = metadata.category
+            row["isInitial"] = metadata.isInitial
+            row["presetOrigin"] = if (metadata.isInitial) "initial" else "expanded"
+        }
+        row["reviewStatus"] = when {
+            p.model == 1 -> "historical-reference"
+            metadata != null && !metadata.isInitial -> "listening-pending"
+            metadata != null -> "retained-original"
+            spec.group == "VOICES" -> "accepted-identity"
+            else -> "engineering-diagnostic"
+        }
         spec.comparison?.let { row["comparison"] = it }
         spec.sweep?.let { row["sweep"] = it }
         spec.grid?.let { row["grid"] = it }
@@ -322,8 +400,7 @@ object EmbouchureAuditionGenerator {
                 "sourceEndSeconds" to it.sourceEndSeconds, "internalRate" to it.rate, "seed" to it.seed)
         }
         if (held) {
-            val measured = Embouchure.renderLoopMeasured(p.voice, p.macros,
-                midi = p.midi, velocity = p.velocity, gesture = p.gesture, normalize = true, model = p.model)
+            val measured = requireNotNull(heldAudio).measured
             row["loopDiagnostics"] = linkedMapOf("seamError" to measured.seam,
                 "seamPass" to (measured.seam.isFinite() && measured.seam < 1e-3),
                 "measurementLoopStartFrame" to measured.loopStart, "settleSeconds" to measured.settleSeconds,
@@ -346,12 +423,42 @@ object EmbouchureAuditionGenerator {
             row["rawPath"] = rawPath
             row["matchedPath"] = matchedPath
             row["rawExportGain"] = RAW_EXPORT_GAIN
+            row["rawStage"] = if (held) "Settled loop before loudness/velocity leveling; rotated to the production loop cut" else "Finite source after conditioning, before loudness/velocity leveling"
             row["rawSourceMetrics"] = amplitudeStats(rawSource)
             row["rawMetrics"] = amplitudeStats(rawSnip)
             row["matchedMetrics"] = amplitudeStats(matched)
         }
         return row
     }
+
+    /** Reuse the production loop measurement and the host's exact best-cut policy. */
+    private fun heldAudio(p: EmbouchurePatch, needRaw: Boolean): HeldAudio {
+        val key = HeldKey(p.voice, p.macros, p.midi, p.velocity, p.gesture, p.model)
+        val rendered = heldCache.getOrPut(key) {
+            val measured = Embouchure.renderLoopMeasured(p.voice, p.macros,
+                midi = p.midi, velocity = p.velocity, gesture = p.gesture, normalize = true, model = p.model)
+            check(measured.converged && measured.seam < 1e-3 && measured.stateError < .02) {
+                "${p.name}: held state did not settle: seam=${measured.seam}, state=${measured.stateError}"
+            }
+            val one = measured.samples
+            val cut = Siren.bestCut(one, one.size)
+            HeldAudio(measured, Snip(rotate(one, cut), 1, Dsp.RATE), cut)
+        }
+        if (needRaw && rendered.raw == null) {
+            val raw = Embouchure.renderLoopMeasured(p.voice, p.macros,
+                midi = p.midi, velocity = p.velocity, gesture = p.gesture, normalize = false, model = p.model)
+            check(raw.converged && raw.loopStart == rendered.measured.loopStart &&
+                raw.seed == rendered.measured.seed && raw.hz == rendered.measured.hz &&
+                raw.seam == rendered.measured.seam && raw.stateError == rendered.measured.stateError) {
+                "${p.name}: raw and normalized held measurements differ"
+            }
+            rendered.raw = Snip(rotate(raw.samples, rendered.cut), 1, Dsp.RATE)
+        }
+        return rendered
+    }
+
+    private fun rotate(one: FloatArray, cut: Int): FloatArray =
+        one.copyOfRange(cut, one.size) + one.copyOfRange(0, cut)
 
     /** Optional historical pack evidence; frozen model1 remains renderable without these files. */
     private fun verifyOriginalInputs(spec: Spec, reference: ReferencePack) {
@@ -471,99 +578,175 @@ object EmbouchureAuditionGenerator {
         }
     }
 
-    private fun exportKit(root: File): Map<String, Any?> {
-        val work = File(root, ".kit-work")
+    private fun kitSpecs(): List<KitSpec> {
+        val starter = KitSpec("embouchure-starter", "SnipSnap Embouchure Kit",
+            SynthKits.embouchureStarterPatches(), EmbouchurePresets.initial(), (1..8).toList(), SynthKits::embouchure)
+        val banks = SynthKits.embouchureFactoryBanks().map { bank ->
+            KitSpec(bank.id, bank.name, bank.patches, bank.presetPatches, bank.noteSlots) { bank.render() }
+        }
+        val names = banks.flatMap { it.presets }.map { it.name }
+        require(names.size == names.toSet().size && names.toSet() == EmbouchurePresets.all().map { it.name }.toSet()) {
+            "factory kits must cover every preset exactly once"
+        }
+        return listOf(starter) + banks
+    }
+
+    private fun exportKit(root: File, spec: KitSpec): Map<String, Any?> {
+        require(spec.patches.size == 16 && spec.patches.all { it.model == Embouchure.MODEL_VERSION }) { "invalid factory kit ${spec.id}" }
+        val work = File(root, ".kit-work/${spec.id}")
         work.deleteRecursively()
+        val directory = if (spec.id == "embouchure-starter") "kit" else "kits/${spec.id}"
+        File(root, directory).deleteRecursively()
         try {
-            val arranged = SynthKits.embouchure()
-            val kit = KitAssembler.assembleArranged("SnipSnap Embouchure Kit", arranged, work)
-            val phrase = Mpc3Clip("Reed pentatonic", bars = 2,
-                notes = listOf(1, 2, 3, 5, 4, 3, 2, 1).mapIndexed { i, slot ->
+            val kit = KitAssembler.assembleArranged(spec.name, spec.render(), work)
+            val pattern = if (spec.id == "embouchure-starter") listOf(1, 2, 3, 5, 4, 3, 2, 1)
+                else listOf(0, 1, 2, 3, 2, 1, 0, 2).map { spec.noteSlots[it] }
+            val phrase = Mpc3Clip("Pentatonic notes", bars = 2,
+                notes = pattern.mapIndexed { i, slot ->
                     Mpc3Note(Mpc3Note.noteFor(slot), i * 4 * Mpc3Clip.PULSES_PER_16TH,
                         velocity = listOf(.7f, .8f, 1f, .9f)[i % 4],
                         lengthPulses = 3 * Mpc3Clip.PULSES_PER_16TH)
                 })
-            val exported = Mpc3Exporter.exportTrack(kit, work, File(root, "kit"),
+            val exported = Mpc3Exporter.exportTrack(kit, work, File(root, directory),
                 overwrite = true, clip = phrase, mpc2Twin = true)
             val samples = exported.samples.first().parentFile
             val sidecar = File(work, KitStore.FILE_NAME).copyTo(File(samples, KitStore.FILE_NAME), overwrite = true)
+            val description = if (spec.id == "embouchure-starter")
+                "A01–A08 are the original independent C minor pentatonic reed notes; A09–A16 preserve the initial eight presets."
+                else "A01–A12 contain twelve dry presets; A13–A16 add four complementary pentatonic notes."
+            val heldNames = spec.patches.filter { Embouchure.isLoop(it.macros.getValue("HOLD")) }.map { it.name }
             File(exported.directory, "README.txt").writeText("""
-                SnipSnap Embouchure Kit
+                ${spec.name}
 
-                MPC 3: load SnipSnap Embouchure Kit.xtd with its adjacent _[TrackData] folder.
-                MPC 2: open that data folder and load SnipSnap Embouchure Kit.xpm.
-                Keep the program files and sample folder together.
+                MPC 3: load ${kit.name}.xtd with its adjacent _[TrackData] folder.
+                MPC 2: open that data folder and load ${kit.name}.xpm.
+                Keep the program files and sample folder together. Download the complete bank ZIP.
 
-                A01-A08: independent C minor pentatonic reed notes.
-                A09-A16: the eight original dry starting presets.
-                MPC 3 includes a two-bar reed phrase. kit.json records every patch recipe.
+                $description
+                MPC 3 includes a two-bar phrase over the complementary notes.
+                kit.json records every native patch recipe; samples use dry Model2 rendering.
 
-                A16 Held Effort contains one settled loop with no finite attack. The existing
+                Held pads: ${heldNames.joinToString().ifEmpty { "none" }}.
+                Each held WAV contains one settled loop without its finite attack. The current
                 drum exporter does not enable sample-loop flags automatically; enable looping
-                from the start to the end of this WAV in the sampler for continuous sustain.
-                The web audition's Repeat control also repeats this same buffer.
+                over the full WAV in the sampler for continuous sustain.
 
+                Model2 voices and controls were accepted by the owner; the initial eight presets are retained unchanged.
+                The expanded bank settings remain listening candidates; hardware loading remains unverified.
                 These original simplified drivers and gestures use no samples or Yamaha data.
-                Hardware loading and the owner's sonic verdict remain acceptance checks.
             """.trimIndent() + "\n")
-            return linkedMapOf("name" to kit.name, "pads" to kit.pads.size,
+            return linkedMapOf("id" to spec.id, "name" to kit.name, "pads" to kit.pads.size,
+                "directory" to directory, "bundlePath" to "${spec.id}.zip",
                 "mpc3Path" to exported.program.relativeTo(root).invariantSeparatorsPath,
                 "mpc2Path" to File(samples, "${kit.name}.xpm").relativeTo(root).invariantSeparatorsPath,
                 "recipePath" to sidecar.relativeTo(root).invariantSeparatorsPath,
+                "presetIds" to spec.presets.map { "preset_${slug(it.name)}" }, "noteSlots" to spec.noteSlots,
+                "samplePaths" to exported.samples.map { it.relativeTo(root).invariantSeparatorsPath },
                 "format" to "Native MPC 3 track and MPC 2 XPM twin with shared PCM24 samples",
-                "description" to "A01–A08 are independent C minor pentatonic reed notes; A09–A16 are the eight dry starting presets.",
+                "description" to description,
                 "pattern" to "MPC 3 carries a two-bar pentatonic clip; MPC 2 loads the same sixteen pads.",
-                "holdPlayback" to "Held Effort imports one settled buffer; enable sampler looping for continuous hardware sustain.",
+                "holdPlayback" to "Held pads import one settled buffer; enable sampler looping for continuous hardware sustain.",
+                "heldPadNames" to heldNames,
                 "findings" to exported.findings.map { it.message })
         } finally {
             work.deleteRecursively()
         }
     }
 
-    /** A curated offline pack small enough for the hosting provider's per-asset limit. */
-    private fun bundle(root: File, manifest: Map<String, Any?>, rows: List<Map<String, Any?>>) {
-        val selectedIds = setOf("hold_reed_rough", "hold_bow_rough", "velocity_reed_v025",
-            "velocity_reed_v060", "velocity_reed_v100", "feedback_reed_on", "feedback_reed_off")
-        val identityIds = rows.filter { it["group"] in setOf("PRESETS", "VOICES") }.map { "original_${it["id"]}" }.toSet()
-        val selected = rows.filter { it["group"] in setOf("PRESETS", "VOICES") || it["id"] in selectedIds || it["id"] in identityIds }
+    private fun attachBanks(rows: List<MutableMap<String, Any?>>, kits: List<Map<String, Any?>>) {
+        val factory = kits.filter { it["id"] != "embouchure-starter" }
+        rows.forEach { row ->
+            val presetId = row["presetId"] ?: row["id"]
+            val bank = factory.firstOrNull { presetId in (it["presetIds"] as List<*>) }
+            if (bank != null) {
+                row["bankId"] = bank["id"]
+                row["bankName"] = bank["name"]
+                row["kitIds"] = kits.filter { presetId in (it["presetIds"] as List<*>) }.map { it["id"] }
+            }
+        }
+    }
+
+    /** Every kit has its complete offline preset/velocity page and native sample folders. */
+    private fun bundles(root: File, manifest: Map<String, Any?>, rows: List<Map<String, Any?>>,
+                        kits: List<Map<String, Any?>>): List<Map<String, Any?>> {
+        val result = kits.map { kit ->
+            val presetIds = (kit.getValue("presetIds") as List<*>).toSet()
+            val selected = rows.filter { row -> row["id"] in presetIds || row["presetId"] in presetIds ||
+                ((row["comparison"] as? Map<*, *>)?.get("revisedId") in presetIds && row["modelVersion"] == 1) }
+            val title = "${kit.getValue("name")} complete pack"
+            val description = "${presetIds.size} presets with soft/forte raw, production and matched audio, their available historical peers, the offline audition, and the full sixteen-pad MPC 2/3 kit with samples."
+            requireNotNull(writeBundle(root, manifest, selected, listOf(kit), kit.getValue("id") as String,
+                title, description, required = true))
+        }.toMutableList()
+        val allPresets = rows.filter { it["group"] == "PRESETS" }.map { it["id"] }.toSet()
+        val combinedRows = rows.filter { row -> row["id"] in allPresets || row["presetId"] in allPresets ||
+            ((row["comparison"] as? Map<*, *>)?.get("revisedId") in allPresets && row["modelVersion"] == 1) }
+        writeBundle(root, manifest, combinedRows, kits, "all-presets", "All presets and four kits",
+            "Every factory preset, all soft/forte companions, historical preset peers and all four complete MPC 2/3 kits.",
+            required = false)?.let { result.add(0, it) }
+        return result
+    }
+
+    private fun writeBundle(root: File, manifest: Map<String, Any?>, selected: List<Map<String, Any?>>,
+                            kits: List<Map<String, Any?>>, id: String, title: String,
+                            description: String, required: Boolean): Map<String, Any?>? {
+        val includedAudio = selected.flatMap { row -> listOfNotNull(row["path"], row["rawPath"], row["matchedPath"]) }.toSet()
+        val canonical = selected.filter { it["group"] == "PRESETS" }
         val selectedGroups = selected.map { it["group"] }.toSet()
+        val localKits = kits.map { LinkedHashMap(it).apply { this["bundlePath"] = null } }
         val curated = LinkedHashMap(manifest).apply {
             this["clips"] = selected
+            this["kits"] = localKits
+            this["kit"] = localKits.first()
+            this["bundles"] = emptyList<Any>()
             this["groups"] = (manifest.getValue("groups") as List<*>).filter {
                 (it as Map<*, *>)["id"] in selectedGroups
             }.map {
-                if ((it as Map<*, *>)["id"] == "ORIGINAL") linkedMapOf(
-                    "id" to "ORIGINAL", "title" to "Original model1 references",
-                    "description" to "The original eight presets and six voice defaults preserve model1. The full original control sweep collection remains on the online page.",
-                ) else it
+                when ((it as Map<*, *>)["id"]) {
+                    "PRESETS" -> linkedMapOf("id" to "PRESETS", "title" to "${canonical.size} dry presets",
+                        "description" to "The presets in this complete offline bank, with their soft/forte comparisons.")
+                    "ORIGINAL" -> linkedMapOf("id" to "ORIGINAL", "title" to "Historical preset references",
+                        "description" to "Genuine Model1 peers for the included initial presets. The full original control collection remains online.")
+                    else -> it
+                }
             }
             @Suppress("UNCHECKED_CAST")
             val referenceSummary = LinkedHashMap(manifest.getValue("originalReferences") as Map<String, Any?>)
             referenceSummary["clips"] = selected.count { it["modelVersion"] == 1 }
             referenceSummary["verifiedWavHashes"] = selected.count { it["referenceVerification"] != null }
             this["originalReferences"] = referenceSummary
+            this["counts"] = linkedMapOf("presets" to canonical.size,
+                "initialPresets" to canonical.count { it["isInitial"] == true },
+                "presetVelocityClips" to selected.count { it["group"] == "PRESET_VELOCITY" },
+                "originalReferences" to selected.count { it["modelVersion"] == 1 },
+                "clips" to selected.size, "auditionWavs" to includedAudio.size,
+                "heldClips" to selected.count { it["loop"] == true },
+                "kits" to kits.size, "kitSamples" to kits.sumOf { it["pads"] as Int })
             this["quick"] = false
             this["completeMatrix"] = false
             this["curated"] = true
-            this["packType"] = "curated-starter"
+            this["packType"] = "preset-bank"
             this["bundlePath"] = null
-            this["packDescription"] = manifest["bundleDescription"]
+            this["packDescription"] = description
         }
         val curatedText = Json.write(json(curated))
-        val includedAudio = selected.flatMap { row -> listOfNotNull(row["path"], row["rawPath"], row["matchedPath"]) }.toSet()
         val measurements = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "engine" to "EMBOUCHURE", "modelVersion" to Embouchure.MODEL_VERSION,
             "curated" to true, "completeMatrix" to false,
             "clips" to selected.size, "auditionWavFiles" to includedAudio.size,
             "audioMeasure" to "Output-rate floats before PCM16 quantization; rawSourceMetrics precede the fixed raw export gain",
-            "listeningVerdict" to "Owner listening verdict pending",
+            "listeningVerdict" to "Model2 identity accepted; expanded preset bank listening pending",
             "rows" to selected.map(::measurementRow),
         )))
-        val destination = File(root, "embouchure-audition.zip")
+        val kitPaths = kits.flatMap { kit ->
+            File(root, kit.getValue("directory") as String).walkTopDown().filter { it.isFile }
+                .map { it.relativeTo(root).invariantSeparatorsPath }.toList()
+        }
+        val paths = (includedAudio + kitPaths + setOf("index.html", "styles.css", "app.js", "manifest.json", "measurements.json"))
+            .map { it as String }.sorted()
+        val destination = File(root, "$id.zip")
         ZipOutputStream(destination.outputStream().buffered()).use { zip ->
-            val paths = root.walkTopDown().filter { it.isFile }.map { it.relativeTo(root).invariantSeparatorsPath }
-                .filter { it in includedAudio || it.startsWith("kit/") || it in setOf("index.html", "styles.css", "app.js", "manifest.json", "measurements.json") }
-                .sorted().toList()
+            zip.setLevel(9)
             paths.forEach { path ->
                 val entry = ZipEntry(path)
                 entry.time = 0
@@ -583,7 +766,17 @@ object EmbouchureAuditionGenerator {
                 zip.closeEntry()
             }
         }
-        require(destination.length() < 25L * 1024 * 1024) { "curated pack exceeds the hosting provider's 25 MiB per-asset limit" }
+        if (destination.length() >= 25L * 1024 * 1024) {
+            val size = destination.length()
+            destination.delete()
+            check(!required) { "$title exceeds the 25 MiB asset limit ($size bytes); split its listening content into smaller complete packs" }
+            println("Combined pack omitted: $size bytes exceeds the per-asset limit; complete bank downloads remain available.")
+            return null
+        }
+        return linkedMapOf("id" to id, "title" to title, "path" to destination.name,
+            "description" to description, "presetCount" to canonical.size,
+            "clipCount" to selected.size, "auditionWavs" to includedAudio.size,
+            "kitIds" to kits.map { it["id"] }, "bytes" to destination.length())
     }
 
     private fun noteName(midi: Int) = listOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")[midi % 12] + (midi / 12 - 1)
@@ -599,7 +792,7 @@ object EmbouchureAuditionGenerator {
         EmbouchureVoice.BOW -> "A restrained bowed role driven by friction and a smooth capture gesture."
         EmbouchureVoice.SOFT -> "A gentle pressure-driven body with a soft entry and relaxed release."
     }
-    private fun presetDescription(name: String) = when (name) {
+    private fun presetDescription(name: String) = EmbouchurePresets.metadataFor(name)?.description ?: when (name) {
         "Leaning Reed" -> "A reed lead that leans into its note before releasing."
         "Muted Bell" -> "A compact, muted brass-like note with compliant lip contact."
         "Breath Pocket" -> "A low, root-bearing pocket of tone and restrained breath."

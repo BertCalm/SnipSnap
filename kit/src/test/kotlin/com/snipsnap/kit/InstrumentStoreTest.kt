@@ -1,7 +1,14 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SmplChunk
+import com.snipsnap.audio.WavReader
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
+import com.snipsnap.json.JsonValue
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -67,6 +74,78 @@ class InstrumentStoreTest {
         assertFailsWith<JsonException> { InstrumentStore.read(File(root, "NoLoop$SUFFIX")) }
         assertEquals(emptyList(), InstrumentStore.list(root))
         assertNull(InstrumentStore.Instrument("X", 0.5f, listOf(InstrumentStore.Zone(40, 50, 45, "x.wav", 10, 0))).zoneFor(60))
+    }
+
+    @Test
+    fun `v2 carries every MPC velocity window sample length and sustain loop into the phone`() {
+        val root = File(temp, "Layered").apply { mkdirs() }
+        val samples = linkedMapOf("soft" to tone(220.0, .1f), "mid" to tone(220.0, .2f), "hard" to tone(220.0, .3f))
+        val layers = samples.entries.mapIndexed { index, (name, snip) ->
+            VelocityLayer(name, snip.frameCount.toLong(), 1 + index * 42, if (index == 2) 127 else (index + 1) * 42,
+                loopStartFrame = (index + 1) * 100L)
+        }
+        val program = KeygroupProgram("Velocity Keys", listOf(Keygroup(48, 72, 60, layers)), volumeRelease = .6f)
+        OneNote.writePackage(program.name, program, samples, root, overwrite = false)
+        val sidecar = InstrumentStore.sidecar(root, program.name)
+        assertEquals(2, Json.parse(sidecar.readText()).obj().getValue("version").int())
+        val loaded = InstrumentStore.read(sidecar)
+        val zone = loaded.zones.single()
+        assertEquals(listOf(1..42, 43..84, 85..127), zone.layers.map { it.velStart..it.velEnd })
+        assertEquals(layers.map { it.frameCount }, zone.layers.map { it.frameCount })
+        assertEquals(layers.map { it.loopStartFrame }, zone.layers.map { it.loopStartFrame })
+        assertEquals(zone.layers.last().sample, zone.sample, "the compatibility headline stays the hard layer")
+        assertEquals(zone.layers.map { it.sample }, loaded.sampleFiles)
+        for ((index, layer) in zone.layers.withIndex()) {
+            val wav = File(root, layer.sample)
+            assertTrue(wav.isFile)
+            assertEquals(SmplChunk(60, SmplChunk.Loop(layer.loopStartFrame, layer.frameCount)), WavReader.readSmpl(wav))
+            assertEquals(layers[index].frameCount, WavReader.read(wav).frameCount.toLong())
+        }
+        val xpm = File(root, "${program.name}_[TrackData]/${program.name}.xpm").readText()
+        for (layer in layers) {
+            assertTrue(xpm.contains("<VelStart>${layer.velStart}</VelStart>"))
+            assertTrue(xpm.contains("<VelEnd>${layer.velEnd}</VelEnd>"))
+            assertTrue(xpm.contains("<SliceLoopStart>${layer.loopStartFrame}</SliceLoopStart>"))
+        }
+    }
+
+    @Test
+    fun `existing v1 sidecars remain a single full velocity sample`() {
+        val file = File(temp, "Legacy$SUFFIX").apply { writeText("""{"version":1,"name":"Legacy","release":0.25,"zones":[{"low":48,"high":72,"root":60,"sample":"Legacy/data.wav","frames":100,"loopStart":40}]}""") }
+        val instrument = InstrumentStore.read(file)
+        val zone = instrument.zones.single()
+        assertEquals(listOf(InstrumentStore.Layer("Legacy/data.wav", 100, 40)), zone.playableLayers)
+        assertEquals(zone.playableLayers.single(), zone.layerFor(1))
+        assertEquals(zone.playableLayers.single(), zone.layerFor(127))
+        assertEquals(listOf("Legacy/data.wav"), instrument.sampleFiles)
+    }
+
+    @Test
+    fun `v2 rejects incomplete overlapping or unsafe layers rather than falling back to the hard sample`() {
+        fun layer(sample: String = "data/soft.wav", start: Int = 1, end: Int = 42) = JsonValue.Obj(linkedMapOf(
+            "sample" to JsonValue.Str(sample), "frames" to JsonValue.Num(100.0), "loopStart" to JsonValue.Num(40.0),
+            "velStart" to JsonValue.Num(start.toDouble()), "velEnd" to JsonValue.Num(end.toDouble()),
+        ))
+        val soft = layer()
+        val hard = layer("data/hard.wav", 43, 127)
+        val headline = linkedMapOf<String, JsonValue>("low" to JsonValue.Num(48.0), "high" to JsonValue.Num(72.0),
+            "root" to JsonValue.Num(60.0), "sample" to JsonValue.Str("data/hard.wav"),
+            "frames" to JsonValue.Num(100.0), "loopStart" to JsonValue.Num(40.0))
+        val invalid = listOf(
+            null,
+            emptyList(),
+            listOf(layer("../escape.wav"), hard),
+            listOf(soft, layer("data/hard.wav", 42, 127)),
+            listOf(soft, layer("data/hard.wav", 43, 128)),
+            listOf(soft), // headline no longer matches the hardest available layer
+        )
+        for ((index, layers) in invalid.withIndex()) {
+            val zone = JsonValue.Obj(LinkedHashMap(headline).also { fields -> layers?.let { fields["layers"] = JsonValue.Arr(it) } })
+            val json = JsonValue.Obj(linkedMapOf("version" to JsonValue.Num(2.0), "name" to JsonValue.Str("Bad"),
+                "release" to JsonValue.Num(.6), "zones" to JsonValue.Arr(listOf(zone))))
+            val file = File(temp, "bad-$index$SUFFIX").apply { writeText(Json.write(json)) }
+            assertFailsWith<JsonException>("case $index") { InstrumentStore.read(file) }
+        }
     }
 
     private companion object {

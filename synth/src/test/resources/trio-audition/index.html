@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#171c20">
+  <title>TRIO · SnipSnap first listen</title>
+  <style>
+    :root{color-scheme:dark;--bg:#171c20;--panel:#20272b;--line:#3d474b;--ink:#f4efe4;--muted:#b8b9b0;--orange:#f7a071;--mint:#a5cbbb;--yellow:#e8c574;--mono:ui-monospace,SFMono-Regular,Consolas,monospace}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 95% 0,#2e3630,transparent 50%),var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}button,select{font:inherit}button{color:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:10px 14px;min-height:44px}button:hover{border-color:var(--muted)}button:disabled{opacity:.4;cursor:default}button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--orange);outline-offset:4px}button[aria-pressed=true]{border-color:var(--orange);background:#392d26;color:var(--orange)}a{color:var(--mint);text-underline-offset:4px}p{margin:0 0 16px}.wrap{width:min(1120px,calc(100% - 48px));margin:auto}.brand{display:flex;align-items:center;justify-content:space-between;gap:20px;border-bottom:1px solid var(--line);padding:22px 0}.wordmark{font-weight:750;font-size:20px;letter-spacing:-.05em}.eyebrow{font:11px/1.5 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}.hero{display:grid;grid-template-columns:1fr 240px;gap:40px;align-items:center;padding:45px 0 36px}h1{font-size:clamp(70px,11vw,112px);letter-spacing:-.07em;line-height:1;margin:14px 0 18px}.subtitle{font-size:25px;line-height:1.35;max-width:550px}.intro{color:var(--muted);max-width:610px}.hero button{background:var(--orange);border-color:var(--orange);color:#251c16;font-weight:700;min-width:175px}.diagram{position:relative;height:240px;display:flex;align-items:center;justify-content:center}.diagram svg{width:100%;height:100%}.diagram text{font:12px var(--mono);fill:var(--ink)}.protocol{display:flex;gap:25px;flex-wrap:wrap;font:11px var(--mono);color:var(--muted);margin-bottom:25px}.protocol b{color:var(--ink);font-weight:500}.transport-shell{position:sticky;top:0;z-index:2;background:#171c20f5;border-block:1px solid var(--line);padding:14px 0;backdrop-filter:blur(12px)}.transport{display:grid;grid-template-columns:minmax(0,1fr) 330px auto;gap:18px;align-items:center}.now-label{font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now-meta{color:var(--muted);font:11px/1.5 var(--mono);margin-top:4px}.transport audio{width:100%;height:44px}.modes{display:flex;gap:5px}.modes button{padding:9px 12px;font-size:12px}.status{color:var(--muted);font-size:12px;min-height:19px;margin-top:7px}.navigation{display:flex;gap:8px;align-items:center;padding:18px 0}.navigation span{color:var(--muted);font:11px var(--mono);margin-left:auto}.group-nav{display:flex;flex-wrap:wrap;gap:8px;padding:12px 0 24px}.group-nav a{font-size:12px;padding:6px 10px;border:1px solid var(--line);border-radius:20px;text-decoration:none}section{padding:22px 0 24px;scroll-margin-top:140px;border-top:1px solid var(--line)}.section-header{display:flex;gap:15px;align-items:baseline}h2{font-size:25px;letter-spacing:-.04em;margin:0 0 7px}.section-number{color:var(--orange);font:12px var(--mono)}.section-copy{color:var(--muted);margin-bottom:22px;max-width:700px}.clips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:13px}.clip{border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}.clip.selected{border-color:var(--orange);box-shadow:inset 3px 0 var(--orange)}.clip-heading{display:flex;gap:12px;align-items:start;justify-content:space-between}.clip h3{margin:0;font-size:17px;line-height:1.4;font-weight:650}.clip-index{font:10px var(--mono);color:var(--muted);padding-top:4px}.clip p{font-size:13px;color:var(--muted);margin:0}.clip-footer{display:flex;gap:12px;align-items:center;margin-top:auto}.clip-footer button{background:#2a3336;font-size:13px;min-width:110px}.clip-footer .duration{font:11px var(--mono);color:var(--muted)}.clip details{font-size:12px;color:var(--muted)}summary{cursor:pointer;padding:4px 0;min-height:28px}.details-content{padding-top:8px}.macro-readout{font:10px/1.8 var(--mono);word-spacing:2px;color:var(--mint);margin-bottom:9px}.evidence{display:flex;gap:12px;flex-wrap:wrap;margin-top:9px}.metrics{font:11px/1.8 var(--mono);margin:8px 0}.scope{margin-top:9px!important;font-size:11px!important}.footer{border-top:1px solid var(--line);padding:25px 0 35px;color:var(--muted);font-size:12px}.footer details{margin-top:18px}.footer code{font:11px var(--mono);overflow-wrap:anywhere}.error{border:1px solid var(--orange);border-radius:8px;padding:18px;color:var(--orange);margin:20px 0}noscript p{border:1px solid var(--orange);padding:15px} @media(max-width:850px){.transport{grid-template-columns:1fr auto}.transport audio{grid-column:1/-1;grid-row:2}.hero{grid-template-columns:1fr 180px;gap:20px}.diagram{height:180px}.transport-shell{position:relative}section{scroll-margin-top:15px}}@media(max-width:580px){.wrap{width:calc(100% - 30px)}.hero{grid-template-columns:1fr;padding-top:30px}.diagram{display:none}.subtitle{font-size:22px}.clips{grid-template-columns:1fr}.brand .eyebrow{font-size:9px;text-align:right}.protocol{gap:10px 20px}.section-header{gap:10px}h2{font-size:23px}.navigation span{max-width:100px;text-align:right}.modes button{padding:9px}.footer{padding-bottom:25px}}@media(prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+  </style>
+  <style>.hero-actions{display:flex;flex-wrap:wrap;gap:10px}.hero button.secondary{background:var(--panel);color:var(--ink);border-color:var(--line)}.revision-note{border-left:3px solid var(--orange);padding:8px 12px;color:var(--muted);font-size:13px;margin:0 0 20px}.revision-note strong{color:var(--ink)}.clip-footer.comparison{flex-wrap:wrap}.comparison button{min-width:104px}.comparison-note{font-size:11px!important;margin-top:9px!important}</style>
+  <style>
+    .transport > *{min-width:0}
+    @media(max-width:850px){.transport{grid-template-columns:minmax(0,1fr) auto}.now-label{white-space:normal;overflow-wrap:anywhere}}
+  </style>
+  <style>
+    .listening-route{display:flex;flex-wrap:wrap;gap:8px}.hero .listening-route button{min-width:0;font-size:13px}.hero .listening-route button[aria-pressed=true]{background:#392d26;color:var(--orange)}
+    #group-arc .clips{grid-template-columns:repeat(3,minmax(0,1fr))}.clip .listen-for{color:var(--yellow);font-size:13px;line-height:1.5}.timing-strip{min-width:0;margin:2px 0}.timing-title{font:10px/1.5 var(--mono);color:var(--muted);display:flex;justify-content:space-between;gap:8px;margin-bottom:8px}.timing-row{display:grid;grid-template-columns:60px minmax(0,1fr) 40px;gap:8px;align-items:center;font:10px/1.5 var(--mono);margin:6px 0;color:var(--muted)}.timing-track{height:2px;position:relative;background:var(--line)}.timing-hit{position:absolute;top:50%;width:7px;height:7px;border-radius:50%;background:var(--hit-color);transform:translate(-50%,-50%)}.timing-time{text-align:right}.timing-comparison{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+    @media(max-width:850px){#group-arc .clips{grid-template-columns:1fr}.timing-comparison{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <header class="wrap brand"><span class="wordmark">SnipSnap</span><span class="eyebrow">Rhythmic DRAMA / pitched ensemble</span></header>
+  <main>
+    <div class="wrap">
+      <div class="hero">
+        <div><div class="eyebrow">Three players. A changing relationship.</div><h1>TRIO</h1><p class="subtitle">A conversation<br>across DRAMA.</p><p class="intro">Start with spaced replies. Hear the answers interleave, then the entrances overlap. The wives keep their established DRAMA response; each husband keeps one hit and its natural ring.</p><div class="hero-actions"><div class="listening-route" id="listening-route" role="group" aria-label="Listen to Low, Middle and High"><button type="button" id="start" data-listen-id="low">Low · DRAMA .25</button></div><button type="button" class="secondary" id="meet">Meet the players</button></div></div>
+        <div class="diagram" aria-hidden="true"><svg viewBox="0 0 240 240"><path d="M120 43 199 174H41Z" fill="none" stroke="#647769" stroke-width="2"/><path d="M41 174H199" stroke="#e8c574" stroke-width="4"/><circle cx="120" cy="43" r="17" fill="#f7a071"/><circle cx="41" cy="174" r="17" fill="#a5cbbb"/><circle cx="199" cy="174" r="17" fill="#e8c574"/><text x="120" y="15" text-anchor="middle">TRES</text><text x="41" y="216" text-anchor="middle">BERIMBAU</text><text x="199" y="216" text-anchor="middle">CHARANGO</text><path d="M116 102h8m-4-4v8" stroke="#a5cbbb" stroke-width="2"/></svg></div>
+      </div>
+      <p class="revision-note"><strong>Follow Low → Middle → High.</strong> Listen for the changing attack spacing. The husbands-only clips make the rhythm easier to hear. In each same-setting Previous / Rhythmic arc pair, the wives' performance is identical. High keeps the accepted overlapping entrance.</p>
+      <div class="protocol"><span><b>C4</b> / same requested pitch</span><span><b>Velocity 1</b> / same seed</span><span><b>Mono</b> / no rack effects</span><span id="clip-count"><b>20</b> listening clips</span></div>
+    </div>
+    <div class="transport-shell"><div class="wrap"><div class="transport"><div><div class="eyebrow">Now selected</div><div class="now-label" id="now-label">Tres</div><div class="now-meta" id="now-meta">Matched loudness · C4</div></div><audio id="player" controls preload="metadata" aria-label="Selected TRIO clip"></audio><div class="modes" role="group" aria-label="Playback level"><button type="button" id="matched" aria-pressed="true">Matched</button><button type="button" id="raw" aria-pressed="false">Raw</button></div></div><div class="status" id="status" role="status" aria-live="polite">Matched mode helps compare the instruments. Raw mode reveals the scene balance.</div></div></div>
+    <div class="wrap"><div class="navigation"><button type="button" id="previous" aria-label="Previous clip">← Previous</button><button type="button" id="next" aria-label="Next clip">Next →</button><span id="position">1 / 20</span></div><nav class="group-nav" id="group-nav" aria-label="Listening groups"></nav><div id="library"></div><noscript><p>Enable JavaScript to use the listening page. The raw and matched folders contain ordinary WAV files that also play independently.</p></noscript></div>
+  </main>
+  <footer class="wrap footer"><p>Begin in matched mode, then check raw balance. Listen for spaced replies, interleaved answers and overlapping entrances. Compare the full scene with its husbands-only contribution. The recorded markers show the actual attack times on the same scale.</p><p>← / → previous and next · Space play/pause · M matched/raw. One player, one clip at a time.</p><details><summary>How this listening pack was made</summary><div id="method"></div><p id="footer-downloads"><a href="manifest.json" download="manifest.json">Manifest</a> · <a href="CHECKSUMS.sha256" download="CHECKSUMS.sha256">Asset checksums</a> · <a href="README.md" download="README.md">Rebuild instructions</a></p></details></footer>
+  <script type="application/json" id="manifest">__MANIFEST__</script>
+  <script>
+  (() => {
+    'use strict';
+    const $ = id => document.getElementById(id);
+    let manifest;
+    try { manifest = JSON.parse($('manifest').textContent); } catch (_) { $('library').innerHTML = '<p class="error">The listening manifest is unavailable. Rebuild or extract the complete TRIO pack.</p>'; $('start').disabled = true; return; }
+    const clips = manifest.clips || [], groups = manifest.groups || [], route = manifest.listeningRoute || [], player = $('player');
+    if (!clips.length) { $('library').innerHTML = '<p class="error">This pack contains no clips.</p>'; return; }
+    const escape = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    const number = (value, digits = 2) => typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : '—';
+    const path = value => {
+      if (typeof value !== 'string' || !/^[a-zA-Z0-9_./-]+$/.test(value) || value.startsWith('/') || value.split('/').includes('..')) return '';
+      const embedded = manifest.embeddedFiles;
+      if (embedded && Object.prototype.hasOwnProperty.call(embedded, value)) {
+        const data = embedded[value];
+        return typeof data === 'string' && /^data:(?:audio\/wav|application\/json|text\/(?:csv|markdown|plain);charset=utf-8);base64,[A-Za-z0-9+/=]+$/.test(data) ? data : '';
+      }
+      return embedded ? '' : value;
+    };
+    const link = (value, label) => `<a href="${escape(path(value))}" download="${escape(String(value).split('/').pop())}">${label}</a>`;
+    let selected = 0, mode = 'matched', request = 0;
+    const macroNames = ['TOUCH', 'SIDES', 'MOTION', 'DRAMA', 'SPACE', 'DAMP'];
+    function timingStrip(clip, label = 'Recorded hits') {
+      const events = (clip.husbandEntrances || []).filter(event => Number.isFinite(event.timeSeconds));
+      if (!events.length) return '';
+      const colors = {OUD:'var(--orange)',BOUZOUKI:'var(--mint)',PHIN:'var(--yellow)'};
+      const name = actor => String(actor).toLowerCase().replace(/^./, letter => letter.toUpperCase());
+      const duration = clip.seconds || 3.5;
+      const summary = events.map(event => `${name(event.actor)} at ${number(event.timeSeconds,2)} seconds`).join('; ');
+      return `<div class="timing-strip" role="img" aria-label="${escape(label + ': ' + summary)}"><div class="timing-title" aria-hidden="true"><span>${escape(label)}</span><span>0–${number(duration,1)} s</span></div>${events.map(event => `<div class="timing-row" aria-hidden="true"><span>${escape(name(event.actor))}</span><span class="timing-track"><span class="timing-hit" style="left:${Math.max(0,Math.min(100,event.timeSeconds / duration * 100))}%;--hit-color:${colors[event.actor] || 'var(--muted)'}"></span></span><span class="timing-time">${number(event.timeSeconds,2)}s</span></div>`).join('')}</div>`;
+    }
+    function card(clip, index) {
+      const raw = clip.rawMetrics || {}, matched = clip.matchedMetrics || {};
+      const counterpart = clip.compareId ? clips.findIndex(other => other.id === clip.compareId) : -1;
+      const beforeLabel = clip.beforeLabel || 'Original', afterLabel = clip.afterLabel || 'Updated';
+      const playLabel = clip.playLabel || 'Play clip';
+      const buttons = counterpart >= 0 ? `<button type="button" data-clip="${index}" data-label="${escape(beforeLabel)}" aria-label="Play ${escape(beforeLabel)}: ${escape(clip.label)}" aria-pressed="false">${escape(beforeLabel)}</button><button type="button" data-clip="${counterpart}" data-label="${escape(afterLabel)}" aria-label="Play ${escape(afterLabel)}: ${escape(clip.label)}" aria-pressed="false">${escape(afterLabel)}</button>` : `<button type="button" data-clip="${index}" data-label="${escape(playLabel)}" aria-label="Play ${escape(clip.label)}" aria-pressed="false">${escape(playLabel)}</button>`;
+      const timing = counterpart >= 0 ? `<div class="timing-comparison">${timingStrip(clip,beforeLabel)}${timingStrip(clips[counterpart],afterLabel)}</div>` : timingStrip(clip);
+      return `<article class="clip" id="clip-${escape(clip.id)}"><div class="clip-heading"><h3>${escape(clip.label)}</h3><span class="clip-index">${String(index + 1).padStart(2,'0')}</span></div><p>${escape(clip.description)}</p>${clip.listenFor ? `<p class="listen-for">${escape(clip.listenFor)}</p>` : ''}${timing}<div class="clip-footer${counterpart >= 0 ? ' comparison' : ''}">${buttons}<span class="duration">${number(clip.seconds,1)} s</span></div><details><summary>Settings &amp; listening evidence</summary><div class="details-content"><div class="macro-readout">${macroNames.map(name => `${name} ${number(clip.macros?.[name])}`).join(' · ')}</div><p>${clip.eventCount} recorded gestures · ${clip.tap === 'MIX' ? 'Full mix' : `${escape(clip.tap.toLowerCase())} scene tap`} · saved model ${clip.configuration?.model ?? clip.model ?? '—'}</p><div class="metrics">Raw peak ${number(raw.peak,4)} · DC ${number(raw.dc,6)}<br>Matched peak ${number(matched.peak,4)} · level ${number(matched.loudness,4)}<br>Finite samples: ${raw.finite && matched.finite ? 'yes' : 'check diagnostics'}${clip.rawExportGain < 1 ? `<br>Raw safety gain ${number(clip.rawExportGain,4)}` : ''}</div><div class="evidence">${link(clip.rawPath,'Raw WAV')}${link(clip.matchedPath,'Matched WAV')}${link(clip.patchPath,clip.tap === 'MIX' ? 'Patch' : 'Source scene patch')}${link(clip.recipePath,'Pad recipe')}${link(clip.eventsPath,'Events CSV')}${link(clip.diagnosticsPath,'Diagnostics')}</div>${counterpart >= 0 ? `<p class="comparison-note">This evidence describes ${escape(beforeLabel)}. ${escape(afterLabel)} evidence is attached to its corresponding scene or isolated clip.</p>` : ''}${clip.tap !== 'MIX' ? '<p class="scope">The saved patch and pad recipe reproduce the full source scene. This clip uses selected contributions from that same scene.</p>' : ''}</div></details></article>`;
+    }
+    $('group-nav').innerHTML = groups.map(group => `<a href="#group-${escape(group.id)}">${escape(group.title)}</a>`).join('');
+    $('library').innerHTML = groups.map((group, index) => `<section id="group-${escape(group.id)}" aria-labelledby="title-${escape(group.id)}"><div class="section-header"><span class="section-number">${String(index + 1).padStart(2,'0')}</span><h2 id="title-${escape(group.id)}">${escape(group.title)}</h2></div><p class="section-copy">${escape(group.description)}</p><div class="clips">${clips.map((clip, i) => clip.group === group.id ? card(clip, i) : '').join('')}</div></section>`).join('');
+    $('clip-count').innerHTML = `<b>${clips.length}</b> listening clips`;
+    $('listening-route').innerHTML = route.map((step,index) => `<button type="button"${index === 0 ? ' id="start"' : ''} data-listen-id="${escape(step.id)}" aria-label="Play ${escape(step.label)}" aria-pressed="false">${escape(step.label)}</button>`).join('');
+    $('method').innerHTML = `<p>${escape(manifest.levelMethod)}</p><p>${escape(manifest.metricNotes)}</p><p>44.1 kHz · 24-bit mono WAVs · ${manifest.renderCount} rendered performances.</p><p>Listening round: <code>${escape(manifest.listeningRound)}</code></p><p>Rebuild: <code>${escape(manifest.rebuildCommand)}</code></p>`;
+    // A hosting build can insert its archive link into the initial HTML. Preserve it
+    // when resolving the manifest links, including after a new audition is published.
+    const archives = [...$('footer-downloads').querySelectorAll('a[href$=".zip"]')].map(anchor => ({href:anchor.getAttribute('href'),label:anchor.textContent})).filter(archive => path(archive.href));
+    $('footer-downloads').innerHTML = [...archives.map(archive => link(archive.href,escape(archive.label))),link('manifest.json','Manifest'),link('CHECKSUMS.sha256','Asset checksums'),link('README.md','Rebuild instructions')].join(' · ');
+    function updateUI() {
+      const clip = clips[selected];
+      $('now-label').textContent = clip.label;
+      $('now-meta').textContent = `${mode === 'matched' ? 'Matched loudness' : 'Raw scene level'} · C4 · ${number(clip.seconds,1)} s`;
+      $('position').textContent = `${selected + 1} / ${clips.length}`;
+      $('previous').disabled = selected === 0; $('next').disabled = selected === clips.length - 1;
+      for (const button of document.querySelectorAll('[data-clip]')) {
+        const active = Number(button.dataset.clip) === selected;
+        button.setAttribute('aria-pressed', String(active));
+        button.textContent = active && !player.paused ? 'Playing' : button.dataset.label || 'Play clip';
+      }
+      for (const card of document.querySelectorAll('.clip')) card.classList.toggle('selected', [...card.querySelectorAll('[data-clip]')].some(button => Number(button.dataset.clip) === selected));
+      for (const button of document.querySelectorAll('[data-listen-id]')) button.setAttribute('aria-pressed', String(route.some(step => step.id === button.dataset.listenId && step.clipId === clip.id)));
+      $('matched').setAttribute('aria-pressed', String(mode === 'matched')); $('raw').setAttribute('aria-pressed', String(mode === 'raw'));
+    }
+    function select(index, autoplay = true, seek = 0) {
+      if (index < 0 || index >= clips.length) return;
+      selected = index; const serial = ++request;
+      player.pause(); player.src = path(mode === 'matched' ? clips[selected].matchedPath : clips[selected].rawPath);
+      player.onloadedmetadata = () => { if (serial === request && seek > 0) player.currentTime = Math.min(seek, Math.max(0, player.duration - .01)); };
+      player.load(); updateUI();
+      $('status').textContent = mode === 'matched' ? 'Matched mode helps compare character at a similar perceived level.' : 'Raw mode preserves the actual performance balance; level can change between clips.';
+      if (autoplay) player.play().catch(() => { if (serial === request) $('status').textContent = 'Press the audio play control to begin.'; });
+    }
+    function changeMode(nextMode) {
+      if (nextMode === mode) return;
+      const playing = !player.paused, time = player.currentTime; mode = nextMode; select(selected, playing, time);
+    }
+    $('listening-route').addEventListener('click', event => { const button = event.target.closest('[data-listen-id]'); if (!button) return; const step = route.find(item => item.id === button.dataset.listenId); if (!step) return; const index = clips.findIndex(clip => clip.id === step.clipId); select(index >= 0 ? index : 0); $('group-arc')?.scrollIntoView({block:'start'}); });
+    $('meet').addEventListener('click', () => { const index = clips.findIndex(clip => clip.id === (manifest.meetClipId || 'tres')); select(index >= 0 ? index : 0); $('group-players')?.scrollIntoView({block:'start'}); });
+    $('previous').addEventListener('click', () => select(selected - 1));
+    $('next').addEventListener('click', () => select(selected + 1));
+    $('matched').addEventListener('click', () => changeMode('matched'));
+    $('raw').addEventListener('click', () => changeMode('raw'));
+    $('library').addEventListener('click', event => { const button = event.target.closest('[data-clip]'); if (button) select(Number(button.dataset.clip)); });
+    player.addEventListener('play', updateUI); player.addEventListener('pause', updateUI); player.addEventListener('ended', updateUI);
+    player.addEventListener('error', () => { $('status').textContent = 'The WAV could not be loaded. Extract the entire folder and keep raw/ and matched/ beside index.html.'; });
+    document.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.target.matches('input,textarea,select,[contenteditable="true"],audio')) return;
+      if (event.key === 'ArrowLeft' && selected > 0) { event.preventDefault(); select(selected - 1); }
+      else if (event.key === 'ArrowRight' && selected < clips.length - 1) { event.preventDefault(); select(selected + 1); }
+      else if (event.key.toLowerCase() === 'm') { event.preventDefault(); changeMode(mode === 'matched' ? 'raw' : 'matched'); }
+      else if (event.code === 'Space' && !event.target.closest('button,a,summary')) { event.preventDefault(); if (player.paused) player.play().catch(() => { $('status').textContent = 'Press the audio play control to begin.'; }); else player.pause(); }
+    });
+    const initial = clips.findIndex(clip => clip.id === (manifest.initialClipId || 'drama_025'));
+    select(initial >= 0 ? initial : 0, false);
+  })();
+  </script>
+</body>
+</html>

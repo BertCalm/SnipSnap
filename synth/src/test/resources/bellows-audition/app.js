@@ -16,35 +16,45 @@
   const volumeValue = document.getElementById('volume-value');
 
   const collections = {
+    library: {
+      eyebrow: '01 / PLAY THE LIBRARY',
+      title: 'Find a sound to play.',
+      description: 'Twenty-four dry presets, six from each family. Start with a sound, then hear what happens in a phrase or chord.'
+    },
+    musical: {
+      eyebrow: '02 / PUT IT IN A PHRASE',
+      title: 'Give the notes some company.',
+      description: 'Four phrases and four held chords at 96 BPM. Real attacks, looping sustains, changing touch and note-off releases. Dry mono, with one separate fixed C3 bed under the Wheel chords.'
+    },
     'body-breath': {
-      eyebrow: '01 / BODY & BREATH',
+      eyebrow: '03 / BODY & BREATH',
       title: 'Hear the full range.',
       description: 'The same note and gesture at both ends of each control. Play A and B separately, or listen to A then B.'
     },
     'first-listen': {
-      eyebrow: '02 / MEET THE VOICES',
+      eyebrow: '04 / MEET THE VOICES',
       title: 'Find your first favorite.',
       description: 'Two sounds from each family. Listen for the reeds, the air, and the motion.'
     },
     control: {
-      eyebrow: '03 / ONE CHANGE AT A TIME',
+      eyebrow: '05 / ONE CHANGE AT A TIME',
       title: 'Follow the change.',
       description: 'Compare pressure, body, reed beating, direction, and buzz. Keep your ear on what moves.'
     },
     notes: {
-      eyebrow: '04 / ACROSS THE KEYBOARD',
+      eyebrow: '06 / ACROSS THE KEYBOARD',
       title: 'Different notes. Different touch.',
       description: 'Hear how the voices respond across pitch and playing strength.'
     },
     hold: {
-      eyebrow: '05 / LET IT SETTLE',
+      eyebrow: '07 / LET IT SETTLE',
       title: 'Give the sound some time.',
-      description: 'A pad plays each sound once. Turn on Repeat for a longer listen to a loop; a held keyboard voice needs its own sustain path.'
+      description: 'A pad plays each sound once. Turn on Repeat for a longer listen to a loop; the playable keygroups carry an attack and sustain path of their own.'
     }
   };
   const familyNumbers = { CHAMBER: '01', COUNTER: '02', FOLK: '03', WHEEL: '04' };
   let clips = [];
-  let section = 'body-breath';
+  let section = 'library';
   let family = 'all';
   let levelMode = 'matched';
   let selectedId = null;
@@ -67,6 +77,8 @@
 
   function normalizeSection(value) {
     const normalized = String(value || 'first-listen').toLowerCase().replace(/[_\s]+/g, '-');
+    if (normalized === 'library') return 'library';
+    if (normalized === 'musical') return 'musical';
     if (/^(?:body-breath|body-and-breath)$/.test(normalized)) return 'body-breath';
     if (/^(?:first-listen|first|presets?|identity|audition)$/.test(normalized)) return 'first-listen';
     if (/pitch|velocity|note|touch/.test(normalized)) return 'notes';
@@ -286,6 +298,7 @@
       const marker = comparison.endpoint === 'joined' ? `${comparisonName(comparison)} / FULL-RANGE A–B` : `${comparison.endpoint === 'low' ? 'A / ' : comparison.endpoint === 'high' ? 'B / ' : ''}${comparisonName(comparison)} ${comparison.value === null ? '' : `${Math.round(comparison.value * 100)}%`}`;
       card.append(el('div', 'endpoint-marker', marker));
     }
+    if (clip.role && !comparison) card.append(el('div', 'preset-role', clip.role));
     card.append(heading, el('p', 'card-description', comparison ? comparisonDescription(comparison) : clip.description || 'A dry voice from the BELLOWS prototype.'));
     const segments = [];
     if (comparison?.endpoint === 'joined') {
@@ -302,10 +315,11 @@
     }
     const metadata = el('div', 'clip-metadata');
     const note = noteLabel(clip.midi);
-    if (note) metadata.append(el('span', '', note));
-    if (clip.velocity !== undefined && clip.velocity !== null) metadata.append(el('span', '', `VEL ${numberLabel(clip.velocity)}`));
+    if (note && !clip.performance) metadata.append(el('span', '', note));
+    if (!clip.performance && clip.velocity !== undefined && clip.velocity !== null) metadata.append(el('span', '', `VEL ${numberLabel(clip.velocity)}`));
     if (Number.isFinite(Number(clip.durationSeconds))) metadata.append(el('span', '', `${Number(clip.durationSeconds).toFixed(1)} SEC`));
     if (isLoop(clip)) metadata.append(el('span', '', 'LOOP'));
+    if (clip.performance) metadata.append(el('span', '', `${clip.performance.bpm} BPM`));
     card.append(metadata);
 
     const controls = el('div', 'card-controls');
@@ -425,6 +439,7 @@
     viewCards = new Map();
     grid.replaceChildren();
     const visible = visibleClips();
+    document.getElementById('level-description').textContent = section === 'musical' ? (levelMode === 'matched' ? 'Matched levels the whole performance; touch stays intact.' : 'Raw plays the native performance before audition matching.') : (levelMode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves source dynamics.');
     grid.classList.toggle('comparison-grid', section === 'body-breath');
     document.getElementById('focus-guide').hidden = section !== 'body-breath';
     if (section === 'body-breath') renderComparisons(visible);
@@ -458,7 +473,7 @@
     rawButton.classList.toggle('selected', mode === 'raw');
     matchedButton.setAttribute('aria-pressed', mode === 'matched' ? 'true' : 'false');
     rawButton.setAttribute('aria-pressed', mode === 'raw' ? 'true' : 'false');
-    document.getElementById('level-description').textContent = mode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves source dynamics.';
+    document.getElementById('level-description').textContent = section === 'musical' ? (mode === 'matched' ? 'Matched levels the whole performance; touch stays intact.' : 'Raw plays the native performance before audition matching.') : (mode === 'matched' ? 'Matched compares color at similar level.' : 'Raw preserves source dynamics.');
     updateTransport();
   }
 
@@ -471,6 +486,24 @@
   }
 
   function addDownloads(manifest) {
+    if (Array.isArray(manifest.instrumentDownloads)) for (const item of manifest.instrumentDownloads) {
+      const file = safeFile(item.file);
+      if (!file) continue;
+      const link = el('a', 'instrument-download', item.label || 'Instrument');
+      link.href = file;
+      link.download = downloadName(file);
+      link.append(el('span', '', '↓'));
+      document.querySelector('.download-buttons').append(link);
+    }
+    for (const [key, id] of [['libraryZip', 'download-library'], ['instrumentZip', 'download-instruments']]) {
+      const file = safeFile(manifest[key]);
+      if (file) {
+        const link = document.getElementById(id);
+        link.href = file;
+        link.download = downloadName(file);
+        link.hidden = false;
+      }
+    }
     const focusZip = safeFile(manifest.bodyBreathZip);
     if (focusZip) {
       const link = document.getElementById('download-body-breath');
@@ -544,7 +577,7 @@
 
   async function loadManifest() {
     try {
-      const response = await fetch('manifest.json?v=2', { cache: 'no-store' });
+      const response = await fetch('manifest.json?v=3', { cache: 'no-store' });
       if (!response.ok) throw new Error('Manifest unavailable');
       const manifest = await response.json();
       if (!manifest || !Array.isArray(manifest.clips)) throw new Error('Invalid manifest');

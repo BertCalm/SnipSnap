@@ -88,6 +88,28 @@ keeps the direct attack path and ordinary PM, so a difference cannot be credited
 only to changing attack gain. Compare MATERIAL at ordinary FUSE settings, EDGE with
 FUSE zero, and held MATERIAL/FUSE changes after the initial gesture is absent.
 
+## Voice contrast candidates
+
+The owner's expanded-roster review identified similarity both within and between
+voices. A separate [voice contrast audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/contrast/)
+therefore compares twelve candidate voicing recipes, two per voice. These use
+explicit model-1 configurations; the released engine defaults, all 36 factory
+patches, original listening assets and their saved reviews remain intact.
+
+```sh
+./gradlew --no-daemon :synth:generateAlloyContrastAudition
+```
+
+`testkit/alloy-contrast/` contains 60 matched-level listening clips: six finite
+old/new voice pairs at identical macros, twelve candidate roles at MIDI 36/48/60,
+and six old/new settled HOLD pairs. All comparisons use velocity .75; the voice
+and held pairs use MIDI 48. Each clip records its complete configuration, raw
+measurements and source/compiled-class provenance. Twelve raw PCM24 references,
+twelve patch JSONs and a sixteen-pad MPC kit accompany the page. Pads A13–A16 are
+loop-only BASS/BRASS/STRING/SOFT candidates; enable whole-sample looping on the MPC
+for indefinite HOLD. The new page keeps its listening notes separate from the
+released audition. Candidate voicing and naming await listening approval.
+
 ## Validation and remaining acceptance
 
 The numerical gates cover deterministic renders, bounded raw state, velocity,

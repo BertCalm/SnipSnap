@@ -203,23 +203,82 @@ class ContourTablesTest {
         println("CONTOUR moving table worst folded share=$worstAlias; bypassed-mip control=$aliasedControl")
     }
 
+    @Test
+    fun `maximum rate engine trajectories retain sidebands without folded bandwidth`() {
+        val size = 16_384
+        val oversample = 8
+        val seconds = size / 44_100.0
+        val motionBin = 84
+        // Fit a coherent period just above the shortest legal motionSeconds.
+        // RATE=1 and MOTION=1 then produce about 226 Hz finite scan cycles,
+        // including the second motion harmonic and CURVE's extra curvature.
+        // This is close to the 228 Hz maximum, rather than an ordinary slow LFO.
+        val motionSeconds = ((.65 + 2.2) * 8 * seconds / motionBin).toFloat()
+        val macros = ContourEngine.defaults(ContourVoice.LEAD) + mapOf(
+            "SCAN" to .65f, "OFFSET" to .8f, "MOTION" to 1f, "RATE" to 1f)
+        var worstAlias = 0.0
+        var positiveControl = 0.0
+        for (relation in listOf(ContourRelation.LAG, ContourRelation.CURVE)) {
+            val config = ContourConfig(ContourTable.SOFT_SAW, ContourTable.CLUSTER,
+                bodyTravel = .8f, edgeTravel = 1f, edgeScanBias = -.8f,
+                relation = relation, motionShape = ContourMotionShape.CYCLE,
+                motionSeconds = motionSeconds)
+            // Use the real engine coordinate mapping independently at every 8x
+            // reference instant. Both source paths get maximum legal travel.
+            val bodyScans = DoubleArray(size * oversample)
+            val edgeScans = DoubleArray(bodyScans.size)
+            for (i in bodyScans.indices) {
+                val coordinates = ContourEngine.scanCoordinates(ContourVoice.LEAD, macros,
+                    i * seconds / bodyScans.size, config)
+                bodyScans[i] = coordinates.first
+                edgeScans[i] = coordinates.second
+            }
+            for ((path, scans) in listOf("body" to bodyScans, "edge" to edgeScans)) {
+                assertTrue(scans.max() - scans.min() > .25, "$relation $path high RATE fixture barely scans")
+                for (table in ContourTable.entries) for (fundamentalBin in intArrayOf(389, 1_519)) {
+                    // The instrument excites tables at 4x before output low-pass
+                    // conditioning. Legitimate fast-scan sidebands above output
+                    // Nyquist must be removed there, not mistaken for foldback.
+                    val (aliasShare, motionShare) = movingSpectrum(table, fundamentalBin, motionBin,
+                        scanCoordinates = scans, nativeRateMultiple = Dsp.OVERSAMPLE)
+                    worstAlias = maxOf(worstAlias, aliasShare)
+                    assertTrue(aliasShare < 1e-6,
+                        "$table $relation $path RATE=1 rootBin=$fundamentalBin folded share=$aliasShare")
+                    assertTrue(motionShare > .001,
+                        "$table $relation $path high RATE source lost its moving sidebands: $motionShare")
+                }
+            }
+            val (aliased, _) = movingSpectrum(ContourTable.CLUSTER, 777, motionBin,
+                bypassPitchLimit = true, scanCoordinates = edgeScans)
+            positiveControl = maxOf(positiveControl, aliased)
+        }
+        assertTrue(positiveControl > .05, "High RATE unbandlimited positive control escaped: $positiveControl")
+        println("CONTOUR maximum RATE engine-scan worst folded share=$worstAlias; bypassed-mip control=$positiveControl")
+    }
+
     private fun movingSpectrum(table: ContourTable, fundamentalBin: Int, motionBin: Int,
-        bypassPitchLimit: Boolean = false): Pair<Double, Double> {
+        bypassPitchLimit: Boolean = false, scanCoordinates: DoubleArray? = null,
+        nativeRateMultiple: Int = 1): Pair<Double, Double> {
         val size = 16_384
         val oversample = 8
         val hz = fundamentalBin * 44_100.0 / size
         val lookup = ContourTables.lookup(table, if (bypassPitchLimit) 20.0 else hz)
-        val nativeRe = FloatArray(size)
-        val nativeIm = FloatArray(size)
+        require(oversample % nativeRateMultiple == 0)
+        val sampleStride = oversample / nativeRateMultiple
+        val nativeRe = FloatArray(size * nativeRateMultiple)
+        val nativeIm = FloatArray(nativeRe.size)
         val referenceRe = FloatArray(size * oversample)
         val referenceIm = FloatArray(referenceRe.size)
+        require(scanCoordinates == null || scanCoordinates.size == referenceRe.size)
         for (i in referenceRe.indices) {
             val time = i.toDouble() / referenceRe.size
-            val angle = 2.0 * PI * motionBin * time
-            val scan = .5 + .42 * sin(angle) + .06 * sin(2.0 * angle)
+            val scan = scanCoordinates?.get(i) ?: run {
+                val angle = 2.0 * PI * motionBin * time
+                .5 + .42 * sin(angle) + .06 * sin(2.0 * angle)
+            }
             val value = lookup.sample(fundamentalBin * time, scan).toFloat()
             referenceRe[i] = value
-            if (i % oversample == 0) nativeRe[i / oversample] = value
+            if (i % sampleStride == 0) nativeRe[i / sampleStride] = value
         }
         Fft.forward(nativeRe, nativeIm)
         Fft.forward(referenceRe, referenceIm)
@@ -227,11 +286,12 @@ class ContourTablesTest {
         var foldedEnergy = 0.0
         var sidebandEnergy = 0.0
         // Equal durations make bin frequencies identical. Dividing reference FFT
-        // amplitudes by 8 matches normalization; its upper bins are the ideal
-        // antialias rejection region, so no resampler response clouds this probe.
+        // amplitudes by their sample-count ratio matches normalization. Only the
+        // final 44.1 kHz audible band is scored; no resampler response clouds
+        // whether out-of-band source energy folded into that region.
         for (bin in 1 until size / 2) {
-            val re = referenceRe[bin].toDouble() / oversample
-            val im = referenceIm[bin].toDouble() / oversample
+            val re = referenceRe[bin].toDouble() / sampleStride
+            val im = referenceIm[bin].toDouble() / sampleStride
             val energy = re * re + im * im
             val differenceRe = nativeRe[bin] - re
             val differenceIm = nativeIm[bin] - im

@@ -85,7 +85,8 @@ class BrassGrowIntegrationTest {
             for (format in listOf(ExportFormat.PROGRAM_FOLDER, ExportFormat.MPC3_TRACK)) {
                 val exported = Exporters.export(format, loaded, work, File(root, format.id), overwrite = true)
                 val findings = ExportReadBack.verify(loaded, exported)
-                assertTrue(exported.primary.isFile)
+                // Main's contract: a program folder's primary is the folder, the MPC3 track's is its file.
+                assertTrue(if (format == ExportFormat.PROGRAM_FOLDER) exported.primary.isDirectory else exported.primary.isFile)
                 assertTrue(findings.none { it.severity == Severity.FAIL }, "$format: ${findings.joinToString { it.message }}")
                 assertEquals(3, findings.count { it.severity == Severity.OK }, "$format must read both pads and the program")
             }

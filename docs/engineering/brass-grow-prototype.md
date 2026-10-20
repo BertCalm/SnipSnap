@@ -38,6 +38,10 @@ model fields still select model 1. Both legacy renderers and their seven
 controls remain unchanged. New GROW patches explicitly save model 3, require
 the BRASS voice, and accept only TUNE/GROW/LENGTH/HOLD. The original eight
 factory presets and sixteen-pad EMBOUCHURE starter kit remain unchanged.
+The two GROW presets are deliberately **experimental**: they are listed by
+`EmbouchurePresets.experimental()` and offered in the SYNTH picker, but they are
+not part of the 36-preset EMBOUCHURE factory bank (`EmbouchurePresets.all()`),
+its MPC banks or the starter kit.
 Pre-prototype model-2 BRASS PCM16 fixtures supplement the existing model-1
 golden recordings and default-sound compatibility checks.
 Model 3 derives its pressure gesture from GROW; the legacy saved `gesture`

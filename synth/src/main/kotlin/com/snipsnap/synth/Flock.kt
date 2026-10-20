@@ -89,6 +89,13 @@ object Flock {
 
     fun defaults(voice: FlockVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
+    /** Vary a sound's character while retaining its finite duration and saved patch state. */
+    fun scramble(voice: FlockVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
+        val base = defaults(voice) + if (near is FlockPatch && near.voice == voice) near.macros else emptyMap()
+        val amount = (temperature.takeIf { it.isFinite() } ?: .35f).coerceIn(0f, 1f)
+        return Dsp.scrambleNear(base, amount, random) + ("HOLD" to base.getValue("HOLD"))
+    }
+
     fun supportsModel(model: Int): Boolean = model in 1..MODEL_VERSION
 
     /**
@@ -295,6 +302,35 @@ object Flock {
         cancelled: () -> Boolean = { false },
         oversample: Int = 4,
         model: Int = MODEL_VERSION,
+    ): Probe = renderSource(voice, macros, midi, velocity, seed, mode, perturb, cancelled, oversample, model)
+
+    /** Audition-only continuation: the same cloud and carriers, without the finite gesture envelope. */
+    internal fun renderContinuousRibbon(
+        seconds: Double,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float,
+        seed: Long,
+        oversample: Int = 4,
+        cancelled: () -> Boolean = { false },
+    ): Probe {
+        require(seconds.isFinite() && seconds in .1..90.0) { "FLOCK continuous source must be .1..90 seconds" }
+        return renderSource(FlockVoice.RIBBON, macros, midi, velocity, seed, FlockMode.FLOCK, false,
+            cancelled, oversample, MODEL_VERSION, seconds)
+    }
+
+    private fun renderSource(
+        voice: FlockVoice,
+        macros: Map<String, Float>,
+        midi: Int,
+        velocity: Float,
+        seed: Long,
+        mode: FlockMode,
+        perturb: Boolean,
+        cancelled: () -> Boolean,
+        oversample: Int,
+        model: Int,
+        continuousSeconds: Double? = null,
     ): Probe {
         require(supportsModel(model)) { "unsupported flock model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "FLOCK midi must be $MIN_MIDI..$MAX_MIDI" }
@@ -302,7 +338,7 @@ object Flock {
         require(oversample == 1 || oversample == 4) { "FLOCK oversample must be 1 or 4" }
         stopIfUnwanted(cancelled)
         val m = settled(macros, voice)
-        val seconds = 2.0 + 4.0 * m.getValue("HOLD")
+        val seconds = continuousSeconds ?: (2.0 + 4.0 * m.getValue("HOLD"))
         val rate = Dsp.RATE * oversample
         val block = rate / CONTROL_RATE
         check(block * CONTROL_RATE == rate)
@@ -337,8 +373,10 @@ object Flock {
             val count = minOf(block, frames - frame)
             repeat(count) { offset ->
                 val time = (frame + offset).toDouble() / rate
-                val env = smooth(time / attack) * (1.0 - smooth((time - seconds + release) / release)) *
-                    (.82 + .18 * exp(-time / .30)) * velocity
+                val env = if (continuousSeconds == null)
+                    smooth(time / attack) * (1.0 - smooth((time - seconds + release) / release)) *
+                        (.82 + .18 * exp(-time / .30)) * velocity
+                    else velocity.toDouble()
                 var sum = 0.0
                 for (i in 0 until PARTICLES) {
                     val e = energy[i]
@@ -360,7 +398,7 @@ object Flock {
         }
         stopIfUnwanted(cancelled)
         val native = if (oversample == 4) Dsp.decimate(raw, Dsp.RATE) else raw
-        Dsp.fadeTail(native)
+        if (continuousSeconds == null) Dsp.fadeTail(native)
         val samples = native.copyOf()
         // The shared project loudness measurement leaves scatter and motion intact; velocity
         // retains an amplitude component after leveling as well as disturbing the initial state.

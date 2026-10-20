@@ -41,6 +41,8 @@ class ExportWizardTest {
         assertEquals("READY TO DUB", w.dubLabel)
         assertEquals(4, w.fileCount) // 3 WAVs + the program
         assertTrue("4 FILES QUEUED" in w.dubFilesLine(0))
+        // The landing box (LandingNote.dubbed) repeats the sides in the same words.
+        assertTrue(ExportWizardModel.DUB_SIDES in w.dubFilesLine(0))
         assertFalse(w.blocked)
 
         val result = w.write(File(temp, "card-stages"))

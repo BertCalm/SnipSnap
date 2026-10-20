@@ -1,9 +1,11 @@
 package com.snipsnap.synth
 
 import com.snipsnap.json.JsonValue
+import com.snipsnap.json.JsonException
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -11,7 +13,7 @@ import kotlin.test.assertTrue
 class RegistersPatchTest {
     @Test
     fun `dispatcher replays all audition models including omitted legacy model`() {
-        for (model in 1..3) {
+        for (model in 1..Registers.MODEL_VERSION) {
             val original = RegistersPatch("Saved audition", RegistersVoice.PIPE,
                 Registers.defaults(RegistersVoice.PIPE), midi = 69, velocity = .37f, model = model)
             val decoded = Patches.fromJsonText(original.toJsonText()) as RegistersPatch
@@ -54,7 +56,7 @@ class RegistersPatchTest {
         val preset = RegistersPresets.forVoice(RegistersVoice.PIPE).first()
         val high = Patches.edited(preset, "Higher", preset.macros + ("TUNE" to 1f)) as RegistersPatch
         assertEquals(72, high.midi)
-        assertEquals(Registers.MODEL_VERSION, high.model)
+        assertEquals(3, high.model, "editing an accepted PIPE preset keeps its pinned model")
         assertEquals(Keys.midiHz(72).toDouble(), high.probe().effectiveHz)
 
         // Published audition recipes use explicit notes even when their old TUNE is .5.
@@ -79,11 +81,12 @@ class RegistersPatchTest {
     @Test
     fun `velocity dispatch passes one performance velocity and keeps note and model`() {
         for (voice in RegistersVoice.entries) for (hold in listOf(.35f, 1f)) {
+            val model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3
             val patch = RegistersPatch("Quiet recipe", voice, Registers.defaults(voice) + ("HOLD" to hold),
-                midi = 69, velocity = .2f, model = 3)
+                midi = 69, velocity = .2f, model = model)
             assertNull(Velocity.brightnessSpec(patch))
             val actual = Velocity.atVelocity(patch, .75f)
-            val expected = Registers.render(voice, patch.macros, 69, .75f, model = 3)
+            val expected = Registers.render(voice, patch.macros, 69, .75f, model = model)
             assertContentEquals(expected.samples, actual.samples, "velocity must not multiply the saved .2 twice")
             assertTrue(Velocity.atVelocity(patch, 0f).samples.all { it == 0f })
             val reference = patch.render()
@@ -95,10 +98,10 @@ class RegistersPatchTest {
     }
 
     @Test
-    fun `six factory presets reuse published default restrained and expressive settings`() {
+    fun `factory presets retain accepted settings and offer three transistor registrations`() {
         val all = RegistersPresets.all()
-        assertEquals(6, all.size)
-        assertEquals(6, all.map { it.name }.distinct().size)
+        assertEquals(9, all.size)
+        assertEquals(9, all.map { it.name }.distinct().size)
         assertTrue(Presets.all().containsAll(all))
         for (voice in RegistersVoice.entries) {
             val group = RegistersPresets.forVoice(voice)
@@ -108,7 +111,7 @@ class RegistersPatchTest {
             for (preset in group) {
                 assertEquals(60, preset.midi)
                 assertEquals(1f, preset.velocity)
-                assertEquals(3, preset.model)
+                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 4 else 3, preset.model)
                 assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
                 assertEquals(preset, Presets.byName("REGISTERS", voice.name, preset.name))
                 assertTrue(preset.name.length <= 14)
@@ -123,6 +126,35 @@ class RegistersPatchTest {
         assertEquals(listOf(.32f, .64f), musette.drop(1).map { it.macros.getValue("COLOR") })
         assertEquals(listOf(.24f, .78f), musette.drop(1).map { it.macros.getValue("AIR") })
         assertEquals(listOf(.20f, .78f), musette.drop(1).map { it.macros.getValue("SPREAD") })
+        val transistor = RegistersPresets.forVoice(RegistersVoice.TRANSISTOR)
+        assertEquals(listOf("Compact Keys", "Clean Combo", "Garage Buzz"), transistor.map { it.name })
+        assertEquals(listOf(.42f, .25f, .78f), transistor.map { it.macros.getValue("COLOR") })
+        assertEquals(listOf(.20f, .10f, .45f), transistor.map { it.macros.getValue("AIR") })
+        assertEquals(listOf(.30f, .05f, .78f), transistor.map { it.macros.getValue("EDGE") })
+        assertEquals(listOf(.12f, 0f, .18f), transistor.map { it.macros.getValue("SPREAD") })
+        assertEquals(listOf(.18f, .08f, .55f), transistor.map { it.macros.getValue("MOTION") })
         assertTrue(Presets.forVoice("REGISTERS", "UNKNOWN").isEmpty())
+    }
+
+    @Test
+    fun `transistor pad recipes replay model four and reject unsupported legacy models`() {
+        val original = RegistersPatch("Saved keys", RegistersVoice.TRANSISTOR,
+            Registers.defaults(RegistersVoice.TRANSISTOR) + ("HOLD" to .6f), midi = 69, velocity = .37f, model = 4)
+        val recipe = PadRecipe.fromJsonText(PadRecipe(original).toJsonText())
+        val decoded = recipe.patch as RegistersPatch
+        assertEquals(original, decoded)
+        assertContentEquals(original.render().samples, decoded.render().samples)
+        val editable = decoded.forEditing()
+        val edited = Patches.edited(editable, "More drive", editable.macros + ("EDGE" to .8f)) as RegistersPatch
+        assertEquals(69, edited.midi)
+        assertEquals(.37f, edited.velocity)
+        assertEquals(4, edited.model)
+        for (model in 1..3) {
+            assertFailsWith<IllegalArgumentException> { original.copy(model = model) }
+            val old = JsonValue.Obj(original.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
+            assertFailsWith<JsonException> { Patches.fromJsonValue(old) }
+        }
+        val withoutModel = JsonValue.Obj(original.toJsonValue().entries.filterKeys { it != "model" })
+        assertFailsWith<JsonException> { Patches.fromJsonValue(withoutModel) }
     }
 }

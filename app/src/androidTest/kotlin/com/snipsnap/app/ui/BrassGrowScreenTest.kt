@@ -180,7 +180,7 @@ class BrassGrowScreenTest {
 
     @Test fun leavingDuringAnUnreadYoursPresetCannotPersistTemporaryLegacyState() {
         val patch = EmbouchurePatch(
-            "MY WAITING GROW", EmbouchureVoice.BRASS,
+            "MY WAIT GROW", EmbouchureVoice.BRASS,
             mapOf("TUNE" to .5f, "GROW" to .2f, "LENGTH" to .5f, "HOLD" to 0f),
             velocity = .75f, model = Embouchure.BRASS_GROW_MODEL,
         )
@@ -201,13 +201,17 @@ class BrassGrowScreenTest {
             }
             compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 1 }
             compose.runOnIdle {
-                assertEquals(originalSettings, settings.toMap())
+                // Main's other engines now seed their own bag entries (shoal.patch.*, patch.OVEN.*); this
+                // test is about EMBOUCHURE's keys and the original ones staying untouched while unread.
+                assertEquals(originalSettings, settings.filterKeys { it in originalSettings || "EMBOUCHURE" in it })
                 assertFalse("patch.EMBOUCHURE.BRASS" in settings)
             }
             reenter()
             compose.waitUntil(timeoutMillis = 5_000) { reads.get() >= 2 }
             compose.runOnIdle {
-                assertEquals(originalSettings, settings.toMap())
+                // Main's other engines now seed their own bag entries (shoal.patch.*, patch.OVEN.*); this
+                // test is about EMBOUCHURE's keys and the original ones staying untouched while unread.
+                assertEquals(originalSettings, settings.filterKeys { it in originalSettings || "EMBOUCHURE" in it })
                 assertFalse("patch.EMBOUCHURE.BRASS" in settings)
             }
             releaseRead.countDown()

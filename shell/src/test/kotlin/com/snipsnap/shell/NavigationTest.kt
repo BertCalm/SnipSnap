@@ -68,6 +68,28 @@ class NavigationTest {
     }
 
     @Test
+    fun `the gear's benches name where back goes, not BACK`() {
+        val nav = Navigation()
+        nav.open(Bench.SETUP)
+        assertEquals("◄ SHELF", nav.backChip, "the shelf has no stage: its place")
+        nav.closeBench()
+        nav.go(Place.PROJECT)
+        nav.stage(Stage.BEAT)
+        nav.open(Bench.HELP)
+        assertEquals("◄ BEAT", nav.backChip, "a stage is a more exact place")
+        nav.closeBench()
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.HELP)
+        assertEquals("◄ PROJECT", nav.backChip, "under a bench: the place, as a long bench name will not fit the chip")
+        nav.closeBench()
+        nav.closeBench()
+        nav.open(Bench.SETUP)
+        nav.open(Bench.HELP)
+        assertEquals("◄ SETUP", nav.backChip, "HELP from SETUP goes back to SETUP")
+        assertTrue(Bench.SETUP.backChip.startsWith("◄ ") && Bench.HELP.backChip.startsWith("◄ "), "the bench's own is still a back chip")
+    }
+
+    @Test
     fun `benches stack and a back chip closes the top one`() {
         val nav = Navigation()
         nav.go(Place.PROJECT)

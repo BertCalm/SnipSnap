@@ -16,6 +16,7 @@ class PresetsTest {
     fun `forVoice forwards every registered engine by name`() {
         for (voice in ShoalVoice.entries) assertEquals(ShoalPresets.forVoice(voice), Presets.forVoice("SHOAL", voice.name))
         assertEquals(ThumpPresets.forVoice(ThumpVoice.KICK), Presets.forVoice("THUMP", "KICK"))
+        for (voice in OnsetVoice.entries) assertEquals(OnsetPresets.forVoice(voice), Presets.forVoice("ONSET", voice.name))
         assertEquals(TinesPresets.forVoice(TinesVoice.BELL), Presets.forVoice("TINES", "BELL"))
         assertEquals(PluckPresets.forVoice(PluckVoice.HARP), Presets.forVoice("PLUCK", "HARP"))
         assertEquals(VelvetPresets.forVoice(VelvetVoice.BASS), Presets.forVoice("VELVET", "BASS"))
@@ -30,6 +31,7 @@ class PresetsTest {
         assertEquals(ForkPresets.forVoice(ForkVoice.TINE), Presets.forVoice("FORK", "TINE"))
         assertEquals(BorePresets.forVoice(BoreVoice.FLUTE), Presets.forVoice("BORE", "FLUTE"))
         assertEquals(BorePresets.forVoice(BoreVoice.SAX), Presets.forVoice("BORE", "SAX"))
+        assertEquals(ObbligatoPresets.all(), Presets.forVoice("OBBLIGATO", "AIR_REED"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.CELLO), Presets.forVoice("ARCO", "CELLO"))
         assertEquals(ArcoPresets.forVoice(ArcoVoice.ERHU), Presets.forVoice("ARCO", "ERHU"))
         for (voice in MercuryVoice.entries) assertEquals(MercuryPresets.forVoice(voice), Presets.forVoice("MERCURY", voice.name))
@@ -48,20 +50,30 @@ class PresetsTest {
         for (voice in PitchwheelVoice.entries) assertEquals(PitchwheelPresets.forVoice(voice), Presets.forVoice("PITCHWHEEL", voice.name))
         for (voice in LacquerVoice.entries) assertEquals(LacquerPresets.forVoice(voice), Presets.forVoice("LACQUER", voice.name))
         for (voice in TangleVoice.entries) assertEquals(TanglePresets.forVoice(voice), Presets.forVoice("TANGLE", voice.name))
-        for (voice in EmbouchureVoice.entries) assertEquals(EmbouchurePresets.forVoice(voice), Presets.forVoice("EMBOUCHURE", voice.name))
+        for (voice in FlockVoice.entries) assertEquals(FlockPresets.forVoice(voice), Presets.forVoice("FLOCK", voice.name))
+        for (voice in OverlapTopology.entries) assertEquals(OverlapFactoryPresets.forVoice(voice), Presets.forVoice("OVERLAP", voice.name))
+        for (voice in EmbouchureVoice.entries) assertEquals(
+            EmbouchurePresets.forVoice(voice) + EmbouchurePresets.experimental().filter { it.voice == voice },
+            Presets.forVoice("EMBOUCHURE", voice.name),
+        )
         for (voice in BellowsVoice.entries) assertEquals(BellowsPresets.forVoice(voice), Presets.forVoice("BELLOWS", voice.name))
         for (voice in MurmurVoice.entries) assertEquals(MurmurPresets.forVoice(voice), Presets.forVoice("MURMUR", voice.name))
         for (voice in OspreyVoice.entries) assertEquals(OspreyPresets.forVoice(voice), Presets.forVoice("OSPREY", voice.name))
         for (voice in RevelVoice.entries) assertEquals(RevelPresets.forVoice(voice), Presets.forVoice("REVEL", voice.name))
         for (voice in SpoolVoice.entries) assertEquals(SpoolPresets.forVoice(voice), Presets.forVoice("SPOOL", voice.name))
         for (voice in PrismVoice.entries) assertEquals(PrismPresets.forVoice(voice), Presets.forVoice("PRISM", voice.name))
+        for (voice in OrigamiVoice.entries) assertEquals(OrigamiPresets.forVoice(voice), Presets.forVoice("ORIGAMI", voice.name))
         for (voice in AlloyVoice.entries) assertEquals(AlloyPresets.forVoice(voice), Presets.forVoice("ALLOY", voice.name))
         for (voice in ContourVoice.entries) assertEquals(ContourPresets.forVoice(voice), Presets.forVoice("CONTOUR", voice.name))
         for (voice in StoopVoice.entries) assertEquals(StoopPresets.forVoice(voice), Presets.forVoice("STOOP", voice.name))
         for (voice in SkitterVoice.entries) assertEquals(SkitterPresets.forVoice(voice), Presets.forVoice("SKITTER", voice.name))
         for (voice in RelayVoice.entries) assertEquals(RelayPresets.forVoice(voice), Presets.forVoice("RELAY", voice.name))
+        for (material in OrphicaMaterial.entries) assertEquals(OrphicaPresets.forVoice(material), Presets.forVoice("ORPHICA", material.name))
         for (voice in RegistersVoice.entries) assertEquals(RegistersPresets.forVoice(voice), Presets.forVoice("REGISTERS", voice.name))
+        for (voice in OvenVoice.entries) assertEquals(OvenPresets.forVoice(voice), Presets.forVoice("OVEN", voice.name))
+        for (voice in CreaseVoice.entries) assertEquals(CreasePresets.patchesForVoice(voice), Presets.forVoice("CREASE", voice.name))
         for (voice in OpenSkyVoice.entries) assertEquals(OpenSkyPresets.forVoice(voice), Presets.forVoice("OPENSKY", voice.name))
+        for (voice in VentVoice.entries) assertEquals(VentKitPresets.forVoice(voice), Presets.forVoice("VENT", voice.name))
     }
 
     /**
@@ -81,6 +93,10 @@ class PresetsTest {
             for (voice in PatchTypes.voicesOf(type)) {
                 val filed = all.filter { it.engine == engine && it.voiceName == voice }
                 assertEquals(filed, Presets.forVoice(engine, voice), "$engine/$voice: forVoice disagrees with the presets all() files under it")
+                PatchTypes.PROTOTYPE_VOICES[engine]?.let { provisional ->
+                    assertEquals(voice in provisional, filed.isEmpty(),
+                        "$engine/$voice: only its explicitly named prototype voices may be absent")
+                }
             }
         }
 
@@ -103,11 +119,18 @@ class PresetsTest {
             val roster = rosterClass(engine)
             assertTrue(runCatching { Class.forName(roster) }.isSuccess, "$engine is listed as a prototype but has no $roster to audition")
         }
+        for ((engine, voices) in PatchTypes.PROTOTYPE_VOICES) {
+            assertTrue(engine in rostered && engine !in PatchTypes.PROTOTYPES && engine !in PatchTypes.ROSTERLESS)
+            val type = PatchTypes.all.single { PatchTypes.engineOf(it) == engine }
+            assertTrue(voices.isNotEmpty() && PatchTypes.voicesOf(type).containsAll(voices))
+        }
     }
 
     @Test
     fun `forVoice returns empty for an unknown voice on a real engine`() {
         assertTrue(Presets.forVoice("THUMP", "NOT A VOICE").isEmpty())
+        assertTrue(Presets.forVoice("OBBLIGATO", "NOT A VOICE").isEmpty())
+        assertTrue(Presets.forVoice("OVERLAP", "NOT A VOICE").isEmpty())
     }
 
     @Test
@@ -126,16 +149,41 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = ThumpPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
-            BorePresets.all() + ArcoPresets.all() + MercuryPresets.all() +
+            BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +
             FlotillaPresets.all() + AerostatPresets.all() + TremorPresets.all() +
             CisternPresets.all() + CircuitPresets.all() + ThawPresets.all() +
             MurkPresets.all() + NimbusPresets.all() + CorollaPresets.all() + UndertowPresets.all() +
-            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + RelayPresets.all() + EmbouchurePresets.all() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all()
+            SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() + RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + ShoalPresets.all() + OpenSkyPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all()
         assertEquals(expected.size, Presets.all().size)
         assertEquals(expected.toSet(), Presets.all().toSet())
+    }
+
+    @Test
+    fun `OVERLAP factory lookup preserves the approved musical notes velocities and model`() {
+        data class Identity(val name: String, val topology: OverlapTopology, val midi: Int, val velocity: Float, val model: Int = 2)
+        val expected = listOf(
+            Identity("GLASS THREAD", OverlapTopology.TREFOIL, 60, .85f),
+            Identity("HOLLOW PIN", OverlapTopology.TORUS, 60, .75f),
+            Identity("CUP STRIKE", OverlapTopology.MIRROR, 48, .90f),
+            Identity("CHORD SEED", OverlapTopology.SELF, 48, .80f),
+            Identity("OPEN WEAVE", OverlapTopology.SELF, 48, .70f),
+            Identity("FIFTH CLOUD", OverlapTopology.TREFOIL, 48, .75f),
+            Identity("SILVER VEIL", OverlapTopology.MIRROR, 60, .70f),
+            Identity("LOW HALO", OverlapTopology.TORUS, 48, .80f),
+            Identity("LOOSE TIDE", OverlapTopology.SELF, 48, .75f),
+            Identity("COMMON TIDE", OverlapTopology.TREFOIL, 48, .80f),
+            Identity("PAIR PULSE", OverlapTopology.MIRROR, 60, .75f),
+            Identity("CIRCUIT RUN", OverlapTopology.TORUS, 48, .85f),
+        )
+        val factory = Presets.all().filterIsInstance<OverlapPatch>()
+        assertEquals(OverlapMusicalBank.all().map { it.patch }, factory)
+        assertEquals(expected, factory.map { Identity(it.name, it.topology, it.midi, it.velocity, it.model) })
+        for (patch in factory) {
+            assertEquals(patch, Presets.byName(OverlapPatch.ENGINE, patch.voiceName, patch.name))
+        }
     }
 
     @Test

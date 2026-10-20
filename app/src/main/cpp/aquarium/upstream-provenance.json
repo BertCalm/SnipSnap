@@ -1,0 +1,11 @@
+{
+  "repository": "https://github.com/BertCalm/XO_OX-XOmnibus",
+  "commit": "a9bdc7803d899f0b1688fe0c0abc4ce481a76c3e",
+  "license": "MIT",
+  "files": {
+    "LICENSE": "0ca569d7651d81c18baeea0981e999d351a6e6187fa91c119dd2c13356523f55",
+    "Source/DSP/Effects/AquaticFXSuite.h": "506e53605b2182861cccdc0fee66567f368a710f2e586dd46bd197d480bd212d",
+    "Source/DSP/Effects/MultibandCompressor.h": "294a292ce6c9a22e73b630929fee373c9ababafe504469c45d9fbcfcf0b18844",
+    "Source/DSP/FastMath.h": "084f8df65d82cc3cfe11b0f3d9efc22ae3dbf4c356d5877ae75fce54929a8008"
+  }
+}

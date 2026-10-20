@@ -208,9 +208,22 @@ object Skin {
 
     // ---------- voices ----------
 
-    private fun kick(m: Map<String, Float>, rate: Int): FloatArray {
-        val fundamental = Dsp.expMap(m.getValue("TUNE"), 45f, 75f)
-        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.9f)
+    /** Unfinished ONSET source; beater is suppressed in favor of its shared transient. */
+    internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, body: Float, edge: Float, rate: Int): FloatArray =
+        kick(defaults(SkinVoice.KICK) + mapOf("CLICK" to 0f, "DROP" to snap,
+            "TONE" to ((1f - body) * (0.35f + 0.65f * edge))), rate, rootHz, t60Seconds,
+            dropDepth = snap * 1.5f, dropSpeed = 90.0)
+
+    internal fun onsetHat(baseHz: Float, t60Seconds: Float, body: Float, edge: Float, rate: Int, open: Boolean = false): FloatArray =
+        hat(defaults(SkinVoice.HAT_CLOSED) + mapOf("TONE" to edge, "RING" to (0.35f + 0.6f * body)),
+            open = open, rate = rate, rootHz = baseHz, decaySeconds = t60Seconds)
+
+    private fun kick(
+        m: Map<String, Float>, rate: Int, rootHz: Float? = null, decaySeconds: Float? = null,
+        dropDepth: Float? = null, dropSpeed: Double = 30.0,
+    ): FloatArray {
+        val fundamental = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 45f, 75f)
+        val t60 = decaySeconds ?: Dsp.expMap(m.getValue("DECAY"), 0.12f, 0.9f)
         val tone = m.getValue("TONE")
         // CLICK: the beater. 0.5 was the only one (level 0.5 through a
         // 1400 Hz lowpass); below, a softer felt fading to no click at all;
@@ -222,7 +235,7 @@ object Skin {
         val clickHz = if (clickMacro < 0.5f) 1400f else 1400f * (1f + (clickMacro - 0.5f) * 4f)
         // DROP: the head's pitch dip (see modalBody) - up to 90% sharp at
         // the strike, settling at 30/s, a hard hit on a loose kick.
-        val drop = m.getValue("DROP") * 0.9f
+        val drop = dropDepth ?: m.getValue("DROP") * 0.9f
         // TONE balances the shell's fundamental against two inharmonic
         // overtones (1.59x/2.14x, circular-membrane ratios) — up, and the
         // hit reads as a smaller, rattlier shell rather than a bigger one.
@@ -239,7 +252,7 @@ object Skin {
             seconds = t60 * 1.4f,
             rate = rate,
             drop = drop,
-            dropRate = 30.0,
+            dropRate = dropSpeed,
         )
         // The mallet strike itself: a brief low-passed noise click, same
         // role as Thump.kick's own CLICK burst, layered under the body.
@@ -314,9 +327,12 @@ object Skin {
 
     private val HAT_RATIOS = floatArrayOf(1f, 1.342f, 1.681f, 1.940f, 2.318f, 2.703f)
 
-    private fun hat(m: Map<String, Float>, open: Boolean, rate: Int): FloatArray {
-        val base = Dsp.expMap(m.getValue("TUNE"), 5200f, 8200f)
-        val t60 = if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
+    private fun hat(
+        m: Map<String, Float>, open: Boolean, rate: Int,
+        rootHz: Float? = null, decaySeconds: Float? = null,
+    ): FloatArray {
+        val base = rootHz ?: Dsp.expMap(m.getValue("TUNE"), 5200f, 8200f)
+        val t60 = decaySeconds ?: if (open) Dsp.expMap(m.getValue("DECAY"), 0.25f, 1.0f)
         else Dsp.expMap(m.getValue("DECAY"), 0.04f, 0.16f)
         val tone = m.getValue("TONE")
         val spread = Dsp.lin(tone, 0.9f, 1.25f)

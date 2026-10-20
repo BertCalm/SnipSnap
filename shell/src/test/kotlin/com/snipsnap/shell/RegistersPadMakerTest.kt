@@ -7,6 +7,7 @@ import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.mpc3.Acvs
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
+import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
@@ -23,7 +24,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Exercise actual exported files, phone playback and the attack-to-held transition. */
+/** Exercise actual exported files, reference playback and the attack-to-held transition. */
 class RegistersPadMakerTest {
     private val dest = java.nio.file.Files.createTempDirectory("registers-pad").toFile()
 
@@ -37,17 +38,31 @@ class RegistersPadMakerTest {
         val notes: List<KeyNote> by lazy {
             RegistersPadMaker.zoneMidis(spec).map { RegistersPadMaker.renderZone(spec, it) }
         }
+        // Keep this registration straight so the exported reference player's pitch can be
+        // measured independently of a deliberate rank detune or vibrato.
+        val transistorPatch = RegistersPatch("COMPACT KEYS", RegistersVoice.TRANSISTOR,
+            Registers.defaults(RegistersVoice.TRANSISTOR) + mapOf("SPREAD" to 0f, "MOTION" to 0f),
+            midi = 81, velocity = .7f, model = 4)
+        val transistorSpec = RegistersPadMaker.Spec(transistorPatch, releaseSeconds = .4f)
+        val transistorNotes: List<KeyNote> by lazy {
+            val saved = PadRecipe.fromJsonText(PadRecipe(transistorPatch).toJsonText()).patch as RegistersPatch
+            assertEquals(transistorPatch, saved)
+            RegistersPadMaker.zoneMidis(transistorSpec).map {
+                RegistersPadMaker.renderZone(RegistersPadMaker.Spec(saved, .4f), it)
+            }
+        }
     }
 
     @Test
     fun `speaking attack survives while independently rendered held flow closes`() {
-        for (voice in RegistersVoice.entries) for (midi in listOf(48, 60, 69)) {
-            val recipe = patch.copy(voice = voice, macros = Registers.defaults(voice), midi = 24)
+        for (voice in RegistersVoice.entries) for (midi in listOf(48, 60, 72)) {
+            val recipe = patch.copy(voice = voice, macros = Registers.defaults(voice), midi = 24,
+                model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
             val note = if (voice == RegistersVoice.PIPE) notes[(midi - 48) / 3]
                 else RegistersPadMaker.renderZone(RegistersPadMaker.Spec(recipe), midi)
             val finite = recipe.copy(midi = midi).render().samples
-            val unchanged = (note.snip.sampleRate * .080).toInt()
-            assertContentEquals(finite.copyOf(unchanged), note.snip.samples.copyOf(unchanged), "$voice $midi keeps accepted attack")
+            val unchanged = (note.snip.sampleRate * .350).toInt()
+            assertContentEquals(finite.copyOf(unchanged), note.snip.samples.copyOf(unchanged), "$voice $midi keeps the complete authored onset")
             val held = Registers.probe(voice, recipe.macros + ("HOLD" to 1f), midi, recipe.velocity, recipe.model)
             assertTrue(requireNotNull(held.cycleError) < 1e-5, "independent held cycles recur")
             assertTrue(requireNotNull(held.seamError) < Keys.MAX_SEAM_ERROR)
@@ -65,17 +80,23 @@ class RegistersPadMakerTest {
 
     @Test
     fun `exported loops roots and release agree in XPM XTY and phone sidecar`() {
-        val program = RegistersPadMaker.export("PIPE AIR", spec, notes, dest)
+        assertExportedPackage("PIPE AIR", spec, notes)
+        assertExportedPackage("COMPACT KEYS", transistorSpec, transistorNotes)
+    }
+
+    private fun assertExportedPackage(name: String, spec: RegistersPadMaker.Spec, notes: List<KeyNote>) {
+        val directory = File(dest, name).apply { mkdirs() }
+        val program = RegistersPadMaker.export(name, spec, notes, directory)
         assertEquals((48..72 step 3).toList(), program.keygroups.map { it.rootNote }, "zone pitch replaces saved MIDI 81")
         assertEquals(39, program.keygroups.first().lowNote)
         assertEquals(81, program.keygroups.last().highNote)
         program.keygroups.zipWithNext().forEach { (a, b) -> assertEquals(a.highNote + 1, b.lowNote) }
-        val data = File(dest, "PIPE AIR_[TrackData]")
+        val data = File(directory, "${name}_[TrackData]")
         val xpm = data.listFiles { f -> f.extension == "xpm" }!!.single().readText()
-        val xty = Acvs.read(File(dest, "PIPE AIR.xty")).payloadText
+        val xty = Acvs.read(File(directory, "$name.xty")).payloadText
         assertTrue("<SliceLoop>1</SliceLoop>" in xpm)
         assertTrue("\"LoopMode\": 1" in xty)
-        val (sidecar, instrument) = InstrumentStore.list(dest).single()
+        val (sidecar, instrument) = InstrumentStore.list(directory).single()
         assertEquals(.4f, instrument.release)
         assertEquals(9, instrument.zones.size)
         instrument.zones.forEachIndexed { i, zone ->
@@ -88,10 +109,14 @@ class RegistersPadMakerTest {
             val sampler = assertNotNull(WavReader.readSmpl(File(sidecar.parentFile, zone.sample)))
             assertEquals(zone.rootNote, sampler.rootNote)
             assertEquals(zone.loopStartFrame, assertNotNull(sampler.loop).startFrame)
+            assertEquals(zone.frameCount, sampler.loop!!.endFrameExclusive)
             assertEquals(44_100, wav.sampleRate)
             assertEquals(1, wav.channels)
             assertEquals(zone.frameCount, wav.frameCount.toLong())
             assertTrue(wav.samples.all { it.isFinite() })
+            val expected = notes[i].snip.samples
+            assertTrue(expected.indices.all { abs(expected[it] - wav.samples[it]) < 2e-7f },
+                "$name zone ${zone.rootNote} preserves the rendered recipe within PCM24 rounding")
             assertTrue(Keys.seamError(wav.samples, zone.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)
             assertTrue(wav.peak() <= .991f)
         }
@@ -99,8 +124,14 @@ class RegistersPadMakerTest {
 
     @Test
     fun `export readback sounds at requested key and velocity until release`() {
-        RegistersPadMaker.export("PIPE AIR", spec, notes, dest)
-        val (sidecar, instrument) = InstrumentStore.list(dest).single()
+        assertReferencePlayback("PIPE AIR", spec, notes)
+        assertReferencePlayback("COMPACT KEYS", transistorSpec, transistorNotes)
+    }
+
+    private fun assertReferencePlayback(name: String, spec: RegistersPadMaker.Spec, notes: List<KeyNote>) {
+        val directory = File(dest, name).apply { mkdirs() }
+        RegistersPadMaker.export(name, spec, notes, directory)
+        val (sidecar, instrument) = InstrumentStore.list(directory).single()
         val loaded = InstrumentEngine.Loaded(instrument, 44_100,
             instrument.zones.map { WavReader.read(File(sidecar.parentFile, it.sample)).samples })
         for ((root, transpose) in listOf(48 to 0, 60 to 1, 72 to 0)) {
@@ -109,7 +140,7 @@ class RegistersPadMakerTest {
             val held = render(engine, 5.5f, 48_000)
             val estimate = assertNotNull(Pitch.detect(held, fromSec = 4.8f, windowSec = .5f))
             val cents = abs(1200 * ln(estimate.hz / Keys.midiHz(root + transpose).toDouble()) / ln(2.0))
-            assertTrue(cents < 4, "MIDI ${root + transpose} at phone 48 kHz is $cents cents away")
+            assertTrue(cents < 4, "$name MIDI ${root + transpose} in the reference player at 48 kHz is $cents cents away")
             assertTrue(rms(held.samples, 5.2f, 5.4f, 48_000, 2) > .005, "key still sounds after loop wraps")
             engine.noteOff(root + transpose)
             val release = render(engine, instrument.release + .1f, 48_000)

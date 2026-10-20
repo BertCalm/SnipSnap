@@ -261,7 +261,8 @@ object Bellows {
     }
 
     private fun synthesize(voice: BellowsVoice, m: Map<String, Float>, p: Plan, velocity: Float,
-                           gesture: BellowsGesture, playedMidi: Int, cancelled: () -> Boolean): FloatArray {
+                           gesture: BellowsGesture, playedMidi: Int, cancelled: () -> Boolean,
+                           keyAttack: Boolean = false): FloatArray {
         val n = p.frames * Dsp.OVERSAMPLE
         val warm = if (p.loop) n else 0
         val margin = if (p.loop) 2048 else 0
@@ -322,7 +323,7 @@ object Bellows {
             BellowsVoice.FOLK -> .065 + .08 * body
             BellowsVoice.WHEEL -> .16 + .12 * body
         }
-        var pressure = if (p.loop) pressureScale * gestureLevel(gesture, 0.0, motion, p.motionCycles, true) else 0.0
+        var pressure = if (p.loop && !keyAttack) pressureScale * gestureLevel(gesture, 0.0, motion, p.motionCycles, true) else 0.0
         var pressureStep = 0.0
         var dc = 0.0
         for (i in raw.indices) {
@@ -350,7 +351,7 @@ object Bellows {
                 main.coefficients(cutoff * (p.hz / 261.625565).pow(.30), if (voice == BellowsVoice.FOLK) 1.05 else 1.45)
             }
             pressure = (pressure + pressureStep).coerceIn(0.0, 1.4)
-            val env = if (p.loop) 1.0 else if (t < p.gate) smooth(t / attack) else
+            val env = if (keyAttack) smooth(i.toDouble() / INTERNAL_RATE / attack) else if (p.loop) 1.0 else if (t < p.gate) smooth(t / attack) else
                 exp(-6.907755 * (t - p.gate) / release) * (1.0 - smooth((t - p.gate - release) / .15))
             val vibCycles = if (p.loop) p.wheelCycles.toDouble() else p.gate * (3.0 + 6.0 * motion)
             // Phase displacement, rather than integrated frequency, has exact periodic closure.
@@ -443,6 +444,41 @@ object Bellows {
             raw[i] = flush(x).toFloat()
         }
         return raw
+    }
+
+    /**
+     * Continuous model-2 key source: real source attack, one complete settling period, then
+     * an independently synthesized sustain period. No rendered-note splice or seam fade.
+     * [BellowsKeys] validates the model and chooses melody versus fixed-tonic drone policy.
+     * The periodic pressure gesture continues through the attack, sustain and played wrap.
+     */
+    internal fun keyNote(voice: BellowsVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
+                         gesture: BellowsGesture, cancelled: () -> Boolean): KeyNote {
+        val m = settled(macros, voice) + mapOf("TUNE" to 0f, "HOLD" to 1f)
+        checkCancelled(cancelled)
+        val p = plan(voice, m, midi)
+        val native = synthesize(voice, m, p, velocity, gesture, midi, cancelled, keyAttack = true)
+        checkCancelled(cancelled)
+        val out = Dsp.decimate(native, Dsp.RATE).copyOf(p.frames * 2)
+        checkCancelled(cancelled)
+        val mean = out.asSequence().drop(p.frames).sumOf { it.toDouble() } / p.frames
+        for (i in out.indices) out[i] = (out[i] - mean.toFloat()) * RAW_SOURCE_HEADROOM
+
+        // Measure the settled region once. Apply that SAME scalar to the actual attack and
+        // every sustained frame, preserving their causal relative level and native timbre.
+        val reference = out.copyOfRange(p.frames, out.size)
+        var peakAt = 0
+        for (i in reference.indices) if (abs(reference[i]) > abs(reference[peakAt])) peakAt = i
+        val sourcePeak = reference[peakAt]
+        Dsp.levelTo(reference, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        val gain = if (abs(sourcePeak) > 1e-9f) reference[peakAt] / sourcePeak else 1f
+        val dynamics = velocity.pow(.60f)
+        for (i in out.indices) out[i] *= gain * dynamics
+        // An onset can have a larger crest than its settled reference. One whole-note scalar
+        // supplies headroom without altering the attack/sustain relationship or looping state.
+        Dsp.limitPeak(out, .99f * dynamics)
+        checkCancelled(cancelled)
+        return KeyNote(Snip(out, channels = 1, sampleRate = Dsp.RATE), p.frames.toLong())
     }
 
     /** Conditioned 44.1 kHz source before loudness matching; includes velocity's acoustic response. */
