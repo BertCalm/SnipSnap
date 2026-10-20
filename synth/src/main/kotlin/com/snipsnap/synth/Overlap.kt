@@ -2,6 +2,8 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.audio.DrumClass
+import kotlin.random.Random
 
 /** Six audible delay lines, with topology-specific scattering. */
 enum class OverlapTopology { SELF, TREFOIL, MIRROR, TORUS }
@@ -32,8 +34,19 @@ object Overlap {
     )
 
     fun rootMidi(topology: OverlapTopology): Int = 48
-    fun macrosFor(topology: OverlapTopology): List<MacroSpec> = OverlapV2.macrosFor(topology)
-    fun defaults(topology: OverlapTopology): Map<String, Float> = OverlapV2.defaults(topology)
+    fun macrosFor(topology: OverlapTopology, model: Int = MODEL_VERSION): List<MacroSpec> = when (model) {
+        1 -> OverlapV1.macrosFor(topology)
+        2 -> OverlapV2.macrosFor(topology)
+        else -> throw IllegalArgumentException("unsupported OVERLAP model $model")
+    }
+    fun defaults(topology: OverlapTopology, model: Int = MODEL_VERSION): Map<String, Float> =
+        macrosFor(topology, model).associate { it.name to it.default }
+
+    /** All renders have a finite ending, including maximum HOLD. */
+    fun drumClassFor(topology: OverlapTopology, macros: Map<String, Float> = emptyMap()): DrumClass = DrumClass.TONAL
+
+    fun scramble(topology: OverlapTopology, random: Random, temperature: Float = .35f): Map<String, Float> =
+        Dsp.scrambleNear(defaults(topology), (temperature.takeIf { it.isFinite() } ?: .35f).coerceIn(0f, 1f), random)
 
     fun probe(
         topology: OverlapTopology, macros: Map<String, Float> = emptyMap(),

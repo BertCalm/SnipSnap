@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f1eee6">
+  <meta name="description" content="Listen to the Chamber prototype for SnipSnap: a struck quartet shaped by wood, glass, and a room that answers back.">
+  <title>CHAMBER — SnipSnap listening room</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2712%27 fill=%27%23f1eee6%27/%3E%3Cpath d=%27M12 45V22l20-11 20 11v23L32 56Z M12 22l20 12 20-12 M32 34v22%27 fill=%27none%27 stroke=%27%23416c70%27 stroke-width=%273%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#first-listen">Skip to the sounds</a>
+  <header class="masthead wrap">
+    <a class="wordmark" href="#" aria-label="Chamber home">SNIPSNAP <span>/</span> CHAMBER</a>
+    <nav aria-label="Page navigation"><a href="#first-listen">Listen</a><a href="#comparisons">Explore</a><a href="#bench-notes">The experiment</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer">Source <span aria-hidden="true">↗</span></a></nav>
+    <span class="edition">ENGINE STUDY <span>001</span></span>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> A WORKING SOUND EXPERIMENT</p>
+        <h1 id="page-title">One strike.<br>Four <em>answers.</em></h1>
+        <p class="lede">A membrane, a bar, a cowbell, a triangle.<br>Then the room joins the instrument.</p>
+        <p class="hero-note">CHAMBER explores a pitched quartet inside a modeled room. Wood, glass, and placement shape how a single strike unfolds.</p>
+        <a class="text-link hero-link" href="#first-listen">Step into the listening room <span aria-hidden="true">↓</span></a>
+      </div>
+      <figure class="room-figure" aria-labelledby="room-caption">
+        <div class="figure-topline"><span>THE ROOM IS PART OF THE SOUND</span><span id="diagram-room-name">HYBRID</span></div>
+        <svg class="room-svg" viewBox="0 0 600 390" role="img" aria-labelledby="room-svg-title room-svg-desc">
+          <title id="room-svg-title">Four instruments in a mixed-material room</title>
+          <desc id="room-svg-desc">A conceptual cutaway showing four sound sources, a listener, and reflection paths from wood and glass surfaces. This is a schematic, not a room editor.</desc>
+          <defs>
+            <pattern id="woodgrain" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)"><path d="M0 0V12" stroke="#987751" stroke-width=".5" opacity=".35"/></pattern>
+            <pattern id="glasslines" width="18" height="18" patternUnits="userSpaceOnUse" patternTransform="rotate(32)"><path d="M0 0V18" stroke="#729c9b" stroke-width=".6" opacity=".3"/></pattern>
+          </defs>
+          <polygon class="wall wall-wood" points="74,123 300,27 300,204 74,300"/>
+          <polygon class="wall-texture" points="74,123 300,27 300,204 74,300" fill="url(#woodgrain)"/>
+          <polygon class="wall wall-glass" points="300,27 526,123 526,300 300,204"/>
+          <polygon points="300,27 526,123 526,300 300,204" fill="url(#glasslines)"/>
+          <polygon class="room-floor" points="74,300 300,204 526,300 300,389"/>
+          <path class="room-edges" d="M74 300V123L300 27L526 123V300L300 389Z M74 300L300 204L526 300 M300 27V204"/>
+          <path class="canopy" d="M74 181L300 85L526 181"/>
+          <g class="reflection-paths"><path d="M190 275L137 168L341 317"/><path d="M370 264L461 166L341 317"/><path d="M285 252L300 74L341 317"/></g>
+          <g class="instrument-node" transform="translate(190 275)"><ellipse rx="19" ry="8"/><path d="M-19 0V12Q0 23 19 12V0 M-19 12Q0 25 19 12"/><circle cy="-1" r="3"/><text x="-23" y="38">01</text></g>
+          <g class="instrument-node" transform="translate(285 252)"><path d="M-18-4L11-16L21-9L-8 3Z M-8 3V11L21-1V-9"/><path d="M-10 13V19M13 5V11"/><text x="-5" y="36">02</text></g>
+          <g class="instrument-node" transform="translate(370 264)"><path d="M-8-17L7-17L20 7Q2 17-17 7Z M-17 7Q2-2 20 7"/><text x="-8" y="38">03</text></g>
+          <g class="instrument-node" transform="translate(280 321)"><path d="M-18 8L0-23L20 8H-8"/><text x="-7" y="34">04</text></g>
+          <g class="listener-node" transform="translate(405 331)"><circle r="6"/><path d="M-11 12Q0 4 11 12"/><text x="19" y="8">YOU</text></g>
+          <text class="surface-label" x="121" y="140" transform="rotate(-23 121 140)">WOOD / BODY</text>
+          <text class="surface-label" x="348" y="103" transform="rotate(23 348 103)">GLASS / BRIGHTNESS</text>
+        </svg>
+        <figcaption id="room-caption"><span><i class="line-swatch"></i> Surface reflections</span><span>Conceptual cutaway · not to scale</span></figcaption>
+      </figure>
+    </section>
+
+    <div class="instrument-strip wrap" aria-label="The four sound sources">
+      <span class="strip-label">THE QUARTET</span>
+      <span><b>01</b> Membrane <small>the body</small></span>
+      <span><b>02</b> Bar <small>the pitch</small></span>
+      <span><b>03</b> Cowbell <small>the edge</small></span>
+      <span><b>04</b> Triangle <small>the air</small></span>
+    </div>
+
+    <section class="listening-section wrap" id="first-listen" aria-labelledby="first-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / START HERE</p><h2 id="first-title">A quartet.<br>Two different rooms.</h2></div><p>Start with these two rooms. Listen beyond the attack: where does the brightness linger, and what answers the quartet?</p></div>
+      <div class="listening-settings">
+        <div class="mode-setting"><span id="level-label">Listening level</span><div class="segmented" role="group" aria-labelledby="level-label"><button type="button" class="mode-button active" data-mode="matched" aria-pressed="true">Matched</button><button type="button" class="mode-button" data-mode="raw" aria-pressed="false">Raw</button></div></div>
+        <p id="normalization-note">Matched levels use the supplied audition gain. Raw preserves render levels.</p>
+      </div>
+      <div id="first-clips" class="first-clips" aria-live="polite"><p class="loading-copy">Opening the listening room…</p></div>
+      <p class="headphone-note"><span aria-hidden="true">◉</span> Headphones help reveal the tail. Begin at a comfortable volume. Only one clip plays at a time.</p>
+    </section>
+
+    <section class="comparison-section wrap" id="comparisons" aria-labelledby="compare-title">
+      <div class="section-heading"><div><p class="eyebrow">02 / CHANGE ONE THING</p><h2 id="compare-title">Listen for the difference.</h2></div><p>Rooms, source positions, and the returning energy. These comparisons make the experiment audible.</p></div>
+      <div class="filter-bar"><div class="filter-control"><label for="section-filter">Study</label><select id="section-filter"><option value="all">All studies</option></select></div><div class="filter-control search-control"><label for="clip-search">Find a sound</label><input id="clip-search" type="search" placeholder="Room, note, source…" autocomplete="off"></div><span id="clip-count" class="clip-count"></span></div>
+      <div id="comparison-clips"><p class="loading-copy">Loading comparisons…</p></div>
+      <p id="no-results" hidden>No sounds match this selection. Try another study or search.</p>
+    </section>
+
+    <section class="bench-section" id="bench-notes" aria-labelledby="bench-title"><div class="wrap bench-grid">
+      <div><p class="eyebrow">03 / ON THE BENCH</p><h2 id="bench-title">A prototype.<br>An open question.</h2><p id="manifest-summary">Can the relationship between four instruments and their room become a sound of its own?</p><p class="bench-detail">Each rendered note contains its own room. Playing several exported samples layers those recordings; it does not place new notes in one shared live room.</p></div>
+      <div class="bench-evidence"><h3>What this audition contains</h3><dl id="render-facts"><div><dt>Engine</dt><dd>CHAMBER prototype</dd></div></dl><div id="checks-panel"></div><div id="limitations-panel"></div></div>
+    </div></section>
+
+    <section class="takeaway-section wrap" aria-labelledby="takeaway-title"><div><p class="eyebrow">TAKE IT WITH YOU</p><h2 id="takeaway-title">Your ears. Your notes.</h2><p>Use each clip’s listening notes to record what you hear. Notes and ratings stay in this browser on this device. Export them to keep or share a copy.</p><div class="download-actions"><button type="button" id="export-notes" class="button button-dark">Export listening notes <span aria-hidden="true">↗</span></button><span id="note-count">No notes saved yet</span></div><p id="storage-notice" class="storage-notice" hidden>Browser storage is unavailable. Notes will remain here until you close or reload the page; export them to keep a copy.</p></div><div class="download-box"><span class="eyebrow">THE RENDER PACKAGE</span><h3>Keep listening.</h3><p>Download the WAV renders and the recipes behind them.</p><a id="zip-download" class="text-link" hidden>Starter listening pack <span aria-hidden="true">↓</span></a><a id="manifest-download" class="text-link" href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a></div></section>
+  </main>
+
+  <footer class="footer wrap"><span>SNIPSNAP / CHAMBER</span><span>A listening room for an engine in progress.</span><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer">Explore SnipSnap ↗</a></footer>
+
+  <aside class="transport" aria-label="Audio playback" id="transport" hidden><div class="transport-inner"><button id="transport-play" class="transport-play" type="button" aria-label="Play current clip">▶</button><div class="transport-track"><span id="transport-title">No sound selected</span><div class="transport-progress"><span id="elapsed">0:00</span><input id="seek" type="range" min="0" max="1000" value="0" step="1" aria-label="Playback position"><span id="duration">0:00</span></div></div><button id="transport-repeat" type="button" class="small-control" aria-pressed="false">Repeat</button><button id="transport-stop" type="button" class="small-control" title="Stop playback (Escape)">Stop <span aria-hidden="true">×</span></button></div></aside>
+  <p class="sr-only" id="audio-status" role="status" aria-live="polite"></p>
+  <div id="error-banner" class="error-banner wrap" role="alert" hidden></div>
+</body>
+</html>

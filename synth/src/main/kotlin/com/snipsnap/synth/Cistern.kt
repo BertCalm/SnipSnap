@@ -19,6 +19,7 @@ import kotlin.random.Random
 
 enum class CisternVoice { FIRST, DRIP, CASCADE, POOL, RIPPLE, RECOVERY }
 
+
 /**
  * A struck modal surface releases a finite suspended inventory. Landings excite
  * that same surface, add mass, and change its losses and contact compliance.
@@ -85,8 +86,8 @@ object Cistern {
     private fun profile(voice: CisternVoice): Profile = when (voice) {
         // A clear elastic note leads; the restrained field gives a few answers.
         CisternVoice.FIRST -> Profile(
-            doubleArrayOf(1.0, 1.58, 2.34, 3.08, 4.18, 5.40, 6.68, 7.96, 9.30, 10.60),
-            doubleArrayOf(1.08, 1.0, 1.125, 1.025, .9625, .825, .7625, .675, .5625, .50),
+            doubleArrayOf(1.0, 1.7776388834631178, 2.649528259898354, 3.509985754956849, 4.571651780264984, 5.692099788303083, 6.838128398911503, 7.979974937304001, 9.148770409186143, 10.295630140987),
+            doubleArrayOf(1.08, 1.0, 1.125, 1.025, 0.9625, 0.825, 0.7625, 0.675, 0.5625, 0.5),
             doubleArrayOf(1.0, .98, 1.02, .90, .86, .80, .72, .64, .58, .52),
             .78, 2.45, .26, 1.20, 2.3, 0.0,
             1.12, .78, .82, .65, .075,
@@ -95,8 +96,8 @@ object Cistern {
         )
         // Rounded, nearly harmonic drop notes outweigh the soft initiating hit.
         CisternVoice.DRIP -> Profile(
-            doubleArrayOf(1.0, 2.02, 3.01, 4.12, 5.07, 6.16, 7.20, 8.28, 9.36, 10.45),
-            doubleArrayOf(1.05, 1.326, .952, .799, .646, .527, .442, .357, .289, .238),
+            doubleArrayOf(1.0, 2.4617067250182343, 3.8794329482541645, 5.370288632839021, 6.754998149518622, 8.23164625090267, 9.67470929795826, 11.144505372604025, 12.614277624977182, 14.09077712548176),
+            doubleArrayOf(1.05, 1.6772720709533084, 1.204195332992119, 1.010663940189814, 0.646, 0.527, 0.442, 0.357, 0.289, 0.238),
             doubleArrayOf(1.0, 1.12, .98, .86, .74, .64, .56, .48, .42, .35),
             1.68, 3.20, .44, 1.10, 2.7, 0.0,
             .43, 1.22, 1.03, 1.15, .18,
@@ -105,8 +106,8 @@ object Cistern {
         )
         // A coarse surface exposes unequal partials as the chain spreads.
         CisternVoice.CASCADE -> Profile(
-            doubleArrayOf(1.0, 1.43, 2.07, 2.71, 3.46, 4.33, 5.36, 6.48, 7.76, 9.10),
-            doubleArrayOf(1.18, .86, .74, .98, .83, .78, .69, .58, .51, .44),
+            doubleArrayOf(1.0, 1.6911534525287764, 2.491987158875422, 3.681032463861192, 4.921381919745713, 6.2425956140054435, 7.678541528180987, 9.178235124467014, 10.788883167408942, 12.437845472588892),
+            doubleArrayOf(1.18, 0.86, 0.74, 0.98, 0.83, 0.78, 0.69, 0.58, 0.51, 0.44),
             doubleArrayOf(1.0, 1.12, .91, 1.15, .94, .85, .78, .66, .60, .52),
             1.01, 2.80, .30, 1.45, 3.0, 0.0,
             .91, 1.02, .80, .82, .11,
@@ -115,8 +116,8 @@ object Cistern {
         )
         // Nearby low modes and a broad wet contact give a heavy yielding skin.
         CisternVoice.POOL -> Profile(
-            doubleArrayOf(1.0, 1.29, 1.84, 2.46, 3.14, 3.91, 4.77, 5.72, 6.78, 7.92),
-            doubleArrayOf(1.06, 1.769, 1.189, .841, .6815, .5365, .4205, .348, .261, .203),
+            doubleArrayOf(1.0, 1.3910427743243556, 1.9183326093250879, 2.716615541441225, 3.54400902933387, 4.194639436232869, 5.349766350038102, 6.764613810115105, 7.811529939774922, 9.748846085563152),
+            doubleArrayOf(1.06, 2.237627672335145, 1.503979255176081, 1.0637902048806427, 0.6815, 0.5365, 0.4205, 0.348, 0.261, 0.203),
             doubleArrayOf(1.0, 1.30, 1.10, .88, .74, .62, .52, .44, .36, .30),
             1.26, 2.90, .50, 2.35, 4.2, .20,
             .83, 1.15, 1.28, 1.40, .20,
@@ -125,8 +126,8 @@ object Cistern {
         )
         // Light narrow impacts keep widely spaced high modes articulated.
         CisternVoice.RIPPLE -> Profile(
-            doubleArrayOf(1.0, 1.88, 2.76, 3.99, 5.27, 6.65, 8.14, 9.73, 11.44, 13.25),
-            doubleArrayOf(1.65, 1.02, .88, 1.10, .93, .85, .77, .66, .57, .48),
+            doubleArrayOf(1.0, 2.3748684174075834, 3.3226495451672298, 4.892851929090027, 6.49307323229917, 8.55277732669336, 10.28688485402651, 12.477179168385778, 14.349912891721678, 16.680827317612277),
+            doubleArrayOf(1.65, 1.02, 0.88, 1.1, 0.93, 0.85, 0.77, 0.66, 0.57, 0.48),
             doubleArrayOf(1.0, 1.24, 1.08, 1.20, 1.10, .98, .87, .78, .68, .60),
             1.20, 3.20, .24, .90, 1.7, 0.0,
             .93, .86, .56, .44, .055,
@@ -135,8 +136,8 @@ object Cistern {
         )
         // A loaded, dull onset gives way to clearer contacts as outlets empty.
         CisternVoice.RECOVERY -> Profile(
-            doubleArrayOf(1.0, 1.70, 2.54, 3.41, 4.43, 5.61, 6.92, 8.34, 9.92, 11.65),
-            doubleArrayOf(1.03, 1.247, 1.421, 1.2615, 1.102, .986, .8555, .754, .638, .5365),
+            doubleArrayOf(1.0, 1.8439088914585775, 2.760434748368452, 3.6932370625238775, 5.155579501860096, 6.699253689777691, 8.318653737234168, 10.00399920031984, 12.198360545581526, 14.481022063376605),
+            doubleArrayOf(1.03, 2.050547325959584, 2.336670208651619, 2.0743908995172538, 1.4326, 1.2818, 1.1121500000000002, 0.9802000000000001, 0.8294, 0.69745),
             doubleArrayOf(1.0, 1.08, 1.12, 1.0, .90, .81, .72, .64, .55, .48),
             1.06, 2.55, .29, 1.70, 3.8, .13,
             .94, 1.10, .91, .88, .14,
@@ -533,7 +534,7 @@ object Cistern {
                 }
                 modeMass[k] = nextMass
                 val sagCents = -min(26.0, wet * (12.0 + 7.0 * (1.0 - skin)))
-                val ratio = if (k == 0) 1.0 else profile.ratios[k] * (1.0 + (skin - .5) * (.20 + .015 * k))
+                val ratio = if (k == 0) 1.0 else profile.ratios[k] * sqrt((1.0 + (skin - .5) * (.20 + .015 * k)) * 2.0.pow((skin - .5) * (18.0 + 4.0 * k) / 1200.0))
                 val loadingPitch = if (k == 0) 2.0.pow(sagCents / 1200.0) else 1.0 / sqrt(1.0 + wet * (.15 + .055 * k))
                 val frequency = min(15_000.0, hz * ratio * loadingPitch)
                 val angle = 2.0 * PI * frequency / UP_RATE

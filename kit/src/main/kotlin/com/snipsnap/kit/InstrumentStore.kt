@@ -19,7 +19,7 @@ import java.io.File
 object InstrumentStore {
 
     const val SUFFIX = ".instrument.json"
-    const val VERSION = 1
+    const val VERSION = 2
 
     /**
      * The longest release a sidecar may ask for. Every writer in the shop
@@ -29,7 +29,16 @@ object InstrumentStore {
      */
     const val MAX_RELEASE_SECONDS = 30f
 
-    /** One keygroup zone, as the player needs it. */
+    /** One sample selected by an inclusive MPC velocity window. */
+    data class Layer(
+        val sample: String,
+        val frameCount: Long,
+        val loopStartFrame: Long,
+        val velStart: Int = 0,
+        val velEnd: Int = 127,
+    )
+
+    /** One pitch zone; the headline sample remains its hardest layer for older callers. */
     data class Zone(
         val lowNote: Int,
         val highNote: Int,
@@ -39,7 +48,15 @@ object InstrumentStore {
         val frameCount: Long,
         /** 0 = plays unlooped; otherwise the frame playback wraps back to (looping to the end). */
         val loopStartFrame: Long,
-    )
+        /** Empty on a v1 sidecar or a legacy code-built zone: its headline sample covers all velocities. */
+        val layers: List<Layer> = emptyList(),
+    ) {
+        val playableLayers: List<Layer>
+            get() = layers.ifEmpty { listOf(Layer(sample, frameCount, loopStartFrame)) }
+
+        /** Gaps stay silent, matching the exported MPC windows. */
+        fun layerFor(midiVelocity: Int): Layer? = playableLayers.firstOrNull { midiVelocity in it.velStart..it.velEnd }
+    }
 
     data class Instrument(
         val name: String,
@@ -61,6 +78,9 @@ object InstrumentStore {
 
         /** The lowest root the instrument has — where the grid opens. */
         val rootNote: Int get() = zones.minOf { it.rootNote }
+
+        /** Every layer must load, including soft samples that are not a zone's headline. */
+        val sampleFiles: List<String> get() = zones.flatMap { it.playableLayers }.map { it.sample }.distinct()
     }
 
     fun sidecar(destRoot: File, name: String): File = File(destRoot, "$name$SUFFIX")
@@ -68,7 +88,6 @@ object InstrumentStore {
     /** Write the sidecar for [program], whose samples live under [dataDirName] beside it. */
     fun write(destRoot: File, name: String, program: KeygroupProgram, dataDirName: String) {
         val zones = program.keygroups.map { kg ->
-            // The loudest layer is the one the phone plays: velocity zones are the hardware's.
             val layer = kg.layers.last()
             JsonValue.Obj(
                 linkedMapOf<String, JsonValue>(
@@ -78,6 +97,15 @@ object InstrumentStore {
                     "sample" to JsonValue.Str("$dataDirName/${layer.sampleName}.wav"),
                     "frames" to JsonValue.Num(layer.frameCount.toDouble()),
                     "loopStart" to JsonValue.Num(layer.loopStartFrame.toDouble()),
+                    "layers" to JsonValue.Arr(kg.layers.map { l ->
+                        JsonValue.Obj(linkedMapOf(
+                            "sample" to JsonValue.Str("$dataDirName/${l.sampleName}.wav"),
+                            "frames" to JsonValue.Num(l.frameCount.toDouble()),
+                            "loopStart" to JsonValue.Num(l.loopStartFrame.toDouble()),
+                            "velStart" to JsonValue.Num(l.velStart.toDouble()),
+                            "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
+                        ))
+                    }),
                 ),
             )
         }
@@ -93,7 +121,8 @@ object InstrumentStore {
     }
 
     /**
-     * Read a sidecar; throws [JsonException] on a shape it does not know - every v1 field is required, so a half-written file never reaches the shelf.
+     * Read v1 single-sample or v2 velocity-layer sidecars. Every field in the selected
+     * version is required, so an interrupted write cannot silently lose its soft layers.
      *
      * And on values no writer here produces, since a sidecar is also a file a
      * person can edit: a release that is not a length of time (negative,
@@ -105,7 +134,7 @@ object InstrumentStore {
     fun read(file: File): Instrument {
         val obj = Json.parse(file.readText()).obj()
         val version = obj["version"]?.int() ?: throw JsonException("instrument has no version")
-        if (version != VERSION) throw JsonException("unsupported instrument version $version")
+        if (version != 1 && version != VERSION) throw JsonException("unsupported instrument version $version")
         val name = obj["name"]?.str() ?: throw JsonException("instrument has no name")
         val releaseRaw = obj["release"]?.num() ?: throw JsonException("instrument has no release")
         if (!releaseRaw.isFinite() || releaseRaw < 0.0 || !releaseRaw.toFloat().isFinite()) {
@@ -115,6 +144,29 @@ object InstrumentStore {
         val folder = file.absoluteFile.parentFile
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
+            val layers = if (version == 1) emptyList() else {
+                val values = (o["layers"] as? JsonValue.Arr)?.items ?: throw JsonException("zone has no velocity layers")
+                if (values.size !in 1..8) throw JsonException("a keygroup zone has 1..8 velocity layers")
+                values.map { value ->
+                    val l = value.obj()
+                    val layer = Layer(
+                        sample = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
+                        frameCount = l["frames"]?.long() ?: throw JsonException("layer has no frame count"),
+                        loopStartFrame = l["loopStart"]?.long() ?: throw JsonException("layer has no loop start"),
+                        velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velocity start"),
+                        velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velocity end"),
+                    )
+                    if (layer.velStart !in MIDI || layer.velEnd !in MIDI || layer.velStart > layer.velEnd) {
+                        throw JsonException("invalid layer velocity window ${layer.velStart}..${layer.velEnd}")
+                    }
+                    validateSample(folder, layer.sample, layer.frameCount, layer.loopStartFrame)
+                    layer
+                }.also { ordered ->
+                    for (i in 1 until ordered.size) if (ordered[i].velStart <= ordered[i - 1].velEnd) {
+                        throw JsonException("velocity layers must ascend without overlap")
+                    }
+                }
+            }
             val zone = Zone(
                 lowNote = o["low"]?.int() ?: throw JsonException("zone has no low note"),
                 highNote = o["high"]?.int() ?: throw JsonException("zone has no high note"),
@@ -122,13 +174,18 @@ object InstrumentStore {
                 sample = o["sample"]?.str() ?: throw JsonException("zone has no sample"),
                 frameCount = o["frames"]?.long() ?: throw JsonException("zone has no frame count"),
                 loopStartFrame = o["loopStart"]?.long() ?: throw JsonException("zone has no loop start"),
+                layers = layers,
             )
             if (zone.lowNote !in MIDI || zone.highNote !in MIDI || zone.rootNote !in MIDI || zone.lowNote > zone.highNote) {
                 throw JsonException("zone ${zone.lowNote}..${zone.highNote} (root ${zone.rootNote}) isn't a range of MIDI notes")
             }
-            if (zone.frameCount <= 0) throw JsonException("zone sample has no frames: ${zone.frameCount}")
-            if (zone.loopStartFrame < 0) throw JsonException("zone loop start is negative: ${zone.loopStartFrame}")
-            if (!staysIn(folder, zone.sample)) throw JsonException("zone sample leaves the instrument's folder: '${zone.sample}'")
+            validateSample(folder, zone.sample, zone.frameCount, zone.loopStartFrame)
+            if (layers.isNotEmpty()) {
+                val hard = layers.last()
+                if (zone.sample != hard.sample || zone.frameCount != hard.frameCount || zone.loopStartFrame != hard.loopStartFrame) {
+                    throw JsonException("zone headline must match its hardest velocity layer")
+                }
+            }
             zone
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")
@@ -136,6 +193,12 @@ object InstrumentStore {
     }
 
     private val MIDI = 0..127
+
+    private fun validateSample(folder: File, sample: String, frames: Long, loopStart: Long) {
+        if (frames <= 0) throw JsonException("sample has no frames: $frames")
+        if (loopStart < 0 || loopStart >= frames) throw JsonException("loop start $loopStart is outside $frames frames")
+        if (!staysIn(folder, sample)) throw JsonException("sample leaves the instrument's folder: '$sample'")
+    }
 
     /**
      * Whether [sample] names a file under [folder]: relative, no `..`, and

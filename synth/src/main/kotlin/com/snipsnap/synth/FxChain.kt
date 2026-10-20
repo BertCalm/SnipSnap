@@ -8,12 +8,16 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
  * before phase, because the copies are made of the finished tone and the
  * sweep and the repeats then carry all three.
+ *
+ * wah after contour and before squash: a wah is the first pedal on the
+ * board, a filter in front of the compressor and the amp, and the
+ * compressor then levels what the sweep did to the note.
  *
  * valve after squash and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
@@ -65,6 +69,7 @@ data class FxChain(
     val contour: Map<String, Float>? = null,
     val ensemble: Map<String, Float>? = null,
     val valve: Map<String, Float>? = null,
+    val wah: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -111,10 +116,10 @@ data class FxChain(
         val maxFrames = input.frameCount + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
         if (output.frameCount <= maxFrames) return output
         val out = output.samples.copyOfRange(0, maxFrames * output.channels)
-        val fade = (0.01f * output.sampleRate).toInt() * output.channels
-        for (i in 0 until minOf(fade, out.size)) {
-            out[out.size - 1 - i] *= i.toFloat() / fade
-        }
+        // Per-FRAME through Dsp.fadeTail, like every other fade in the
+        // codebase: the per-sample ramp this used to run gave the two
+        // channels of a stereo frame different gains across the fade.
+        Dsp.fadeTail(out, ms = 10f, rate = output.sampleRate, channels = output.channels)
         return Snip(out, output.channels, output.sampleRate)
     }
 
@@ -189,6 +194,7 @@ data class FxChain(
             Section("spike", Spike.MACROS, { it.spike }, { c, m -> c.copy(spike = m) }, Spike::process),
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
+            Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
             Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),

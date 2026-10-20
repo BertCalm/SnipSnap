@@ -156,18 +156,32 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
-                // Every starter fills bank A; the A/B dip fills bank B with a twin of each.
-                val slots = if (starter.id == "lucky-dip-ab") 32 else 16
+                if (starter.id != StarterKits.CONFLUENCE_ID) {
+                    assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
+                }
+                // Most starters fill bank A. The wordless source bank has eight pads;
+                // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each.
+                val slots = when (starter.id) {
+                    "lucky-dip-ab" -> 32
+                    StarterKits.CONFLUENCE_ID -> 8
+                    "vent" -> 12
+                    else -> 16
+                }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
                 // Every recipe a starter writes reads back through the typed layer.
                 for (pad in kit.pads) {
                     if (pad.recipe != null) assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: its recipe does not parse")
                 }
                 // CLOUD's grain clouds (A07-A16) are render-only: GRAINS has no Patch type.
-                // Every other pad of every starter carries its recipe.
+                // CONFLUENCE carries source-bank provenance instead of typed Patch recipes.
+                // Every remaining pad of every starter carries its recipe.
                 val renderOnly = kit.pads.filter { it.recipe == null }.map { it.slot }
-                assertEquals(if (starter.id == "cloud") (7..16).toList() else emptyList(), renderOnly, "${starter.id}: pads with no recipe")
+                val expectedRenderOnly = when (starter.id) {
+                    "cloud" -> (7..16).toList()
+                    StarterKits.CONFLUENCE_ID -> (1..8).toList()
+                    else -> emptyList()
+                }
+                assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
             }
             oneEngineStarters[starter.id]?.let { engine ->
                 val model = KitBuilderModel.open(dir)
@@ -457,7 +471,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "cloud", "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "relay", "shoal", "embouchure", "bellows", "murmur", "osprey", "opensky", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "crease", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "trio", "osprey", "opensky", "vent", "skin", "cistern", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!
@@ -484,6 +498,10 @@ class StarterKitsTest {
         assertEquals("TANGLE", tangle.displayName)
         assertFalse(tangle.seeded, "TANGLE is a fixed dry audition kit")
         assertEquals(KeySpec.parse("Cminpent"), tangle.key)
+        val flock = StarterKits.byId("flock")!!
+        assertEquals("FLOCK", flock.displayName)
+        assertFalse(flock.seeded, "FLOCK repeats its saved finite performances")
+        assertEquals(KeySpec.parse("Cminpent"), flock.key)
         val embouchure = StarterKits.byId("embouchure")!!
         assertEquals("EMBOUCHURE", embouchure.displayName)
         assertFalse(embouchure.seeded, "EMBOUCHURE is a fixed dry audition kit")

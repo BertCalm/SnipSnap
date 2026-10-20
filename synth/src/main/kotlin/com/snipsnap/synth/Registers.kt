@@ -15,8 +15,8 @@ import kotlin.math.sqrt
 import kotlin.math.tanh
 import kotlin.random.Random
 
-/** Two original synthesis sketches for the organ/reed audition, not historical instrument models. */
-enum class RegistersVoice { PIPE, MUSETTE }
+/** Original organ/reed sketches rather than historical instrument emulations. */
+enum class RegistersVoice { PIPE, MUSETTE, TRANSISTOR }
 
 /**
  * Conditioned audio before loudness matching. Held evidence comes from separately synthesized
@@ -59,7 +59,7 @@ data class RegistersProbe(
  * the same loop, with the carrier adjusted by substantially less than a tenth of a cent.
  */
 object Registers {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val LEGACY_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
@@ -72,12 +72,19 @@ object Registers {
 
     fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL_VERSION..MODEL_VERSION
 
+    /** TRANSISTOR was introduced in model 4; an older recipe cannot silently acquire it. */
+    fun supportsModel(model: Int, voice: RegistersVoice): Boolean =
+        supportsModel(model) && (voice != RegistersVoice.TRANSISTOR || model >= 4)
+
     fun macrosFor(voice: RegistersVoice): List<MacroSpec> = when (voice) {
         RegistersVoice.PIPE -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COLOR", .28f),
             MacroSpec("AIR", .36f), MacroSpec("EDGE", .22f), MacroSpec("SPREAD", .12f),
             MacroSpec("MOTION", .16f), MacroSpec("HOLD", .35f))
         RegistersVoice.MUSETTE -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COLOR", .48f),
             MacroSpec("AIR", .40f), MacroSpec("EDGE", .23f), MacroSpec("SPREAD", .42f),
+            MacroSpec("MOTION", .18f), MacroSpec("HOLD", .35f))
+        RegistersVoice.TRANSISTOR -> listOf(MacroSpec("TUNE", .5f), MacroSpec("COLOR", .42f),
+            MacroSpec("AIR", .20f), MacroSpec("EDGE", .30f), MacroSpec("SPREAD", .12f),
             MacroSpec("MOTION", .18f), MacroSpec("HOLD", .35f))
     }
 
@@ -411,10 +418,12 @@ object Registers {
         cancelled: () -> Boolean = { false },
     ): RegistersProbe {
         checkCancelled(cancelled)
-        require(supportsModel(model)) { "unsupported REGISTERS model $model" }
+        require(supportsModel(model, voice)) { "unsupported REGISTERS $voice model $model" }
         require(midi in 24..96) { "REGISTERS audition supports MIDI 24..96, got $midi" }
         val m = settled(voice, macros)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
+        // Keep the accepted PIPE/MUSETTE arithmetic and seed path completely unchanged.
+        if (voice == RegistersVoice.TRANSISTOR) return RegistersTransistor.probe(m, midi, v, cancelled)
         val requestedHz = Keys.midiHz(midi).toDouble()
         val loop = if (isLoop(m.getValue("HOLD"))) planLoop(requestedHz) else null
         val hz = loop?.hz ?: requestedHz

@@ -26,6 +26,13 @@ oscillator, envelope and filter state and produces mono 44.1 kHz audio.
 | FILTER | Generic filter cutoff, restrained resonance and envelope amount |
 | DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
 | HOLD | Finite sustain length; the top step supplies settled loop-only material |
+| BODY | Root-to-overtone balance: rounded root emphasis through a fuller partial spectrum |
+| EDGE | Independent edge-layer level, from muted through the authored balance to a forward layer |
+| ATTACK | Amplitude, edge and filter attack times, approximately ⅛–8× the saved recipe |
+| DECAY | Amplitude decay/release and edge/filter decay times, approximately ¼–4× the saved recipe |
+| RATE | Independent scan clock, approximately ⅛–8×; MOTION still sets travel and must be nonzero |
+| RESO | Independent filter emphasis, without moving the cutoff control |
+| ENV | Filter contour depth, from no transient through the authored amount to a larger opening |
 
 Velocity changes excitation energy, spectral emphasis and filter response.
 Its energy gain enters before saturation and filtering; velocity zero returns
@@ -42,6 +49,18 @@ projection are saved with the patch. Fresh voices use those settings to give the
 body more overtone detail and the edge a distinct articulation. Older recipes
 missing these fields decode to neutral settings, including recipes without a
 configuration object; they retain their original rendered samples.
+
+The seven added controls are neutral at .5. Missing values also resolve to .5,
+with explicit neutral paths retaining the original model-1 arithmetic. Older
+seven-control patches need no migration. BODY changes the root/partial balance
+before the filter rather than adding distortion: its root contribution spans
+1.5× to .25×, while the existing partial spectrum spans .5× to 1×. EDGE reaches
+.8 input level at its upper endpoint. Envelope field limits and the eight-second
+finite budget bound ATTACK/DECAY. RATE retains the existing MOTION depth/rate
+curve and supplies an independent clock multiplier; HOLD fits 1–16 whole motion
+cycles per loop. RESO varies SVF damping from 2.5 to .4 around the authored value.
+ENV adds up to two filter octaves beyond the authored amount, bounded by the
+18 kHz cutoff ceiling. Settled HOLD has no attack or filter-contour gesture.
 
 Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
@@ -64,6 +83,14 @@ The percentages describe parameter weights; listening judges the resulting chara
 Finite attacks span 14.25–88 ms and the held recipe's nominal loop is 3.3 seconds.
 Earlier saved recipes continue to render from their complete saved settings.
 
+R05 responds to the limited audible change of R04 by widening the control surface
+and rebuilding the nine recipes. Five body-table families replace the preceding
+bank's heavy use of SOFT_SAW. Independent layer and articulation settings, octave
+edge intervals in selected recipes and a band-pass hollow recipe provide more
+distinct spectra and gestures while keeping modest drive. The audition isolates
+each added control at 0, .5 and 1 so its effect can be judged directly; these are
+rendered choices from the native engine. The nine recipes remain provisional.
+
 `SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
 and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
 starter catalog. Finite pads carry TONAL metadata; held pads carry LOOP metadata.
@@ -73,7 +100,13 @@ The CLI accepts the usual preset path with explicit note and velocity overrides:
 
 ```text
 ./gradlew :cli:run --args="synth CONTOUR KEY --preset 1 --midi 60 --velocity 0.4 --out /tmp/contour"
+./gradlew :cli:run --args="synth CONTOUR KEY --patch /tmp/contour-patch.json --macros BODY=.8,EDGE=.6 --out /tmp/contour"
 ```
+
+`--patch` replays a complete downloaded Contour patch, including its table pair,
+config and velocity. `--macros` accepts comma-separated control/value pairs in
+0..1; unknown, duplicate and non-finite values are rejected. `--midi` and a TUNE
+macro override cannot be combined because both set pitch.
 
 ## HOLD and export
 
@@ -102,12 +135,15 @@ is private to the repository owner's connected ChatGPT account.
 ```
 
 The generator writes a listening page, manifest and dry WAVs under
-`testkit/contour-audition/`. The complete matrix contains 477 cases:
+`testkit/contour-audition/`. The original matrix contains 477 cases:
 9 presets, 36 note/velocity voice checks, 150 macro-sweep points, 216 interaction
 points, 6 all-high corners, 36 diagnostic comparisons and 24 held loops.
-Supplying an archived previous round adds nine Previous/New pairs, bringing
-the current comparison pack to 495 cases. The R04 comparison uses the previously
-published rounded R03 voicing. Previous WAVs remain byte-identical;
+R05 adds 63 control-range cases: seven controls at three values, each in three
+saved recipe contexts. The bass filter-contour comparison uses Dark Table so
+its lower cutoff leaves room to hear ENV. Identical neutral recordings share WAVs. Supplying an archived
+previous round adds nine Previous/New pairs, bringing the comparison pack to
+558 cases. The R05 comparison uses the previously published R04 voicing.
+Previous WAVs remain byte-identical;
 current references reuse the new preset WAVs. The comparison records each
 version's complete patch, source fingerprints and audio hashes. The baseline
 directory must contain `baseline.json`, its original `source/` files, and the
@@ -115,7 +151,9 @@ verified `raw/` and `matched/` WAVs. Generation refuses a mismatched source,
 audio hash or level policy. An existing generated `comparison/` directory is a
 valid baseline for a later regeneration.
 
-The page opens with Revision A/B when comparisons are available. Each pair can
+The page opens with Control range when those recordings are available, with
+control and recipe selectors and three exact rendered steps. Each recording
+offers its complete patch JSON for CLI replay. Revision A/B pairs can
 load Previous into A and New into B. Both use the same note, velocity and
 level policy, with finite attacks played as rendered. The previous page added a
 12 ms entry ramp to every clip, which softened short pluck attacks; only settled
@@ -152,6 +190,11 @@ retaining intended modulation sidebands. Its worst folded-energy share is
 moving control folds 59.3% and proves the measurement detects aliases. The
 separate nonlinear-engine probe measures frozen high-register output and includes
 an intentionally aliased native-rate control.
+
+The added maximum-RATE check uses actual engine scan trajectories near 226 Hz,
+maximum layer travel and an independent 8× reference for the 4× source path.
+Its worst folded-energy share is `5.43e-9` (about −82.7 dB), below the −60 dB
+gate while preserving the intended motion sidebands.
 
 ## Table and filter policy
 
