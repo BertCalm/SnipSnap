@@ -1,5 +1,10 @@
 # Which document to trust
 
+**OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
+instrument, versioned recipes and the control-authority revision. Its audition
+compares the original and revised renderers directly. The revised sound is the
+working baseline, with five auditioned recipes in the synth picker.
+
 The tree has moved faster than some of the notes. When two of them
 disagree, this is the order.
 
@@ -55,6 +60,11 @@ roughly six-second loops at three FLOW settings, without changing the finite pre
 **Osprey.** [`OSPREY.md`](OSPREY.md) records the finite five-shore SWELL proof,
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
+
+**Scanned Chain.** [`SCANNED_CHAIN.md`](SCANNED_CHAIN.md) describes the editable
+render-to-pad voice, three presets, factory/drawn/sample shapes and complete
+patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
+and its published comparisons remain available separately.
 
 **Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
 first-listen prototype, complete room recipes, passive feedback model and

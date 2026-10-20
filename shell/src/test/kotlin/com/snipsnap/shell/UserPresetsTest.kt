@@ -33,6 +33,10 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.OhmVoice
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.VentPatch
@@ -87,6 +91,32 @@ class UserPresetsTest {
     /** A kick the player wrecked: SCRAMBLE's own odd floats, nothing a table would round. */
     private val wrecked = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(7)))
     private val snare = ThumpPatch("MY KICK", ThumpVoice.SNARE, Thump.defaults(ThumpVoice.SNARE))
+
+    @Test
+    fun `saved OHM encounters keep model seed and gesture on the shelf and in promotion`() {
+        val root = shelf()
+        try {
+            for (model in listOf(1, 2)) {
+                val source = OhmPatch("MY FAMILY", linkedMapOf("TOUCH" to .27f, "COMMUNE" to .73f),
+                    midi = 57, velocity = .35f, seed = -905, gesture = OhmGesture.GATHER, model = model)
+                UserPresets.save(root, source, nowMillis = model.toLong())
+                val back = UserPresets.read(root).single()
+                assertEquals(source, back.patch, "a restart retains the full encounter")
+                val line = UserPresets.rosterLine(back.patch)
+                assertEquals("p(OhmVoice.STRING, \"MY FAMILY\", \"TOUCH\" to 0.27f, \"COMMUNE\" to 0.73f)" +
+                    ".copy(midi = 57, velocity = 0.35f, seed = -905, gesture = OhmGesture.GATHER, model = $model),", line)
+                assertEquals("OhmPresets.kt\n  $line\n", UserPresets.renderAll(listOf(back)))
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `OHM factory names reserve only their own voice shelf`() {
+        assertEquals(UserPresets.Check.Factory("GATHER"), UserPresets.check(" gather ", "OHM", "STRING", emptyList()))
+        assertEquals(UserPresets.Check.Fresh("MY FAMILY"), UserPresets.check("my family", "OHM", "STRING", emptyList()))
+    }
 
     @Test
     fun `a saved preset survives a restart and re-renders the same bytes`() {
@@ -203,6 +233,7 @@ class UserPresetsTest {
                 "BELLOWS" to BellowsVoice.entries.map { it.name },
                 "MURMUR" to MurmurVoice.entries.map { it.name },
                 "OSPREY" to OspreyVoice.entries.map { it.name },
+                "OHM" to OhmVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -255,6 +286,11 @@ class UserPresetsTest {
             } else if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ScannedChainPatch) {
+                val promoted = scannedChainFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete shape, physical settings and render-state promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is VentPatch) {
@@ -725,6 +761,17 @@ class UserPresetsTest {
         return OpenSkyPatch.fromJsonText(recipe)
     }
 
+    private fun scannedChainFromRosterLine(line: String): ScannedChainPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ScannedChainPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return ScannedChainPatch.fromJsonText(recipe)
+    }
+
     private fun origamiFromRosterLine(line: String): OrigamiPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -771,6 +818,10 @@ class UserPresetsTest {
             } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == ScannedChainPatch.ENGINE) {
+                val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ScannedChainPatch::class.java, decoder.returnType,
+                    "SCANNED_CHAIN promotion names its public complete-JSON constructor")
             } else if (engine == ShoalPatch.ENGINE) {
                 // SHOAL promotes the complete constructor directly: passing a held harmonic
                 // recipe through the finite WOOD helper first would reject it or lose metadata.

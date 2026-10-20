@@ -12,6 +12,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
@@ -101,6 +102,7 @@ object Spread {
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
+        is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
