@@ -21,11 +21,25 @@
   const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
   const filePath = (file) => typeof file === 'string' ? file : file && (file.url || file.path) || '';
   const clipModel = (clip) => Number(clip.model) || 1;
-  const modelName = (clip) => clipModel(clip) >= 2 ? 'REVISED' : 'ORIGINAL';
+  const modelName = (clip) => ({1:'ORIGINAL',2:'CHARACTER PASS',3:'CURRENT'}[clipModel(clip)] || `MODEL ${clipModel(clip)}`);
   const modelLabel = (clip) => `${modelName(clip)} / MODEL ${clipModel(clip)}`;
+  const modelClass = (clip) => ({1:'original',2:'character',3:'current'}[clipModel(clip)] || 'character');
   const voiceIntents = {THREAD:'A focused root, with upper glass glints that shed quickly.',PULSE:'Articulated odd/even groups, with shifting accents.',CURL:'Upper harmonics bloom after the root, then release slowly.'};
+  const interactionIntents = {THREAD:'Follow the upper glints through paths with different arrival times.',PULSE:'Listen for each attack changing what the next bend lets through.',CURL:'Follow the slow bloom as the paths exchange the sound that remains.'};
+  const junctionGroups = ['junction','junction-presets','junction-pulse-bend','junction-pulse-collect','junction-hold','junction-mechanism'];
   const characterGroups = ['character','character-presets','character-context','character-sweep-bend','character-sweep-collect','character-mechanism'];
-  const groupPriority = (id) => { const index = characterGroups.indexOf(id); return index >= 0 ? index : String(id).startsWith('character') ? characterGroups.length : characterGroups.length + 1; };
+  const groupPriority = (id) => {
+    const junctionIndex = junctionGroups.indexOf(id);
+    if (junctionIndex >= 0) return junctionIndex;
+    if (String(id).startsWith('junction')) return junctionGroups.length;
+    const characterIndex = characterGroups.indexOf(id);
+    if (characterIndex >= 0) return junctionGroups.length + 1 + characterIndex;
+    return junctionGroups.length + characterGroups.length + (String(id).startsWith('character') ? 1 : 2);
+  };
+  const partnerAction = (clip, partner) => {
+    if ([clipModel(clip),clipModel(partner)].includes(3)) return clipModel(partner) === 3 ? 'current' : 'previous';
+    return modelName(partner).toLowerCase();
+  };
   const urlFor = (path) => path ? new URL(path, new URL('./', location.href)).href : '';
   const files = () => state.selected?.files || {};
   const currentPath = () => filePath(files()[state.track === 'mix' ? state.mode : state.track]);
@@ -51,13 +65,13 @@
   }
   function drawGroups() {
     const all = [{id:'all', title:'All renders'}, ...state.groups];
-    $('group-nav').innerHTML = all.map((group) => `<button type="button" class="group-button${String(group.id).startsWith('character') ? ' featured' : ''}" data-group="${escapeHtml(group.id)}" aria-pressed="${state.group === group.id}">${escapeHtml(group.title)}<small>${group.id === 'all' ? state.clips.length : state.clips.filter((clip) => clip.group === group.id).length}</small></button>`).join('');
+    $('group-nav').innerHTML = all.map((group) => `<button type="button" class="group-button${String(group.id).startsWith('junction') ? ' featured' : ''}" data-group="${escapeHtml(group.id)}" aria-pressed="${state.group === group.id}">${escapeHtml(group.title)}<small>${group.id === 'all' ? state.clips.length : state.clips.filter((clip) => clip.group === group.id).length}</small></button>`).join('');
   }
   function drawList() {
     const clips = visibleClips();
     $('visible-count').textContent = `${clips.length} ${clips.length === 1 ? 'render' : 'renders'}`;
     if (!clips.length) { $('clip-list').innerHTML = '<p class="clip-no-results">No renders match. Try another collection, voice, or search.</p>'; return; }
-    $('clip-list').innerHTML = clips.map((clip) => `<div class="clip-row${state.selected?.id === clip.id ? ' selected' : ''}" data-row="${escapeHtml(clip.id)}"><button type="button" class="clip-select" data-select="${escapeHtml(clip.id)}"${state.selected?.id === clip.id ? ' aria-current="true"' : ''}><span class="clip-row-title">${escapeHtml(clip.title)}</span><span class="clip-row-description">${escapeHtml(clip.description)}</span><span class="clip-row-meta"><span class="row-model${clipModel(clip) >= 2 ? ' revised' : ''}">${escapeHtml(modelLabel(clip))}</span> <span aria-hidden="true">·</span> ${escapeHtml(String(clip.voice || '').toUpperCase())} <span aria-hidden="true">·</span> ${escapeHtml(noteName(clip.midi))}${clip.loop ? ' · HELD' : ''}</span></button><button type="button" class="clip-play" data-play="${escapeHtml(clip.id)}" aria-label="Play ${escapeHtml(clip.title)}, ${escapeHtml(modelLabel(clip))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 8 5-8 5Z" fill="currentColor"/></svg></button></div>`).join('');
+    $('clip-list').innerHTML = clips.map((clip) => `<div class="clip-row${state.selected?.id === clip.id ? ' selected' : ''}" data-row="${escapeHtml(clip.id)}"><button type="button" class="clip-select" data-select="${escapeHtml(clip.id)}"${state.selected?.id === clip.id ? ' aria-current="true"' : ''}><span class="clip-row-title">${escapeHtml(clip.title)}</span><span class="clip-row-description">${escapeHtml(clip.description)}</span><span class="clip-row-meta"><span class="row-model ${modelClass(clip)}">${escapeHtml(modelLabel(clip))}</span> <span aria-hidden="true">·</span> ${escapeHtml(String(clip.voice || '').toUpperCase())} <span aria-hidden="true">·</span> ${escapeHtml(noteName(clip.midi))}${clip.loop ? ' · HELD' : ''}</span></button><button type="button" class="clip-play" data-play="${escapeHtml(clip.id)}" aria-label="Play ${escapeHtml(clip.title)}, ${escapeHtml(modelLabel(clip))}"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="m5 3 8 5-8 5Z" fill="currentColor"/></svg></button></div>`).join('');
     updateSteppers();
   }
   function updateSteppers() {
@@ -92,7 +106,9 @@
     if (m.durationSeconds != null) values.push(['DURATION', `${number(m.durationSeconds, 2)} s`]);
     if (m.actualHz != null || m.pitchHz != null) values.push(['PITCH', `${number(m.actualHz ?? m.pitchHz, 1)} Hz`]);
     if (m.rawPeak != null) values.push(['RAW PEAK', number(m.rawPeak, 4)]);
-    if (m.budget?.error != null) values.push(['BUDGET Δ', Number(m.budget.error).toExponential(1)]);
+    if (m.budget?.error != null) values.push([clipModel(clip) === 3 ? 'NOMINAL Δ' : 'BUDGET Δ', Number(m.budget.error).toExponential(1)]);
+    if (m.actualEnergyLedger?.maxJunctionError != null) values.push(['JUNCTION Δ', Number(m.actualEnergyLedger.maxJunctionError).toExponential(1)]);
+    if (m.actualEnergyLedger?.memorySpan != null) values.push(['MEMORY SPAN', number(m.actualEnergyLedger.memorySpan, 3)]);
     if (clip.loop && m.loopConverged != null) values.push(['LOOP', m.loopConverged ? 'converged' : 'not converged']);
     $('metrics').innerHTML = values.map(([label, value]) => `<div class="metric"><span class="metric-label">${label}</span><span class="metric-value">${escapeHtml(value)}</span></div>`).join('');
     $('metrics').hidden = !values.length;
@@ -113,13 +129,21 @@
     const group = state.groups.find((item) => item.id === clip.group);
     $('clip-group').textContent = group?.title || clip.group || 'Render';
     $('clip-index').textContent = `${String(state.clips.indexOf(clip) + 1).padStart(2, '0')} / ${state.clips.length}`;
-    $('clip-tags').innerHTML = `<span class="clip-tag model ${clipModel(clip) >= 2 ? 'revised' : 'original'}">${escapeHtml(modelLabel(clip))}</span><span class="clip-tag voice">${escapeHtml(String(clip.voice || 'FILAMENT').toUpperCase())}</span><span class="clip-tag">${escapeHtml(noteName(clip.midi))} · MIDI ${escapeHtml(clip.midi ?? '—')}</span><span class="clip-tag">VEL ${escapeHtml(number(clip.velocity))}</span>${clip.loop ? '<span class="clip-tag held">HELD / LOOPABLE</span>' : ''}`;
+    $('clip-tags').innerHTML = `<span class="clip-tag model ${modelClass(clip)}">${escapeHtml(modelLabel(clip))}</span><span class="clip-tag voice">${escapeHtml(String(clip.voice || 'FILAMENT').toUpperCase())}</span><span class="clip-tag">${escapeHtml(noteName(clip.midi))} · MIDI ${escapeHtml(clip.midi ?? '—')}</span><span class="clip-tag">VEL ${escapeHtml(number(clip.velocity))}</span>${clip.loop ? '<span class="clip-tag held">HELD / LOOPABLE</span>' : ''}`;
     const partner = state.clips.find((item) => item.id === clip.comparisonPartnerId);
     $('revision-comparison').hidden = !partner;
     $('compare-version').dataset.partnerId = partner?.id || '';
-    $('compare-version').firstChild.textContent = partner ? `Hear ${modelName(partner).toLowerCase()} ` : 'Compare version ';
-    $('compare-version').setAttribute('aria-label', partner ? `Hear ${modelName(partner).toLowerCase()}: ${partner.title}` : 'Compare version');
-    const intent = voiceIntents[String(clip.voice || '').toUpperCase()];
+    const action = partner ? partnerAction(clip, partner) : '';
+    $('compare-version').firstChild.textContent = partner ? `Hear ${action} ` : 'Compare version ';
+    $('compare-version').setAttribute('aria-label', partner ? `Hear ${action}, ${modelLabel(partner)}: ${partner.title}` : 'Compare version');
+    const fixedSource = Boolean(partner && clip.comparisonSourcePolicy === 'fixed-source' && partner.comparisonSourcePolicy === 'fixed-source');
+    $('comparison-heading').textContent = partner && [clipModel(clip),clipModel(partner)].includes(3) ? 'PREVIOUS / CURRENT' : 'ORIGINAL / CHARACTER PASS';
+    $('comparison-explanation').textContent = fixedSource
+      ? 'Same excitation; hear what the routes add. Your loudness mode stays selected.'
+      : clip.comparisonSourcePolicy === 'model-change'
+        ? 'Whole model change, including excitation. Your loudness mode stays selected.'
+        : 'Compare the saved versions. Your loudness mode stays selected.';
+    const intent = (clipModel(clip) === 3 ? interactionIntents : voiceIntents)[String(clip.voice || '').toUpperCase()];
     $('voice-intent').hidden = !intent || (clipModel(clip) < 2 && !partner);
     $('voice-intent').textContent = intent ? `Listening intent · ${intent}` : '';
     const failures = Array.isArray(clip.failures) ? clip.failures : clip.failures ? [clip.failures] : [];
@@ -140,6 +164,9 @@
       $(`${type}-details`).hidden = !path;
       $(`${type}-download`).href = path ? urlFor(path) : '#';
     }
+    const referencePath = filePath(clip.files?.referenceDiagnostics);
+    $('reference-diagnostics-download').hidden = !referencePath;
+    $('reference-diagnostics-download').href = referencePath ? urlFor(referencePath) : '#';
     drawTracks();
     drawList();
     loadAudio({play});
@@ -288,8 +315,8 @@
       state.clips = [...manifest.clips].sort((a, b) => {
         const groupOrder = groupPriority(a.group) - groupPriority(b.group);
         if (groupOrder) return groupOrder;
-        if (a.group === 'character' && b.group === 'character') {
-          const voices = ['THREAD','PULSE','CURL'];
+        if (a.group === b.group && ['junction','character'].includes(a.group)) {
+          const voices = a.group === 'junction' ? ['PULSE','THREAD','CURL'] : ['THREAD','PULSE','CURL'];
           return voices.indexOf(a.voice) - voices.indexOf(b.voice) || clipModel(b) - clipModel(a);
         }
         return 0;
@@ -307,11 +334,14 @@
       let initialId = '';
       try { initialId = new URLSearchParams(location.hash.slice(1)).get('clip') || ''; } catch { /* Use the first render. */ }
       const initialClip = state.clips.find((clip) => clip.id === initialId)
+        || state.clips.find((clip) => clip.id === 'junction_pulse_current')
+        || state.clips.find((clip) => clipModel(clip) === 3 && clip.group === 'junction')
+        || state.clips.find((clip) => clipModel(clip) === 3)
         || state.clips.find((clip) => clip.id === 'character_thread_revised')
         || state.clips.find((clip) => clipModel(clip) === 2 && clip.group === 'character')
         || state.clips.find((clip) => clipModel(clip) === 2)
         || state.clips[0];
-      if (initialClip.group === 'character') state.group = 'character';
+      if (['junction','character'].includes(initialClip.group)) state.group = initialClip.group;
       drawGroups();
       selectClip(initialClip.id);
       $('workstation').setAttribute('aria-busy', 'false');

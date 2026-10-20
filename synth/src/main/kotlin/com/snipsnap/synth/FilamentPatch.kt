@@ -25,7 +25,9 @@ data class FilamentPatch(
             "FILAMENT midi out of ${Filament.MIN_MIDI}..${Filament.MAX_MIDI}: $midi"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "FILAMENT velocity out of 0..1: $velocity" }
-        require(model == Filament.ORIGINAL_MODEL || model == Filament.MODEL_VERSION) { "unsupported filament model $model" }
+        require(model == Filament.ORIGINAL_MODEL || model == Filament.CHARACTER_MODEL || model == Filament.MODEL_VERSION) {
+            "unsupported filament model $model"
+        }
     }
 
     override val engine get() = ENGINE
@@ -55,7 +57,9 @@ data class FilamentPatch(
             fun optional(key: String) = obj[key]?.takeUnless { it is JsonValue.Null }
             // Omitted model always names the original rendering contract.
             val model = optional("model")?.int() ?: Filament.ORIGINAL_MODEL
-            if (model != Filament.ORIGINAL_MODEL && model != Filament.MODEL_VERSION) throw JsonException("unsupported filament model $model")
+            if (model != Filament.ORIGINAL_MODEL && model != Filament.CHARACTER_MODEL && model != Filament.MODEL_VERSION) {
+                throw JsonException("unsupported filament model $model")
+            }
             val configObject = optional("config")?.obj()
             fun configuration(key: String) = configObject?.get(key)?.takeUnless { it is JsonValue.Null }
             val profileName = configuration("profile")?.str() ?: FilamentProfile.VOICE.name

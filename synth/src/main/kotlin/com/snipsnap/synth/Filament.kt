@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import kotlin.math.PI
 import kotlin.math.abs
@@ -33,7 +34,7 @@ data class FilamentConfig(
  * takes escaped and absorbed POWER from what remains. Its audio branches use the square roots
  * of those powers. A collector is a unit-length vector over ALL its branches, including every
  * escaped site; the halo is a convex mixture of unity-peak bandpasses and its actual input.
- * These choices bound the linear network's energy gain; coherent peaks still need headroom.
+ * These choices bound the network's energy gain; coherent peaks still need headroom.
  *
  * Geometry is fixed during a render. The ordered network is compiled into equivalent delayed,
  * contractively filtered taps. A held source repeats exactly; the real delay, modal and DC state
@@ -41,8 +42,9 @@ data class FilamentConfig(
  * crossfaded to manufacture a seam. All mappings are first-listen musical hypotheses.
  */
 object Filament {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val ORIGINAL_MODEL = 1
+    const val CHARACTER_MODEL = 2
     const val MIN_MIDI = 36
     const val MAX_MIDI = 84
     private const val RATE = Dsp.RATE
@@ -59,6 +61,9 @@ object Filament {
         val collapsePaths: Boolean = false,
         val genericSpill: Boolean = false,
         val disableBend: Boolean = false,
+        val disableExchange: Boolean = false,
+        val freezeMemory: Boolean = false,
+        val referenceOversampling: Int = Dsp.OVERSAMPLE,
     )
 
     data class BranchTrace(
@@ -112,9 +117,37 @@ object Filament {
         val haloGainBound: Double? = null,
         val haloNormalization: Double? = null,
         val haloModes: List<HaloTrace> = emptyList(),
+        val allocationBasis: String = "feed-forward splitter allocation",
+        val exchange: ExchangeDiagnostics? = null,
     )
 
     data class HaloTrace(val frequencyHz: Double, val t60Seconds: Double, val weight: Double)
+
+    /** Actual waveform energy integrals, separately from the nominal no-exchange plan. */
+    data class ExchangeDiagnostics(
+        val enabled: Boolean,
+        val frozen: Boolean,
+        val oversampling: Int,
+        val sourceEnergy: Double,
+        val launchedEnergy: Double,
+        val retainedEnergy: Double,
+        val escapedEnergy: Double,
+        val absorbedEnergy: Double,
+        val uncollectedEnergy: Double,
+        val junctionInputEnergy: Double,
+        val junctionOutputEnergy: Double,
+        val maxJunctionError: Double,
+        val maxSplitError: Double,
+        val collectorThroughNorm: Double,
+        val collectorSpillNorm: Double,
+        val maxMemory: Double,
+        val meanMemory: Double,
+        val maxAngleRadians: Double,
+        val routeEnergyChanges: List<Double>,
+        val memorySpan: Double = 0.0,
+        val energyScope: String = "complete finite propagation",
+        val energyFrameCount: Long = 0,
+    )
 
     /** Every array is mono 44.1 kHz. Previous is the actual preceding cycle at samples' gain. */
     data class Probe(
@@ -181,7 +214,7 @@ object Filament {
         model: Int = MODEL_VERSION,
     ): Snip = Snip(inspect(voice, macros, midi, velocity, config, model = model).samples, channels = 1, sampleRate = RATE)
 
-    private data class TapSpec(
+    internal data class TapSpec(
         val delay: Double,
         val power: Double,
         val lowHz: Double,
@@ -190,7 +223,7 @@ object Filament {
         val dispersionHz: Double = 0.0,
         val dispersionMix: Double = 0.0,
     )
-    private data class Plan(
+    internal data class Plan(
         val branches: List<BranchTrace>,
         val sites: List<SiteTrace>,
         val endpoints: List<TapSpec>,
@@ -364,8 +397,8 @@ object Filament {
     }
 
     /** A fixed allpass changes a route's dispersion, never its pitch or magnitude response. */
-    private class Allpass(hz: Double) {
-        private val omega = TWO_PI * hz / HIGH_RATE
+    internal class Allpass(hz: Double, rate: Int = HIGH_RATE) {
+        private val omega = TWO_PI * hz / rate
         private val alpha = sin(omega) / 1.8
         private val a1 = -2.0 * cos(omega) / (1.0 + alpha)
         private val a2 = (1.0 - alpha) / (1.0 + alpha)
@@ -383,8 +416,8 @@ object Filament {
     }
 
     /** Double precision avoids cancellation in low-note, high-rate, long-tail biquads. */
-    private class HaloMode(hz: Double, t60: Double) {
-        val omega = TWO_PI * hz / HIGH_RATE
+    private class HaloMode(hz: Double, t60: Double, rate: Int = HIGH_RATE) {
+        val omega = TWO_PI * hz / rate
         private val q = max(.6, PI * hz * t60 / 6.907755278982137)
         private val alpha = sin(omega) / (2.0 * q)
         private val b = alpha / (1.0 + alpha)
@@ -440,8 +473,8 @@ object Filament {
         return maximum
     }
 
-    private class Dc {
-        private val alpha = 1.0 - exp(-TWO_PI * 2.0 / HIGH_RATE)
+    private class Dc(rate: Int = HIGH_RATE) {
+        private val alpha = 1.0 - exp(-TWO_PI * 2.0 / rate)
         var state = 0.0
         var maxState = 0.0; private set
         fun next(x: Double): Double {
@@ -451,10 +484,10 @@ object Filament {
         }
     }
 
-    private class Network(plan: Plan, hz: Double, collect: Double, voice: FilamentVoice, model: Int) {
+    private class Network(plan: Plan, hz: Double, collect: Double, voice: FilamentVoice, model: Int, rate: Int = HIGH_RATE) {
         private val endpoints = plan.endpoints.filter { it.power > 0.0 }.map { Tap(it, plan.retained) }
         private val leakage = plan.leakage.filter { it.power > 0.0 }.map { Tap(it, plan.escaped) }
-        private val ring = DoubleArray(ceil(plan.maxDelay * HIGH_RATE).toInt() + 4)
+        private val ring = DoubleArray(ceil(plan.maxDelay * rate).toInt() + 4)
         private var position = 0
         private val original = model == ORIGINAL_MODEL
         private val ratios = if (original) doubleArrayOf(1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0) else when (voice) {
@@ -475,11 +508,11 @@ object Filament {
             }
             HaloTrace(hz * ratios[i], t60, modeWeights[i])
         }
-        private val modes = Array(ratios.size) { i -> HaloMode(haloModes[i].frequencyHz, haloModes[i].t60Seconds) }
+        private val modes = Array(ratios.size) { i -> HaloMode(haloModes[i].frequencyHz, haloModes[i].t60Seconds, rate) }
         private val unnormalizedBound = if (original) 1.0 else modalGainBound(modes, modeWeights)
         val haloNormalization: Double? = if (original) null else .98 / unnormalizedBound
         val haloGainBound: Double? = if (original) null else unnormalizedBound * haloNormalization!!
-        private val dc = Array(4) { Dc() }
+        private val dc = Array(4) { Dc(rate) }
         private val collectNorm = sqrt((1.0 - collect).pow(2) + collect * collect)
         private val throughMix = (1.0 - collect) / collectNorm
         private val spillMix = collect / collectNorm
@@ -506,6 +539,19 @@ object Filament {
             raw = throughMix * through + spillMix * spill
             maxState = max(maxState, max(abs(input), max(abs(t), max(abs(e), max(abs(halo), abs(raw))))))
             position = (position + 1) % ring.size
+        }
+
+        /** Model 3 supplies genuinely propagated terminal channels to the unchanged collectors. */
+        fun fromJunction(input: Double, t: Double, e: Double) {
+            var halo = 0.0
+            for (i in modes.indices) halo += modeWeights[i] * modes[i].next(e)
+            halo *= haloNormalization!!
+            source = dc[0].next(input)
+            through = dc[1].next(t)
+            escaped = dc[2].next(e)
+            spill = dc[3].next(.20 * e + .80 * halo)
+            raw = throughMix * through + spillMix * spill
+            maxState = max(maxState, max(abs(input), max(abs(t), max(abs(e), max(abs(halo), abs(raw))))))
         }
 
         fun state(): DoubleArray {
@@ -561,8 +607,9 @@ object Filament {
         carrierCycles: Int,
         model: Int,
         config: FilamentConfig,
+        rate: Int = HIGH_RATE,
     ): FloatArray {
-        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config)
+        if (model != ORIGINAL_MODEL) return sourceTable2(voice, m, hz, effort, velocity, frames, loop, carrierCycles, config, rate)
         val inject = m.getValue("INJECT").toDouble()
         val hold = m.getValue("HOLD").toDouble()
         val weights = harmonicWeights(inject, voice, hz)
@@ -630,6 +677,7 @@ object Filament {
         loop: Boolean,
         carrierCycles: Int,
         config: FilamentConfig,
+        rate: Int = HIGH_RATE,
     ): FloatArray {
         val inject = m.getValue("INJECT").toDouble()
         val hold = if (loop) 1.0 else m.getValue("HOLD").toDouble()
@@ -649,7 +697,7 @@ object Filament {
         val phaseB = seeded.nextDouble() * TWO_PI
         val timing = .93 + .14 * seeded.nextDouble()
         val attack = (.004 + .018 * (1.0 - inject)) * (1.22 - .35 * velocity) * timing
-        val duration = frames.toDouble() / HIGH_RATE
+        val duration = frames.toDouble() / rate
         val pulseSeconds = .155 + .12 * (1.0 - inject)
         val pulseTau = .110 + .030 * (1.0 - inject)
         val pulseRates = doubleArrayOf(1.0 / pulseTau, 1.0 / pulseTau + 1.0 / attack,
@@ -662,7 +710,7 @@ object Filament {
         }
         val pulseGain = 1.0 - exp(-pulseSeconds / pulseTau)
         return FloatArray(frames) { i ->
-            val time = i.toDouble() / HIGH_RATE
+            val time = i.toDouble() / rate
             val phase = if (loop) TWO_PI * carrierCycles * i / frames else TWO_PI * hz * time
             val progress = i.toDouble() / frames
             var rootEnvelope: Double
@@ -728,7 +776,11 @@ object Filament {
         }
     }
 
-    private fun decimate(high: FloatArray): FloatArray = Dsp.decimate(high, RATE)
+    private fun decimate(high: FloatArray, oversampling: Int = Dsp.OVERSAMPLE): FloatArray =
+        if (oversampling == Dsp.OVERSAMPLE) Dsp.decimate(high, RATE) else {
+            val half = Resampler.resample(Snip(high, channels = 1, sampleRate = RATE * oversampling), RATE * Dsp.OVERSAMPLE)
+            Dsp.decimate(half.samples, RATE)
+        }
 
     fun inspect(
         voice: FilamentVoice,
@@ -740,18 +792,42 @@ object Filament {
         model: Int = MODEL_VERSION,
     ): Probe {
         require(model in ORIGINAL_MODEL..MODEL_VERSION) { "unsupported FILAMENT model $model" }
+        require(options.referenceOversampling in listOf(4, 8)) { "FILAMENT reference oversampling must be 4 or 8" }
+        require(model == MODEL_VERSION || options.referenceOversampling == Dsp.OVERSAMPLE) {
+            "FILAMENT reference oversampling is a model-3 diagnostic"
+        }
         require(midi in MIN_MIDI..MAX_MIDI) { "FILAMENT supports MIDI $MIN_MIDI..$MAX_MIDI (received $midi)" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FILAMENT velocity must be finite and in 0..1" }
         val start = System.nanoTime()
         val m = settled(voice, macros)
+        val oversampling = options.referenceOversampling
+        val highRate = RATE * oversampling
         val loop = isLoop(m.getValue("HOLD"))
         val nominalHz = 440.0 * 2.0.pow((midi - 69.0) / 12.0)
         val cycles = max(1, (nominalHz * if (model == ORIGINAL_MODEL) .42 else 2.3).roundToInt())
         val periodFrames = if (loop) (cycles * RATE / nominalHz).roundToInt() else 0
         val hz = if (loop) cycles.toDouble() * RATE / periodFrames else nominalHz
         val effort = if (velocity == 0f) 0.0 else .62 * velocity.toDouble().pow(.72)
-        val plan = prepare(voice, m, hz, velocity.toDouble(), config, options, model)
-        val network = Network(plan, hz, m.getValue("COLLECT").toDouble(), voice, model)
+        val prepared = prepare(voice, m, hz, velocity.toDouble(), config, options, model)
+        // Model 3's generic-send ablation delays every escaped leaf to one causal collection
+        // time. It must not read a post-junction signal before that junction has happened.
+        val plan = if (model == MODEL_VERSION && options.genericSpill) prepared.copy(
+            sites = prepared.sites.map { it.copy(delaySeconds = prepared.maxDelay) },
+            leakage = prepared.leakage.map { it.copy(delay = prepared.maxDelay) },
+        ) else prepared
+        val junction = if (model == MODEL_VERSION) FilamentJunction(plan, voice, m, hz, options, highRate) else null
+        val collectorPlan = if (junction == null) plan else plan.copy(endpoints = emptyList(), leakage = emptyList())
+        val network = Network(collectorPlan, hz, m.getValue("COLLECT").toDouble(), voice, model, highRate)
+        fun advance(input: Double) {
+            if (junction == null) network.next(input) else {
+                junction.next(input)
+                network.fromJunction(input, junction.through, junction.escaped)
+            }
+        }
+        fun snapshot(): DoubleArray {
+            val output = network.state()
+            return if (junction == null) output else output + junction.state()
+        }
         val preparationNanos = System.nanoTime() - start
         val synthesisStart = System.nanoTime()
         var previous: FloatArray? = null
@@ -760,6 +836,7 @@ object Filament {
         var seam: Double? = null
         var fullCycleError: Double? = null
         var stateError: Double? = null
+        var acceptedExchange: ExchangeDiagnostics? = null
         val output: List<FloatArray>
         if (!loop) {
             val sourceSeconds = if (model == ORIGINAL_MODEL) when (voice) {
@@ -771,29 +848,30 @@ object Filament {
                 FilamentVoice.PULSE -> 1.85 + 1.8 * m.getValue("HOLD")
                 FilamentVoice.CURL -> 2.35 + 1.7 * m.getValue("HOLD")
             }
-            val sourceFrames = (sourceSeconds * HIGH_RATE).roundToInt()
-            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), sourceFrames, false, 0, model, config)
-            val total = ceil((sourceSeconds + plan.maxDelay + 1.8 * plan.haloT60 + .08) * HIGH_RATE).toInt()
-            val capture = Cycle(total + (Dsp.OVERSAMPLE - total % Dsp.OVERSAMPLE) % Dsp.OVERSAMPLE)
+            val sourceFrames = (sourceSeconds * highRate).roundToInt()
+            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), sourceFrames, false, 0, model, config, highRate)
+            val total = ceil((sourceSeconds + plan.maxDelay + 1.8 * plan.haloT60 + .08) * highRate).toInt()
+            val capture = Cycle(total + (oversampling - total % oversampling) % oversampling)
             for (i in capture.raw.indices) {
-                network.next(if (i < source.size) source[i].toDouble() else 0.0)
+                advance(if (i < source.size) source[i].toDouble() else 0.0)
                 capture.capture(i, network)
             }
-            network.state()
-            output = capture.arrays().map { decimate(it).also { samples -> Dsp.fadeTail(samples) } }
+            snapshot()
+            output = capture.arrays().map { decimate(it, oversampling).also { samples -> Dsp.fadeTail(samples) } }
         } else {
-            val highFrames = periodFrames * Dsp.OVERSAMPLE
-            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config)
+            val highFrames = periodFrames * oversampling
+            val source = sourceTable(voice, m, hz, effort, velocity.toDouble(), highFrames, true, cycles, model, config, highRate)
             val recent = ArrayList<Cycle>()
             var previousState: DoubleArray? = null
-            val minAttempts = max(4, ceil(plan.maxDelay * HIGH_RATE / highFrames).toInt() + 3)
+            val minAttempts = max(4, ceil(plan.maxDelay * highRate / highFrames).toInt() + 3)
             while (attempts < MAX_LOOP_ATTEMPTS) {
+                junction?.beginWindow("returned held cycle")
                 val capture = Cycle(highFrames)
-                for (i in source.indices) { network.next(source[i].toDouble()); capture.capture(i, network) }
+                for (i in source.indices) { advance(source[i].toDouble()); capture.capture(i, network) }
                 recent += capture
                 if (recent.size > 3) recent.removeAt(0)
                 attempts++
-                val state = network.state()
+                val state = snapshot()
                 val old = previousState
                 var error = 0.0
                 var scale = 0.0
@@ -805,18 +883,19 @@ object Filament {
                 previousState = state
                 if (attempts >= minAttempts && old != null && error <= 1e-9 + 1e-7 * scale) {
                     converged = true
+                    acceptedExchange = junction?.diagnostics()
                     break
                 }
             }
             check(converged) { "FILAMENT $voice MIDI $midi HOLD did not settle after $attempts periods" }
             // A following, independently rendered cycle supplies the resampler's right guard.
             val future = Cycle(highFrames)
-            for (i in source.indices) { network.next(source[i].toDouble()); future.capture(i, network) }
-            network.state()
+            for (i in source.indices) { advance(source[i].toDouble()); future.capture(i, network) }
+            snapshot()
             recent += future
             val channels = Array(5) { FloatArray(highFrames * 4) }
             for (c in 0 until 4) for (s in 0 until 5) recent[c].arrays()[s].copyInto(channels[s], c * highFrames)
-            val resampled = channels.map { decimate(it) }
+            val resampled = channels.map { decimate(it, oversampling) }
             output = resampled.map { it.copyOfRange(periodFrames * 2, periodFrames * 3) }
             previous = resampled[4].copyOfRange(periodFrames, periodFrames * 2)
             val joined = previous + output[4]
@@ -852,8 +931,10 @@ object Filament {
         val diagnostics = Diagnostics(plan.branches, plan.sites, plan.branches.sumOf { it.launch },
             plan.retained, plan.escaped, plan.absorbed, peak, sqrt(square / raw.size.coerceAtLeast(1)),
             sum / raw.size.coerceAtLeast(1), effort, loop, converged, seam, hz, periodFrames, attempts,
-            network.maxState, preparationNanos, System.nanoTime() - synthesisStart, fullCycleError, stateError,
-            network.haloGainBound, network.haloNormalization, if (model == ORIGINAL_MODEL) emptyList() else network.haloModes)
+            max(network.maxState, junction?.maxState ?: 0.0), preparationNanos, System.nanoTime() - synthesisStart, fullCycleError, stateError,
+            network.haloGainBound, network.haloNormalization, if (model == ORIGINAL_MODEL) emptyList() else network.haloModes,
+            if (junction == null) "feed-forward splitter allocation" else "nominal no-exchange splitter allocation; actual waveform ledger is exchange",
+            acceptedExchange ?: junction?.diagnostics())
         check(samples.all { it.isFinite() }) { "FILAMENT produced a non-finite sample" }
         return Probe(samples, raw, source, through, escaped, spill, previous, diagnostics)
     }

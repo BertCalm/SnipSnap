@@ -38,13 +38,17 @@ class FilamentTest {
             assertEquals(a.diagnostics.branches, b.diagnostics.branches, "$voice HOLD$hold branch replay")
             assertEquals(a.diagnostics.sites, b.diagnostics.sites, "$voice HOLD$hold allocation replay")
             assertEquals(a.diagnostics.seamError, b.diagnostics.seamError, "$voice HOLD$hold seam replay")
+            assertEquals(a.diagnostics.exchange, b.diagnostics.exchange, "$voice HOLD$hold actual exchange and memory replay")
         }
     }
 
     @Test
-    fun `ordered splits conserve one launch budget without donating escaped input twice`() {
+    fun `nominal ordered plan splits conserve one launch budget without donating escaped input twice`() {
         val p = Filament.inspect(FilamentVoice.CURL, gesture)
         val d = p.diagnostics
+        // These scalar traces describe preparation before R3's causal mid-route exchange.
+        // FilamentExchangeTest checks actual sample energy and downstream loss independently.
+        assertTrue(d.allocationBasis.contains("nominal"), "dynamic routes were presented as a fixed allocation trace")
         assertEquals(1.0, d.launch, 1e-9, "source allocation must not grow with the bundle")
         assertEquals(d.launch, d.retained + d.escaped + d.absorbed, 1e-9)
         assertEquals(d.launch, d.branches.sumOf { it.launch }, 1e-9)
@@ -167,7 +171,7 @@ class FilamentTest {
             "${a[i].id} long path did not travel longer")
         fun spread(branches: List<Filament.BranchTrace>) = branches.maxOf { it.endpointSeconds } - branches.minOf { it.endpointSeconds }
         assertTrue(spread(b) > spread(a), "length did not separate path arrivals")
-        assertTrue(long.absorbed > short.absorbed, "longer travel has no accumulated absorption")
+        assertTrue(long.absorbed > short.absorbed, "longer nominal travel has no accumulated absorption")
     }
 
     @Test
@@ -178,13 +182,13 @@ class FilamentTest {
         assertContentEquals(early.source, late.source, "leakage profile changed excitation")
         assertEquals(early.diagnostics.branches.map { it.endpointSeconds }, late.diagnostics.branches.map { it.endpointSeconds },
             "moving a bend changed total route travel")
-        fun escapedArrival(p: Filament.Probe): Double {
+        fun nominalEscapedArrival(p: Filament.Probe): Double {
             val sites = p.diagnostics.sites
             val total = sites.sumOf { it.escapedPower }
             assertTrue(total > 0.0)
             return sites.sumOf { it.escapedPower * it.delaySeconds } / total
         }
-        assertTrue(escapedArrival(early) < escapedArrival(late), "early and late bends donated at the same time")
+        assertTrue(nominalEscapedArrival(early) < nominalEscapedArrival(late), "early and late nominal bends donate at the same time")
         assertTrue(TangleMeasure.distance(early.escaped, late.escaped) > .01, "site timing only changes metadata")
     }
 

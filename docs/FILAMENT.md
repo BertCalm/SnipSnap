@@ -24,9 +24,10 @@ HOLD selects sustained/repeating material at its top step.
 Requested MIDI root (36–84), velocity and deterministic configuration are
 saved separately from the six controls in `FilamentPatch`. The configuration
 records the seed, optional early/late/coil profile and ideal-retention
-fixture. Model version 2 selects the revised voice character; model 1 retains
-the original response. JSON without a model still selects model 1. Derived taps and runtime
-filter state remain internal. Macro edits and velocity rendering preserve
+fixture. Model version 3 selects reactive routing; model 2 retains the first
+character revision and model 1 the original response. JSON without a model
+still selects model 1. Derived taps and runtime filter state remain internal.
+Macro edits and velocity rendering preserve
 the nonmacro configuration.
 
 An explicit EARLY/LATE/COIL profile replaces the voice's bend-location pattern;
@@ -59,11 +60,12 @@ The revised HOLD material has a longer carrier-fitted recurrence period with
 periodic overtone motion. Its actual delay history and filter state must
 still settle, and predecessor/current audio must still recur independently.
 Model 1 keeps the shorter original period and its original audio exactly.
-`FilamentPresets.original()` retains those twelve original recipes; the
-current twelve recipes use model 2. The audition's character comparisons
-keep the note, velocity, controls and configuration fixed across models.
+`FilamentPresets.original()` retains those twelve original recipes, and
+`FilamentPresets.revision2()` retains the twelve model-2 recipes. The audition's
+character comparisons keep the note, velocity, controls and configuration
+fixed across models.
 
-The expanded audition has 125 successful clips: the original 88 plus 37
+The model-2 audition rendered 125 successful clips: the original 88 plus 37
 comparison, recipe, context, sweep and mechanism clips. All 366 original WAVs
 retain their exact SHA256 fingerprints. Thirty-five new ordinary saved patches
 also decode and reproduce their native samples exactly. Twelve revised presets
@@ -87,6 +89,51 @@ clap, hat and tom classifications. Generic PERC is the classifier's permitted
 fallback for some brighter harmonic material; pitch and confidence are measured
 separately. Native output keeps its fixed gain, so use Matched to compare tone
 across models without their native loudness difference.
+
+## Reactive guided exchange
+
+Model 3 keeps model 2's excitation and static geometry. Halfway along the
+guide, marginal paths exchange their remaining guided signals before entering
+the destination paths' later bends. The near-axis path remains separate.
+BUNDLE opens exchanges between participating strands as well as the existing
+within-strand exchange. INJECT and velocity alter the actual upper-band
+activity that drives a short attack and slower release memory; there is no
+output LFO or added source.
+
+PULSE's shorter memory release lets successive articulations reopen and relax
+the exchange. THREAD and CURL retain slower control motion.
+
+PULSE's fixed collection vectors put more weight on marginal endpoints
+and post-junction escape. Each complete vector has norm at most one. Active,
+disabled-exchange and frozen-memory comparisons use the same collection
+vectors, so their differences come from the exchange behavior.
+
+The junction uses orthogonal pair rotations, preserving the instantaneous sum
+of squared channel amplitudes even while the activity memory changes the
+angle. Early escaped input has already left the guide. Later retention,
+escape and absorption fractions operate on the exchanged signal that actually
+arrives, rather than donating a second copy of the original launch. Delays
+stay fixed and no audio signal feeds back into an earlier section.
+
+The constant-loss sections within each half use compiled delayed taps carrying
+cumulative retention. Each arrival uses one fractional-delay interpolation;
+the model does not cascade a separate fractional interpolator at every section.
+The exchanged midpoint waveform itself supplies the destination half's history.
+
+Coherent exchange can move power between paths, so the branch/site allocation
+tables are explicitly an **uncoupled nominal reference** for model 3. Its
+separate waveform-energy ledger records actual junction input/output, split
+residuals, terminal energies, collector norms and activity memory. Residual
+uncollected energy includes passive filtering and stored/undelivered history;
+closing that accounting identity is not an independent proof of conservation.
+The pointwise junction/split checks and terminal-energy bounds provide that
+separate evidence.
+
+Held evidence includes every post-junction delay and activity state. Integral
+energy measurements describe the accepted output cycle, rather than mixing
+preroll energy with a single exported period. Diagnostic disabled-exchange and
+frozen-memory comparisons retain the same excitation. An 8× internal-rate
+reference checks the ordinary 4× render, with antialiasing before decimation.
 
 ## Model and evidence
 

@@ -94,4 +94,38 @@ class FilamentCharacterTest {
                 "${fixture.voice} HOLD$held changed the published original native WAV")
         }
     }
+
+    @Test
+    fun `explicit second model preserves published revised voices and held preset PCM bytes`() {
+        // Captured from the frozen model-2 publication before exchange/model 3 was implemented.
+        // Values and hashes are embedded so replay never depends on a local audition directory.
+        data class Fixture(val voice: FilamentVoice, val values: List<Float>, val velocity: Float,
+            val config: FilamentConfig, val hash: String)
+        val shared = listOf(.55f, .60f, .60f, .65f, .48f, 0f)
+        val fixtures = listOf(
+            Fixture(FilamentVoice.THREAD, shared, .7f, FilamentConfig(seed = 17),
+                "9646218f4e547f589d1ac5ae08b0f50ecfc804b2dcf3f6f9a5b71251a91a9345"),
+            Fixture(FilamentVoice.PULSE, shared, .7f, FilamentConfig(seed = 17),
+                "a9a116c57490c4ccbb16205273f48b2d6365f1c1688a8e949a4dcd0ef60a7bf6"),
+            Fixture(FilamentVoice.CURL, shared, .7f, FilamentConfig(seed = 17),
+                "d81856bf622003ea02f15d60330baa54f21e90b8ec23540809a921c848fe8293"),
+            Fixture(FilamentVoice.THREAD, listOf(.42f, .18f, .30f, .06f, .18f, 1f), 1f, FilamentConfig(),
+                "6f4b800b0a7ffdef710e4f30937a7a6230fc4ab61fa2a0d06e57db1c78d34ad9"),
+            Fixture(FilamentVoice.PULSE, listOf(.76f, .58f, .78f, .82f, .56f, 1f), 1f,
+                FilamentConfig(seed = 41, profile = FilamentProfile.COIL),
+                "1f1b68a5b6d2c01d7699efa52b824edb7c2a25a07d6a6be271a124833c4a1ca8"),
+            Fixture(FilamentVoice.CURL, listOf(.36f, .82f, .76f, .92f, .88f, 1f), 1f,
+                FilamentConfig(seed = 61, profile = FilamentProfile.LATE),
+                "6a7ae9fcde252a344618deb40e44b5df0a817e796441f53c36a7849495f7a868"),
+        )
+        val names = listOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT", "HOLD")
+        for (fixture in fixtures) {
+            val macros = names.zip(fixture.values).toMap()
+            val snip = Filament.render(fixture.voice, macros, midi = 48, velocity = fixture.velocity,
+                config = fixture.config, model = 2)
+            val bytes = ByteArrayOutputStream().also { WavWriter.write(it, snip, WavWriter.BitDepth.PCM_24) }.toByteArray()
+            val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 0xff) }
+            assertEquals(fixture.hash, hash, "${fixture.voice} HOLD${macros.getValue("HOLD")} changed published model-2 native WAV")
+        }
+    }
 }

@@ -55,6 +55,8 @@ object FilamentAuditionGenerator {
         val model: Int = Filament.ORIGINAL_MODEL,
         val requireFixedSource: Boolean = true,
         val comparisonPartnerId: String? = null,
+        val reference8x: Boolean = false,
+        val requireExactSource: Boolean = false,
     )
 
     @JvmStatic
@@ -115,7 +117,7 @@ object FilamentAuditionGenerator {
                 }
                 val metrics = LinkedHashMap(TangleMeasure.metrics(probe.raw, native, case.midi, elapsedMs))
                 val diagnostic = isDiagnostic(case.options)
-                val newOrdinary = (case.model == Filament.MODEL_VERSION || case.group == "character") && !diagnostic
+                val newOrdinary = (case.model >= Filament.CHARACTER_MODEL || case.group == "character") && !diagnostic
                 val classifierGateApplies = !d.loop && (case.kind in setOf("defaults", "preset", "range") || newOrdinary && case.kind != "mechanism")
                 metrics["classifierGateApplies"] = classifierGateApplies
                 metrics["classifierGatePolicy"] = when {
@@ -164,6 +166,21 @@ object FilamentAuditionGenerator {
                 metrics["sourceFundamentalErrorCents"] = sourceFundamental?.let { FineTuning.cents(it, requestedHz.toDouble()) }
                 metrics["sourceRequestedRootEnergyShare"] = TangleMeasure.toneShare(probe.source, requestedHz.toDouble())
                 metrics["sourcePitchDetectorRange"] = "40–1200 Hz; body window starts at 0.12 seconds. A constrained root-component estimate is separate from the house detector."
+                val nativePitchGate = case.group.startsWith("junction") && !d.loop && !diagnostic && case.kind != "mechanism"
+                metrics["nativePitchGateApplies"] = nativePitchGate
+                if (nativePitchGate) {
+                    val componentError = (metrics["fundamentalErrorCents"] as? Number)?.toDouble()
+                    val rootShare = (metrics["requestedRootEnergyShare"] as? Number)?.toDouble() ?: 0.0
+                    val confidence = (metrics["pitchConfidence"] as? Number)?.toDouble() ?: 0.0
+                    val detectorError = (metrics["detectorErrorCents"] as? Number)?.toDouble()
+                    val rootPass = componentError?.let { it.isFinite() && abs(it) <= 25.0 } == true && rootShare > .025
+                    val detectorApplies = confidence >= .7 && requestedHz in 40f..1200f
+                    val detectorPass = !detectorApplies || detectorError?.let { it.isFinite() && abs(it) <= 50.0 } == true
+                    metrics["nativePitchGatePass"] = rootPass && detectorPass
+                    metrics["nativePitchGatePolicy"] = "Requested-root component within 25 cents and coherent root share above 0.025; house detector within 50 cents only at confidence >=0.7 inside its 40–1200 Hz range."
+                    if (!rootPass) localFailures += "native root component failed: cents=$componentError, share=$rootShare"
+                    if (!detectorPass) localFailures += "confident native pitch detector failed: cents=$detectorError, confidence=$confidence"
+                }
                 val windows = analysisWindows(probe.raw, matched.samples, probe.source)
                 metrics["analysisWindows"] = windows
                 metrics["sourceBodyPowerCentroidHz"] = windows.first { it["id"] == "body" }["sourcePowerCentroidHz"]
@@ -194,6 +211,7 @@ object FilamentAuditionGenerator {
                 metrics["branchCount"] = d.branches.size
                 metrics["siteCount"] = d.sites.size
                 metrics["budget"] = linkedMapOf(
+                    "basis" to d.allocationBasis,
                     "launch" to d.launch, "retained" to d.retained, "escaped" to d.escaped,
                     "absorbed" to d.absorbed, "error" to budgetError,
                 )
@@ -204,6 +222,23 @@ object FilamentAuditionGenerator {
                 metrics["loopAttempts"] = d.loopAttempts
                 metrics["haloGainBound"] = d.haloGainBound
                 metrics["haloNormalization"] = d.haloNormalization
+                metrics["allocationBasis"] = d.allocationBasis
+                d.exchange?.let { exchange ->
+                    val actual = exchangeDiagnostics(exchange)
+                    metrics["actualEnergyLedger"] = actual
+                    val excess = (actual.getValue("terminalEnergyExcess") as Number).toDouble()
+                    if (!listOf(exchange.sourceEnergy, exchange.launchedEnergy, exchange.retainedEnergy, exchange.escapedEnergy,
+                            exchange.absorbedEnergy, exchange.uncollectedEnergy, exchange.junctionInputEnergy, exchange.junctionOutputEnergy,
+                            exchange.collectorThroughNorm, exchange.collectorSpillNorm, exchange.maxMemory, exchange.meanMemory,
+                            exchange.memorySpan, exchange.maxAngleRadians).all { it.isFinite() } || exchange.routeEnergyChanges.any { !it.isFinite() }) {
+                        localFailures += "non-finite actual energy/junction diagnostics"
+                    }
+                    if (!exchange.maxJunctionError.isFinite() || exchange.maxJunctionError > 1e-10) localFailures += "middle-junction sample-power error ${exchange.maxJunctionError}"
+                    if (!exchange.maxSplitError.isFinite() || exchange.maxSplitError > 1e-10) localFailures += "actual bend split sample-power error ${exchange.maxSplitError}"
+                    if (!excess.isFinite() || excess > 1e-9 || exchange.uncollectedEnergy < -1e-9) localFailures += "actual terminal energy exceeded launched energy by $excess"
+                    if (exchange.collectorThroughNorm > 1.0 + 1e-10 || exchange.collectorSpillNorm > 1.0 + 1e-10) localFailures += "actual collector norm exceeded one"
+                }
+                if (case.model == Filament.MODEL_VERSION && d.exchange == null) localFailures += "model 3 omitted its actual junction/energy diagnostics"
                 if (case.config.perfectRetention) {
                     val silent = probe.escaped.all { it == 0f } && probe.spill.all { it == 0f }
                     metrics["perfectRetentionSpillSilent"] = silent
@@ -212,10 +247,14 @@ object FilamentAuditionGenerator {
                 case.comparison?.let { key ->
                     comparisonSources[key]?.let { previous ->
                         val difference = maximumPaddedDifference(previous, probe.source)
-                        metrics["identicalComparisonSource"] = difference == 0.0
-                        metrics["comparisonSourceMatches"] = difference <= SOURCE_COMPARISON_TOLERANCE
+                        val tolerance = if (case.requireExactSource) 0.0 else SOURCE_COMPARISON_TOLERANCE
+                        val exact = previous.contentEquals(probe.source)
+                        metrics["identicalComparisonSource"] = if (case.requireExactSource) exact else difference == 0.0
+                        metrics["comparisonSourceMatches"] = if (case.requireExactSource) exact else difference <= tolerance
                         metrics["comparisonSourceMaximumDifference"] = difference
-                        metrics["comparisonSourceTolerance"] = SOURCE_COMPARISON_TOLERANCE
+                        metrics["comparisonSourceTolerance"] = tolerance
+                        metrics["comparisonSourceExactRequired"] = case.requireExactSource
+                        if (case.requireExactSource && !exact) localFailures += "exact-source comparison changed its source (frames ${previous.size}/${probe.source.size}, maximum difference $difference)"
                         if (case.requireFixedSource && difference > SOURCE_COMPARISON_TOLERANCE) localFailures += "fixed-excitation comparison changed its source (maximum difference $difference)"
                     } ?: run { comparisonSources[key] = probe.source }
                     comparisonAudio[key]?.let { previous ->
@@ -251,6 +290,27 @@ object FilamentAuditionGenerator {
                     "matched" to "matched/${case.id}.wav", "recipe" to "recipes/${case.id}.json",
                     "diagnostics" to "diagnostics/${case.id}.json",
                 )
+                if (case.reference8x) {
+                    val referenceOptions = case.options.copy(referenceOversampling = 8)
+                    val reference = Filament.inspect(case.voice, case.macros, case.midi, case.velocity, case.config, referenceOptions, model = case.model)
+                    check(reference.samples.all { it.isFinite() } && reference.raw.all { it.isFinite() } && reference.source.all { it.isFinite() }) { "non-finite 8x reference" }
+                    check(reference.diagnostics.exchange?.oversampling == 8) { "8x reference did not report 8x processing" }
+                    reference.diagnostics.exchange?.let { actual ->
+                        val excess = actual.retainedEnergy + actual.escapedEnergy + actual.absorbedEnergy - actual.launchedEnergy
+                        check(actual.maxJunctionError.isFinite() && actual.maxJunctionError <= 1e-10 && actual.maxSplitError.isFinite() && actual.maxSplitError <= 1e-10) { "8x reference violated sample-power conservation" }
+                        check(excess.isFinite() && excess <= 1e-9 && actual.collectorThroughNorm <= 1.0 + 1e-10 && actual.collectorSpillNorm <= 1.0 + 1e-10) { "8x reference exceeded terminal energy or collector budget" }
+                    }
+                    val referenceMetrics = referenceComparison(probe, reference, requestedHz.toDouble())
+                    metrics["higherRateReference"] = referenceMetrics
+                    files["referenceDiagnostics"] = "diagnostics/${case.id}_reference-8x.json"
+                    val referencePatch = FilamentPatch(case.title.take(14), case.voice, case.macros, case.midi, case.velocity, case.config, model = case.model)
+                    writeJson(File(root, files.getValue("referenceDiagnostics")), linkedMapOf(
+                        "format" to "filament-diagnostic-rate-reference-v1", "engineModel" to case.model,
+                        "patch" to referencePatch.toJsonValue(), "diagnosticOptions" to options(referenceOptions),
+                        "metrics" to referenceMetrics, "diagnostics" to diagnostics(reference.diagnostics),
+                        "exportsAudio" to false,
+                    ))
+                }
                 WavWriter.write(File(root, files.getValue("native")), native, WavWriter.BitDepth.PCM_24)
                 WavWriter.write(File(root, files.getValue("raw")), scaled(probe.raw, RAW_EXPORT_GAIN), WavWriter.BitDepth.PCM_24)
                 WavWriter.write(File(root, files.getValue("matched")), matched, WavWriter.BitDepth.PCM_16)
@@ -313,7 +373,7 @@ object FilamentAuditionGenerator {
                 writeJson(File(root, files.getValue("diagnostics")), linkedMapOf(
                     "id" to case.id, "model" to case.model, "metrics" to metrics, "diagnostics" to diagnostics(d),
                     "status" to if (localFailures.isEmpty()) "ready" else "failed", "failures" to localFailures,
-                    "allocationNote" to "Branch and bend budgets partition launch power. Coherent output waveform energies need not add because delayed paths interfere.",
+                    "allocationNote" to if (case.model == Filament.MODEL_VERSION) "Branch/site traces are nominal launch-allocation plans. The actualEnergyLedger records propagated path energy around the middle junction and later splits, with independently checked sample-power residuals; its uncollected residual is accounting." else "Branch and bend budgets partition launch power. Coherent output waveform energies need not add because delayed paths interfere.",
                 ))
                 clips += metadata(case) + linkedMapOf(
                     "loop" to d.loop, "files" to files, "metrics" to metrics,
@@ -330,20 +390,33 @@ object FilamentAuditionGenerator {
         }
 
         val metrics = clips.mapNotNull { it["metrics"] as? Map<*, *> }
+        val actualLedgers = metrics.mapNotNull { it["actualEnergyLedger"] as? Map<*, *> }
         fun maximum(key: String) = metrics.mapNotNull { (it[key] as? Number)?.toDouble() }.maxOrNull()
+        fun actualMaximum(key: String) = actualLedgers.mapNotNull { (it[key] as? Number)?.toDouble() }.maxOrNull()
         val summary = linkedMapOf<String, Any?>(
             "clipCount" to clips.size, "readyClips" to clips.count { it["status"] == "ready" },
             "heldClips" to clips.count { it["loop"] == true }, "presetCount" to cases.count { it.kind == "preset" },
             "standardFiniteClassifierCases" to metrics.count { it["classifierGateApplies"] == true },
             "standardFiniteClassifierFailures" to clips.filter { (it["metrics"] as? Map<*, *>)?.get("standardFiniteClassifierPass") == false }.map { it["id"] },
+            "legacyFiniteClassifierCases" to clips.count { !it.getValue("id").toString().startsWith("junction_") && (it["metrics"] as? Map<*, *>)?.get("classifierGateApplies") == true },
+            "nativePitchGateFailures" to clips.filter { (it["metrics"] as? Map<*, *>)?.get("nativePitchGatePass") == false }.map { it["id"] },
             "failedCases" to failures, "maxRawPeak" to maximum("rawPeak"),
             "maxExportedSeamError" to maximum("exportedSeamError"),
             "maxFullCycleError" to maximum("fullCycleError"), "maxStateError" to maximum("stateError"),
             "maxExportedWrapStepRatio" to maximum("exportedWrapStepRatio"),
             "renderSeconds" to (System.nanoTime() - started) / 1e9,
             "models" to cases.groupingBy { it.model.toString() }.eachCount(),
+            "presetCountsByModel" to cases.filter { it.kind == "preset" }.groupingBy { it.model.toString() }.eachCount(),
+            "heldCountsByModel" to clips.filter { it["loop"] == true }.groupingBy { it.getValue("model").toString() }.eachCount(),
             "exactNewPatchReplays" to metrics.count { it["exactPatchReplay"] == true },
+            "replayCountsByModel" to clips.filter { (it["metrics"] as? Map<*, *>)?.get("exactPatchReplay") == true }.groupingBy { it.getValue("model").toString() }.eachCount(),
+            "nativePitchGateCases" to metrics.count { it["nativePitchGateApplies"] == true },
             "characterComparisons" to characterComparisons(clips),
+            "junctionComparisons" to versionComparisons(clips, "junction", "previous", "current"),
+            "higherRateReferences" to metrics.count { it["higherRateReference"] != null },
+            "actualLedgerCases" to actualLedgers.size,
+            "maxJunctionError" to actualMaximum("maxJunctionError"), "maxSplitError" to actualMaximum("maxSplitError"),
+            "maxTerminalEnergyExcess" to actualMaximum("terminalEnergyExcess"),
             "deterministicDefaults" to clips.filter { it["kind"] == "defaults" }.associate { clip ->
                 clip.getValue("voice").toString() to ((clip["metrics"] as? Map<*, *>)?.get("deterministic") ?: false)
             },
@@ -351,27 +424,27 @@ object FilamentAuditionGenerator {
         val groups = cases.groupBy { it.group }.map { (id, members) -> linkedMapOf(
             "id" to id, "title" to groupTitle(id), "description" to groupDescription(id), "clipIds" to members.map { it.id },
         ) }
-        val packClipIds = cases.filter { it.group in setOf("character", "character-presets", "character-context") }.map { it.id }
+        val packClipIds = cases.filter { it.group in setOf("junction", "junction-presets", "junction-pulse-bend", "junction-pulse-collect", "junction-mechanism") }.map { it.id }
         val packScope = linkedMapOf<String, Any?>(
-            "description" to "Native audio for the ${packClipIds.size} character comparison, revised preset and musical context clips; all recipes, patches and JSON diagnostics for both models; all held PCM seam contexts. The original 88-clip corpus, full raw/matched files and isolated stems remain individually downloadable on the listening page.",
+            "description" to "Native audio for the ${packClipIds.size} model 2/3 comparisons, current presets, middle-control probes and mechanism fixtures; all recipes, patches and JSON diagnostics for all three models; all held PCM seam contexts. The previous 125-clip corpus, full raw/matched files and isolated stems remain individually downloadable on the listening page.",
             "nativeClipIds" to packClipIds, "nativeClipCount" to packClipIds.size,
             "allRecipeCount" to clips.size, "fullAudioOnPage" to true,
         )
         writeJson(File(root, "manifest.json"), linkedMapOf(
             "schemaVersion" to 1, "engine" to "FILAMENT", "currentModel" to Filament.MODEL_VERSION,
-            "engineModels" to listOf(Filament.ORIGINAL_MODEL, Filament.MODEL_VERSION),
-            "title" to "FILAMENT · More to follow",
-            "description" to "Compare the original and revised THREAD, PULSE and CURL, then play twelve revised recipes across musical registers. Bends still transfer guided sound into an escaping halo. The complete original listening corpus remains available; musical acceptance remains open.",
+            "engineModels" to listOf(Filament.ORIGINAL_MODEL, Filament.CHARACTER_MODEL, Filament.MODEL_VERSION),
+            "title" to "FILAMENT · Through the middle",
+            "description" to "Model 3 lets remaining guided signals meet at a memory-controlled middle junction before later bends. Compare it with model 2 using exactly the same source, then play twelve current recipes and ordinary PULSE controls. All 125 previous clips remain available; musical acceptance remains open.",
             "status" to if (failures.isEmpty()) "requires-owner-listening" else "render-failed",
             "sampleRate" to Dsp.RATE, "oversampling" to Dsp.OVERSAMPLE, "channels" to 1, "generatedAt" to Instant.now().toString(),
             "quick" to quick, "rawExportGain" to RAW_EXPORT_GAIN,
             "audioNote" to "Native PCM24 is the engine output. Matched PCM16 uses the shared loudest-200-ms target of 0.03. Raw PCM24 and all stems use the same fixed gain of 0.25 (-12.04 dB), preserving depletion and relative levels; raw metrics precede that gain. An intentionally silent collector stays silent.",
             "holdNote" to "Held files contain one converged cycle. Each seam-context PCM16 WAV contains a genuinely generated preceding cycle followed by the exported cycle, both at the same matched gain. No seam repair or duplicated-cycle proof is used.",
             "seamNote" to "Exported seam error compares independently generated corresponding 256-frame windows after PCM16 encoding. The complete-cycle error and the actual end-to-start step divided by local derivative RMS plus one PCM16 unit are also reported. These checks support listening; they do not establish musical acceptance.",
-            "allocationNote" to "Budgets partition launch power at every branch and bend. Delayed coherent output energies need not add; THROUGH, escaped-input and halo SPILL are separately available in selected clips.",
-            "comparisonNote" to "The character pairs share explicit controls, root, velocity and seed but select different saved renderer models; source equality is not required across versions. All original fixed-excitation guards remain active. Gain-matched spectral distance uses normalized 12-band power from the same 8192-frame window starting at 0.15 seconds inside a shared first-1.2-second analysis buffer. Early/body/late windows report source and mix power centroids and RMS without perceptual acceptance thresholds.",
+            "allocationNote" to "Nominal launch-allocation traces partition the planned branch/bend budget. Model 3 also reports actual propagated path-energy integrals, junction and split sample-power residuals, collector norms and scoped memory measurements. The uncollected ledger residual closes accounting for filter loss, storage and undelivered sound; it is not an independent conservation proof. Coherent collected waveform energies need not add.",
+            "comparisonNote" to "The new junction pairs share explicit controls, root, velocity, seed and exactly the same model 2 source at 4x processing; exact source identity is gated. Earlier character pairs intentionally change model 1/2 excitation. All earlier fixed-excitation guards remain active. Gain-matched spectral distance uses normalized 12-band power from a common 8192-frame window starting at 0.15 seconds. Three diagnostic 8x references additionally align the source over that window without choosing alignment from the output. Early/body/late centroids and RMS have no perceptual acceptance thresholds.",
             "collectorBalanceNote" to "Weighted THROUGH/SPILL RMS applies the collector coefficients to each stem. The independent power share excludes coherent cross terms and is a balance comparison, not an additive accounting of mixed output energy.",
-            "classifierNote" to "Full-file classification can read LOOP because finite files exceed 1.5 seconds. Standard finite defaults, presets, note/velocity clips and new musical examples screen the first 1.2 seconds against KICK, SNARE, CLAP, HAT_OPEN, HAT_CLOSED and TOM. Generic PERC is an allowed fallback for brighter material; classification is not pitch evidence. Original geometry, collector, diagnostic and extreme-sweep fixtures retain explicit exemptions. Held sustain classification uses repeated periodic audio solely for analysis; independent preceding/current state and PCM measurements remain the recurrence evidence.",
+            "classifierNote" to "Full-file classification can read LOOP because finite files exceed 1.5 seconds. All earlier classifier gates remain, and new finite musical junction/preset/control examples screen the first 1.2 seconds against KICK, SNARE, CLAP, HAT_OPEN, HAT_CLOSED and TOM. Generic PERC is allowed. New ordinary finite examples separately require a requested-root component within 25 cents and coherent root share above 0.025, with a 50-cent detector gate only at confidence >=0.7. Diagnostic mechanism fixtures retain explicit exemptions. Held sustain classification repeats audio solely for analysis; independent state and PCM comparisons remain recurrence evidence.",
             "classifierScreenedFamilies" to TangleMeasure.drumClasses.map { it.name },
             "classifierAllowsGenericPerc" to true,
             "runtime" to linkedMapOf(
@@ -393,12 +466,80 @@ object FilamentAuditionGenerator {
     }
 
     private fun cases(quick: Boolean): List<Case> = buildList {
+        addAll(junctionCases())
+        val previous = revision2Cases(quick)
+        check(previous.size == if (quick) 80 else 125) { "The model 1/2 listening corpus changed size" }
+        addAll(previous)
+    }
+
+    private fun junctionCases(): List<Case> = buildList {
         for (voice in FilamentVoice.entries) {
             val controls = originalDefaults(voice) + mapOf(
                 "INJECT" to .55f, "BEND" to .60f, "LENGTH" to .60f,
                 "BUNDLE" to .65f, "COLLECT" to .48f, "HOLD" to 0f,
             )
-            for ((variant, model) in listOf("original" to Filament.ORIGINAL_MODEL, "revised" to Filament.MODEL_VERSION)) add(Case(
+            for ((variant, model) in listOf("previous" to Filament.CHARACTER_MODEL, "current" to Filament.MODEL_VERSION)) add(Case(
+                id = "junction_${voice.name.lowercase()}_$variant", title = "${voice.name} · ${if (variant == "previous") "model 2" else "model 3"}",
+                description = "${voice.name} at C3 and velocity 70%, with identical explicit controls, seed and model 2 excitation. Model 3 exchanges remaining guided signals at a memory-controlled middle junction before the late bends. The fixed-source guard stays active across this pair.",
+                group = "junction", kind = "junction", voice = voice, macros = controls,
+                midi = 48, velocity = .7f, config = FilamentConfig(seed = 17), stems = true,
+                comparison = "junction-${voice.name.lowercase()}", variant = variant, model = model,
+                comparisonPartnerId = "junction_${voice.name.lowercase()}_${if (variant == "previous") "current" else "previous"}",
+                reference8x = variant == "current",
+                requireExactSource = true,
+            ))
+        }
+        val presets = FilamentPresets.all()
+        check(presets.size == 12 && presets.all { it.model == Filament.MODEL_VERSION }) {
+            "Junction presets must contain twelve explicit current-model recipes"
+        }
+        for (patch in presets) add(Case(
+            id = "junction_preset_${slug(patch.name)}", title = patch.name,
+            description = "A saved model 3 ${patch.voice.name} recipe. Source, delayed guided signals, the middle exchange and later escape produce the collected result. The saved JSON is decoded and rendered again to verify exact replay.",
+            group = "junction-presets", kind = "preset", voice = patch.voice, macros = patch.macros,
+            midi = patch.midi, velocity = patch.velocity, config = patch.config, preset = patch, model = patch.model,
+        ))
+        val pulse = originalDefaults(FilamentVoice.PULSE) + mapOf(
+            "INJECT" to .65f, "BEND" to .60f, "LENGTH" to .70f,
+            "BUNDLE" to .65f, "COLLECT" to .55f, "HOLD" to 0f,
+        )
+        for (macro in listOf("BEND", "COLLECT")) for (value in listOf(.25f, .5f, .75f)) add(Case(
+            id = "junction_pulse_${macro.lowercase()}_${tag(value)}", title = "PULSE · $macro ${(value * 100).toInt()}%",
+            description = "Ordinary model 3 PULSE at three middle $macro settings. Only this control changes. The source stays fixed and every finite onset retains classifier and pitch screening.",
+            group = "junction-pulse-${macro.lowercase()}", kind = "sweep", voice = FilamentVoice.PULSE,
+            macros = pulse + (macro to value), config = FilamentConfig(seed = 17, profile = FilamentProfile.COIL),
+            macro = macro, value = value, comparison = "junction-pulse-${macro.lowercase()}", model = Filament.MODEL_VERSION,
+        ))
+        for (voice in FilamentVoice.entries) {
+            val controls = originalDefaults(voice) + ("HOLD" to 1f)
+            val duplicate = presets.any { it.voice == voice && it.macros == controls && it.midi == Filament.rootMidi(voice) && it.velocity == 1f && it.config == FilamentConfig() }
+            if (!duplicate) add(Case(
+                id = "junction_hold_${voice.name.lowercase()}", title = "${voice.name} · model 3 HOLD",
+                description = "Model 3 defaults in a converged held cycle. The actual preceding and current periods support both state recurrence and PCM verification; the browser's repeated playback is separate.",
+                group = "junction-hold", kind = "hold", voice = voice, macros = controls, model = Filament.MODEL_VERSION,
+            ))
+        }
+        val mechanism = pulse + mapOf("BEND" to .70f, "BUNDLE" to 1f)
+        for ((variant, title, options) in listOf(
+            Triple("full", "Middle junction · active memory", Filament.Options()),
+            Triple("exchangeoff", "Middle junction · exchange disabled", Filament.Options(disableExchange = true)),
+            Triple("memoryfrozen", "Middle junction · frozen memory", Filament.Options(freezeMemory = true)),
+        )) add(Case(
+            id = "junction_mechanism_$variant", title = title,
+            description = "Model 3 PULSE with the same source and controls. Compare the complete exchange with a disabled junction and with memory frozen. Options are diagnostic and remain explicit in each replay recipe.",
+            group = "junction-mechanism", kind = "mechanism", voice = FilamentVoice.PULSE, macros = mechanism,
+            config = FilamentConfig(seed = 17, profile = FilamentProfile.COIL), options = options, stems = true,
+            comparison = "junction-mechanism", variant = variant, model = Filament.MODEL_VERSION,
+        ))
+    }
+
+    private fun revision2Cases(quick: Boolean): List<Case> = buildList {
+        for (voice in FilamentVoice.entries) {
+            val controls = originalDefaults(voice) + mapOf(
+                "INJECT" to .55f, "BEND" to .60f, "LENGTH" to .60f,
+                "BUNDLE" to .65f, "COLLECT" to .48f, "HOLD" to 0f,
+            )
+            for ((variant, model) in listOf("original" to Filament.ORIGINAL_MODEL, "revised" to Filament.CHARACTER_MODEL)) add(Case(
                 id = "character_${voice.name.lowercase()}_$variant", title = "${voice.name} · $variant",
                 description = "${voice.name} model $model at C3 and velocity 70%. Both versions use identical explicit controls, seed and geometry configuration; the source and prepared paths can change with the renderer model. Compare matched colour and native level, then inspect the stems.",
                 group = "character", kind = "character", voice = voice, macros = controls,
@@ -408,9 +549,9 @@ object FilamentAuditionGenerator {
                 comparisonPartnerId = "character_${voice.name.lowercase()}_${if (variant == "original") "revised" else "original"}",
             ))
         }
-        val revisedPresets = FilamentPresets.all()
-        check(revisedPresets.size == 12 && revisedPresets.all { it.model == Filament.MODEL_VERSION }) {
-            "Character presets must contain twelve explicit current-model recipes"
+        val revisedPresets = FilamentPresets.revision2()
+        check(revisedPresets.size == 12 && revisedPresets.all { it.model == Filament.CHARACTER_MODEL }) {
+            "Character presets must contain twelve explicit model 2 recipes"
         }
         for (patch in revisedPresets) add(Case(
             id = "character_preset_${slug(patch.name)}", title = patch.name,
@@ -437,7 +578,7 @@ object FilamentAuditionGenerator {
                 description = "Model 2 ${voice.name}: only $macro changes through five settings. Raw keeps the physical level movement, while matched playback helps compare colour. The same-source guard remains active within this sweep.",
                 group = "character-sweep-${macro.lowercase()}", kind = "sweep", voice = voice,
                 macros = controls + (macro to value), config = FilamentConfig(seed = 17, profile = FilamentProfile.COIL),
-                macro = macro, value = value, comparison = "character-sweep-${macro.lowercase()}", model = Filament.MODEL_VERSION,
+                macro = macro, value = value, comparison = "character-sweep-${macro.lowercase()}", model = Filament.CHARACTER_MODEL,
             ))
         }
         val mechanism = originalDefaults(FilamentVoice.PULSE) + mapOf("INJECT" to .65f, "BEND" to .8f, "LENGTH" to .9f, "BUNDLE" to 1f, "COLLECT" to .6f, "HOLD" to 0f)
@@ -450,7 +591,7 @@ object FilamentAuditionGenerator {
             description = "Model 2 PULSE, with identical source and explicit controls. Compare ordered escape against a generic spill or collapsed path delays. Diagnostic options are saved separately from the base patch.",
             group = "character-mechanism", kind = "mechanism", voice = FilamentVoice.PULSE, macros = mechanism,
             config = FilamentConfig(profile = FilamentProfile.COIL), options = options, stems = true,
-            comparison = "character-mechanism", variant = variant, model = Filament.MODEL_VERSION,
+            comparison = "character-mechanism", variant = variant, model = Filament.CHARACTER_MODEL,
         ))
         val original = originalCases(quick)
         check(original.size == if (quick) 49 else 88) { "Original listening corpus changed size" }
@@ -539,6 +680,7 @@ object FilamentAuditionGenerator {
         "macro" to case.macro, "value" to case.value, "comparison" to case.comparison,
         "variant" to case.variant, "preset" to case.preset?.name,
         "comparisonSourcePolicy" to if (case.requireFixedSource) "fixed-source" else "model-change",
+        "comparisonSourceExactRequired" to case.requireExactSource,
         "comparisonPartnerId" to case.comparisonPartnerId,
     )
 
@@ -551,7 +693,90 @@ object FilamentAuditionGenerator {
         return listOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT").zip(values).toMap() + ("HOLD" to 0f)
     }
 
-    private fun isDiagnostic(options: Filament.Options) = options.collapsePaths || options.genericSpill || options.disableBend
+    private fun isDiagnostic(options: Filament.Options) = options.collapsePaths || options.genericSpill || options.disableBend ||
+        options.disableExchange || options.freezeMemory || options.referenceOversampling != 4
+
+    private fun exchangeDiagnostics(d: Filament.ExchangeDiagnostics): Map<String, Any?> {
+        val terminal = d.retainedEnergy + d.escapedEnergy + d.absorbedEnergy
+        return linkedMapOf(
+            "enabled" to d.enabled, "frozen" to d.frozen, "oversampling" to d.oversampling,
+            "energyScope" to d.energyScope, "energyFrameCount" to d.energyFrameCount,
+            "energyUnits" to "sum of internal path sample squares divided by the internal sample rate",
+            "sourceEnergy" to d.sourceEnergy, "launchedEnergy" to d.launchedEnergy,
+            "retainedEnergy" to d.retainedEnergy, "escapedEnergy" to d.escapedEnergy,
+            "absorbedEnergy" to d.absorbedEnergy, "uncollectedEnergy" to d.uncollectedEnergy,
+            "terminalEnergyExcess" to (terminal - d.launchedEnergy).coerceAtLeast(0.0),
+            "accountingClosureResidual" to d.launchedEnergy - terminal - d.uncollectedEnergy,
+            "junctionInputEnergy" to d.junctionInputEnergy, "junctionOutputEnergy" to d.junctionOutputEnergy,
+            "maxJunctionError" to d.maxJunctionError, "maxSplitError" to d.maxSplitError,
+            "errorUnits" to "maximum absolute per-sample power residual; global worst case including settling",
+            "maxJunctionErrorLimit" to 1e-10, "maxSplitErrorLimit" to 1e-10, "terminalEnergyExcessLimit" to 1e-9,
+            "collectorThroughNorm" to d.collectorThroughNorm, "collectorSpillNorm" to d.collectorSpillNorm,
+            "maxMemory" to d.maxMemory, "meanMemory" to d.meanMemory, "memorySpan" to d.memorySpan,
+            "maxAngleRadians" to d.maxAngleRadians, "routeEnergyChanges" to d.routeEnergyChanges,
+            "accountingNote" to "Uncollected energy closes the accounting for filter loss, undelivered sound and stored state; its closure is bookkeeping. Independent checks use terminal energy excess, actual sample-power junction/split residuals and collector norms. Nominal launch-allocation traces are separate.",
+        )
+    }
+
+    private fun referenceComparison(normal: Filament.Probe, reference: Filament.Probe, requestedHz: Double): Map<String, Any?> {
+        val start = (.15 * Dsp.RATE).toInt()
+        val count = 8192
+        var bestLag = 0
+        var bestCorrelation = Double.NEGATIVE_INFINITY
+        for (lag in (0..128).flatMap { if (it == 0) listOf(0) else listOf(it, -it) }) {
+            var aa = 0.0
+            var bb = 0.0
+            var ab = 0.0
+            for (i in start until start + count) {
+                val a = normal.source[i].toDouble()
+                val b = reference.source[i + lag].toDouble()
+                aa += a * a; bb += b * b; ab += a * b
+            }
+            val correlation = ab / sqrt(aa * bb).coerceAtLeast(1e-30)
+            if (correlation > bestCorrelation) { bestCorrelation = correlation; bestLag = lag }
+        }
+        val normalMatched = AuditionLevel.level(Snip(normal.samples, 1, Dsp.RATE)).samples
+        val referenceMatched = AuditionLevel.level(Snip(reference.samples, 1, Dsp.RATE)).samples
+        val a = normalMatched.copyOfRange(start, start + count)
+        val b = referenceMatched.copyOfRange(start + bestLag, start + bestLag + count)
+        val sa = normal.source.copyOfRange(start, start + count)
+        val sb = reference.source.copyOfRange(start + bestLag, start + bestLag + count)
+        val residual = FloatArray(count) { a[it] - b[it] }
+        return linkedMapOf(
+            "normalOversampling" to 4, "referenceOversampling" to 8,
+            "analysisStartSeconds" to .15, "analysisFrames" to count,
+            "sourceAlignmentLagFrames" to bestLag, "sourceAlignmentCorrelation" to bestCorrelation,
+            "alignmentNote" to "Source cross-correlation selects a shared offset within ±128 output frames. The same offset is applied to the collected output; output differences do not choose the alignment.",
+            "normalizedSpectralDistance" to TangleMeasure.spectralDistance(a, b),
+            "sourceSpectralDistance" to TangleMeasure.spectralDistance(sa, sb),
+            "gainMatchedWaveDistance" to TangleMeasure.distance(a, b),
+            "rawPeak4x" to normal.diagnostics.rawPeak, "rawPeak8x" to reference.diagnostics.rawPeak,
+            "rawDc4x" to normal.diagnostics.rawDc, "rawDc8x" to reference.diagnostics.rawDc,
+            "alignedMatchedPeak4x" to peak(a), "alignedMatchedPeak8x" to peak(b),
+            "alignedMatchedDc4x" to a.average(), "alignedMatchedDc8x" to b.average(),
+            "sourceRootShare4x" to TangleMeasure.toneShare(normal.source, requestedHz),
+            "sourceRootShare8x" to TangleMeasure.toneShare(reference.source, requestedHz),
+            "actualEnergyLedger8x" to reference.diagnostics.exchange?.let(::exchangeDiagnostics),
+            "outputHighFrequencyPowerShare4x" to highFrequencyShare(a), "outputHighFrequencyPowerShare8x" to highFrequencyShare(b),
+            "sourceHighFrequencyPowerShare4x" to highFrequencyShare(sa), "sourceHighFrequencyPowerShare8x" to highFrequencyShare(sb),
+            "gainMatchedResidualRms" to TangleMeasure.rms(residual), "gainMatchedResidualPeak" to peak(residual),
+            "gainMatchedResidualDc" to residual.average(), "residualHighFrequencyPowerShare" to highFrequencyShare(residual),
+            "highFrequencyFromHz" to 16_000,
+            "note" to "Same model 3 recipe at 4x and diagnostic 8x processing, after source-derived alignment over a fixed common window. Differences and energy above 16 kHz are engineering references, not an aliasing decomposition or a perceptual acceptance threshold.",
+        )
+    }
+
+    private fun highFrequencyShare(samples: FloatArray): Double {
+        val magnitude = Fft.magnitudeSpectrum(samples, 8192)
+        var total = 0.0
+        var high = 0.0
+        for (i in 1 until magnitude.size) {
+            val power = magnitude[i].toDouble() * magnitude[i]
+            total += power
+            if (i.toDouble() * Dsp.RATE / 8192 >= 16_000.0) high += power
+        }
+        return high / total.coerceAtLeast(1e-30)
+    }
 
     private fun analysisWindows(raw: FloatArray, matched: FloatArray, source: FloatArray): List<Map<String, Any?>> =
         listOf(Triple("early", .04, .18), Triple("body", .20, .55), Triple("late", .75, 1.15)).map { (id, from, to) ->
@@ -587,19 +812,22 @@ object FilamentAuditionGenerator {
         return if (power > 1e-30) weighted / power else null
     }
 
-    private fun characterComparisons(clips: List<Map<String, Any?>>): List<Map<String, Any?>> = FilamentVoice.entries.map { voice ->
+    private fun characterComparisons(clips: List<Map<String, Any?>>) = versionComparisons(clips, "character", "original", "revised")
+
+    private fun versionComparisons(clips: List<Map<String, Any?>>, prefix: String, first: String, second: String): List<Map<String, Any?>> = FilamentVoice.entries.map { voice ->
         fun excerpt(variant: String): Map<String, Any?> {
-            val id = "character_${voice.name.lowercase()}_$variant"
+            val id = "${prefix}_${voice.name.lowercase()}_$variant"
             val clip = clips.first { it["id"] == id }
             val metrics = clip["metrics"] as? Map<*, *> ?: emptyMap<Any?, Any?>()
             val keys = listOf(
                 "sourceRequestedRootEnergyShare", "requestedRootEnergyShare", "sourceBodyPowerCentroidHz",
                 "mixBodyPowerCentroidHz", "rawRms", "weightedThroughRms", "weightedSpillRms",
                 "weightedSpillIndependentPowerShare", "analysisWindows", "comparisonGainMatchedSpectralDistance",
+                "identicalComparisonSource", "comparisonSourceMaximumDifference", "nativePitchGatePass", "actualEnergyLedger", "higherRateReference",
             )
             return linkedMapOf("id" to id, "model" to clip["model"], "status" to clip["status"]) + keys.associateWith { metrics[it] }
         }
-        linkedMapOf("voice" to voice.name, "original" to excerpt("original"), "revised" to excerpt("revised"))
+        linkedMapOf("voice" to voice.name, first to excerpt(first), second to excerpt(second))
     }
 
     private fun config(c: FilamentConfig) = linkedMapOf<String, Any?>(
@@ -608,9 +836,11 @@ object FilamentAuditionGenerator {
 
     private fun options(o: Filament.Options) = linkedMapOf<String, Any?>(
         "collapsePaths" to o.collapsePaths, "genericSpill" to o.genericSpill, "disableBend" to o.disableBend,
+        "disableExchange" to o.disableExchange, "freezeMemory" to o.freezeMemory, "referenceOversampling" to o.referenceOversampling,
     )
 
     private fun diagnostics(d: Filament.Diagnostics): Map<String, Any?> = linkedMapOf(
+        "allocationBasis" to d.allocationBasis, "exchange" to d.exchange?.let(::exchangeDiagnostics),
         "launch" to d.launch, "retained" to d.retained, "escaped" to d.escaped, "absorbed" to d.absorbed,
         "rawPeak" to d.rawPeak, "rawRms" to d.rawRms, "rawDc" to d.rawDc, "sourceEffort" to d.sourceEffort,
         "loop" to d.loop, "loopConverged" to d.loopConverged, "seamError" to d.seamError,
@@ -695,6 +925,12 @@ object FilamentAuditionGenerator {
     private fun note(midi: Int) = listOf("C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B")[midi % 12] + (midi / 12 - 1)
 
     private fun groupTitle(id: String): String = when (id) {
+        "junction" -> "Same source · a new middle junction"
+        "junction-presets" -> "Twelve current recipes"
+        "junction-pulse-bend" -> "Current PULSE · BEND at 25, 50, 75%"
+        "junction-pulse-collect" -> "Current PULSE · COLLECT at 25, 50, 75%"
+        "junction-hold" -> "Current held defaults"
+        "junction-mechanism" -> "Exchange and memory comparisons"
         "character" -> "Original and revised · three voices"
         "character-presets" -> "Twelve expressive recipes"
         "character-context" -> "Across the keyboard"
@@ -719,6 +955,12 @@ object FilamentAuditionGenerator {
     }
 
     private fun groupDescription(id: String): String = when (id) {
+        "junction" -> "Model 2 and model 3 share exactly the same source, C3, velocity 70%, controls, seed and profile. Model 3 exchanges remaining guided sound before later bends. Compare the native level, matched colour, stems and actual propagated energy ledger."
+        "junction-presets" -> "Four current model 3 recipes per voice, including a held recipe. Saved JSON is decoded and rendered again for exact replay; the twelve earlier model 1 and twelve model 2 recipes remain below."
+        "junction-pulse-bend" -> "Ordinary current PULSE at BEND 25, 50 and 75%, with fixed excitation and companion controls. Actual junction/split errors, pitch and onset classifications remain visible."
+        "junction-pulse-collect" -> "Ordinary current PULSE at COLLECT 25, 50 and 75%, with a fixed source and guided network. Raw preserves the actual collector balance."
+        "junction-hold" -> "Current voice defaults in a held cycle, where not already identical to a preset. Independent prior/current PCM and state evidence verify recurrence, including the middle memory state."
+        "junction-mechanism" -> "Current PULSE with active exchange, disabled exchange and frozen memory, all with the same source. These controlled fixtures retain explicit diagnostic recipes and actual energy measurements."
         "character" -> "One model 1/model 2 pair for THREAD, PULSE and CURL. Each pair shares explicit controls, C3, velocity 70%, seed and profile. Hear matched colour, then compare native level and source/collector stems."
         "character-presets" -> "Four model 2 recipes per voice, including a held recipe. Every ordinary patch is decoded and rendered again to check exact saved-model replay."
         "character-context" -> "Each revised voice at C2/35% velocity and C5/90% velocity. These musical examples change both register and touch; the original controlled pitch/velocity grid remains below."
@@ -764,16 +1006,16 @@ object FilamentAuditionGenerator {
     private fun zip(root: File, nativeClipIds: Set<String>, allClipIds: Set<String>) {
         val readme = File(root, "LISTENING-PACK.txt")
         readme.writeText("""
-            FILAMENT · character listening iteration
+            FILAMENT · middle-junction listening iteration
 
             This curated pack contains ${nativeClipIds.size} native PCM24 clips covering the six
-            original/revised voice comparisons, twelve revised expressive presets and six
-            revised musical register/velocity contexts. It also contains every clip's
+            model 2/model 3 comparisons, twelve current presets, six ordinary PULSE
+            middle-control probes and three exchange/memory comparisons. It contains every clip's
             recipe, ordinary patch where applicable, JSON diagnostics and every held
             independently generated predecessor/current PCM16 seam context.
 
             The manifest describes the complete ${allClipIds.size}-clip listening page.
-            The original 88-clip model 1 corpus, raw/matched/stem files, macro sweeps and
+            The previous 125-clip model 1/model 2 corpus, raw/matched/stem files, macro sweeps and
             diagnostic mechanism audio remain individually downloadable on that page;
             those audio files are omitted here to
             keep this pack below the host's per-file limit. The manifest's packScope field
@@ -784,10 +1026,17 @@ object FilamentAuditionGenerator {
             the page use one shared gain of 0.25; matched files use the common 0.03
             loudest-200-ms target. An intentionally silent collector remains silent.
             Diagnostic ablation recipes keep options separate from their base patch.
-            Each clip and every saved patch explicitly names model 1 or model 2; omitted
-            patch model retains the original model 1 contract. The character comparisons
-            intentionally allow changed excitation between renderer versions. Existing
-            geometry comparisons keep their fixed-source guards.
+            Each clip and every saved patch explicitly names model 1, model 2 or model 3;
+            omitted patch model retains the original model 1 contract. New model 2/model 3
+            pairs require exact source identity at 4x processing. Earlier model 1/model 2
+            character pairs intentionally allow changed excitation. Existing geometry
+            comparisons keep their fixed-source guards. Three diagnostic 8x references
+            export metrics and replay recipes without additional audio clips.
+
+            Model 3 nominal branch/site traces describe the launch-allocation plan. The
+            actualEnergyLedger describes propagated path energies and scoped memory data.
+            Uncollected closure is bookkeeping; actual terminal excess, sample-power
+            junction/split residuals and collector norms provide separate checks.
             Numeric evidence supports listening and does not establish musical acceptance.
         """.trimIndent() + "\n")
         val destination = File(root, PACK_NAME)
@@ -797,7 +1046,7 @@ object FilamentAuditionGenerator {
                 relative == "LISTENING-PACK.txt" || relative == "manifest.json" ||
                     relative.startsWith("recipes/") && file.extension == "json" && file.nameWithoutExtension in allClipIds ||
                     relative.startsWith("patches/") && file.extension == "json" && file.nameWithoutExtension in allClipIds ||
-                    relative.startsWith("diagnostics/") && (file.extension == "json" && file.nameWithoutExtension in allClipIds || file.name.endsWith("_seam-context.wav") && file.name.removeSuffix("_seam-context.wav") in allClipIds) ||
+                    relative.startsWith("diagnostics/") && (file.extension == "json" && file.nameWithoutExtension.removeSuffix("_reference-8x") in allClipIds || file.name.endsWith("_seam-context.wav") && file.name.removeSuffix("_seam-context.wav") in allClipIds) ||
                     relative.startsWith("native/") && file.nameWithoutExtension in nativeClipIds
             }
         }.sortedBy { it.relativeTo(root).invariantSeparatorsPath }.toList()
