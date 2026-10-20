@@ -265,6 +265,7 @@ object Velocity {
         is NacrePatch -> Nacre.macrosFor(patch.voice)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
+        is TrioPatch -> Trio.macrosFor(patch.voice)
     }
 
     /**
@@ -407,6 +408,7 @@ object Velocity {
         is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
+        is TrioPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
