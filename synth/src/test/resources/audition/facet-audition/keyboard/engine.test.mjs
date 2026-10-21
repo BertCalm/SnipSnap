@@ -7,6 +7,7 @@
  * reconstructed from this JavaScript engine. No repository-wide Gradle run is needed.
  */
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -243,6 +244,70 @@ test('brightness, reflection density and movement change sound, not only display
   console.log(JSON.stringify({ check: 'reflection-control-authority', densityDistance, movementDistance }));
 });
 
+test('dark and neutral brightness retain the published seeded PCM output', () => {
+  // Captured before changing the bright-half veil balance. Float32 bytes are
+  // written explicitly as little endian so these hashes do not depend on host byte order.
+  const goldens = {
+    'BLOOM/glass/0': 'fa871ab5d0a7017aa03f5091560f3a13454ff9e542f8a835c6898fc62d15c547',
+    'BLOOM/glass/0.25': '2312eefe09143f38f6ee8c31c949277de1a82e593d38f871a01c32f24a92b8f6',
+    'BLOOM/glass/0.5': 'e549e728fb0e84203c15028924a01c3a923f295045dd3944846e35a4e9872a3e',
+    'BLOOM/air/0': 'a9405fbef4a3855518426c602fb4a8c2d5d525da1364432e425ec60e53bece4b',
+    'BLOOM/air/0.25': '0253cc59aaabd8f02b1ab8f716fa55fe2b79f9931295a21b065b65a0ee6ffc4c',
+    'BLOOM/air/0.5': '51358dd1c567e0ffe97ce01932e534c16cbe6396d23fa370536be15b1a297dd0',
+    'SHIMMER/glass/0': 'ff32b9481982d17dede4b60a20c7cc1debb6041e7f33db1a1b5c1514832896cb',
+    'SHIMMER/glass/0.25': '3a3a8e3f30d20b4e1dbca371b21ceed5f1947440ec1ccb7d34fa5bc06aa57675',
+    'SHIMMER/glass/0.5': 'a4028a582d65f13749df0d8346d5e38b8b643032a7919e973effee54df5edcf5',
+    'SHIMMER/air/0': '991ca27a63281b83e34d39ee850ee5814749cdced3f9c5c246c0515b09a62144',
+    'SHIMMER/air/0.25': '38a57ae046d4563592645cfa0fd075d27c5ddef1c625ddd1d2ae135d11ef4ec4',
+    'SHIMMER/air/0.5': '0c73be06a1e2b5e2749d6297cb0e0433f9b79e56adb5016fe7d995a2e15f4d7c',
+  };
+  for (const [configuration, expected] of Object.entries(goldens)) {
+    const [voice, texture, value] = configuration.split('/');
+    const synth = engine();
+    synth.handleMessage(note({ id: 'brightness-regression', voice, texture, brightness: Number(value) }));
+    const samples = synth.render(52920);
+    const bytes = Buffer.alloc(samples.length * 4);
+    samples.forEach((sample, i) => bytes.writeFloatLE(sample, i * 4));
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), expected, configuration);
+  }
+});
+
+test('bright settings expose the ringing modes without raising the diffuse noise veil', () => {
+  for (const voice of ['BLOOM', 'SHIMMER']) for (const texture of textures) {
+    const observations = [.5, .75, 1].map(brightness => {
+      const synth = engine();
+      synth.handleMessage(note({ id: 'brightness-regression', voice, texture, brightness }));
+      const samples = synth.render(52920);
+      const measured = spectrum(samples, 44100, .35, 1.15);
+      const ratios = geometry.model[texture === 'air' ? 'airRatios' : 'glassRatios'];
+      const rootHz = 440 * 2 ** ((48 - 69) / 12);
+      let diffusePower = 0, modalPower = 0;
+      for (let i = 0; i < measured.power.length; i++) {
+        const hz = i * measured.binHz;
+        if (hz < 2000 || hz > 10000) continue;
+        // A 35 Hz exclusion is wider than the modal lines and FFT skirts.
+        // The remaining power measures the broad upper veil in actual rendered audio.
+        if (ratios.some(ratio => Math.abs(hz - rootHz * ratio) < 35)) modalPower += measured.power[i];
+        else diffusePower += measured.power[i];
+      }
+      return { brightness, diffusePower: diffusePower / measured.windows,
+        modalPower: modalPower / measured.windows, diffuseToModal: diffusePower / modalPower };
+    });
+    const [neutral, brighter, maximum] = observations;
+    console.log(JSON.stringify({ check: 'brightness-noise-balance', voice, texture, observations }));
+    for (const bright of [brighter, maximum]) {
+      assert.ok(bright.diffusePower < neutral.diffusePower * .95,
+        `${voice}/${texture}/${bright.brightness} must not raise the broad noise floor`);
+      assert.ok(bright.diffuseToModal < neutral.diffuseToModal * .7,
+        `${voice}/${texture}/${bright.brightness} must expose the ringing body at equal playback gain`);
+      assert.ok(bright.modalPower >= neutral.modalPower * .95,
+        `${voice}/${texture}/${bright.brightness} must retain upper modal energy`);
+    }
+    assert.ok(maximum.diffuseToModal < brighter.diffuseToModal * .9,
+      `${voice}/${texture} moving farther into brightness must keep improving ring-to-noise balance`);
+  }
+});
+
 test('calibrated playback has headroom for coherent four-note chords before the UI volume', () => {
   // Identical note/seed/start combinations deliberately sum coherently. Other
   // cases cover chords and both density/movement corners without an expensive
@@ -336,7 +401,8 @@ function spectrum(samples, sampleRate, from = .35, until = 2.7) {
     for (let j = 0; j < bands.length; j++) if (frequency >= edges[j] && frequency < edges[j + 1]) { bands[j] += value; break; }
   }
   assert.ok(total > 1e-20, 'reference comparison must have spectral energy');
-  return { bands: bands.map(value => value / total), centroid: weighted / total };
+  return { bands: bands.map(value => value / total), centroid: weighted / total,
+    power, binHz: sampleRate / length, windows };
 }
 
 function alignment(actual, expected, sampleRate) {

@@ -31,6 +31,15 @@ changes, and retains resonator memories while controls move. Brightness is
 a new performance tilt with a neutral midpoint; it is separate from saved
 CHROMA or ELEVATION. Airy retains the refined .016 noise veil.
 
+The owner heard Brightness add enough white noise to obscure the sound.
+The bright half now reduces the broad veil as it raises the modal tilt:
+`veilTilt = 2^(-2 * abs(brightness - .5))`. The neutral and darker half retain
+their exact output; maximum brightness has 12 dB less veil than the prior
+keyboard version. The ringing-mode tilt, excitation, geometry and timing
+are unchanged. Eleven Node checks pass, including twelve pre-change
+dark/neutral PCM hashes and rendered inter-modal power measurements that
+separate the broad veil from the brighter resonances.
+
 The streaming adaptation replaces whole-file level matching and the fixed
 six-second envelope with fixed gain, causal filtering and a key envelope.
 Attack/release control playing gestures rather than glint packet timings.

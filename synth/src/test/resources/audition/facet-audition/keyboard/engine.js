@@ -395,7 +395,9 @@ class LiveVoice {
     }
     if(this.lastBrightness!==this.brightness.value) {
       for(let j=0;j<16;j++)this.tilt[j]=Math.pow(2,(this.brightness.value-.5)*4*(j/15-.5));
-      this.veilTilt=Math.pow(2,(this.brightness.value-.5)*2);this.lastBrightness=this.brightness.value;
+      // Brighten the ringing modes without lifting the diffuse noise floor.
+      // Preserve the dark half and neutral sound; ease the veil back above .5.
+      this.veilTilt=Math.pow(2,-Math.abs(this.brightness.value-.5)*2);this.lastBrightness=this.brightness.value;
     }
     let output=0;
     for(let sub=0;sub<4;sub++) {
