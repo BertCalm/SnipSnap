@@ -65,14 +65,19 @@ class PadRecipeTest {
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),
         MurmurPatch("Mouth Test", MurmurVoice.KEY, mapOf("MOUTH" to 0.7f), midi = 55, velocity = 0.6f),
         ShoalPatch("Population Test", ShoalVoice.RIPPLE, mapOf("COHESION" to .8f, "STRAY" to .3f), midi = 43, velocity = .6f),
-        // VENT is a prototype held outside Presets (PatchTypes.PROTOTYPES), so no factory
-        // preset covers it; this one also carries a saved note, velocity and seed.
+        // VENT's model-1 comparisons stay outside the model-2 factory roster;
+        // this one covers their saved note, velocity and seed.
         VentPatch("Orbit Test", VentVoice.WIRE, mapOf("CHAOS" to 0.6f, "LENGTH" to 0.1f), midi = 48, velocity = 0.6f, seed = 7),
         // OVERLAP is a prototype too; its patch carries a saved note and velocity.
         OverlapPatch("Network Test", OverlapTopology.TREFOIL, mapOf("KNOT" to 0.6f), midi = 57, velocity = 0.6f),
-        // FLOCK also keeps its provisional recipes outside the factory preset roster.
+        // FLOCK also exercises a saved root, velocity and exact seed beyond its factory defaults.
         FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
+        NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
+        // CHAMBER is a finite prototype too; its patch carries a saved note, velocity and exact seed.
+        ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
+        OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),
+            midi = 57, velocity = .6f, seed = -7, gesture = OhmGesture.GATHER),
     )
 
     @Test

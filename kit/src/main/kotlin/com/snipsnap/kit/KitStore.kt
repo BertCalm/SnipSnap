@@ -40,8 +40,11 @@ object KitStore {
     @Throws(IOException::class)
     fun read(file: File): Kit {
         if (!file.isFile) throw IOException("no such file: $file")
-        return fromJson(Json.parse(file.readText(Charsets.UTF_8)))
+        return fromJsonText(file.readText(Charsets.UTF_8))
     }
+
+    /** The same codec for a bounded sidecar read from an import archive. */
+    fun fromJsonText(text: String): Kit = fromJson(Json.parse(text))
 
     /** Subdirectories of [root] that are kits, sorted by name. */
     fun list(root: File): List<File> =

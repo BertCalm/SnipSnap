@@ -146,7 +146,7 @@ object ShoalAuditionGenerator {
                 "headClassifierConfidence" to headClass.confidence,
                 "energyTrace" to trace, "energyTraceOriginalFrames" to probe.energyTrace.size,
                 "normalizedDistanceFromDefault" to references[p.voice]?.let { distance(it, matched.samples) },
-                "referenceModelVersion" to Shoal.MODEL_VERSION,
+                "referenceModelVersion" to Shoal.HARMONIC_MODEL_VERSION,
                 "seamError" to if (held) probe.seamError else null,
                 "stateError" to if (held) probe.stateError else null,
                 "cycleDifferenceRatio" to if (held) cycleDifference(requireNotNull(previous), raw.samples) else null,
@@ -178,7 +178,7 @@ object ShoalAuditionGenerator {
             "legacy-v1/shoal-first-listen.zip"
         } else null
         val manifest = linkedMapOf(
-            "schemaVersion" to 1, "engine" to "SHOAL", "modelVersion" to Shoal.MODEL_VERSION,
+            "schemaVersion" to 1, "engine" to "SHOAL", "modelVersion" to Shoal.HARMONIC_MODEL_VERSION,
             "title" to "Shoal / SnipSnap listening room", "sourceRevision" to git("rev-parse", "HEAD"),
             "sourceTreeDirty" to (git("status", "--porcelain")?.isNotBlank()),
             "sourceDescription" to "Actual offline SnipSnap Kotlin engine renders. No samples, browser synthesis or rack effects.",
@@ -199,7 +199,7 @@ object ShoalAuditionGenerator {
         )
         val manifestText = Json.write(json(manifest)) + "\n"
         val summary = linkedMapOf(
-            "engine" to "SHOAL", "modelVersion" to Shoal.MODEL_VERSION,
+            "engine" to "SHOAL", "modelVersion" to Shoal.HARMONIC_MODEL_VERSION,
             "sourceRevision" to manifest["sourceRevision"], "sourceTreeDirty" to manifest["sourceTreeDirty"],
             "metricNotes" to METRIC_NOTES,
             "clips" to rows.map { row -> row.filterKeys { it != "energyTrace" } },
@@ -313,7 +313,7 @@ object ShoalAuditionGenerator {
     private fun case(voice: ShoalVoice, suffix: String, group: String, title: String, question: String,
                      overrides: Map<String, Float> = emptyMap(), midi: Int = 48, velocity: Float = 1f,
                      ablation: Shoal.Ablation = Shoal.Ablation.NONE, macro: String? = null, step: Float? = null,
-                     pair: String? = null, values: List<Float>? = null, seconds: Float? = null, model: Int = Shoal.MODEL_VERSION) =
+                     pair: String? = null, values: List<Float>? = null, seconds: Float? = null, model: Int = Shoal.HARMONIC_MODEL_VERSION) =
         Case("${voice.name.lowercase()}_$suffix", group, title, question,
             ShoalPatch("${voice.name} · $title", voice, Shoal.defaults(voice) + overrides, midi, velocity, model), ablation, macro, step, pair, values, seconds)
 

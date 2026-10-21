@@ -136,7 +136,7 @@ class SpoolIntegrationTest {
             assertTrue(findings.none { it.severity == Severity.FAIL }, findings.joinToString { it.message })
             assertEquals(17, findings.count { it.severity == Severity.OK }, "one program and sixteen readable pad references")
             for (pad in finalModel.kit.pads) {
-                val exported = File(outcome.primary.parentFile, pad.sampleFile)
+                val exported = File(outcome.primary, pad.sampleFile)
                 assertTrue(File(dir, pad.sampleFile).readBytes().contentEquals(exported.readBytes()), "${pad.sampleFile}: export preserves audio")
                 val info = WavInfo.read(exported)
                 assertEquals(WavWriter.MPC_SAMPLE_RATE, info.sampleRate)

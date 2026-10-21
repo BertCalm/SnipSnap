@@ -99,7 +99,15 @@ object KitBackup {
                         continue
                     }
                     val xpn = File(temp, "${kit.name}.xpn")
-                    XpnPackager.write(kit, dir, xpn, Exporters.defaultMeta(kit), overwrite = true)
+                    try {
+                        XpnPackager.write(kit, dir, xpn, Exporters.defaultMeta(kit), overwrite = true)
+                    } catch (e: IllegalArgumentException) {
+                        // Source metadata has a bounded portable form. An
+                        // oversized kit must be named, not cost every other
+                        // kit in this backup or silently lose its credits.
+                        skipped[kit.name] = e.message ?: "kit could not be packaged"
+                        continue
+                    }
                     zip.putNextEntry(ZipEntry("${kit.name}.xpn"))
                     xpn.inputStream().use { it.copyTo(zip) }
                     zip.closeEntry()

@@ -118,7 +118,7 @@ object Exporters {
     ): ExportOutcome = when (format) {
         ExportFormat.PROGRAM_FOLDER -> {
             val r = KitExporter.exportProgramFolder(kit, kitDir, destRoot, overwrite)
-            ExportOutcome(format, r.program, null, r.findings)
+            ExportOutcome(format, r.directory, null, r.findings)
         }
         ExportFormat.EXPANSION -> {
             val r = ExpansionWriter.write(

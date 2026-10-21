@@ -28,7 +28,7 @@ data class SkitterProbe(
     val noiseForcingDisabled: Boolean = false,
 )
 
-/** Control traces are sampled every 5 ms, before final loudness matching. Pitch offsets are cents. */
+/** Control traces include every 5 ms and the final frame, before loudness matching. Offsets are cents. */
 data class SkitterTrace(
     val seconds: Double,
     val energyHistory: Double,
@@ -113,13 +113,50 @@ object Skitter {
     )
 
     private fun shape(v: SkitterVoice): Shape = when (v) {
-        SkitterVoice.BASS -> Shape(floatArrayOf(.40f,.20f,.30f,.10f,.05f), 1.30,.45,.012, 5.5,.95,9.0,.028,.13,.14,.065)
+        SkitterVoice.BASS -> Shape(floatArrayOf(.40f,.20f,.30f,.10f,.05f), 1.30,.45,.012, 3.4,1.15,9.0,.028,.13,.14,.065)
         SkitterVoice.LEAD -> Shape(floatArrayOf(.70f,.45f,.45f,.25f,.10f), 1.85,.48,.009, 9.0,.80,17.0,.022,.11,.18,.085)
         SkitterVoice.HOLLOW -> Shape(floatArrayOf(.35f,.30f,.25f,.50f,.10f), 2.0,.62,.018, 3.2,.70,9.0,.044,.16,.22,.09,2.0)
         SkitterVoice.FLUTTER -> Shape(floatArrayOf(.55f,.55f,.70f,.40f,.20f), 2.05,.68,.013, 6.4,.74,22.0,.020,.13,.24,.09)
-        SkitterVoice.CHIRP -> Shape(floatArrayOf(.50f,.25f,.65f,.65f,.35f), 1.45,.56,.012, 3.6,.62,28.0,.030,.14,.16,.11)
+        SkitterVoice.CHIRP -> Shape(floatArrayOf(.50f,.25f,.65f,.65f,.35f), 1.45,.56,.012, 2.6,.52,28.0,.030,.14,.16,.11)
         // Dense edges already provoke FRAY strongly; keep its irregular pitch gestures compact.
-        SkitterVoice.FRAY -> Shape(floatArrayOf(.85f,.65f,.85f,.45f,.60f), 2.10,.70,.016, 7.4,.72,33.0,.019,.10,.30,.10,phaseTravel=.25)
+        SkitterVoice.FRAY -> Shape(floatArrayOf(.85f,.65f,.85f,.45f,.60f), 2.10,.70,.016, 7.4,.82,33.0,.019,.10,.30,.10,phaseTravel=.25)
+    }
+
+    /** The waveform families differ before the filter, including when all reaction controls are off. */
+    private data class Wave(val edgeLow: Double, val edgeHigh: Double, val pulse: Double,
+                            val dutyLow: Double = .5, val dutyHigh: Double = .16, val sine: Double = 0.0,
+                            val third: Double = 0.0)
+    private data class Source(val a: Wave, val b: Wave, val bMix: Double, val rootSupport: Double)
+    private data class Color(val drive: Double, val buzzDrive: Double, val memoryDrive: Double,
+                             val bias: Double, val signedBias: Double, val dampingFloor: Double)
+    private data class Reaction(val motion: Double, val memoryMotion: Double, val zeta: Double,
+                                val zetaDepth: Double, val energy: Double, val gesture: Double, val noise: Double)
+    private data class Character(val source: Source, val color: Color, val reaction: Reaction)
+
+    /**
+     * Circuit voicings, not output effects. Rounded bass, saw/pulse bite, odd-harmonic hollow,
+     * complementary pulses, a clean resonant carrier, and an asymmetrically driven pair share
+     * one coherent filter. The same six controls retain their scope within each family.
+     */
+    private fun character(voice: SkitterVoice): Character = when(voice) {
+        SkitterVoice.BASS -> Character(
+            Source(Wave(.05,.70,.08,sine=.15),Wave(.15,.80,.15,dutyHigh=.30),.18,.035),
+            Color(1.0,.65,2.2,0.0,.50,.90), Reaction(4.0,1.8,.95,.12,1.6,.55,.60))
+        SkitterVoice.LEAD -> Character(
+            Source(Wave(.40,1.0,.10),Wave(.25,1.0,.90,dutyLow=.42,dutyHigh=.14),.38,.030),
+            Color(1.1,1.7,5.5,.035,3.0,.58), Reaction(3.6,2.2,.88,.20,1.4,.95,.70))
+        SkitterVoice.HOLLOW -> Character(
+            Source(Wave(.15,1.0,1.0,dutyHigh=.48),Wave(.20,.90,.60,dutyHigh=.35),.21,.055),
+            Color(.95,.90,2.8,0.0,1.0,.62), Reaction(3.6,1.8,.94,.15,1.1,.65,.55))
+        SkitterVoice.FLUTTER -> Character(
+            Source(Wave(.25,1.0,1.0,dutyHigh=.44),Wave(.35,1.0,1.0,dutyLow=.30,dutyHigh=.12),.32,.025),
+            Color(1.0,1.2,3.0,0.0,1.3,.55), Reaction(5.0,2.4,.80,.25,1.35,1.05,.70))
+        SkitterVoice.CHIRP -> Character(
+            Source(Wave(.025,.45,.10,sine=.65,third=.35),Wave(.30,1.0,.80,dutyLow=.46,dutyHigh=.18),.16,.045),
+            Color(.95,.70,1.8,0.0,.60,.48), Reaction(5.5,1.5,.86,.24,2.0,.75,1.0))
+        SkitterVoice.FRAY -> Character(
+            Source(Wave(.65,1.0,.65,dutyLow=.22,dutyHigh=.12),Wave(.60,1.0,.95,dutyLow=.16,dutyHigh=.12),.42,.030),
+            Color(1.25,1.9,6.0,.13,4.0,.62), Reaction(3.5,2.4,.86,.24,1.3,.85,1.25))
     }
 
     fun macrosFor(voice: SkitterVoice): List<MacroSpec> {
@@ -152,18 +189,23 @@ object Skitter {
         else -> 0.0
     }
 
-    private fun oscillator(phase: Double, increment: Double, buzz: Double): Double {
+    private fun oscillator(phase: Double, increment: Double, buzz: Double, wave: Wave): Double {
         val saw = 2.0*phase - 1.0 - blep(phase,increment)
-        val duty = .5 - .34*buzz
+        val duty = (wave.dutyLow+(wave.dutyHigh-wave.dutyLow)*buzz).coerceIn(.12,.50)
         val shifted = (phase-duty+1.0)%1.0
         val pulse = (if (phase<duty) 1.0 else -1.0) + blep(phase,increment) - blep(shifted,increment) - (2.0*duty-1.0)
-        val edge = .23 + .77*buzz
+        val edge = wave.edgeLow+(wave.edgeHigh-wave.edgeLow)*buzz
         val p=2.0*PI*phase
+        val fundamental=sin(p)
+        val third=sin(3.0*p)
         // A four-partial triangle is intentionally rounded, with no discontinuity or aliased corner.
-        val triangle=8.0/(PI*PI)*(sin(p)-sin(3.0*p)/9.0+sin(5.0*p)/25.0-sin(7.0*p)/49.0)
+        val triangle=8.0/(PI*PI)*(fundamental-third/9.0+sin(5.0*p)/25.0-sin(7.0*p)/49.0)
+        // CHIRP excites the shared filter near its third-harmonic resonance; this remains
+        // part of the rooted oscillator, with no extra note, recursive state, or output effect.
+        val rounded=triangle+(fundamental-triangle)*wave.sine+wave.third*third
         // Match fundamental polarity across the morph; opposing fundamentals would leave a
         // misleadingly thin/noisy middle while the shared leveler concealed the cancellation.
-        return -(1.0-edge)*triangle + edge*((1.0-.58*buzz)*saw - .58*buzz*pulse*.75)
+        return -(1.0-edge)*rounded + edge*((1.0-wave.pulse)*saw - wave.pulse*pulse*.75)
     }
 
     /** Deterministic base-rate noise also makes the 8x/16x reference use the same excitation. */
@@ -199,7 +241,8 @@ object Skitter {
     }
 
     /** All recursive state, including coefficient smoothing and the noise/DC detectors. */
-    private class Circuit(val s: Shape, val m: Map<String,Float>, val rate: Int, val probe: SkitterProbe, val held: Boolean) {
+    private class Circuit(val s: Shape, val c: Character, val m: Map<String,Float>, val rate: Int,
+                          val probe: SkitterProbe, val held: Boolean) {
         // Force and depth both depend on AGITATE. Square-root mapping keeps their product
         // responsive near zero instead of reserving the defining reaction for the top half.
         val agitate=if(probe.agitationDisabled) 0.0 else sqrt(m.getValue("AGITATE").toDouble())
@@ -221,7 +264,7 @@ object Skitter {
         private val dcSlew=1.0-exp(-2.0*PI*9.0/rate)
         private val coefficientSlew=1.0-exp(-1.0/(rate*.0015))
         private val omega=2.0*PI*s.flutterHz*(.8+.3*agitate)
-        private val zeta=.90-.30*agitate
+        private val zeta=(c.reaction.zeta-c.reaction.zetaDepth*agitate).coerceIn(.55,.95)
         private val damped=omega*sqrt(1.0-zeta*zeta)
         private val decay=exp(-zeta*omega/rate)
         private val cc=cos(damped/rate)
@@ -245,13 +288,13 @@ object Skitter {
             noiseEnergy+=noiseEnergySlew*(noiseVariance-noiseEnergy)
             val x=input+static*.11*noiseAudio2
             // Read PREVIOUS history/agitation. Their updates below cannot feed today's own output.
-            val logTarget=ln(baseCutoff)+agitate*(4.5*position+3.0*history)
+            val logTarget=ln(baseCutoff)+agitate*(c.reaction.motion*position+c.reaction.memoryMotion*history)
             if(sample==0 && oldLogCutoff==0.0) oldLogCutoff=logTarget
             oldLogCutoff+=coefficientSlew*(logTarget-oldLogCutoff)
             cutoff=exp(oldLogCutoff).coerceIn(35.0, min(16000.0,rate*.20))
-            drive=1.0+1.3*buzz+agitate*(4.5*history+.75*abs(position))
-            val bias=agitate*1.3*signed
-            damping=(s.damping-.20*agitate*history-.08*agitate*position).coerceIn(.48,1.30)
+            drive=c.color.drive+c.color.buzzDrive*buzz+agitate*(c.color.memoryDrive*history+.75*abs(position))
+            val bias=c.color.bias+agitate*c.color.signedBias*signed
+            damping=(s.damping-.20*agitate*history-.08*agitate*position).coerceIn(c.color.dampingFloor,1.30)
             if(sample%16==0) {
                 val g=tan(PI*cutoff/rate)
                 a1=1.0/(1.0+g*(g+damping)); a2=g*a1; a3=g*a2
@@ -279,7 +322,8 @@ object Skitter {
             val energyRise=max(0.0,(history-oldHistory)*rate*.025)
             val noiseDeviation=(noiseVariance-noiseEnergy)*7.0 + .85*noiseSlow
             val noiseForce=if(probe.noiseForcingDisabled) 0.0 else static*noiseDeviation*(if(held) .70 else 1.0)
-            val forcing=.85*tanh(agitate*(.30*history+1.5*energyRise+.80*gesture+.85*noiseForce))
+            val forcing=.85*tanh(agitate*(.30*history+c.reaction.energy*energyRise+
+                c.reaction.gesture*gesture+c.reaction.noise*noiseForce))
             val displaced=position-forcing
             val nextPosition=forcing+p00*displaced+p01*velocity
             velocity=p10*displaced+p11*velocity
@@ -563,22 +607,25 @@ object Skitter {
         require(oversample==4 || oversample==8 || oversample==16) { "SKITTER oversample must be 4, 8 or 16" }
         require(seconds==null || (seconds.isFinite() && seconds>0f && seconds<=12f)) { "SKITTER probe seconds must be (0,12]" }
         val started=System.nanoTime()
-        val m=settled(voice,macros); val s=shape(voice)
+        val m=settled(voice,macros); val s=shape(voice); val c=character(voice)
         val vel=velocity.takeIf { it.isFinite() }?.coerceIn(0f,1f)?.toDouble() ?: 1.0
         val held=isLoop(m.getValue("HOLD")); val rate=RATE*oversample
         val hz=Keys.midiHz(midi).toDouble()
-        val circuit=Circuit(s,m,rate,probe,held); val stats=Stats(); val trace=ArrayList<SkitterTrace>()
+        val circuit=Circuit(s,c,m,rate,probe,held); val stats=Stats(); val trace=ArrayList<SkitterTrace>()
         val contextSeed=Dsp.seedFor("SKITTER",voice.name,midi,seed)
         val buzz=m.getValue("BUZZ").toDouble(); val skitter=m.getValue("SKITTER").toDouble()
         val vent=m.getValue("VENT").toDouble()
-        val support=s.support+.10*vent.pow(3.0)+.035*((midi-60)/12.0).coerceIn(0.0,1.0)
+        // Let the voiced filter define ordinary timbre. Preserve the previous root support
+        // at full high-pass VENT and in the upper register, where it protects the musical root.
+        val support=c.source.rootSupport+(s.support+.10-c.source.rootSupport)*vent.pow(3.0)+
+            .035*((midi-60)/12.0).coerceIn(0.0,1.0)
         val baseCutoff=(hz*s.cutoffRatio*(.62+.70*buzz)*(.75+.25*vel)).coerceIn(90.0,5500.0)
         var phaseA=.173; var phaseB=.381; var rootPhase=.0
         var a=0.0; var b=0.0; var gesture=0.0
         val traceStride=max(1,(rate*.005).roundToInt())
-        fun record(i: Int, timeOffset: Double = 0.0) {
+        fun record(i: Int, final: Boolean = false) {
             stats.measure(circuit,a,b)
-            if(i%traceStride==0) trace.add(SkitterTrace(i.toDouble()/rate+timeOffset,circuit.history,circuit.signed,
+            if(i%traceStride==0 || final) trace.add(SkitterTrace(i.toDouble()/rate,circuit.history,circuit.signed,
                 circuit.position,circuit.velocity,a,b,circuit.cutoff,circuit.drive))
         }
         var periods=0; var converged=!held; var stateError=0.0; var loopStart=-1
@@ -594,13 +641,13 @@ object Skitter {
                     a=force.a[i].toDouble(); b=force.b[i].toDouble(); gesture=force.gesture[i].toDouble()
                     val fa=plan.rootHz*force.correctionA*2.0.pow(a/1200.0)
                     val fb=plan.rootHz*s.interval*force.correctionB*2.0.pow(b/1200.0)
-                    val oa=oscillator(phaseA,fa/rate,buzz); val ob=oscillator(phaseB,fb/rate,buzz)
-                    val input=vel*.35*(.57*oa+.43*ob)
+                    val oa=oscillator(phaseA,fa/rate,buzz,c.source.a); val ob=oscillator(phaseB,fb/rate,buzz,c.source.b)
+                    val input=vel*.35*((1.0-c.source.bMix)*oa+c.source.bMix*ob)
                     val root=sin(2.0*PI*rootPhase)*vel
                     raw[i]=circuit.step(input,interpolate(force.noise,i.toDouble()/oversample,true)*vel,gesture*vel,
                         root,support,baseCutoff,i).toFloat()
                     phaseA=(phaseA+fa/rate)%1.0; phaseB=(phaseB+fb/rate)%1.0; rootPhase=(rootPhase+plan.rootHz/rate)%1.0
-                    if(recordTrace) record(i) else stats.measure(circuit,a,b)
+                    if(recordTrace) record(i,final=i==raw.lastIndex) else stats.measure(circuit,a,b)
                 }
                 return raw
             }
@@ -665,13 +712,13 @@ object Skitter {
                 val brightness=(buzz+.13*vel*exp(-t/.10)).coerceAtMost(1.0)
                 val fa=hz*2.0.pow(a/1200.0)
                 val fb=hz*s.interval*2.0.pow(b/1200.0)
-                val oa=oscillator(phaseA,fa/rate,brightness); val ob=oscillator(phaseB,fb/rate,brightness)
-                val input=excitation*vel*.35*(.57*oa+.43*ob)
+                val oa=oscillator(phaseA,fa/rate,brightness,c.source.a); val ob=oscillator(phaseB,fb/rate,brightness,c.source.b)
+                val input=excitation*vel*.35*((1.0-c.source.bMix)*oa+c.source.bMix*ob)
                 val root=sin(2.0*PI*rootPhase)*excitation*vel
                 rawInternal[i]=circuit.step(input,interpolate(nse,i.toDouble()/oversample,false)*excitation*vel,
                     gesture*excitation*vel,root,support,baseCutoff,i).toFloat()
                 phaseA=(phaseA+fa/rate)%1.0; phaseB=(phaseB+fb/rate)%1.0; rootPhase=(rootPhase+hz/rate)%1.0
-                record(i)
+                record(i,final=i==rawInternal.lastIndex)
             }
         }
         check(stats.boundHits==0) { "SKITTER internal bounds exceeded ${stats.boundHits} times" }

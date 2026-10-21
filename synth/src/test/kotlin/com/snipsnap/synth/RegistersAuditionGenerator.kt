@@ -22,6 +22,7 @@ import kotlin.math.sqrt
 /** Real Kotlin DSP evidence for a provisional organ/reed family, before application integration. */
 object RegistersAuditionGenerator {
     private const val REVISION = "r3-airflow"
+    private const val MODEL = 3
     private const val BASELINE_AUDIO_HASH = "56aa7372cb7bd4e84b7ac9fe8321acfdec17d32c2393fa5d63a3749a1510c513"
     private const val BASELINE_MANIFEST_HASH = "77ee227bf2855c327008c86c57b9046b8d66dca310357d8c2c561b6314316b5d"
     private const val PREVIOUS_AUDIO_HASH = "a1856a35995acd5dc151193cede4133ebcf896b17606d6205e9a4d49c81941df"
@@ -161,7 +162,7 @@ object RegistersAuditionGenerator {
         val audioHash = audioHash(clips)
         val manifest = Json.write(json(linkedMapOf(
             "schemaVersion" to 1, "title" to "REGISTERS · Pipe + Musette", "revision" to REVISION,
-            "engine" to "REGISTERS", "model" to Registers.MODEL_VERSION,
+            "engine" to "REGISTERS", "model" to MODEL,
             "status" to "Prototype audition — listening approval pending",
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
             "clipCount" to clips.size, "listeningTarget" to TARGET, "listeningPeakCeiling" to .99,
@@ -193,7 +194,7 @@ object RegistersAuditionGenerator {
         ))) + "\n"
         File(root, "manifest.json").writeText(manifest)
         for (asset in listOf("index.html", "styles.css", "app.js")) {
-            val resource = RegistersAuditionGenerator::class.java.getResourceAsStream("/audition/registers-audition/$asset")
+            val resource = RegistersAuditionGenerator::class.java.getResourceAsStream("/audition/registers-audition-r3/$asset")
                 ?: error("Missing REGISTERS listening page resource $asset")
             File(root, asset).outputStream().use { output -> resource.use { it.copyTo(output) } }
         }
@@ -238,7 +239,7 @@ object RegistersAuditionGenerator {
     }
 
     private fun cases(): List<Case> = buildList {
-        for (voice in RegistersVoice.entries) {
+        for (voice in listOf(RegistersVoice.PIPE, RegistersVoice.MUSETTE)) {
             val tag = voice.name.lowercase()
             for (midi in pitches) for (gesture in listOf("restrained", "expressive")) {
                 add(Case("${tag}_${midi}_$gesture", "identities", voice.name,
@@ -286,10 +287,10 @@ object RegistersAuditionGenerator {
         return controls.zip(values).toMap() + ("HOLD" to .35f)
     }
 
-    private fun render(case: Case): Render = if (case.voice in RegistersVoice.entries.map { it.name }) {
+    private fun render(case: Case): Render = if (case.voice in listOf("PIPE", "MUSETTE")) {
         val voice = RegistersVoice.valueOf(case.voice)
         val macros = Registers.defaults(voice) + case.overrides + ("TUNE" to (case.note - 48) / 24f)
-        val patch = RegistersPatch(case.label, voice, macros, case.note, case.velocity)
+        val patch = RegistersPatch(case.label, voice, macros, case.note, case.velocity, model = MODEL)
         val probe = patch.probe()
         val recipe = Json.parse(patch.toJsonText())
         val repeated = RegistersPatch.fromJsonText(Json.write(recipe)).probe()

@@ -7,6 +7,12 @@ All six finite default voices remain sample-identical to model 1. Eight
 starting presets are available; the proposed larger roster waits for listening
 approval of the revised controls.
 
+The opt-in [BRASS GROW prototype](engineering/brass-grow-prototype.md) adds two
+separate model-3 presets with a four-control panel. It leaves the original
+eight presets and starter kit unchanged. The legacy model-1/model-2 controls
+and saved-sound contracts described below still apply to ordinary patches;
+the linked prototype notes describe the new single-source GROW path.
+
 The source brief is [Embouchure engine engineering specification](engineering/embouchure-engine-spec.md).
 That brief refers to a supplied edited Gyre integration contract, but no such
 separate contract accompanied the attachment. The port follows the interfaces
@@ -31,7 +37,7 @@ synthesis, with no VL1 algorithm or factory-data compatibility claim.
 The saved gesture is one of SOFT_ENTRY, LEANING_SWELL, OVERPRESSURE,
 PRESSURE_RELEASE or BOWED_CAPTURE. Named segment profiles are versioned with
 the renderer. Model 1 is frozen, including its complete loop policy, so existing
-saved recipes retain their sound. New patches and factory presets use model 2.
+saved recipes retain their sound. Ordinary new patches and the original factory presets use model 2.
 Both versions use the original voice/note seed for direct comparisons.
 
 Model 2 makes EFFORT change the player trajectory and capture speed as well as
@@ -80,7 +86,13 @@ note's full release measurement. An arbitrary crop of a still-rising BASS can
 read as TOM when the crop invents an early release. Saved host recipes retain
 their explicit TONAL/LOOP routing.
 
-## First listening roster
+## Factory presets and kits
+
+The factory bank contains 36 Model 2 presets: 8 REED leads, 6 BRASS, 6 BASS,
+4 WHISTLE, 6 BOW and 6 SOFT. Each catalog entry includes its saved player gesture,
+musical role and description. `EmbouchurePresets.initial()` retains the accepted
+first eight below, with their original names, order and exact recipes;
+`all()` and `forVoice()` expose the expanded bank.
 
 | Preset | Voice | Saved gesture |
 |---|---|---|
@@ -100,6 +112,12 @@ Effort is a loop; the remaining pads are tonal finite notes. The FRESH TAPE
 starter has ID `embouchure` and the SYNTH picker includes all six voices,
 factory presets, editing, SCRAMBLE, saving and SEND TO PAD.
 
+`SynthKits.embouchureFactoryBanks()` supplies three additional dry sixteen-pad
+banks: Reeds and Air, Brass and Bass, and Bow and Soft. Each has twelve distinct
+factory presets plus four complementary C-minor-pentatonic notes. Across the
+three banks every factory preset appears exactly once, with the complete native
+recipe retained. These exports do not change the original FRESH TAPE starter.
+
 ## Audition and export
 
 Generate the listening pack with:
@@ -112,7 +130,8 @@ The pack lives under `testkit/embouchure-audition/`. Its manifest and patch JSON
 identify the actual note, velocity, macros and player profile; audio comparisons
 include raw and matched renders so loudness does not conceal excitation changes.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
-hosts the revised matrix, original/revised comparisons and kit downloads;
+hosts all 36 presets, per-preset soft/forte comparisons, the revised control
+matrix, historical original/revised comparisons and all four kit downloads;
 [pack notes](EMBOUCHURE_AUDITION.md)
 describe the loudness rules, measurements and reproduction task.
 
@@ -133,11 +152,17 @@ MPC WAV/program output. The patch is carried by `PadRecipe`; export is handled
 by the existing host, including its velocity-layer conventions. The current
 kit/drum-pad format has no attack-plus-sustain-loop field: Held Effort exports
 as one settled loop-length WAV and a drum pad plays it once. Continuous repeat
-on the audition page tests its wrap. A sustained keygroup instrument is a
+on the audition page tests its wrap. Enable looping over each held WAV in the
+sampler for continuing sustain. A sustained keygroup instrument is a
 separate host workflow and is not implied by a LOOP classification.
 
-Numerical tests cover reproducibility, bounds, root capture, macro activity,
-feedback dependence, source removal, serialization, routing and seam metrics.
+The owner accepted the six voices and revised controls before authorizing the
+expanded bank. The new presets have a separate listening verdict; this release
+does not retune the accepted renderer. Numerical tests cover reproducibility,
+bounds, root capture, macro activity, feedback dependence, source removal,
+serialization, routing, the original eight recipes, complete bank coverage and
+every exact held preset's convergence and seam metrics. Physical Android and
+MPC playback still requires a device check.
 They do not decide whether the voices have distinct musical identities or
 whether a held transition sounds seamless. Listening, Android-device testing,
 MPC-device playback and final naming remain acceptance work.

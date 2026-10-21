@@ -11,14 +11,21 @@ import com.snipsnap.synth.ContourRelation
 import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.Embouchure
+import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlotillaVoice
+import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerRole
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.OrphicaConfig
+import com.snipsnap.synth.OrphicaMaterial
+import com.snipsnap.synth.OrphicaMode
+import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.Murmur
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurFormantTarget
@@ -28,10 +35,23 @@ import com.snipsnap.synth.MurmurRouting
 import com.snipsnap.synth.MurmurTrajectory
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.OhmVoice
+import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.OspreyVoice
+import com.snipsnap.synth.OvenPatch
+import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.PluckVoice
+import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
+import com.snipsnap.synth.ShoalMaterial
+import com.snipsnap.synth.ShoalPatch
+import com.snipsnap.synth.ShoalVoice
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
 import com.snipsnap.synth.Presets
@@ -53,6 +73,7 @@ import com.snipsnap.synth.Thump
 import com.snipsnap.synth.ThumpPatch
 import com.snipsnap.synth.ThumpVoice
 import com.snipsnap.synth.TinesVoice
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.TonewheelVoice
 import com.snipsnap.synth.VelvetVoice
 import com.snipsnap.synth.VoxVoice
@@ -66,12 +87,59 @@ import kotlin.test.assertTrue
 
 /** SAVE AS PRESET (`docs/WORKSHOP.md`, WS5): the player's own presets beside the kits, and the line that promotes one. */
 class UserPresetsTest {
+    @Test
+    fun `brass grow survives the shelf and can be promoted without a legacy helper`() {
+        val root = shelf()
+        try {
+            val source = EmbouchurePatch("MY GROW", EmbouchureVoice.BRASS,
+                Embouchure.defaults(EmbouchureVoice.BRASS, Embouchure.BRASS_GROW_MODEL) +
+                    mapOf("TUNE" to 0f, "GROW" to .25f),
+                midi = 64, velocity = .37f, model = Embouchure.BRASS_GROW_MODEL)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            val literal = line.removePrefix("EmbouchurePatch.fromJsonText(").removeSuffix("),")
+            val promoted = EmbouchurePatch.fromJsonText(Json.parse(literal).str())
+            assertEquals(source, promoted)
+            assertTrue(source.render().samples.contentEquals(promoted.render().samples))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 
     private fun shelf(): File = java.nio.file.Files.createTempDirectory("presets").toFile()
 
     /** A kick the player wrecked: SCRAMBLE's own odd floats, nothing a table would round. */
     private val wrecked = ThumpPatch("MY KICK", ThumpVoice.KICK, Thump.defaults(ThumpVoice.KICK) + Thump.scramble(ThumpVoice.KICK, Random(7)))
     private val snare = ThumpPatch("MY KICK", ThumpVoice.SNARE, Thump.defaults(ThumpVoice.SNARE))
+
+    @Test
+    fun `saved OHM encounters keep model seed and gesture on the shelf and in promotion`() {
+        val root = shelf()
+        try {
+            for (model in listOf(1, 2)) {
+                val source = OhmPatch("MY FAMILY", linkedMapOf("TOUCH" to .27f, "COMMUNE" to .73f),
+                    midi = 57, velocity = .35f, seed = -905, gesture = OhmGesture.GATHER, model = model)
+                UserPresets.save(root, source, nowMillis = model.toLong())
+                val back = UserPresets.read(root).single()
+                assertEquals(source, back.patch, "a restart retains the full encounter")
+                val line = UserPresets.rosterLine(back.patch)
+                assertEquals("p(OhmVoice.STRING, \"MY FAMILY\", \"TOUCH\" to 0.27f, \"COMMUNE\" to 0.73f)" +
+                    ".copy(midi = 57, velocity = 0.35f, seed = -905, gesture = OhmGesture.GATHER, model = $model),", line)
+                assertEquals("OhmPresets.kt\n  $line\n", UserPresets.renderAll(listOf(back)))
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `OHM factory names reserve only their own voice shelf`() {
+        assertEquals(UserPresets.Check.Factory("GATHER"), UserPresets.check(" gather ", "OHM", "STRING", emptyList()))
+        assertEquals(UserPresets.Check.Fresh("MY FAMILY"), UserPresets.check("my family", "OHM", "STRING", emptyList()))
+    }
 
     @Test
     fun `a saved preset survives a restart and re-renders the same bytes`() {
@@ -182,11 +250,13 @@ class UserPresetsTest {
                 "STOOP" to StoopVoice.entries.map { it.name },
                 "SKITTER" to SkitterVoice.entries.map { it.name },
                 "TANGLE" to TangleVoice.entries.map { it.name },
+                "FLOCK" to FlockVoice.entries.map { it.name },
                 "RELAY" to RelayVoice.entries.map { it.name },
                 "EMBOUCHURE" to EmbouchureVoice.entries.map { it.name },
                 "BELLOWS" to BellowsVoice.entries.map { it.name },
                 "MURMUR" to MurmurVoice.entries.map { it.name },
                 "OSPREY" to OspreyVoice.entries.map { it.name },
+                "OHM" to OhmVoice.entries.map { it.name },
             )
             for ((engine, names) in voices) {
                 for (v in names) {
@@ -228,13 +298,48 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is OpenSkyPatch) {
+            if (preset is ObbligatoPatch) {
+                assertEquals(preset, obbligatoFromRosterLine(line), "${preset.name}: complete duet recipe promotion")
+            } else if (preset is com.snipsnap.synth.OverlapPatch) {
+                val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
+                val promoted = com.snipsnap.synth.OverlapPatch.fromJsonText(com.snipsnap.json.Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete model, note and velocity promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is OpenSkyPatch) {
                 val promoted = openSkyFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete source, articulation and render-state promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ScannedChainPatch) {
+                val promoted = scannedChainFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete shape, physical settings and render-state promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is VentPatch) {
+                val promoted = ventFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete note, touch, trajectory and renderer promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is EmbouchurePatch && preset.model == Embouchure.BRASS_GROW_MODEL) {
+                val literal = line.removePrefix("EmbouchurePatch.fromJsonText(").removeSuffix("),")
+                val promoted = EmbouchurePatch.fromJsonText(Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: GROW model is constructed before macro validation")
+            } else if (preset is OrigamiPatch) {
+                val promoted = origamiFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is TrioPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("TrioPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = TrioPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete performance promotion")
+            } else if (preset is OrphicaPatch) {
+                assertEquals(preset, orphicaFromRosterLine(line), "${preset.name}: complete microsound recipe promotion")
             } else if (preset is StoopPatch) {
                 val parsed = stoopValue.findAll(line).associate { it.groupValues[1].uppercase() to it.groupValues[2].toFloat() }
                 assertEquals(preset.macros, parsed, "${preset.engine}/${preset.name}: the named macro arguments round a value")
@@ -302,7 +407,7 @@ class UserPresetsTest {
     fun `a saved wheel retains root gesture velocity and model when promoted`() {
         val root = shelf()
         try {
-            for (model in listOf(1, 2)) {
+            for (model in 1..Pitchwheel.MODEL_VERSION) {
                 val source = PitchwheelPatch(
                     "LOW WHEEL", PitchwheelVoice.RECOIL,
                     linkedMapOf("ADHESION" to .83f, "HEAT" to .21f), midi = 36, velocity = .3f, model = model,
@@ -496,7 +601,7 @@ class UserPresetsTest {
      * way the compiler would ([KotlinLiteral]) and rebuilds the patch from it.
      */
     @Test
-    fun `a saved mouth retains root velocity and its complete instrument definition when promoted`() {
+    fun `a saved mouth retains root velocity model and its complete instrument definition when promoted`() {
         val root = shelf()
         try {
             val held = MurmurPresets.all().first { it.name == "HELD HUM" }
@@ -510,14 +615,18 @@ class UserPresetsTest {
                     MurmurFormantTarget("Wide", listOf(700.0, 1_200.0, 2_400.0, 3_200.0),
                         listOf(180.0, 210.0, 310.0, 390.0), listOf(1.2, 1.3, .6, .35), .6),
                 ),
+                model = 1,
             )
-            val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config)
-            UserPresets.save(root, source, 1L)
-            val saved = UserPresets.read(root).single()
-            assertEquals(source, saved.patch, "the shelf retains root, velocity and the complete configuration")
-            val line = UserPresets.rosterLine(saved.patch)
-            assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
-            assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds the saved mouth exactly")
+            assertEquals(2, held.config.model, "the promotion helper starts from the new model")
+            for (model in 1..2) {
+                val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config.copy(model = model))
+                UserPresets.save(root, source, 1L)
+                val saved = UserPresets.read(root).single()
+                assertEquals(source, saved.patch, "the shelf retains model $model, root, velocity and the complete configuration")
+                val line = UserPresets.rosterLine(saved.patch)
+                assertEquals("MurmurPresets.kt\n  $line\n", UserPresets.renderAll(listOf(saved)))
+                assertEquals(source, murmurFromRosterLine(line), "the pasteable line rebuilds model $model exactly")
+            }
         } finally {
             root.deleteRecursively()
         }
@@ -588,6 +697,7 @@ class UserPresetsTest {
                     sourceBalance = double(t.named.getValue("sourceBalance")),
                 )
             },
+            model = int(a.getValue("model")),
         )
     }
 
@@ -619,6 +729,54 @@ class UserPresetsTest {
         return LacquerPatch.fromJsonText(json)
     }
 
+    @Test
+    fun `obbligato roster promotion preserves legacy and current render recipes and escaped names`() {
+        for (model in listOf(1, com.snipsnap.synth.Obbligato.MODEL)) {
+            val source = ObbligatoPatch(
+                name = "DUET \"answer\" \\ \$lead\nnext",
+                macros = linkedMapOf("BOND" to 0.73125f, "BREATH" to 0.321f, "HOLD" to 0.65f),
+                midi = 67, velocity = 0.375f, seed = -437, model = model,
+            )
+            val promoted = obbligatoFromRosterLine(UserPresets.rosterLine(source))
+            assertEquals(source, promoted)
+            assertEquals(source.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+        }
+    }
+
+    private fun obbligatoFromRosterLine(line: String): ObbligatoPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ObbligatoPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        return ObbligatoPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
+    private fun orphicaFromRosterLine(line: String): OrphicaPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("OrphicaPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return OrphicaPatch.fromJsonText(recipe)
+    }
+
+    @Test
+    fun `Orphica promotion preserves the entire saved cloud and escapes the recipe as text`() {
+        val patch = OrphicaPatch("CLOUD \"\$X\"", OrphicaConfig(
+            material = OrphicaMaterial.CRYSTAL, mode = OrphicaMode.FREEZE,
+            midi = 67, velocity = .42f, pluck = .81f, fracture = .73f,
+            grainSizeMs = 39f, grainRateHz = 51f, scatter = .64f, damping = .19f,
+            seconds = .8f, seed = Long.MIN_VALUE, captureSeconds = .11f, hold = .75f,
+        ), macros = mapOf("PLUCK" to .7f, "TUNE" to .6f, "HOLD" to 1f))
+        assertEquals(patch, orphicaFromRosterLine(UserPresets.rosterLine(patch)))
+        assertEquals("OrphicaMaterial", UserPresets.voiceEnum(patch.engine))
+        assertEquals("OrphicaPresets.kt", UserPresets.rosterFile(patch.engine))
+    }
+
     private fun openSkyFromRosterLine(line: String): OpenSkyPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -630,6 +788,37 @@ class UserPresetsTest {
         return OpenSkyPatch.fromJsonText(recipe)
     }
 
+    private fun scannedChainFromRosterLine(line: String): ScannedChainPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("ScannedChainPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return ScannedChainPatch.fromJsonText(recipe)
+    }
+
+    private fun origamiFromRosterLine(line: String): OrigamiPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("OrigamiPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty())
+        assertTrue(call.named.isEmpty())
+        val recipe = (call.positional.single() as KotlinLiteral.Str).value
+        return OrigamiPatch.fromJsonText(recipe)
+    }
+
+    private fun ventFromRosterLine(line: String): VentPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("VentPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty() && call.named.isEmpty())
+        return VentPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
     @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
@@ -638,20 +827,75 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == OpenSkyPatch.ENGINE) {
+            if (engine == "ONSET") {
+                // ONSET's promotion writes its constructor directly so the
+                // saved renderer version is explicit, independent of a helper.
+                val patch = Presets.all().first { it.engine == engine }
+                assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
+                assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == ObbligatoPatch.ENGINE) {
+                val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
+            } else if (engine == com.snipsnap.synth.OverlapPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.OverlapPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.OverlapPatch::class.java, decoder.returnType, "OVERLAP promotion retains the complete versioned recipe")
+            } else if (engine == RelayPatch.ENGINE) {
+                val decoder = RelayPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(RelayPatch::class.java, decoder.returnType, "RELAY promotion retains its complete phrase JSON")
+            } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == ScannedChainPatch.ENGINE) {
+                val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(ScannedChainPatch::class.java, decoder.returnType,
+                    "SCANNED_CHAIN promotion names its public complete-JSON constructor")
+            } else if (engine == ShoalPatch.ENGINE) {
+                // SHOAL promotes the complete constructor directly: passing a held harmonic
+                // recipe through the finite WOOD helper first would reject it or lose metadata.
+                val constructor = ShoalPatch::class.java.getConstructor(
+                    String::class.java, ShoalVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType, ShoalMaterial::class.java,
+                )
+                assertEquals(ShoalPatch::class.java, constructor.declaringClass,
+                    "SHOAL promotion names its public complete seven-argument constructor")
+                assertTrue(Regex("\\bShoalPatch\\s*\\(").containsMatchIn(text), "SHOAL's table uses that public constructor")
+                assertTrue(Regex("\\bmaterial\\s*=\\s*material\\b").containsMatchIn(text), "SHOAL's table forwards the selected material")
+            } else if (engine == VentPatch.ENGINE) {
+                assertEquals("VentKitPresets.kt", table.name)
+                val decoder = VentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(VentPatch::class.java, decoder.returnType, "VENT promotion names its public complete-JSON constructor")
+                assertTrue("private val promoted:" in text, "VENT factory promotions need a destination beside the fixed kit entries")
+            } else if (engine == OvenPatch.ENGINE) {
+                val constructor = OvenPatch::class.java.getConstructor(
+                    String::class.java, OvenVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType, Int::class.javaPrimitiveType,
+                )
+                assertEquals(OvenPatch::class.java, constructor.declaringClass,
+                    "OVEN promotion names its public complete-recipe constructor")
             } else if (engine == StoopPatch.ENGINE) {
                 assertTrue(Regex("private fun p\\(\\s*voice: StoopVoice, name: String, source: StoopSource, description: String, tags: String").containsMatchIn(text))
                 for (argument in listOf("touch: Float?", "color: Float?", "shadow: Float?", "wear: Float?", "length: Float?", "hold: Float", "midi: Int?", "velocity: Float", "model: Int")) {
                     assertTrue(argument in text, "STOOP's metadata helper accepts the roster line's $argument")
                 }
-            } else {
+            } else if (engine == "FLOCK") {
+                val helper = "private fun p(voice: FlockVoice, name: String, seed: Long, vararg macros: Pair<String, Float>)"
+                assertTrue(helper in text, "${table.name} accepts the exact performance seed written by its roster line")
+            } else if (engine == OrphicaPatch.ENGINE) {
+                assertTrue("OrphicaPatch(" in text, "ORPHICA's table accepts complete typed recipes")
+                val decoder = OrphicaPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(OrphicaPatch::class.java, decoder.returnType, "ORPHICA promotion names its public complete-JSON constructor")
+            } else if (engine != TrioPatch.ENGINE) {
+                // TRIO promotion emits its complete JSON constructor directly.
                 val helper = "private fun p(voice: ${UserPresets.voiceEnum(engine)}, name: String, vararg macros: Pair<String, Float>)"
                 assertTrue(helper in text, "${table.name} is written with the helper the line uses: $helper")
             }
-            val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
-            assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
+            if (engine == ObbligatoPatch.ENGINE) {
+                assertEquals(listOf(ObbligatoPatch.VOICE), Presets.all().filter { it.engine == engine }.map { it.voiceName }.distinct())
+            } else {
+                val enum = Class.forName("com.snipsnap.synth." + UserPresets.voiceEnum(engine))
+                assertTrue(enum.isEnum, "${UserPresets.voiceEnum(engine)} is the voice enum")
+            }
         }
     }
 

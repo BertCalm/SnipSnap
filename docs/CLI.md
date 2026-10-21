@@ -158,9 +158,13 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth TRIO ENSEMBLE --all --out <dir>
+snipsnap synth TRIO ENSEMBLE --midi 67 --velocity 0.6 --tempo 120 --beats 3 --out <dir>
+snipsnap synth OVEN FELT --all --midi 60 --velocity 0.65 --out <dir>
 snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
 snipsnap synth REGISTERS PIPE --preset 1 --instrument --release 0.6 --out <dir>
+snipsnap synth REGISTERS TRANSISTOR --preset 3 --instrument --release 0.6 --out <dir>
 snipsnap synth RESIN BASS --preset 1 --drone --out <dir>
 ```
 
@@ -174,24 +178,30 @@ speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
 no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
-VENT, a prototype outside
-both the roster and the picker, renders six provisional recipes
-(`VentPresets`, one per voice):
-ROUND, WIRE and TEAR use model 1; the clean PULSE, COIL and PLUME voices use
-model 2. The voice selects its saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK and four BUBBLE recipes,
+VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes
+each: bass, short note, percussive hit and long texture. These are the same
+patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
+CLI-only model-1 comparison each from `VentPresets`. The voice selects its
+saved model; see [VENT](VENT.md).
+WICK follows the same provisional path with four PLUCK, four WOOD and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
 energy on the engines below and are refused on any other, and with
-`--instrument` or `--drone` except OPENSKY HALO instrument roots and authoring
-velocity. The ranges are `SynthCommand`'s note-range
+`--instrument` or `--drone` except ORPHICA and OPENSKY HALO instrument roots
+and authoring velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
+
+SHOAL also accepts `--material WOOD|BOWL|WIRE|HARMONIC`. Material selects the
+resonant body; GLASS/RIPPLE still select its movement. WOOD, BOWL and WIRE play
+finite notes, so overriding a held preset with one of those materials is refused
+before any output is written. HARMONIC supports the captured HOLD loop.
 
 | Engine | `--midi` |
 |---|---|
 | ALLOY | 24–96 |
+| OVEN | 24–96 |
 | CISTERN | 36–84 |
 | FLOTILLA | 36–84 |
 | TESSERA | 48–72 |
@@ -199,24 +209,32 @@ the message.
 | REVEL | 48–72 |
 | PRISM | BASS 24–48; ORGAN 36–60; KEY, PLUCK, VEIL 48–72; GLASS 60–84 |
 | REGISTERS | 24–96 |
+| ORPHICA | 21–108 |
 | CONTOUR | BASS 12–60; HOLLOW, SWELL 24–72; KEY, PLUCK, LEAD 36–84 |
 | STOOP | 24–96 |
 | LACQUER | 24–96 |
 | SPOOL | 48–72 |
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
+| CREASE | 24–84 |
 | SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | BELLOWS | 48–72 |
 | MURMUR | 36–96 |
+| TRIO | 48–84 |
 | OSPREY | 36–84 |
 | OPENSKY | 0–127 finite; HALO instrument root 36–96 |
 | VENT | 36–84 |
 | WICK | 24–84 |
 
-ALLOY, PITCHWHEEL and LACQUER take the note as the stored root and keep
-the preset's saved TUNE offset (±12 semitones). EMBOUCHURE and BELLOWS
+TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
+and `--beats 1..4` edit the finite performance while preserving its saved seed,
+articulation and model. The selected beats must fit within two seconds;
+the output remains a 3.5-second one-shot with room for the replies to decay.
+
+ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
+the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
 reset TUNE to zero, so the note is the one played. TESSERA, REVEL, PRISM, CONTOUR, SPOOL
 and RELAY rewrite TUNE to land on the note; the rest store the note
 itself. SKITTER also takes `--seed N` (its noise) and `--scramble N` (a
@@ -224,8 +242,24 @@ repeatable macro variation around the chosen preset). OSPREY also takes
 `--seed N` (its sea gesture's variation), `--seconds .25..12` (the length
 of its finite render) and `--model 1|2|3` (the saved renderer). VENT takes
 `--seed N` for its starting trajectory and refuses `--scramble`. `--seed`
-is supported by SKITTER, OSPREY and VENT; `--scramble` by SKITTER only;
-`--seconds` and `--model` by OSPREY only. Other engines refuse these options.
+is supported by SKITTER, OSPREY, VENT and ORPHICA; `--scramble` by SKITTER only;
+`--seconds` by OSPREY only; `--model 1|2|3` by OSPREY and CREASE.
+Other engines refuse these options. CREASE stores the selected model, MIDI
+note and velocity in its native Patch JSON; `--patch recipe.json` replays
+a saved patch, with explicit note, velocity or model flags overriding only
+those fields. See [CREASE](CREASE.md) for examples.
+
+ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
+accepts the full signed 64-bit range. `--instrument [--release S]` packages
+attack-preserving stereo captured-sustain zones; release is 0.1–1.5 seconds.
+It accepts `--midi` and `--velocity` for the sampled root and string excitation,
+and refuses `--all`, `--attack` and `--drone`. See [ORPHICA](ORPHICA.md).
+
+OVEN's GRAND, FELT, FORGED and BLOOM articulations render finite notes with
+their saved six controls and model. `--velocity` changes hammer excitation;
+omitting either override retains that preset's authored root or velocity.
+Its halo is baked into each note's tail. OVEN does not export a held
+instrument or drone from this command.
 
 OPENSKY's ANTHEM, SOAR, HALO and CRYSTAL keep the complete source timbre beside
 their four macros. `--gate S` sets a finite source gate (0.05–8 seconds), and
@@ -780,6 +814,23 @@ names — you pick, it doesn't. `--loop` cuts **sustain loops**: a
 whole-period loop found in each note's sustain (crossfaded when the raw
 seam isn't clean), trimmed to the loop-to-end idiom both formats share —
 held pads sing forever. A note with no honest sustain plays unlooped.
+
+### `bellows-keys` — playable BELLOWS validation pack
+
+`bellows-keys --out <folder> [--release .6] [--overwrite]` renders four
+model-2 C3–C5 instruments, each with nine pitch roots and three velocity
+timbres, plus a separate C3-only WHEEL tonic bed. The original source
+attack leads into a sustain loop; note-off uses the program release
+(.1–1.5 seconds). WHEEL melody has its embedded drone disabled.
+
+The result is `<folder>/Bellows-phone-mpc-m2.zip` and a `playable/` folder
+containing `card/` programs, WAVs and phone sidecars, source recipes,
+a checksum manifest and an unchecked device checklist. Smaller per-instrument
+ZIPs sit beside the full pack for download from the audition page. Existing output
+is preserved unless `--overwrite` is supplied. The phone can generate
+the same melody instruments with BELLOWS → MAKE INSTRUMENT; its ordinary
+share-import door does not import this ZIP. See
+[BELLOWS_PLAYTEST.md](BELLOWS_PLAYTEST.md) for loading and validation.
 
 ### `pad <wav> | <kit-dir> <pad>` — pad from anything
 

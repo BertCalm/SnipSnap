@@ -164,6 +164,17 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
+together in independently assigned wood/glass or concrete/aquarium regions.
+HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
+returns into the instruments. Six provisional recipes and complete saved rooms
+work through the CLI and kit renderer, outside the phone picker pending listening.
+Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
+replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
+finite prototype from the proposed HOLD, room editor and larger library. The
+[published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+contains 114 clips with raw/matched playback and downloadable recipes.
+
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
 staggered sustained vowels and a shared mono room. Run
@@ -284,12 +295,18 @@ RELAY makes a compact timbral phrase inside one pitched note: a rounded
 pluck hands off to harmonic body, bell detail and soft tone, with accents
 scheduled independently of the order. KEY, BASS, PLUCK, ORGAN, CHIME and FLOW
 share ORDER, PULSE, BLEND, COLOR, LENGTH and HOLD, plus the host's TUNE
-control. Six dry identity presets, complete phrase recipes, native velocity,
-a sixteen-pad kit, FRESH TAPE and the synth picker use the same renderer.
-Run `./gradlew :synth:generateRelayAudition` for raw/matched voices, sweeps,
-interaction corners and repeated loops under `testkit/relay-audition/`.
+control. Thirty-six dry recipes retain the six earlier seeds unchanged:
+eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
+The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
+sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
+explicit kit selections keep the starter at sixteen pads as the bank grows.
+Run `./gradlew :synth:generateRelayPerformanceAudition` for the 76-clip page:
+the full bank, six musical performances, three velocities per voice and every
+starter pad, with raw/matched WAVs under `testkit/relay-performance-audition/`.
+The earlier `generateRelayAudition` engineering matrix remains available.
 [Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
-The dry identities await the owner's sonic approval before preset expansion.
+The expanded bank is a listening and playability candidate; hands-on device
+verification and the owner's listening verdict remain open.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
@@ -319,7 +336,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 33 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 41 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -358,14 +375,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Nine provisional recipes stay outside
+PLUCK, WOOD and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Thirteen provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, BUBBLE
-tone comparisons, mechanism comparisons, control sweeps, held loops and causal traces. The
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, three-voice
+musical phrases, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/WICK.md) describe this first round; the remaining
-four proposed voices and full preset library follow the listening verdict.
+three proposed voices and full preset library follow the listening verdict.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -378,23 +395,50 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-OVERLAP is a second-listen six-delay resonator prototype: a finite strike rings
-through selectable self, three-cycle, reflected-pair or six-cycle routing.
-KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response; saved recipes
-retain MIDI root and velocity. Run `./gradlew :synth:generateOverlapAudition`
-for twelve dry raw/matched comparisons and their replayable recipes. Revision 2
-uses different cycle families, passive depth scattering and phase-gated excitation
-after the first listening verdict found the identities and breathing too similar. The
-[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site)
-awaits listening; [implementation notes](docs/OVERLAP.md) describe tuning limits
-and the prototype's scope before phone-picker or sustained-loop integration.
+CREASE's ROUND, PINCH and RUBBER voices bend and recover through positive
+phase maps. The six approved model-3 presets are registered in the SYNTH picker,
+native patch/preset pipeline, CLI and a dry sixteen-pad FRESH TAPE starter.
+Saved patches retain model, MIDI root and playing velocity; finite notes file as
+TONAL and only the top HOLD step files as LOOP. The
+[private audition](https://snipsnap-crease-audition.bertcalm.chatgpt.site) provides
+listening references, native patch downloads and reproducible source.
+[Implementation notes](docs/CREASE.md) cover controls and model compatibility.
 
-FLOCK is a finite oscillator-flock listening proof: twenty-four oscillators
+OVERLAP is a finite six-delay resonator: a strike rings
+through selectable self, three-cycle, reflected-pair or six-cycle routing.
+KNOT, PULSE, LOCK, GLOW, RING and finite HOLD shape its response. The picker
+exposes four topologies, ROOT and VELOCITY; edits, saved presets and pads retain
+the recipe's model. The twelve approved `OverlapMusicalBank` recipes enter the
+factory roster through `OverlapFactoryPresets`: four plucks, four finite textures
+and four breaths. FRESH TAPE's fixed OVERLAP starter preserves those twelve on
+A01–A12, then adds octave-lower copies of the four plucks on A13–A16. All sixteen
+are dry TONAL one-shots with complete finite tails.
+
+Run `./gradlew :synth:generateOverlapKit` for `testkit/SnipSnap Overlap Kit/`
+and `testkit/SnipSnap-Overlap-Kit.zip`: an MPC 3 track, its MPC 2 twin and a
+Source Kit with editable recipes and native mono 44.1 kHz PCM24 WAVs. Run
+`./gradlew :synth:generateOverlapMusicalAudition` for fifteen dry clips, including
+three scheduled musical studies, under `testkit/overlap-musical-audition/`.
+Native presets preserve regular renderer leveling and velocity; native studies
+use a common `.25` mix gain. Matched clips use the `.03` audition target. The
+bank ZIP contains native WAVs, recipes and study scores with complete pad recipes
+and frame offsets. This is audition revision 3 on unchanged engine model 2;
+the first, second and musical auditions retain their audio. The
+[private audition](https://overlap-snipsnap-audition.bertcalm.chatgpt.site) also
+provides the kit handoff. ROOT is a geometry reference; strongest perceived pitch
+can follow another family. HOLD stays finite and breathing has no tempo sync;
+held-note support is a separate future step. Android compile/device CI and real
+phone validation of this integration remain pending. [Implementation notes](docs/OVERLAP.md)
+include the export layout, verification plan and manual phone pass.
+
+FLOCK is a finite oscillator-flock engine: twenty-four oscillators
 scatter and respond through changing local neighborhoods around a played note.
 GATHER, RIBBON and SPLIT share SPREAD, PULL, FLOW, SCATTER, EDGE and HOLD;
-HOLD is two to six seconds, with no loop mode. Exact seeded patches, recipes,
-physical velocity and CLI auditions are implemented; its nine provisional
-presets stay outside the factory roster and phone picker pending listening.
+HOLD is two to six seconds, with no loop mode. SYNTH exposes nine factory
+recipes with saved ROOT, VELOCITY, exact 64-bit seed and rendering model.
+FRESH TAPE adds a dry sixteen-pad starter: eight C minor pentatonic GATHER
+notes and eight preset contrasts. Run `./gradlew :synth:generateFlockKit`
+for a shared-audio MPC 3/MPC 2 kit with complete editable pad recipes.
 Run `./gradlew :synth:generateFlockAudition` for real raw/matched WAVs,
 fixed/independent comparisons and one-particle disturbance measurements.
 The [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site)
@@ -402,30 +446,50 @@ and [implementation notes](docs/FLOCK.md) describe the proof and its limits.
 After the first listen, model 2 gives FLOW a slow-to-fast clock for the flock;
 original model-1 recipes and each voice's default sound remain exact. The
 audition includes five Previous/Revised FLOW pairs, with its other clips retained.
+The owner confirmed the revised FLOW difference is audible; phone and MPC
+hardware checks remain open.
 
 EMBOUCHURE models a virtual player feeding a pitched resonator through reed,
 lip or bow contact. Six voices share EFFORT, REED, SHAPE, GRAIN and LENGTH,
 with relative TUNE, native velocity, saved playing gestures and settled HOLD
-loops. Eight dry starting presets and a sixteen-pad C minor pentatonic kit
-are available in SYNTH, FRESH TAPE and the CLI. Run
+loops. Thirty-six dry factory presets are available in SYNTH and the CLI;
+FRESH TAPE keeps the original sixteen-pad C minor pentatonic starter. Run
 `./gradlew :synth:generateEmbouchureAudition` for the complete listening page,
-control matrix and MPC 2/3 kit under `testkit/embouchure-audition/`.
+control matrix and four MPC 2/3 kits under `testkit/embouchure-audition/`.
 The [private audition page](https://embouchure-audition.bertcalm.chatgpt.site)
 contains the revised control matrix, original/revised comparisons and the
-downloadable kit. Model 2 strengthens the controls while preserving all six
-default voices; saved model 1 recipes retain their original render.
-The revised controls await owner listening approval before preset expansion;
-[implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
+downloadable starter and three factory banks covering all 36 presets. Model 2
+strengthens the controls while preserving all six default voices; saved model 1
+recipes retain their original render. The owner accepted the voices and revised
+controls; the expanded presets now have their own listening review.
+[Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
+
+An experimental [BRASS GROW mode](docs/engineering/brass-grow-prototype.md)
+adds two BRASS presets with TUNE, GROW, LENGTH and HOLD. GROW shapes one
+performance from rough through centered to expressive, rather than mixing
+separate takes. It explicitly saves model 3; ordinary patches, the original
+eight presets and the sixteen-pad starter retain their previous models.
+Run `./gradlew :synth:generateBrassGrowPrototype` for its register/velocity
+validation pack. Device playing and listening remain the next acceptance step.
+
+TRIO brings three plucked performers and changing alliances into a finite pad
+performance. TRES, BERIMBAU, CHARANGO and ENSEMBLE share TOUCH, DRAMA, SIDES,
+MOTION, SPACE and DAMP, with saved root, velocity, tempo and phrase length.
+The sixteen-preset bank is also the TRIO starter kit. Husbands make one strike
+per trigger and ring out while the wives retain their strum. Rebuild the
+musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBank`.
+[Implementation and listening notes](docs/TRIO.md)
 
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Twelve provisional presets and a sixteen-pad
+remain saved with each patch. Thirty-six dry presets and a sixteen-pad
 C minor pentatonic FRESH TAPE starter are included. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
-describe the renderer, settled HOLD loops and the pending owner listening review.
+describe the approved six-voice sound, settled HOLD loops and the expanded bank's
+listening review.
 
 OSPREY adapts XOsprey into a finite SWELL articulation. The original sound was
 positively received, with a request for slightly more distinct voices. R2 was
@@ -438,7 +502,9 @@ remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudit
 for paired R1/R3 renders and creature-muted body comparisons. The original
 46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
 the owner said, “We are in a better spot audio wise.” R3 is the working audio
-baseline; final listening and phone/MPC acceptance remain open. Run
+baseline. The owner subsequently confirmed, “Sounds good in app, let's proceed.”
+In-app listening is confirmed; save/reopen, recipe replay and MPC playback checks
+remain open. The [MPC listening pass](docs/OSPREY_MPC_PASS.md) is next. Run
 `./gradlew :shell:generateOspreyHandoff` for the existing sixteen-pad starter as
 a SnipSnap working folder, native MPC 3 export and compatibility twin, with raw
 renders, recipes and checks. [Implementation notes](docs/OSPREY.md) describe the
@@ -465,15 +531,17 @@ listening matrix, or add `-Pquick` for a first listening set. The
 is the owner's sonic acceptance gate;
 [implementation notes](docs/REVEL.md) describe the model and validation limits.
 
-REGISTERS adds PIPE and MUSETTE to the phone's SYNTH picker. PIPE keeps the
-selected model-3 chiff and soft sustained airflow; MUSETTE has three beating
-reeds and a bellows contour. COLOR, AIR, EDGE, SPREAD and MOTION shape the sound,
-with TUNE and HOLD beside them. Six published settings, saved recipes, native
-velocity and CLI rendering share the same renderer. MAKE INSTRUMENT preserves
-the finite speech before a verified held loop, then writes the existing phone,
-MPC 2 and MPC 3 keygroup package. [The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site)
-retains the original chiff and airflow comparisons; [implementation notes](docs/REGISTERS.md)
-describe compatibility and export behavior. MUSETTE remains provisional.
+REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
+PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
+three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
+ranks, immediate keying, electronic key-click, vibrato and transistor drive.
+Nine starting settings, saved recipes, native velocity and CLI rendering share
+the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
+held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?voice=TRANSISTOR#listen)
+introduces TRANSISTOR alongside the working PIPE/MUSETTE baseline and retains
+the original chiff and airflow comparisons. TRANSISTOR awaits listening review;
+[implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
@@ -486,16 +554,29 @@ interaction grids, velocity and loop probes. The
 includes the complete factory bank and the original/revised GLASS comparisons.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
-SHOAL's first prototype offers GLASS and RIPPLE: harmonic energy gathers,
-migrates between partials and briefly strays before returning. DENSITY, CURRENT,
-COHESION, STRAY and GLOW shape the population; HOLD supplies a moving loop.
-ROOT and VELOCITY remain independent controls. Eight provisional dry recipes,
-saved patches, a sixteen-pad starter kit, CLI rendering and the phone picker
-support the first listen. Run `./gradlew :synth:generateShoalAudition` for the
-audition. The remaining four proposed voices and 36-preset expansion await
-later work. The first listen found the two voices too similar; model 2 revises
-their contrast and awaits another listen. Saved model-1 recipes retain their sound.
-[Implementation notes](docs/SHOAL.md) describe the first proof and HOLD approximation.
+SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
+animated by GLASS or RIPPLE energy transport. Velocity changes contact and
+excitation as well as level. ROOT and VELOCITY remain independent of DENSITY,
+CURRENT, COHESION, STRAY, GLOW and HOLD. Model 3 supplies six dry material
+recipes, two harmonic HOLD recipes, a sixteen-pad starter, saved patches, CLI
+`--material` selection and the phone material picker. The material bodies play
+finite notes with passive tails; HARMONIC retains the moving HOLD approximation.
+Saved model-1 and model-2 recipes retain their sound. Run
+`./gradlew :synth:generateShoalMaterialAudition` for the playable comparison, or
+`generateShoalAudition` for the preserved model-2 listening matrix.
+[Implementation notes](docs/SHOAL.md) describe the material and loop contracts.
+
+OVEN is a struck keyboard instrument: velocity-sensitive
+stiff strings, restrained paired-string beating, dark fixed body coloration and
+a baked resonance halo. GRAND, FELT, FORGED and BLOOM share TUNE, HAMMER, BODY,
+RING, BLOOM and HALO. Ten approved factory recipes and a dry sixteen-pad kit use
+the same finite mono renderer as the phone SYNTH picker. ROOT and VELOCITY select
+the note and strike; edits, saved presets and pad recipes retain both and the model.
+MAKE INSTRUMENT and live shared resonance remain later work.
+Run `./gradlew :synth:generateOvenAudition` for raw/matched notes, soft/medium/hard
+keyboard samples, five-point sweeps and causal comparisons. The
+[published audition](https://snipsnap-oven-audition.bertcalm.chatgpt.site) is the
+approved listening baseline. [Implementation notes](docs/OVEN.md) describe its scope and limits.
 
 ALLOY is an original attack-driven four-operator PM engine: generated wood,
 tine/string and breath/contact attacks enter the tonal body through a bounded
@@ -755,6 +836,15 @@ the owner's listening review. Audition: `./gradlew :synth:generateCorollaAuditio
 Individual presets can also be rendered with
 `./gradlew :cli:run --args="synth COROLLA TONGUE --all --out /tmp/corolla"`.
 
+ORPHICA is a first-listen microsound-harp prototype: each tuned pluck disperses
+into grains of its own recent history. CLEAR, STUTTER, SCATTER, REVERSE and
+captured FREEZE are deterministic stereo renders, with dry attacks and no
+added reverb. Run `./gradlew :synth:generateOrphicaAudition` for the raw/matched
+listening pack. The owner gave the finite sound a positive first-listening verdict. The phone
+picker now provides material, mode, root and HOLD controls; MAKE INSTRUMENT
+exports attack-preserving stereo captured-sustain keygroups. Original finite
+recipes retain their sound. See [ORPHICA](docs/ORPHICA.md).
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -762,9 +852,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY and GRAINS round out the lineup —
-forty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM and GRAINS round out the lineup —
+fifty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -946,25 +1036,33 @@ spike → eq → contour → wah → squash → valve → crunch → ring → du
 tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
+
+**WIDE** is the first editable compound board: TAPE → EQ → ENSEMBLE → SPRING
+in its own order. On the pad sheet, AMT is staged until KEEP, original/result
+previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
+See [`docs/WIDE.md`](docs/WIDE.md).
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, plus GRAINS, SNAP and DRAW, which sit beside the
+THUMP, SCANNED CHAIN, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
+GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
+SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, VENT, OVERLAP, TRIO, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY and OPENSKY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, TRIO, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).
 TERRA, SILK, GYRE and MAGNET are in the module, with kits or voices, and
-no roster entry. VENT, a Rössler-attractor synth prototype (not the TapeOS
-scheme of that name), is in the module outside the picker and the preset
-roster: `snipsnap synth VENT` renders six provisional recipes across two
-saved models: ROUND, WIRE and TEAR use model 1; PULSE, COIL and PLUME use the
-clean model 2. The voice selects its model, and
+no roster entry. VENT, the Rössler-attractor synth (separate from the TapeOS
+scheme of that name), brings clean model-2 PULSE, COIL and PLUME to the picker
+and factory roster. FRESH TAPE's VENT kit has twelve dry pads in C minor
+pentatonic: a bass, short note, percussive hit and long texture per voice,
+leaving four capture slots free. The CLI renders those same four recipes per
+clean voice; ROUND, WIRE and TEAR retain their CLI-only model-1 comparisons.
+The voice selects its model, and
 `--midi`, `--velocity` and `--seed` set their note, strike energy and
 starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
 Each file's own KDoc names its spec.
@@ -975,15 +1073,39 @@ Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
 went unstable past ~7 kHz. VELVET's CUTOFF, once capped at 5.2 kHz for
 stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
 
+OHM is a dry coupled-string instrument inspired by XOmnibus's
+family dynamics: MEDDLING introduces two companions, and COMMUNE moves
+their energy through a shared resonating bridge. The finite solo, argument,
+communion and gathering examples, complete recipes and control comparisons
+are generated by `./gradlew :synth:generateOhmAudition`. Its five auditioned
+recipes are available in the synth picker, factory roster and CLI. Model 2
+keeps the plucked foreground present under the companions and broadens
+control variation; saved model-1 recipes retain the original sound. The
+audition includes direct original/revised middle-range comparisons. See
+[`docs/OHM.md`](docs/OHM.md) and the
+[private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones
-with pressure-gated bridge chatter. Eight dry presets, saved player gestures,
-a sixteen-pad starter kit, CLI and the synth picker share the same renderer.
-Run `./gradlew :synth:generateBellowsAudition` for its raw/matched listening
-page and control comparisons. The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
-awaits the owner's sonic verdict; [implementation notes](docs/BELLOWS.md)
-describe expression, drone and HOLD limits.
+with pressure-gated bridge chatter. Twenty-four dry presets, saved player
+gestures, a sixteen-pad starter kit, CLI and the synth picker share the same
+renderer. MAKE INSTRUMENT adds C3–C5 attack/sustain keygroups with three
+velocity timbres; WHEEL's fixed tonic companion stays separate from melody.
+Run `./gradlew :synth:generateBellowsAudition` for the library, phrases,
+chords and raw/matched control comparisons, and
+`./gradlew :cli:generateBellowsInstruments` for the phone/MPC package.
+The owner accepted the four dry voice identities and parameter differences.
+The [private audition](https://bellows-snipsnap-audition.bertcalm.chatgpt.site)
+now supports the playable review; [implementation notes](docs/BELLOWS.md)
+and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
+phone/MPC checks.
+
+ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
+CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
+model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
+SEND saves a replayable recipe and authored pitch for kit tuning. See the
+[ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`
 

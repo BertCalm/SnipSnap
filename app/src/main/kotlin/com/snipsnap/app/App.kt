@@ -25,7 +25,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -33,13 +35,18 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
@@ -52,12 +59,13 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
+import com.snipsnap.app.ui.BootGate
+import com.snipsnap.app.ui.BootText
 import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.ChoiceSheet
 import com.snipsnap.app.ui.SheetRow
 import com.snipsnap.app.ui.DoublesScreen
-import com.snipsnap.app.ui.EmptyStatePanel
-import com.snipsnap.app.ui.EmptyStateRoute
+import com.snipsnap.app.ui.NoKitPanel
 import com.snipsnap.app.ui.ExportScreen
 import com.snipsnap.app.ui.ExportSession
 import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
@@ -110,6 +118,7 @@ import com.snipsnap.kit.ExportFormat
 import com.snipsnap.kit.GrooveFeel
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
@@ -136,6 +145,7 @@ import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
 import com.snipsnap.shell.Look
+import com.snipsnap.shell.Names
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Stage
@@ -187,6 +197,8 @@ private const val PREF_SCHEME = "scheme"
 /** LOOK (plan §3.7): CLASSIC or MODERN, beside the scheme. Defaults to the scheme's own look. */
 private const val PREF_LOOK = "look"
 private const val PREF_TEACH = "teach"
+/** HAPTICS (SETUP): the motor under pads, steppers and landings - ON unless the player turned it off. */
+private const val PREF_HAPTICS = "haptics"
 /** The WORKSHOP (`docs/WORKSHOP.md`): open once the knock on SETUP's title lands, remembered like the scheme until its own CLOSE. */
 private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
@@ -202,6 +214,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * three labs gain `◄ MAKE` with the MAKE step, the gear's two stay here.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+
+/** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
+private const val DOCK_LINE_CHARS = 44
 
 /** The most a shared kit file may be before it is copied for the shelf: a whole backup fits, a video never needs to. */
 private const val LANDING_MAX_BYTES = 512L * 1024 * 1024
@@ -276,9 +291,15 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
  * later milestones bind to them; M0's state is navigation and a shelf.
  */
 @Composable
-fun App(shelf: KitShelf) {
+fun App(shelf: KitShelf, bootText: Boolean = true) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    // The boot text: the LCD draws Copy.BOOT_LINES then BOOT_READY for ~0.6 s
+    // on a cold start and lifts to whatever is under it. `BootGate` is the
+    // process's, so a rotation (which rebuilds this composition) does not
+    // replay it; [bootText] is the seam for a harness that must not wait.
+    var booting by remember { mutableStateOf(bootText && BootGate.claim()) }
 
     // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
     // getExternalFilesDir does real filesystem work - it creates the
@@ -336,8 +357,18 @@ fun App(shelf: KitShelf) {
     // stranded under someone else's sentence — which is what the old two
     // vars (`toast`, `offered`) claimed and had to be compared to prove.
     // Nothing here is timed: the line stays until the next one, the door
-    // until it is taken.
-    val dock = rememberDock()
+    // until it is taken. A line is scoped to where it was said (stamped
+    // from `nav.location` at the write) and rests when the user moves to
+    // another place or stage; a door and its words survive the move.
+    val dock = rememberDock { nav.location }
+    // HAPTICS (SETUP): the motor under a pad hit, the arm, a stepper and a
+    // landing. Remembered like the scheme, ON by default. The gate is read
+    // at each call: off by the switch, and off while the dock's capture
+    // light says ARMED - the phone's mic hears its own motor (Haptics' KDoc).
+    var hapticsOn by remember { mutableStateOf(prefs.getBoolean(PREF_HAPTICS, true)) }
+    val haptics = remember(context) {
+        Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
+    }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
@@ -373,6 +404,14 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * SEND TO PADS' line: what it did, and which kit is on the grid now,
+     * when the two fit the dock's two lines of about 44; what it did alone
+     * when they do not.
+     */
+    fun sentAndOnTheGrid(sent: String, entry: KitShelf.Entry): String =
+        "$sent ${Copy.onTheGrid(entry.kit.name)}".takeIf { it.length <= 2 * DOCK_LINE_CHARS } ?: sent
+
+    /**
      * A landing: the screen changes and whatever hand-off state the landing
      * set rides along — a bank request for the KIT that follows, an armed
      * audition for GROOVE. This is what a bare `screen = AppScreen.X` used
@@ -381,6 +420,7 @@ fun App(shelf: KitShelf) {
      */
     fun landOn(target: AppScreen) {
         nav.goTo(locationOf(target))
+        dock.moved(nav.location)
     }
 
     /**
@@ -769,7 +809,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "landKit: project bookkeeping failed for ${entry.dir.name}", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             // Re-read after the await: only adopt the update if the user
@@ -852,6 +892,9 @@ fun App(shelf: KitShelf) {
         val (attempt, message) = lastSnipError ?: return@LaunchedEffect
         if (attempt != lastSnipErrorSeen) {
             lastSnipErrorSeen = attempt
+            // The optimistic line offered CUT; a failed commit has nothing
+            // to cut, and a line keeps its door, so the door goes first.
+            dock.clear()
             dock.say(message)
         }
     }
@@ -968,6 +1011,7 @@ fun App(shelf: KitShelf) {
                     projectionLauncher.launch(manager.createScreenCaptureIntent())
                 }
             } else {
+                haptics.arm()
                 MicSessionService.arm(context)
                 dock.say(Copy.SESSION_ARMED)
                 offerBubbleOnce()
@@ -1556,7 +1600,7 @@ fun App(shelf: KitShelf) {
                 if (e is CancellationException) throw e
                 busy = null
                 partial?.let { if (open?.dir == source.dir) open = it }
-                dock.say("DUST FAILED: ${e.message ?: e.javaClass.simpleName}")
+                openNote(LandingNote.dustFailed(e.message ?: e.javaClass.simpleName))
                 return@launch
             }
             busy = null
@@ -1765,7 +1809,14 @@ fun App(shelf: KitShelf) {
      * SNIPS shelf's USED badge's own durable key, unaffected by a later
      * rename — see `SnipStore.isUsedBy`'s own KDoc).
      */
-    fun assignPendingSnip(file: File, slot: Int) {
+    fun assignPendingSnip(
+        file: File,
+        slot: Int,
+        /** What the dock says once it has landed; the first catch says its own. */
+        placedLine: String = Copy.snipPlaced(slot),
+        /** After the grid holds the new pad and the dock has spoken: the first catch selects and lights it here. */
+        onPlaced: () -> Unit = {},
+    ) {
         val target = open ?: return
         // Cleared synchronously, before the write even starts — a second
         // empty-pad long-press elsewhere while this one is mid-flight must
@@ -1797,7 +1848,8 @@ fun App(shelf: KitShelf) {
                 // onto whichever kit is open now.
                 if (open?.dir == target.dir) open = open?.copy(kit = updated)
                 kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                dock.say(Copy.snipPlaced(slot))
+                dock.say(placedLine)
+                onPlaced()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2748,12 +2800,14 @@ fun App(shelf: KitShelf) {
     /** The place row: a place opens on the stage it was last on, benches closed. */
     fun goToPlace(place: Place) {
         nav.go(place)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
     /** The stage row: a stage of the current place, benches closed. */
     fun goToStage(stage: Stage) {
         nav.stage(stage)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2761,6 +2815,7 @@ fun App(shelf: KitShelf) {
     fun takeDockDoor() {
         val door = dock.take() ?: return
         nav.take(door)
+        dock.moved(nav.location)
         clearTransientState()
     }
 
@@ -2802,6 +2857,18 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * `+ FROM SHELF`: the shelf in pick mode, returning here with the kit
+     * tapped added to the open project. With no project open there is
+     * nothing to add to, and the pages that offer this door only offer it
+     * when one is open.
+     */
+    fun addFromShelf() {
+        val p = project ?: return
+        goToScreen(AppScreen.KITS)
+        pendingAddTo = p
+    }
+
+    /**
      * The kit switcher (plan §3.3): [kitFolder] becomes the open project's
      * active kit, saved through `ShelfModel.activate`, and the grid shows
      * it. A failure says so and leaves the grid where it was.
@@ -2819,7 +2886,12 @@ fun App(shelf: KitShelf) {
                 return@launch
             }
             project = updated
-            open = kits.firstOrNull { it.dir.name == kitFolder }
+            val activated = kits.firstOrNull { it.dir.name == kitFolder }
+            open = activated
+            // The grid changes under the user's finger: say which kit it is
+            // now (F4). A switch that said nothing left the header as the
+            // only evidence.
+            if (activated != null) dock.say(Copy.onTheGrid(activated.kit.name))
         }
     }
 
@@ -2840,7 +2912,7 @@ fun App(shelf: KitShelf) {
                 throw e
             } catch (e: Exception) {
                 Log.e(TAG, "addKitToProject: failed", e)
-                dock.say(Copy.PROJECT_OPEN_FAILED)
+                dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
             }
             project = updated
@@ -2849,11 +2921,16 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    /** NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf. */
+    /**
+     * NEW PROJECT ▸: an empty project, opened on PADS with no kit, where the switcher offers the shelf.
+     * Its name is a roll ([Names.roll]) against the projects already on the shelf, not "New Project 2".
+     */
     fun newProject() {
         scope.launch {
             val p = try {
-                withContext(Dispatchers.IO) { shelfModel.newProject() }
+                withContext(Dispatchers.IO) {
+                    shelfModel.newProject(Names.roll(taken = shelfModel.projects().map { it.name }.toSet()))
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2865,9 +2942,145 @@ fun App(shelf: KitShelf) {
         }
     }
 
-    // The dock's ▶ / ■ for the beat: a one-shot ask GrooveScreen flips on,
-    // counted so each press is its own event (plan §3.4).
-    var beatPlayRequest by remember { mutableIntStateOf(0) }
+    // The first catch (the cold shelf's way in): a pad PADS is to light once,
+    // asked for by the landing and consumed by the grid when it has flashed.
+    var lightRequest by remember { mutableStateOf<Int?>(null) }
+    var catchingFirst by remember { mutableStateOf(false) }
+
+    /**
+     * The first SNIP of a cold shelf - no project, no kit - has a home made
+     * for it, instead of EMPTY_SHELF_FOR_ASSIGN's errand: a project (a roll,
+     * like NEW PROJECT's), an empty kit in it (the EMPTY GRID starter under
+     * a rolled name, as INSTANT KIT names its kits), and the snip on A01
+     * through [assignPendingSnip], the one path SNIPS -> PAD uses. PADS comes
+     * up with A01 selected and lit, and the dock says where the sound is.
+     *
+     * The shelf is read from disk, not from [kits] and [projects], which are
+     * only as fresh as the last visit to the shelf. A catch that finds
+     * anything there leaves the snip where every snip waits, in SNIPS.
+     */
+    fun catchFirstSound(file: File) {
+        if (catchingFirst || busy != null || pendingSnipAssign != null) return
+        catchingFirst = true
+        scope.launch {
+            try {
+                val made = try {
+                    withContext(Dispatchers.IO) {
+                        if (KitStore.list(shelf.root).isNotEmpty() || ProjectStore.list(shelf.root).isNotEmpty()) {
+                            return@withContext null
+                        }
+                        // The kit first: a failure after it leaves a kit the
+                        // shelf's own migration adopts, where a failure after
+                        // a project would leave an empty project to explain.
+                        val entry = shelf.render(StarterKits.byId("blank")!!, Random.nextInt(), shelf.rolledName())
+                        val named = shelfModel.newProject(Names.roll(taken = shelfModel.projects().map { it.name }.toSet()))
+                        shelfModel.addKit(named.name, entry.dir.name)
+                        entry to shelfModel.activate(named.name, entry.dir.name)
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "catchFirstSound: the first project and kit were not made", e)
+                    dock.say(Copy.CREATE_FAILED)
+                    return@launch
+                }
+                if (made == null) return@launch
+                val (entry, created) = made
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                project = created
+                open = kits.firstOrNull { it.dir == entry.dir } ?: entry
+                goToScreen(AppScreen.KIT)
+                // The first catch is the loop shown once: record, snip, land.
+                // The tape stops here, so the dock's line (the sentence that
+                // says where the sound went) has the dock to itself; while
+                // armed, the capture region holds that slot. The person who
+                // wants more arms it again from the chip, now knowing how.
+                MicSessionService.eject(context)
+                assignPendingSnip(
+                    file, 1,
+                    placedLine = Copy.FIRST_CATCH_LANDED,
+                    onPlaced = {
+                        nav.padsSelectedSlot = 1
+                        lightRequest = 1
+                    },
+                )
+            } finally {
+                catchingFirst = false
+            }
+        }
+    }
+    // A SNIP that lands is the cold shelf's cue. Baselined by file, as the
+    // snip errors above are by attempt: whatever the session last wrote
+    // before this composition mounted is not a new catch.
+    val lastSnip by MicSessionService.lastSnipFile.collectAsState()
+    var lastSnipSeen by remember { mutableStateOf(MicSessionService.lastSnipFile.value) }
+    LaunchedEffect(lastSnip) {
+        val file = lastSnip ?: return@LaunchedEffect
+        if (file == lastSnipSeen) return@LaunchedEffect
+        lastSnipSeen = file
+        catchFirstSound(file)
+    }
+
+    // The beat (plan §3.4): one clock for the project, kept here rather than
+    // in the screen that draws it, so it plays on when the user leaves BEAT.
+    // The dock's chip is its control; GROOVE draws it, edits its program and
+    // pushes what it shows into it, and rides its clock for RECORD, BOUNCE
+    // and AUDITION. Over the open kit, read live; its settings stand in for
+    // GROOVE's own only when the beat is started with GROOVE never opened.
+    val hosts = remember { PadHosts(context) }
+    val grooveSettings by rememberUpdatedState(BeatPlayer.Settings(grooveProgIndex, grooveSwingPercent, grooveFeel, grooveSeed))
+    val beat = remember {
+        BeatPlayer(hosts = hosts, scope = scope, kitNow = { open }, settings = { grooveSettings })
+    }
+    // A groove rewritten on disk while GROOVE is not up to reload itself
+    // (TAPE's READ AS GROOVE and STEAL THE FEEL, ORBIT's CLIP ▸ KIT, all of
+    // which bump `grooveReload`) would leave the beat playing yesterday's.
+    // With GROOVE up it reloads from the same request and pushes its own
+    // program, which is the one to hear.
+    LaunchedEffect(grooveReload) {
+        val grooveUp = location.top == null && location.stage == Stage.BEAT && !(arrangeOpen && open != null)
+        if (grooveReload > 0 && !grooveUp) beat.reloadFromDisk { dock.say(it) }
+    }
+    // A different kit is a different beat: the program, the position and the
+    // hold on the old kit's pads all belonged to it. Also the end of the
+    // app's composition, which is what lets the last host close.
+    DisposableEffect(open?.dir) { onDispose { beat.forget() } }
+    // The bank follows an edit made while no screen is holding the kit's
+    // pads - the pad sheet's TUNE, heard on a beat that is playing under it.
+    LaunchedEffect(open?.kit) { open?.let { beat.kitChanged(it) } }
+    // The clock, driven from here for the life of the app. Keyed as the
+    // screen's own loop always was: the transport, the kit's folder and the
+    // kit itself.
+    LaunchedEffect(beat.playing, open?.dir, open?.kit) { beat.run() }
+    // What the dock reads. The bar is written to the beat only when it
+    // changes, so this follows at bar granularity and never reads the
+    // position, which moves every frame.
+    LaunchedEffect(beat) {
+        snapshotFlow {
+            when {
+                beat.recording || beat.countingIn -> DockModel.Transport.Recording(beat.bar)
+                beat.playing -> DockModel.Transport.Playing(open?.kit?.tempoBpm ?: KitPreview.DEFAULT_BPM, beat.bar)
+                else -> DockModel.Transport.Stopped
+            }
+        }.collect { dock.transport = it }
+    }
+    // Backgrounding the app silences the beat: it is its own audio voice, but
+    // a focus loss is not the only way the app stops being heard.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, beat) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) beat.silence()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    // ORBIT, SPLIT, ARRANGE and LOOP each make the sound they show with an
+    // engine of their own, and a second stream on a device falls back to the
+    // shared path for the rest of its life, so the beat stops when one opens
+    // (v1) and is not offered while one is up. The PADS grid is not among
+    // them: it holds the same host the beat plays through.
+    val beatMustStop = location.top == Bench.ORBIT || location.top == Bench.SPLIT || location.top == Bench.LOOP ||
+        (location.top == null && location.stage == Stage.BEAT && arrangeOpen && open != null)
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -2942,10 +3155,11 @@ fun App(shelf: KitShelf) {
         // over a pad sheet comes back to the pad sheet. Popping a stage or
         // a place is a departure, and abandons what a departure abandons.
         val to = nav.location
+        dock.moved(to)
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme) {
+    TapeTheme(scheme, LocalHaptics provides haptics) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -2996,6 +3210,11 @@ fun App(shelf: KitShelf) {
                     // than as a nested `when` per place, so the fifteen
                     // bodies sit where the tab-era `when (screen)` left them.
                     when {
+                        // The beat stops before the screen that makes its own
+                        // sound is composed: this frame draws nothing, the
+                        // effect stops the beat and closes its host, and the
+                        // next frame composes the screen on a free stream.
+                        beatMustStop && beat.playing -> SideEffect { beat.stop() }
                         // SNIPS: a bench over the shelf, or over PADS when an
                         // empty pad's FROM SNIPS ▸ opened it for a slot.
                         top == Bench.SNIPS -> SnipsScreen(
@@ -3090,7 +3309,9 @@ fun App(shelf: KitShelf) {
                                 kits = kits,
                                 projects = projects,
                                 onOpenProject = { openProject(it.project) },
+                                openProjectName = project?.name,
                                 onNewProject = ::newProject,
+                                onCatchFirst = ::requestArm,
                                 busy = busy != null,
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
@@ -3339,8 +3560,8 @@ fun App(shelf: KitShelf) {
                                         // Same shape as PAD SHEET's own
                                         // onKitUpdated above: bumping
                                         // `open.kit`'s identity is what
-                                        // makes KIT's engine reload its bank
-                                        // (`LaunchedEffect(entry.kit)`),
+                                        // makes the kit's host reload its bank
+                                        // (`PadHost.request`),
                                         // so a restored sample is heard,
                                         // not the stale cached one — but only
                                         // onto the kit this restore actually
@@ -3371,7 +3592,7 @@ fun App(shelf: KitShelf) {
                                         onKitUpdated = { updatedKit ->
                                             // Same shape as PAD SHEET/TAKES+BIN's own
                                             // onKitUpdated: bump `open.kit`'s identity
-                                            // so KIT's engine reloads the pad GRAB
+                                            // so the kit's host reloads the pad GRAB
                                             // just filled, not a stale cached (empty)
                                             // sample — guarded the same way, against
                                             // `sheetEntry` captured at this
@@ -3393,14 +3614,11 @@ fun App(shelf: KitShelf) {
                                     // The switcher (plan §3.3): the project's line,
                                     // its kit list, and the shelf in pick mode.
                                     switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
-                                    onSwitchKit = { kitSheetOpen = true },
-                                    onAddFromShelf = {
-                                        val p = project
-                                        if (p != null) {
-                                            goToScreen(AppScreen.KITS)
-                                            pendingAddTo = p
-                                        }
-                                    },
+                                    // With fewer than two kits there is nothing to
+                                    // switch between: the chip is the shelf's door,
+                                    // not a one-row sheet naming the kit on screen.
+                                    onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
+                                    onAddFromShelf = ::addFromShelf,
                                     // The grid's state, held by the navigation model.
                                     bank = nav.padsBank,
                                     onBankChange = { nav.padsBank = it },
@@ -3424,6 +3642,9 @@ fun App(shelf: KitShelf) {
                                     onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                     bankRequest = kitBankRequest,
                                     onBankRequestConsumed = { kitBankRequest = null },
+                                    lightRequest = lightRequest,
+                                    onLightConsumed = { lightRequest = null },
+                                    beat = beat,
                                     onBreed = ::startBreed,
                                     // A second kit to cross with has to
                                     // already be on the shelf — BREED can't
@@ -3448,6 +3669,9 @@ fun App(shelf: KitShelf) {
                                         dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
                                     },
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                                    hosts = hosts,
                                 )
                             }
                         }
@@ -3504,7 +3728,8 @@ fun App(shelf: KitShelf) {
                             onCaptureLanded = { retrim = null },
                             onCatch = ::catchOnto,
                             onCatchDone = ::catchDone,
-                            onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            // The empty deck's door: SNIPS, a bench, like PADS' FROM SNIPS.
+                            onNavigateSnips = { nav.open(Bench.SNIPS) },
                             onCatchInFlight = { catchInFlight = it },
                         )
                         top == Bench.SETUP -> PropertiesScreen(
@@ -3523,6 +3748,12 @@ fun App(shelf: KitShelf) {
                                 teachEnabled = on
                                 prefs.edit().putBoolean(PREF_TEACH, on).apply()
                                 dock.say(if (on) Copy.TEACHING_ON else Copy.TEACHING_OFF)
+                            },
+                            hapticsOn = hapticsOn,
+                            onHaptics = { on ->
+                                hapticsOn = on
+                                prefs.edit().putBoolean(PREF_HAPTICS, on).apply()
+                                if (on) haptics.tick()
                             },
                             // Finding 23: three facts the app already kept and
                             // never showed. Read straight from the same prefs
@@ -3565,7 +3796,8 @@ fun App(shelf: KitShelf) {
                             teachEnabled = teachEnabled,
                             workshopOpen = workshopOpen,
                             onToast = { dock.say(it) },
-                            onSentToGrid = { newEntry ->
+                            onSentToGrid = { newEntry, sent ->
+                                haptics.land()
                                 landKit(newEntry)
                                 // Step 3 → step 4 (J10), and only when the
                                 // kit has pads: a door onto an empty EXPORT
@@ -3573,16 +3805,27 @@ fun App(shelf: KitShelf) {
                                 if (newEntry.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // What SEND did is the line and the offer is
+                                // the door: the offer replaces the whole
+                                // line, so the sentence is said after it, and
+                                // a line keeps the door. The new kit is the
+                                // grid's now (F4); its name rides along when
+                                // both fit the dock's two lines.
+                                dock.say(sentAndOnTheGrid(sent, newEntry))
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
                             },
-                            onLandedOnto = { updated, bank ->
+                            onLandedOnto = { updated, bank, landed ->
+                                haptics.land()
                                 landKit(updated)
                                 kitBankRequest = bank
                                 if (updated.kit.pads.isNotEmpty()) {
                                     offer(Copy.KIT_OFFER, Copy.KIT_OFFER_DOOR, AppScreen.EXPORT)
                                 }
+                                // The landing sentence, after the offer, for
+                                // the same reason SEND's is.
+                                dock.say(landed)
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                 }
@@ -3606,6 +3849,7 @@ fun App(shelf: KitShelf) {
                             appScope = scope,
                             onToast = { dock.say(it) },
                             onNavigateKits = { goToScreen(AppScreen.KITS) },
+                            onAddFromShelf = ::addFromShelf,
                             // OUT's second card (plan §3.5): the whole project
                             // as one session, over the open project.
                             project = project,
@@ -3631,7 +3875,7 @@ fun App(shelf: KitShelf) {
                                 onKitUpdated = { updatedKit ->
                                     // Same shape as PAD SHEET/CHOP's own
                                     // onKitUpdated: bump `open.kit`'s identity so
-                                    // KIT's engine reloads the pad SEND TO PAD
+                                    // the kit's host reloads the pad SEND TO PAD
                                     // just replaced, not a stale cached sample.
                                     if (open?.dir == synthEntry?.dir) open = open?.copy(kit = updatedKit)
                                     scope.launch {
@@ -3701,7 +3945,7 @@ fun App(shelf: KitShelf) {
                             // request a share-sheet import raises.
                             onPrinted = { importCount++ },
                             // A print on a pad: bump `open.kit`'s identity so
-                            // KIT's engine and the surface reload it.
+                            // the kit's host and the surface reload it.
                             onKitUpdated = { updatedKit ->
                                 open = open?.copy(kit = updatedKit)
                                 scope.launch {
@@ -3709,7 +3953,8 @@ fun App(shelf: KitShelf) {
                                 }
                             },
                         )
-                        top == Bench.HELP -> HelpScreen()
+                        // The place under the gear: HELP opens its section.
+                        top == Bench.HELP -> HelpScreen(cameFrom = location.place)
                         top == null && location.stage == Stage.BEAT -> {
                             val songEntry = open
                             if (arrangeOpen && songEntry != null) {
@@ -3734,10 +3979,12 @@ fun App(shelf: KitShelf) {
                                     onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
                                     onOrbit = { nav.open(Bench.ORBIT) },
                                     onLoop = { nav.open(Bench.LOOP) },
-                                    playRequest = beatPlayRequest,
-                                    onTransport = { dock.transport = it },
+                                    beat = beat,
                                     onBeatWritten = ::mirrorBeat,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigatePads = { goToStage(Stage.PADS) },
                                     feel = grooveFeel,
                                     onFeelChange = { grooveFeel = it },
                                     swingPercent = grooveSwingPercent,
@@ -3781,7 +4028,12 @@ fun App(shelf: KitShelf) {
                             // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
-                                EmptyStatePanel(Copy.NO_KIT_FOR_ORBIT, listOf(EmptyStateRoute("SHELF ▸", { goToScreen(AppScreen.KITS) })))
+                                NoKitPanel(
+                                    Copy.NO_KIT_FOR_ORBIT,
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                )
                             } else {
                                 OrbitScreen(
                                     entry = orbitEntry,
@@ -3830,7 +4082,7 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) })
+                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
@@ -3845,6 +4097,10 @@ fun App(shelf: KitShelf) {
                         // nothing rather than something false.
                         else -> Unit
                     }
+                    // The boot text over the stage, last so it is on top: the
+                    // frame around it is already drawn, the stage under it is
+                    // already composing, and it lifts after ~0.6 s or a tap.
+                    BootText(booting = booting, onDone = { booting = false })
                 }
                 // The dock, at the foot of every screen (plan §1). The status
                 // bar's three cells live on: where you are is the two rows
@@ -3854,16 +4110,24 @@ fun App(shelf: KitShelf) {
                     dock = dock,
                     busy = busy,
                     onArm = { captureSheetOpen = true },
-                    // The transport is a button only while BEAT is the stage:
-                    // the clock is GrooveScreen's, so off BEAT there is nothing
-                    // to flip and the region is a readout (Frame.kt's Dock KDoc).
-                    onPlayToggle = if (location.stage == Stage.BEAT && location.top == null) ({ beatPlayRequest++ }) else null,
+                    // The transport is a button wherever a kit is open, and while
+                    // the beat plays: the clock is App's, so the chip is the beat's
+                    // one control from anywhere. It is still offered on BEAT with
+                    // no kit, so its answer can be ADD A KIT first. Not offered
+                    // where the beat cannot run (`beatMustStop`).
+                    onPlayToggle = if (!beatMustStop && (open != null || beat.playing || (location.stage == Stage.BEAT && location.top == null))) {
+                        ({ beat.toggle { dock.say(it) } })
+                    } else {
+                        null
+                    },
                     onSnip = {
                         MicSessionService.snip(context)
                         // Optimistic — the real commit hasn't started yet, let
                         // alone resolved. The `lastSnipError` collector above
-                        // corrects this line if that commit fails.
-                        dock.say(Copy.SNIPPED)
+                        // corrects this line if that commit fails. The door
+                        // is CUT, one tap from the new snip; it is not drawn
+                        // when CUT is where the user already is.
+                        offer(Copy.SNIPPED, Places.DOOR_CUT, AppScreen.CHOP)
                     },
                     onEject = { MicSessionService.eject(context) },
                     onTakeDoor = ::takeDockDoor,
@@ -3871,14 +4135,14 @@ fun App(shelf: KitShelf) {
             }
             if (kitSheetOpen) {
                 // The switcher's list (plan §3.3): the project's kits by name,
-                // the active one marked, each a tap to put it on the grid.
+                // the active one marked, each a tap to put it on the grid,
+                // and the shelf's door as the last row.
                 val p = project
                 ChoiceSheet(
                     rows = p?.kits.orEmpty().map { folder ->
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
-                        val label = name.uppercase(java.util.Locale.ROOT) + if (folder == p?.activeKit) " · ON THE GRID" else ""
-                        SheetRow(label) { kitSheetOpen = false; activateKit(folder) }
-                    },
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) { kitSheetOpen = false; activateKit(folder) }
+                    } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
                     onDismiss = { kitSheetOpen = false },
                 )
             }
@@ -3927,7 +4191,26 @@ fun App(shelf: KitShelf) {
             }
             if (micPermissionDenied) {
                 val dismissDenied = { micPermissionDenied = false }
-                BlockedDialog(Copy.MIC_PERMISSION_DENIED, Copy.CAPTURE_BLOCKED_BUTTON, onDismiss = dismissDenied)
+                BlockedDialog(
+                    Copy.MIC_PERMISSION_DENIED,
+                    Copy.CAPTURE_BLOCKED_BUTTON,
+                    onDismiss = dismissDenied,
+                    // The words say where the switch is; the button takes
+                    // you there. A permission the system will not ask for
+                    // again can only be turned on in this app's own page.
+                    actionLabel = Places.OPEN_SETTINGS,
+                    onAction = {
+                        dismissDenied()
+                        try {
+                            context.startActivity(
+                                Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null)),
+                            )
+                        } catch (e: Exception) {
+                            Log.e(TAG, "mic denied: the app's settings page would not open", e)
+                            dock.say(Copy.MIC_PERMISSION_DENIED)
+                        }
+                    },
+                )
                 BackHandler(onBack = dismissDenied)
             }
         }
@@ -3944,10 +4227,17 @@ fun App(shelf: KitShelf) {
  * scrim's dismiss doesn't fire through, rather than a Material
  * `AlertDialog` (TapeOS never uses Material's own chrome, see `Chrome.kt`'s
  * `TapeText` KDoc). [message] and [buttonLabel] are the only things that
- * differ between callers.
+ * differ between callers, and an optional [actionLabel] button above the
+ * dismiss when the refusal has somewhere to send the user.
  */
 @Composable
-private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () -> Unit) {
+private fun BlockedDialog(
+    message: String,
+    buttonLabel: String,
+    onDismiss: () -> Unit,
+    actionLabel: String? = null,
+    onAction: () -> Unit = {},
+) {
     val scheme = LocalScheme.current
     Box(
         Modifier
@@ -3980,6 +4270,7 @@ private fun BlockedDialog(message: String, buttonLabel: String, onDismiss: () ->
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             TapeText(message, TapeType.lcdSmall, scheme.ink.tape, maxLines = 4)
+            if (actionLabel != null) PrimaryAction(label = actionLabel, enabled = true, onClick = onAction)
             PrimaryAction(label = buttonLabel, enabled = true, onClick = onDismiss)
         }
     }
