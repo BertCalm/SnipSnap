@@ -16,8 +16,9 @@ factory roster and phone picker. This stage is finite only: positive HOLD is
 rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
 for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is published with 114 raw/matched clips and a starter download. The owner's listening
-verdict remains pending.
+opens a 16-clip model-2 timpani revision after the owner found the membrane
+inaudible. Model 1 and its original 114-clip matrix remain reproducible and archived.
+The revised balance awaits the owner's listening verdict.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry

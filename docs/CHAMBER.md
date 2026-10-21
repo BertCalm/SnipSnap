@@ -13,9 +13,60 @@ Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work, subject to the owner's listening verdict.
 
 The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is published with **114 clips**, raw and matched playback, mechanism comparisons,
-WAV/recipe downloads and a 16-clip starter pack. The owner's listening verdict
-remains open; numerical checks do not establish sonic acceptance.
+opens a **16-clip timpani revision**: previous/revised quartets and dry membrane
+solos at C3 and C4, with raw/matched playback and replayable downloads. The
+[original 114-clip study](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/archive/model-1/index.html)
+remains available unchanged. Numerical checks do not establish sonic acceptance.
+
+## Timpani revision — model 2
+
+The owner heard model 1 and reported: **“The timpani doesn't come through at all.”**
+Its direct membrane body was about 21 dB below the bar over 50–500 ms, and its
+pitched decay disappeared rapidly. The 12/s acoustic port load overwhelmed the
+membrane's intrinsic decay; sharing the bar's root made the weak body easier to mask.
+
+Model 2 reduces that load to 0.5/s, lengthens intrinsic membrane decay from 1.15
+seconds to 1.65 seconds, and gives the near-integer upper modes more presence.
+Half-integer modes remain at lower participation to avoid octave ambiguity.
+A separate 24× membrane radiation calibration restores its listener level. This observer
+calibration affects direct and reflected pickup, never feedback energy or strike
+work. The other three dry source banks and random realizations remain unchanged;
+room returns respond to the revised membrane coupling. The tuning ratios remain
+1×, 1×, 2× and 4×; no hidden octave shift supplies the improvement.
+
+At default C3/C4 settings, the direct membrane body over 50–500 ms is now
+about **2.9 dB below the bar in HYBRID** and **2.1 dB below it in AQUARIUM**,
+including source-distance pickup gains. It was about 21 dB below before.
+Full-room pitch probes at MIDI 36, 48, 60 and 84 retain the requested root in
+both rooms; the largest detected deviation is 17.8 cents. These measurements
+verify level and tuning guards, rather than replacing the owner's listening verdict.
+
+New patches use model 2. **Saved model-1 recipes retain model 1** through decoding,
+macro edits, native velocity and CLI replay. Two captured model-1 recipes and
+published raw-WAV SHA-256 values guard exact reproduction of the original sounds.
+
+All **38 focused CHAMBER checks pass** for this revision, covering DSP, room
+geometry, patch/preset/CLI replay, original model-1 WAV hashes, dry-source isolation
+and the new membrane body guard. The ensemble pitch check now also covers C3.
+
+The revised page features C3 quartets and provides C3/C4 comparisons in each room.
+Each four-clip group uses one gain derived from its revised full quartet. Previous
+quartets and both membrane solos receive that same gain and tail fade. Solos keep
+their actual quartet strike strength and balance; they are never independently
+boosted. Revision-specific IDs preserve the original listening notes and avoid
+reusing old audio URLs. The complete original page, audio, recipes and rendering
+source snapshots are archived separately.
+
+Reproduce the focused revision from a retained original render directory:
+
+```sh
+./gradlew --no-daemon :synth:generateChamberAudition -PchamberRevision=timpani -PchamberOutput=/tmp/chamber-timpani -PchamberPrevious=/absolute/model-1-audition
+```
+
+Omit `chamberPrevious` for the standalone 16-clip revision without the archive.
+The default generator still produces the complete control matrix using the current
+model. The compact starter ZIP contains the 16 revision clips and their sources;
+it excludes the archived original matrix.
 
 ## Controls and complete recipes
 
@@ -131,9 +182,9 @@ Git. The page source is retained with the test resources so regeneration can
 reproduce the listening interface. No phone or MPC hardware acceptance is claimed.
 
 
-## Recorded validation (2026-10-18)
+## Original model-1 validation (2026-10-18)
 
-The published audio was rendered from clean engine commit
+The original audio was rendered from clean engine commit
 `4621959c5b66869f9aaeb04cecb8669a6faabd08`. All **114 requested cases passed**.
 A second, separate JVM render reproduced all **228 raw/matched WAVs byte for
 byte**. The manifest records each recipe and WAV hash; `source-provenance.json`
@@ -143,7 +194,9 @@ identify the published page, whose browser icon was added after audio rendering.
 All **35 CHAMBER checks** passed across DSP, geometry, complete patch replay,
 diagnostic PCM replay, saved presets and CLI integration. Six other module
 suites passed **1,344 tests**. The Android debug build and native CI tests passed;
-the full JVM regression gate is tracked in [PR #574](https://github.com/BertCalm/SnipSnap/pull/574).
+the full JVM, Android and native baseline subsequently passed at commit `d49f0b26`
+in [CI run 39339176543](https://github.com/BertCalm/SnipSnap/actions/runs/39339176543).
+The original implementation landed through [PR #574](https://github.com/BertCalm/SnipSnap/pull/574).
 
 Default full mixes at MIDI 36, 60 and 84 pass the existing melodic classifier
 guard for both voices. At the maximum-control MIDI-84 comparison, the 4× versus

@@ -173,7 +173,8 @@ Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
 finite prototype from the proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-contains 114 clips with raw/matched playback and downloadable recipes.
+opens 16 previous/revised timpani comparisons with raw/matched playback and
+downloadable recipes; the original 114-clip study remains archived there.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
