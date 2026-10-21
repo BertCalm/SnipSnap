@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIME — first finite listening prototype (2026-10-20).** LOOP, GLINT and VESSEL
+project the same finite Koch contour through two pickups into an eight-mode body.
+DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,
+gate, seed and model round-trip in the patch. `generateRimeAudition` supplies 130 dry
+clips, controlled path removals, macro sweeps, phrases and replayable recipes.
+HOLD is explicitly refused; phone integration and the full library follow listening.
+See [RIME.md](RIME.md). Owner sonic acceptance is pending.
+
 Capture is the headline; synthesis is the second leg. The goal: dial in drum
 sounds (and eventually keys) inside SnipSnap, render them to WAVs, and ship
 them through the exact same kit → preflight → export pipeline as captured

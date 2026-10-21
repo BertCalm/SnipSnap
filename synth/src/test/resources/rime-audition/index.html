@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#142e3d">
+  <meta name="description" content="Listen to Rime, a contour synthesis prototype for SnipSnap. Three dry starter sounds, musical phrases and controlled listening comparisons.">
+  <title>Rime — SnipSnap listening room</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#listen">Skip to the sounds</a>
+  <header class="masthead wrap">
+    <a class="wordmark" href="#top" aria-label="Rime listening room home"><span class="mark">✳</span> SNIPSNAP <span class="divider">/</span> RIME</a>
+    <nav aria-label="Page sections"><a href="#listen">Listen</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
+    <span class="edition">FIRST LISTEN <i></i> 01</span>
+  </header>
+  <main id="top">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow">A contour instrument for SnipSnap</p>
+        <h1>Rime<span class="period">.</span></h1>
+        <p class="hero-line">One silhouette.<br>Increasingly elaborate edges.</p>
+        <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. This room is the first dry listening pass.</p>
+        <a class="primary" href="#listen">Meet the three sounds <span aria-hidden="true">↘</span></a>
+        <p class="small muted">Finite prototype · No external samples or rack effects</p>
+      </div>
+      <figure class="contour-study">
+        <div class="figure-heading"><span>THE SOURCE / KOCH CONTOUR</span><span>ITERATION 05</span></div>
+        <svg id="contour" viewBox="-1.26 -1.26 2.52 2.52" role="img" aria-label="Finite Koch contour and its Fourier reconstruction">
+          <defs><pattern id="grid" width=".2" height=".2" patternUnits="userSpaceOnUse"><path d="M .2 0 L 0 0 0 .2" fill="none" stroke="#bdcdd0" stroke-width=".003"/></pattern></defs>
+          <rect x="-1.26" y="-1.26" width="2.52" height="2.52" fill="url(#grid)"/>
+          <circle r="1" fill="none" stroke="#bccbd0" stroke-width=".005" stroke-dasharray=".015 .025"/>
+          <path d="M-1.2 0H1.2 M0-1.2V1.2" stroke="#b1c1c5" stroke-width=".005"/>
+          <g transform="scale(1,-1)"><path id="target-contour" fill="none" stroke="#b1c2c6" stroke-width=".009"/><path id="active-contour" fill="none" stroke="#176082" stroke-width=".013" stroke-linejoin="round"/></g>
+          <circle r=".015" fill="#cb653c"/>
+        </svg>
+        <figcaption><div class="figure-label"><label for="geometry-detail">Reconstruction</label><output id="geometry-value" for="geometry-detail">|n| ≤ 128</output></div>
+          <input id="geometry-detail" type="range" min="0" max="4" step="1" value="3" aria-describedby="geometry-caption">
+          <div class="range-labels" aria-hidden="true"><span>Pure loop</span><span>Fine contour</span></div>
+          <p id="geometry-caption">A geometric study. The audio also includes pickup, contact and body responses.</p>
+        </figcaption>
+      </figure>
+    </section>
+    <div class="facts wrap"><span><b>03</b> starter sounds</span><span><b>05</b> timbral controls</span><span><b>44.1</b> kHz mono WAVs</span><span><b>Dry</b> source → body</span></div>
+    <p id="load-status" class="wrap status" role="status">Loading the rendered library…</p>
+    <section id="listen" class="section wrap">
+      <div class="section-heading"><span class="number">01</span><div><p class="eyebrow">Start here</p><h2>Meet the silhouette.</h2><p>Try the single note, then the short musical phrase. Each starts from the same finite contour.</p></div></div>
+      <div id="starters" class="starters"></div>
+      <div class="download-strip"><span>Take the first six clips with you.</span><a href="downloads/rime-first-listen.zip" download>Starter WAVs + recipes <span aria-hidden="true">↓</span></a></div>
+    </section>
+    <section id="controls" class="section controls-section">
+      <div class="wrap">
+        <div class="section-heading"><span class="number">02</span><div><p class="eyebrow">Change one thing</p><h2>Five ways to shape a note.</h2><p>Every row keeps the note, velocity, seed and other controls fixed. Play individual steps or the complete sweep.</p></div></div>
+        <div class="voice-tabs" id="voice-tabs" role="tablist" aria-label="Voice for control sweeps">
+          <button type="button" role="tab" aria-selected="false" data-voice="LOOP" id="tab-loop" aria-controls="sweep-panel">LOOP <small>Round Seed</small></button>
+          <button type="button" role="tab" aria-selected="true" data-voice="GLINT" id="tab-glint" aria-controls="sweep-panel">GLINT <small>Fine Frost</small></button>
+          <button type="button" role="tab" aria-selected="false" data-voice="VESSEL" id="tab-vessel" aria-controls="sweep-panel">VESSEL <small>Open Vessel</small></button>
+        </div>
+        <div id="sweep-panel" role="tabpanel" aria-labelledby="tab-glint"><div id="sweeps"></div></div>
+        <p class="footnote">ANGLE 0% and 100% coincide. At DETAIL 0%, there is no fine structure for UNFOLD to reveal. Higher notes use fewer safe harmonics.</p>
+      </div>
+    </section>
+    <section id="compare" class="section wrap">
+      <div class="section-heading"><span class="number">03</span><div><p class="eyebrow">Controlled comparisons</p><h2>Inside the note.</h2><p>Remove one part of the instrument and listen for its contribution. Use matched playback for tone; raw playback keeps one common gain across every clip.</p></div></div>
+      <div id="causal" class="causal-grid"></div>
+      <details class="explorer"><summary><span>Explore the rest of the bench</span><span id="bench-count" class="small muted"></span><span class="expand" aria-hidden="true">+</span></summary>
+        <p>Low, middle and high notes; soft and hard velocities; paired controls; and all-high settings at C7.</p>
+        <div class="explorer-tools"><label>Find a test <input id="search" type="search" placeholder="Voice, note, or control…"></label><label>Section <select id="section-filter"><option value="all">All bench tests</option><option value="register">Notes & velocity</option><option value="interactions">Control interactions</option><option value="stress">All high</option></select></label></div>
+        <div class="table-scroll"><table><thead><tr><th>Voice / test</th><th>Length</th><th>Root error</th><th>Raw peak</th><th><span class="sr-only">Playback and recipe</span></th></tr></thead><tbody id="bench"></tbody></table></div>
+        <p id="bench-empty" hidden>No tests match those filters.</p>
+      </details>
+    </section>
+    <section id="notes" class="section notes-section"><div class="wrap notes-grid">
+      <div><p class="eyebrow">The listening question</p><h2>Does the edge feel<br>part of the note?</h2><p>Listen for a stable pitch as detail arrives. Does ANGLE offer a useful change? Does the body add a convincing ring? Which of the three sounds deserves more work?</p><p class="small muted">Your notes stay in this browser. Download them to bring them back to the conversation.</p></div>
+      <div class="notes-form"><label for="listening-notes">Listening notes</label><textarea id="listening-notes" rows="7" placeholder="Round Seed…&#10;Fine Frost…&#10;Open Vessel…"></textarea><div class="notes-actions"><span id="notes-status" class="small muted" role="status"></span><button type="button" id="download-notes">Download notes ↓</button></div></div>
+    </div></section>
+    <section class="section wrap evidence">
+      <div><p class="eyebrow">Keep the work</p><h2>Every sound has a recipe.</h2><p>The downloads retain the controls and performance. Causal recipes also record which internal path was removed. The source bundle includes the Kotlin renderer, tests and replay instructions.</p></div>
+      <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Prototype source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
+    </section>
+    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 1</span></span><p>First finite listening prototype. HOLD, the remaining voices, the full preset bank and phone integration are later work. Listening acceptance is pending.</p><span id="build-info" class="small muted"></span></footer>
+  </main>
+  <aside class="transport" aria-label="Audition player"><div class="transport-inner wrap">
+    <div class="now-playing"><span class="playing-dot" id="playing-dot"></span><div><span class="eyebrow">Listening room</span><p id="now-title" aria-live="polite">Choose a sound above</p></div></div>
+    <div class="audio-wrap"><audio id="player" controls preload="none" aria-label="Current audition clip"></audio><div class="playback-error" id="playback-error" role="status"></div></div>
+    <fieldset class="mode-picker"><legend class="sr-only">Playback gain</legend><label><input type="radio" name="mode" value="matched" checked><span>Matched</span></label><label><input type="radio" name="mode" value="raw"><span>Raw</span></label></fieldset>
+    <a id="current-download" class="player-download" hidden download aria-label="Download current WAV">WAV ↓</a>
+  </div></aside>
+  <noscript><p class="wrap">Enable JavaScript for the listening controls, or download <a href="downloads/rime-first-listen.zip">the starter audio pack</a>.</p></noscript>
+</body>
+</html>

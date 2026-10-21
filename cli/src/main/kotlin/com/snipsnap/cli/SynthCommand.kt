@@ -73,6 +73,10 @@ import com.snipsnap.synth.ResinDrone
 import com.snipsnap.synth.ResinVoice
 import com.snipsnap.synth.ScannedChain
 import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.Rime
+import com.snipsnap.synth.RimeVoice
+import com.snipsnap.synth.RimePatch
+import com.snipsnap.synth.RimePresets
 import com.snipsnap.synth.Stoop
 import com.snipsnap.synth.StoopPatch
 import com.snipsnap.synth.Spool
@@ -181,8 +185,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR and CHAMBER, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, RimePatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER and RIME, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -207,6 +211,7 @@ object SynthCommand {
         }
 
         val presets = when (engine) {
+            RimePatch.ENGINE -> RimeVoice.entries.firstOrNull { it.name == voice }?.let { RimePresets.forVoice(it) } ?: emptyList()
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
             } ?: emptyList()
@@ -222,17 +227,20 @@ object SynthCommand {
                 ?: throw CliError("--material wants ${ShoalMaterial.entries.joinToString("|") { it.name }}, got '$raw'")
         }
         val contourMacros = opts["--macros"]?.let { raw ->
-            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
-            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+            if (engine !in setOf(ContourPatch.ENGINE, RimePatch.ENGINE)) throw CliError("--macros is only supported by CONTOUR and RIME, got $engine")
+            val names = (if (engine == RimePatch.ENGINE) Rime.macrosFor(RimeVoice.valueOf(voice)) else ContourEngine.macrosFor(ContourVoice.valueOf(voice))).map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
                 val fields = entry.split('=')
                 if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
                 val name = fields[0].trim().uppercase(Locale.ROOT)
-                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name !in names) throw CliError("--macros unknown $engine control '$name'; choose ${names.joinToString()}")
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
+                if (engine == RimePatch.ENGINE && name == "HOLD" && value != 0f) {
+                    throw CliError("--macros HOLD: RIME model 1 renders finite notes; HOLD is not implemented")
+                }
                 overrides[name] = value
             }
             if ("TUNE" in overrides && opts["--midi"] != null) {
@@ -247,6 +255,7 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
@@ -310,7 +319,7 @@ object SynthCommand {
                 ?: throw CliError("--beats for TRIO is 1..4, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE, RimePatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
@@ -322,9 +331,9 @@ object SynthCommand {
         } else null
         val seedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
-            if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
-            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
-                ?: throw CliError("--seconds wants .25..${Osprey.MAX_SECONDS} seconds, got '$raw'")
+            if (engine !in setOf(OspreyPatch.ENGINE, RimePatch.ENGINE)) throw CliError("--seconds is only supported by OSPREY and RIME, got $engine")
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in (if(engine == RimePatch.ENGINE) .15f else .25f)..(if(engine == RimePatch.ENGINE) 4f else Osprey.MAX_SECONDS) }
+                ?: throw CliError(if(engine == RimePatch.ENGINE) "--seconds for RIME wants .15..4 gate seconds, got '$raw'" else "--seconds wants .25..${Osprey.MAX_SECONDS} seconds, got '$raw'")
         }
         val modelOverride = opts["--model"]?.let { raw ->
             val lastModel = when (engine) {
@@ -378,6 +387,7 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is RimePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrigamiPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TrioPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -457,6 +467,8 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
+            } else if (withNote is RimePatch) {
+                withNote.copy(macros = withNote.macros + contourMacros, gateSeconds = secondsOverride ?: withNote.gateSeconds, seed = seedOverride ?: withNote.seed)
             } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + contourMacros)
             } else if (withNote is SkitterPatch) {

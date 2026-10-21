@@ -1,5 +1,9 @@
 # Which document to trust
 
+**Rime.** [`RIME.md`](RIME.md) records the finite LOOP/GLINT/VESSEL contour-synthesis
+prototype, note-aware detail, two-port body, complete recipes and reproducible audition.
+HOLD, the phone picker and the full library await the first listening verdict.
+
 The tree has moved faster than some of the notes. When two of them
 disagree, this is the order.
 

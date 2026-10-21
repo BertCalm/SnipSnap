@@ -342,3 +342,6 @@ testkit/trio-musical-bank/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# RIME finite listening WAVs and page regenerate with generateRimeAudition.
+testkit/rime-audition/

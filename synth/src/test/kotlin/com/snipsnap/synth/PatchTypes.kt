@@ -65,7 +65,7 @@ internal object PatchTypes {
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, ChamberPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, ChamberPatch.ENGINE, RimePatch.ENGINE)
 
     /** Only these voices of an otherwise rostered engine remain CLI-only comparisons. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

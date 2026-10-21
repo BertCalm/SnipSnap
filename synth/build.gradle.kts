@@ -2,6 +2,19 @@ plugins {
     kotlin("jvm")
 }
 
+/** RIME finite first-listen bench; diagnostic recipes are replayable with -PrimeReplay. */
+tasks.register<JavaExec>("generateRimeAudition") {
+    group = "distribution"
+    description = "Render RIME's three finite starters, controls, causal comparisons, phrases and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+    if (project.hasProperty("rimeQuick")) args("--quick")
+    providers.gradleProperty("rimeReplay").orNull?.let { args("--replay", it) }
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"

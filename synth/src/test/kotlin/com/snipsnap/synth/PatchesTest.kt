@@ -50,6 +50,7 @@ class PatchesTest {
         WickPresets.all().first(),
         NacrePresets.all().first(),
         ChamberPresets.all().first(),
+        RimePresets.all().first(),
     )
 
     @Test
