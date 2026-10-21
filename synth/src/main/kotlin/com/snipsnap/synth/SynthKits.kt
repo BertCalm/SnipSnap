@@ -639,6 +639,8 @@ object SynthKits {
      * Every pad carries the model, player gesture and native velocity in its recipe.
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
+    // The original sixteen-pad acceptance kit is a saved factory contract. The experimental GROW
+    // presets (EmbouchurePresets.experimental) are available in SYNTH without changing that kit.
     fun embouchure(): List<ArrangedPad?> = embouchureStarterPatches().map(::embouchurePad)
 
     /** The original starter layout remains fixed when the selectable factory roster grows. */

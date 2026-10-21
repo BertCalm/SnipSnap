@@ -465,6 +465,14 @@ controls; the expanded presets now have their own listening review.
 [Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
 
+An experimental [BRASS GROW mode](docs/engineering/brass-grow-prototype.md)
+adds two BRASS presets with TUNE, GROW, LENGTH and HOLD. GROW shapes one
+performance from rough through centered to expressive, rather than mixing
+separate takes. It explicitly saves model 3; ordinary patches, the original
+eight presets and the sixteen-pad starter retain their previous models.
+Run `./gradlew :synth:generateBrassGrowPrototype` for its register/velocity
+validation pack. Device playing and listening remain the next acceptance step.
+
 TRIO brings three plucked performers and changing alliances into a finite pad
 performance. TRES, BERIMBAU, CHARANGO and ENSEMBLE share TOUCH, DRAMA, SIDES,
 MOTION, SPACE and DAMP, with saved root, velocity, tempo and phrase length.

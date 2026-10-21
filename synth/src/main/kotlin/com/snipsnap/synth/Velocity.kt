@@ -241,7 +241,7 @@ object Velocity {
         is SpoolPatch -> Spool.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
-        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice, patch.model)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is OspreyPatch -> Osprey.macrosFor(patch.voice)

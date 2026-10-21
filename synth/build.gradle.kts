@@ -1420,6 +1420,17 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     args("${rootDir}/testkit/opensky-audition")
 }
 
+/** Experimental, single-source BRASS GROW register/velocity/loop validation pack. */
+tasks.register<JavaExec>("generateBrassGrowPrototype") {
+    group = "distribution"
+    description = "Render the single-source BRASS GROW prototype matrix and checks under testkit/brass-grow-prototype/."
+    maxHeapSize = "1024m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BrassGrowPrototypeGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/brass-grow-prototype")
+}
+
 /** A finite scanned-chain experiment: frozen versus moving physics, with saved source shapes. */
 tasks.register<JavaExec>("generateScannedChainAudition") {
     group = "distribution"
