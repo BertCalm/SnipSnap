@@ -8,9 +8,9 @@ import com.snipsnap.kit.InstrumentStore
  * The phone now plays keys through the native engine (`InstrumentPlayer`
  * over `NativePads`), but the *map* - which zone, what speed, which loop,
  * what release - is this engine's, lifted into [KeyHit] and tested
- * against both; this class stays the reference rendering. Nothing in the
- * shop plays through it: only `InstrumentEngineTest` and the pad makers'
- * tests construct and render it.
+ * against both; this class stays the reference rendering. ORIGAMI's maker
+ * uses it for a finite hold-and-release preview; KEYS itself uses the
+ * native player.
  *
  * A note picks the zone that covers it, reads the zone's sample at the
  * ratio between the note and the zone's root (times the sample rate

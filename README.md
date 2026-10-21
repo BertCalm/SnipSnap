@@ -1096,7 +1096,13 @@ phone/MPC checks.
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
 CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
-SEND saves a replayable recipe and authored pitch for kit tuning. See the
+SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
+and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
+on the desk, use
+`snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
+`--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
+renderer has its own model 1, separate from finite model 4; the six controls
+and patch JSON stay unchanged, with no HOLD macro. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`
