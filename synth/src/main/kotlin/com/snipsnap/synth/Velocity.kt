@@ -264,7 +264,7 @@ object Velocity {
         is WickPatch -> Wick.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
-        is NacrePatch -> Nacre.macrosFor(patch.voice)
+        is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)

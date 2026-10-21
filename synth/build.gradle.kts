@@ -97,7 +97,7 @@ tasks.register<JavaExec>("generateOverlapKit") {
     args(providers.gradleProperty("overlapKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
-/** First finite Nacre listening proof: two harps, current, coral and seaweed. */
+/** Model-2 Nacre listening proof: fixed-pattern tone pairs and frozen model-1 comparison. */
 tasks.register<JavaExec>("generateNacreAudition") {
     group = "distribution"
     description = "Render NACRE's finite duet, control and causal comparisons with recipes and a listening page."

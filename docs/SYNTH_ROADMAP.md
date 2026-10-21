@@ -2315,9 +2315,9 @@ Twelve presets: plain counts from the chip and the person, a robot, two
 shouts and a hush, a giant and a child, a stretched chop and a held
 word, two stutters. The longest render takes about 60 ms.
 
-## NACRE — first finite listening prototype
+## NACRE — second finite listening prototype
 
-PEARL renders an octave duet from two distinct four-string harps, separate bodies, and eight sympathetic resonators. TOUCH, DUET, CURRENT, VENUE and BLOOM control the finite gesture; MIDI, physical velocity, model and exact seed travel in its patch. The first venue blend is coral → seaweed; conch, cave and HOLD are deferred, and nonzero HOLD is refused. Shared current changes internal string loss and body-to-sympathetic transfer. The bounded topology has no venue-to-active-string return. Six provisional recipes and CLI/recipe/velocity support accompany a 49-clip audition with common-gain causal comparisons, source snapshots and measurements. Phone picker and held-key integration are outside this first prototype. **Listening acceptance pending.** See [NACRE.md](NACRE.md).
+PEARL renders an octave duet from two four-string harps, separate bodies, and eight sympathetic resonators. Model 2 strengthens harmonic touch, finite ringing, shared-current motion, and coral/seaweed material response after the first audition was heard mainly as strum-pattern variation. The topology remains bounded and acyclic outside the passive active-string loops. Saved model-1 recipes retain the exact published renderer and defaults. TOUCH, DUET, CURRENT, VENUE and BLOOM accompany saved MIDI, physical velocity, model and exact seed. A 59-clip audition opens with ten original/revised and fixed-pattern, level-matched tone comparisons, followed by mechanism probes and control sweeps. Six provisional recipes and CLI/recipe/velocity support remain outside the factory roster. Conch, cave, HOLD, the phone picker and held-key integration are deferred; nonzero HOLD is refused. **Listening acceptance pending.** See [NACRE.md](NACRE.md).
 
 ## S24 — FLOTILLA, as built
 
