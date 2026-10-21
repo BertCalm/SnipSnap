@@ -6,7 +6,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import java.io.File
 
-/** Frozen, matched recipes for the listening repair. Capture before before editing the engine. */
+/** Frozen, matched recipes for the listening repair. Capture the baseline before editing the engine. */
 object TremorComparisonGenerator {
     private data class Case(val id: String, val label: String, val role: String, val patch: TremorPatch)
 

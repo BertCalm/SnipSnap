@@ -177,7 +177,7 @@ instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
 speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
-no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+no picker entry (BORE, ARCO, MERCURY) still renders here.
 VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes
 each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one

@@ -1110,6 +1110,27 @@ tasks.register<JavaExec>("generateFlotillaComparison") {
     args("${rootDir}/testkit/flotilla-comparison/$version")
 }
 
+/** Full BALLAST audition with shared-gain touch and component diagnostics. */
+tasks.register<JavaExec>("generateBallastAudition") {
+    group = "distribution"
+    description = "Render BALLAST presets, control sweeps and correctly calibrated diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-audition")
+}
+
+/** Capture before first; candidate mode requires the frozen baseline calibration. */
+tasks.register<JavaExec>("generateBallastComparison") {
+    group = "distribution"
+    description = "Render BALLAST's matched bass, glass, structure and velocity comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("ballastComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/ballast-comparison/$version")
+}
+
 /** Render MURK's dry voices, causal probes and accessible offline listening page. */
 tasks.register<JavaExec>("generateMurkAudition") {
     group = "distribution"

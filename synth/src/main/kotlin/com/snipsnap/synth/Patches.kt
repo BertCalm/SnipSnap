@@ -66,6 +66,7 @@ object Patches {
             GyrePatch.ENGINE -> GyrePatch.fromJsonValue(value)
             MagnetPatch.ENGINE -> MagnetPatch.fromJsonValue(value)
             AerostatPatch.ENGINE -> AerostatPatch.fromJsonValue(value)
+            BallastPatch.ENGINE -> BallastPatch.fromJsonValue(value)
             FlotillaPatch.ENGINE -> FlotillaPatch.fromJsonValue(value)
             CisternPatch.ENGINE -> CisternPatch.fromJsonValue(value)
             TremorPatch.ENGINE -> TremorPatch.fromJsonValue(value)
