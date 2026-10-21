@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**Trefoil finite listening prototype (2026-10-20).** Five provisional studies
+use unsoftened three-body trajectories, three pitched banks with passive internal
+exchange, and feedforward sympathetic memory. Complete recipes, numerical probes
+and `generateTrefoilAudition` provide moving/frozen comparisons, isolated threads,
+one-body transfer proof and control/register sweeps. HOLD is rejected; PAIR,
+factory/phone integration and owner listening acceptance remain later work.
+See [TREFOIL.md](TREFOIL.md) for the model and reproduction.
+
 Capture is the headline; synthesis is the second leg. The goal: dial in drum
 sounds (and eventually keys) inside SnipSnap, render them to WAVs, and ship
 them through the exact same kit → preflight → export pipeline as captured

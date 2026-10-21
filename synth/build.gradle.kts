@@ -368,6 +368,9 @@ repositories {
 }
 
 dependencies {
+    // Versioned eighth-order 8(5,3) integrator and dense output for TREFOIL's
+    // offline Newtonian trajectory. Apache-2.0; never runs on the audio clock.
+    implementation("org.apache.commons:commons-math3:3.6.1")
     implementation(project(":audio"))
     implementation(project(":json"))
     // The factory kit builders hand ArrangedPads (audio + class + recipe)
@@ -378,6 +381,22 @@ dependencies {
     testImplementation(project(":xpm"))
     // The MPC 3 generators write native tracks with embedded groove clips.
     testImplementation(project(":mpc3"))
+}
+
+tasks.register<JavaExec>("generateTrefoilAudition") {
+    group = "distribution"
+    description = "Render finite TREFOIL studies, causal comparisons, trajectories and replayable recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("trefoilReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("trefoilReplayWav").get(),
+            providers.gradleProperty("trefoilReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("trefoilOutput").orNull ?: "${rootDir}/testkit/trefoil-audition")
+    }
 }
 
 // The native processor and the JVM recipe reader share one canonical registry.

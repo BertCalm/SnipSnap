@@ -342,3 +342,6 @@ testkit/trio-musical-bank/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Reproducible finite TREFOIL listening renders and evidence.
+testkit/trefoil-audition/

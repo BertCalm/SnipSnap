@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="Listen to Trefoil: three pitched resonators exchanging energy through a changing three-body choreography. A finite SnipSnap listening study.">
+  <meta name="theme-color" content="#f5f3eb"><title>Trefoil — SnipSnap Listening Room</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip" href="#library">Skip to listening studies</a>
+  <header class="masthead"><a class="wordmark" href="#top"><svg viewBox="0 0 30 30" aria-hidden="true"><path d="M15 15C-4-3 0 32 15 15S34-3 15 15S-4 32 15 15"/></svg> SNIPSNAP <span>/ ENGINE STUDIES</span></a><span class="edition">No. 43 <i></i> FIRST LISTEN</span></header>
+  <main id="top">
+    <section class="hero" aria-labelledby="title">
+      <div class="hero-copy"><p class="eyebrow">A THREE-BODY RESONATOR STUDY</p><h1 id="title">Trefoil<span>Three bodies.<br>One unfolding note.</span></h1>
+        <p class="intro">A rounded thread, a wiry thread, a fine thread. They meet, exchange energy, and leave something ringing.</p>
+        <div class="hero-actions"><button class="primary" id="begin">Listen to the weave <span aria-hidden="true">→</span></button><button class="text-button" id="transfer-link">Hear the transfer test →</button></div>
+        <p class="hero-foot">Dry synthesis <span>·</span> Mono <span>·</span> Finite gestures <span>·</span> Headphones optional</p>
+      </div>
+      <figure class="orbit-figure"><div class="figure-top"><span>THE CHANGING RELATIONSHIP</span><span id="orbit-time">0.00 s</span></div><canvas id="orbit" width="600" height="340" aria-label="Measured paths and current positions of the three bodies"></canvas><figcaption><div class="legend"><span><i class="a"></i>A Rounded</span><span><i class="b"></i>B Wiry</span><span><i class="c"></i>C Fine</span></div><p id="orbit-caption">The actual trajectory, synchronized to the recording.</p></figcaption></figure>
+    </section>
+    <section class="listening-intro"><span class="section-number">01 / LISTEN</span><h2>Follow the threads.</h2><p>Start with the complete sounds. Then remove motion, exchange, or memory and hear what changes. Every comparison is rendered from the same saved recipe.</p></section>
+    <section id="library" aria-label="Listening studies">
+      <div class="library-toolbar"><div id="tabs" class="tabs" role="tablist" aria-label="Study collection"></div><div class="level-options" aria-label="Playback level"><button id="matched" aria-pressed="true">Matched</button><button id="raw" aria-pressed="false">Raw</button></div></div>
+      <div class="collection-heading"><div><p class="eyebrow" id="collection-label">FIRST LISTEN</p><h3 id="collection-title">Five ways into the weave</h3><p id="collection-description">Listen for the three contributions becoming one changing pitched body.</p></div><span id="clip-count" class="clip-count"></span></div>
+      <div class="listening-layout"><div><div id="clips" class="clip-list" role="tabpanel" aria-live="polite"></div><p class="gain-note" id="gain-note">Matched playback uses a common audition target. Diagnostic branches and stems keep their reference mix’s gain.</p></div>
+        <aside class="notebook" aria-labelledby="notebook-title"><p class="eyebrow">YOUR LISTENING NOTES</p><h3 id="notebook-title">Ordered weave</h3><p class="listen-for" id="listen-for"></p><div class="sound-meta" id="sound-meta"></div>
+          <label for="verdict">Your impression</label><select id="verdict"><option value="">Choose an impression</option><option value="keep">Keep exploring this</option><option value="change">Needs a change</option><option value="unsure">Not sure yet</option></select>
+          <label for="note">What do you hear?</label><textarea id="note" rows="4" placeholder="Movement, pitch, a thread that disappears…"></textarea><p class="local-note" id="note-status">Notes stay in this browser.</p><button class="outline" id="export-notes">Export listening notes →</button>
+          <a class="small-link" id="recipe-link" href="recipes/ordered.json" download>Download this recipe ↓</a>
+        </aside>
+      </div>
+    </section>
+    <section class="evidence"><div class="evidence-intro"><span class="section-number">02 / KEEP EXPLORING</span><h2>Take the study with you.</h2><p>The starter download includes the first sounds, comparison mixes, isolated threads, and their saved recipes. Receiver clips marked “exchange off” are intentionally silent.</p><a class="primary download" href="trefoil-listening-starter.zip" download>Download the listening starter <span>↓</span></a><span class="download-detail">Mono WAVs + recipes + rendering source</span></div>
+      <details id="engineering"><summary>Engineering evidence &amp; replay <span aria-hidden="true">+</span></summary><div class="engineering-body"><p>This is finite model 1, awaiting listening acceptance. HOLD and a validated departing-pair voice remain later work. “Repeat clip” replays the same recording.</p><p>Unsoftened equal-mass Newtonian motion supplies bounded contact descriptors. Three energy-coordinate modal banks exchange normalized port states through orthogonal rotations. A separate sympathetic bank receives a feedforward send.</p><h4 id="evidence-title">Selected recording</h4><dl id="metrics" class="metrics"></dl><p id="gain-policy"></p><div class="evidence-links"><a id="diagnostics-link" href="diagnostics/ordered.json" download>Clip diagnostics ↓</a><a id="trace-link" href="traces/ordered.json" download>Trajectory + energy ↓</a><a href="manifest.json" download>Full manifest ↓</a><a href="source-provenance.json" download>Source fingerprints ↓</a><a href="REPLAY.txt" download>Replay instructions ↓</a></div><p class="source-note" id="source-note"></p></div></details>
+    </section>
+  </main>
+  <footer class="footer"><span>SNIPSNAP / TREFOIL</span><span>A listening study, not a finished instrument.</span><a href="#top">Back to the weave ↑</a></footer>
+  <div id="status" class="status" role="status" aria-live="polite">Loading the recordings…</div>
+  <section class="transport" aria-label="Audio player"><button id="transport-play" class="transport-play" aria-label="Play selected recording">▶</button><div class="transport-label"><strong id="now-title">Ordered weave</strong><span id="now-subtitle">Ready when you are</span></div><div class="scrubber"><label class="sr-only" for="seek">Playback position</label><input id="seek" type="range" min="0" max="6" step="0.01" value="0"><div><span id="elapsed">0:00</span><span id="duration">0:06</span></div></div><label class="repeat"><input id="repeat" type="checkbox">Repeat clip</label><button id="stop" class="stop" aria-label="Stop playback">■</button><a id="wav-link" href="audio/ordered-matched.wav" download class="wav-download" aria-label="Download selected WAV">WAV ↓</a></section>
+  <audio id="audio" preload="metadata"></audio>
+  <noscript><p class="no-script">This listening interface needs JavaScript. You can still <a href="trefoil-listening-starter.zip">download the WAVs and recipes</a>.</p></noscript>
+  <script src="app.js" defer></script>
+</body>
+</html>
