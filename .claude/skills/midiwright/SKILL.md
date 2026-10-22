@@ -20,10 +20,11 @@ one.
 ## 0. Ground truth first (every time)
 
 1. Read `references/snipsnap-midi-state.md`. It is what the repo has today: USB note input
-   only, parsed by `MidiWire`, hopped to the main thread by `MidiInput`, no timestamps kept,
-   no output, no BLE, no virtual port, no clock, pad commands applied at the top of the Oboe
-   callback, GROOVE clocked off the display. Every design starts from that, not from a blank
-   page.
+   only, parsed by `MidiWire`, hopped to the main thread by `MidiInput` with the service's
+   timestamp on every event, no output, no BLE, no virtual port, no clock, pad commands
+   able to land on a frame (`PadCommand.frameOffset`) but nothing on the Kotlin side yet
+   computing one, GROOVE clocked off the display. Every design starts from that, not from a
+   blank page.
 2. If the SnipSnap repo is on disk, **grep before you name any API**. `docs/MIDI_SYNC.md`
    records 39 corrections to one design document, most of them a confidently named thing that
    did not exist. Name an API only after `grep -rn` found it; otherwise write "the repo's
@@ -35,7 +36,8 @@ one.
 4. Apply the clock rule. One clock domain for events: `CLOCK_MONOTONIC` nanoseconds, the
    domain `MidiReceiver.onSend`, AMidi, `MotionEvent.getEventTimeNanos()` and Oboe's
    `getTimestamp` all share. Every event carries its timestamp from the edge to the frame it
-   lands on. `MidiInput` discards it today; new code must not.
+   lands on. `MidiWire.Event.timestampNanos` carries it off the edge; new code must not
+   drop it between there and the frame.
 5. Apply the honesty ledger (section 7). Timing lives in the gaps between components, and the
    gaps do not appear in any file. Bench items S1 to S4 in `docs/BENCH.md` gate clock work; a
    spec that starts follower code before they are answered repeats the mistake MIDI_SYNC.md

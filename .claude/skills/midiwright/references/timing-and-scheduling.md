@@ -61,7 +61,7 @@ filling). Keep that. Additions worth proposing:
 1. **Every event carries a `CLOCK_MONOTONIC` nanosecond timestamp from the edge.** Java
    `MidiReceiver.onSend` gives one; AMidi gives one; `MotionEvent.getEventTimeNanos()` (API
    34) or `getEventTime() * 1_000_000` gives one for touches; the sequencer stamps its own
-   from the beat position. `MidiInput` discards it today; that is gap number one.
+   from the beat position. `MidiInput` kept it from the steps 1 and 2 PR on (2026-10-22); before that it was gap number one.
 2. **The engine keeps an absolute frame counter** (frames rendered since the stream started;
    `OrbitEngine`'s `AtomicLong frame` is the pattern) and **a smoothed mapping from
    nanoseconds to frames**: sample `AudioStream::getTimestamp(CLOCK_MONOTONIC, &framePosition,
@@ -79,8 +79,9 @@ filling). Keep that. Additions worth proposing:
    Tempo changes and loop wraps stay correct; this is the AUv3 and JUCE `MidiBuffer` model
    (cp3.io: emitting with "a timestamp of zero or AUEventSampleTimeImmediate" loses timing).
 5. **Modulation may step in 16 or 32 sample sub-blocks**; note starts and sample retriggers
-   land on the exact frame. `PadCommand` needs a `frameOffset` field and `apply` must honour
-   it mid-block; today everything applies at the top of the callback.
+   land on the exact frame. `PadCommand.frameOffset` exists and `onAudioReady` honours it
+   mid-block (steps 1 and 2 PR, 2026-10-22); the JNI still sends 0, so the Kotlin side has
+   no way to use it until the mapping in item 2 exists.
 6. **One SPSC ring per producer** into the callback (UI, MIDI service thread, sequencer
    thread if it is not the callback itself), each carrying timestamped commands; the
    callback merges by frame. The ring drops on full; size it so it never fills under a
