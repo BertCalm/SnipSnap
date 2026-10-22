@@ -60,6 +60,7 @@
     active = null;
     old.button.setAttribute('aria-pressed', 'false');
     old.button.textContent = 'Play held tone';
+    old.button.setAttribute('aria-label', 'Play ' + old.name + ' held tone');
     const now = context.currentTime;
     old.gain.gain.cancelScheduledValues(now);
     old.gain.gain.setValueAtTime(old.gain.gain.value, now);
@@ -90,9 +91,10 @@
       const now = context.currentTime;
       gain.gain.setValueAtTime(0, now); gain.gain.linearRampToValueAtTime(1, now + .005);
       source.onended = () => { source.disconnect(); gain.disconnect(); };
-      active = {source, gain, button};
+      active = {source, gain, button, name: row.name};
       source.start(now);
       button.setAttribute('aria-pressed', 'true'); button.textContent = 'Stop held tone';
+      button.setAttribute('aria-label', 'Stop ' + row.name + ' held tone');
       status.textContent = row.name + ' · ' + note(row.rootMidi) + ' · repeating settled tone';
     } catch (error) { if (id === request) status.textContent = error.message; }
     finally { button.disabled = false; }
