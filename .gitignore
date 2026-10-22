@@ -361,3 +361,6 @@ testkit/tidal-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Generated R6 Skitter listening proof
+testkit/skitter-character-r6/

@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/** Touch is measured in unlevelled audio; spectral comparisons remove gain and carrier phase. */
+/** Archival R5 touch proof; bodyDisabled keeps its steady-body contract separate from R6. */
 class SkitterArticulationTest {
     @Test
     fun `soft medium and hard contacts change audio color while preserving a pitched body`() {
@@ -39,14 +39,16 @@ class SkitterArticulationTest {
                 "$voice stronger touch does not deepen the audible contact")
             assertTrue(SkitterArticulationMeasure.touchColor(takes.first(), takes.last(), false) > .01,
                 "$voice full soft and hard attacks have the same normalized audio color")
-            val zero = Skitter.renderProbe(voice, SkitterArticulationMeasure.isolated, velocity = 0f, seconds = .3f)
+            val zero = Skitter.renderProbe(voice, SkitterArticulationMeasure.isolated, velocity = 0f, seconds = .3f,
+                probe = SkitterProbe(bodyDisabled = true))
             assertTrue(zero.raw.all { it == 0f } && zero.snip.samples.all { it == 0f }, "$voice contact leaves audio at zero velocity")
         }
         // The proof is deliberately confined to two source families.
         for (voice in SkitterVoice.entries - SkitterArticulationMeasure.voices.toSet()) {
-            val normal = Skitter.renderProbe(voice, SkitterArticulationMeasure.isolated, seconds = .4f)
+            val normal = Skitter.renderProbe(voice, SkitterArticulationMeasure.isolated, seconds = .4f,
+                probe = SkitterProbe(bodyDisabled = true))
             val off = Skitter.renderProbe(voice, SkitterArticulationMeasure.isolated, seconds = .4f,
-                probe = SkitterProbe(articulationDisabled = true))
+                probe = SkitterProbe(articulationDisabled = true, bodyDisabled = true))
             assertContentEquals(off.raw, normal.raw, "$voice changed outside the LEAD/HOLLOW proof")
             assertContentEquals(off.snip.samples, normal.snip.samples, "$voice changed its exported level")
         }
@@ -155,9 +157,10 @@ internal object SkitterArticulationMeasure {
 
     val finite: List<FiniteTake> by lazy {
         voices.flatMap { voice -> velocities.map { velocity ->
-            val full = Skitter.renderProbe(voice, isolated, midi = 48, velocity = velocity, seed = 0, seconds = 1.15f)
+            val full = Skitter.renderProbe(voice, isolated, midi = 48, velocity = velocity, seed = 0, seconds = 1.15f,
+                probe = SkitterProbe(bodyDisabled = true))
             val off = Skitter.renderProbe(voice, isolated, midi = 48, velocity = velocity, seed = 0, seconds = 1.15f,
-                probe = SkitterProbe(articulationDisabled = true))
+                probe = SkitterProbe(articulationDisabled = true, bodyDisabled = true))
             FiniteTake(voice, velocity, full, off, differences(full.raw, off.raw))
         } }
     }
@@ -165,9 +168,10 @@ internal object SkitterArticulationMeasure {
     val held: List<HeldTake> by lazy {
         voices.map { voice ->
             val macros = isolated + mapOf("SKITTER" to .7f, "HOLD" to 1f)
-            val full = Skitter.renderProbe(voice, macros, midi = 48, velocity = 1f, seed = 917)
+            val full = Skitter.renderProbe(voice, macros, midi = 48, velocity = 1f, seed = 917,
+                probe = SkitterProbe(bodyDisabled = true))
             val off = Skitter.renderProbe(voice, macros, midi = 48, velocity = 1f, seed = 917,
-                probe = SkitterProbe(contactMemoryDisabled = true))
+                probe = SkitterProbe(contactMemoryDisabled = true, bodyDisabled = true))
             val delta = differences(full.raw.copyOf(full.loopStart), off.raw.copyOf(off.loopStart))
             HeldTake(voice, full, off, delta.map { it.color }.average())
         }

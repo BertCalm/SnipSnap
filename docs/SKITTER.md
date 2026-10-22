@@ -6,6 +6,149 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Persistent source bodies (R6 listening candidate)
+
+The characteristic gesture is contact → strained upper harmonics → quick
+unequal recovery → a distinct sustained body. This changes the source for
+LEAD and HOLLOW, rather than adding another short gain bump. The existing
+nonlinear filter, six controls and primary/reply/breath schedule remain the
+instrument around that source.
+
+LEAD combines a protected fundamental with six upper components whose phases
+are `A + (n−1)B`. At rest they are harmonics 2–7. A narrow, smooth harmonic
+packet supplies a persistent formant; BUZZ moves its center, while contact
+and the previous circuit state disturb it. The two oscillators' unequal
+recovery changes the upper components without replacing the rooted carrier.
+A recurrence generates the packet without six separate sine evaluations.
+
+HOLLOW combines an explicit carrier with sine phase modulation from the
+octave oscillator, using a quadrature modulator. Its nonzero body index
+produces odd-harmonic character throughout the note. Contact and delayed
+history change that index around the body value. This is literal phase
+modulation, not an acoustic reed model. Neither source uses oscillator resets,
+an output effect, a new random stream, or additional recursive state.
+
+| Control | Additional R6 source behavior |
+| --- | --- |
+| BUZZ | Moves LEAD's harmonic focus and HOLLOW's modulation index. |
+| SKITTER | The existing unequal oscillator recoveries now strain the coupled upper spectrum. |
+| AGITATE | Gates the delayed history/position contribution to source color. |
+| VENT | Retains the existing low/band/high filter blend. |
+| STATIC | Retains the existing audible noise and agitation forcing. |
+| HOLD | Retains finite gate extension and the converged periodic gesture path. |
+
+`SkitterProbe.bodyDisabled` selects the exact R5 source path. Combining it
+with `articulationDisabled` selects R4. The four other voices bypass the new
+body and retain their previous source arithmetic. R5's tests and generator
+explicitly disable the new body so their historical contract stays testable.
+The ordinary house output stage is unchanged; the audition uses unlevelled
+raw output and one common playback gain.
+
+The compact R6 proof imports the exact four frozen R5 proof WAVs. It adds only
+two new raw PCM24 tracks, each containing full soft, medium and hard finite
+notes at C3, seed 0 and the common controls. Revisions share a cue-relative
+clock; a 20 ms linear crossfade permits comparison during the body. Restart
+returns to contact. Matching remains optional and applies one constant gain
+to the complete selected note. R4 and R5 pages and assets remain archived.
+
+Reproduce with
+`./gradlew --no-daemon :synth:generateSkitterCharacterR6Audition -PskitterR5Baseline=/absolute/frozen-r5-proof`.
+Package with
+`python3 scripts/package_skitter_r6.py /absolute/r5-hosted testkit/skitter-character-r6 /tmp/skitter-r6-hosted`.
+The final tar must fit 256 MiB while every retained audio asset stays intact.
+
+### R6 validation and limits
+
+All 39 focused tests pass, including the unchanged prior admission margins.
+The 60-case touch/pitch probe covers both voices, C2–C6, three velocities and
+common/moderate-default controls: maximum root error is 2.315 cents and minimum
+confidence .959. Both measured held loops converge in three periods with zero
+raw seam and no bound hits.
+
+An independent measurement of the actual HOLD 0 proof, with separate normalized
+FFT power windows wholly inside 500–1500 ms, gives R6/R5 body redistribution of
+57.1/43.5/30.3% in LEAD and 39.0/47.5/19.0% in HOLLOW at soft/medium/hard touch.
+The same R5/R4 comparisons were only .030/.062/.161% and .721/.891/1.064%.
+These measure spectral change, not perceived quality. R6 body levels also rise
+by .24–5.25 dB in these comparisons; use optional complete-note matching when
+judging tone without that level bias. Fixed gain still preserves relative touch
+response, and no gain is written into the raw downloads.
+
+A clean stationary C6 check at BUZZ 1 compares 4× against 16× rendering.
+Excess nonharmonic power is −94.7 dB for LEAD and −109.7 dB for HOLLOW;
+harmonic-envelope distance is .987%/.560%. This single clean setting is not a
+universal alias floor. All 24 causal mechanism checks retain their previous
+audio and cutoff margins. A classloader comparison of the retained R5 path and
+four untouched voices verifies 120 cases and 12,249,678 bit-identical raw samples.
+
+The assembled proof retains all 1,745 earlier non-index assets byte-for-byte,
+adds two losslessly transported PCM24 WAVs and six copied note events, and
+validates 1,873 asset references. Chromium passes 36 comparison sessions at a
+48 kHz device rate using the original 44.1 kHz cue clock, all six exact downloads,
+synchronized revision switching, pause/restart/stop/loading races, archived
+playback and 320/390/1440 px layouts. The final publication also checks the
+actual Git archive against the 256 MiB cap. Full unfiltered JVM regression
+results belong in the pull request's validation record.
+
+### Why it is built this way
+
+- A persistent source body gives the voice an identity after the attack ends.
+- LEAD's upper components share both oscillator phases, so the existing quick
+  recoveries change its edge while a separate fundamental anchors the note.
+- HOLLOW's octave modulation supplies a different harmonic structure; its
+  explicit carrier protects the requested root when the upper body grows.
+- Both feed the same history-sensitive filter, so the macros still operate
+  one instrument rather than an attached effect rack.
+- Stronger upper harmonics are the main risk. Root, loop and high-register
+  oversampling checks guard the implementation; listening decides the value.
+
+## Luthier review after the R5 listening test
+
+The owner's listening verdict is that R4 and R5 seem like the same sound.
+The review starts from that verdict, not from the passing numerical margins.
+Source reviewed: `b8ae2b958057080ad2d06238d4a2e1bf4c618e22`.
+
+**Fix now, sound character.** R5 deliberately restores R4's steady source.
+Its contact moves only oscillator B, with 30/70 ms recoveries, while A stays
+powered. At the published common controls, medium-touch LEAD redistributes
+1.07% of normalized spectral power in the first 100 ms but only .063% in
+500–1500 ms. HOLLOW moves 11.54% initially and .894% in that body window.
+Body levels differ by only .025/.037 dB. A brief contact detail did not meet
+the request for deeper voice identity.
+
+**Fix now, audition.** All four source WAVs are distinct. The published
+bundle decodes exactly to those files, caches use revision-specific keys,
+and the fixed playback gain does not substitute or equalize the takes.
+The old click-to-restart comparison and long clips make a small transient
+change harder to judge. The next proof uses full short notes with revision
+switches at the same note time and a separate restart control for attacks.
+
+**Try next, source architecture.** Three candidate operators were considered:
+root-period harmonic shaping (SPLICE), octave phase modulation (COUPLE), and
+sum/difference ring interaction (MUTATE). The first two offer the clearest
+contrasting sustained roles with bounded cost. Literal hard sync would need
+proper reset antialiasing, so the LEAD proposal uses a finite harmonic formant
+instead. HOLLOW uses smooth octave modulation with a protected root carrier.
+Ring interaction risks cancellation and extra pitch ambiguity without a
+clearer gesture, so it is deferred.
+
+These remain Skitter voices. `Glint.render` already provides a separate
+root-synchronous phase-distortion instrument; `Murmur.render` provides a
+four-operator, five-formant voice. Here the new excitation feeds Skitter's
+existing history-driven nonlinear filter and retains its six controls,
+quicker agitation and seeded primary/reply/breath schedule.
+
+**Disclosed.** R5's continuously powered source keeps its contact-memory load
+near saturation. The prior tests prove a causal dependency, not a clearly
+restored contact after a breath. Fresh rendered notes reset that state.
+
+**Evidence ledger.** Verified: source paths, separate PCM, exact hosted
+transport and gain behavior. Measured: the published-control spectral and
+level comparisons above. Proposed: stronger sustained source identities.
+Heard: the owner reports that R4 and R5 seem the same. The Luthier main skill
+was available; its referenced review/convention/catalog files could not be
+read, so this review uses the actual repository and render evidence.
+
 ## Touch and articulation proof (R5)
 
 LEAD and HOLLOW now keep oscillator A's existing source contribution while

@@ -71,7 +71,7 @@ object SkitterArticulationAudition {
                 val macros = common + ("HOLD" to kind.hold)
                 val report = Skitter.renderProbe(voice, macros, midi = 48, velocity = kind.velocity,
                     seed = 0, seconds = null, oversample = 4,
-                    probe = SkitterProbe(articulationDisabled = revision == "R4"))
+                    probe = SkitterProbe(articulationDisabled = revision == "R4", bodyDisabled = true))
                 require(report.loopStart == -1) { "this proof requires finite notes, not periodic HOLD loops" }
                 require(report.raw.isNotEmpty() && report.raw.all { it.isFinite() } && stats(report.raw).peak <= 1.0) {
                     "$voice/$revision/${kind.id}: raw PCM24 would be invalid or clip"
@@ -150,7 +150,8 @@ object SkitterArticulationAudition {
             val recordPath = "r5/${track.id}-render.json"
             val probe = obj("memoryFrozen" to bool(false), "agitationDisabled" to bool(false),
                 "equalRecovery" to bool(false), "noiseForcingDisabled" to bool(false),
-                "articulationDisabled" to bool(track.revision == "R4"), "contactMemoryDisabled" to bool(false))
+                "articulationDisabled" to bool(track.revision == "R4"), "contactMemoryDisabled" to bool(false),
+                "bodyDisabled" to bool(true))
             val record = obj("trackId" to str(track.id), "revision" to str(track.revision), "source" to sourceJson,
                 "renderSettings" to obj("voice" to str(track.voice.name), "midi" to num(48), "seed" to num(0),
                     "oversample" to num(4), "seconds" to JsonValue.Null, "probe" to probe),
