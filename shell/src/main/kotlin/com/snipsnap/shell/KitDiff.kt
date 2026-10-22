@@ -112,6 +112,13 @@ object KitDiff {
                 return "${it.type.name} ${(it.amount * 100).roundToInt()}%"
             }
         }
+        // A pedal board names every pick, AMT and side, in chain order: the
+        // sheet lights each, so the line says each.
+        PadSheet.readPedals(recipe)?.let { board ->
+            return board.picks.joinToString(" · ") { p ->
+                "${com.snipsnap.synth.Pedals.byKey(p.key).word} ${(p.amount * 100).roundToInt()}% ${p.side.id.uppercase()}"
+            }
+        }
         PadSheet.read(recipe)?.let { applied ->
             val word = applied.segment?.let { PadSheet.displayLabel(it) } ?: applied.treatment.name.uppercase()
             // Rounded, not truncated — the AMT stepper on the card itself
