@@ -1099,6 +1099,16 @@ tasks.register<JavaExec>("generateWahAudition") {
     args("${rootDir}/testkit/wah-audition")
 }
 
+/** Render the pedal board's Stage 1b listens (short pads through WAH with and without the one-cycle floor, and the FADE IN, VIBRATO and DELAY comparisons) under testkit/pedal-listens/. See PedalListensGenerator. */
+tasks.register<JavaExec>("generatePedalListens") {
+    group = "distribution"
+    description = "Render the pedal board's Stage 1b listening clips, manifest and page under testkit/pedal-listens/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PedalListensGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pedal-listens")
+}
+
 tasks.register<JavaExec>("generateFlotillaKit") {
     group = "distribution"
     description = "Render the FLOTILLA acceptance kit under testkit/."
