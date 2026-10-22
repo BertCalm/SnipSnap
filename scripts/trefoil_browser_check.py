@@ -31,6 +31,51 @@ with sync_playwright() as p:
  with page.expect_download() as dl:page.get_by_role('button',name='Export listening notes').click()
  payload=json.loads(pathlib.Path(dl.value.path()).read_text());assert payload['notes']['ordered']['verdict']=='keep'
  page.reload(wait_until='networkidle');assert page.locator('#note').input_value().startswith('QA note:')
+ # The paired player keeps both buffers on one clock and switches only their
+ # gains. Verify the actual output of the intentionally silent branch as well.
+ page.get_by_role('button',name='Play comparison',exact=True).click()
+ page.wait_for_function('deck.playing && !deck.loading')
+ assert page.evaluate('audio.paused && deck.sources.length === 2 && deck.context.state === "running"')
+ page.wait_for_timeout(250);before=page.evaluate('playbackPosition()')
+ page.locator('#compare-b').click();page.wait_for_timeout(100)
+ assert page.evaluate('playbackPosition()')>before+.04
+ assert page.evaluate('deck.gains[0].gain.value === 0 && deck.gains[1].gain.value === 1')
+ page.keyboard.press('a');assert page.locator('#compare-a').get_attribute('aria-pressed')=='true'
+ page.get_by_role('button',name='Pause comparison',exact=True).click()
+ at=page.evaluate('playbackPosition()');page.wait_for_timeout(150);assert abs(page.evaluate('playbackPosition()')-at)<.005
+ page.locator('#seek').evaluate('(e)=>{e.value=2;e.dispatchEvent(new Event("input",{bubbles:true}))}')
+ page.get_by_role('button',name='Raw',exact=True).click()
+ page.wait_for_function('!deck.loading && Math.abs(playbackPosition()-2)<.01')
+ page.get_by_role('button',name='Matched',exact=True).click()
+ page.wait_for_function('!deck.loading && Math.abs(playbackPosition()-2)<.01')
+ page.locator('#compare-focus').uncheck()
+ page.get_by_role('button',name='Play comparison',exact=True).click()
+ page.wait_for_timeout(100);before=page.evaluate('playbackPosition()')
+ page.locator('#compare-focus').check();page.wait_for_timeout(60)
+ assert before-.02<page.evaluate('playbackPosition()')<before+.3
+ page.locator('#seek').evaluate('(e)=>{e.value=3.4;e.dispatchEvent(new Event("input",{bubbles:true}))}')
+ page.wait_for_timeout(350);assert .4<=page.evaluate('playbackPosition()')<.9
+ page.locator('#compare-pair').select_option('transfer');page.wait_for_function('!deck.loading')
+ page.get_by_role('button',name='Play comparison',exact=True).click();page.wait_for_function('deck.playing')
+ page.evaluate('window.deckMeter=deck.context.createAnalyser();deckMeter.fftSize=2048;deck.gains.forEach(g=>g.connect(deckMeter))')
+ page.wait_for_timeout(150)
+ receiver_peak=page.evaluate('(()=>{const x=new Float32Array(deckMeter.fftSize);deckMeter.getFloatTimeDomainData(x);return Math.max(...x.map(Math.abs))})()')
+ assert receiver_peak>1e-5,receiver_peak
+ page.locator('#compare-b').click();page.wait_for_timeout(180)
+ silent_peak=page.evaluate('(()=>{const x=new Float32Array(deckMeter.fftSize);deckMeter.getFloatTimeDomainData(x);return Math.max(...x.map(Math.abs))})()')
+ assert silent_peak<1e-7,silent_peak
+ page.locator('#compare-pair').select_option('memory');page.wait_for_function('!deck.loading')
+ page.get_by_role('button',name='Play comparison',exact=True).click();page.wait_for_function('deck.playing')
+ assert page.evaluate('deck.sources.every(s=>s.buffer.duration===2.5) && playbackPosition()>=3.5')
+ page.locator('#verdict').select_option('indistinct');page.locator('#note').fill('QA comparison: no clear difference')
+ with page.expect_download() as dl:page.get_by_role('button',name='Export listening notes').click()
+ payload=json.loads(pathlib.Path(dl.value.path()).read_text())
+ assert payload['notes']['memory-0']['verdict']=='indistinct'
+ assert payload['notes']['memory-0']['comparison']['pair']=='memory'
+ page.keyboard.press('Escape');assert not page.evaluate('deck.playing')
+ # Starting an individual recording releases both paired sources.
+ page.get_by_role('button',name='Listen to the weave').click();page.wait_for_function('audio.currentTime>.1')
+ assert page.evaluate('!deck.active && deck.sources.length===0')
  for section,count in [('Comparisons',8),('Stems',5),('Transfer proof',8),('Control sweeps',5),('Notes & touch',9),('Extremes',2)]:
   page.get_by_role('tab',name=section,exact=True).click();assert page.locator('.clip').count()==count,(section,page.locator('.clip').count())
  page.get_by_role('tab',name='Control sweeps',exact=True).click()
@@ -51,11 +96,14 @@ with sync_playwright() as p:
  mobile.goto(base+'/',wait_until='networkidle');mobile.wait_for_selector('.clip')
  assert mobile.evaluate('document.documentElement.scrollWidth <= innerWidth')
  mobile.screenshot(path=str(root/'mobile.png'),full_page=True)
+ mobile.get_by_role('button',name='Play comparison',exact=True).click();mobile.wait_for_function('deck.playing')
+ mobile.locator('#compare-b').click();mobile.wait_for_timeout(100)
+ assert mobile.evaluate('deck.side===1 && deck.playing && audio.paused')
  mobile.get_by_role('button',name='Hear the transfer test').click();assert mobile.locator('.clip').count()==8
  mobile.get_by_role('button',name='Play Strike A · exchange on',exact=True).click();mobile.wait_for_function('document.getElementById("audio").currentTime>.1')
  mobile.get_by_role('button',name='Stop playback',exact=True).click()
  assert not errors,errors
  assert not failures,failures
- result={'desktop':{'viewport':[1440,1000],'noOverflow':True},'mobile':{'viewport':[390,844],'noOverflow':True},'checks':['one audio source','play/pause/seek/stop','raw/matched position continuity','all seven collections','macro sweep selector','local notes survive reload','JSON notes download','real receiver WAV decoding','disconnected receiver exact silence','mobile playback'],'receiver':decoded,'errors':errors,'failedHttp':failures}
+ result={'desktop':{'viewport':[1440,1000],'noOverflow':True},'mobile':{'viewport':[390,844],'noOverflow':True},'checks':['one audible player at a time','paired buffer clock continuity','A/B gain switching and keyboard shortcuts','paired pause/seek/raw/matched continuity','focus-loop boundaries and mode continuity','actual paired receiver output vs silent branch','paired sources stop before individual playback','play/pause/seek/stop','all seven collections','macro sweep selector','local notes survive reload','JSON notes download','real receiver WAV decoding','disconnected receiver exact silence','mobile playback'],'pairedOutput':{'receiverPeak':receiver_peak,'disconnectedPeak':silent_peak},'receiver':decoded,'errors':errors,'failedHttp':failures}
  (root/'browser-report.json').write_text(json.dumps(result,indent=2));print(json.dumps(result,indent=2))
  browser.close()

@@ -105,7 +105,48 @@ excerpt can read KICK when its latest peak has no following decay interval in th
 short excerpt. The whole-gesture guard retains the actual envelope. Neither result
 changes routing metadata or claims that a listener has accepted the timbre.
 
-The page supports one audio source, pause/seek/stop, finite-clip repeat, raw/matched
-switching, measured trajectories, local listening notes and JSON export. Notes are
-never submitted to a server. Publication implies neither listening acceptance nor
-phone/MPC hardware validation.
+The page supports one audible player at a time, pause/seek/stop, finite-clip repeat,
+raw/matched switching, measured trajectories, local listening notes and JSON export.
+Notes are never submitted to a server. Publication implies neither listening
+acceptance nor phone/MPC hardware validation.
+
+## Comparison review, listening interface revision 2
+
+**Heard:** Josh reports difficulty distinguishing the comparisons. The first
+recordings remain unaccepted and are preserved byte for byte. The audio model,
+recipes, fixed matching gains and source provenance remain model 1 at
+`a637ee4a61edec30441114ae98922383f562a93c`.
+
+**Fix now, sound character:** the five starters put 99.13–99.97% of Hann-windowed
+spectral power within +/-5% of the MIDI root. The default ordered memory on/off
+residual is -47.27 dB relative to the reference after removing one scalar gain.
+The bank colors and motion do not establish useful audible differences simply
+because their internal states differ. `scripts/trefoil_comparison_audit.py`
+measures the published PCM16 files and records hashes and the exact method in
+`comparison-audit.json`. These are signal measurements, not listening thresholds.
+
+**Fix now, playability:** the original list required restarting each recording.
+The guided player runs both decoded mono buffers on one Web Audio clock with
+complementary 8 ms gain ramps. A/B switches preserve position, pause and seek.
+Five-millisecond edge fades on identical focus windows avoid hard loop cuts;
+full recordings are untouched. The individual player pauses while the paired
+player runs and starting an individual recording releases both paired sources.
+
+The guided sequence compares perturbed moving/frozen geometry, a connected/silent
+unstruck receiver, and the wider 0%/100% memory endpoints, then labels the original
+ordered exchange and memory pairs as subtle. The receiver retains the complete
+mix's gain. Memory endpoints keep their existing per-clip loudness target. Each
+policy is stated beside the player. Neither isolation nor endpoint selection
+establishes that the production mix has sufficient character.
+
+**Try next, sound character:** a new acoustic model should let geometry change
+the audible partial balance and the contact gesture while preserving a useful
+root. The present coherent root drive, protected local root modes and similar
+pickups are candidate causes of masking. Altering those mechanisms needs a new
+model/version comparison, root and energy probes, and Josh's listening verdict.
+No acoustic constants were changed in this interface revision.
+
+**Measured:** PCM analysis above, paired-player continuity and actual silent
+receiver output in browser QA, and the focused Kotlin Trefoil checks. The earlier
+whole-repository run ended with the execution session before a final build result;
+it is not recorded as a full-suite pass.

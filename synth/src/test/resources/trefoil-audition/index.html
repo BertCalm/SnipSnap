@@ -12,19 +12,27 @@
   <main id="top">
     <section class="hero" aria-labelledby="title">
       <div class="hero-copy"><p class="eyebrow">A THREE-BODY RESONATOR STUDY</p><h1 id="title">Trefoil<span>Three bodies.<br>One unfolding note.</span></h1>
-        <p class="intro">A rounded thread, a wiry thread, a fine thread. They meet, exchange energy, and leave something ringing.</p>
-        <div class="hero-actions"><button class="primary" id="begin">Listen to the weave <span aria-hidden="true">→</span></button><button class="text-button" id="transfer-link">Hear the transfer test →</button></div>
+        <p class="intro">Three pitched bodies share a note. This first prototype asks whether their changing relationships make a useful musical gesture.</p>
+        <div class="hero-actions"><a class="primary" href="#compare">Compare A and B <span aria-hidden="true">→</span></a><button class="text-button" id="begin">Listen to the weave →</button></div>
         <p class="hero-foot">Dry synthesis <span>·</span> Mono <span>·</span> Finite gestures <span>·</span> Headphones optional</p>
       </div>
       <figure class="orbit-figure"><div class="figure-top"><span>THE CHANGING RELATIONSHIP</span><span id="orbit-time">0.00 s</span></div><canvas id="orbit" width="600" height="340" aria-label="Measured paths and current positions of the three bodies"></canvas><figcaption><div class="legend"><span><i class="a"></i>A Rounded</span><span><i class="b"></i>B Wiry</span><span><i class="c"></i>C Fine</span></div><p id="orbit-caption">The actual trajectory, synchronized to the recording.</p></figcaption></figure>
     </section>
-    <section class="listening-intro"><span class="section-number">01 / LISTEN</span><h2>Follow the threads.</h2><p>Start with the complete sounds. Then remove motion, exchange, or memory and hear what changes. Every comparison is rendered from the same saved recipe.</p></section>
+    <section class="listening-intro"><span class="section-number">01 / LISTEN</span><h2>What actually changes?</h2><p>The first sounds share a strong fundamental and several differences are subtle. Switch A and B during the same passage. “I can’t tell” is a useful result for this prototype.</p></section>
+    <section id="compare" class="compare" aria-labelledby="compare-title">
+      <div class="compare-intro"><p class="eyebrow">GUIDED A/B</p><h2 id="compare-title">Switch while the note continues.</h2><p>Both versions run at the same position. Switching takes 8 ms and keeps the original recording levels.</p><label for="compare-pair">Choose a question</label><select id="compare-pair">
+        <option value="motion">1 · Moving vs frozen geometry</option><option value="transfer">2 · Connected vs disconnected receiver</option><option value="memory">3 · Memory at 0% vs 100%</option><option value="ordered-exchange">4 · Ordered exchange on/off · subtle</option><option value="ordered-memory">5 · Default memory on/off · very subtle</option>
+      </select></div>
+      <div class="compare-controls"><p id="compare-prompt"></p><div class="compare-sides" role="group" aria-label="Comparison version"><button id="compare-a" aria-pressed="true"><b>A</b><span></span></button><button id="compare-b" aria-pressed="false"><b>B</b><span></span></button></div>
+        <div class="compare-actions"><button id="compare-play" class="primary">Play comparison</button><label><input id="compare-focus" type="checkbox" checked> Loop the focus passage <span id="compare-window"></span></label></div><p id="compare-status" class="compare-status" role="status" aria-live="polite">Ready. Start playback, then switch A and B.</p><p id="compare-level" class="compare-level"></p><button class="text-button" id="transfer-link">Hear the transfer test →</button>
+      </div>
+    </section>
     <section id="library" aria-label="Listening studies">
       <div class="library-toolbar"><div id="tabs" class="tabs" role="tablist" aria-label="Study collection"></div><div class="level-options" aria-label="Playback level"><button id="matched" aria-pressed="true">Matched</button><button id="raw" aria-pressed="false">Raw</button></div></div>
       <div class="collection-heading"><div><p class="eyebrow" id="collection-label">FIRST LISTEN</p><h3 id="collection-title">Five ways into the weave</h3><p id="collection-description">Listen for the three contributions becoming one changing pitched body.</p></div><span id="clip-count" class="clip-count"></span></div>
       <div class="listening-layout"><div><div id="clips" class="clip-list" role="tabpanel" aria-live="polite"></div><p class="gain-note" id="gain-note">Matched playback uses a common audition target. Diagnostic branches and stems keep their reference mix’s gain.</p></div>
         <aside class="notebook" aria-labelledby="notebook-title"><p class="eyebrow">YOUR LISTENING NOTES</p><h3 id="notebook-title">Ordered weave</h3><p class="listen-for" id="listen-for"></p><div class="sound-meta" id="sound-meta"></div>
-          <label for="verdict">Your impression</label><select id="verdict"><option value="">Choose an impression</option><option value="keep">Keep exploring this</option><option value="change">Needs a change</option><option value="unsure">Not sure yet</option></select>
+          <label for="verdict">Your impression</label><select id="verdict"><option value="">Choose an impression</option><option value="keep">Keep exploring this</option><option value="change">Needs a change</option><option value="indistinct">No clear difference</option><option value="unsure">Not sure yet</option></select>
           <label for="note">What do you hear?</label><textarea id="note" rows="4" placeholder="Movement, pitch, a thread that disappears…"></textarea><p class="local-note" id="note-status">Notes stay in this browser.</p><button class="outline" id="export-notes">Export listening notes →</button>
           <a class="small-link" id="recipe-link" href="recipes/ordered.json" download>Download this recipe ↓</a>
         </aside>
