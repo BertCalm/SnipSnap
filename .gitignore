@@ -359,3 +359,6 @@ testkit/tidal-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Contour's reproducible held-instrument bank and listening assets.
+testkit/contour-starter/

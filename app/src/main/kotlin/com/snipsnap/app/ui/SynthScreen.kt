@@ -107,6 +107,7 @@ import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
@@ -1479,10 +1480,11 @@ fun SynthScreen(
     // docs/superpowers/specs/2026-09-25-resin-held-pad-design.md (RESIN),
     // docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md, door 3
     // (SIREN) and docs/superpowers/specs/2026-09-29-glint-paths-design.md §3
-    // (GLINT). Zones render off the main thread, with OPENSKY's larger
-    // wet-state renders serialized and the other makers in parallel. A
-    // progress bar stays live (the author's call: a slow phone shows
-    // work, it does not drop zones); the package is written once every zone
+    // (GLINT). Zones render off the main thread. OPENSKY's larger wet
+    // state, BELLOWS's velocity layers and CONTOUR's seventeen zones render
+    // serially; the other makers run in parallel. A progress bar stays live
+    // (the author's call: a slow phone shows work, it does not drop zones);
+    // the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
     var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
@@ -1495,7 +1497,7 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
-    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
+    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
     val heldInstrumentReady = when (engine) {
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
@@ -1522,7 +1524,8 @@ fun SynthScreen(
     // (Keys.sirenPad's own KDoc) and neither does GLINT's (its onset and
     // breath come from the patch). OPENSKY HALO likewise keeps its authored
     // onset; REGISTERS retains its speaking attack before the verified
-    // periodic sustain. These specs expose only a release control.
+    // periodic sustain. CONTOUR starts directly from its settled tone.
+    // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
@@ -1542,6 +1545,9 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, holdRelease)) else null
         }
+        Engine.CONTOUR -> HeldSpec.Contour(ContourPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, holdRelease,
+        ))
         else -> null
     }
 
@@ -1580,10 +1586,10 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Contour) {
                         // OPENSKY has larger wet state; BELLOWS renders three
-                        // velocity layers per zone. Render serially so phones never hold nine
-                        // independent oversampled states at once; CANCEL and
+                        // velocity layers per zone; CONTOUR spans seventeen zones.
+                        // Render serially to bound working memory; CANCEL and
                         // the same zone counter remain live between them.
                         midis.map { midi ->
                             val note = withContext(Dispatchers.Default) {
@@ -2648,70 +2654,82 @@ fun SynthScreen(
                     Shoal.supportsHold(patch.model, patch.material)
                 } else true
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    for (spec in macroSpecs) {
-                        MacroSlider(
-                            label = spec.name,
-                            value = macros.getValue(spec.name),
-                            fillColor = classColor,
-                            scheme = scheme,
-                            // SIREN's HOLD reads LOOP at its top: the render is
-                            // one seamless loop for the SURFACE, not a longer
-                            // hold (Siren.isLoop), the way GLINT's PEAK readout
-                            // would say the harmonic it snapped to.
-                            readout = when {
-                                engine == Engine.SHOAL && spec.name == "HOLD" && !shoalHoldSupported -> "NOTE"
-                                engine == Engine.OVERLAP && spec.name == "HOLD" -> {
-                                    val hold = macros.getValue(spec.name)
-                                    val legacy = (loadedPatch as? OverlapPatch)?.model == 1
-                                    val seconds = if (legacy) .008f + 2.8f * hold * hold
-                                        else .040f + 5.96f * hold * hold
-                                    "%.1fs".format(Locale.ROOT, seconds)
-                                }
-                                engine == Engine.FLOCK && spec.name == "HOLD" ->
-                                    "%.1fs".format(Locale.ROOT, 2f + 4f * macros.getValue(spec.name))
-                                engine == Engine.ORPHICA && spec.name == "HOLD" && Orphica.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
-                                engine == Engine.ORIGAMI && spec.name == "TUNE" -> Scales.nameOf(
-                                    (loadedPatch as? OrigamiPatch)?.midi
-                                        ?: Origami.midiFor(voice as OrigamiVoice, macros.getValue(spec.name)),
-                                )
-                                engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.REGISTERS && spec.name == "HOLD" && Registers.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.REGISTERS && spec.name == "TUNE" && registersRoot != null -> Scales.nameOf(registersRoot)
-                                engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.MURMUR && spec.name == "HOLD" && Murmur.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.PRISM && spec.name == "HOLD" && Prism.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.SHOAL && spec.name == "HOLD" && Shoal.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.CREASE && spec.name == "HOLD" && Crease.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.RELAY && spec.name == "TUNE" ->
-                                    Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(spec.name)))
-                                engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.SPOOL && spec.name == "HOLD" && Spool.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
-                                else -> null
-                            },
-                            onValueChange = { v -> updateMacro(spec.name, v) },
-                            valueRange = macroRange(spec.name),
-                            enabled = spec.name != "HOLD" || shoalHoldSupported,
+                    for ((heading, specs) in if (engine == Engine.CONTOUR) {
+                        listOf("TONE", "ENVELOPE", "MOVEMENT", "FILTER", "PLAY").map { heading ->
+                            heading to macroSpecs.filter { contourMacroGroup(it.name) == heading }
+                        }
+                    } else listOf(null to macroSpecs)) {
+                        if (heading != null) TapeText(
+                            heading, TapeType.pixelSmall, scheme.ink2.tape,
+                            Modifier.padding(top = 8.dp),
                         )
+                        for (spec in specs) {
+                            MacroSlider(
+                                label = spec.name,
+                                value = macros.getValue(spec.name),
+                                fillColor = classColor,
+                                scheme = scheme,
+                                // SIREN's HOLD reads LOOP at its top: the render is
+                                // one seamless loop for the SURFACE, not a longer
+                                // hold (Siren.isLoop), the way GLINT's PEAK readout
+                                // would say the harmonic it snapped to.
+                                readout = when {
+                                    engine == Engine.SHOAL && spec.name == "HOLD" && !shoalHoldSupported -> "NOTE"
+                                    engine == Engine.OVERLAP && spec.name == "HOLD" -> {
+                                        val hold = macros.getValue(spec.name)
+                                        val legacy = (loadedPatch as? OverlapPatch)?.model == 1
+                                        val seconds = if (legacy) .008f + 2.8f * hold * hold
+                                            else .040f + 5.96f * hold * hold
+                                        "%.1fs".format(Locale.ROOT, seconds)
+                                    }
+                                    engine == Engine.FLOCK && spec.name == "HOLD" ->
+                                        "%.1fs".format(Locale.ROOT, 2f + 4f * macros.getValue(spec.name))
+                                    engine == Engine.ORPHICA && spec.name == "HOLD" && Orphica.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.OSPREY && spec.name == "HOLD" && macros.getValue(spec.name) >= .999f -> "EXTEND"
+                                    engine == Engine.ORIGAMI && spec.name == "TUNE" -> Scales.nameOf(
+                                        (loadedPatch as? OrigamiPatch)?.midi
+                                            ?: Origami.midiFor(voice as OrigamiVoice, macros.getValue(spec.name)),
+                                    )
+                                    engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.CIRCUIT && spec.name == "HOLD" && Circuit.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.ALLOY && spec.name == "HOLD" && Alloy.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.REGISTERS && spec.name == "HOLD" && Registers.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.REGISTERS && spec.name == "TUNE" && registersRoot != null -> Scales.nameOf(registersRoot)
+                                    engine == Engine.MURK && spec.name == "HOLD" && Murk.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.NIMBUS && spec.name == "HOLD" && Nimbus.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.TESSERA && spec.name == "HOLD" && Tessera.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.PITCHWHEEL && spec.name == "HOLD" && Pitchwheel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.MURMUR && spec.name == "HOLD" && Murmur.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.PRISM && spec.name == "HOLD" && Prism.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.CONTOUR && spec.name == "TUNE" ->
+                                        Scales.nameOf(ContourEngine.midiFor(voice as ContourVoice, macros.getValue(spec.name)))
+                                    engine == Engine.CONTOUR && spec.name == "HOLD" && ContourEngine.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.STOOP && spec.name == "HOLD" && Stoop.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.LACQUER && spec.name == "HOLD" && Lacquer.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.SKITTER && spec.name == "HOLD" && Skitter.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.SHOAL && spec.name == "HOLD" && Shoal.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.CREASE && spec.name == "HOLD" && Crease.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.RELAY && spec.name == "TUNE" ->
+                                        Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(spec.name)))
+                                    engine == Engine.EMBOUCHURE && spec.name == "HOLD" && Embouchure.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.BELLOWS && spec.name == "HOLD" && Bellows.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.COROLLA && spec.name == "HOLD" && Corolla.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.THAW && spec.name == "HOLD" && Thaw.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.UNDERTOW && spec.name == "HOLD" && Undertow.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.SUTURE && spec.name == "HOLD" && Suture.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.SPOOL && spec.name == "HOLD" && Spool.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    engine == Engine.REVEL && spec.name == "HOLD" && Revel.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                    else -> null
+                                },
+                                onValueChange = { v -> updateMacro(spec.name, v) },
+                                valueRange = macroRange(spec.name),
+                                enabled = spec.name != "HOLD" || shoalHoldSupported,
+                            )
+                        }
                     }
                 }
 
@@ -2824,6 +2842,7 @@ fun SynthScreen(
                 // keys instrument when its renderer closes its own loop.
                 // REGISTERS retains the authored attack before its held region.
                 // ORPHICA holds a captured sustain behind its own plucked onset.
+                // CONTOUR starts from its settled repeating tone.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
@@ -3269,6 +3288,15 @@ private fun PresetNameDialog(
     }
 }
 
+/** Contour's expanded panel follows the sound's tone, envelope, scan, filter and playback controls. */
+private fun contourMacroGroup(name: String): String = when (name) {
+    "ATTACK", "DECAY" -> "ENVELOPE"
+    "SCAN", "OFFSET", "MOTION", "RATE" -> "MOVEMENT"
+    "FILTER", "RESO", "ENV" -> "FILTER"
+    "TUNE", "HOLD" -> "PLAY"
+    else -> "TONE"
+}
+
 // ---------- MAKE INSTRUMENT: held synths (BELLOWS among them) and captured sustain ----------
 
 /**
@@ -3282,6 +3310,7 @@ private fun PresetNameDialog(
  * so their slider never appears. REGISTERS likewise has no attack knob: its
  * speaking onset is in the instrument sample, before the verified held cycle.
  * ORPHICA keeps its plucked onset, with the captured grain cycle supplying sustain.
+ * CONTOUR begins at its settled tone, omitting the original finite attack.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -3353,6 +3382,17 @@ private sealed interface HeldSpec {
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Contour(private val spec: ContourPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = ContourPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${ContourPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "FOUR OCTAVES OF SETTLED TONE. ORIGINAL ATTACK OMITTED. TUNE FOLLOWS THE KEYBOARD."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(ContourPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = ContourPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = ContourPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Bellows(private val spec: BellowsPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = BellowsPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -3367,7 +3407,7 @@ private sealed interface HeldSpec {
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, BELLOWS or OPENSKY HALO): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, BELLOWS, CONTOUR or OPENSKY HALO): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,

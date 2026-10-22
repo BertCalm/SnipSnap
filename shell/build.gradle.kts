@@ -119,3 +119,13 @@ tasks.register<JavaExec>("generateOspreyHandoff") {
     args("${rootDir}/testkit/osprey-handoff")
     args(providers.gradleProperty("ospreyGentleBaselineDir").orElse("${rootDir}/testkit/osprey-gentle-audition").get())
 }
+
+/** Package Contour's accepted nine recipes as held instruments with verified native and compatibility programs. */
+tasks.register<JavaExec>("generateContourStarter") {
+    group = "distribution"
+    description = "Render nine CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ContourStarterGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/contour-starter")
+}

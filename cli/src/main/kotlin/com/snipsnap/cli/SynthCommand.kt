@@ -9,6 +9,7 @@ import com.snipsnap.loop.DroneFit
 import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
+import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
@@ -121,13 +122,15 @@ import kotlin.random.Random
  * A preset that lands with a rack chain (the string machines - VELVET BRASS
  * STRING MACHINE and THIN STRINGS, RESIN BRASS WIDE STRINGS and DARK STRINGS)
  * renders through it, as SEND TO PAD would, and comes out a stereo file.
- * `--instrument` and `--drone` rebuild from the preset's macros alone and stay
- * dry: an instrument is nine held zones and a drone a loop, each with its own
- * shape, and neither is a one-shot pad.
+ * `--instrument` and `--drone` stay dry. An instrument contains held zones
+ * and a drone a loop, each with its own shape. Recipe-based instruments keep
+ * the complete source configuration, including its authoring velocity.
  *
  * `--instrument [--attack S] [--release S]` renders the preset as keys that
  * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS and
- * OPENSKY HALO keep their authored attack and accept release only.
+ * OPENSKY HALO keep their authored attack and accept release only. CONTOUR
+ * exports seventeen settled-sustain zones with release only, omitting its
+ * finite key/pluck attack.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
@@ -150,6 +153,9 @@ import kotlin.random.Random
  * Macro names are case-insensitive and values are finite 0..1. Complete saved
  * table/envelope configurations survive macro, note and velocity overrides.
  * TUNE in --macros cannot combine with --midi; choose one pitch control.
+ * `--instrument [--release S] [--velocity 0..1]` exports the complete CONTOUR
+ * recipe as a held keyboard. Its zones set TUNE and HOLD, so explicit
+ * --midi and --macros TUNE/HOLD edits are refused in this mode.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
  * VENT accepts `--seed N` for its initial trajectory. PULSE, COIL and PLUME
@@ -253,8 +259,14 @@ object SynthCommand {
         val instrument = opts.has("--instrument")
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
+        if (instrument && engine == ContourPatch.ENGINE) {
+            if (opts["--midi"] != null) throw CliError("CONTOUR --instrument samples the full four-octave keyboard; --midi shapes a finite audition")
+            if (contourMacros.keys.any { it == "TUNE" || it == "HOLD" }) {
+                throw CliError("CONTOUR --instrument sets TUNE and HOLD for every zone; omit those --macros edits")
+            }
+        }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
@@ -352,7 +364,8 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO and ORPHICA export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, ContourPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA and CONTOUR export a keys instrument here - try snipsnap synth CONTOUR KEY --instrument")
+            if (engine == ContourPatch.ENGINE && opts["--attack"] != null) throw CliError("CONTOUR --instrument uses settled sustain without the finite attack; use --release")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its authored attack - use --release to shape the held instrument")
             if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
@@ -510,10 +523,19 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
         } else null
+        val contourInstrumentSpec = if (instrument && engine == ContourPatch.ENGINE) try {
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull() ?: throw CliError("--release wants seconds, got '$raw'")
+            } ?: ContourPadMaker.RELEASE.default
+            ContourPadMaker.Spec(chosen.single() as ContourPatch, releaseSeconds = release)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("--release: ${e.message ?: "invalid CONTOUR instrument"}")
+        } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
+        if (contourInstrumentSpec != null) return makeContourInstrument(contourInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -551,6 +573,19 @@ object SynthCommand {
         OpenSkyPadMaker.export(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, each holds - RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}, stereo")
+        return 0
+    }
+
+    private fun makeContourInstrument(spec: ContourPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = ContourPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            ContourPadMaker.renderZone(spec, midi)
+        }
+        ContourPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, settled sustain (finite attack omitted) - RELEASE ${ContourPadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
     }
 

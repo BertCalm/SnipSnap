@@ -120,8 +120,45 @@ Ordinary drum pads play their WAV once; their format does not expose a separate
 attack-plus-loop region. `Keys.contourPad()` supplies two copies of the settled
 region and a nonzero `loopStartFrame`, matching the existing keygroup export
 convention. Repeated playback on the audition page exposes the actual wrap.
-`Keys.contourPad()` is a tested helper; SYNTH MAKE INSTRUMENT and the CLI
-`--instrument` path do not call it yet.
+SYNTH **MAKE INSTRUMENT** and CLI `--instrument` now use `ContourPadMaker` to
+export seventeen minor-third roots across the voice's supported four octaves.
+Adjacent roots cover the intervening semitones; keys outside that range are
+unmapped. The complete edited patch supplies tables, layer relationships,
+movement, filter and excitation velocity. Each zone replaces TUNE with its
+absolute MIDI pitch and forces HOLD. A five-millisecond entry fade affects only
+the first copy; the repeating cycle and loop marker remain unchanged. RELEASE
+sets the player's key-up fade, from 0.1 to 1.5 seconds (default 0.6).
+
+These are captured settled tones: the finite attack, decay and transient filter
+contour do not retrigger. Saved velocity authors the sampled excitation; playing
+velocity controls sample amplitude through the standard single-layer instrument
+path. There are no separately captured velocity layers. MPC velocity defaults
+and physical playback still require a device check.
+
+```text
+./gradlew :cli:run --args="synth CONTOUR KEY --preset 1 --instrument --release .6 --out /tmp/contour-keys"
+./gradlew :cli:run --args="synth CONTOUR KEY --patch /tmp/contour-patch.json --instrument --velocity .6 --macros BODY=.8 --out /tmp/contour-keys"
+./gradlew :shell:generateContourStarter
+```
+
+Instrument mode rejects explicit `--midi`, `--attack`, and TUNE/HOLD macro edits
+because its keyboard and settled sustain own those settings. Both MPC generations
+share the exported PCM24 WAVs: a native `.xty` track sits beside its
+`_[TrackData]/` folder containing the MPC 2 `.xpm` twin. The phone's
+`.instrument.json` sidecar sits beside that folder. Keep each track and sidecar
+with their matching folder.
+
+The starter task packages all nine unchanged R05 recipes and 153 zones under
+`testkit/contour-starter/`, with editable patch JSON, source fingerprints, file
+hashes and a ZIP. It reads back the native JSON, XPM XML, phone sidecars and WAV
+sampler sheets before packaging. Commit the source before running it so the bank
+identifies its exact implementation. The Android panel groups all fourteen
+controls into Tone, Envelope, Movement, Filter and Play.
+
+The bank task also writes `web/` with nine exact root-loop previews and recipe
+downloads. Copy it into an existing audition's `instruments/` directory and
+refresh that audition's page to show its instrument link. The published page
+includes this companion listening view; its R05 matrix audio stays unchanged.
 
 ## Audition and verification
 
