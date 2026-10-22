@@ -85,7 +85,18 @@ internal object RimeContour {
     const val TABLE_SIZE = 8192
     const val BANDWIDTH = 18000.0
 
-    fun prepare(hz: Double, detail: Double, edge: Double): Prepared {
+    private data class TableKey(val hz: Double, val detail: Double, val edge: Double)
+    private val preparedCache = object : LinkedHashMap<TableKey, Prepared>(12, .75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<TableKey, Prepared>?): Boolean = size > 12
+    }
+
+    /** At most twelve immutable banks, about 14 MiB at the maximum band count. */
+    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double): Prepared {
+        val key = TableKey(hz, detail, edge)
+        return preparedCache.getOrPut(key) { build(hz, detail, edge) }
+    }
+
+    private fun build(hz: Double, detail: Double, edge: Double): Prepared {
         val maximum = min(512, floor(BANDWIDTH / hz).toInt()).coerceAtLeast(1)
         // Compress the proposed 1/8/32/128/512 scale onto this note's safe range.
         val segment = min(3, floor(detail * 4).toInt())

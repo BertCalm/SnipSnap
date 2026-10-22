@@ -1,10 +1,12 @@
 # Synth roadmap — generate kits, not just capture them
 
-**RIME — first finite listening prototype (2026-10-20).** LOOP, GLINT and VESSEL
+**RIME — revised finite listening prototype (2026-10-22).** LOOP, GLINT and VESSEL
 project the same finite Koch contour through two pickups into an eight-mode body.
 DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,
-gate, seed and model round-trip in the patch. `generateRimeAudition` supplies 130 dry
-clips, controlled path removals, macro sweeps, phrases and replayable recipes.
+gate, seed and model round-trip in the patch. Model 2 strengthens upper body pressure
+and LOOP's available detail after owner feedback; model-1 recipes remain exact.
+`generateRimeAudition` supplies 134 dry clips, retained previous versions, controlled
+path removals, degree-labeled ANGLE sweeps, phrases and replayable recipes.
 HOLD is explicitly refused; phone integration and the full library follow listening.
 See [RIME.md](RIME.md). Owner sonic acceptance is pending.
 

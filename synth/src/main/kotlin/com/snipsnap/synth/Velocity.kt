@@ -189,7 +189,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
-        is RimePatch -> Rime.macrosFor(patch.voice)
+        is RimePatch -> Rime.macrosFor(patch.voice, patch.model)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
         // intact and use the existing soften fallback.

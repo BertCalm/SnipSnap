@@ -9,25 +9,25 @@ import java.util.Collections
 class RimePatch(
     override val name: String,
     val voice: RimeVoice,
-    macros: Map<String, Float> = Rime.defaults(voice),
+    macros: Map<String, Float>? = null,
     val midi: Int = Rime.rootMidi(voice),
     val velocity: Float = .8f,
     val gateSeconds: Float = Rime.gateSeconds(voice),
     val seed: Int = 1729,
     val model: Int = Rime.MODEL_VERSION,
 ) : Patch {
-    override val macros: Map<String, Float> = Collections.unmodifiableMap(LinkedHashMap(macros))
+    override val macros: Map<String, Float> = Collections.unmodifiableMap(LinkedHashMap(macros ?: Rime.defaults(voice, model)))
     init {
-        Patches.validateMacros(this, Rime.macrosFor(voice))
-        Rime.settled(voice, macros)
+        Patches.validateMacros(this, Rime.macrosFor(voice, model))
+        Rime.settled(voice, this.macros, model)
         require(midi in Rime.MIN_MIDI..Rime.MAX_MIDI) { "RIME MIDI must be ${Rime.MIN_MIDI}..${Rime.MAX_MIDI}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "RIME velocity must be finite in 0..1" }
         require(gateSeconds.isFinite() && gateSeconds in .15f..4f) { "RIME gateSeconds must be .15..4" }
-        require(model == Rime.MODEL_VERSION) { "unsupported RIME model $model" }
+        require(model in 1..Rime.MODEL_VERSION) { "unsupported RIME model $model" }
     }
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Rime.render(voice, macros, midi, velocity, gateSeconds, seed)
+    override fun render() = Rime.render(voice, macros, midi, velocity, gateSeconds, seed, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
     fun copy(name: String = this.name, voice: RimeVoice = this.voice, macros: Map<String, Float> = this.macros,
         midi: Int = this.midi, velocity: Float = this.velocity, gateSeconds: Float = this.gateSeconds,

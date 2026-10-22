@@ -33,7 +33,7 @@ object RimeAuditionGenerator {
         for((index,case) in cases.withIndex()) {
             val p=case.patch
             val began=System.nanoTime()
-            val probe=Rime.inspect(p.voice,p.macros,p.midi,p.velocity,p.gateSeconds,p.seed,case.options)
+            val probe=Rime.inspect(p.voice,p.macros,p.midi,p.velocity,p.gateSeconds,p.seed,case.options,p.model)
             val elapsed=(System.nanoTime()-began)/1e6
             val native=Snip(probe.samples,1,Dsp.RATE)
             val metrics=LinkedHashMap(TangleMeasure.metrics(probe.raw,native,p.midi,elapsed))
@@ -58,7 +58,7 @@ object RimeAuditionGenerator {
             }
             entries+=linkedMapOf("id" to case.id,"section" to case.section,"title" to case.title,"description" to case.description,
                 "voice" to p.voiceName,"midi" to p.midi,"velocity" to p.velocity,"gateSeconds" to p.gateSeconds,
-                "macros" to (Rime.defaults(p.voice)+p.macros),"macro" to case.macro,"value" to case.value,"group" to case.group,
+                "model" to p.model,"macros" to (Rime.defaults(p.voice,p.model)+p.macros),"macro" to case.macro,"value" to case.value,"group" to case.group,
                 "files" to (files+mapOf("recipe" to recipeFile)),"metrics" to metrics,"waveform" to waveform(matched))
             println("RIME ${index+1}/${cases.size}: ${case.id}; ${"%.0f".format(elapsed)} ms; peak=${probe.internalPeak}; tail=${probe.tailDb}")
         }
@@ -67,10 +67,10 @@ object RimeAuditionGenerator {
         val manifest=linkedMapOf("schema" to 1,"engine" to "RIME","model" to Rime.MODEL_VERSION,
             "generatedAt" to Instant.now().toString(),"sourceRevision" to sourceRevision(),"sampleRate" to Dsp.RATE,
             "oversample" to 4,"rawExportGain" to RAW_GAIN,"matchedTarget" to MATCHED_TARGET,
-            "status" to "Finite first-listen prototype. Owner listening pending. HOLD and phone integration are deferred.",
+            "status" to "Revision 2: stronger body pressure, LOOP scale development and preserved model-1 recipes. Owner listening pending. HOLD and phone integration are deferred.",
             "renderSeconds" to (System.nanoTime()-started)/1e9,"clips" to entries)
         File(root,"manifest.json").writeText(Json.write(json(manifest)))
-        File(root,"README.txt").writeText("RIME finite listening prototype, model 1\n\n44.1 kHz mono, synthesized in the SnipSnap Kotlin engine at 4x.\nRaw: one fixed gain of $RAW_GAIN for all prelevel outputs.\nMatched: shared Dsp.levelTo, loudest-200-ms RMS target $MATCHED_TARGET, peak ceiling .90.\nDiagnostic recipes include an ordinary RIME patch and explicit contact/reference/body switches.\nReplay a recipe: ./gradlew :synth:generateRimeAudition -PrimeReplay=/absolute/recipe.json -PrimeOutput=/absolute/output\nOrdinary patches replay through: synth RIME VOICE --patch /path/voice-patch.json --out /path/output\nHOLD is refused in model 1. No external samples or rack effects.\n")
+        File(root,"README.txt").writeText("RIME finite listening prototype, model ${Rime.MODEL_VERSION}\n\n44.1 kHz mono, synthesized in the SnipSnap Kotlin engine at 4x.\nRaw: one fixed gain of $RAW_GAIN for all prelevel outputs.\nMatched: shared Dsp.levelTo, loudest-200-ms RMS target $MATCHED_TARGET, peak ceiling .90.\nDiagnostic recipes include an ordinary RIME patch and explicit contact/reference/body switches.\nReplay a recipe: ./gradlew :synth:generateRimeAudition -PrimeReplay=/absolute/recipe.json -PrimeOutput=/absolute/output\nOrdinary patches replay through: synth RIME VOICE --patch /path/voice-patch.json --out /path/output\nHOLD is refused. Model-1 recipes keep the original renderer. No external samples or rack effects.\n")
         File(root,"downloads").mkdirs()
         zip(File(root,"downloads/rime-recipes.zip"),root,listOf(File(root,"recipes"),File(root,"README.txt"),File(root,"manifest.json"),File(root,"geometry.json")))
         zip(File(root,"downloads/rime-first-listen.zip"),root,entries.filter{it["section"]=="start"||it["section"]=="phrases"}.flatMap {
@@ -107,6 +107,15 @@ object RimeAuditionGenerator {
             }
         }
         if(!quick) {
+            for (voice in RimeVoice.entries) {
+                val p = RimePatch("Previous ${voice.name} BODY 100", voice,
+                    Rime.defaults(voice, 1) + ("BODY" to 1f), model = 1)
+                add(Case("legacy-${voice.name.lowercase()}-body-100","revision","Previous BODY 100%",
+                    "The original model-1 audition recipe; preserved without the revised body excitation.",p))
+            }
+            add(Case("legacy-loop-unfold-100","revision","Previous LOOP UNFOLD 100%",
+                "The original LOOP starting contour and body, before additional fine structure was available to reveal.",
+                RimePatch("Previous LOOP unfold",RimeVoice.LOOP,Rime.defaults(RimeVoice.LOOP,1)+("UNFOLD" to 1f),model=1)))
             val p=RimePresets.forVoice(RimeVoice.GLINT).single().copy(midi=48,gateSeconds=2f)
             for((a,b) in listOf("DETAIL" to "EDGE","DETAIL" to "UNFOLD","ANGLE" to "BODY","EDGE" to "BODY")) {
                 for(x in listOf(.2f,.9f)) for(y in listOf(.2f,.9f)) {
@@ -132,7 +141,7 @@ object RimeAuditionGenerator {
         val raw=FloatArray(size){mix[it]*RAW_GAIN}
         val id="${p.voice.name.lowercase()}-phrase"
         val files=writeAudio(root,id,raw,matched)
-        val score=mapOf("kind" to "RIME_SCORE","model" to 1,"mixGain" to .55,"events" to notes.mapIndexed{i,n->
+        val score=mapOf("kind" to "RIME_SCORE","version" to 1,"model" to Rime.MODEL_VERSION,"mixGain" to .55,"events" to notes.mapIndexed{i,n->
             mapOf("seconds" to i*spacing,"patch" to n.toJsonValue())})
         val file="recipes/$id.json";File(root,file).writeText(Json.write(json(score)))
         return mapOf("id" to id,"section" to "phrases","title" to "${p.name} · six notes","description" to "An original C-minor phrase, with physical velocity and overlapping dry tails.",
@@ -170,7 +179,7 @@ object RimeAuditionGenerator {
         val obj=Json.parse(file.readText()).obj()
         val kind=obj.getValue("kind").str()
         if(kind=="RIME_SCORE") {
-            require(obj.getValue("model").int()==1)
+            require((obj["version"]?.int() ?: 1)==1 && obj.getValue("model").int() in 1..Rime.MODEL_VERSION)
             val events=obj.getValue("events").arr().map{it.obj()}.map{
                 it.getValue("seconds").num() to RimePatch.fromJsonValue(it.getValue("patch"))}
             val renders=events.map{it.second.render().samples}
@@ -183,7 +192,7 @@ object RimeAuditionGenerator {
             require(kind=="RIME_DIAGNOSTIC"&&obj.getValue("version").int()==1)
             val p=RimePatch.fromJsonValue(obj.getValue("patch"));val o=obj.getValue("options").obj()
             val options=Rime.Options(o.getValue("contact").bool(),o.getValue("reference").bool(),o.getValue("body").bool(),o.getValue("oversample").int(),o.getValue("friction").bool())
-            val probe=Rime.inspect(p.voice,p.macros,p.midi,p.velocity,p.gateSeconds,p.seed,options)
+            val probe=Rime.inspect(p.voice,p.macros,p.midi,p.velocity,p.gateSeconds,p.seed,options,p.model)
             val matched=probe.samples.copyOf();Dsp.levelTo(matched,Dsp.RATE,MATCHED_TARGET,ceiling=.9f)
             writeAudio(root,"replay",FloatArray(probe.raw.size){probe.raw[it]*RAW_GAIN},matched)
         }

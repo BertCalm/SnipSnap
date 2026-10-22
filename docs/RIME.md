@@ -1,4 +1,53 @@
-# Rime — finite first-listen prototype
+# Rime — revised finite listening prototype
+
+## Revision 2 — BODY and LOOP development
+
+The owner reported that BODY's endpoints were hard to distinguish and LOOP's
+UNFOLD did little. ANGLE 0 and 100 are intentionally the same geometric pickup
+orientation, but the page previously presented them as ordinary percentage steps.
+
+Model 2 routes bounded, contour-derived pressure more strongly into upper body
+modes, gives those modes larger readout weights, and uses small absolute mode
+detunings so they remain excitable across registers. The first model predominantly
+reinforced the direct fundamental; finishing often removed that level difference.
+BODY now has an explicit dry endpoint and retains a direct root at its wet endpoint.
+
+LOOP starts at DETAIL .46 and EDGE .22. More actual contour structure is therefore
+available for UNFOLD to reveal during its .8-second excitation. The reveal still
+changes band admission rather than pitch or an unrelated modulation. ANGLE retains
+one full turn; the page labels 0°, 90°, 180°, 270°, and 360° = 0° and provides direct
+quarter-turn comparisons. Cached audio URLs include the source revision.
+
+Original model-1 patches dispatch to the frozen `RimeV1` implementation. SHA-256
+fixtures prove that the original three published matched PCM WAVs remain identical.
+The page includes the original BODY-100 and LOOP-UNFOLD-100 recipes beside model 2.
+Its full collection contains 134 clips, including four retained model-1 comparisons.
+
+The reference contour is cached once. Up to twelve immutable band banks are cached
+by frequency, DETAIL and EDGE, with a worst-case allocation of about 14 MiB. Changes
+to BODY, ANGLE or UNFOLD reuse those banks. Voice/filter/noise state remains per render.
+Phone latency has not been measured; the audition generator records desktop costs.
+
+The 4x/8x probe now uses identical final house conditioning: the higher-rate DSP is
+first decimated to 4x, then both paths use the same 4x IIR band limit and output
+decimator. This removes rate-dependent cutoff-filter phase from the alias comparison.
+Observed residuals at C2/C5/C7 were below -78 dB with friction disabled.
+
+Level-independent, averaged Hann-window spectra now distinguish BODY's 0/50/100
+steps on all three normal voices. Endpoint square-root power distances are .838
+(LOOP), .978 (GLINT), and .786 (VESSEL). LOOP's UNFOLD endpoint distance is .145;
+at UNFOLD 100, energy above 1.5 times the root rises from less than .001% early in
+the note to 10.1% later. These are regression measurements, not listening acceptance.
+
+Why it is built this way:
+
+- Pressure excites upper resonances so BODY can change the leveled spectrum.
+- LOOP gains real fine structure so UNFOLD has something to reveal and conceal.
+- A periodic ANGLE keeps the geometric interpretation; degree labels expose the wrap.
+- Model dispatch protects downloaded recipes while the new voicing is evaluated.
+
+Owner listening of the revision remains pending. The following sections retain the
+original finite prototype's architecture and recipe contracts.
 
 Rime turns a finite Koch contour into a pitched source, reveals its finer frequency
 bands within a note, and drives a two-port modal body. Model 1 is the first listening
@@ -16,8 +65,8 @@ Owner listening acceptance is pending. The phone picker, HOLD, remaining voices,
 ```
 
 The page, WAVs, manifest, geometric reference, recipes and downloads are written
-under `testkit/rime-audition/`. `-PrimeOutput` changes that destination. The full
-bench has 130 clips: three starters, three original six-note phrases, five-step
+under `testkit/rime-audition/`. `-PrimeOutput` changes that destination. The main
+bench has 130 clips, plus four retained model-1 comparisons: three starters, three original six-note phrases, five-step
 sweeps of each timbral control on each voice, three path removals and a full
 reference per voice, three registers at two velocities, four paired-control
 matrices, and an all-high C7 case per voice. Quick mode produces 45 comparisons.
@@ -105,9 +154,9 @@ finite extremes/DC/tails, and a 4x/8x reference with friction disabled. CLI test
 check exact authored-patch WAV replay and refusal before output creation. Shared
 patch/preset tests register RIME as a provisional engine.
 
-The initial GLINT ANGLE 0 versus .5 comparison changed leveled FFT magnitudes by
+The model-1 GLINT ANGLE 0 versus .5 comparison changed leveled FFT magnitudes by
 about 4.9% in normalized L2 distance. Tested bright notes tracked within .1 cent.
-The 4x/8x full-wave residual was approximately -36 to -31 dB across C2, C5 and C7.
+Its original 4x/8x full-wave residual was approximately -36 to -31 dB across C2, C5 and C7.
 That includes modal integration and conditioning differences; listening is still
 needed to assess alias audibility and the usefulness of every control.
 

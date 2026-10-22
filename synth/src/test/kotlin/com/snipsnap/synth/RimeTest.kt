@@ -3,10 +3,65 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Fft
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.json.Json
+import com.snipsnap.audio.WavWriter
+import com.snipsnap.audio.Snip
+import java.io.ByteArrayOutputStream
+import java.security.MessageDigest
 import kotlin.math.*
 import kotlin.test.*
 
 class RimeTest {
+    @Test fun `model one published recipes reproduce their original matched PCM exactly`() {
+        fun resource(name: String) = requireNotNull(javaClass.getResourceAsStream("/rime-model1/$name")).bufferedReader().use { it.readText() }
+        val hashes = Json.parse(resource("matched-pcm-sha256.json")).obj()
+        for (voice in listOf("loop", "glint", "vessel")) {
+            val patch = RimePatch.fromJsonText(resource("$voice-patch.json"))
+            assertEquals(1, patch.model)
+            val native = patch.render().samples
+            Dsp.levelTo(native, Dsp.RATE, .10f, ceiling = .9f)
+            val wav = ByteArrayOutputStream().also { WavWriter.write(it, Snip(native, 1, Dsp.RATE)) }.toByteArray()
+            val hash = MessageDigest.getInstance("SHA-256").digest(wav).joinToString("") { "%02x".format(it) }
+            assertEquals(hashes.getValue(voice).str(), hash, "$voice model 1 must not inherit the revoicing")
+        }
+    }
+
+    @Test fun `body changes spectral shape throughout the range on every normal voice`() {
+        for (voice in RimeVoice.entries) {
+            val p = RimePresets.forVoice(voice).single()
+            val notes = listOf(0f, .5f, 1f).map { value -> p.copy(macros = p.macros + ("BODY" to value)).render().samples }
+            for ((a, b) in listOf(0 to 1, 1 to 2, 0 to 2)) {
+                val distance = RimeControlMeasure.distance(notes[a], notes[b], p.gateSeconds.toDouble())
+                println("RIME $voice BODY $a/$b power-spectrum magnitude distance $distance")
+                assertTrue(distance > if (a == 0 && b == 2) .20 else .06, "$voice BODY $a/$b remained a gain/phase change: $distance")
+            }
+        }
+    }
+
+    @Test fun `loop unfold changes fine structure during a normal bass note`() {
+        val p = RimePresets.forVoice(RimeVoice.LOOP).single()
+        val immediate = p.copy(macros = p.macros + ("UNFOLD" to 0f)).render().samples
+        val unfolding = p.copy(macros = p.macros + ("UNFOLD" to 1f)).render().samples
+        val distance = RimeControlMeasure.distance(immediate, unfolding, p.gateSeconds.toDouble())
+        val early = RimeControlMeasure.fineShare(unfolding, Keys.midiHz(p.midi).toDouble(), .025)
+        val later = RimeControlMeasure.fineShare(unfolding, Keys.midiHz(p.midi).toDouble(), .43)
+        println("RIME LOOP UNFOLD spectral distance $distance; early fine share $early; later $later")
+        assertTrue(distance > .08, "normal LOOP unfold remains too weak: $distance")
+        assertTrue(later > early * 4 && later > .01, "fine structure must emerge within the note: $early -> $later")
+    }
+
+    @Test fun `angle quarter turns change normal preset spectra while a whole turn closes`() {
+        for (voice in RimeVoice.entries) {
+            val p = RimePresets.forVoice(voice).single()
+            val zero = p.copy(macros = p.macros + ("ANGLE" to 0f)).render().samples
+            val turns = listOf(.25f, .5f, .75f).map { value -> p.copy(macros = p.macros + ("ANGLE" to value)).render().samples }
+            val distance = turns.maxOf { RimeControlMeasure.distance(zero, it, p.gateSeconds.toDouble()) }
+            println("RIME $voice largest ANGLE quarter-turn distance $distance")
+            assertTrue(distance > .06, "$voice intermediate ANGLE positions need useful spectral activity: $distance")
+            assertContentEquals(zero, p.copy(macros = p.macros + ("ANGLE" to 1f)).render().samples)
+        }
+    }
+
     @Test fun `finite reference converges and signed pickup formula matches direct projection`() {
         val path = RimeContour.generate()
         assertEquals(3072, path.edges)

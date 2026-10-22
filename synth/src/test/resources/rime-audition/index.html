@@ -7,15 +7,15 @@
   <meta name="description" content="Listen to Rime, a contour synthesis prototype for SnipSnap. Three dry starter sounds, musical phrases and controlled listening comparisons.">
   <title>Rime — SnipSnap listening room</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css">
-  <script src="app.js" defer></script>
+  <link rel="stylesheet" href="style.css?v=2">
+  <script src="app.js?v=2" defer></script>
 </head>
 <body>
   <a class="skip" href="#listen">Skip to the sounds</a>
   <header class="masthead wrap">
     <a class="wordmark" href="#top" aria-label="Rime listening room home"><span class="mark">✳</span> SNIPSNAP <span class="divider">/</span> RIME</a>
     <nav aria-label="Page sections"><a href="#listen">Listen</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
-    <span class="edition">FIRST LISTEN <i></i> 01</span>
+    <span class="edition">REVISED CONTROLS <i></i> 02</span>
   </header>
   <main id="top">
     <section class="hero wrap">
@@ -46,6 +46,11 @@
     </section>
     <div class="facts wrap"><span><b>03</b> starter sounds</span><span><b>05</b> timbral controls</span><span><b>44.1</b> kHz mono WAVs</span><span><b>Dry</b> source → body</span></div>
     <p id="load-status" class="wrap status" role="status">Loading the rendered library…</p>
+    <section id="revision" class="revision-section wrap" aria-labelledby="revision-heading">
+      <div class="revision-heading"><div><p class="eyebrow">Revision 02 · Your listening feedback</p><h2 id="revision-heading">Revisit these three controls.</h2><p>BODY now excites more upper modes. LOOP has more contour detail for UNFOLD to reveal. The original versions are kept for comparison.</p></div><label class="revision-voice">Voice for BODY & ANGLE<select id="revision-voice"><option value="LOOP">LOOP · Round Seed</option><option value="GLINT">GLINT · Fine Frost</option><option value="VESSEL">VESSEL · Open Vessel</option></select></label></div>
+      <div id="revision-comparisons"></div>
+      <p class="footnote">ANGLE is a full rotation: 0° and 360° are the same pickup position. Compare the quarter turns to judge its effect.</p>
+    </section>
     <section id="listen" class="section wrap">
       <div class="section-heading"><span class="number">01</span><div><p class="eyebrow">Start here</p><h2>Meet the silhouette.</h2><p>Try the single note, then the short musical phrase. Each starts from the same finite contour.</p></div></div>
       <div id="starters" class="starters"></div>
@@ -60,7 +65,7 @@
           <button type="button" role="tab" aria-selected="false" data-voice="VESSEL" id="tab-vessel" aria-controls="sweep-panel">VESSEL <small>Open Vessel</small></button>
         </div>
         <div id="sweep-panel" role="tabpanel" aria-labelledby="tab-glint"><div id="sweeps"></div></div>
-        <p class="footnote">ANGLE 0% and 100% coincide. At DETAIL 0%, there is no fine structure for UNFOLD to reveal. Higher notes use fewer safe harmonics.</p>
+        <p class="footnote">ANGLE 0° and 360° coincide. At DETAIL 0%, there is no fine structure for UNFOLD to reveal. Higher notes use fewer safe harmonics.</p>
       </div>
     </section>
     <section id="compare" class="section wrap">
@@ -81,7 +86,7 @@
       <div><p class="eyebrow">Keep the work</p><h2>Every sound has a recipe.</h2><p>The downloads retain the controls and performance. Causal recipes also record which internal path was removed. The source bundle includes the Kotlin renderer, tests and replay instructions.</p></div>
       <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Prototype source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
     </section>
-    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 1</span></span><p>First finite listening prototype. HOLD, the remaining voices, the full preset bank and phone integration are later work. Listening acceptance is pending.</p><span id="build-info" class="small muted"></span></footer>
+    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 2</span></span><p>Revised finite listening prototype. Original model-1 recipes remain replayable. HOLD, the remaining voices, the full preset bank and phone integration are later work. Listening acceptance is pending.</p><span id="build-info" class="small muted"></span></footer>
   </main>
   <aside class="transport" aria-label="Audition player"><div class="transport-inner wrap">
     <div class="now-playing"><span class="playing-dot" id="playing-dot"></span><div><span class="eyebrow">Listening room</span><p id="now-title" aria-live="polite">Choose a sound above</p></div></div>

@@ -239,7 +239,7 @@ object SynthCommand {
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
                 if (engine == RimePatch.ENGINE && name == "HOLD" && value != 0f) {
-                    throw CliError("--macros HOLD: RIME model 1 renders finite notes; HOLD is not implemented")
+                    throw CliError("--macros HOLD: RIME renders finite notes; HOLD is not implemented")
                 }
                 overrides[name] = value
             }

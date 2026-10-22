@@ -8,31 +8,33 @@ import kotlin.math.*
 
 enum class RimeVoice { LOOP, GLINT, VESSEL }
 
-/** Finite first-listen model. HOLD is reserved and nonzero values are refused. */
+/** Finite contour instrument. Model 2 gives BODY upper-mode pressure and LOOP audible scale development. */
 object Rime {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
     fun rootMidi(voice: RimeVoice): Int = when (voice) { RimeVoice.LOOP -> 36; RimeVoice.GLINT -> 60; RimeVoice.VESSEL -> 48 }
     fun gateSeconds(voice: RimeVoice): Float = when (voice) { RimeVoice.LOOP -> .8f; RimeVoice.GLINT -> 1.2f; RimeVoice.VESSEL -> 2.6f }
-    fun defaults(voice: RimeVoice): Map<String, Float> {
+    fun defaults(voice: RimeVoice, model: Int = MODEL_VERSION): Map<String, Float> {
+        require(model in 1..MODEL_VERSION) { "unsupported RIME model $model" }
+        if (model == 1) return RimeV1.defaults(voice)
         val values = when (voice) {
-            RimeVoice.LOOP -> listOf(.28f, .18f, .20f, .10f, .25f)
+            RimeVoice.LOOP -> listOf(.46f, .22f, .20f, .10f, .25f)
             RimeVoice.GLINT -> listOf(.82f, .72f, .65f, .35f, .55f)
             RimeVoice.VESSEL -> listOf(.85f, .48f, .25f, .85f, .85f)
         }
         return (TIMBRAL.zip(values) + ("HOLD" to 0f)).toMap()
     }
-    fun macrosFor(voice: RimeVoice): List<MacroSpec> = defaults(voice).map { MacroSpec(it.key, it.value) }
-    internal fun settled(voice: RimeVoice, macros: Map<String, Float>): Map<String, Float> {
-        val values = defaults(voice).toMutableMap()
+    fun macrosFor(voice: RimeVoice, model: Int = MODEL_VERSION): List<MacroSpec> = defaults(voice, model).map { MacroSpec(it.key, it.value) }
+    internal fun settled(voice: RimeVoice, macros: Map<String, Float>, model: Int = MODEL_VERSION): Map<String, Float> {
+        val values = defaults(voice, model).toMutableMap()
         for ((name, value) in macros) {
             require(name in values) { "unknown RIME macro $name" }
             require(value.isFinite() && value in 0f..1f) { "RIME $name must be finite in 0..1" }
             values[name] = value
         }
-        require(values.getValue("HOLD") == 0f) { "RIME model 1 renders finite notes; HOLD is not implemented" }
+        require(values.getValue("HOLD") == 0f) { "RIME renders finite notes; HOLD is not implemented" }
         return values
     }
     fun drumClassFor(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), gateSeconds: Float = gateSeconds(voice)): DrumClass {
@@ -60,13 +62,19 @@ object Rime {
     }
 
     fun render(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
-        velocity: Float = .8f, gateSeconds: Float = gateSeconds(voice), seed: Int = 1729): Snip =
-        Snip(inspect(voice, macros, midi, velocity, gateSeconds, seed).samples, 1, Dsp.RATE)
+        velocity: Float = .8f, gateSeconds: Float = gateSeconds(voice), seed: Int = 1729, model: Int = MODEL_VERSION): Snip =
+        Snip(inspect(voice, macros, midi, velocity, gateSeconds, seed, model = model).samples, 1, Dsp.RATE)
 
     internal fun inspect(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
         velocity: Float = .8f, gateSeconds: Float = gateSeconds(voice), seed: Int = 1729,
-        options: Options = Options()): Probe {
-        val m = settled(voice, macros)
+        options: Options = Options(), model: Int = MODEL_VERSION): Probe {
+        if (model == 1) {
+            val old = RimeV1.inspect(voice, macros, midi, velocity, gateSeconds, seed,
+                RimeV1.Options(options.contact, options.reference, options.body, options.oversample, options.friction))
+            return Probe(old.raw, old.samples, old.internalPeak, old.maxBodyEnergy, old.cutoff, old.safeMaximum, old.tailDb,
+                old.trace.map { Trace(it.seconds, it.bandGains, it.bodyEnergy) })
+        }
+        val m = settled(voice, macros, model)
         require(midi in MIN_MIDI..MAX_MIDI) { "RIME MIDI must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "RIME velocity must be finite in 0..1" }
         require(gateSeconds.isFinite() && gateSeconds in .15f..4f) { "RIME gateSeconds must be .15..4" }
@@ -132,8 +140,13 @@ object Rime {
                 (1 - RimeContour.smooth((t - gateSeconds) / release))
             val a = velocity * envelope * (p + .50 * contactA)
             val b = if (options.reference) .36 * velocity * envelope * (reference + .50 * contactB) else 0.0
-            val resonated = if (options.body) resonator.next(a, b) else 0.0
-            val value = (1 - .40 * body) * a + .18 * b + (.12 + 1.25 * body) * resonated
+            // The body needs contour-derived upper-mode force. Feeding it mostly the
+            // same sine as the direct path made BODY a level change erased by finishing.
+            val bodyContact = if (options.contact) .45 + .90 * edge else 0.0
+            val driveA = velocity * envelope * (.18 * p + bodyContact * pressureA)
+            val driveB = if (options.reference) .36 * velocity * envelope * (.18 * reference + bodyContact * pressureB) else 0.0
+            val resonated = if (options.body) resonator.next(driveA, driveB) else 0.0
+            val value = (1 - .45 * body) * a + .18 * b + (3.8 * body) * resonated
             check(value.isFinite() && abs(value) < 16) { "RIME unbounded internal output at $i: $value" }
             raw[i] = value.toFloat(); peak = max(peak, abs(value))
             if (i % (rate / 50) == 0) {
@@ -144,11 +157,13 @@ object Rime {
             }
             phase += step; if (phase >= 1) phase -= 1
         }
-        Tide.bandLimit(raw, rate)
-        val down = if (options.oversample == 4) Dsp.decimate(raw, Dsp.RATE) else {
-            val half = Resampler.resample(Snip(raw, 1, rate), rate / 2)
-            Dsp.decimate(half.samples, Dsp.RATE)
-        }
+        // Compare higher-rate DSP through the identical house conditioning path.
+        // Running its IIR cutoff at 8x changed filter phase near 18 kHz and
+        // incorrectly counted that phase difference as nonlinear alias error.
+        val houseRate = Dsp.RATE * Dsp.OVERSAMPLE
+        val conditioned = if (rate == houseRate) raw else Resampler.resample(Snip(raw, 1, rate), houseRate).samples
+        Tide.bandLimit(conditioned, houseRate)
+        val down = Dsp.decimate(conditioned, Dsp.RATE)
         val mean = down.sumOf { it.toDouble() } / down.size
         val highpass = Dsp.OnePole(Dsp.RATE)
         for (i in down.indices) { val value = (down[i] - mean).toFloat(); down[i] = value - highpass.lp(value, 8f) }
@@ -180,11 +195,16 @@ internal class RimeBody(voice: RimeVoice, hz: Double, body: Double, rate: Int) {
             when (voice) { RimeVoice.LOOP -> .65; RimeVoice.GLINT -> .8; RimeVoice.VESSEL -> 1.35 }
     }
     init {
-        val ratios = doubleArrayOf(1.0, 2.03, 3.16, 5.01, 7.02, 11.03, 13.08, 17.11)
-        val a = doubleArrayOf(1.0, .72, .58, .45, .40, .31, .24, .20)
-        val b = doubleArrayOf(.55, -.95, .30, -.70, .84, -.31, .58, -.40)
+        val ratios = doubleArrayOf(1.0, 2.0, 3.0, 5.0, 7.0, 11.0, 13.0, 17.0)
+        val offsets = doubleArrayOf(0.0, -2.0, 3.5, -4.0, 5.0, -6.0, 7.0, -8.0)
+        val ringingOffsets = doubleArrayOf(0.0, .20, -.30, .45, -.55, .65, -.75, .85)
+        val a = doubleArrayOf(.55, .45, .35, 1.10, .90, .60, .45, .30)
+        val b = doubleArrayOf(.25, -.65, .30, -.90, 1.0, -.55, .65, -.40)
+        val readout = doubleArrayOf(.30, .22, .20, .65, .55, .36, .28, .20)
         for (i in ratios.indices) {
-            val frequency = hz * (1 + (ratios[i] - 1) * (1.33 - .60 * body))
+            // Absolute small detunings keep the upper body modes excitable across
+            // registers. Scaling every ratio moved them off all contour harmonics.
+            val frequency = (hz * ratios[i] + offsets[i] * (1 - body) + ringingOffsets[i] * body).coerceAtLeast(10.0)
             val modeT60 = (t60 / (1 + .28 * i)).coerceAtLeast(.035)
             bank.tune(i, frequency.coerceAtMost(17000.0), modeT60)
             val safe = RimeContour.smooth((17500 - frequency) / 2000)
@@ -192,7 +212,7 @@ internal class RimeBody(voice: RimeVoice, hz: Double, body: Double, rate: Int) {
             val force = 2 * ln(1000.0) / modeT60
             portA[i] = a[i] * force * safe
             portB[i] = b[i] * force * safe
-            pickup[i] = (1.0 / (1 + .35 * i)) * .38
+            pickup[i] = readout[i]
         }
     }
     fun next(a: Double, b: Double): Double {

@@ -1,12 +1,13 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 const player = $('player');
-let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null;
+let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null, buildId = '', model = 2;
+const assetURL = (url) => url + (url.includes('?')?'&':'?') + 'r=' + encodeURIComponent(buildId);
 const voiceTitles = {LOOP:'Round Seed',GLINT:'Fine Frost',VESSEL:'Open Vessel'};
 const controlText = {
   DETAIL:'Maximum resolved scale, limited to the note’s safe bandwidth.',
   EDGE:'Fine-feature sharpness and bounded contour pressure.',
-  ANGLE:'The rotating pickup relative to the fixed body port.',
+  ANGLE:'A complete pickup rotation. 0° and 360° return to the same position.',
   UNFOLD:'When fine bands emerge and recede within the note.',
   BODY:'Modal spacing, decay and the balance of direct sound and resonance.'
 };
@@ -32,10 +33,20 @@ function renderSweeps(voice='GLINT') {
   $('sweep-panel').setAttribute('aria-labelledby',`tab-${voice.toLowerCase()}`);
   $('sweeps').innerHTML=Object.entries(controlText).map(([macro,description])=>{
     const clips=library.filter(c=>c.section==='controls'&&c.voice===voice&&c.macro===macro).sort((a,b)=>a.value-b.value);
-    return `<div class="sweep-row"><div class="sweep-label"><strong>${macro}</strong><p>${escape(description)}</p></div><div class="step-buttons">${clips.map(c=>`<button type="button" data-play="${c.id}" aria-label="Play ${voice} ${macro} at ${Math.round(c.value*100)} percent" aria-pressed="false">${Math.round(c.value*100)}<span class="sr-only"> percent</span></button>`).join('')}</div><button type="button" class="sweep-play" data-sequence="${clips.map(c=>c.id).join(',')}">Play sweep ↗</button></div>`;
+    return `<div class="sweep-row"><div class="sweep-label"><strong>${macro}</strong><p>${escape(description)}</p></div><div class="step-buttons">${clips.map(c=>`<button type="button" data-play="${c.id}" aria-label="Play ${voice} ${macro} at ${Math.round(c.value*(macro==='ANGLE'?360:100))} ${macro==='ANGLE'?'degrees':'percent'}" aria-pressed="false">${Math.round(c.value*(macro==='ANGLE'?360:100))}${macro==='ANGLE'?'°':'%'}${macro==='ANGLE'&&c.value===1?'<small class="same-angle">= 0°</small>':''}</button>`).join('')}</div><button type="button" class="sweep-play" data-sequence="${clips.map(c=>c.id).join(',')}">Play sweep ↗</button></div>`;
   }).join('');
   updateButtons();
 }
+function renderRevision(voice='LOOP') {
+  const prefix=voice.toLowerCase();
+  const steps=(name,values,labels,stem=prefix)=>values.map((v,i)=>button(byId.get(`${stem}-${name}-${v}`),labels[i],'play-button revision-play')).join('');
+  $('revision-comparisons').innerHTML=`
+    <article class="revision-row"><div><strong>BODY / ${voice}</strong><p>Direct contour → a larger resonating body.</p></div><div class="revision-buttons">${steps('body',[0,50,100],['0%','50%','100%'])}</div><div class="previous-clip">${button(byId.get(`legacy-${prefix}-body-100`),'Previous 100%','play-button previous-play')}</div></article>
+    <article class="revision-row"><div><strong>UNFOLD / LOOP</strong><p>Detail at onset → detail arriving within the note.</p></div><div class="revision-buttons">${steps('unfold',[0,50,100],['0%','50%','100%'],'loop')}</div><div class="previous-clip">${button(byId.get('legacy-loop-unfold-100'),'Previous 100%','play-button previous-play')}</div></article>
+    <article class="revision-row"><div><strong>ANGLE / ${voice}</strong><p>Hear four different pickup orientations.</p></div><div class="revision-buttons angle-turns">${steps('angle',[0,25,50,75],['0°','90°','180°','270°'])}</div><div class="previous-clip angle-return">360° returns to 0°</div></article>`;
+  updateButtons();
+}
+$('revision-voice').addEventListener('change',event=>renderRevision(event.target.value));
 function renderCausal() {
   const descriptions={LOOP:'Listen for changes in the hollow bass and the attack.',GLINT:'Listen for fine pressure and how the upper edge rings.',VESSEL:'Listen for the reveal, then the body after excitation ends.'};
   $('causal').innerHTML=Object.keys(voiceTitles).map(voice=>`<article class="causal-column"><span class="voice-name">${voice}</span><h3>${voiceTitles[voice]}</h3>${library.filter(c=>c.voice===voice&&c.section==='causal').map(c=>button(c)).join('')}<p>${descriptions[voice]}</p></article>`).join('');
@@ -56,7 +67,7 @@ async function playClip(id, preserveQueue=false) {
   if(!preserveQueue) clearQueue();
   if(current?.id===id&&!player.paused&&!preserveQueue){player.pause();updateButtons();return;}
   current=clip;
-  player.src=clip.files[mode];
+  player.src=assetURL(clip.files[mode]);
   $('now-title').textContent=`${clip.voice} / ${clip.title}`;
   $('playback-error').textContent='';
   updateDownload();
@@ -65,7 +76,7 @@ async function playClip(id, preserveQueue=false) {
   }
   updateButtons();
 }
-function updateDownload(){if(!current)return;$('current-download').href=current.files[mode];$('current-download').hidden=false;}
+function updateDownload(){if(!current)return;$('current-download').href=assetURL(current.files[mode]);$('current-download').hidden=false;}
 function updateButtons(){
   const playing=current&&!player.paused&&!player.ended;
   document.querySelectorAll('[data-play]').forEach(b=>{const on=playing&&b.dataset.play===current.id;b.classList.toggle('is-playing',!!on);b.setAttribute('aria-pressed',String(!!on));});
@@ -90,7 +101,7 @@ document.querySelectorAll('[name=mode]').forEach(input=>input.addEventListener('
   const time=player.currentTime, wasPlaying=!player.paused;
   player.preload='metadata';
   player.addEventListener('loadedmetadata',()=>{player.currentTime=Math.min(time,Math.max(0,player.duration-.01));},{once:true});
-  player.src=current.files[mode];player.load();updateDownload();
+  player.src=assetURL(current.files[mode]);player.load();updateDownload();
   if(wasPlaying)try{await player.play();}catch(error){if(error.name!=='AbortError')$('playback-error').textContent='Press play to resume this version.';}
   updateButtons();
 }));
@@ -102,15 +113,16 @@ const notesKey='snipsnap-rime-model1-listening-notes';
 try{$('listening-notes').value=localStorage.getItem(notesKey)||'';}catch{}
 $('listening-notes').addEventListener('input',()=>{try{localStorage.setItem(notesKey,$('listening-notes').value);$('notes-status').textContent='Saved in this browser';}catch{$('notes-status').textContent='Download to keep these notes';}});
 $('download-notes').addEventListener('click',()=>{
-  const data={engine:'RIME',model:1,date:new Date().toISOString(),lastClip:current?.id||null,playback:mode,notes:$('listening-notes').value};
+  const data={engine:'RIME',model,date:new Date().toISOString(),lastClip:current?.id||null,playback:mode,notes:$('listening-notes').value};
   const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=document.createElement('a');link.href=url;link.download='rime-listening-notes.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 });
 async function load(){
   try{
-    const fetchJson=async(url)=>{const response=await fetch(url);if(!response.ok)throw new Error(`${url}: ${response.status}`);return response.json();};
+    const fetchJson=async(url)=>{const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${url}: ${response.status}`);return response.json();};
     const [manifest,contour]=await Promise.all([fetchJson('manifest.json'),fetchJson('geometry.json')]);
-    library=manifest.clips;byId=new Map(library.map(c=>[c.id,c]));geometry=contour;
-    renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();
+    library=manifest.clips;byId=new Map(library.map(c=>[c.id,c]));geometry=contour;buildId=manifest.sourceRevision;model=manifest.model;
+    renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();renderRevision();
+    document.querySelectorAll('a[download][href]').forEach(link=>{link.href=assetURL(link.getAttribute('href'));});
     $('bench-count').textContent=`${library.filter(c=>['register','interactions','stress'].includes(c.section)).length} tests`;
     $('build-info').textContent=`${library.length} rendered clips · ${manifest.sampleRate.toLocaleString()} Hz · ${manifest.oversample}× internal DSP · ${new Date(manifest.generatedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}`;
     $('load-status').hidden=true;
