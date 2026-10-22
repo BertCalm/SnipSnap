@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.Snapshot
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -1038,7 +1039,6 @@ fun SynthScreen(
         // Audition recipes can save an explicit root beside a different TUNE.
         // Canonicalize the sliders without changing that sound or its model.
         val editable = editablePreset(patch)
-        loadedPatchesByVoice[engine to voice] = editable
         // Merged over the engine's own defaults, same as macrosByVoice's own
         // seeding above: a preset only has to name the macros it cares
         // about (PUNCH, added after every existing THUMP preset was
@@ -1051,13 +1051,18 @@ fun SynthScreen(
         // has its own four controls) all select their displayed defaults;
         // loading a partial recipe keeps its sound.
         val loadedMacros = editableDefaults(engine.defaults(voice), editable) + editableMacros(editable)
-        macrosByVoice[engine to voice] = loadedMacros
+        // A model can change the control names (legacy BRASS versus GROW).
+        // Publish the recipe and its controls together, including the restore gate.
+        Snapshot.withMutableSnapshot {
+            loadedPatchesByVoice[engine to voice] = editable
+            macrosByVoice[engine to voice] = loadedMacros
+            embouchureRestore.pending.remove(engine to voice)
+            currentPresetByVoice[engine to voice] = patch.name
+        }
         if (editable is OhmPatch) {
             keepOhmPatch(editable.copy(macros = loadedMacros))
             settings[presetSettingsKey(Engine.OHM, OhmVoice.STRING)] = patch.name
         }
-        embouchureRestore.pending.remove(engine to voice)
-        currentPresetByVoice[engine to voice] = patch.name
     }
 
     // ---- SAVE AS PRESET (docs/WORKSHOP.md, WS5) ----
@@ -1098,20 +1103,24 @@ fun SynthScreen(
                 }
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
                     .firstOrNull { it.patch.name == name }?.patch
-                if (mine != null) {
-                    val editable = editablePreset(mine)
-                    loadedPatchesByVoice[pair] = editable
-                    if (editable is EmbouchurePatch) {
-                        macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
-                    }
-                    if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
-                    // The named preset is being restored whole. A partial legacy
-                    // OVERLAP recipe must fill its sliders from its saved model.
-                    if (mine is OverlapPatch) {
-                        macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
-                    }
-                } else currentPresetByVoice.remove(pair)
-                embouchureRestore.pending.remove(pair)
+                // The delayed shelf read must not expose a new model with the old
+                // control map, or clear its persistence gate before both are ready.
+                Snapshot.withMutableSnapshot {
+                    if (mine != null) {
+                        val editable = editablePreset(mine)
+                        loadedPatchesByVoice[pair] = editable
+                        if (editable is EmbouchurePatch) {
+                            macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
+                        }
+                        if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
+                        // The named preset is being restored whole. A partial legacy
+                        // OVERLAP recipe must fill its sliders from its saved model.
+                        if (mine is OverlapPatch) {
+                            macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
+                        }
+                    } else currentPresetByVoice.remove(pair)
+                    embouchureRestore.pending.remove(pair)
+                }
             }
         } catch (e: CancellationException) {
             throw e
