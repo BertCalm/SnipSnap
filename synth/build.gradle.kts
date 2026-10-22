@@ -61,6 +61,11 @@ tasks.register<JavaExec>("generateChamberAudition") {
     mainClass.set("com.snipsnap.synth.ChamberAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
+    providers.gradleProperty("chamberRevision").orNull?.let {
+        require(it == "timpani") { "chamberRevision must be timpani" }
+        args("--timpani")
+    }
+    providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
 }
 
 tasks.register<JavaExec>("replayChamberDiagnostic") {
