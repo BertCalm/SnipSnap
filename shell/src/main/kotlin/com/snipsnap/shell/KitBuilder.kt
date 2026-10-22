@@ -209,14 +209,14 @@ class KitBuilderModel private constructor(
         return edited
     }
 
-    /** Adopt already-written board files while retaining every unrelated pad field. */
-    internal fun replaceBoardPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad {
-        require(kit.pad(slot) == expected) { "the pad changed while the board was rendering; try again" }
+    /** Adopt already-written printed files while retaining every unrelated pad field. */
+    internal fun replacePrintedPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad {
+        require(kit.pad(slot) == expected) { "the pad changed while the treatment was rendering; try again" }
         require(replacement.slot == slot && replacement.copy(
             sampleFile = expected.sampleFile,
             velocityLayers = expected.velocityLayers,
             recipe = expected.recipe,
-        ) == expected) { "a board can change only audio files, velocity layers and its recipe" }
+        ) == expected) { "a printed treatment can change only audio files, velocity layers and its recipe" }
         // This fingerprint names the previous current WAV, not its provenance.
         // Even REMOVE and UNDO adopt different audio; exports fingerprint that
         // result again. Keep the caller guard strict before clearing this key.
@@ -225,6 +225,10 @@ class KitBuilderModel private constructor(
         dirty = true
         return adopted
     }
+
+    /** Existing board callers retain the same guarded adoption door. */
+    internal fun replaceBoardPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad =
+        replacePrintedPad(slot, expected, replacement)
 
     /**
      * Set or clear the kit's key. Choosing a key never retunes anything by
@@ -398,7 +402,7 @@ class KitBuilderModel private constructor(
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeSoftHits(BoardSheet.read(pad.recipe)?.type?.name ?: "BOARD") }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         // Velocity.layerAt makes the same patch-vs-captured (and
@@ -463,7 +467,7 @@ class KitBuilderModel private constructor(
         require(softTakes.size in 1..StackTakes.MAX_SOFT) { "1..${StackTakes.MAX_SOFT} soft takes, got ${softTakes.size}" }
         require(softTakes.map { it.file }.toSet().size == softTakes.size) { "the same take can't fill two zones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeStack(BoardSheet.read(pad.recipe)?.type?.name ?: "BOARD") }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeStack(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
         requireNotChained(pad, "stacking")
         // The entries must be THIS kit's bin's: `originalName` alone is a
@@ -549,12 +553,12 @@ class KitBuilderModel private constructor(
         // The imported audition's fingerprint describes the previous WAV.
         // Keep its provenance, but never carry that current-file claim onto
         // regenerated or treated audio; exporters fingerprint the new file.
-        // An unlabelled audio replacement also cannot retain a board inventory:
+        // An unlabelled audio replacement also cannot retain a printed inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
         return update(slot) {
             it.copy(
-                recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries },
+                recipe = recipe ?: it.recipe?.takeUnless(PrintedPads::has),
                 source = it.source - "rawSha256",
             )
         }
@@ -867,7 +871,7 @@ class KitBuilderModel private constructor(
     /** Back to a single-sample pad; the soft renders are deleted. */
     fun clearGhostLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeSoftHits(BoardSheet.read(pad.recipe)?.type?.name ?: "BOARD") }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
         val cleared = update(slot) { it.copy(velocityLayers = emptyList()) }
         softFiles.forEach { File(kitDir, it).delete() }

@@ -2,6 +2,8 @@ package com.snipsnap.shell
 
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.AquariumOfflineRenderer
+import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.BoardType
 import com.snipsnap.xpm.PadNoteMap
@@ -41,6 +43,8 @@ object RecipeReplay {
         data class Character(val name: String, val amount: Float) : Plan()
         /** Copy the board settings; the destination retains its own source and recipe. */
         data class Board(val amount: Float, val type: BoardType = BoardType.WIDE) : Plan()
+        /** Copy complete Aquarium controls/context; the destination keeps its own immutable baseline. */
+        data class Aquarium(val recipe: AquariumRenderRecipe) : Plan()
         /** [sourceKey] is the key label the recipe was written in — a label, not an input: the destination kit's own key is what plays. */
         data class KeyedPlan(val name: String, val amount: Float, val seed: Long, val dials: Keyed.Dials, val sourceKey: String?) : Plan()
         data class Smear(val amount: Float) : Plan()
@@ -64,6 +68,10 @@ object RecipeReplay {
     fun plan(recipe: JsonValue.Obj?): Plan {
         if (recipe == null) return Plan.Refused(Copy.REPLAY_NOTHING)
         val e = recipe.entries
+        if ("aquariumPad" in e) {
+            return AquariumPadSheet.read(recipe)?.let { Plan.Aquarium(it) }
+                ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+        }
         if ("boardPad" in e) {
             return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type) }
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
@@ -144,6 +152,7 @@ object RecipeReplay {
         slot: Int,
         recipe: JsonValue.Obj,
         padName: String,
+        aquariumRenderer: AquariumOfflineRenderer? = null,
         prints: ((String) -> com.snipsnap.audio.Dust.Print?)? = null,
     ): Done {
         val word = KitDiff.recipeName(recipe)
@@ -152,6 +161,10 @@ object RecipeReplay {
             is Plan.Era -> Done(model.eraPad(slot, p.era, p.amount), Copy.replayed(word, padName))
             is Plan.Character -> Done(model.characterPad(slot, p.name, p.amount), Copy.replayed(word, padName))
             is Plan.Board -> Done(BoardSheet.apply(model, slot, p.amount, p.type), Copy.replayedBoard(word, padName))
+            is Plan.Aquarium -> {
+                val renderer = requireNotNull(aquariumRenderer) { PrintedPads.AQUARIUM_RENDERER_REQUIRED }
+                Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard("AQUARIUM", padName))
+            }
             is Plan.KeyedPlan -> {
                 val pad = model.keyedPad(slot, p.name, p.amount, p.seed, p.dials)
                 val key = model.lastKeyLabel

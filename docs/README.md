@@ -81,9 +81,7 @@ remains the unchanged proposal; sustained HOLD and the wider library are later w
 finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.
 
-**Aquarium.** The accepted [six-effect audition](https://snipsnap-aquarium-pedals-audition.bertcalm.chatgpt.site)
-is preserved by the shared native processor and standalone settings contract.
-The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md)
-and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
-separate that foundation from the planned pad rendering, performance routing
-and controls. The foundation does not yet process app playback.
+**Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
+finite native pad-printing bridge, saved sources, replay and export contracts.
+Dedicated controls and continuous performance routing remain later stages of
+the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
