@@ -104,7 +104,7 @@ object ContourStarterGenerator {
             "instrumentCount" to rows.size, "zoneCount" to rows.sumOf { (it.getValue("zones") as List<*>).size },
             "hardwareVerified" to false, "checks" to listOf("XPM XML", "native ACVS JSON", "phone sidecar", "WAV PCM24 and sampler sheets", "ZIP byte identity"),
             "instruments" to rows, "files" to bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }
-                .map { linkedMapOf("file" to relative(bundle, it), "bytes" to it.length(), "sha256" to sha(it)) }))
+                .map { linkedMapOf("file" to relative(bundle, it), "bytes" to it.length(), "sha256" to sha(it)) }.toList()))
         val archive = File(output, "snipsnap-contour-starter.zip")
         ZipOutputStream(archive.outputStream().buffered()).use { zip ->
             bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.forEach { file ->
