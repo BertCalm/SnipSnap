@@ -6,6 +6,70 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Touch and articulation proof (R5)
+
+LEAD and HOLLOW now keep oscillator A's existing source contribution while
+oscillator B gains its own transient contact envelope. LEAD's 2 ms rise and
+30 ms recovery make a quick tear; HOLLOW's 30 ms rise and 70 ms recovery
+produce a delayed octave bloom. These are envelope time constants, not measured
+audible attack times. B returns to its existing gain of one. Neither voice adds
+an output effect, another pitch, or a new macro. BASS, FLUTTER, CHIRP and FRAY
+retain their R4 render path.
+
+Two positive, exactly discretized states carry contact excitation and its
+attack follower. Velocity changes the contact strength; previous circuit
+energy reduces a loaded reply. This dependency is gated by AGITATE. Existing seeded
+gesture events trigger contact with their absolute strength, preserving both
+upward and downward pitch departures. Finite note-on still articulates at
+SKITTER zero. HOLD has no synthetic note-on: contact follows its existing
+periodic events, and both new states must converge during preroll.
+
+This arrangement gives the voices different attack-to-body trajectories
+without moving A's contribution when B speaks. It retains the current pitch
+recovery, flutter rates, phrase scheduler and output treatment. Finite breath
+timing can respond to the changed circuit history through its existing
+feedback. The audible result still needs the owner's listening verdict.
+
+The isolated C3 checks measure HOLLOW's gain-independent spectral-change
+centroid 31–46 ms later than LEAD's across the three velocities. Both recover
+to within .0014% of the previous body's RMS in the measured .6–.95 s window;
+requested-root error stays below .706 cents. Loaded held contacts reach about
+46% of their history-disabled peaks and both new states converge in three
+periods. Continuous oscillator A keeps history strongly loaded: within-phrase
+contact-factor recovery is at most 1.68% in LEAD and .0074% in HOLLOW in this
+probe. This establishes causal loading, not an audible breath-restoration claim.
+
+The focused proof compares the R4 source path with R5 on the current shared
+runtime. `SkitterProbe.articulationDisabled` removes only the new source path;
+`contactMemoryDisabled` removes only its history dependency. The original
+published R4 page and all its audio remain available as the archive.
+
+The audition uses C3/MIDI 48, seed 0, velocities .25/.60/1, medium retriggers,
+and a longer finite note for each of these two voices. All four raw performance
+tracks share one playback gain. Optional cue/take matching uses one constant
+gain for the selected region and explicitly hides its level response; it
+never levels individual notes within a phrase. Downloads restore the original
+unlevelled mono 44.1 kHz PCM24 WAV bytes. Fresh note retriggers reset the circuit;
+they do not imply memory carried between separate renders.
+
+Reproduce the small proof with
+`./gradlew --no-daemon :synth:generateSkitterArticulationAudition`.
+The generator records sample-index cues, controls, source hashes, timing and
+gain measurements under `testkit/skitter-articulation/`.
+Package it beside the retained R4 hosted directory with
+`python3 scripts/package_skitter_articulation.py /absolute/r4-hosted testkit/skitter-articulation /tmp/skitter-r5-hosted`.
+The packager retains R4 assets, adds its archive banner and losslessly encodes
+only the four new WAVs. Check the final deployment tar against 256 MiB.
+
+An independent isolated-classloader check compares 72 articulation-disabled
+cases and 48 unchanged-voice cases against the compiled R4 engine on the current
+shared runtime: all 12,249,678 raw samples match exactly. All 24 existing causal
+cutoff probes retain their thresholds. Independent transport checks restore
+the four new WAVs exactly, verify 28 copied note events and retain all 1,735
+other R4 assets byte-for-byte. Chromium passes all 48 track/cue/gain combinations,
+including a 48 kHz playback device using the original 44.1 kHz cue clock,
+original downloads, pause/stop/loading races and layouts down to 320 px.
+
 ## Voice character revision (R4)
 
 The six voices previously shared their oscillator morph, source balance and

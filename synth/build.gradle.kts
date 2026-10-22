@@ -1402,6 +1402,18 @@ tasks.register<JavaExec>("generateSkitterAudition") {
     if (project.hasProperty("skitterOriginal")) args("--original=${project.property("skitterOriginal")}")
 }
 
+/** Small raw SKITTER articulation proof, independent of the full audition matrix. */
+tasks.register<JavaExec>("generateSkitterArticulationAudition") {
+    group = "distribution"
+    description = "Render the bounded four-track SKITTER R4/R5 articulation proof with raw PCM24, cue/gain records and a listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterArticulationAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-articulation")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"

@@ -246,6 +246,8 @@ testkit/SnipSnap Contour Kit/
 
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
+testkit/skitter-articulation/
+scripts/__pycache__/
 
 # REGISTERS listening packs are reproducible generated audio and manifests.
 testkit/registers-audition/
