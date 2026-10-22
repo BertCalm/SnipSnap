@@ -2,6 +2,23 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
+tasks.register<JavaExec>("generateTidalAudition") {
+    group = "distribution"
+    description = "Render finite PAIR/STREAM raw and matched WAVs, replayable recipes and the TIDAL listening page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalAuditionGenerator")
+    workingDir = projectDir
+    val replay = providers.gradleProperty("tidalReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("tidalReplayOutput").get(),
+            providers.gradleProperty("tidalReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("tidalOutput").orNull ?: "${rootDir}/testkit/tidal-audition")
+    }
+}
+
 /** Dry, finite OHM family encounters and their replayable listening evidence. */
 tasks.register<JavaExec>("generateOhmAudition") {
     group = "distribution"

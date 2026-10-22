@@ -345,6 +345,9 @@ testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
 
+# TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
+testkit/tidal-audition/
+
 # Reproducible scanned-chain experiment audio and offline listening artifacts.
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
