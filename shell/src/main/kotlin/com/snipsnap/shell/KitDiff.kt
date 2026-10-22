@@ -4,6 +4,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.ChainInfo
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.PadRecipe
 import com.snipsnap.xpm.PadNoteMap
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -102,7 +103,15 @@ object KitDiff {
      * "RECIPE" — a change is still reported, just not named.
      */
     fun recipeName(recipe: JsonValue.Obj): String {
-        BoardSheet.read(recipe)?.let { return "WIDE ${(it.amount * 100).roundToInt()}%" }
+        BoardSheet.read(recipe)?.let { return "${it.type.name} ${(it.amount * 100).roundToInt()}%" }
+        // Typed source recipes can also end in a board. Name that last
+        // treatment just as replay does, rather than calling it RECIPE or
+        // SYNTH PATCH after the parser has already recognized its type.
+        if ("recipe" in recipe.entries && "board" in recipe.entries) {
+            runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()?.let {
+                return "${it.type.name} ${(it.amount * 100).roundToInt()}%"
+            }
+        }
         PadSheet.read(recipe)?.let { applied ->
             val word = applied.segment?.let { PadSheet.displayLabel(it) } ?: applied.treatment.name.uppercase()
             // Rounded, not truncated — the AMT stepper on the card itself

@@ -337,6 +337,9 @@ testkit/oven-kit/
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
 
+# RUSH's listening audio and measurements regenerate from the shared board DSP.
+testkit/rush-audition/
+
 # TRIO generated auditions and playable bank.
 testkit/trio-audition/
 testkit/trio-audition-model1/

@@ -229,6 +229,12 @@ object KitExporter {
                 velocityLayers = slot.velocityLayers.orEmpty().map { layer ->
                     KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd)
                 },
+                // Printed boards depend on .boards/ source snapshots, which
+                // flat MPC exports do not carry. Their WAVs remain baked; do
+                // not restore an orphan editing wrapper on a later import.
+                // Ordinary opaque recipes and self-contained typed boards
+                // retain their existing sidecar behavior.
+                recipe = pad.recipe?.takeUnless { "boardPad" in it.entries },
                 source = pad.source + ("rawSha256" to digest),
             )
         })
