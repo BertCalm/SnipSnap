@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#f3f0e8">
   <meta name="description" content="Listen to Alloy: an original hybrid attack and phase-modulation engine for SnipSnap. Review real offline renders, compare fusion, and explore six voices.">
   <title>Alloy — SnipSnap audition room</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath fill=%27%23272b26%27 d=%27M2 5h8v14H2zM14 5h8v14h-8z%27/%3E%3C/svg%3E">
   <link rel="stylesheet" href="alloy-audition.css">
   <script src="alloy-audition.js" defer></script>
 </head>
@@ -23,7 +24,8 @@
         <h1 id="page-title">Alloy<span class="title-dot">.</span></h1>
         <p class="hero-tagline">The attack becomes the body.</p>
         <p class="hero-description">Wood, tines, breath, and wire meet a four-operator tonal core. Listen as a familiar attack becomes part of the sound it starts.</p>
-        <div class="hero-actions"><a class="primary-link" href="#audition">Enter the audition <span aria-hidden="true">↓</span></a><span class="review-status"><span class="status-dot" aria-hidden="true"></span> Provisional presets · ready for your ears</span></div>
+        <div class="hero-actions"><a class="primary-link" href="#audition">Enter the audition <span aria-hidden="true">↓</span></a><span class="review-status"><span class="status-dot" aria-hidden="true"></span> Expanded presets · ready for your ears</span></div>
+        <p class="hero-description"><a href="contrast/"><strong>New: compare the voice contrast candidates →</strong></a></p>
       </div>
       <div class="instrument" aria-label="Alloy signal path: generated attack feeds the direct mix and the tonal body's phase modulation">
         <div class="instrument-top"><span>ALLOY / SIGNAL ARCHITECTURE</span><span class="instrument-light" aria-hidden="true"></span></div>
@@ -36,20 +38,20 @@
         </div>
         <div class="instrument-bottom"><span>ORIGINAL SOURCES. SHARED GESTURE.</span><span>MONO / 44.1 kHz</span></div>
       </div>
-      <div class="hero-facts"><div><strong id="preset-count">12</strong><span>provisional presets</span></div><div><strong>6</strong><span>distinct voices</span></div><div><strong>5 + HOLD</strong><span>playable macros</span></div><div class="fact-note"><span class="small-arrow" aria-hidden="true">↳</span><span>Real Kotlin renders.<br>No browser synthesis.</span></div></div>
+      <div class="hero-facts"><div><strong id="preset-count">36</strong><span>factory presets</span></div><div><strong>6</strong><span>distinct voices</span></div><div><strong>5 + HOLD</strong><span>playable macros</span></div><div class="fact-note"><span class="small-arrow" aria-hidden="true">↳</span><span>Real Kotlin renders.<br>No browser synthesis.</span></div></div>
     </section>
 
     <section class="audition wrap" id="audition" aria-labelledby="audition-title">
       <div class="section-heading"><div><div class="eyebrow">THE LISTENING BENCH</div><h2 id="audition-title">Find the point of fusion.</h2></div><button class="text-button" id="export-review" type="button">Export your review <span aria-hidden="true">↗</span></button></div>
       <div class="tab-scroll"><div class="tabs" id="section-tabs" role="tablist" aria-label="Audition sections"></div></div>
       <div id="section-panel" role="tabpanel" tabindex="-1">
-        <div class="section-intro"><div><h3 id="section-title">Presets</h3><p id="section-description">Twelve starting points. Pick a sound, then listen to what its attack does to the body.</p></div><span class="clip-count" id="clip-count">Loading renders…</span></div>
+        <div class="section-intro"><div><h3 id="section-title">Presets</h3><p id="section-description">Thirty-six starting points, six per voice. Pick a sound, then listen to what its attack does to the body.</p></div><span class="clip-count" id="clip-count">Loading renders…</span></div>
         <div id="load-status" class="load-status" role="status"><span class="loading-ring" aria-hidden="true"></span> Opening the audition library…</div>
         <div id="load-error" class="load-error" hidden><h3>The audition library could not load.</h3><p id="load-error-detail">Check your connection and try again.</p><button id="retry-load" class="primary-link" type="button">Try again</button></div>
 
         <div class="listening-desk" id="listening-desk" hidden>
           <section class="player" aria-label="Audio player">
-            <div class="player-heading"><span class="player-eyebrow" id="player-category">PROVISIONAL PRESET</span><span class="player-format">PCM / MONO</span></div>
+            <div class="player-heading"><span class="player-eyebrow" id="player-category">FACTORY PRESET</span><span class="player-format">PCM / MONO</span></div>
             <div class="player-title-row"><h3 id="player-title">Select a render</h3><span class="voice-pill" id="player-voice">KEY</span></div>
             <p class="player-detail" id="player-detail">Listen for the attack changing the tonal body as it enters.</p>
             <div class="wave-stage" id="wave-stage"><canvas id="main-wave" aria-hidden="true"></canvas><div class="wave-playhead" id="wave-playhead" hidden></div><div class="wave-message" id="wave-message">Loading the actual waveform…</div><button class="wave-seek" id="wave-seek" type="button" aria-label="Seek audio; use left and right arrow keys to move one second"></button><span class="wave-zero">−</span><span class="wave-end">+</span></div>
@@ -60,7 +62,7 @@
           </section>
 
           <aside class="review-panel" aria-label="Selected render details and review">
-            <div class="review-head"><span class="eyebrow">PATCH AT A GLANCE</span><span class="review-index" id="review-index">01 / 12</span></div>
+            <div class="review-head"><span class="eyebrow">PATCH AT A GLANCE</span><span class="review-index" id="review-index">01 / 36</span></div>
             <div class="macro-grid" id="macro-grid"></div>
             <div class="review-divider"></div>
             <label class="note-label" for="review-note">Your listening notes <span>Saved on this device</span></label>
@@ -79,7 +81,7 @@
     <section class="listening-guide wrap" aria-labelledby="guide-title"><div><div class="eyebrow">A LITTLE DIRECTION</div><h2 id="guide-title">Listen beyond the first hit.</h2><p>Alloy's signature lives where the attack meets the tone. Keep your playback level comfortable, give the body a moment, and compare one change at a time.</p></div><ol><li><span>01</span><div><h3>Start with a voice.</h3><p>Find a useful dry sound. A clear root should remain underneath its material character.</p></div></li><li><span>02</span><div><h3>Compare the fusion.</h3><p>Switch between fused and modulation-removed renders. Listen for a change inside the body, beyond the audible attack layer.</p></div></li><li><span>03</span><div><h3>Hold it up to scrutiny.</h3><p>Explore sweeps, interactions, and settled loops. Keep, revise, or skip a render and export your notes.</p></div></li></ol></section>
   </main>
 
-  <footer class="site-footer wrap"><div><span class="footer-brand">Alloy / SnipSnap</span><p>Original generated attacks. A new hybrid voice.</p></div><div class="footer-note">V0.1 audition · presets await sonic approval<br><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering <span aria-hidden="true">↗</span></a></div></footer>
+  <footer class="site-footer wrap"><div><span class="footer-brand">Alloy / SnipSnap</span><p>Original generated attacks. A new hybrid voice.</p></div><div class="footer-note">V0.1 engine · expanded presets await review<br><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering <span aria-hidden="true">↗</span></a></div></footer>
   <noscript><div class="noscript">JavaScript is needed to select renders and use the audio player. You can still download <a href="manifest.json">the audition manifest</a>.</div></noscript>
 </body>
 </html>

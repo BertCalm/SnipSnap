@@ -43,6 +43,13 @@ object PrismAuditionGenerator {
         PrismVoice.VEIL to "Slowly separating harmonic texture",
     )
     private val NOTE_NAMES = listOf("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    private val FACTORY_CATEGORIES = linkedMapOf(
+        "keys-plucks" to "Keys and plucks",
+        "organs" to "Organs",
+        "basses" to "Basses",
+        "textures" to "Sustained textures",
+        "glass-bells" to "Glass and bells",
+    )
     private const val MATCHED_TARGET = 0.03
     private const val AUDITION_REVISION = "r2"
     private const val COMPARISON_GROUP = "glass-softening"
@@ -202,17 +209,22 @@ object PrismAuditionGenerator {
             }
         }
 
-        // Curated dry patches only. A patch's template and saved pitch are
-        // preserved; held presets remain genuine loop-only files.
+        // The complete 36-preset factory bank. A patch's template and saved
+        // pitch are preserved; held presets remain genuine loop-only files.
         for (voice in PrismVoice.entries) {
             for (patch in PrismPresets.forVoice(voice)) {
                 val macros = Prism.defaults(voice) + patch.macros
                 val midi = Prism.rootMidi(voice) + (macros.getValue("TUNE") * Prism.TUNE_SEMITONES).roundToInt()
+                val role = PrismPresets.descriptionFor(patch.name) ?: VOICE_ROLES.getValue(voice)
                 clip(
                     "presets", "preset_${slug(patch.name)}", patch.name,
-                    "${VOICE_ROLES.getValue(voice)}. ${macroLine(macros)}.",
+                    "${role.trimEnd().removeSuffix(".")}. ${macroLine(macros)}.",
                     voice, patch.macros, midi, patch.velocity, patch.template,
-                    extra = mapOf("patch" to patch.toJsonValue()) + if (patch.name == "Small Prism")
+                    extra = mapOf(
+                        "patch" to patch.toJsonValue(),
+                        "factoryCategory" to factoryCategory(voice),
+                        "factoryRole" to role,
+                    ) + if (patch.name == "Small Prism")
                         comparison("small-prism", midi, "r2", false) else emptyMap(),
                 )
             }
@@ -282,6 +294,7 @@ object PrismAuditionGenerator {
         }
 
         val presetCount = PrismVoice.entries.sumOf { PrismPresets.forVoice(it).size }
+        check(presetCount == 36) { "expected the complete 36-preset factory bank, found $presetCount" }
         check(clips.size == 140 + presetCount) { "incomplete audition matrix: ${clips.size} clips" }
         val baseClipCount = clips.size
 
@@ -333,10 +346,22 @@ object PrismAuditionGenerator {
             pair.size == 2 && pair.map { it["revision"] }.toSet() == setOf("r1", "r2") &&
                 pair[0]["note"] == pair[1]["note"] && pair[0]["macros"] == pair[1]["macros"]
         }) { "GLASS comparisons must pair the same pitch and controls across R1/R2" }
-        require(clips.size <= 160) { "audition matrix exceeds its 160-clip limit" }
+        check(clips.size == 185) { "expected 176 base cases and nine GLASS comparison extras, found ${clips.size}" }
+        val factoryPresets = clips.filter { it["section"] == "presets" && it["comparisonOnly"] != true }
+        check(factoryPresets.size == presetCount) { "the factory bank is missing preset cases" }
+        val factoryBank = linkedMapOf<String, Any?>(
+            "revision" to "factory-36",
+            "presetCount" to presetCount,
+            "categories" to FACTORY_CATEGORIES.map { (id, label) ->
+                linkedMapOf("id" to id, "label" to label, "count" to factoryPresets.count { it["factoryCategory"] == id })
+            },
+            "voiceCounts" to PrismVoice.entries.associate { it.name to PrismPresets.forVoice(it).size },
+            "finiteCount" to factoryPresets.count { it["loop"] != true },
+            "heldCount" to factoryPresets.count { it["loop"] == true },
+        )
         val sections = listOf(
             section("voices", "Voices", "Six identities across three registers, played softly and loudly."),
-            section("presets", "Presets", "Curated dry patches, ready for sonic review."),
+            section("presets", "Presets", "The complete 36-preset factory bank: keys, plucks, organs, basses, sustained textures, and glass or bells."),
             section("sweeps", "Macro sweeps", "Five steps per timbral control on KEY and VEIL; other controls stay at their defaults."),
             section("interactions", "Interactions", "Four corners of GRAIN × SHAPE, DRIFT × STRIKE, BODY × GRAIN, and DRIFT × SHAPE."),
             section("extremes", "Extremes", "Every timbral control at 1, a finite note on every voice."),
@@ -347,7 +372,8 @@ object PrismAuditionGenerator {
             "engine" to "PRISM",
             "modelVersion" to Prism.MODEL_VERSION,
             "auditionRevision" to AUDITION_REVISION,
-            "revisionDescription" to "GLASS R2: softer harmonic template. Other voices and Small Prism controls are unchanged.",
+            "revisionDescription" to "Complete 36-preset factory bank. Existing voice examples and the original eight presets retain their sound, including the GLASS R2 calibration.",
+            "factoryBank" to factoryBank,
             "generatedAt" to Instant.now().toString(),
             "sampleRate" to Dsp.RATE,
             "internalSampleRate" to Dsp.RATE * Dsp.OVERSAMPLE,
@@ -381,6 +407,14 @@ object PrismAuditionGenerator {
         linkedMapOf("id" to id, "label" to label, "description" to description)
 
     private fun noteName(midi: Int) = NOTE_NAMES[midi % 12] + (midi / 12 - 1)
+
+    private fun factoryCategory(voice: PrismVoice) = when (voice) {
+        PrismVoice.KEY, PrismVoice.PLUCK -> "keys-plucks"
+        PrismVoice.ORGAN -> "organs"
+        PrismVoice.BASS -> "basses"
+        PrismVoice.VEIL -> "textures"
+        PrismVoice.GLASS -> "glass-bells"
+    }
 
     private fun slug(value: String) = value.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_')
 

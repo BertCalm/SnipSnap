@@ -7,6 +7,7 @@ import com.snipsnap.xpm.WavInfo
 import com.snipsnap.xpm.XpmWriter
 import java.io.File
 import java.io.IOException
+import java.security.MessageDigest
 
 /**
  * Thrown by every writer that refuses to replace something already on disk —
@@ -92,7 +93,9 @@ object KitExporter {
         dest.mkdirs()
         if (!dest.isDirectory) throw IOException("could not create $dest")
 
-        val (program, written) = writeProgramAndSamples(kit, kitDir, programDir = dest, samplesDir = dest)
+        val (slots, written) = buildSlots(kit, kitDir, samplesDir = dest)
+        val program = XpmWriter().writeTo(dest, DrumProgram(kit.name, slots))
+        writeSidecar(kit, slots, dest)
         return ExportResult(dest, program, written, findings)
     }
 
@@ -186,7 +189,56 @@ object KitExporter {
                 chain = p.chain?.toPlay(frameCountBySlot.getValue(p.slot)),
             )
         }
+        SourceAttribution.writeTo(kit, samplesDir)
         return slots.toList() to written
+    }
+
+    /**
+     * Standalone exports carry editable history beside the actual exported
+     * samples. Names come from the program projection, including every velocity
+     * zone; the fingerprint describes the WAV copied now, never an earlier take.
+     * Project and expansion writers keep their own packaging semantics.
+     */
+    internal fun writeSidecar(kit: Kit, slots: List<Pad?>, samplesDir: File): File? {
+        // The readers do not yet reconstruct Slice Motion and its per-zone
+        // anchor windows. Keep chain exports on their existing program/audio
+        // import path instead of claiming editable history we cannot match.
+        if (kit.pads.any { it.chain != null }) {
+            val old = File(samplesDir, KitStore.FILE_NAME)
+            if (old.exists() && (!old.isFile || !old.delete())) {
+                throw IOException("could not remove unsupported chain history sidecar: $old")
+            }
+            return null
+        }
+        val exported = kit.copy(pads = kit.pads.map { pad ->
+            val slot = requireNotNull(slots[pad.slot - 1]) { "missing exported slot ${pad.slot}" }
+            val sampleFile = "${slot.sampleName}.wav"
+            val sha256 = MessageDigest.getInstance("SHA-256")
+            File(samplesDir, sampleFile).inputStream().use { input ->
+                val buffer = ByteArray(8192)
+                while (true) {
+                    val count = input.read(buffer)
+                    if (count < 0) break
+                    sha256.update(buffer, 0, count)
+                }
+            }
+            val digest = sha256.digest()
+                .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
+            pad.copy(
+                sampleFile = sampleFile,
+                velocityLayers = slot.velocityLayers.orEmpty().map { layer ->
+                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd)
+                },
+                // Printed boards depend on .boards/ source snapshots, which
+                // flat MPC exports do not carry. Their WAVs remain baked; do
+                // not restore an orphan editing wrapper on a later import.
+                // Ordinary opaque recipes and self-contained typed boards
+                // retain their existing sidecar behavior.
+                recipe = pad.recipe?.takeUnless { "boardPad" in it.entries },
+                source = pad.source + ("rawSha256" to digest),
+            )
+        })
+        return KitStore.save(exported, samplesDir)
     }
 
     /**

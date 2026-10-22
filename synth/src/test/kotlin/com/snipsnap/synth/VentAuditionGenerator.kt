@@ -24,6 +24,7 @@ object VentAuditionGenerator {
     private const val VELOCITY = .8f
     private const val SEED = 17
     private const val MODEL = 1
+    private val voices = listOf(VentVoice.ROUND, VentVoice.WIRE, VentVoice.TEAR)
 
     private data class Condition(
         val id: String, val title: String, val description: String,
@@ -45,7 +46,7 @@ object VentAuditionGenerator {
         val clips = mutableListOf<Map<String, Any?>>()
         val reports = mutableListOf<Map<String, Any?>>()
 
-        for (voice in VentVoice.entries) for (condition in conditions) {
+        for (voice in voices) for (condition in conditions) {
             val id = "${voice.name.lowercase()}-${condition.id}"
             val macros = Vent.defaultsFor(voice) + mapOf(
                 "CHAOS" to condition.chaos, "LEASH" to condition.leash, "LENGTH" to .7f,
@@ -146,7 +147,7 @@ object VentAuditionGenerator {
             "description" to "Twelve dry finite sounds generated from a Rössler trajectory: three intended characters, four CHAOS/LEASH comparisons.",
             "note" to "C4", "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED,
             "sampleRate" to Dsp.RATE, "channels" to 1,
-            "groups" to VentVoice.entries.map { voice -> linkedMapOf(
+            "groups" to voices.map { voice -> linkedMapOf(
                 "id" to voice.name, "title" to voiceTitle(voice), "description" to voiceDescription(voice),
             ) },
             "conditions" to conditions.map { linkedMapOf(
@@ -195,6 +196,7 @@ object VentAuditionGenerator {
         VentVoice.ROUND -> "Round"
         VentVoice.WIRE -> "Wire"
         VentVoice.TEAR -> "Tear"
+        else -> error("The original audition accepts model-1 voices only")
     }
 
     private fun engineDiagnostics(d: VentDiagnostics): Map<String, Any?> = linkedMapOf(
@@ -210,6 +212,7 @@ object VentAuditionGenerator {
         VentVoice.ROUND -> "A rounded starting point; listen for the orbit's body and motion."
         VentVoice.WIRE -> "A brighter starting point; listen for a narrow edge and shifting overtones."
         VentVoice.TEAR -> "A rougher starting point; listen for excursions and a tearing texture."
+        else -> error("The original audition accepts model-1 voices only")
     }
 
     private fun samplesHash(samples: FloatArray): String {

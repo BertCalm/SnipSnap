@@ -36,8 +36,63 @@ object Places {
     const val DOOR_OUT = "OUT ▸"
 
     const val LISTEN = "LISTEN · MIC"
+
+    /**
+     * The cold shelf's one filled button: what LISTEN · MIC then SNIP does,
+     * asked for in the player's own terms. It arms the same mic session the
+     * dock's LISTEN does; its accessible name is its label.
+     */
+    const val CATCH_FIRST = "CATCH YOUR FIRST SOUND ▸"
+
+    /** The mic-denied box's way out: the system's page for this app, where the permission is switched on. The arrow: it opens that page. */
+    const val OPEN_SETTINGS = "OPEN SETTINGS ▸"
     const val SNIPPED = "SNIPPED"
     const val STOPPED = "■"
+
+    /** The live transport chip's face while the beat is stopped: what a tap does, where [STOPPED] read as the stop. */
+    const val PLAY_GLYPH = "▶"
+
+    /** The dock's SNIP, shown while armed. No arrow: it takes the last 60 s, it opens nothing. */
+    const val SNIP = "SNIP"
+
+    /** The dock's STOP, beside SNIP while armed: the session ends. The shelf's ArmControl said the same word in bin red. */
+    const val STOP = "STOP"
+
+    /** The transport chip's accessible names, wherever a kit is open — the beat's own PLAY / STOP, read by what they do to the beat. */
+    const val PLAY_BEAT = "PLAY THE BEAT"
+    const val STOP_BEAT = "STOP THE BEAT"
+
+    /**
+     * The boot text's pace, in milliseconds: one [Copy.BOOT_LINES] line per
+     * step, READY a step after the last, and the glass lifting over
+     * [BOOT_FADE_MS]. The run is shorter than [BOOT_MAX_MS] (`PlacesTest`
+     * does the sum), and it is once per process start, never per screen.
+     */
+    const val BOOT_STEP_MS = 120L
+    const val BOOT_FADE_MS = 150L
+    const val BOOT_MAX_MS = 700L
+
+    /** The boot text is a tap away from gone: this is that button's accessible name, since the glass has no label of its own. */
+    const val BOOT_SKIP = "SKIP START-UP"
+
+    /**
+     * BEAT's SHARE chip, beside BOUNCE TO SNIPS: the pattern as two passes of
+     * audio, handed to the share sheet. The arrow: it opens the sheet. Spoken
+     * as [SHARE_BEAT_SPOKEN], because "share" alone does not say what.
+     */
+    const val SHARE_BEAT = "SHARE ▸"
+    const val SHARE_BEAT_SPOKEN = "SHARE THIS BEAT"
+
+    /**
+     * The first row of the dock's capture choice: the room, through the mic.
+     * The chip above already says LISTEN · MIC, so the row repeating it told
+     * nobody what it was for; this says it, as [ARM_INSIDE] does for the other.
+     * The row's accessible name stays [LISTEN].
+     */
+    const val ARM_MIC = "MIC ▸ RECORD THIS ROOM"
+
+    /** The second row of the dock's capture choice: another app's audio, with the projection consent. The arrow: it opens that consent. */
+    const val ARM_INSIDE = "APP AUDIO ▸ RECORD AN APP"
 
     /** `ARMED · 00:41 ON TAPE` — the shelf's counter, now on every screen. */
     fun armed(secondsOnTape: Int): String {
@@ -59,8 +114,35 @@ object Places {
         return "${active.uppercase(Locale.ROOT)} ▾ · $n ${if (n == 1) "KIT" else "KITS"} IN THIS PROJECT"
     }
 
+    /**
+     * The name chip's accessible name: what a tap does, then the fact the
+     * drawn chip has no room for. The line is [switcher]'s, and its `▾`
+     * is dropped on the way - neither face has the glyph, it drew as a
+     * dot, and a screen reader would read it out as a shape.
+     */
+    fun switchKitName(line: String): String = "SWITCH KIT · " + line.replace(" ▾", "")
+
     const val NO_KITS = "NO KITS YET"
     const val ADD_FROM_SHELF = "+ FROM SHELF"
+
+    /** The header chip that opens [ADD_FROM_SHELF]: the same door, in the room the header has. */
+    const val ADD_KIT = "+ KIT"
+
+    /** The kit sheet's last row. The arrow: it opens the shelf in pick mode. */
+    const val SHEET_ADD_FROM_SHELF = "+ FROM SHELF ▸"
+
+    /**
+     * One row of the kit sheet. The active kit is marked in words and a
+     * dot, never colour alone, and not "ON THE GRID" - that is the
+     * quantize language (CUT's ON THE GRID, GROOVE's), a different fact.
+     */
+    fun kitRow(name: String, active: Boolean): String {
+        val upper = name.uppercase(Locale.ROOT)
+        return if (active) "● $upper · ACTIVE" else upper
+    }
+
+    /** The shelf's header while `+ FROM SHELF` is picking a kit for [project]: the third pick mode beside the snip's and BREED's. */
+    fun addPickHeader(project: String): String = "PICK A KIT FOR ${project.uppercase(Locale.ROOT)}"
 
     /** The closed THIS KIT group's line: what it holds, like a pad sheet box. */
     fun thisKit(keyLabel: String?, bankBEmpty: Boolean, versions: Int): String {
@@ -107,7 +189,7 @@ object Places {
             "· INSTRUMENTS: WHAT YOU MADE ONE FROM, PLAYED ON THE SAME 16 PADS.",
         ),
         "THE DOCK" to listOf(
-            "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING WHEREVER YOU GO.",
+            "· THE BEAT PLAYS FROM HERE AND KEEPS PLAYING ON PADS, OUT, MAKE AND A PAD BENCH.",
             "· THE LIGHT IS THE TAPE. WHILE IT IS ARMED, SNIP TAKES THE LAST 60s.",
             "· THE LINE SAYS WHAT JUST HAPPENED. A DOOR BESIDE IT STAYS UNTIL YOU TAKE IT.",
         ),

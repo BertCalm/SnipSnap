@@ -51,7 +51,6 @@ object SfzImporter {
         if (File(kitDir, KitStore.FILE_NAME).exists() && !overwrite) {
             throw IOException("kit already exists: $kitDir (pass overwrite to replace it)")
         }
-        kitDir.mkdirs()
 
         val skipped = mutableListOf<Pair<String, String>>()
         val bySlot = LinkedHashMap<Int, MutableList<Map<String, String>>>()
@@ -66,6 +65,7 @@ object SfzImporter {
 
         val used = HashSet<String>()
         val copied = HashMap<String, Pair<String, Long>>() // resolved path -> stem.wav to frames
+        val planned = LinkedHashMap<String, File>() // stem.wav -> the sample it copies
         var copiedBytes = 0L
         fun bringSample(r: Map<String, String>): Pair<String, Long>? {
             val ref = r["sample"] ?: return null
@@ -84,7 +84,7 @@ object SfzImporter {
             var stem = Names.sanitizeStem(resolved.nameWithoutExtension)
             var n = 2
             while (!used.add(stem.lowercase())) stem = Names.sanitizeStem(resolved.nameWithoutExtension) + "_${n++}"
-            resolved.copyTo(File(kitDir, "$stem.wav"), overwrite = true)
+            planned["$stem.wav"] = resolved
             return ("$stem.wav" to frames).also { copied[resolved.path] = it }
         }
 
@@ -105,6 +105,17 @@ object SfzImporter {
             )
         }
         val kit = Kit(kitName, pads)
+        // Nothing touches the disk until the kit is known good. Copying each
+        // sample as its pad was read used to leave WAVs behind when the import
+        // then failed (and, with overwrite, replaced a kit's samples under a
+        // kit.json that still named the old ones); a pad skipped partway, or a
+        // velocity layer dropped past the four kept, left its sample as an
+        // orphan. Only samples a landed pad names are copied.
+        val named = pads.flatMapTo(HashSet()) { p -> listOf(p.sampleFile) + p.velocityLayers.map { it.sampleFile } }
+        kitDir.mkdirs()
+        for ((file, source) in planned) {
+            if (file in named) source.copyTo(File(kitDir, file), overwrite = true)
+        }
         KitStore.save(kit, kitDir)
         return Result(kit, kitDir, skipped)
     }

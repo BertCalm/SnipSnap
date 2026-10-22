@@ -213,8 +213,8 @@ object BubbleOverlay {
         // whenever any of this app's Activities is started; toggling
         // visibility (not add/remove) keeps the dragged-to position.
         // Debounced, not applied on every raw emission — an Activity
-        // recreated across a config change LoopActivity/MainActivity
-        // don't declare (rotation, some density/uiMode changes) produces
+        // recreated across a config change MainActivity does
+        // not declare (rotation, some density/uiMode changes) produces
         // a transient started-count dip (destroy-then-recreate), and
         // without the debounce that dip's GONE->VISIBLE round trip lands
         // as one real frame of the bubble flashing over the shelf.

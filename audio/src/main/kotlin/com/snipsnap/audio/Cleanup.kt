@@ -40,14 +40,18 @@ data class Snip(
         return peak
     }
 
-    // Data class with an array member: identity semantics would be surprising,
-    // and content equality on megabytes of audio would be worse. Compare format
-    // and length only, which is what tests and caches actually want.
+    // Data class with an array member: content equality on megabytes of audio
+    // would be too slow, so two snips are equal only when they share the same
+    // sample array (and format). Format-and-length equality used to stand in
+    // here, but then a re-render of the same length compared equal to the old
+    // one, and Compose state (mutableStateOf, remember keys) silently kept the
+    // stale audio. copy() shares the array, so a copy still equals its source.
+    // Compare audio with samples.contentEquals.
     override fun equals(other: Any?): Boolean =
         other is Snip &&
+            samples === other.samples &&
             channels == other.channels &&
-            sampleRate == other.sampleRate &&
-            samples.size == other.samples.size
+            sampleRate == other.sampleRate
 
     override fun hashCode(): Int =
         (channels * 31 + sampleRate) * 31 + samples.size
@@ -174,7 +178,12 @@ object Cleanup {
 
         val out = FloatArray(snip.samples.size)
         for (i in snip.samples.indices) {
-            out[i] = (snip.samples[i] * gain).coerceIn(-1f, 1f)
+            val v = snip.samples[i] * gain
+            // A non-finite sample stays non-finite through coerceIn (NaN
+            // fails both comparisons), so scrub it to silence here, the
+            // same rule WavWriter keeps on export: one poisoned sample
+            // must not ride through cleanup into every later stage.
+            out[i] = if (v.isFinite()) v.coerceIn(-1f, 1f) else 0f
         }
         return snip.copy(samples = out)
     }

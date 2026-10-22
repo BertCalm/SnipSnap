@@ -7,9 +7,11 @@ Yamaha operator/sample data. The supplied [engineering specification](ALLOY_ENGI
 describes a proposed hybrid gesture, rather than a reconstruction of the SY77.
 
 The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
-is the dry listening gate. Twelve provisional presets cover BASS, KEY, PLUCK,
-BRASS, STRING and SOFT. The proposed expansion to 36 presets waits for the owner's
-listening verdict.
+contains 36 dry factory presets across BASS, KEY, PLUCK, BRASS, STRING and SOFT.
+The owner heard the initial twelve-preset audition and authorized expansion on the
+same engine tuning. The agreed roster has six presets per voice, superseding the
+uneven allocation proposed in the supplied specification. The original twelve
+retain their names and settings; the twenty-four additions await listening review.
 
 ## Controls and render contract
 
@@ -52,8 +54,9 @@ export contains the material-modified sustain; it omits the opening strike.
 CLI rendering and `SynthKits.alloy()` use the same engine. A sixteen-pad dry kit
 contains a playable scale, voice examples and held material. TONAL and LOOP classes
 use the existing melodic export routing. The standard drum-program export keeps
-infinite sample looping disabled; pads 15/16 contain settled held WAVs, and
-MPC users can enable sample looping on those pads for indefinite HOLD.
+infinite sample looping disabled. Pads 15/16 retain Held Filament and Endless Ember
+as settled held WAVs; MPC users can enable sample looping on those pads for
+indefinite HOLD.
 Actual waveform classifier checks remain
 separate from those declared export classes.
 
@@ -69,11 +72,58 @@ Generated audio is ignored by Git. The page groups presets, voice/register/veloc
 coverage, five-point sweeps, interaction grids, FUSE ablation, settled HOLD and
 extremes. Playback is explicit; held loops use Web Audio for gapless repetition.
 Keep/revise/skip decisions and notes stay in the browser and can be exported as JSON.
+The original preset clip IDs and browser storage key remain stable, so existing
+listening notes stay attached after the expansion. New preset IDs are based on
+their names rather than their position in the roster.
+
+The default publication pack contains 309 listening clips and 393 WAVs, including
+all 36 preset renders and the existing diagnostic studies. `alloy-patches.zip`
+contains the complete patch library; `alloy-mpc-kit.zip` contains the sixteen-pad
+XPM program and PCM24 samples. The older `alloy-provisional-*.zip` URLs remain
+compatibility copies of the current archives. `-PalloyFull` expands the diagnostic
+sweeps and grids across all six voices; both modes include the complete preset roster.
 
 Listen to FUSE-on and attack-modulation-removed pairs at the same level. The latter
 keeps the direct attack path and ordinary PM, so a difference cannot be credited
 only to changing attack gain. Compare MATERIAL at ordinary FUSE settings, EDGE with
 FUSE zero, and held MATERIAL/FUSE changes after the initial gesture is absent.
+
+## Voice contrast candidates
+
+The owner's expanded-roster review identified similarity both within and between
+voices. A separate [voice contrast audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/contrast/)
+therefore compares twelve candidate voicing recipes, two per voice. These use
+explicit model-1 configurations. The original listening assets and their saved
+reviews remain available as a fixed reference.
+
+The listening selection uses the revised KEY, PLUCK, BRASS and STRING voices,
+and the original BASS and SOFT voices. `Alloy.defaultConfigFor` supplies that
+selection to new patches, factory presets and the patchless app preview. The
+36 factory names and macro settings remain the same; the 24 presets in the four
+revised voices adopt their selected configuration. Selecting one of those factory
+names again therefore uses its revised sound.
+
+Saved patch and pad JSON keeps its explicit configuration, including original
+sounds. Model-1 JSON with a missing or null configuration still decodes with the
+original recipe through `Alloy.configFor`; low-level diagnostic render defaults
+also retain that reference. New code should construct an `AlloyPatch` or pass
+`Alloy.defaultConfigFor(voice)` explicitly when making the selected voice.
+
+```sh
+./gradlew --no-daemon :synth:generateAlloyContrastAudition
+```
+
+`testkit/alloy-contrast/` contains 60 matched-level listening clips: six finite
+old/new voice pairs at identical macros, twelve candidate roles at MIDI 36/48/60,
+and six old/new settled HOLD pairs. All comparisons use velocity .75; the voice
+and held pairs use MIDI 48. Each clip records its complete configuration, raw
+measurements and source/compiled-class provenance. Twelve raw PCM24 references,
+twelve patch JSONs and a sixteen-pad MPC kit accompany the page. Pads A13–A16 are
+loop-only BASS/BRASS/STRING/SOFT candidates; enable whole-sample looping on the MPC
+for indefinite HOLD. The new page keeps its listening notes separate from the
+released audition. The page marks the selected original/revised voice for each
+comparison. The two-role candidates, expanded preset sweep and naming still need
+listening review; the voice choice does not approve every proposed preset.
 
 ## Validation and remaining acceptance
 
@@ -89,6 +139,6 @@ repository check is:
 High-register checks include a deterministic 4×/8× body comparison and near-Nyquist
 spectral probes. These bound solver divergence in the tested tonal cases; they
 do not establish complete alias elimination for every custom recipe or stochastic
-breath projection. Numerical
-checks do not establish sonic approval. Owner listening, phone/device behavior,
-hardware MPC listening and naming checks remain open.
+breath projection. Numerical checks do not establish sonic approval. The initial
+engine audition has been heard; expanded-preset listening, phone/device behavior,
+hardware MPC listening and final naming checks remain open.

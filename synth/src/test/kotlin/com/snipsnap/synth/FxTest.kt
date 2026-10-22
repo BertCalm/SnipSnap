@@ -718,6 +718,25 @@ class FxTest {
         assertTrue(Treatments.chain("amped", 0f).isBypass)
     }
 
+    // ---------- WAH ----------
+
+    @Test
+    fun `WAH sits right after CONTOUR and before SQUASH, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("contour") + 1, names.indexOf("wah"), "WAH is not right after CONTOUR: $names")
+        assertEquals(names.indexOf("wah") + 1, names.indexOf("squash"), "WAH is not right before SQUASH: $names")
+
+        val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
+        assertTrue(!without.toJsonText().contains("wah"), "no wah key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(wah = mapOf("AUTO" to 1f))
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the wah section is a no-op in the chain")
+        assertContentEquals(Wah.process(snare, mapOf("AUTO" to 1f)).samples, chained.samples, "the chain's wah row does not run Wah.process")
+    }
+
     // ---------- GHOST + MOTION ----------
 
     /** Zero-crossing rate over a window: a cheap pitch reading for a tone. */

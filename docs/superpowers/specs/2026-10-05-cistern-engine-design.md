@@ -326,6 +326,29 @@ circulation clock remain the same. The root-balance screen requires at least
 existing body and pairwise-contrast floors still apply. The before/after audition
 uses the prior `voice-contrast-2` audio; listening remains the acceptance check.
 
+The owner heard revisions 2 and 3 as identical. Audition revision
+`musicality-4` therefore changes the physical decay: the root loses energy
+more slowly in every surface, while upper modes lose energy sooner.
+Surface-specific radiation retains the onset body of FIRST, DRIP, POOL and
+RECOVERY, and emphasizes the root in CASCADE and RIPPLE. Modal ratios,
+contact and release fields, wet loading and the circulation clock are
+preserved. The existing contrast, pitch, conservation and HOLD checks still
+apply. The hosted comparison uses the published `musicality-3` clips;
+level-matched kit envelopes and tails are measured separately from waveform
+differences caused by changed landing phases. These measurements do not
+establish musical acceptance.
+
+The owner selected the midpoint tuning on 18 October 2026 after comparing it
+with revision 4 and the more harmonic pitch study. Audition revision
+`selected-midpoint-1` promotes that exact listening variant: dry upper ratios
+and the SKIN spacing factor sit halfway between the two versions in pitch
+cents. The root remains fixed. Radiation sits halfway in dB, with RECOVERY's
+upper radiation multiplied by 1.30 to retain separation from FIRST. The
+revision-4 losses, contact and release fields, wet loading, circulation clock,
+defaults and recipes are preserved. This selects the default voice character;
+the full control matrix, preset names and physical interpretation still have
+their separate measurement and listening limits.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches

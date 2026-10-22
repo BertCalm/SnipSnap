@@ -28,7 +28,8 @@ import java.util.zip.ZipFile
 object XpnImporter {
 
     /**
-     * A spend-down budget shared across many sample writes that together
+     * A spend-down budget shared across sample writes and native source
+     * payloads read or preserved in the imported kit, which together
      * bound the total one untrusted archive may cause to land on disk —
      * each sample is already capped on its own by [com.snipsnap.mpc3.LimitedRead]'s
      * per-entry ceiling, but a program with hundreds of pads (or, from
@@ -47,7 +48,8 @@ object XpnImporter {
         val remaining: Long get() = (max - spent).coerceAtLeast(0L)
 
         /**
-         * [n] is always a byte count a caller actually wrote — never
+         * [n] is always a byte count a caller read, wrote or reserved for
+         * native source metadata — never
          * negative — but this is part of a security boundary, so it does
          * not trust that: a negative [n] would shrink [spent] and hand back
          * budget that was never earned, and enough additions could in
@@ -61,7 +63,7 @@ object XpnImporter {
         }
     }
 
-    /** The default cap for one archive's worth of sample writes — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
+    /** The default cap for one archive's samples and native source metadata — [com.snipsnap.shell.ShelfImport]'s own ZIP budget, held here too since `:kit` doesn't depend on `:shell`. */
     const val DEFAULT_BUDGET_BYTES: Long = 512L * 1024 * 1024
 
     /**
@@ -161,9 +163,10 @@ object XpnImporter {
         budget: WriteBudget,
     ): ImportResult {
         run {
-            val xml = zip.getInputStream(programEntry).use {
+            val programBytes = zip.getInputStream(programEntry).use {
                 com.snipsnap.mpc3.LimitedRead.bytes(it, what = "program ${programEntry.name}")
-            }.toString(Charsets.UTF_8)
+            }
+            val xml = programBytes.toString(Charsets.UTF_8)
             // A real DOM parse, not a regex: attribute order, extra attributes,
             // whitespace, comments, CDATA and numeric entities are all handled,
             // where the old pattern-matcher silently dropped pads it couldn't
@@ -188,12 +191,29 @@ object XpnImporter {
             // (sampled or empty) marks a 0-based program — what we write,
             // hardware-verified; otherwise vendor 1-based.
             val zeroBased = program.zeroBased
+            val sourceMetadata = XpnSourceMetadata.read(zip, entries, programEntry.name, programBytes, budget)
+            sourceMetadata?.validate(instruments.mapNotNull { inst ->
+                val slot = if (zeroBased) inst.number + 1 else inst.number
+                if (slot !in 1..128) null else slot to inst.layers.sortedBy { it.velStart }.map { it.sampleName }
+            }.toMap())
+            val legacyNotice = if (sourceMetadata == null) {
+                XpnSourceMetadata.legacyNotice(zip, entries, programEntry.name, kitName, instruments.size, budget)
+            } else null
+            val sourceBySlot = sourceMetadata?.pads?.associate { it.slot to it.source }
+            val boundSamples = sourceMetadata?.pads?.flatMap { it.samples }?.associateBy { it.name.lowercase() }.orEmpty()
 
             // Samples resolve by bare stem, case-insensitive, anywhere.
             val wavByStem = HashMap<String, java.util.zip.ZipEntry>()
             for (e in entries) {
                 if (!e.name.endsWith(".wav", ignoreCase = true) || inPreviews(e.name)) continue
                 wavByStem.putIfAbsent(File(e.name).nameWithoutExtension.lowercase(), e)
+            }
+            // A native source sidecar identifies the actual file for this
+            // program, even when another program has the same bare stems.
+            for ((stem, binding) in boundSamples) {
+                wavByStem[stem] = requireNotNull(XpnSourceMetadata.singleEntry(entries, binding.entry)) {
+                    "source metadata sample is missing: ${binding.entry}"
+                }
             }
 
             // Names were made safe basenames at parse time; SafePath.child is
@@ -252,6 +272,11 @@ object XpnImporter {
                         )
                     }
                     budget.spend(out.length())
+                    boundSamples[stem.lowercase()]?.let { binding ->
+                        require(XpnSourceMetadata.sha256(out) == binding.sha256) {
+                            "source metadata hash differs for sample $stem.wav"
+                        }
+                    }
                 }
 
                 val pads = instruments.mapNotNull { inst ->
@@ -274,7 +299,13 @@ object XpnImporter {
                         decay = inst.decay,
                         cutoff = inst.cutoff,
                         resonance = inst.resonance,
-                        source = mapOf("importedFrom" to xpnFile.name),
+                        source = sourceBySlot?.getValue(slot) ?: buildMap {
+                            put("importedFrom", xpnFile.name)
+                            // The older aggregate notice has no safe pad
+                            // bindings. Keep it on every pad so retaining a
+                            // single pad cannot discard the source credits.
+                            legacyNotice?.let { put("attribution", it) }
+                        },
                         velocityLayers = if (ordered.size < 2) emptyList() else {
                             ordered.map { KitLayer("${it.sampleName}.wav", it.velStart, it.velEnd) }
                         },
@@ -282,7 +313,18 @@ object XpnImporter {
                 }
                 require(pads.isNotEmpty()) { "no pads landed in the 128-slot range" }
 
-                val kit = Kit(kitName, pads)
+                // Only the selected program's own adjacent sidecar may restore
+                // history; a different kit.json elsewhere in a pack has no claim.
+                val sidecarName = programEntry.name.substringBeforeLast('/', "")
+                    .let { if (it.isEmpty()) KitStore.FILE_NAME else "$it/${KitStore.FILE_NAME}" }
+                val sidecars = entries.filter { it.name == sidecarName }
+                require(sidecars.size <= 1) { "duplicate kit sidecar '$sidecarName' - refused" }
+                val sidecarText = sidecars.singleOrNull()?.let { entry ->
+                    zip.getInputStream(entry).use {
+                        com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
+                    }.toString(Charsets.UTF_8)
+                }
+                val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
                 KitStore.save(kit, staging)
                 // Only now, with everything down safely, does destDir
                 // change: the pre-existing-kit check above already

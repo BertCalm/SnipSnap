@@ -4,12 +4,12 @@ import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
 import android.util.Log
-import java.util.concurrent.atomic.AtomicBoolean
+import com.snipsnap.audio.PcmPlayback
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.concurrent.thread
 
 /**
- * The TAPE screen's unity-speed voice: streams [tape] forward through a mono
+ * The TAPE screen's unity-speed voice: streams [tape] forward through a mono or stereo
  * float `AudioTrack`, starting from wherever [start] last pointed and running
  * until it hits the end of the buffer or is told to [stop].
  *
@@ -34,28 +34,30 @@ import kotlin.concurrent.thread
  * `AudioTrack`, which never escapes the thread that owns it. [start] no
  * longer needs to synchronize with a previous thread at all — it just bumps
  * [generation] and spawns a new one; an old thread notices the generation
- * moved on (or [running] went false) and exits on its own, touching only
+ * moved on and exits on its own, touching only
  * its own track. The worst case from a stale generation racing a fresh one
  * is at most one buffer's worth (~150ms) of overlapping audio on device
  * output — self-healing, and a different order of problem than a foreign
  * thread flushing the live stream.
  */
-class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : AudioVoice {
+class TapeVoice(
+    private val tape: FloatArray,
+    private val sampleRate: Int,
+    private val channels: Int = 1,
+) : AudioVoice {
 
-    private val running = AtomicBoolean(false)
-    private val cursor = AtomicInteger(0)
+    init {
+        require(sampleRate > 0) { "TapeVoice needs a positive sample rate" }
+        require(channels in 1..2) { "TapeVoice supports mono or stereo, got $channels channels" }
+        require(tape.size % channels == 0) { "TapeVoice needs complete interleaved frames" }
+    }
+
+    private val tapeFrames = tape.size / channels
 
     /**
-     * CATCH A HIT's loop (`docs/CATCH.md`): `[loopIn, loopOut)` in frames
-     * when [start] was given one, else -1. The stream wraps its own cursor
-     * at OUT, so the loop is gapless — no thread or track is respawned
-     * per pass, and the deck model wrapping in step with it (its own
-     * `Event.Looped`) has nothing to restart.
+     * Bumped by every [start] and [stop]. Cancellation belongs to each stream's
+     * captured generation; a stale stream ending cannot stop a newer one.
      */
-    private val loopIn = AtomicInteger(-1)
-    private val loopOut = AtomicInteger(-1)
-
-    /** Bumped by every [start]; a stream thread stops once this moves past its own value. */
     private val generation = AtomicInteger(0)
     private var streamThread: Thread? = null
 
@@ -84,19 +86,13 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
      * down on its own, without touching the new thread's track.
      */
     fun start(frame: Int, loop: IntRange? = null) {
-        if (loop != null && loop.last + 1 > loop.first && loop.first >= 0) {
-            loopIn.set(loop.first.coerceAtMost(tape.size))
-            loopOut.set((loop.last + 1).coerceAtMost(tape.size))
-        } else {
-            loopIn.set(-1)
-            loopOut.set(-1)
-        }
-        cursor.set(frame.coerceIn(0, tape.size))
-        running.set(true)
+        // One frame reader per generation: stereo seeks and CATCH loop bounds
+        // use the same frame units as mono, and a stale stream owns only its own position.
+        val playback = PcmPlayback(tape, channels, startFrame = frame, loop = loop)
         val myGeneration = generation.incrementAndGet()
         focusOwners.incrementAndGet()
         AudioFocus.acquire(this)
-        streamThread = thread(name = "TapeVoice", isDaemon = true) { runLoop(myGeneration) }
+        streamThread = thread(name = "TapeVoice", isDaemon = true) { runLoop(myGeneration, playback) }
     }
 
     /**
@@ -106,7 +102,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
      * releases its own `AudioTrack` on its way out; see [runLoop].
      */
     fun stop() {
-        running.set(false)
+        generation.incrementAndGet()
     }
 
     /**
@@ -119,7 +115,6 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
      * here is a delay, never a leak.
      */
     fun release() {
-        running.set(false)
         generation.incrementAndGet()
         streamThread?.join(200)
         streamThread = null
@@ -136,23 +131,24 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
     private fun padToFillBuffer(track: AudioTrack, alreadyWritten: Int, myGeneration: Int): Int {
         val remaining = track.bufferSizeInFrames - alreadyWritten
         if (remaining <= 0) return 0
-        val silence = FloatArray(minOf(remaining, BLOCK_FRAMES))
-        var padded = 0
-        while (padded < remaining) {
+        val silence = FloatArray(minOf(remaining, BLOCK_FRAMES) * channels)
+        val remainingSamples = remaining * channels
+        var paddedSamples = 0
+        while (paddedSamples < remainingSamples) {
             if (generation.get() != myGeneration) break
-            val chunk = minOf(silence.size, remaining - padded)
+            val chunk = minOf(silence.size, remainingSamples - paddedSamples)
             val w = try {
                 track.write(silence, 0, chunk, AudioTrack.WRITE_BLOCKING)
             } catch (e: IllegalStateException) {
                 break
             }
             if (w <= 0) break
-            padded += w
+            paddedSamples += w
         }
-        return padded
+        return paddedSamples / channels
     }
 
-    private fun runLoop(myGeneration: Int) {
+    private fun runLoop(myGeneration: Int, playback: PcmPlayback) {
         // Construction cost lives here, off the UI thread that calls start()
         // — this is a MODE_STREAM track (no asset to decode or buffer to
         // prefill up front, unlike AndroidAudioSink's long-lived track,
@@ -165,16 +161,15 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         // format" case GrainVoice.start()'s own KDoc documents) would
         // otherwise be a hard process crash — TapeScreen/PadSheetScreen both
         // call `start()` unguarded, so there is no caller anywhere that
-        // could catch it. Caught here instead: log it, leave [running]
-        // false, and exit this thread quietly. Silence, not a crash — the
+        // could catch it. Caught here instead: log it and exit this thread
+        // quietly. Silence, not a crash — the
         // residual (this exit is not itself reported to the UI) is a
         // deliberate, narrower fix than plumbing a toast out of a class that
         // has none of the callback machinery for one.
         val track = try {
-            buildTrack(sampleRate, tape.size)
+            buildTrack(sampleRate, tapeFrames, channels)
         } catch (e: Exception) {
             Log.w(TAG, "TapeVoice: buildTrack rejected the format, staying silent", e)
-            running.set(false)
             if (focusOwners.decrementAndGet() == 0) AudioFocus.release(this)
             return
         }
@@ -188,16 +183,10 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         var framesWritten = 0
         try {
             runCatching { track.play() }
-            val block = FloatArray(BLOCK_FRAMES)
-            while (running.get() && generation.get() == myGeneration) {
-                var at = cursor.get()
-                val out = loopOut.get()
-                if (out > 0 && at >= out) {
-                    at = loopIn.get()
-                    cursor.set(at)
-                }
-                if (at >= tape.size) {
-                    running.set(false)
+            val block = FloatArray(BLOCK_FRAMES * channels)
+            while (generation.get() == myGeneration) {
+                val n = playback.readFrames(block)
+                if (n == 0) {
                     ranToCompletion = true
                     // Even a buffer capped to the clip's own size (see
                     // bufferBytes()'s KDoc) can't shrink below the device's
@@ -214,14 +203,12 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                     framesWritten += padToFillBuffer(track, framesWritten, myGeneration)
                     return
                 }
-                val limit = if (out > 0) minOf(out, tape.size) else tape.size
-                val n = minOf(BLOCK_FRAMES, limit - at)
-                System.arraycopy(tape, at, block, 0, n)
                 var written = 0
-                while (written < n) {
-                    if (!running.get() || generation.get() != myGeneration) return
+                val sampleCount = n * channels
+                while (written < sampleCount) {
+                    if (generation.get() != myGeneration) return
                     val w = try {
-                        track.write(block, written, n - written, AudioTrack.WRITE_BLOCKING)
+                        track.write(block, written, sampleCount - written, AudioTrack.WRITE_BLOCKING)
                     } catch (e: IllegalStateException) {
                         // The track vanished under us (screen exit racing this write) —
                         // drop the rest of this block rather than propagate, matching
@@ -231,7 +218,6 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                     if (w <= 0) return
                     written += w
                 }
-                cursor.addAndGet(n)
                 framesWritten += n
             }
         } finally {
@@ -314,7 +300,7 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
         const val DRAIN_MARGIN_NANOS = 300_000_000L
         const val DRAIN_POLL_MILLIS = 5L
 
-        fun buildTrack(sampleRate: Int, tapeFrames: Int): AudioTrack = AudioTrack.Builder()
+        fun buildTrack(sampleRate: Int, tapeFrames: Int, channels: Int): AudioTrack = AudioTrack.Builder()
             .setAudioAttributes(
                 AudioAttributes.Builder()
                     .setUsage(AudioAttributes.USAGE_MEDIA)
@@ -325,10 +311,10 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
                 AudioFormat.Builder()
                     .setEncoding(AudioFormat.ENCODING_PCM_FLOAT)
                     .setSampleRate(sampleRate)
-                    .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                    .setChannelMask(channelMask(channels))
                     .build(),
             )
-            .setBufferSizeInBytes(bufferBytes(sampleRate, tapeFrames))
+            .setBufferSizeInBytes(bufferBytes(sampleRate, tapeFrames, channels))
             .setTransferMode(AudioTrack.MODE_STREAM)
             .build()
 
@@ -346,16 +332,19 @@ class TapeVoice(private val tape: FloatArray, private val sampleRate: Int) : Aud
          * construction. Longer clips keep the original streaming-sized
          * buffer untouched.
          */
-        fun bufferBytes(sampleRate: Int, tapeFrames: Int): Int {
-            val wanted = sampleRate * BUFFER_MILLIS / 1000 * BYTES_PER_FLOAT
-            val tapeBytes = tapeFrames * BYTES_PER_FLOAT
-            val capped = if (tapeBytes in 1 until wanted) tapeBytes else wanted
+        fun bufferBytes(sampleRate: Int, tapeFrames: Int, channels: Int): Int {
+            val wanted = sampleRate * BUFFER_MILLIS / 1000 * channels * BYTES_PER_FLOAT
+            val tapeBytes = tapeFrames.toLong() * channels * BYTES_PER_FLOAT
+            val capped = if (tapeBytes in 1L until wanted.toLong()) tapeBytes else wanted.toLong()
             val minimum = AudioTrack.getMinBufferSize(
                 sampleRate,
-                AudioFormat.CHANNEL_OUT_MONO,
+                channelMask(channels),
                 AudioFormat.ENCODING_PCM_FLOAT,
             )
-            return maxOf(capped, minimum)
+            return maxOf(capped.toInt(), minimum)
         }
+
+        fun channelMask(channels: Int): Int =
+            if (channels == 2) AudioFormat.CHANNEL_OUT_STEREO else AudioFormat.CHANNEL_OUT_MONO
     }
 }

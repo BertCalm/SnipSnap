@@ -39,6 +39,7 @@ import com.snipsnap.app.TapeVoice
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -114,6 +115,8 @@ fun SnipsScreen(
      */
     snipsRoot: File,
     onBack: () -> Unit,
+    /** → BIN: the door under the header, shown only while the snip bin holds something. */
+    onBin: () -> Unit,
     onToast: (String) -> Unit,
     onOpenInTape: (File) -> Unit,
     onPickPadFor: (File) -> Unit,
@@ -148,21 +151,21 @@ fun SnipsScreen(
         snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
     }
 
-    // DELETED SNIPS (name-and-find task): the SNIPS-level equivalent of
-    // KitsScreen's own "DELETED KITS ▸" row — reached from SNIPS, not the
-    // shelf, since snips (not kits) are what it holds. `binnedCount` gates
+    // BIN door (was DELETED SNIPS, name-and-find task): `binnedCount` gates
     // the button below (shown only when the bin actually holds something,
     // the same locked behavior `binnedKitsCount` already keeps for kits).
-    // Keyed on `deletedSnipsOpen` itself, not `Unit` — `App.kt`'s own
-    // `binnedKitsCount` effect gives the exact reasoning: EMPTY THE BIN NOW
-    // (or a RESTORE) inside DeletedSnipsScreen changes nothing else this
-    // effect watches, so without that key the row would keep reading a
-    // stale count after the door behind it is empty. The local `+= 1`/`- 1`
-    // nudges in doDelete/onRestored below stay too, for instant feedback
-    // between refreshes.
-    var deletedSnipsOpen by remember { mutableStateOf(false) }
+    // Keyed on `Unit`: the bin is no longer hosted by this screen, it is the
+    // BIN bench `onBin` navigates to, so this screen has no "bin closed again"
+    // edge of its own to re-count on. That makes this a count taken once per
+    // mount. It is correct for as long as walking into BIN and back remounts
+    // this screen (whoever owns `onBin` decides that): then EMPTY THE BIN NOW
+    // or a RESTORE over there is seen by the fresh load here. If the host ever
+    // keeps this screen composed underneath BIN, the count goes stale until
+    // the next mount, and this effect needs a key the host can bump. The
+    // local `+= 1` in doDelete below stays, for instant feedback between
+    // loads.
     var binnedCount by remember { mutableStateOf(0) }
-    LaunchedEffect(deletedSnipsOpen) {
+    LaunchedEffect(Unit) {
         binnedCount = withContext(Dispatchers.IO) { SnipStore.binned(snipsRoot).size }
     }
 
@@ -263,35 +266,6 @@ fun SnipsScreen(
         }
     }
 
-    if (deletedSnipsOpen) {
-        // Placed here, past `voice`/`playToken`/`stopPlayback`/
-        // `DisposableEffect` above (NOT at the top of the function): an
-        // early return before those hooks would mean a PLAY in flight when
-        // DELETED SNIPS opens is orphaned — the coroutine's captured
-        // `playToken` still matches, so it still assigns a fresh `voice`
-        // into a state slot this branch never composes again, and the
-        // `DisposableEffect` that would have released it was never
-        // registered either. Stopping first closes that window; keeping
-        // the hooks composed either way is the belt this relies on.
-        // Everything BELOW this point (confirmDelete/renameTarget/the main
-        // BackHandler/the dialogs) is still skipped while this shows, so
-        // DELETED SNIPS owns Back entirely on its own with no shared
-        // `enabled =` gate to keep in sync.
-        stopPlayback()
-        DeletedSnipsScreen(
-            snipsRoot = snipsRoot,
-            onBack = { deletedSnipsOpen = false },
-            onToast = onToast,
-            onRestored = {
-                binnedCount = (binnedCount - 1).coerceAtLeast(0)
-                scope.launch {
-                    snips = withContext(Dispatchers.IO) { SnipStore.listWithInfo(snipsRoot) }
-                }
-            },
-        )
-        return
-    }
-
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
     // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
@@ -357,17 +331,16 @@ fun SnipsScreen(
                 )
             }
 
-            // DELETED SNIPS: gated on the bin actually holding something —
-            // KitsScreen's own "DELETED KITS ▸" row, one level down: a user
+            // BIN: gated on the bin actually holding something — a user
             // who has never deleted a snip sees no door to an empty room
             // at all (locked behavior).
             if (binnedCount > 0) {
                 ActionButton(
-                    "DELETED SNIPS ▸ $binnedCount WAITING",
+                    "BIN ▸ $binnedCount WAITING",
                     scheme,
                     enabled = true,
                     modifier = Modifier.fillMaxWidth(),
-                    onClick = { deletedSnipsOpen = true },
+                    onClick = onBin,
                 )
             }
 
@@ -672,12 +645,12 @@ private fun HeaderChip(label: String, scheme: Scheme, modifier: Modifier = Modif
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .border(1.dp, scheme.ink2.tape, RoundedCornerShape(3.dp))
-            .tapeClick(label = label, onClick = onClick)
+            .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
+            .tapeClick(label = label, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.ink.tape)
+        TapeText(label, TapeType.pixel, scheme.lcdInk.tape)
     }
 }
 

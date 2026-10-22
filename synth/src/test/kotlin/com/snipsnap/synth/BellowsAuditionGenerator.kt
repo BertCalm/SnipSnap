@@ -19,22 +19,34 @@ import kotlin.math.roundToInt
 object BellowsAuditionGenerator {
     private data class Clip(val id: String, val title: String, val section: String,
         val description: String, val patch: BellowsPatch, val comparison: Comparison? = null,
-        val joinedWith: BellowsPatch? = null)
+        val joinedWith: BellowsPatch? = null, val role: String? = null, val performance: Performance? = null)
     private data class Comparison(val parameter: String, val endpoint: String, val value: Float?,
         val pairId: String, val lowLabel: String, val highLabel: String)
+    private data class PlayedNote(val midi: Int, val startBeat: Double, val holdBeats: Double, val velocity: Float)
+    private data class Performance(val kind: String, val bpm: Int, val notes: List<PlayedNote>,
+        val releaseSeconds: Double, val tonicMidi: Int, val tonicBedMidi: Int? = null)
     private const val COMPARISON_GAP_SECONDS = .25
+    private const val INSTRUMENT_ZIP = "Bellows-phone-mpc-m2.zip"
 
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.none { it.startsWith("--") }) { "BELLOWS audition accepts an output directory only" }
         val root = File(args.firstOrNull() ?: "../testkit/bellows-audition").also { it.mkdirs() }
         File(root, "wav").mkdirs()
-        val specs = bodyBreathComparisons() + firstListen() + comparisons()
+        val specs = library() + musicalDemos() + bodyBreathComparisons() + firstListen() + comparisons()
         val clips = ArrayList<JsonValue>()
         val patches = ArrayList<JsonValue>()
         val firstListenFiles = ArrayList<File>()
         val bodyBreathFiles = ArrayList<File>()
+        val libraryFiles = ArrayList<File>()
         for ((index, spec) in specs.withIndex()) {
+            if (spec.performance != null) {
+                val (clip, patch) = renderMusicalClip(spec, root)
+                clips += clip
+                patches += patch
+                println("BELLOWS ${index + 1}/${specs.size}: ${spec.id}-m${spec.patch.model} (musical ${spec.performance.kind})")
+                continue
+            }
             val p = spec.patch
             val id = "${spec.id}-m${p.model}"
             val rawSource = Bellows.renderRaw(p.voice, p.macros, p.midi, p.velocity, p.gesture, p.model)
@@ -98,6 +110,7 @@ object BellowsAuditionGenerator {
                 "macros" to JsonValue.Obj(LinkedHashMap(p.macros.mapValues { num(it.value) })),
                 "metrics" to JsonValue.Obj(metrics),
             )
+            spec.role?.let { clipFields["role"] = str(it) }
             spec.comparison?.let { comparison ->
                 val fields = linkedMapOf<String, JsonValue>(
                     "parameter" to str(comparison.parameter), "endpoint" to str(comparison.endpoint),
@@ -133,6 +146,7 @@ object BellowsAuditionGenerator {
                 firstListenFiles += File(root, rawFile)
             }
             if (spec.section == "body-breath") bodyBreathFiles += listOf(File(root, file), File(root, rawFile))
+            if (spec.section == "library") libraryFiles += listOf(File(root, file), File(root, rawFile))
             println("BELLOWS ${index + 1}/${specs.size}: $id (${String.format(Locale.ROOT, "%.2f", decoded.frameCount.toDouble() / 44_100)} s)")
         }
         val patchFile = File(root, "patches-m${Bellows.MODEL_VERSION}.json")
@@ -140,15 +154,21 @@ object BellowsAuditionGenerator {
             "engine" to str("BELLOWS"), "model" to num(Bellows.MODEL_VERSION), "patches" to JsonValue.Arr(patches),
         ))))
         patchFile.copyTo(File(root, "patches.json"), overwrite = true)
-        val manifest = JsonValue.Obj(linkedMapOf(
-            "engine" to str("BELLOWS"), "title" to str("Bellows — first listen"),
+        val manifestFields = linkedMapOf(
+            "engine" to str("BELLOWS"), "title" to str("Bellows — play the library"),
             "model" to num(Bellows.MODEL_VERSION), "sampleRate" to num(44_100), "bitDepth" to num(16),
             "rawSourceHeadroom" to num(Bellows.RAW_SOURCE_HEADROOM),
-            "description" to str("Four original reed-and-wheel voices, dry from the SnipSnap Kotlin engine. Matched clips share the repository's audition loudness; raw clips preserve source dynamics. Gestures are rendered performances, and held examples repeat a settled source loop four times."),
+            "description" to str("Twenty-four original dry presets, four phrases and four held chords, plus the body/breath and control studies. Musical demos play native key-note attacks, sustain their real loop markers and apply a note-off release; their unmatched files preserve within-performance touch. Preset and control raw files preserve source dynamics."),
             "firstListenZip" to str("Bellows-first-listen-m${Bellows.MODEL_VERSION}.zip"),
+            "libraryZip" to str("Bellows-library-m${Bellows.MODEL_VERSION}.zip"),
             "bodyBreathZip" to str("Bellows-body-breath-m${Bellows.MODEL_VERSION}.zip"), "patches" to str(patchFile.name),
             "clips" to JsonValue.Arr(clips),
-        ))
+        )
+        val instrumentDownloads = File(root, "instrument-downloads.json")
+        if (instrumentDownloads.isFile) manifestFields["instrumentDownloads"] = Json.parse(instrumentDownloads.readText())
+        else if (File(root, INSTRUMENT_ZIP).isFile && File(root, INSTRUMENT_ZIP).length() <= 25L * 1024 * 1024)
+            manifestFields["instrumentZip"] = str(INSTRUMENT_ZIP)
+        val manifest = JsonValue.Obj(manifestFields)
         File(root, "manifest.json").writeText(Json.write(manifest))
         val firstListenManifest = File(root, "first-listen-manifest.json").also {
             it.writeText(Json.write(JsonValue.Obj(LinkedHashMap(manifest.entries).also { fields ->
@@ -160,9 +180,15 @@ object BellowsAuditionGenerator {
                 fields["clips"] = JsonValue.Arr(clips.filter { it.obj()["section"]?.str() == "body-breath" })
             })))
         }
+        val libraryManifest = File(root, "library-manifest.json").also {
+            it.writeText(Json.write(JsonValue.Obj(LinkedHashMap(manifest.entries).also { fields ->
+                fields["clips"] = JsonValue.Arr(clips.filter { it.obj()["section"]?.str() == "library" })
+            })))
+        }
         File(root, "README.txt").writeText("""
-            BELLOWS MODEL ${Bellows.MODEL_VERSION} — FIRST LISTEN
-            Eight original dry presets from SnipSnap, plus their raw source renders.
+            BELLOWS MODEL ${Bellows.MODEL_VERSION} — PLAY THE LIBRARY
+            The full audition contains 24 original dry presets, four family phrases and four chord demos.
+            Each ZIP includes the selection in its accompanying manifest plus the full recipe list.
             WAV: mono, 44.1 kHz, PCM16. Matched uses AuditionLevel.level, the shared repository listening rule.
             Raw preserves source excitation dynamics before the engine's output leveling.
             Body & breath compares true 0/1 endpoints and 0/.25/.5/.75/1 sweeps with STEADY gesture,
@@ -173,6 +199,14 @@ object BellowsAuditionGenerator {
             ${patchFile.name} records every audition recipe, including MIDI base, velocity, gesture and model.
             The manifest's MIDI field is the sounded root after TUNE. The patch's MIDI field is its saved base.
             Held clips play four source periods; WAV smpl metadata carries root and loop frames.
+            Musical demos use BellowsKeys.note: its genuine note attack, the settled sustain loop,
+            the saved gesture and velocity, and a linear note-off release. At least one 6.25-second
+            held note in every musical demo crosses the source's loop boundary. No extra velocity
+            multiplier is applied: velocity timbre and level are already present in key-note PCM.
+            Musical raw files are the native mixed performance before whole-clip audition matching;
+            matching uses a single gain for that entire performance, preserving its internal touch.
+            WHEEL melodies disable the tracking drone. The wheel chord adds a separate fixed C3
+            tonic bed once; that bed does not follow the chord's independently played melody notes.
             WHEEL's tracking octave/fifth bed is a rendered source component. When a sampler repitches the whole WAV,
             that bed follows it. These examples do not implement a separate global drone or live bellows input.
             Reproduce: ./gradlew :synth:generateBellowsAudition
@@ -181,6 +215,8 @@ object BellowsAuditionGenerator {
             firstListenFiles + listOf(patchFile, firstListenManifest, File(root, "README.txt")))
         writeZip(root, "Bellows-body-breath-m${Bellows.MODEL_VERSION}.zip",
             bodyBreathFiles + listOf(patchFile, focusedManifest, File(root, "README.txt")))
+        writeZip(root, "Bellows-library-m${Bellows.MODEL_VERSION}.zip",
+            libraryFiles + listOf(patchFile, libraryManifest, File(root, "README.txt")))
         for (asset in listOf("index.html", "styles.css", "app.js")) {
             val resource = BellowsAuditionGenerator::class.java.getResourceAsStream("/bellows-audition/$asset")
                 ?: error("missing BELLOWS audition resource /bellows-audition/$asset")
@@ -189,7 +225,133 @@ object BellowsAuditionGenerator {
         println("BELLOWS audition: ${clips.size} clips, ${clips.size * 2} WAVs, ${root.absolutePath}/manifest.json")
     }
 
-    private fun firstListen(): List<Clip> = BellowsPresets.all().mapIndexed { i, p ->
+    private val libraryRoles = mapOf(
+        "Amber Breath" to "Warm swell", "Silver Ranks" to "Bright reed ranks",
+        "Midnight Pull" to "Dark pull", "Forward Push" to "Bright accent",
+        "Village Stab" to "Short folk accent", "Dancing Reeds" to "Pulsing paired reeds",
+        "Quiet Wheel" to "Gentle tracking bed", "Wrist Sparks" to "Pulsing bridge buzz",
+        "Bare Reed" to "Direct soft reed", "Chest Tone" to "Deep enclosure",
+        "Reed Tap" to "Concise accent", "Slow Bloom" to "Long swell",
+        "Paper Reed" to "Soft pull", "Round Push" to "Enclosed push",
+        "Reed Knock" to "Concise accent", "Reed Tread" to "Pressure pulse",
+        "Soft Grain" to "Quiet rounded reed", "Wooden Chest" to "Enclosed folk tone",
+        "Reed Reply" to "Open accent", "Harvest Air" to "Long paired swell",
+        "Solo Thread" to "Clean melody", "Hollow Bow" to "Enclosed wheel tone",
+        "Fifth Breath" to "Long tracking bed", "Bridge Tap" to "Short buzz accent",
+    )
+
+    private fun library(): List<Clip> = BellowsPresets.all().map { patch ->
+        val role = libraryRoles.getValue(patch.name)
+        Clip("library-${slug(patch.name)}", patch.name, "library",
+            "$role. One dry C4 note with this preset's saved pressure gesture and finite HOLD.", patch, role = role)
+    }
+
+    private fun musicalDemos(): List<Clip> = buildList {
+        for (voice in BellowsVoice.entries) {
+            val patch = BellowsPresets.forVoice(voice).first()
+            val melody = listOf(60, 63, 67, 65, 63, 60, 58, 60).mapIndexed { i, midi ->
+                PlayedNote(midi, i * .5, .38, listOf(.35f, .65f, 1f, .65f)[i % 4])
+            } + PlayedNote(60, 4.5, 10.0, .65f)
+            add(Clip("phrase-${slug(voice.name)}", "${display(voice.name)} · a little air", "musical",
+                "A C-minor phrase at 96 BPM, from soft to firm touch, then a long C4 hold and release. " +
+                    if (voice == BellowsVoice.WHEEL) "Melody only; the tracking drone is off." else
+                        "Listen for the attack, the changing touch and the settled sustain.",
+                patch, role = "Phrase · C minor · 96 BPM",
+                performance = Performance("phrase", 96, melody, .6, 60)))
+            val chord = listOf(60, 63, 67, 70).mapIndexed { i, midi ->
+                PlayedNote(midi, 0.0, 10.0, listOf(.65f, .55f, .8f, .45f)[i])
+            } + listOf(60, 65, 67).map { midi -> PlayedNote(midi, 12.0, 3.0, .65f) }
+            add(Clip("chord-${slug(voice.name)}", "${display(voice.name)} · room to hold", "musical",
+                "Cm7, a breath, then Csus4 at 96 BPM. The first chord holds for 6.25 seconds and crosses the loop seam. " +
+                    if (voice == BellowsVoice.WHEEL) "One separate C3 tonic bed stays fixed beneath both chords." else
+                        "Each note keeps its own attack, touch and release; no external effects.",
+                patch, role = "Chords · Cm7 / Csus4",
+                performance = Performance("chord", 96, chord, .6, 60,
+                    if (voice == BellowsVoice.WHEEL) 48 else null)))
+        }
+    }
+
+    /** Plays the same [start,end) loop and linear note-off fade as the keygroup hosts. */
+    private fun renderMusicalClip(spec: Clip, root: File): Pair<JsonValue, JsonValue> {
+        val p = spec.patch
+        val performance = requireNotNull(spec.performance)
+        val beatSeconds = 60.0 / performance.bpm
+        val gateEnd = performance.notes.maxOf { (it.startBeat + it.holdBeats) * beatSeconds }
+        val samples = FloatArray(((gateEnd + performance.releaseSeconds + .1) * 44_100).roundToInt())
+        val macros = p.macros + mapOf("TUNE" to 0f, "HOLD" to 1f) +
+            if (p.voice == BellowsVoice.WHEEL) mapOf("DRONE" to 0f) else emptyMap()
+        val cache = HashMap<Pair<Int, Float>, KeyNote>()
+        var loopCrossings = 0
+        fun mix(note: KeyNote, startSeconds: Double, holdSeconds: Double, bedGain: Float = 1f) {
+            val source = note.snip.samples
+            val loopStart = note.loopStartFrame.toInt()
+            require(loopStart > 0 && loopStart < source.size)
+            val loopLength = source.size - loopStart
+            val start = (startSeconds * 44_100).roundToInt()
+            val gate = (holdSeconds * 44_100).roundToInt()
+            val release = (performance.releaseSeconds * 44_100).roundToInt()
+            if (gate > source.size) loopCrossings++
+            for (frame in 0 until gate + release) {
+                val index = if (frame < source.size) frame else loopStart + (frame - loopStart) % loopLength
+                val envelope = if (frame < gate) 1f else (1f - (frame - gate + 1f) / release).coerceAtLeast(0f)
+                samples[start + frame] += source[index] * envelope * .35f * bedGain
+            }
+        }
+        for (event in performance.notes) {
+            val note = cache.getOrPut(event.midi to event.velocity) {
+                BellowsKeys.note(p.voice, macros, event.midi, event.velocity, p.gesture, p.model)
+            }
+            mix(note, event.startBeat * beatSeconds, event.holdBeats * beatSeconds)
+        }
+        performance.tonicBedMidi?.let { tonic ->
+            mix(BellowsKeys.tonicBed(tonic, p.macros + ("BUZZ" to 0f), .65f,
+                BellowsGesture.STEADY, p.model), 0.0, gateEnd, .45f)
+        }
+        require(loopCrossings > 0) { "${spec.id}: the musical demo never crossed its sustain loop" }
+        val native = Snip(samples, 1, 44_100)
+        require(native.samples.all { it.isFinite() && abs(it) <= 1f }) { "${spec.id}: unsafe performance mix" }
+        val matched = AuditionLevel.level(native)
+        val id = "${spec.id}-m${p.model}"
+        val file = "wav/$id.wav"
+        val rawFile = "wav/$id-raw.wav"
+        WavWriter.write(File(root, file), matched, WavWriter.BitDepth.PCM_16)
+        WavWriter.write(File(root, rawFile), native, WavWriter.BitDepth.PCM_16)
+        val events = JsonValue.Arr(performance.notes.map { note -> JsonValue.Obj(linkedMapOf(
+            "midi" to num(note.midi), "startBeat" to num(note.startBeat),
+            "holdBeats" to num(note.holdBeats), "velocity" to num(note.velocity),
+        )) })
+        val playing = JsonValue.Obj(linkedMapOf(
+            "kind" to str(performance.kind), "bpm" to num(performance.bpm),
+            "releaseSeconds" to num(performance.releaseSeconds), "notes" to events,
+            "tonicBedMidi" to (performance.tonicBedMidi?.let { num(it) } ?: JsonValue.Null),
+            "voiceGain" to num(.35), "bedGain" to num(.45), "adapter" to str("BellowsKeys.note"),
+            "tonicBed" to (performance.tonicBedMidi?.let { tonic -> JsonValue.Obj(linkedMapOf(
+                "midi" to num(tonic), "velocity" to num(.65), "gesture" to str("STEADY"),
+                "adapter" to str("BellowsKeys.tonicBed"), "relativeGain" to num(.45),
+                "macros" to JsonValue.Obj(LinkedHashMap((p.macros + mapOf("TUNE" to 0f,
+                    "HOLD" to 1f, "DRONE" to 1f, "BUZZ" to 0f)).mapValues { num(it.value) })),
+            )) } ?: JsonValue.Null),
+            "macros" to JsonValue.Obj(LinkedHashMap(macros.mapValues { num(it.value) })),
+        ))
+        val clip = JsonValue.Obj(linkedMapOf(
+            "id" to str(id), "title" to str(spec.title), "voice" to str(p.voice.name),
+            "section" to str(spec.section), "description" to str(spec.description), "role" to str(spec.role ?: "Musical demo"),
+            "file" to str(file), "rawFile" to str(rawFile), "rawKind" to str("native-performance"),
+            "durationSeconds" to num(samples.size / 44_100.0), "midi" to num(performance.tonicMidi),
+            "velocity" to num(1), "gesture" to str(p.gesture.name), "model" to num(p.model),
+            "loop" to JsonValue.Bool(false), "loopable" to JsonValue.Bool(false), "loopStartFrame" to num(0),
+            "macros" to JsonValue.Obj(LinkedHashMap(macros.mapValues { num(it.value) })), "performance" to playing,
+            "metrics" to JsonValue.Obj(linkedMapOf(
+                "peak" to num(native.peak()), "rms" to num(BellowsTestAudio.rms(samples)),
+                "rawPeak" to num(native.peak()), "matchedPeak" to num(matched.peak()),
+                "loopCrossings" to num(loopCrossings), "finite" to JsonValue.Bool(true),
+            )),
+        ))
+        val recipe = JsonValue.Obj(linkedMapOf("id" to str(id), "patch" to p.toJsonValue(), "performance" to playing))
+        return clip to recipe
+    }
+
+    private fun firstListen(): List<Clip> = BellowsPresets.all().take(8).mapIndexed { i, p ->
         val explanation = when (p.voice) {
             BellowsVoice.CHAMBER -> "Listen for the reed chest, register blend and gentle reed beating under one breath."
             BellowsVoice.COUNTER -> "Listen for the focused concertina reed color and the direction of the rendered bellows."

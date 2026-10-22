@@ -1,24 +1,19 @@
 package com.snipsnap.app.ui
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.runtime.Composable
@@ -28,36 +23,38 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.semantics.LiveRegionMode
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.liveRegion
-import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.etchedGroove
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.oilslickSweep
-import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
-import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
-import com.snipsnap.shell.Motion
+import com.snipsnap.shell.Look
+import com.snipsnap.shell.Places
 import com.snipsnap.shell.SchemeId
 
 /**
- * Every place the menu row can land. Every entry routes to a real,
- * shipped screen — `App.kt`'s `when (screen)` has no catch-all branch, so
- * a new entry added here without a matching branch there fails to
- * compile instead of silently falling through to a stub. (There used to
+ * The screens `App.kt` navigates by name. Under the four-place shape
+ * (`docs/SCREEN_PLAN_2026_10.md` §2) none of these is a tab any more:
+ * `App.kt`'s `locationOf` maps each one onto a place, a stage or a bench
+ * of the `:shell` `Navigation` model, and that map is the plan's §2 table
+ * as code — exhaustive, so a new entry here without a landing there
+ * fails to compile instead of silently falling through. (There used to
  * be a `StubScreen` and an `else ->` branch for milestones that hadn't
  * shipped yet; every one of them had shipped long before the stub was
  * finally deleted, which is exactly the failure mode the missing
@@ -86,7 +83,6 @@ enum class AppScreen(val label: String) {
     KIT("KIT"),
     TAPE("TAPE"),
     CHOP("CHOP"),
-    PLAY("PLAY"),
     GROOVE("GROOVE"),
     /** The circular sequencer: the kit on rings of different lengths. Its own menu entry, since a sequencer is a peer of GROOVE, not a corner of it. */
     ORBIT("ORBIT"),
@@ -98,14 +94,13 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
-    /** Not one of MenuRow's twelve: reached from the shelf's INSTRUMENTS list, left by its own ◄ SHELF. */
+    /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
     KEYS("KEYS"),
 
     /**
-     * Nor is this one: reached from KIT's action row on the pad you want
-     * taken apart, and left by its own ◄ KIT. A menu of twelve fits no
-     * phone, and SPLIT is something you do *to a pad* — which is what KIT
-     * is for.
+     * A PADS bench: reached from the stage's action row on the pad you
+     * want taken apart, and left by ◄ PADS. SPLIT is something you do *to a
+     * pad*, which is what PADS is for.
      */
     SPLIT("SPLIT"),
 }
@@ -170,6 +165,14 @@ fun TapeText(
  * call sites using a raw `Modifier.pointerInput { detectTapGestures {}
  * }` instead, which registers no semantics node.)
  *
+ * [spoken] is the accessible name when it should differ from [label]:
+ * a chip whose visible label carries a glyph ("SNIPS ▸", "◄ KIT") keeps
+ * the glyph on screen and gives TalkBack the words. It takes the place of
+ * [label] as the `contentDescription`, so a call site that a test finds
+ * by its visible label simply does not pass one. The node is a
+ * `Role.Button`: nothing here is a switch or a tab, and no call site has
+ * ever said otherwise.
+ *
  * [enabled] mirrors `clickable`'s own flag: a disabled control keeps
  * its semantics node (and its name) but exposes Compose's `disabled()`
  * state instead of an actionable one, so a screen-reader user is told
@@ -177,15 +180,28 @@ fun TapeText(
  * from the tree (audit finding 12).
  */
 @Composable
-fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> Unit): Modifier =
+fun Modifier.tapeClick(label: String?, enabled: Boolean = true, spoken: String? = null, onClick: () -> Unit): Modifier =
     clickable(
         interactionSource = remember { MutableInteractionSource() },
         indication = null,
         enabled = enabled,
+        // A button, said so: TalkBack reads "button" after the name, and a
+        // switch access scan can tell this node from a label.
+        role = Role.Button,
         onClick = onClick,
     ).let { base ->
-        if (label != null) base.semantics { contentDescription = label } else base
+        val name = spoken ?: label
+        if (name != null) base.semantics { contentDescription = name } else base
     }
+
+/**
+ * A back chip's spoken name: the glyph on the chip is a picture of an
+ * arrow, and "◄ KIT" read aloud is noise before the word. "BACK TO KIT"
+ * for anything that begins with the arrow, null for the rest, so the
+ * caller's `spoken` falls back to the visible label.
+ */
+fun spokenBack(label: String): String? =
+    if (label.startsWith("◄ ")) "BACK TO " + label.removePrefix("◄ ") else null
 
 /**
  * The title bar. [onNote] is the WORKSHOP's NOTE chip (`docs/WORKSHOP.md`,
@@ -195,12 +211,30 @@ fun Modifier.tapeClick(label: String?, enabled: Boolean = true, onClick: () -> U
  * under it - PLAY, CHOP, a pad sheet - and a chip per screen would be one
  * more thing per screen to keep in step. A raised bevel at the bar's right
  * end: the Win9x button-on-a-title-bar, which is what this is.
+ *
+ * [projectName] is the open project, at the bar's right (plan §1): the
+ * one word of state the title carries, since the status bar that carried
+ * the open kit's name is gone and the project is the unit now.
+ *
+ * [onGear] is the gear (`docs/SCREEN_PLAN_2026_10.md` §1): SETUP and HELP
+ * behind one chip at the bar's right end, one tap from every screen, where
+ * the two used to be the twelfth and thirteenth tabs of a row that fit
+ * nine. Drawn as the same button-on-a-bar the NOTE chip is.
  */
 @Composable
-fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null) {
+fun TitleBar(
+    modifier: Modifier = Modifier,
+    projectName: String? = null,
+    onNote: (() -> Unit)? = null,
+    onGear: () -> Unit,
+) {
     val scheme = LocalScheme.current
+    val modern = scheme.look == Look.MODERN
     val brush =
-        if (scheme.id == SchemeId.OILSLICK) {
+        if (modern) {
+            // `.masthead`: a flat bar, a hairline under it, no gradient.
+            SolidColor(scheme.title1.tape)
+        } else if (scheme.id == SchemeId.OILSLICK) {
             oilslickSweep()
         } else {
             Brush.horizontalGradient(listOf(scheme.title1.tape, scheme.title2.tape))
@@ -209,7 +243,8 @@ fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null) {
         modifier = modifier
             .fillMaxWidth()
             .height(Layout.TITLEBAR_H.dp)
-            .background(brush, RoundedCornerShape(4.dp))
+            .background(brush, RoundedCornerShape(if (modern) 2.dp else 4.dp))
+            .let { if (modern) it.drawBehind { drawRect(scheme.grayEdge.tape, topLeft = Offset(0f, size.height - 1.dp.toPx()), size = Size(size.width, 1.dp.toPx())) } else it }
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -219,358 +254,60 @@ fun TitleBar(modifier: Modifier = Modifier, onNote: (() -> Unit)? = null) {
         // skeleton it made a finished app look like an abandoned prototype.
         // Gone rather than corrected: there is no version constant to hang a
         // true one on, and a hardcoded tag is exactly what went stale before.
-        TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
-        if (onNote != null) {
-            // The whole 34dp height is the tap target; the bevel sits
-            // inside a vertical inset so it reads as a button on the bar
-            // rather than the bar's own edge. `tapeClick` before the inset,
-            // so the inset is inside the target and not taken out of it.
-            Box(
-                Modifier
-                    .fillMaxHeight()
-                    .tapeClick(label = "NOTE", onClick = onNote)
-                    .padding(vertical = 5.dp)
-                    .raisedBevel(scheme)
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("NOTE", TapeType.pixel, scheme.ink.tape)
+        // `weight(1f, fill = false)`: the right-hand cluster is measured first
+        // and the wordmark takes what it leaves, so a long project name
+        // ellipsises itself and never pushes SNIPSNAP.EXE to an ellipsis.
+        Row(
+            Modifier.weight(1f, fill = false),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (modern) {
+                // `.wordmark-square`: the page's tilted square before the name.
+                Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
             }
+            TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (projectName != null) {
+                // The bar clips the name at 140 dp; the accessible name is the whole of it.
+                val fullName = projectName.uppercase()
+                TapeText(
+                    fullName,
+                    TapeType.pixel,
+                    scheme.titleInk.tape,
+                    Modifier.widthIn(max = 140.dp).semantics { contentDescription = fullName },
+                )
+            }
+            if (onNote != null) {
+                TitleChip("NOTE", label = "NOTE", onClick = onNote)
+            }
+            // The gear's accessible name says what is behind it; the glyph
+            // alone would be read as a symbol name or not at all.
+            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP}", onClick = onGear)
         }
     }
 }
 
-/** One menu entry: its label and the screen it lands on. */
-data class MenuItem(val label: String, val screen: AppScreen)
-
-// EXPORT moved up beside TAPE/CHOP/KIT (name-and-find followups,
-// truncation pass): the cold-open screen states the app's own primary
-// flow as "TAPE ▸ CHOP ▸ KIT ▸ EXPORT — four tabs, in order," but at
-// twelve items EXPORT sat at position 10 — past the ~8-9 tabs that fit
-// on screen at every width tested (390dp/411dp/360dp), so step four of
-// the app's own stated loop was never visible without a drag the row
-// gives no other cue to try beyond its ◂/▸ edges. Reordering (not
-// shortening, not wrapping) is the smallest change that puts it back in
-// the visible run — total row width is unchanged, only which items land
-// in the first ~9 slots. `ConventionTest`'s "first-run loop names real
-// menu tabs" law only checks membership, not order, so this is safe
-// against it.
-//
-// KIT then moved after CHOP (same followups): the shelf is where you
-// arrive, not one of the four steps, so it stays first — but KIT had
-// landed second, ahead of TAPE and CHOP, which put the strip out of step
-// with the loop it was just fixed to make visible. The four flow tabs
-// now read TAPE ▸ CHOP ▸ KIT ▸ EXPORT, matching the stated order exactly,
-// still inside the same visible run.
-//
-// J12: the twelve tabs are four groups, and the row now says so with a
-// [Layout.MENU_GROOVE_W] rule between them. The order above was already
-// doing the grouping's work - the four flow tabs in their stated order,
-// then the instruments, then the two utilities - but nothing drew the
-// seams, so a strip of twelve equal words read as one undifferentiated
-// run and the reordering's whole point was legible only to someone who
-// already knew the loop.
-//
-// The groups are nested here rather than marked by a boundary index or a
-// `groupStart` flag on [MenuItem], because either of those is the order
-// written down a second time: move a tab and the index still points at
-// the old seam, silently. Nesting makes the order and the grouping the
-// same declaration, so they cannot disagree. `ConventionTest`'s
-// "first-run loop names real menu tabs" law reads `MenuItem("...")` by
-// regex, so it sees all twelve through the nesting unchanged.
-//
-// There is no flattened `MENU_ITEMS` beside this any more: `MenuRow` was
-// its only reader, and a second spelling of the same twelve tabs kept
-// only for tidiness is the shape this file has just finished removing.
-val MENU_GROUPS = listOf(
-    // Where you arrive, and the only tab that is a place rather than a
-    // thing you do to a sound.
-    listOf(
-        MenuItem("SHELF", AppScreen.KITS),
-    ),
-    // The loop the empty shelf states in words, in its stated order.
-    listOf(
-        MenuItem("TAPE", AppScreen.TAPE),
-        MenuItem("CHOP", AppScreen.CHOP),
-        MenuItem("KIT", AppScreen.KIT),
-        MenuItem("EXPORT", AppScreen.EXPORT),
-    ),
-    // Ways to play what the loop made.
-    listOf(
-        MenuItem("PLAY", AppScreen.PLAY),
-        MenuItem("GROOVE", AppScreen.GROOVE),
-        MenuItem("ORBIT", AppScreen.ORBIT),
-        MenuItem("SYNTH", AppScreen.SYNTH),
-        MenuItem("SURFACE", AppScreen.SURFACE),
-        MenuItem("SNAP", AppScreen.SNAP),
-    ),
-    // Not about a sound at all.
-    listOf(
-        MenuItem("SETUP", AppScreen.PROPERTIES),
-        MenuItem("HELP", AppScreen.HELP),
-    ),
-)
-
 /**
- * One end of the menu row: an arrow while there are tabs that way, and
- * an empty gutter of the same width while there are not.
- *
- * The gutter is always reserved rather than appearing with the arrow,
- * so the tabs do not shift sideways under a thumb the moment a scroll
- * starts or ends.
- *
- * The glyph is cleared from the semantics tree: it is a picture of the
- * scroll state, and TalkBack already announces a scrollable row and its
- * position without being told about a triangle. Announcing it as well
- * would put a shape between the user and the tab names.
+ * A button on the title bar. The whole 34dp height is the tap target; the
+ * bevel sits inside a vertical inset so it reads as a button on the bar
+ * rather than the bar's own edge. `tapeClick` before the inset, so the
+ * inset is inside the target and not taken out of it.
  */
 @Composable
-private fun MenuEdge(glyph: String, showing: Boolean) {
+private fun TitleChip(text: String, label: String, onClick: () -> Unit) {
     val scheme = LocalScheme.current
     Box(
         Modifier
-            .width(Layout.MENU_EDGE_W.dp)
             .fillMaxHeight()
-            .clearAndSetSemantics { },
+            .tapeClick(label = label, onClick = onClick)
+            .padding(vertical = 5.dp)
+            .raisedBevel(scheme)
+            .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        if (showing) TapeText(glyph, TapeType.pixel, scheme.ink3.tape)
-    }
-}
-
-/**
- * The twelve tabs, and the two things September UAT found wrong with
- * them.
- *
- * Finding 9: the row was 26dp tall and each tab's tap area was its text
- * plus 3dp, so the app's primary navigation held the smallest targets in
- * it. [Layout.MENU_ROW_H] is the hit-target floor now, and each tab
- * fills the row rather than sitting inside it.
- *
- * Finding 10: the row scrolls — the tabs do not fit at 390dp and are not
- * meant to — but it scrolled with no arrow, fade or cue of any kind, so
- * SETUP and HELP were simply absent for anyone who never guessed to drag
- * it. The arrows say which way the rest is.
- *
- * They are cues, not buttons. A tappable arrow would need to be a legal
- * target itself, and two 48dp chips would take a quarter of the row's
- * width to reveal about 34dp of tabs — paying more than the problem
- * costs. Dragging the row is the gesture; the arrows only say it is
- * there.
- */
-@Composable
-fun MenuRow(
-    current: AppScreen,
-    onSelect: (AppScreen) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = LocalScheme.current
-    val scroll = rememberScrollState()
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Layout.MENU_ROW_H.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        MenuEdge("◂", showing = scroll.canScrollBackward)
-        Row(
-            Modifier
-                .weight(1f)
-                .fillMaxHeight()
-                .horizontalScroll(scroll),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            for ((groupIndex, group) in MENU_GROUPS.withIndex()) {
-                if (groupIndex > 0) {
-                    // The rule sits in the 8dp the two neighbouring tabs'
-                    // own padding already leaves, so it reads as spaced
-                    // without any padding of its own - and 4dp of clear
-                    // gray each side is what a Win9x toolbar gives one.
-                    // It is also why the row only grows by
-                    // MENU_GROOVE_W per seam: see that constant on why
-                    // the third dp would start costing a tab.
-                    Box(
-                        Modifier
-                            .width(Layout.MENU_GROOVE_W.dp)
-                            .fillMaxHeight(0.5f)
-                            .etchedGroove(scheme),
-                    )
-                }
-                for (item in group) {
-                    val isSelected = item.screen == current
-                    Box(
-                        Modifier
-                            // The row's height is fixed, so this is a bounded
-                            // parent and fillMaxHeight resolves to 48dp rather
-                            // than collapsing (the trap MIN_HIT_TARGET's own
-                            // KDoc records). It is what makes the whole tab
-                            // tappable instead of just the word in it.
-                            .fillMaxHeight()
-                            .let { if (isSelected) it.pressedBevel(scheme, 3.dp) else it }
-                            // The tab's own name (item.label) is the accessible
-                            // name, passed explicitly — an accessibility-tree
-                            // dump showed the descendant TapeText below does
-                            // NOT merge into this clickable node for free (that
-                            // was the assumption this comment used to make; all
-                            // 12 tabs spoke as unnamed nodes with it). Selection
-                            // is the one thing the label text still can't say on
-                            // its own (audit finding 7 — selection state had no
-                            // programmatic exposure anywhere in the app).
-                            .semantics { selected = isSelected }
-                            .tapeClick(label = item.label) { onSelect(item.screen) }
-                            .padding(horizontal = 4.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(
-                            item.label,
-                            TapeType.pixel,
-                            if (isSelected) scheme.ink.tape else scheme.ink2.tape,
-                        )
-                    }
-                }
-            }
-        }
-        MenuEdge("▸", showing = scroll.canScrollForward)
-    }
-}
-
-/**
- * Three cells: where you are, what's on the shelf, and either a busy
- * line or the open kit's name. The third cell used to carry a rotating
- * quip instead (gated behind the now-deleted PERSONALITY slider — see
- * `Personality.kt`'s own KDoc on why that gate was removed); this is
- * real state in a slot shaped for state, so it names the kit that is
- * actually open instead of the machine talking to itself.
- *
- * With no kit open, [kitName] is `Copy.NO_KIT_STATUS`, not the empty
- * string — an empty cell sat there as a bordered box with nothing in it,
- * reading as a rendering gap next to the populated `SHELF: n` cell beside
- * it rather than a state. The caller (`App.kt`) is the one that decides
- * this, not this composable: it already owns `open?.kit?.name`.
- */
-@Composable
-fun StatusBar(
-    screenLabel: String,
-    shelfLabel: String,
-    busy: String?,
-    kitName: String,
-    modifier: Modifier = Modifier,
-) {
-    val scheme = LocalScheme.current
-    val tail = busy ?: kitName
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Layout.STATUS_BAR_H.dp),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StatusCell(screenLabel, Modifier.width(88.dp))
-        StatusCell(shelfLabel, Modifier.width(88.dp))
-        StatusCell(tail, Modifier.weight(1f))
-    }
-}
-
-@Composable
-private fun StatusCell(text: String, modifier: Modifier = Modifier) {
-    val scheme = LocalScheme.current
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(Layout.STATUS_BAR_H.dp)
-            .sunkenField(scheme, 3.dp)
-            .padding(horizontal = 6.dp),
-        contentAlignment = Alignment.CenterStart,
-    ) {
-        TapeText(text, TapeType.pixelSmall, scheme.ink2.tape)
-    }
-}
-
-/**
- * The toast: rises 8dp and fades in over 250ms, dwells, and is cleared by
- * the state holder (see `App`). Always composed and always drawn while a
- * message is live, carrying [liveRegion] semantics so a screen-reader
- * user gets the same "did DELETE/SHARE/RENAME work" channel a sighted
- * user gets from watching the operation resolve (audit finding 3).
- *
- * This used to be gated by the PERSONALITY slider: OFF drew the bubble at
- * alpha 0 while still composing it for TalkBack, which meant a *failure*
- * toast like DUB FAILED silently never appeared for a sighted user who'd
- * turned personality off — a real bug this removal fixes by construction.
- * See `Personality.kt`'s own KDoc for why the gate is gone rather than
- * patched in place. The semantics node lives on the bubble itself, not
- * a screen-sized wrapper around it — a full-screen node would sit in
- * TalkBack's touch-exploration path for the whole `TOAST_DWELL_MS`
- * dwell, intercepting an explore-by-touch anywhere on screen instead of
- * whatever pad or button is actually under the finger.
- * `Polite` (not `Assertive`) throughout: several of this file's own error
- * strings (`Copy.grooveRefused`, `Copy.KIT_RENAME_FAILED`, ...) don't share
- * a common marker that would let this function tell a failure from a
- * status line without guessing, and a wrong guess (an `Assertive` status
- * toast interrupting whatever TalkBack was already reading) is worse than
- * a uniformly polite announcement.
- */
-@Composable
-fun ToastOverlay(
-    message: String?,
-    modifier: Modifier = Modifier,
-    /**
-     * An optional door out of the toast (J10): its label, and what it
-     * opens. Null for the ordinary one-line toast, which is most of them.
-     *
-     * The door is part of the same merged semantics node as the message,
-     * so TalkBack announces the line and offers the action together rather
-     * than as two separately-focusable things saying overlapping words —
-     * the same reasoning `mergeDescendants` already carries below.
-     */
-    door: Pair<String, () -> Unit>? = null,
-) {
-    val scheme = LocalScheme.current
-    if (message == null) return
-
-    val t = remember(message) { Animatable(0f) }
-    LaunchedEffect(message) { t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
-
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Box(
-            modifier = Modifier
-                .padding(bottom = 44.dp)
-                .alpha(t.value)
-                // mergeDescendants: without it, the TapeText below
-                // registers as a second, separately-focusable node with
-                // the same words — one node per toast, not two.
-                .semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }
-                .raisedBevel(scheme, 4.dp)
-                .let {
-                    if (scheme.id == SchemeId.OILSLICK) {
-                        it.border(2.dp, oilslickSweep(), RoundedCornerShape(4.dp))
-                    } else {
-                        it
-                    }
-                }
-                .padding(horizontal = 12.dp, vertical = 8.dp),
-        ) {
-            // Three lines: MUTATE's longest toasts (a STACK keep with its flip sentence and length note,
-            // MUTATE_CHAINED) are cut at two on a 390 dp phone, and their last words are the point.
-            if (door == null) {
-                TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 3)
-            } else {
-                val (label, open) = door
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    TapeText(message, TapeType.pixel, scheme.ink.tape, maxLines = 3, modifier = Modifier.weight(1f, fill = false))
-                    Spacer(Modifier.width(10.dp))
-                    Box(
-                        Modifier
-                            .raisedBevel(scheme, 3.dp)
-                            .tapeClick(label = label) { open() }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
-                    ) {
-                        TapeText(label, TapeType.pixel, scheme.amber.tape, maxLines = 1)
-                    }
-                }
-            }
-        }
+        TapeText(text, TapeType.pixel, scheme.ink.tape)
     }
 }
 
@@ -622,5 +359,27 @@ fun EmptyStatePanel(
                 ActionButton(route.label, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = route.onClick)
             }
         }
+    }
+}
+
+/**
+ * The empty face of a place that needs a kit (BEAT, OUT, ORBIT): [need] is
+ * the place's own sentence, in project words, when a project is open, with
+ * `+ FROM SHELF` (the switcher's own pick mode) as its door; with no
+ * project at all the page says that once instead ([Copy.NO_PROJECT_OPEN])
+ * and the door is `SHELF ▸`, where a project is opened or started.
+ */
+@Composable
+fun NoKitPanel(
+    need: String,
+    hasProject: Boolean,
+    onAddFromShelf: () -> Unit,
+    onNavigateKits: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (hasProject) {
+        EmptyStatePanel(need, listOf(EmptyStateRoute(Places.ADD_FROM_SHELF, onAddFromShelf)), modifier)
+    } else {
+        EmptyStatePanel(Copy.NO_PROJECT_OPEN, listOf(EmptyStateRoute("SHELF ▸", onNavigateKits)), modifier)
     }
 }

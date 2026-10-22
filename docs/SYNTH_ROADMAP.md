@@ -6,6 +6,41 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
+restricted two-center encounter into two original harmonic populations, persistent
+cohorts, surviving cores, and extended ringing strands. The finite prototype has
+replayable recipes, a dry listening matrix with mechanism comparisons, and a
+prototype kit outside the factory roster and phone picker. HOLD remains zero;
+reconstruction, the other voices, and factory expansion follow listening review.
+See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
+The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
+contains 58 raw/matched cases and a ten-clip starter download. The owner's
+listening verdict remains pending.
+
+**Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
+simultaneously struck membrane, bar, cowbell and triangle in a rectangular room
+with ten independent material regions. Physical early paths, surface excitation,
+return coupling and a shared passive late field test whether instrument placement
+changes the answer. Complete model/seed/note/velocity/room recipes, six provisional
+presets, CLI replay and a sixteen-pad prototype kit are available outside the
+factory roster and phone picker. This stage is finite only: positive HOLD is
+rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
+for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
+proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+opens a 16-clip model-2 timpani revision after the owner found the membrane
+inaudible. Model 1 and its original 114-clip matrix remain reproducible and archived.
+The revised balance awaits the owner's listening verdict.
+
+**Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
+renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
+audition generator test the gesture of more performers joining. UNISON,
+RESPONSE and marked-vowel DRONE use stable identities and complete source
+regions. This stage is a standalone rendering API; phone source preparation,
+normal patch registration, factory presets, 48 voices and HOLD remain later
+work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
+portable audition recipes and listening limits. The owner's listening verdict
+is pending.
+
 ## Why this is cheaper than it sounds
 
 Pads are one-shots. That means **synthesis here is offline rendering** — a
@@ -47,6 +82,26 @@ rule itself: this roadmap, design specs, and implementation plans may name
 machines when the point is naming the rule that forbids naming them.
 
 ## The engines
+
+### CREASE — pressure memory in a phase map (native integration)
+
+ROUND, PINCH and RUBBER share two smooth, monotonic phase-distortion layers.
+FOLD sets their geometry; PRESSURE drives bounded deformation; DRAG delays it;
+SPLIT separates the shapes and response times; RELAX unfolds them. HOLD extends
+finite notes and reserves its top step for a recurring, converged pressure loop.
+The MIDI root stays outside the six controls. Shape-sensitive reciprocal load,
+history/instantaneous and coupled/independent probes, higher-rate references and
+raw diagnostics make the mechanism reviewable before factory voicing.
+
+`./gradlew :synth:generateCreaseAudition` generates the dry listening matrix and
+standalone audition recipes in `testkit/crease-audition-r3/`. The first audition
+had insufficient variation; the owner preferred model 2's wider analytic phase
+maps. Model 3 retains those shapes and refines lag/recovery, with six named
+listening presets and constant-level gesture comparisons. Models 1 and 2 remain
+exactly replayable. The approved three voices and six presets are registered in native patches,
+velocity routing, the SYNTH picker, FRESH TAPE and CLI. Voice expansion and a
+dedicated multisampled instrument builder remain separate work. [CREASE](CREASE.md) records the prototype scope and
+reproduction commands.
 
 ### THUMP — analog-style drum voices (the drum synth engine)
 
@@ -270,16 +325,39 @@ and GLUE, plus host TUNE and HOLD. RELIEF changes actual layer onsets and
 envelope development. Held loops use periodic layer contours with separated
 phases, because initial arrivals cannot remain audible in loop-only material.
 
-Eight provisional recipes cover the six voices. Saved patches retain the layer
+Thirty-six recipes provide six per voice, preserving the original eight reference
+recipes and the sixteen-pad starter. Saved patches retain the layer
 model, timing, envelopes, processing and loop profile. The dry kit, recipes,
 velocity renderer, CLI and synth picker follow existing host paths. Finite notes
 route as TONAL; HOLD's top step routes as LOOP. The audition generator writes
 real Kotlin-rendered native/matched audio, solos, five-point sweeps, interaction
 grids and held comparisons to `testkit/lacquer-audition/`.
-[LACQUER](LACQUER.md) documents reproduction and acceptance. Owner dry sonic
-approval precedes the wider 36-preset bank; numerical checks do not establish
-that listening verdict. Android device, MPC hardware and naming checks remain
-separate acceptance work.
+[LACQUER](LACQUER.md) documents reproduction and acceptance. The expanded bank
+is available for owner listening review, with three twelve-preset MPC programs
+and the original starter. Numerical checks do not establish a listening verdict;
+Android device, MPC hardware and naming checks remain separate acceptance work.
+
+### WICK — ignite, cascade, recover
+
+The [supplied specification](WICK_SPEC.md) is being tested as a three-voice
+PLUCK/WOOD/BUBBLE listening prototype. One pitched complex source feeds three
+parallel low-pass gates. Each has bounded charge and recoverable availability;
+real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
+TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
+and velocity. The oscillator/filter techniques draw on TIDE; the gate network
+and release scheduler are new.
+
+Thirteen provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+kit support the first audition. WICK stays outside the factory preset roster,
+phone picker and starter menu pending listening. Run
+`./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
+controls, register/velocity probes, mechanism ablations, held examples and four
+musical phrases using one shared score across the three voices.
+The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](WICK.md) retain the scope and current limits.
+BREATH, FLICKER, RATTLE and the proposed 36-preset library follow listening.
+The longer pitched BUBBLE response is the owner's preferred working baseline;
+WOOD now tests a dry pitched body with smaller answering rebounds.
 
 ### TANGLE — oscillators that catch and release
 
@@ -308,6 +386,30 @@ does not claim a circuit recreation of its historical starting point.
 [TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
 HOLD constraint and remaining acceptance work.
 
+### FLOCK — finite oscillator flocks
+
+GATHER, RIBBON and SPLIT use twenty-four audible oscillators with changing
+local separation, alignment and cohesion. SPREAD, PULL, FLOW, SCATTER, EDGE
+and HOLD are the six controls; SYNTH also exposes ROOT (C2–C6) and VELOCITY.
+HOLD selects a two-to-six-second one-shot at every setting. Saved roots,
+velocities, exact 64-bit seeds and render models survive editing, preset
+storage and pad placement; SPREAD uses the authored root.
+
+The owner confirmed that revised FLOW is audible. Model 2 changes the pace of
+the existing group equations while preserving each original default exactly;
+model-1 recipes retain their original rendering behavior. Nine factory presets
+join `Presets` and the phone picker. FRESH TAPE's fixed FLOCK starter supplies
+eight GATHER notes in C minor pentatonic from C4 to F5 and eight other factory
+recipes, all dry TONAL pads without choking.
+
+`./gradlew :synth:generateFlockKit` writes `testkit/SnipSnap Flock Kit/` with
+a native MPC 3 `.xtd`, an MPC 2 `.xpm` twin and shared PCM24 WAVs in its
+`_[TrackData]` folder, complete editable recipes, a manifest and a ZIP beside
+the kit. [FLOCK.md](FLOCK.md) records the exact layout and listening evidence.
+Phone playback, render latency and MPC hardware checks remain open. Sustained
+loops, held instruments and live interaction between separately rendered notes
+remain outside this finite integration.
+
 ### EMBOUCHURE — effort changes how the note speaks
 
 A first dry prototype supplies a finite virtual-player gesture to one pitched
@@ -331,8 +433,12 @@ sample-for-sample. Model 1 is frozen for existing recipes, including JSON that
 omits its model field. The audition includes original/revised comparisons at
 identical settings and separate listening notes for each model.
 
-`SynthKits.embouchure()` carries eight REED pentatonic notes and the eight dry
-presets, all with recipes. The `embouchure` FRESH TAPE starter, normal SYNTH
+The factory catalog has 36 presets: 8 REED, 6 BRASS, 6 BASS, 4 WHISTLE, 6 BOW and 6 SOFT.
+The accepted initial eight retain their recipes, names, order and Model 2 sound.
+`SynthKits.embouchure()` keeps eight REED pentatonic notes and those original
+eight dry presets, all with recipes. Three additional sixteen-pad factory banks
+pair REED/WHISTLE, BRASS/BASS and BOW/SOFT, each with twelve presets and four
+complementary keyed notes. The `embouchure` FRESH TAPE starter, normal SYNTH
 picker, user presets, native velocity variants, CLI rendering and host MPC
 export use the same source. Finite notes are TONAL, HOLD is LOOP.
 `./gradlew :synth:generateEmbouchureAudition` writes the listening pack under
@@ -340,9 +446,11 @@ export use the same source. Finite notes are TONAL, HOLD is LOOP.
 routing and audition conventions; the attached brief is preserved under
 [engineering/embouchure-engine-spec.md](engineering/embouchure-engine-spec.md).
 The separate edited Gyre contract mentioned by that brief was not provided;
-current sibling APIs govern this port. **Owner sonic approval is outstanding**;
-expansion toward 36 presets, device checks and release naming wait for their
-respective acceptance decisions.
+current sibling APIs govern this port. The owner accepted Model 2's voices and
+controls and authorized the 36-preset expansion. The new presets still need their
+listening verdict. Android/MPC hardware playback and release naming remain
+separate checks; the drum exporter requires manually enabling repeat for HOLD
+samples.
 
 ### MURMUR — FM articulation through a moving mouth
 
@@ -357,8 +465,10 @@ velocity changes excitation energy and bite rather than changing a macro.
 Each saved recipe retains its routing, four operator ratios, complete
 formant targets, trajectory, direction, reference duration and envelope.
 Patch editing, velocity layers and rack replay preserve that state.
-Twelve original preset proposals cover the six roles; broader preset
-quotas wait for the owner's dry listening verdict. `SynthKits.murmur()`
+The six dry default voices have owner approval after reducing CHOIR's air.
+The 36-preset bank preserves the original twelve and adds twenty-four dry patches:
+eight BASS, four KEY, four PLUCK, eight LEAD, six CHOIR and six METAL in total.
+The accepted renderer remains unchanged. `SynthKits.murmur()`
 contains sixteen dry recipe pads: eight KEY notes in C minor pentatonic
 from C3, seven contrasts and a settled held choir. Finite notes route as
 TONAL and HOLD at or above 0.99 routes as LOOP, with no drum choke group.
@@ -371,7 +481,8 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-Sonic identity, phone/MPC validation and release naming remain open.
+The expanded preset bank's listening review, phone/MPC validation and release
+naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
@@ -404,16 +515,36 @@ spectral organization, DRIFT separates group timing, SHAPE moves broad partial
 masks, STRIKE articulates the onset and BODY reinforces lower and middle energy.
 TUNE keeps the requested root stable; HOLD exports settled loop-only material.
 
-The initial eight presets, patches, dry sixteen-pad kit, starter, CLI and phone
+The complete 36-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
 picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
 Finite notes route as TONAL and held material as LOOP. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-contains raw/matched voices across register and velocity, five-point sweeps,
-interaction corners and HOLD extremes. Run
+contains the full factory bank, raw/matched voices across register and velocity,
+five-point sweeps, interaction corners and HOLD extremes. Run
 `./gradlew :synth:generatePrismAudition` to regenerate the listening pack.
-[PRISM](PRISM.md) records saving, rendering and loop contracts. The proposed
-36-preset expansion waits for the owner's dry sonic approval. Device playback
-and release naming remain outstanding.
+[PRISM](PRISM.md) records saving, rendering and loop contracts. The owner's dry
+sonic review is positive. Phone and MPC playback still require device validation;
+PRISM remains a working name pending release naming checks.
+
+### SHOAL — materials animated by moving energy
+
+Model 3 carries the owner's preferred material-study direction into the engine:
+WOOD, BOWL and WIRE select resonant frequencies, contact coupling and decay;
+GLASS and RIPPLE select how energy moves. Native velocity changes contact and
+modal excitation as well as loudness. Root MIDI 24–84 and material stay separate
+from the six controls. New patches start with WOOD; saved models 1 and 2 retain
+their exact harmonic renderer. Ordinary edits and native velocity retain the
+saved model and material.
+
+Six finite material recipes, two HARMONIC held recipes and a sixteen-pad C minor
+pentatonic starter are available through the factory registry, CLI and phone
+picker. The new bodies include passive resonant tails and explicitly refuse
+HOLD loops. HARMONIC retains the tested captured periodic control trajectory.
+`./gradlew :synth:generateShoalMaterialAudition` renders the production material,
+motion, note and velocity comparisons; `generateShoalAudition` preserves the
+model-2 matrix. Touch/velocity listening and phone/MPC playback remain validation
+steps. ORGAN, WHISTLE, DRIFT, SWARM and the proposed 36-preset roster are later work.
+[SHOAL](SHOAL.md) records the as-built contracts and retained proposal.
 
 ### ALLOY — generated attack entering a four-operator tonal body
 
@@ -425,8 +556,10 @@ PM articulation independently. BODY preserves root support and shapes carrier
 balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
-Six voices and twelve provisional presets form the first listening roster. The
-proposed 36-preset expansion waits for the owner's dry audition decision. Run
+The owner heard the initial twelve-preset audition and authorized expansion on
+the same engine tuning. Thirty-six factory presets now provide six per voice,
+the agreed allocation replacing the specification's uneven split. The original
+twelve retain their settings, and the new presets await listening review. Run
 `./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
 The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
 includes voice/register/velocity coverage, five-point macro sweeps, interactions,
@@ -640,7 +773,7 @@ What follows from it:
 | S27 | **Port implemented; R6 candidate in calibration and verification, listening acceptance pending** — CIRCUIT, an invented moving pitched ensemble: three distinct pressure/lip-driven breath resonators plus finite stone-rattle, paired wooden-clapper, clay-vessel and synthesized grunt/uh-huh gestures. ROOT, PROCESSION, ANSWER, VOICED, EXPANSE and CONFLUENCE share seven macros: TUNE (C2–C4), BREATH, DIAMETER, ORBIT, PACE, CANYON, HOLD. An authored four-pulse figure ties tube pressure, event energy and onsets to one shared breath, with a slow rise and settle across the whole phrase or loop; stable player identities and quiet overlapping support replace independent turns. ROOT adds a firmer pitched foundation only at faster actual playing rates. Each cell offers one authored cue-dependent answer, with same-source occupancy, count limits and a common energy-budget scale. Movement remains independent of playing; finite PACE fits complete four-pulse cells and reports its stepped actual rate separately from the request. Asymmetric observer paths and separate performer arrivals preserve acoustic cue evidence. Numerical analysis of an identified official preview informs pacing only; all instruments and gestures remain original synthesis. One-shots are approximately 5–7.7-second phrases; HOLD ≥ .99 supplies a settled loop without the initiating gesture, with compatible clocks and measured state convergence. Twelve dry presets, `SynthKits.circuit()`, patch/preset/velocity registration and host selection. `generateCircuitAudition` writes raw/matched WAVs, diagnostics and a standalone page; `-Pquick` selects a development subset. Full mixes retain the pitched trio and surrounding percussion under existing classifier guards. R5 keeps R4's figure while lowering the surrounding radiation and shaping each gesture's excitation with the continuing shared effort; R6, the current candidate, eases force onset and release and gives resonant states a freer passive response. The completed R4 matrix contains 370 variants/740 WAVs, with 360 classifier guards, zero numerical recoveries and eleven closed held loops. R4 validation passes 39 unique checks (28 focused plus eleven additional); the R4 Android debug APK is built and verified against 534 byte-identical build inputs; device validation remains pending. CIRCUIT.md marks the R4 measurements and R5's audition evidence historical: they do not verify R6. Models, revision history and listening matrix: [`CIRCUIT.md`](CIRCUIT.md). **The owner heard the initial audio and R2 through R5, and CIRCUIT.md records each response (R5's: “I think it's still a bit too abrupt.”); R6 calibration and verification are in progress, and R6 listening acceptance is pending.** | S1 + existing patch, rack and kit pipeline |
 | S28 | **R1 port built, listening pending** — CISTERN, a pitched membrane under a finite suspended droplet field (FIRST, DRIP, CASCADE, POOL, RIPPLE, RECOVERY). STRIKE, SUSPENSION, DROP, SKIN, DRAIN and HOLD; note is explicit MIDI 36–84, velocity is event energy. Releases have causal lineage and finite travel; landings excite the same surface, accumulate regional liquid, and can trigger further drops. DRAIN changes modal loading and contact response as the surface recovers. HOLD supplies powered liquid return and maintenance, and returns the settled loop buffer without an initiating strike. Twelve provisional presets, `SynthKits.cistern()` (its first eight pads cover all six profiles rather than transposing one voice), patch/recipe/velocity registration, CLI note and velocity overrides, picker and starter-kit entry. `generateCisternAudition` writes raw and matched-loudness pairs, all voices at C2/C4/C6 and three velocities, all controls at 0/.25/.5/.75/1 with neutral companions, five 3×3 interactions and diagnostic event/liquid traces. The supplied design is preserved with implementation notes at `docs/superpowers/specs/2026-10-05-cistern-engine-design.md`. The imagined holding field, modal ratios, thresholds and preset names remain design choices awaiting listening; numeric checks do not establish the sonic identity or release naming | S1 + shared modal/render utilities |
 | S28 | **R1 implemented, awaiting the audition** — COROLLA, a mechanical flower of coupled metal petals (TONGUE, BLOSSOM, CHOIR, CHATTER, ORBIT, HUSK). TUNE spans C3–C5; PULL, BLOOM, FIELD, CONTACT and CHAMBER control the shared physical model. HOLD at 0.99 returns settled sustain material: the initial opening gesture belongs to the finite render, because the current sample API has no attack-plus-loop region. Velocity is event strength on the render. Twelve complete presets, two held; dry `SynthKits.corolla()` has eight TONGUE scale notes and eight contrasts. Registered through `Patches`, `Presets`, `Velocity` and the Android engine picker; the generic CLI can audition presets. Finite renders route as TONAL for IN KEY and pad tuning; HOLD alone selects LOOP. This engine metadata overrides the generic classifier's length-based LOOP bucket; neither class receives a drum choke group. `generateCorollaAudition` is the listening gate. Design: `docs/superpowers/specs/2026-10-05-corolla-engine-design.md`. The modal ratios, coupling, powered mechanism and preset settings remain provisional until heard | S22 (`Modes.Bank`) |
-| S30 | **Stage 0 (revised) built, awaiting the owner's phone listen** — the pedal board's first stage as the owner's two listens left it (the first found DRIVE and COMP not enough and the wah no wah; the second picked stronger candidates): a seventh pad-sheet row, PEDALS, with two recipe chips over sections the rack already has, no new rack section. DRIVE is VALVE at the top of its gain law (DRIVE 1.0, SAG 0.15, CAB 0.08: 36 percent harmonic distortion on a steady 220 Hz sine at the pad sheet's AMT 0.7 and 38 at AMT 1) with a pre-amp end fade, because VALVE lifts a quiet tail by its own gain and the spike measured the last 20 ms of a snare 19.8 dB under its peak at AMT 1 without one, and the shipped chain's own test 9.1 (the bar is 50): a power-shaped fade of 95 ms at power 5 at full strength, its length scaled by the amp's lift at the AMT over its lift at full (about a third of that length at the pad sheet's AMT 0.7, none where the amp does not lift), never reaching the first half of a pad, chosen from a declared grid (30 to 120 ms, powers 2 to 7) against the spec's bars (53 dB under the peak, the spec's 50 with 3 dB of margin, and a DC mean under 1e-4) at AMT 0.7, 0.8, 0.9 and 1 on a snare and a choir, with no claim of an optimum. Known edges of the fade, disclosed and not fixed: it is capped at half a pad and is a third as long at AMT 0.7, so a pad shorter than about 200 to 250 ms (a hat, a rim, a click, a trimmed hit) still ends hot through gain 1000, a deliberate trade to keep a short pad's body (a snare trimmed to 100 ms ends 24.6 dB under its peak at AMT 0.7 and 7.9 at AMT 1; the end tests cover a 333 ms snare and a 1.44 s choir); the fade lives in `Treatments.apply`, the door of the chip, of the replay of a character and of the CLI `treat`, so a BREED child, which renders an fx-only recipe through the bare chain, inherits a driven parent's DRIVE unfaded (a fix would route the fade through `PadRecipe.process` or into the chain and waits for a listen to find it; Stage 3's design must decide where the fade lives); and a pad whose loudest point lies inside the faded span (a reversed hit, a swell) is untested, because VALVE normalises to its input's peak. COMP is the strongest SQUASH there is (AMOUNT 1.0, ATTACK 0.05), interim: at AMT 0.7 it lifts a tail over its body by only 2.0 to 5.7 dB, SQUASH's own ceiling, and the COMPRESSOR section replaces it. The WAH chip is held back for its own section (the quack recipe was never a wah). A chip rewrites the pad's baked audio, so on a guitar pad COMP lands after the amp and DRIVE stacks a second amp; `generatePedalAudition` renders both ways (32 clips: the rig order for DRIVE is two renders in a row, the pedal and then the amp, and the card's PUNCH and the AMPED character sit beside COMP and DRIVE). The spec stages the rest: the WAH section, the COMPRESSOR section, the board in front of the amp for guitar pads, TREMOLO and FLANGER, and FUZZ deferred (DRIVE at its top is already gain 1000). Spec: `docs/superpowers/specs/2026-10-04-pedal-board-design.md` | S2.5 (the FX rack: SQUASH), S23 (VALVE V1/V1.1) |
+| S30 | **Stage 0 (revised) built, awaiting the owner's phone listen; Stage 1 (the WAH section) built, awaiting its owner gate** — the pedal board's first stage as the owner's two listens left it (the first found DRIVE and COMP not enough and the wah no wah; the second picked stronger candidates): a seventh pad-sheet row, PEDALS, with two recipe chips over sections the rack already has, no new rack section. DRIVE is VALVE at the top of its gain law (DRIVE 1.0, SAG 0.15, CAB 0.08: 36 percent harmonic distortion on a steady 220 Hz sine at the pad sheet's AMT 0.7 and 38 at AMT 1) with a pre-amp end fade, because VALVE lifts a quiet tail by its own gain and the spike measured the last 20 ms of a snare 19.8 dB under its peak at AMT 1 without one, and the shipped chain's own test 9.1 (the bar is 50): a power-shaped fade of 95 ms at power 5 at full strength, its length scaled by the amp's lift at the AMT over its lift at full (about a third of that length at the pad sheet's AMT 0.7, none where the amp does not lift), never reaching the first half of a pad, chosen from a declared grid (30 to 120 ms, powers 2 to 7) against the spec's bars (53 dB under the peak, the spec's 50 with 3 dB of margin, and a DC mean under 1e-4) at AMT 0.7, 0.8, 0.9 and 1 on a snare and a choir, with no claim of an optimum. Known edges of the fade, disclosed and not fixed: it is capped at half a pad and is a third as long at AMT 0.7, so a pad shorter than about 200 to 250 ms (a hat, a rim, a click, a trimmed hit) still ends hot through gain 1000, a deliberate trade to keep a short pad's body (a snare trimmed to 100 ms ends 24.6 dB under its peak at AMT 0.7 and 7.9 at AMT 1; the end tests cover a 333 ms snare and a 1.44 s choir); the fade lives in `Treatments.apply`, the door of the chip, of the replay of a character and of the CLI `treat`, so a BREED child, which renders an fx-only recipe through the bare chain, inherits a driven parent's DRIVE unfaded (a fix would route the fade through `PadRecipe.process` or into the chain and waits for a listen to find it; Stage 3's design must decide where the fade lives); and a pad whose loudest point lies inside the faded span (a reversed hit, a swell) is untested, because VALVE normalises to its input's peak. COMP is the strongest SQUASH there is (AMOUNT 1.0, ATTACK 0.05), interim: at AMT 0.7 it lifts a tail over its body by only 2.0 to 5.7 dB, SQUASH's own ceiling, and the COMPRESSOR section replaces it. The WAH chip is held back for its own section (the quack recipe was never a wah), and that section is now built and awaiting its owner gate: `wah`, a resonant band-pass (a time-varying `TptSvf`, linear, so nothing to oversample) swept exponentially between a heel of 280 Hz and a toe of 2800 Hz by three moves held as weights, not a switch (TOUCH follows the pad's own envelope, AUTO is a sine with a flat top and the owner's round-two pick, ROCK is one raised-cosine gesture), with SPEED and Q, after CONTOUR and before SQUASH in the rack; reach is 1.5 times the weights capped at 1, so the `wahed` character at the pad sheet's default AMT 0.7 is full strength and AMT 0.5 gives 0.75, and the same stretch holds the position at the toe, so AUTO rests there for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70 and ROCK at full weight is there from 152 ms to 446 ms (its audible rise is 152 ms, not 250); TOUCH and ROCK park at the heel for most of a long note (about 3.25 to 3.5 s of a 4 s guitar note at the default SPEED), a known property and not a defect; `wahed`, `touchwahed` and `rockwahed` are recipe characters (reachable from the CLI's `treat` and from saved kits), and the WAH chip joins the PEDALS row only if the section passes the owner's gate, for which `generateWahAudition` renders 35 clips (a snare, a choir and both MAGNET guitars, each guitar on its baked pad as the pad sheet does it and in front of its landing amp as a rig). A chip rewrites the pad's baked audio, so on a guitar pad COMP lands after the amp and DRIVE stacks a second amp; `generatePedalAudition` renders both ways (32 clips: the rig order for DRIVE is two renders in a row, the pedal and then the amp, and the card's PUNCH and the AMPED character sit beside COMP and DRIVE). The spec stages the rest: the COMPRESSOR section, the board in front of the amp for guitar pads, TREMOLO and FLANGER, and FUZZ deferred (DRIVE at its top is already gain 1000). Stage 1b (2026-10-20): a second page for the WAH gate, the short pads (a hat, a rim, a 60 ms snare; no click, since no engine renders one) and the full snare through AUTO as shipped and with a one-cycle floor on its rate (`Wah.fitted`, a listening door, sample-exact at zero cycles), plus the brainstorm's three zero-DSP listens for FADE IN, VIBRATO and DELAY, with ENSEMBLE beside TAPE's wobble and a second, closer ECHO recipe beside the long one (`generatePedalListens`, 48 clips; the rack's tail cap, measured, lands on repeats 48 to 80 dB under the hit, so the brainstorm's 'chops the fourth repeat' hazard was wrong and the page asks instead whether the cut is heard); the brainstorm of what follows is `docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md`. Specs: `docs/superpowers/specs/2026-10-04-pedal-board-design.md`, and for the WAH section `docs/superpowers/specs/2026-10-17-wah-section-design.md` | S2.5 (the FX rack: SQUASH), S23 (VALVE V1/V1.1) |
 | S11 | **Built, rounds 1-4** — VOX, the whole shebang: a throat (vocal-cord pulse, five formants of natural width, breath puffs), vibrato and wobble, CHOIR as seven singers in sections in stereo, held notes, SIZE and GLIDE (round 1); ONSET consonants and a BEATBOX voice (round 2); round 3's THROAT (overtone singing, with GROWL and YODEL), WRAITH (sine-wave speech, with ALIEN and STUTTER) and SWARM (a crowd, with STUTTER); round 4's SPEAK (a talking voice counting one to eight, speech chip to person) — under S11 below | S3.7 + U6 |
 
 THAW is the next material-state engine (S27), ported from
@@ -695,14 +828,16 @@ three loaded strips, diagonal heads, audible spring return, deterministic
 splices and delayed cross-strip imprint. TUNE (C3–C5), HEAD, STRAIN, RETURN,
 IMPRINT, SPLICE and HOLD share that machine. Patch recipes retain gate/source
 duration, source roster and contact/transport/head/splice/write geometry;
-velocity changes the contact gesture. Six dry presets, `SynthKits.spool()`,
-the FRESH TAPE starter, phone picker and CLI expose the first review set.
+velocity changes the contact gesture. Thirty-six dry presets, `SynthKits.spool()`,
+the FRESH TAPE starter, phone picker and CLI expose the full factory bank.
 HOLD explicitly exports a finite `FROZEN_SNAPSHOT` imprint through repeated
 forward/return cycles. `./gradlew :synth:generateSpoolAudition` builds the
 listening pack; [SPOOL.md](SPOOL.md) describes integration and its limits.
-**Awaiting the owner's dry sonic verdict before expanding to 36 presets.**
-Published auditions and numerical probes support that review; device and
-release-name validation remain outstanding.
+The owner accepted the original six sounds and musical audition on 2026-10-14.
+The expanded bank contains eight strings, eight choir, six flute, six brass and
+eight experimental presets; the six originals and starter mapping remain unchanged.
+Published recordings and complete recipes support the new bank's listening pass;
+device and release-name validation remain outstanding.
 
 RELAY follows as S30, ported from [the supplied engineering specification](RELAY_SPEC.md).
 KEY, BASS, PLUCK, ORGAN, CHIME and FLOW share four original generated roles:
@@ -710,12 +845,18 @@ rounded pluck, harmonic body, bell detail and soft tone. Source-order schedules
 morph continuously at a fixed phrase clock; independent accents place rhythmic
 emphasis without changing the requested root. TUNE, ORDER, PULSE, BLEND, COLOR,
 LENGTH and HOLD use the pitched host conventions. The port includes complete
-phrase serialization, native velocity, six dry identity presets,
-`SynthKits.relay()`, the phone picker, a FRESH TAPE starter and
-`generateRelayAudition`. HOLD exports repeating material without a separate
-attack region. [RELAY.md](RELAY.md) records the integration and listening pack.
-**Awaiting the owner's sonic verdict.** The proposed 36-preset roster remains
-deferred until the dry identities are heard and approved.
+phrase serialization, native velocity, `SynthKits.relay()`, the phone picker and
+a FRESH TAPE starter. The performance bank now contains 36 dry recipes: eight
+KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW. The six earlier seeds
+remain unchanged. The SYNTH panel adds a VELOCITY control and note names; explicit
+kit selections supply sixteen distinct pads without growing with the bank.
+`generateRelayPerformanceAudition` builds a 76-clip raw/matched listening page
+with all presets, six musical performances, three velocities per voice and the
+sixteen starter pads. The earlier `generateRelayAudition` engineering matrix
+remains available. HOLD exports repeating material without a separate attack
+region. [RELAY.md](RELAY.md) records the integration and listening packs.
+**The expanded bank remains a listening and playability candidate.** The owner's
+listening verdict and hands-on device verification remain open.
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
@@ -2185,6 +2326,10 @@ Mono; TUNE runs C2 to C4, its middle a man's talking pitch.
 Twelve presets: plain counts from the chip and the person, a robot, two
 shouts and a hush, a giant and a child, a stretched chop and a held
 word, two stutters. The longest render takes about 60 ms.
+
+## NACRE — first finite listening prototype
+
+PEARL renders an octave duet from two distinct four-string harps, separate bodies, and eight sympathetic resonators. TOUCH, DUET, CURRENT, VENUE and BLOOM control the finite gesture; MIDI, physical velocity, model and exact seed travel in its patch. The first venue blend is coral → seaweed; conch, cave and HOLD are deferred, and nonzero HOLD is refused. Shared current changes internal string loss and body-to-sympathetic transfer. The bounded topology has no venue-to-active-string return. Six provisional recipes and CLI/recipe/velocity support accompany a 49-clip audition with common-gain causal comparisons, source snapshots and measurements. Phone picker and held-key integration are outside this first prototype. **Listening acceptance pending.** See [NACRE.md](NACRE.md).
 
 ## S24 — FLOTILLA, as built
 

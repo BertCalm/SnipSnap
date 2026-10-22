@@ -1,0 +1,112 @@
+{
+  "recipe": 2,
+  "patch": {
+    "engine": "CHAMBER",
+    "version": 1,
+    "name": "Four Answers",
+    "voice": "HYBRID",
+    "macros": {
+      "STRIKE": 0.5,
+      "BALANCE": 0.44999998807907104,
+      "MATERIAL": 0.4000000059604645,
+      "DIVIDE": 0.8999999761581421,
+      "PLACEMENT": 0.6000000238418579,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 60,
+    "velocity": 0.75,
+    "seed": "0",
+    "configuration": {
+      "dimensions": {
+        "width": 8,
+        "depth": 9,
+        "height": 4.5
+      },
+      "listener": [
+        0.5,
+        0.8199999928474426,
+        0.46000000834465027
+      ],
+      "sources": [
+        [
+          0.18000000715255737,
+          0.23999999463558197,
+          0.25999999046325684
+        ],
+        [
+          0.3799999952316284,
+          0.36000001430511475,
+          0.30000001192092896
+        ],
+        [
+          0.6399999856948853,
+          0.2800000011920929,
+          0.3400000035762787
+        ],
+        [
+          0.800000011920929,
+          0.41999998688697815,
+          0.3499999940395355
+        ]
+      ],
+      "placementTarget": [
+        [
+          0.12999999523162842,
+          0.25999999046325684,
+          0.7200000286102295
+        ],
+        [
+          0.38999998569488525,
+          0.18000000715255737,
+          0.699999988079071
+        ],
+        [
+          0.6800000071525574,
+          0.23000000417232513,
+          0.7599999904632568
+        ],
+        [
+          0.8600000143051147,
+          0.46000000834465027,
+          0.800000011920929
+        ]
+      ],
+      "placementMode": "MACRO_PATH",
+      "layout": "ALTERNATING_WALLS",
+      "materialMode": "EXPLICIT_TARGETS",
+      "materialPolicy": "COMMON_OFFSET",
+      "materialReference": 0.4000000059604645,
+      "materialOffsetScale": 0.5,
+      "paletteLow": 0,
+      "paletteHigh": 0.75,
+      "targets": {
+        "WEST_LOWER": 0,
+        "WEST_UPPER": 0,
+        "EAST_LOWER": 0.75,
+        "EAST_UPPER": 0.75,
+        "SOUTH_LOWER": 0,
+        "SOUTH_UPPER": 0,
+        "NORTH_LOWER": 0.75,
+        "NORTH_UPPER": 0.75,
+        "FLOOR": 0.25,
+        "CEILING": 0.75
+      },
+      "splitHeight": 0.5,
+      "boundaryBlendMetres": 0.14000000059604645,
+      "tuningRatios": [
+        1,
+        1,
+        2,
+        4
+      ],
+      "instrumentEnabled": [
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  },
+  "alias": false
+}

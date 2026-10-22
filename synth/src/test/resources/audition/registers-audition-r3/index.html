@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#201c1b">
+  <meta name="description" content="Hear soft sustained PIPE airflow in Registers for SnipSnap. Compare Current R2 and With airflow R3 Kotlin renders, revisit the chiff study, and keep your listening notes.">
+  <title>Registers — SnipSnap listening bench</title>
+  <link rel="stylesheet" href="styles.css?r3-voices">
+  <script src="app.js?r3-voices" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#bench">Skip to the listening bench</a>
+  <header class="wrap header">
+    <a class="brand" href="https://github.com/BertCalm/SnipSnap" aria-label="SnipSnap on GitHub"><span class="brand-mark" aria-hidden="true"><i></i><i></i></span><span>SNIP<span class="brand-slash">/</span>SNAP</span></a>
+    <span class="header-label">THE LISTENING BENCH</span>
+    <a class="header-link" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">SOURCE <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-main">
+        <p class="eyebrow"><span class="status-led" aria-hidden="true"></span> ENGINE STUDY <span class="eyebrow-separator">/</span> REVISION 03</p>
+        <h1 id="page-title">Registers<span>.</span></h1>
+        <p class="hero-line">Pipe speech.<br> Musette beating.</p>
+        <p class="hero-description">Two voices: PIPE with speaking chiff and soft airflow, MUSETTE with beating reeds and bellows. Start with either voice, then explore the airflow and chiff comparisons.</p>
+        <div class="hero-actions"><a class="hero-action" href="?voice=PIPE#listen">Listen to PIPE <span aria-hidden="true">↓</span></a><a class="hero-action" href="?voice=MUSETTE#listen">Listen to MUSETTE <span aria-hidden="true">↓</span></a></div>
+      </div>
+      <div class="identity-panel" aria-label="Two voices in this audition: PIPE for wind, body and speech; MUSETTE for reeds, bellows and beating">
+        <div class="panel-label"><span>REGISTERS / VOICE STUDY</span><span class="panel-bolts" aria-hidden="true">+ &nbsp; +</span></div>
+        <div class="instrument-row">
+          <div class="rank-drawing" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="instrument-caption"><span class="instrument-index">01</span><strong>PIPE</strong><span>WIND · BODY · SPEECH</span></div>
+        </div>
+        <div class="instrument-row reeds-row">
+          <div class="reed-drawing" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="instrument-caption"><span class="instrument-index">02</span><strong>MUSETTE</strong><span>REEDS · BELLOWS · BEATING</span></div>
+        </div>
+        <div class="panel-foot"><span>OFFLINE KOTLIN RENDERS</span><span>DRY / MONO</span></div>
+      </div>
+      <div class="hero-foot"><span><i class="small-led" aria-hidden="true"></i> Ready for a listening verdict</span><span>Inspired by <a href="https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md" target="_blank" rel="noopener">Octave’s organ & reed mechanisms ↗</a></span></div>
+    </section>
+
+    <section class="bench wrap" id="bench" aria-labelledby="bench-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / AUDITION</p><h2 id="bench-title">Two voices. First listen.</h2></div><button type="button" class="text-button" id="export-notes">Export listening notes <span aria-hidden="true">↗</span></button></div>
+      <p class="bench-intro">Choose PIPE for speaking chiff and soft airflow, or MUSETTE for beating reeds and bellows. Twelve first listens cover both voices; the airflow and chiff studies remain below.</p>
+      <div id="load-status" class="load-status" role="status">Opening the render library…</div>
+      <div id="load-error" class="load-error" hidden><h3>The render library could not open.</h3><p id="load-error-detail"></p><button type="button" id="retry-load" class="primary-button">Try again</button><a href="manifest.json">Open the manifest</a></div>
+
+      <div id="loaded-content" hidden>
+        <section class="voice-launch" id="listen" aria-labelledby="voice-launch-title"><div class="voice-launch-heading"><p class="eyebrow" id="voice-launch-title">START WITH A VOICE</p><span>C4 · restrained · click to play</span></div><div class="voice-launch-buttons" role="group" aria-label="Play a voice and open its first listens"><button type="button" id="listen-pipe" aria-pressed="true" aria-label="Play PIPE, C4 restrained, and open PIPE first listens"><strong>PIPE</strong><span>Wind · chiff · air</span><i aria-hidden="true">▶</i></button><button type="button" id="listen-musette" aria-pressed="false" aria-label="Play MUSETTE, C4 restrained, and open MUSETTE first listens"><strong>MUSETTE</strong><span>Reeds · bellows · beating</span><i aria-hidden="true">▶</i></button></div></section>
+        <section class="revision-study" id="revision-study" aria-labelledby="revision-title" hidden>
+          <div class="revision-copy"><p class="eyebrow" id="revision-eyebrow">R2 → R3 / SUSTAINED AIR</p><h3 id="revision-title">A little air in the pipe.</h3><p id="revision-description">Compare the body and the held tone at the same pitch and gesture. Matched playback keeps the listening level consistent.</p></div>
+          <div class="revision-controls"><label for="revision-pair">Choose a comparison</label><select id="revision-pair"></select><div class="revision-buttons" role="group" aria-label="Play earlier or revised PIPE"><button type="button" id="revision-original" aria-pressed="false"><span>Current</span><small>R2</small><i aria-hidden="true">▶</i></button><button type="button" id="revision-revised" aria-pressed="true"><span>With airflow</span><small>R3</small><i aria-hidden="true">▶</i></button></div></div>
+        </section>
+        <div class="listening-desk">
+          <section class="player" aria-label="Shared audio player">
+            <div class="player-top"><span id="player-category">FIRST LISTEN</span><span class="player-format" id="player-format">MONO / 44.1 kHz</span></div>
+            <div class="player-title-row"><div><h3 id="player-title">Select a render</h3><p id="player-detail" class="player-detail"></p></div><span class="voice-badge" id="player-voice">PIPE</span></div>
+            <div class="wave-stage"><canvas id="waveform" aria-hidden="true"></canvas><div class="wave-cursor" id="wave-cursor" hidden></div><span id="wave-message" class="wave-message">Select a render to see its waveform.</span><span class="wave-caption" id="wave-caption">WAVEFORM · AUTO SCALED</span></div>
+            <div class="transport"><button type="button" class="play-button" id="play-button"><span id="play-symbol" aria-hidden="true">▶</span><span id="play-label">Play</span></button><button type="button" class="stop-button" id="stop-button" aria-label="Stop and return to the beginning">■</button><span class="timecode"><span id="current-time">0:00.0</span><span class="time-slash">/</span><span id="duration">0:00.0</span></span><span class="held-indicator" id="held-indicator" hidden>↻ HELD LOOP</span></div>
+            <label class="seek-label" id="seek-wrap"><span class="sr-only">Playback position</span><input type="range" id="seek" min="0" max="1" step="0.01" value="0" aria-label="Playback position in seconds"></label>
+            <div class="level-row"><span>Listening level</span><div class="segmented" role="group" aria-label="Audio level"><button id="mode-matched" type="button" aria-pressed="true">Matched</button><button id="mode-raw" type="button" aria-pressed="false">Raw</button></div><span class="level-hint" id="level-hint">Matched for comparison</span></div>
+            <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
+            <div class="downloads"><a id="wav-link" download>Download WAV ↓</a><a id="recipe-link" download>Patch JSON ↓</a><span id="selected-tags"></span></div>
+            <details class="native-fallback" id="native-fallback"><summary>Native audio player & playback help</summary><p id="native-help">Use your browser’s player if the main player cannot decode this WAV. Only one player runs at a time.</p><audio id="native-audio" controls preload="none" aria-label="Native player for the selected render">Your browser does not support audio playback.</audio></details>
+          </section>
+          <aside class="review-panel" aria-labelledby="review-title">
+            <div class="review-top"><p class="eyebrow">YOUR LISTENING VERDICT</p><span id="review-count">0 reviewed</span></div>
+            <h3 id="review-title">A place in the kit?</h3><p class="review-prompt" id="review-prompt">Listen for a distinct voice, a useful gesture, and a clean tail.</p>
+            <div class="verdict-buttons" role="group" aria-label="Verdict for the selected render"><button type="button" data-verdict="keep" aria-pressed="false">Keep</button><button type="button" data-verdict="revise" aria-pressed="false">Revise</button><button type="button" data-verdict="pass" aria-pressed="false">Pass</button></div>
+            <label for="listening-note" class="note-label">Listening notes <span>Saved on this device</span></label><textarea id="listening-note" rows="4" placeholder="Speech, beating, body, tail… What do you hear?"></textarea><p id="save-status" class="save-status" role="status">Your ears are the final check.</p>
+            <details class="patch-details"><summary>Patch & render details</summary><dl id="patch-details"></dl><p id="loop-detail"></p></details>
+          </aside>
+        </div>
+
+        <section class="compare" aria-labelledby="compare-title"><div class="compare-heading"><h3 id="compare-title">A / B</h3><p>Same listening level. One sound at a time.</p></div><div class="compare-slots"><div class="compare-slot"><button type="button" id="play-a" class="compare-play" aria-label="Play comparison A">A <span aria-hidden="true">▶</span></button><label class="sr-only" for="compare-a">Comparison A render</label><select id="compare-a"></select><button type="button" class="assign-button" id="assign-a" aria-label="Use selected render as comparison A" title="Use selected render as A">Use selected</button></div><div class="compare-slot"><button type="button" id="play-b" class="compare-play" aria-label="Play comparison B">B <span aria-hidden="true">▶</span></button><label class="sr-only" for="compare-b">Comparison B render</label><select id="compare-b"></select><button type="button" class="assign-button" id="assign-b" aria-label="Use selected render as comparison B" title="Use selected render as B">Use selected</button></div></div><p class="keyboard-hint">Keyboard: <kbd>Space</kbd> play / pause <span>·</span> <kbd>A</kbd> / <kbd>B</kbd> compare <span>·</span> <kbd>Esc</kbd> stop</p></section>
+
+        <nav class="section-tabs" id="section-tabs" aria-label="Render studies"></nav>
+        <div class="library-heading"><div><h3 id="section-title">First listen</h3><p id="section-description"></p></div><span id="clip-count" class="clip-count"></span></div>
+        <div class="filters" id="library-filters"><label>Voice <select id="voice-filter"><option value="">All voices</option></select></label><label>Pitch <select id="note-filter"><option value="">All pitches</option></select></label><label id="macro-filter-wrap" hidden>Control <select id="macro-filter"><option value="">All controls</option></select></label><button type="button" class="text-button reset-filters" id="reset-filters">Reset filters</button></div>
+        <div class="clip-grid" id="clip-grid"></div><p class="empty-filter" id="empty-filter" hidden>No renders match these filters. Try another voice or pitch.</p>
+        <details class="legacy-history" id="legacy-history" hidden><summary>Earlier R1 & R2 listening notes <span id="legacy-count"></span></summary><p>Your earlier notes remain unchanged. Preserved audio and identical renders show those notes in the player; new edits save separately for this revision. Export includes the complete R1 and R2 review histories.</p><div id="legacy-list"></div></details>
+      </div>
+    </section>
+
+    <section class="guide wrap" aria-labelledby="guide-title"><div class="guide-intro"><p class="eyebrow">02 / WHAT TO LISTEN FOR</p><h2 id="guide-title">Speech.<br> Beating.<br> Belonging.</h2><p>This prototype needs a listening verdict. A convincing mechanism is a starting point; a useful SnipSnap voice is the goal.</p></div><div class="guide-items"><article><span>01</span><div><h3>Let PIPE breathe.</h3><p>Listen past the first speech. Does a little colored air make the body feel alive while the pitch stays clear? Compare AIR settings, then hold the tone.</p></div></article><article><span>02</span><div><h3>Stay with MUSETTE.</h3><p>Hear the reeds moving against one another. Does the beating feel alive? Does the bellows gesture change the body?</p></div></article><article><span>03</span><div><h3>Check the boundaries.</h3><p>Held renders begin at the settled tone, without an onset. Revisit Original R1 / More chiff R2 to hear the earlier attack change; existing organs provide the reference.</p></div></article></div></section>
+  </main>
+
+  <footer class="footer wrap"><div><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap">SNIP/SNAP</a><p>Registers · a pipe & reed audition</p></div><div class="footer-links"><a href="manifest.json">Render manifest ↗</a><a href="prototype.patch" download>Prototype source patch ↓</a><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering ↗</a><span id="manifest-revision">Prototype · awaiting sonic approval</span></div></footer>
+  <noscript><div class="noscript">Enable JavaScript to select renders and compare them. The <a href="manifest.json">render manifest</a> lists the WAV downloads.</div></noscript>
+</body>
+</html>

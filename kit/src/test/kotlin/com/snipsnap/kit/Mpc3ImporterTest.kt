@@ -71,7 +71,7 @@ class Mpc3ImporterTest {
         assertEquals(20, kick.tuneFine)
         assertEquals("#e8542e", kick.colorHex, "class colours survive the native trip")
         assertTrue(kick.oneShot)
-        assertEquals(DrumClass.UNKNOWN, kick.drumClass, "import never invents a class")
+        assertEquals(DrumClass.KICK, kick.drumClass, "the validated adjacent sidecar restores its saved class")
 
         val snare = result.kit.pad(2)!!
         assertEquals(2, snare.velocityLayers.size, "velocity zones survive")
@@ -139,6 +139,40 @@ class Mpc3ImporterTest {
         val err = assertFailsWith<IllegalArgumentException> { Mpc3Importer.import(xtd, File(temp, "trav-in")) }
         assertTrue("pwned.wav" in err.message!! && "missing" in err.message!!, err.message!!)
         assertTrue(!canary.exists(), "nothing written outside the destination")
+    }
+
+    @Test
+    fun `a track refused while building its pads leaves nothing on disk`() {
+        // Two velocity layers, then the payload rewritten so their ranges
+        // overlap: the samples are all there, but the pad can't be built.
+        // The samples used to be copied before the pads were checked.
+        val kitDir = File(temp, "overlap-src").apply { mkdirs() }
+        WavWriter.write(File(kitDir, "A01_Soft_01.wav"), tone(7))
+        WavWriter.write(File(kitDir, "A01_Loud_01.wav"), tone(8))
+        val kit = Kit(
+            "Overlap",
+            listOf(
+                KitPad(
+                    slot = 1, sampleFile = "A01_Loud_01.wav",
+                    velocityLayers = listOf(KitLayer("A01_Soft_01.wav", 0, 63), KitLayer("A01_Loud_01.wav", 64, 127)),
+                ),
+            ),
+        )
+        KitStore.save(kit, kitDir)
+        val card = File(temp, "overlap-card")
+        Mpc3Exporter.exportTrack(kit, kitDir, card)
+
+        val xtd = File(card, "Overlap.xtd")
+        val container = com.snipsnap.mpc3.Acvs.read(xtd)
+        val overlapping = Regex("\"velocityStart\"(\\s*):(\\s*)64\\b").replace(container.payloadText) {
+            "\"velocityStart\"${it.groupValues[1]}:${it.groupValues[2]}10"
+        }
+        assertTrue(overlapping != container.payloadText, "the payload carries the loud layer's start")
+        xtd.writeBytes(com.snipsnap.mpc3.Acvs.write(container.header, overlapping))
+
+        val dest = File(temp, "overlap-in")
+        assertFailsWith<IllegalArgumentException> { Mpc3Importer.import(xtd, dest) }
+        assertTrue(!File(dest, "Overlap").exists(), "no kit folder, and no samples, for a refused track")
     }
 
     @Test

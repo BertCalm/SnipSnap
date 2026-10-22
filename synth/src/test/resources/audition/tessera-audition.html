@@ -105,7 +105,7 @@
     <p class="eyebrow">SnipSnap / dry engine audition</p>
     <div class="hero-title"><h1>Tessera.</h1><span>An instrument in changing space.</span></div>
     <p class="intro">Wood, paired strings and metal tubes share a frame. A strike travels through a changing chamber and returns as another material’s answer.</p>
-    <p class="read-first"><strong>Audio starts off.</strong> Read each clip's description before enabling playback. Nothing plays automatically.</p>
+    <p class="read-first"><strong>Press Play to listen.</strong> Your first Play enables audio. Nothing plays automatically.</p>
     <div class="instrument" aria-hidden="true"><div class="bars"><i></i><i></i><i></i></div><div class="strings"><i></i><i></i></div><div class="tubes"><i></i><i></i><i></i></div></div>
     <p class="verdict">An invented DSP instrument inspired by wood bars, paired strings and metal tubes. It is a musical model, and its sound still needs the owner’s listening verdict.</p>
     <details class="listening-guide"><summary>Listen for a strike, a changing path and an answer</summary><div class="story" aria-label="The sound's three connected parts">
@@ -121,7 +121,7 @@
         <button id="stop-all" type="button">Stop all <span aria-hidden="true">· Esc</span></button>
         <div class="volume"><label for="volume">Volume</label><input id="volume" type="range" min="0" max="100" value="85"><output id="volume-value" for="volume">85%</output></div>
       </div>
-      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Audio off. Descriptions are ready to read.</p>
+      <p id="playback-status" role="status" aria-live="polite" aria-atomic="true">Choose a clip and press Play to start listening.</p>
     </div>
   </div>
   <main id="audition" class="shell" tabindex="-1">
@@ -375,7 +375,7 @@
         card.querySelector('progress').value = 0;
         update(card);
       });
-      announce(enabled.checked ? 'All playback stopped.' : 'Audio off. Descriptions are ready to read.');
+      announce(enabled.checked ? 'All playback stopped.' : 'Audio off. Press Play to start listening.');
     }
     async function nativePlay(card, ticket) {
       await stopBarrier;
@@ -401,6 +401,15 @@
         await nativePlay(card, ticket);
         if (isCurrent(card, ticket) && !media(card).paused) announce(`Playing ${title(card)} with native audio controls.`);
       }
+    }
+    function syncPlaybackControls() {
+      cards.forEach(card => {
+        card.querySelector('.play').disabled = false;
+        media(card).controls = enabled.checked;
+        const hint = card.querySelector('.native-hint');
+        hint.textContent = 'Press Play, or enable audio playback above, to show native controls.';
+        hint.hidden = enabled.checked;
+      });
     }
 
     cards.forEach(card => {
@@ -428,7 +437,10 @@
       audio.addEventListener('error', () => { if (active && active.card === card && active.backend === 'native') announce(`Cannot load ${title(card)}. Try its WAV download.`); });
       audio.addEventListener('timeupdate', () => { if (!held.has(card) || (active && active.card === card && active.backend === 'native')) card.querySelector('progress').value = audio.currentTime; });
       button.addEventListener('click', () => {
-        if (!enabled.checked) return;
+        if (!enabled.checked) {
+          enabled.checked = true;
+          syncPlaybackControls();
+        }
         if (active && active.card === card) {
           if (active.backend === 'loading') { ++epoch; stopActive(true); announce(`Loading cancelled for ${title(card)}.`); }
           else if (active.backend === 'buffer') { ++epoch; stopActive(false); announce(`Paused ${title(card)}.`); }
@@ -453,8 +465,8 @@
     requestAnimationFrame(progress);
     enabled.addEventListener('change', () => {
       if (!enabled.checked) stopAll();
-      cards.forEach(card => { card.querySelector('.play').disabled = !enabled.checked; media(card).controls = enabled.checked; card.querySelector('.native-hint').hidden = enabled.checked; });
-      announce(enabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Descriptions are ready to read.');
+      syncPlaybackControls();
+      announce(enabled.checked ? 'Audio enabled. Choose a clip to play.' : 'Audio off. Press Play to start listening.');
     });
     volume.addEventListener('input', () => {
       const value = Number(volume.value) / 100;
@@ -487,6 +499,7 @@
     document.querySelectorAll('.section-nav a').forEach(link => link.addEventListener('click', () => {
       voiceFilter.value = 'all'; categoryFilter.value = link.hash.slice(1); levelFilter.value = 'all'; searchFilter.value = ''; filter();
     }));
+    syncPlaybackControls();
     filter();
   })();
   </script>

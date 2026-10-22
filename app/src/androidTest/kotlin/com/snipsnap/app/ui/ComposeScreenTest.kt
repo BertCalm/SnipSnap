@@ -11,6 +11,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeTheme
@@ -98,8 +99,16 @@ abstract class ComposeScreenTest {
 
     protected fun button(label: String) = compose.onNodeWithContentDescription(label)
 
-    /** A tap on the button named [label], and the frames for the screen to answer. */
+    /**
+     * A tap on the button named [label], and the frames for the screen to
+     * answer. Scrolled into view first when it sits in a scrolling parent:
+     * `performClick` injects a touch at the node's centre, so a button
+     * below the fold (OUT's WRITE KIT, since the page became one scroll of
+     * two cards) would be missed, not pressed. A screen with no scroll
+     * parent makes `performScrollTo` throw, which is nothing to scroll.
+     */
     protected fun tap(label: String) {
+        runCatching { button(label).performScrollTo() }
         button(label).performClick()
         pump()
     }

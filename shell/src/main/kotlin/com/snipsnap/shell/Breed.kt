@@ -73,9 +73,9 @@ object Breed {
             val partner = partnerOf(pad, b)
             val aRecipe = recipeOf(pad)
             val bRecipe = partner?.let { recipeOf(it) }
-            val canCross = partner != null && crossable(aRecipe, bRecipe)
+            val canCross = partner != null && !hasPrintedBoard(pad) && !hasPrintedBoard(partner) && crossable(aRecipe, bRecipe)
             if (!canCross) {
-                place(model, pad, aSnip, pad.recipe, stamp)
+                placeKept(model, aDir, pad, aSnip, stamp)
                 kept += pad.slot
                 continue
             }
@@ -89,7 +89,7 @@ object Breed {
             }
             val c = child
             if (c == null) {
-                place(model, pad, aSnip, pad.recipe, stamp)
+                placeKept(model, aDir, pad, aSnip, stamp)
                 audited += pad.slot
             } else {
                 place(model, pad, c.first, c.second.toJsonValue(), stamp)
@@ -104,13 +104,16 @@ object Breed {
     fun partnerOf(pad: KitPad, b: Kit): KitPad? =
         b.pad(pad.slot) ?: b.pads.sortedBy { it.slot }.firstOrNull { it.drumClass == pad.drumClass }
 
+    private fun hasPrintedBoard(pad: KitPad): Boolean = "boardPad" in (pad.recipe?.entries ?: emptyMap())
+
     /**
      * Whether the coin has anything to throw for: A's own patch or rack,
      * or B's rack over A's audio. B's patch alone is not enough — a
      * captured pad has no engine to render B's patch through.
      */
     private fun crossable(aRecipe: PadRecipe?, bRecipe: PadRecipe?): Boolean =
-        (aRecipe != null || bRecipe != null) && (aRecipe?.patch != null || aRecipe?.fx != null || bRecipe?.fx != null)
+        aRecipe?.board == null && bRecipe?.board == null &&
+            (aRecipe != null || bRecipe != null) && (aRecipe?.patch != null || aRecipe?.fx != null || bRecipe?.fx != null)
 
     /**
      * The slots of [a] that would cross with [b] — what [breed] will do,
@@ -121,7 +124,9 @@ object Breed {
      */
     fun crossable(a: Kit, b: Kit): List<Int> =
         a.pads.sortedBy { it.slot }
-            .filter { pad -> partnerOf(pad, b)?.let { crossable(recipeOf(pad), recipeOf(it)) } == true }
+            .filter { pad -> !hasPrintedBoard(pad) && partnerOf(pad, b)?.let {
+                !hasPrintedBoard(it) && crossable(recipeOf(pad), recipeOf(it))
+            } == true }
             .map { it.slot }
 
     /**
@@ -132,7 +137,7 @@ object Breed {
      */
     fun recipePads(kit: Kit): List<Int> =
         kit.pads.sortedBy { it.slot }
-            .filter { pad -> recipeOf(pad)?.let { it.patch != null || it.fx != null } == true }
+            .filter { pad -> recipeOf(pad)?.let { it.board == null && (it.patch != null || it.fx != null) } == true }
             .map { it.slot }
 
     /** A pad's recipe as the synth's own shape, or null for anything else (an era, a mutate, a keyed treatment, none). */
@@ -246,6 +251,7 @@ object Breed {
 
     /** The child's recipe: A's patch with crossed macros when the engines agree, and the crossed rack. */
     internal fun cross(a: PadRecipe?, b: PadRecipe?, rng: Random): PadRecipe {
+        require(a?.board == null && b?.board == null) { "Compound board recipes must be kept intact rather than crossed" }
         val patch: Patch? = a?.patch?.let { ap ->
             val bp = b?.patch
             if (bp != null && bp.engine == ap.engine && bp.voiceName == ap.voiceName) {
@@ -290,6 +296,34 @@ object Breed {
     /** The child's audio: a synth patch re-rendered through the rack, or A's audio through it. */
     private fun render(recipe: PadRecipe, aSnip: Snip): Snip? =
         if (recipe.patch != null) recipe.render() else recipe.process(aSnip)
+
+    /** A board that is kept verbatim also keeps its layers and editable source. */
+    private fun placeKept(model: KitBuilderModel, sourceDir: File, pad: KitPad, snip: Snip, stamp: Map<String, String>) {
+        if (!hasPrintedBoard(pad)) {
+            place(model, pad, snip, pad.recipe, stamp)
+            return
+        }
+        val assigned = model.assign(pad.slot, snip, pad.drumClass, pad.displayName)
+        // Assign chooses the child's own stem; copying bytes afterwards avoids
+        // a decode/re-encode changing the inventory hash of a kept board.
+        File(sourceDir, pad.sampleFile).copyTo(File(model.kitDir, assigned.sampleFile), overwrite = true)
+        val names = mutableMapOf(pad.sampleFile to assigned.sampleFile)
+        val layers = pad.velocityLayers.mapIndexed { index, layer ->
+            val name = names.getOrPut(layer.sampleFile) {
+                val board = BoardSheet.read(pad.recipe)?.type?.id ?: "board"
+                val stem = assigned.sampleFile.substringBeforeLast('.') + "_${board}_layer_${index + 1}"
+                var candidate = "$stem.wav"
+                var suffix = 2
+                while (File(model.kitDir, candidate).exists()) candidate = "${stem}_${suffix++}.wav"
+                File(sourceDir, layer.sampleFile).copyTo(File(model.kitDir, candidate))
+                candidate
+            }
+            layer.copy(sampleFile = name)
+        }
+        val copied = pad.copy(sampleFile = assigned.sampleFile, velocityLayers = layers, source = pad.source + stamp)
+        val imported = BoardSheet.importPad(sourceDir, model.kitDir, pad, copied)
+        model.update(pad.slot) { imported }
+    }
 
     private fun place(model: KitBuilderModel, pad: KitPad, snip: Snip, recipe: JsonValue.Obj?, stamp: Map<String, String>) {
         model.assign(pad.slot, snip, pad.drumClass, pad.displayName)

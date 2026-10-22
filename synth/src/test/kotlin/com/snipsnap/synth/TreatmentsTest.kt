@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed",
             ),
             Treatments.names,
         )
@@ -105,7 +105,13 @@ class TreatmentsTest {
 
     @Test
     fun `the pedal recipes set only their own section, and none sits on a neutral`() {
-        val expected = mapOf("driven" to "valve", "compressed" to "squash")
+        val expected = mapOf(
+            "driven" to "valve",
+            "compressed" to "squash",
+            "wahed" to "wah",
+            "touchwahed" to "wah",
+            "rockwahed" to "wah",
+        )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)
             assertEquals(
@@ -118,6 +124,15 @@ class TreatmentsTest {
                 assertTrue(v != neutrals.getValue(macro), "$name.$macro sits on its neutral $v: AMT could never move it")
             }
         }
+    }
+
+    @Test
+    fun `the wah recipe is at full reach at the pad sheet's default AMT, and shrinks below it`() {
+        val seventy = Treatments.chain("wahed", 0.7f).section("wah")!!
+        assertEquals(1f, Wah.reach(seventy), 0f, "AMT 0.7 must give the full wah: the first tap is the one the owner hears")
+        val half = Treatments.chain("wahed", 0.5f).section("wah")!!
+        assertTrue(Wah.reach(half) < 1f, "AMT 0.5 gives a smaller wah, not the same one")
+        assertEquals(null, Treatments.chain("wahed", 1f).section("wah")!!["SPEED"], "SPEED is left out: its neutral is its default")
     }
 
     @Test

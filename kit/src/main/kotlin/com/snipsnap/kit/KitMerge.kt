@@ -26,6 +26,8 @@ object KitMerge {
         destDir: File,
         name: String = destDir.name,
         replace: Boolean = false,
+        /** A higher layer carries source-backed recipes without introducing a :kit -> :shell dependency. */
+        importPad: ((sourceDir: File, targetDir: File, original: KitPad, copied: KitPad) -> KitPad)? = null,
     ): Kit {
         require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
         require(!File(destDir, KitStore.FILE_NAME).exists()) {
@@ -40,16 +42,23 @@ object KitMerge {
         }
         val bBank = b.pads.filter { it.slot in 1..BANK_OFFSET }
         require(bBank.isNotEmpty()) { "'${b.name}' has nothing on bank A to merge" }
+        val aKept = a.pads.filter { it.slot !in (BANK_OFFSET + 1)..(2 * BANK_OFFSET) }
+        // A printed board's recipe refers to immutable source files outside
+        // the live WAV set. Refuse before touching the destination unless the
+        // caller supplies the source-aware importer used by the CLI.
+        require(importPad != null || (aKept + bBank).none { "boardPad" in (it.recipe?.entries ?: emptyMap()) }) {
+            "Compound boards need a source-aware importer to merge; remove the board first or use the SnipSnap merge command"
+        }
 
         destDir.mkdirs()
 
         // Kit A's pads (minus a replaced bank B) come over verbatim - plus
         // a provenance stamp naming the parent, so the lineage can walk it.
-        val kept = a.pads.filter { it.slot !in (BANK_OFFSET + 1)..(2 * BANK_OFFSET) }
-            .map { it.copy(source = it.source + mapOf("mergedFrom" to a.name)) }
-        for (pad in kept) {
+        val kept = aKept.map { pad ->
             copySample(aDir, destDir, pad.sampleFile)
             pad.velocityLayers.forEach { copySample(aDir, destDir, it.sampleFile) }
+            val copied = pad.copy(source = pad.source + mapOf("mergedFrom" to a.name))
+            importPad?.invoke(aDir, destDir, pad, copied) ?: copied
         }
 
         // Kit B's bank arrives re-prefixed for its new slots.
@@ -66,13 +75,14 @@ object KitMerge {
                     layer.copy(sampleFile = f)
                 }
             }
-            pad.copy(
+            val copied = pad.copy(
                 slot = slot,
                 sampleFile = newFile,
                 displayName = newFile.substringBeforeLast('.'),
                 velocityLayers = layers,
                 source = pad.source + mapOf("mergedFrom" to b.name),
             )
+            importPad?.invoke(bDir, destDir, pad, copied) ?: copied
         }
 
         val merged = Kit(

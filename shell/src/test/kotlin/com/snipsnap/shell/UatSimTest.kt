@@ -177,8 +177,9 @@ class UatSimTest {
             check(make.settings(Bench.SYNTH)["engine"] == "RESIN")
         }
         val dock = DockModel()
-        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)))
-        dock.say("DUSTED A02.")
+        val cut = Location(Place.TAPE, Stage.CUT)
+        dock.offer("THE PADS ARE LOADED. TAKE THE KIT OUT.", Door(Places.DOOR_OUT, Location(Place.PROJECT, Stage.OUT)), cut)
+        dock.say("DUSTED A02.", cut)
         note("the dock's door survives a plain line: '${dock.now.text}' still offers ${dock.now.door?.label} — J10's timed offer retires")
     }
 
@@ -193,9 +194,9 @@ class UatSimTest {
 
         step(++taps, "App opens on SHELF. Kits on disk: ${KitStore.list(root).size}")
         note("empty-shelf copy: \"${Copy.EMPTY_SHELF}\"")
-        note("the only primary button reads: NEW KIT ▸ STARTERS")
+        note("the one filled button reads: ${Places.CATCH_FIRST}; NEW KIT ▸ STARTERS is the outline row beneath it")
 
-        step(++taps, "Tap NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
+        step(++taps, "Tap the outline row, NEW KIT ▸ STARTERS. Menu heading: PICK A STARTER")
         StarterKits.ALL.forEachIndexed { i, s ->
             note("${i + 1}. ${s.displayName.padEnd(14)} ${if (s.seeded) "(TAPS REROLL) " else ""}— ${s.blurb}")
         }
@@ -211,7 +212,7 @@ class UatSimTest {
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 
         step(taps, "KIT screen. Pads are tappable and sound immediately.")
-        note("kit-open hint fires (up to 3 times): \"${Copy.PAD_SHEET_HINT}\"")
+        note("the strip reads, until a pad is tapped: \"${Copy.PADS_RESTING_LINE}\"")
 
         step(++taps, "Tap EXPORT in the menu row.")
         val wiz = ExportWizardModel(kit, dir)
@@ -263,7 +264,7 @@ class UatSimTest {
         val root = tmp("j2")
         var taps = 0
 
-        step(++taps, "Shelf: two primary buttons, stacked — LISTEN · MIC / APP AUDIO ▸ RECORD AN APP")
+        step(++taps, "Cold shelf: ${Places.CATCH_FIRST} is the one filled button and arms the mic like LISTEN · MIC in the dock")
         note("LISTEN raises RECORD_AUDIO (+POST_NOTIFICATIONS on 33+). One system dialog.")
         note("armed toast: \"${Copy.SESSION_ARMED}\"")
         note("armed UI = level meter + mm:ss + STOP | SNIP ▸ UP TO 60s")
@@ -276,6 +277,8 @@ class UatSimTest {
         step(0, "…and now what? The snip has landed in SNIPS. Nothing navigates there.")
         note("the user must: STOP, then find SNIPS ▸ EVERY CATCH, ONE LIST at the bottom of the shelf")
         note("from a SNIPS row: → TAPE (trim) or → PAD (place). → PAD needs a kit that exists.")
+        note("on a cold shelf the FIRST snip is placed for them: a project, an empty kit, A01 selected and lit, and \"${Copy.FIRST_CATCH_LANDED}\" after the CUT ▸ offer")
+        note("what follows is the route a LATER failure or an emptied shelf still takes")
 
         // route A: → PAD with no kit on the shelf
         step(++taps, "Tap SNIPS ▸ EVERY CATCH, ONE LIST")
@@ -622,116 +625,71 @@ class UatSimTest {
     // ================================================================
     // J10 — chrome, copy and the things a user reads
     // ================================================================
+
+    /**
+     * The frame, measured. This used to walk a hand-copied row of thirteen
+     * tabs against the design width and report which fell past the fold
+     * (J12 was the cost of the group seams). The four-place shape
+     * (`docs/SCREEN_PLAN_2026_10.md` §1) draws `Places.PLACES` as four
+     * equal chips with no scroll and no seams, so the arithmetic is the
+     * other way round: each chip gets a quarter of the row, and the law is
+     * that the longest word fits in its quarter at the design width. The
+     * list is the model's own, not a copy, so it cannot go stale the way the
+     * old one did.
+     */
     private fun j10ChromeAndCopy() {
         say("")
         say("── J10: CHROME · the frame the whole app is read through ──")
-        // Twelve tabs, in `Chrome.kt`'s own menu order — this list
-        // was missing ORBIT (September UAT never added it here after it
-        // shipped) and had EXPORT last, both stale: that order put
-        // EXPORT up beside TAPE/CHOP/KIT so step four of the app's own
-        // stated loop ("TAPE ▸ CHOP ▸ KIT ▸ EXPORT") lands inside the
-        // visible run instead of past the row's fold (truncation pass), and
-        // KIT then moved after CHOP so the four flow tabs read in exactly
-        // that order rather than KIT ▸ TAPE ▸ CHOP ▸ EXPORT.
-        // SHELF, not KITS (J14): the shelf's tab was one letter from KIT,
-        // which takes 11 of App.kt's 24 direct navigations. Five glyphs
-        // rather than four, so this row is 6dp wider than it was - which
-        // is exactly what this simulation is here to keep honest.
-        //
-        // J12: the tabs are written out in their four groups because the
-        // row now draws a `Layout.MENU_GROOVE_W` rule at each of the three
-        // seams between them, and a seam costs width like anything else. A
-        // simulation that kept one flat list would go on reporting a row
-        // that fits more than it does - which is the one thing this whole
-        // function exists not to do. (Still a hand-copy of `Chrome.kt`'s
-        // `MENU_GROUPS`: `:shell` cannot see `:app`, so nothing but a
-        // reader holds the two together.)
-        val groups = listOf(
-            listOf("SHELF"),
-            listOf("TAPE", "CHOP", "KIT", "EXPORT"),
-            listOf("PLAY", "GROOVE", "ORBIT", "SYNTH", "SURFACE", "SNAP"),
-            listOf("SETUP", "HELP"),
-        )
-        val tabs = groups.flatten()
-        // 9sp pixel face + 0.5sp tracking ≈ 6dp/char; 4dp padding each side per tab.
         val perChar = 6.0
-        // Each tab costs its own width, and the first tab of each group
-        // after the first also carries the rule in front of it - so one
-        // walk over this answers what fits, seams included.
-        val costs = groups.flatMapIndexed { g, group ->
-            group.mapIndexed { i, tab ->
-                tab to (tab.length * perChar + 8 + if (g > 0 && i == 0) Layout.MENU_GROOVE_W.toDouble() else 0.0)
-            }
-        }
-        val width = costs.sumOf { it.second }
-        // What the row actually has to draw in: the frame's outer margin,
-        // the window frame's own 6dp border each side, and - since finding
-        // 10 - the gutter MenuRow keeps clear at each end for its arrows.
-        // The gutter is read from Layout rather than written again here,
-        // so this arithmetic cannot drift away from what MenuRow draws.
         val windowFrame = 6 * 2
-        val gutters = Layout.MENU_EDGE_W * 2
-        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - windowFrame - gutters
-        say("  menu row: ${tabs.size} tabs, estimated ${"%.0f".format(width)}dp wide")
-        say("  usable width at the ${Layout.FRAME_W}dp design frame: ${usable}dp")
-        fun fitting(widths: List<Pair<String, Double>>): List<String> {
-            var run = 0.0
-            return widths.takeWhile { (_, cost) -> run += cost; run <= usable }.map { it.first }
-        }
-        val visible = fitting(costs)
-        note("fits on screen: ${visible.joinToString(" ")}")
-        // What the seams cost, walked rather than claimed. `MENU_GROOVE_W`'s
-        // own note says 2dp buys the grouping for nothing and 4dp would
-        // start spending tabs; a number picked on that argument is only
-        // worth the argument if something recomputes it. So the row is
-        // walked a second time with the rules taken out, and if the answer
-        // moved that is a finding - this harness never asserts (see the
-        // class KDoc: a journey that ends badly is reported, not thrown),
-        // and a tab that stopped fitting is exactly what it reports.
-        val seamless = fitting(tabs.map { it to it.length * perChar + 8 })
-        val seamCost = (groups.size - 1) * Layout.MENU_GROOVE_W
-        if (seamless == visible) {
-            note("the ${groups.size - 1} group rules (J12) cost ${seamCost}dp and change nothing about what fits - the grouping is drawn for free")
+        val usable = Layout.FRAME_W - Layout.OUTER_MARGIN * 2 - windowFrame
+        val gaps = 4 * (Places.PLACES.size - 1)
+        val chip = (usable - gaps) / Places.PLACES.size.toDouble()
+        say("  place row: ${Places.PLACES.size} places · ${Places.PLACES.joinToString(" · ")} · no scroll, no seams")
+        say("  usable width at the ${Layout.FRAME_W}dp design frame: ${usable}dp, ${"%.0f".format(chip)}dp a chip")
+        val longest = Places.PLACES.maxBy { it.length }
+        val need = longest.length * perChar + 8
+        if (need <= chip) {
+            note("the longest word, $longest, needs ${"%.0f".format(need)}dp of its ${"%.0f".format(chip)}dp — every place is on screen at every width the sim measures")
         } else {
-            finding(
-                "J12",
-                "the ${groups.size - 1} group rules cost ${seamCost}dp and a tab fell off the visible run: " +
-                    "the row shows ${visible.joinToString(" ")} where without them it showed " +
-                    "${seamless.joinToString(" ")}. MENU_GROOVE_W was chosen at the width where the " +
-                    "separators are free; either the tabs grew or that width did.",
-            )
+            finding("J10-ROW", "$longest needs ${"%.0f".format(need)}dp and its chip is ${"%.0f".format(chip)}dp: a place is cut short on the row that never scrolls")
         }
-        note("reached by dragging the row, with a ▸ saying so: ${(tabs - visible.toSet()).joinToString(" ")}")
-        note(
-            "the row is ${Layout.MENU_ROW_H}dp and each tab fills it, against " +
-                "MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, fixed); the ends carry ◂ ▸ " +
-                "while there are tabs that way (finding 10, fixed)",
-        )
-        note("status bar cells: WHERE YOU ARE | SHELF: n | a busy line, or the open kit's name")
-        note("title bar reads: SNIPSNAP.EXE — the stale M0 build tag went with finding 2")
+        note("the row is ${Layout.MENU_ROW_H}dp and each place fills it, against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, kept)")
+        note("stage rows under TAPE (${Places.TAPE_STAGES.joinToString(" · ")}) and PROJECT (${Places.PROJECT_STAGES.joinToString(" · ")}); SHELF and MAKE are lists")
+        note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸ and ${Places.GEAR_HELP} ▸ — tabs twelve and thirteen of the old row, one tap from anywhere now")
+        note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
+        note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
+        note("title bar reads: SNIPSNAP.EXE, then the open project's name — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,
         // since once every toast states fact there is nothing left for a
         // tone slider to gate, and the gate had a real bug: OFF silenced
         // every toast, including failures like DUB FAILED. See
-        // `Personality.kt`'s own KDoc.
-        note("the toast bubble is unconditionally composed and drawn — no personality gate to silence a failure toast")
+        // `Personality.kt`'s own KDoc. The toast itself went with the dock:
+        // the line lands in the dock's Now region and stays until replaced.
+        note("no toast: the dock's line says what happened and stays — nothing is timed, nothing is gated")
 
         say("")
-        say("  the ${SchemeId.entries.size} schemes a user can pick in SETUP: ${SchemeId.entries.joinToString(", ")}")
+        val byLook = Schemes.byLook()
+        for ((look, schemes) in byLook) {
+            say("  LOOK ${look.displayName}: ${schemes.size} schemes · ${schemes.joinToString(", ") { it.id.displayName }}")
+        }
         say("")
-        say("  HELP screen, verbatim from StubScreen.kt:")
-        note(Copy.BOOT_READY)
-        Copy.BOOT_LINES.forEach { note(it) }
-        note("THIS IS THE M0 SKELETON:")
-        note("· BROWSE THE SHELF, TAP PADS, HEAR WAVS")
-        note("· FLIP SCHEMES IN SETUP")
-        note("· CAPTURE ARRIVES WITH M1")
-        finding(
-            "J10-HELP",
-            "HELP — the one screen a lost user opens — describes the M0 skeleton and says capture has not " +
-                "shipped. Capture, chop, synth, groove, play and export all shipped. It documents none of them.",
-        )
+        say("  HELP, by place, verbatim from Places.HELP:")
+        for ((section, lines) in Places.HELP) {
+            note(section)
+            lines.forEach { note(it) }
+            val long = lines.filter { it.length > Places.HELP_LINE_CHARS }
+            if (long.isNotEmpty()) {
+                finding("J10-HELP", "HELP's $section section has ${long.size} line(s) over ${Places.HELP_LINE_CHARS} characters: ${long.first()}")
+            }
+        }
+        // Finding 1 of the September UAT (HELP described the M0 skeleton and
+        // said capture had not shipped) is closed here rather than raised:
+        // the sections are the model's, held by PlacesTest, and the MPC is
+        // named at the top of the first one (plan §3.7: the front door says
+        // who the app is for).
+        note("HELP's front door names the MPC: ${Places.HELP.values.first().first { "MPC" in it }}")
     }
 
     // ================================================================
