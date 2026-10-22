@@ -192,3 +192,24 @@ Both manuals are now in (the second arrived after the first draft). Two things w
 - Attack Magazine, "8 Ways We Love To Use Devious Machines Infiltrator 2" (pitch snap as a phrase maker; the follower on resonance for a per-note wobble; Clean Bass on a drum bus).
 - Pluginerds, "Devious Machines Infiltrator 2 Review" (twelve drive models, four compressors, the bass bypass, eight macros in later versions).
 - Reviews disagree on the first tool's macro count (four in the manual's default view, eight after the "+" button). The manuals are taken as authoritative for this document.
+
+## As built: F2, the per-macro fade law (2026-10-22, `synth` only)
+
+- **The law** is a field on `MacroSpec` (`law: FadeLaw = FadeLaw.LINEAR`; `FadeLaw` is `LINEAR` or `LOG`). VALVE's DRIVE is the one LOG macro. A LOG macro names its gain law on its section in the chain table (`FxChain.Section.gains`, read through `FxChain.gainOf`); VALVE's is `Valve.gainFor`. `Treatments.fade` walks a LOG macro so that its gain is the AMT's fraction of the way from the neutral's gain (DRIVE 0, gain 0.05) to the character's (DRIVE 1, gain 1000) in decibels, and finds the knob by bisection on `gainFor` (60 halvings), so the gain law stays in one place. The ends are exact (the neutral at AMT 0, the character at 1). Every other macro walks linearly, byte for byte as before; `Treatments.linearFade` keeps the old walk for the tests and the listen and is not called by the product.
+- **What moved:** only chains that fade VALVE's DRIVE: `driven` (the DRIVE chip) and `amped` below AMT 1, and anything built from them (a DRIVE or RIG pick on a pedal board). At AMT 1 nothing moved. `amped` (DRIVE 0.6) sits on V1's exponential part of the gain law, where a linear walk of the knob is already a linear walk of the gain in dB, so it moves only by floating-point rounding.
+- **Measured** (`./gradlew :synth:generateFadeLawAudition` prints this; `driven` on a steady 220 Hz sine at peak 0.5, THD over harmonics 2 to 8):
+
+| AMT | LOG: DRIVE, gain, THD | old linear: DRIVE, gain, THD |
+|---|---|---|
+| 0.1 | 0.151, 0.13, 0.20 % | 0.100, 0.10, 0.10 % |
+| 0.3 | 0.454, 0.98, 7.08 % | 0.300, 0.36, 1.28 % |
+| 0.5 | 0.668, 7.07, 33.74 % | 0.500, 1.32, 10.46 % |
+| 0.7 | 0.801, 51.25, 38.63 % | 0.700, 11.34, 35.99 % |
+| 0.9 | 0.934, 371.45, 38.39 % | 0.900, 224.65, 38.38 % |
+| 1.0 | 1.000, 1000, 38.05 % | the same |
+
+- **The finding the table shows:** on a steady tone the tube's THD saturates near 38 percent once its gain passes about 20, so at the sheet's AMT 0.7 the law raises the gain into the tube about 13 dB (51 against 11) but steady-tone THD only from 36.0 to 38.6 percent. Where the law changes a steady tone most is the lower half of the stepper (AMT 0.5: 33.7 against 10.5 percent), and the cost is that AMT 0.6 to 1 now sound alike on a sustained note. On a decaying hit the extra gain keeps the tail saturated for longer, which THD on a sine does not measure; that is what the listen is for.
+- **The pre-amp end fade** follows the amp's lift, so it lengthened with the law: 54 ms at AMT 0.7 (57 percent of the full 95 ms, where the old walk gave 33), and the amp now starts to lift (gain above 1) at AMT about 0.30 instead of 0.46. The bars the fade was chosen against (a snare and a choir ending at least 53 dB under their peaks with a DC mean under 1e-4, at AMT 0.7 to 1) pass unchanged; the test's window on the fade's length was re-pinned from 10..40 ms to 40..70 ms with the reason.
+- **Tests:** `FadeLawTest` (VALVE DRIVE is the only LOG macro and every LOG macro names a positive, rising gain law, and no linear macro declares one; the LOG walk is linear in dB within 0.01 dB at nineteen AMTs and exact at the ends; every non-LOG macro in every character at every AMT equals the linear walk, and a chain with no LOG macro is equal whole; the old walk left `driven` at gain 11.3 at AMT 0.7 and the new one is more than four times that), and in `TreatmentsTest` THD versus AMT on the 220 Hz sine (never falls by more than half a point as AMT rises; at 0.7 the LOG walk is at least a point above the linear one).
+- **The listen:** `./gradlew :synth:generateFadeLawAudition` writes `testkit/fade-law-audition/` (gitignored): on a snare, the choir and both MAGNET guitar pads as the sheet bakes them, the dry pad, DRIVE at AMT 70 the old way, DRIVE at AMT 70 the new way, and DRIVE at AMT 100, all at one loudness. The questions: does the new 70 read as the drive pedal you picked at round two, where the old 70 read as "not enough"; and on the choir and the guitars, is the new 70 now too close to 100, so that the top of the stepper does too little?
+- **Heard:** nothing.
