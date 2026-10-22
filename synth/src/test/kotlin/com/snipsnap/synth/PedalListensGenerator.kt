@@ -22,7 +22,16 @@ import kotlin.math.roundToInt
  * second recipe with closer repeats that fall faster ([DELAYED_SHORT]), on the snare, the choir and
  * JANGLE. The rack's one-second tail cap runs from the pad's own end, so on these sources it lands on
  * repeats already 48 to 80 dB under the hit (measured 2026-10-20); the page asks whether that cut is
- * heard at all, rather than telling the owner it is.
+ * heard at all, rather than telling the owner it is. (5) DELAY on long notes, added after the owner's
+ * first listen (2026-10-21: on the jangle and the choir "you don't hear the attack repeat like with a
+ * short hit"; measured, the first repeat adds 37 dB over the snare's silence at 225 ms and 0.5 dB over
+ * the jangle's still-sounding note): ROLL, the keyed treatment that strikes the hit's head again on the
+ * grid, at two divisions of a stated [ROLL_BPM]; and three prototypes of an attack-fed echo
+ * ([attackEcho]), ECHO's repeat line fed by the attack alone rather than the whole note, the attack as
+ * SPIKE measures it, the same with the note ducked under each repeat, or a fixed head, against the
+ * plain DELAY. The prototypes are test-source DSP,
+ * like the WAH round-two spike: they copy ECHO's bus loop rather than call it, so nothing shipped
+ * moves, and a section is written only if the owner picks one.
  *
  * JANGLE is heard as the kit has it (the dry string through its landing amp). A pedal that belongs
  * in front of the amp (SWELL) is put there, in the rig order, with the amp's own values; a pedal that
@@ -63,6 +72,121 @@ object PedalListensGenerator {
 
     /** TAPE's wobble alone: the wow and flutter with no saturation and no head wear. */
     internal fun tapeWobble(depth: Float) = FxChain(tape = mapOf("WOBBLE" to depth, "DRIVE" to 0f, "AGE" to 0f))
+
+    /** The page has no kit, so ROLL's grid is stated: 1/8 is 250 ms here, close to the DELAY recipe's 225 ms. */
+    const val ROLL_BPM = 120f
+
+    /** The fixed head the second prototype feeds: the pick and a little of the body, faded over its last [HEAD_FADE_SEC]. */
+    const val HEAD_SEC = 0.12f
+    const val HEAD_FADE_SEC = 0.04f
+
+    /** Which part of the note the prototype's repeat line hears. */
+    enum class Feed { ATTACK, HEAD }
+
+    /**
+     * The attack-fed echo prototype: ECHO's repeat line fed by the note's attack alone, the whole
+     * dry note added back untouched, so the repeats are the pick or the consonant returning under a
+     * note that is still sounding. [Feed.ATTACK] weights each frame by SPIKE's own transient share
+     * (the gap between a 700 Hz and an 18 Hz follower on the signal's envelope, over the fast one);
+     * [Feed.HEAD] takes the first [HEAD_SEC] of the note with a raised-cosine fade over its last
+     * [HEAD_FADE_SEC]. The bus is ECHO's, line for line (one delay, one low-pass in the loop, repeats
+     * below minus 60 dB counted as silence, ECHO's own 1.1 s tail ceiling), then the rack's 1.0 s cap
+     * from the note's end with its 10 ms fade, then a peak match. Two things differ from ECHO on
+     * purpose, both forced by measurement against the plain DELAY on the jangle, whose first repeat
+     * read 0.5 dB over the still-sounding note: the repeat line is levelled so its first repeat peaks
+     * where the note's own attack peaked (a gain found from the bus, capped at [MAX_FEED_GAIN]; SPIKE's
+     * share of a compressed pluck and the loop's low-pass had left the first repeat about 10 dB under
+     * the hit, inaudible under a body at the hit's level), and [duck] (0 to 1) dips the dry note under
+     * each repeat by up to [DUCK_DB] (a 1 ms attack, 150 ms release follower on the levelled repeat
+     * line, scaled so its loudest repeat dips the full depth), the way a ducking delay pedal lets its repeats through a
+     * held chord. A prototype in test source: it
+     * repeats ECHO's loop rather than calling it, which is the one-quantity-in-two-places smell,
+     * accepted here because nothing shipped may move for a listen.
+     */
+    /** How far the dry note dips under a repeat at duck 1, an end on purpose (measured 15 dB on the jangle 20 ms after the first repeat, a 1 ms follower on a click reaching less than its peak): the jangle's attack is only 2 dB over its body, so a repeat at the attack's level is a 4 dB bump, and the dip is what makes the repeat a rhythm. */
+    const val DUCK_DB = 24f
+
+    /** The most the repeat line may be lifted to bring its first repeat to the hit's peak: a feed that is nearly nothing is not shouted. */
+    const val MAX_FEED_GAIN = 8f
+
+    internal fun attackEcho(snip: Snip, feed: Feed, macros: Map<String, Float>, duck: Float = 0f): Snip {
+        val rate = snip.sampleRate
+        val frames = snip.frameCount
+        val m = Echo.defaults().toMutableMap()
+        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        val delay = Echo.delayFrames(m.getValue("TIME"), rate)
+        val feedback = Dsp.lin(m.getValue("REPEAT"), 0.15f, 0.75f)
+        val toneHz = Dsp.expMap(m.getValue("TONE"), 1_200f, 9_000f)
+        val taps = kotlin.math.ceil(-6.9078 / kotlin.math.ln(feedback.toDouble())).toInt().coerceAtLeast(1)
+        val echoTail = (taps * delay).coerceAtMost((Echo.MAX_TAIL_SECONDS * rate).toInt())
+        val capTail = (FxChain.MAX_CHAIN_TAIL_SECONDS * rate).toInt()
+        val outFrames = frames + minOf(echoTail, capTail)
+        val out = FloatArray(outFrames * snip.channels)
+        val headFrames = (HEAD_SEC * rate).toInt()
+        val headFade = (HEAD_FADE_SEC * rate).toInt()
+        val inPeak = snip.peak()
+        val duckFloor = Math.pow(10.0, -DUCK_DB / 20.0).toFloat()
+        val duckAttack = 1f - kotlin.math.exp(-1.0 / (rate * 0.001)).toFloat()
+        val duckRelease = 1f - kotlin.math.exp(-1.0 / (rate * 0.150)).toFloat()
+        for (ch in 0 until snip.channels) {
+            val fast = Dsp.OnePole(rate)
+            val slow = Dsp.OnePole(rate)
+            val lp = Dsp.OnePole(rate)
+            val d = FloatArray(outFrames)
+            var duckEnv = 0f
+            val wetLine = FloatArray(outFrames)
+            for (f in 0 until outFrames) {
+                val x = if (f < frames) snip.samples[f * snip.channels + ch] else 0f
+                val weight = when (feed) {
+                    Feed.ATTACK -> {
+                        val a = kotlin.math.abs(x)
+                        val quick = fast.lp(a, Spike.FAST_HZ)
+                        val slowed = slow.lp(a, Spike.SLOW_HZ)
+                        ((quick - slowed).coerceAtLeast(0f) / quick.coerceAtLeast(1e-9f)).coerceIn(0f, 1f)
+                    }
+                    Feed.HEAD -> when {
+                        f >= headFrames -> 0f
+                        f < headFrames - headFade -> 1f
+                        else -> (0.5 + 0.5 * kotlin.math.cos(Math.PI * (f - (headFrames - headFade)) / headFade)).toFloat()
+                    }
+                }
+                val fed = if (f >= delay) d[f - delay] else 0f
+                d[f] = lp.lp(x * weight + feedback * fed, toneHz)
+                wetLine[f] = if (f >= delay) d[f - delay] else 0f
+            }
+            // The attack comes back at the attack's own level: the first repeat's peak is lifted to the note's peak.
+            var firstPeak = 0f
+            for (f in delay until minOf(outFrames, delay + (0.1f * rate).toInt())) firstPeak = maxOf(firstPeak, kotlin.math.abs(wetLine[f]))
+            val feedGain = if (firstPeak > 0f) (inPeak / firstPeak).coerceAtMost(MAX_FEED_GAIN) else 1f
+            // The duck follows the repeat line's envelope, scaled so the first repeat dips the note by the
+            // full DUCK_DB and later, quieter repeats dip it less: a follower on a brief click reaches only a
+            // fraction of the click's peak, so scaling by the note's peak left a 5 dB dip where 24 was promised.
+            val envLine = FloatArray(outFrames)
+            var envMax = 0f
+            for (f in 0 until outFrames) {
+                val a = kotlin.math.abs(wetLine[f] * feedGain)
+                duckEnv += (if (a > duckEnv) duckAttack else duckRelease) * (a - duckEnv)
+                envLine[f] = duckEnv
+                if (duckEnv > envMax) envMax = duckEnv
+            }
+            for (f in 0 until outFrames) {
+                val x = if (f < frames) snip.samples[f * snip.channels + ch] else 0f
+                val wet = wetLine[f] * feedGain
+                val dip = if (duck <= 0f || envMax <= 0f) 1f else 1f - duck * (1f - duckFloor) * (envLine[f] / envMax).coerceIn(0f, 1f)
+                out[f * snip.channels + ch] = x * dip + wet
+            }
+        }
+        // The rack's cap fades the last 10 ms, as FxChain.capTail does.
+        val fade = (0.01f * rate).toInt() * snip.channels
+        for (i in 0 until minOf(fade, out.size)) out[out.size - 1 - i] *= i.toFloat() / fade
+        var outPeak = 0f
+        for (v in out) { val a = kotlin.math.abs(v); if (a > outPeak) outPeak = a }
+        if (inPeak > 0f && outPeak > 0f) {
+            val k = inPeak / outPeak
+            for (i in out.indices) out[i] = (out[i] * k).coerceIn(-1f, 1f)
+        }
+        return Snip(out, snip.channels, rate)
+    }
 
     private fun pct(amount: Float) = (amount * 100).roundToInt()
 
@@ -150,7 +274,18 @@ object PedalListensGenerator {
             write(name, "delay_short_100", "$name DELAY, THE CLOSER RECIPE, AT 100", DELAYED_SHORT.process(dry))
         }
 
-        check(entries.size == 48) { "expected 48 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12), wrote ${entries.size}" }
+        // (5) DELAY on long notes: ROLL on the grid, and the attack-fed echo two ways, beside the plain DELAY above.
+        for ((name, dry) in linkedMapOf("JANGLE" to jangle, "CHOIR" to choir)) {
+            for (division in listOf("1/8", "1/16")) {
+                Roll.refusal(dry, ROLL_BPM, division)?.let { error("$name cannot roll at $division: $it") }
+                write(name, "roll_" + division.substringAfter('/'), "$name ROLL AT $division OF ${ROLL_BPM.roundToInt()} BPM", Roll.roll(dry, ROLL_BPM, division, 1f))
+            }
+            write(name, "attack_echo", "$name ATTACK-FED ECHO: THE DELAY RECIPE FED BY SPIKE'S ATTACK ALONE", attackEcho(dry, Feed.ATTACK, DELAYED.echo!!))
+            write(name, "attack_ducked", "$name ATTACK-FED ECHO, THE NOTE DUCKED 24 DB UNDER EACH REPEAT", attackEcho(dry, Feed.ATTACK, DELAYED.echo!!, duck = 1f))
+            write(name, "head_echo", "$name HEAD-FED ECHO: THE DELAY RECIPE FED BY THE FIRST 120 MS ALONE", attackEcho(dry, Feed.HEAD, DELAYED.echo!!))
+        }
+
+        check(entries.size == 58) { "expected 58 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, long notes 10), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         val template = PedalListensGenerator::class.java.getResourceAsStream("/audition/pedal-listens.html")
             ?.bufferedReader()?.use { it.readText() }

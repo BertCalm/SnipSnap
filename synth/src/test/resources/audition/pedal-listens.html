@@ -93,7 +93,7 @@ textarea { width: 100%; min-height: 64px; resize: vertical; font: 400 1rem/1.4 v
   </div>
   <div class="lede">
     <p>Four short listens that cost no new rack section, from the pedal board brainstorm. They sit beside the WAH gate, not in place of it. First, WAH on the short pads a kit is mostly made of: a closed hat, a rim and a snare cut to 60 ms, each as WAH ships today and with a floor that makes the sweep complete one whole wah before the pad ends. Then three questions the brainstorm could not answer without your ears: whether a SWELL already does what a FADE IN pedal would, whether TAPE's wobble already reads as a VIBRATO, and whether a long ECHO recipe is the DELAY pedal, and whether the rack's one-second tail cap is ever heard on it.</p>
-    <p>Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
+    <p>A fifth sheet, DELAY on long notes, was added after your first listen. Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
   </div>
   <div id="sheet"></div>
   <div class="foot">
@@ -118,6 +118,8 @@ const WHICH4 = [['long', 'The long recipe'], ['closer', 'The closer recipe'], ['
 const SLATE4 = [['row', 'Up to five on the row, swapped in from a larger slate'], ['pad', 'Up to five on one pad at once, swappable'], ['both', 'Both'], ['other', 'Something else: see the note']];
 const YES4 = [['yes', 'Yes'], ['nearly', 'Nearly'], ['no', 'No'], ['no_use', 'Not usable']];
 const FLOOR3 = [['yes', 'Yes'], ['no', 'No'], ['later', 'Decide after the WAH gate']];
+const LONG4 = [['roll', 'ROLL'], ['attack', 'The attack-fed echo'], ['ducked', 'The attack-fed echo, ducked'], ['head', 'The head-fed echo'], ['none', 'None of these']];
+const SECTION4 = [['yes', 'Yes: a DELAY section with an ATTACK knob'], ['roll', 'No: ROLL with a fade is enough'], ['no', 'No'], ['later', 'Decide later']];
 const QIDS = [];
 const state = {};
 const els = {};
@@ -388,14 +390,35 @@ function delaySheet() {
   ], ...one('SNARE', 'snare', 'the snare', 'dry', 'Dry'), ...one('CHOIR', 'choir', 'the choir', 'dry', 'Dry'), ...one('JANGLE', 'jangle', 'the jangle', 'pad', 'Pad'));
 }
 
+function longNoteSheet() {
+  const one = (src, id, name, first, firstLabel) => [
+    setRow(name, [
+      [src + '/' + first, firstLabel, name + ', ' + firstLabel.toLowerCase()],
+      [src + '/delay_100', 'Delay 100', name + ', the plain DELAY at 100'],
+      [src + '/roll_8', 'Roll 1/8', name + ', ROLL at an eighth of 120 BPM'],
+      [src + '/roll_16', 'Roll 1/16', name + ', ROLL at a sixteenth of 120 BPM'],
+      [src + '/attack_echo', 'Attack', name + ', the echo fed by the attack alone, as SPIKE hears it'],
+      [src + '/attack_ducked', 'Attack, ducked', name + ', the attack-fed echo with the note ducked under each repeat'],
+      [src + '/head_echo', 'Head 120', name + ', the echo fed by the first 120 ms alone'],
+    ]),
+    chipGroup('s1b_' + id + '_roll', 'Does ROLL give the attack repeating that DELAY could not, on ' + name + '?', YES4, name + ' ROLL'),
+    chipGroup('s1b_' + id + '_attack', 'Does the attack-fed echo, in any of its three forms, on ' + name + '?', YES4, name + ' attack echo'),
+    chipGroup('s1b_' + id + '_long', 'Which is the delay for a long note, on ' + name + '?', LONG4, name + ' long note'),
+  ];
+  return setSheet('DELAY on long notes', [
+    'You heard it: on the jangle and the choir the plain DELAY does not repeat the attack the way it does on a hit. Measured, the first repeat lands 225 ms in, where the snare has gone silent (the repeat adds 37 dB) but the jangle and the choir are still at full voice (it adds half a decibel), so it only thickens them. Three ways to get the attack back. ROLL is already in the app, on the KEYED row: the hit\'s own head struck again on the beat, each a little quieter; this page has no kit, so it runs at 120 BPM, where an eighth is 250 ms. The other three are prototypes of an attack-fed echo: the same DELAY recipe, but its repeat line hears only the attack, as SPIKE measures it or as the first 120 ms, and the repeats come back at the attack\'s own level (the first one peaks where the note\'s own attack did) while the whole note plays on. The ducked one also dips the note under each repeat, set to 24 dB with a 150 ms recovery and measured at 15 dB on the jangle, the way a ducking delay pedal lets its repeats through a held chord, taken to its end on purpose. Measured, the jangle\'s attack is only 2 dB louder than the body it sustains into, so an echo of that attack at its own level is a 4 dB bump on top of the note; the duck is what turns the repeats into a rhythm you can hear. Nothing in the app changes until you pick one.',
+  ], ...one('JANGLE', 'jangle', 'the jangle', 'pad', 'Pad'), ...one('CHOIR', 'choir', 'the choir', 'dry', 'Dry'));
+}
+
 function verdictSheet() {
   return setSheet('Your verdict', 'After all of that.',
     chipGroup('s1b_slate', 'You said a slate of pedals to choose from, five allowed at once, swappable. Which did you mean?', SLATE4, 'slate'),
-    chipGroup('s1b_floor', 'Should the one-cycle floor ship inside WAH, so a short pad always hears one sweep?', FLOOR3, 'floor'));
+    chipGroup('s1b_floor', 'Should the one-cycle floor ship inside WAH, so a short pad always hears one sweep?', FLOOR3, 'floor'),
+    chipGroup('s1b_attack_section', 'Should the attack-fed echo become a section?', SECTION4, 'attack section'));
 }
 
 const sheet = document.getElementById('sheet');
-sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), verdictSheet());
+sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), longNoteSheet(), verdictSheet());
 wireNote(document.getElementById('s1b_note'), 's1b_note');
 loadLocal();
 paint();
