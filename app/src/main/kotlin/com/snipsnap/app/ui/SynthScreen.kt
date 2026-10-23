@@ -1076,45 +1076,51 @@ fun SynthScreen(
     LaunchedEffect(Unit) {
         try {
             val (live, bin) = withContext(Dispatchers.IO) { embouchureRestore.readShelf(shelfRoot) }
-            userPresets = live
-            binnedPresets = bin
-            // The YOURS presets the bag named (§3.6), now that the shelf has
-            // been read: re-adopt each whole, or drop the highlight when the
-            // preset was forgotten while the lab was away. Live state is
-            // re-read here, after the await: a preset tapped meanwhile wins.
-            for ((pair, name) in seededPresets) {
-                if (currentPresetByVoice[pair] != name) {
+            // The shelf read resumes on whichever thread finished it (the Compose test
+            // environment's effect dispatcher is unconfined), so these writes land back on
+            // Main, as holdDone's do: a recomposition that started between the loaded patch
+            // and its macros below would show BRASS GROW's four controls beside six values.
+            withContext(Dispatchers.Main) {
+                userPresets = live
+                binnedPresets = bin
+                // The YOURS presets the bag named (§3.6), now that the shelf has
+                // been read: re-adopt each whole, or drop the highlight when the
+                // preset was forgotten while the lab was away. Live state is
+                // re-read here, after the await: a preset tapped meanwhile wins.
+                for ((pair, name) in seededPresets) {
+                    if (currentPresetByVoice[pair] != name) {
+                        embouchureRestore.pending.remove(pair)
+                        continue
+                    }
+                    val factory = Presets.byName(pair.first.name, pair.second.name, name)
+                    // SHOAL always holds a complete snapshot, so a YOURS name must still be adopted whole.
+                    if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) {
+                        // OVEN can retain a full edited recipe after its YOURS
+                        // preset has left the shelf. Keep the sound, not a stale chip.
+                        if (pair.first == Engine.OVEN && factory == null &&
+                            UserPresets.forVoice(live, pair.first.name, pair.second.name).none { it.name == name }) {
+                            currentPresetByVoice.remove(pair)
+                        }
+                        embouchureRestore.pending.remove(pair)
+                        continue
+                    }
+                    val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
+                        .firstOrNull { it.patch.name == name }?.patch
+                    if (mine != null) {
+                        val editable = editablePreset(mine)
+                        loadedPatchesByVoice[pair] = editable
+                        if (editable is EmbouchurePatch) {
+                            macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
+                        }
+                        if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
+                        // The named preset is being restored whole. A partial legacy
+                        // OVERLAP recipe must fill its sliders from its saved model.
+                        if (mine is OverlapPatch) {
+                            macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
+                        }
+                    } else currentPresetByVoice.remove(pair)
                     embouchureRestore.pending.remove(pair)
-                    continue
                 }
-                val factory = Presets.byName(pair.first.name, pair.second.name, name)
-                // SHOAL always holds a complete snapshot, so a YOURS name must still be adopted whole.
-                if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) {
-                    // OVEN can retain a full edited recipe after its YOURS
-                    // preset has left the shelf. Keep the sound, not a stale chip.
-                    if (pair.first == Engine.OVEN && factory == null &&
-                        UserPresets.forVoice(live, pair.first.name, pair.second.name).none { it.name == name }) {
-                        currentPresetByVoice.remove(pair)
-                    }
-                    embouchureRestore.pending.remove(pair)
-                    continue
-                }
-                val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
-                    .firstOrNull { it.patch.name == name }?.patch
-                if (mine != null) {
-                    val editable = editablePreset(mine)
-                    loadedPatchesByVoice[pair] = editable
-                    if (editable is EmbouchurePatch) {
-                        macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
-                    }
-                    if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
-                    // The named preset is being restored whole. A partial legacy
-                    // OVERLAP recipe must fill its sliders from its saved model.
-                    if (mine is OverlapPatch) {
-                        macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
-                    }
-                } else currentPresetByVoice.remove(pair)
-                embouchureRestore.pending.remove(pair)
             }
         } catch (e: CancellationException) {
             throw e
