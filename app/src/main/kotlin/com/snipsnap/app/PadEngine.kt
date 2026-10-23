@@ -285,6 +285,7 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun hit(pad: KitPad, velocity: Float, voiceId: Int, swap: ((PadHit.Hit) -> PadHit.Hit?)? = null): Boolean {
         if (!isUp()) return false
+        flushPending()
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
         // Resolved as the pad always resolves - round-robin counter, velocity
@@ -316,7 +317,9 @@ class PadEngine(preferredSampleRate: Int) {
      */
     @Synchronized
     fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
-        if (!isUp() || layers.isEmpty()) return false
+        if (!isUp()) return false
+        flushPending()
+        if (layers.isEmpty()) return false
         // The native side refuses a group larger than the engine has voices;
         // saying so here means four arrays are never built for it.
         if (layers.size > MAX_VOICES) return false
@@ -399,7 +402,8 @@ class PadEngine(preferredSampleRate: Int) {
      * The command ring drops on full by design, which is right for a fader
      * (the next value supersedes the lost one) and wrong for a stop: a dropped
      * stop is a stuck pad until PANIC. So a refused stop is kept and retried
-     * from [drainEnded], which the frame loop already runs at screen rate; no
+     * from [drainEnded], which PadHost and BeatPlayer pump at screen rate (SPLIT
+     * and ORBIT own engines that do not; a later hit flushes it there); no
      * new loop. Returns true when queued now, false when kept to retry.
      */
     @Synchronized
@@ -418,7 +422,8 @@ class PadEngine(preferredSampleRate: Int) {
      * Kept and retried from [drainEnded] when the ring refuses it, for the
      * reason [stop] gives. A kept all-off supersedes any kept stops, which are
      * cleared, so they can never replay after it. Returns true when queued
-     * now, false when kept to retry.
+     * now, false when kept to retry. A kept all-off is retried before any later
+     * hit is queued, so nothing played after PANIC is cut by it.
      */
     @Synchronized
     fun allOff(fadeMs: Float = PANIC_FADE_MS): Boolean {

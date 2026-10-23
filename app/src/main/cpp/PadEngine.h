@@ -228,6 +228,7 @@ private:
     // The engine's only clock, the one the loudspeaker is on. The fit from
     // nanoseconds to these frames waits for bench S1; it will read this.
     std::atomic<int64_t> framesRendered_{0};
+    static_assert(std::atomic<int64_t>::is_always_lock_free, "the frame counter must be lock-free on every ABI the app builds for");
 
     std::unique_ptr<Bank> building_;  // UI thread only
     std::atomic<uint32_t> uiGeneration_{0};  // the last committed bank's generation

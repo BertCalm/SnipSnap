@@ -24,9 +24,10 @@ package com.snipsnap.kit
  *    status, as the spec says.
  *
  * What comes out is what a player and a transport need: notes,
- * controllers, and the clock's own four bytes. Pitch bend, aftertouch and program changes are read correctly - their
- * lengths are honoured, so the bytes after them stay in step - and
- * dropped. A note-on at velocity 0 is a note-off, the convention every
+ * controllers, and the clock's own four bytes. Pitch bend,
+ * aftertouch and program changes are read correctly - their lengths
+ * are honoured, so the bytes after them stay in step - and dropped.
+ * A note-on at velocity 0 is a note-off, the convention every
  * keyboard built since 1983 relies on.
  *
  * Velocity is MIDI's 1..127 as 0..1, the inverse of what [MidiGroove]
@@ -48,11 +49,13 @@ package com.snipsnap.kit
  * Hostile input is a stream, not a file: a parser is never more than
  * one message behind, holds at most two pending data bytes, and skips a
  * SysEx byte by byte until its 0xF7 or the next status byte that is not
- * real-time, so no input can make it allocate or stall. MIDI 1.0 asks a
- * receiver to take that status byte as the end, and it is what keeps a
- * SysEx that lost its 0xF7 from swallowing every note after it: a
- * keyboard that sends only channel messages from then on never sends
- * another byte that would end it.
+ * real-time. Output is bounded by input length (one event per byte at
+ * most, the real-time branch being the one that emits per byte), and
+ * the parser never stalls or holds more than one message. MIDI 1.0
+ * asks a receiver to take that status byte as the end, and it is what
+ * keeps a SysEx that lost its 0xF7 from swallowing every note after
+ * it: a keyboard that sends only channel messages from then on never
+ * sends another byte that would end it.
  */
 class MidiWire {
 

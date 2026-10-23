@@ -42,7 +42,8 @@ import com.snipsnap.shell.MidiFingerprint
  * can still say when it was played.
  *
  * Nothing here decides what a note means - [Listener.onEvent] hands the
- * typed event to the screen, and `:shell`'s `MidiKeys` and `MidiPads`
+ * typed note or controller event to the screen (real-time bytes, the clock
+ * among them, stop here: see [Receiver]), and `:shell`'s `MidiKeys` and `MidiPads`
  * are the tested rules. [Listener.onDevicesChanged] is for the LCD and
  * for whatever will key on a device: each [MidiDeviceId] carries the name
  * to print and a [MidiFingerprint] steadier than it, empty when nothing
@@ -196,7 +197,11 @@ class MidiInput(context: Context) {
             // The service's own stamp for this delivery, kept on the event:
             // the one fact about timing that is lost for good if it is
             // dropped here, because nothing downstream can read it again.
-            val events = wire.feed(msg, offset, count, timestamp)
+            // The main-thread hop exists for screen state. The clock belongs to
+            // the follower that will read it on this thread (roadmap P1.3/P1.8);
+            // until that exists each 0xF8 would be a posted lambda thrown away
+            // 24 times a beat.
+            val events = wire.feed(msg, offset, count, timestamp).filter { it !is MidiWire.Event.RealTime }
             if (events.isEmpty()) return
             handler.post {
                 if (!alive) return@post

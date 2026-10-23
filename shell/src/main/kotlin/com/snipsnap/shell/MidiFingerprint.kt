@@ -51,7 +51,8 @@ data class MidiFingerprint(
     companion object {
         /**
          * The fingerprint of a device from what it reports. [name] is the
-         * display name, used only when [product] is null.
+         * display name, used only when [product] is null or blank; a blank
+         * string is treated as absent throughout.
          */
         fun of(
             transport: Transport,
@@ -64,7 +65,8 @@ data class MidiFingerprint(
             name: String?,
         ): MidiFingerprint = MidiFingerprint(
             transport, vendorId, productId, inputPorts, outputPorts,
-            ((manufacturer ?: "").hashCode() * 31) + (product ?: name ?: "").hashCode(),
+            (manufacturer?.takeIf { it.isNotBlank() } ?: "").hashCode() * 31 +
+                (product?.takeIf { it.isNotBlank() } ?: name?.takeIf { it.isNotBlank() } ?: "").hashCode(),
         )
     }
 }

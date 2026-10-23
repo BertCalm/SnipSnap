@@ -14,6 +14,18 @@ class MidiFingerprintTest {
     @Test fun `a different product id is a different key`() =
         assertNotEquals(usb().key, MidiFingerprint.of(MidiFingerprint.Transport.USB, 0x1235, 0x0114, 2, 2, "Novation", "Launchpad X", "Launchpad X MIDI 1").key)
 
+    @Test fun `a blank product string is absent, so the display name is used`() =
+        assertNotEquals(
+            MidiFingerprint.of(MidiFingerprint.Transport.USB, 1, 2, 1, 1, "M", "", "A").key,
+            MidiFingerprint.of(MidiFingerprint.Transport.USB, 1, 2, 1, 1, "M", "", "B").key,
+        )
+
+    @Test fun `a different manufacturer is a different key`() =
+        assertNotEquals(usb(manufacturer = "M1").key, usb(manufacturer = "M2").key)
+
+    @Test fun `a different product is a different key`() =
+        assertNotEquals(usb(product = "P1").key, usb(product = "P2").key)
+
     @Test fun `the display name changing after a permission grant does not change the key`() =
         assertEquals(usb(name = "USB-MIDI").key, usb(name = "Launchpad X MIDI 1").key)
 

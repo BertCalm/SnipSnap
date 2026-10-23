@@ -64,4 +64,18 @@ class MidiPadsTest {
         route(Event.Control(0, MidiWire.CC_ALL_SOUND_OFF, 0))
         assertEquals(listOf("hit 1 0.75", "release 1", "hit 2 1.00", "panic", "panic"), calls)
     }
+
+    @Test
+    fun `clock and start fire no pad callback`() {
+        val calls = mutableListOf<String>()
+        for (event in listOf<Event>(Event.Clock(), Event.Start())) {
+            MidiPads.handle(
+                event, MidiPads.Map.IN_ORDER,
+                onHit = { slot, _ -> calls += "hit $slot" },
+                onRelease = { slot -> calls += "release $slot" },
+                onPanic = { calls += "panic" },
+            )
+        }
+        assertEquals(emptyList(), calls)
+    }
 }
