@@ -83,8 +83,8 @@ tasks.register<JavaExec>("generateChamberAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
     providers.gradleProperty("chamberRevision").orNull?.let {
-        require(it == "timpani") { "chamberRevision must be timpani" }
-        args("--timpani")
+        require(it in setOf("timpani", "timpani-boost")) { "chamberRevision must be timpani or timpani-boost" }
+        args("--$it")
     }
     providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
 }

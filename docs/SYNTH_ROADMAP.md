@@ -29,7 +29,8 @@ for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the so
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
 opens a 16-clip model-2 timpani revision after the owner found the membrane
 inaudible. Model 1 and its original 114-clip matrix remain reproducible and archived.
-The revised balance awaits the owner's listening verdict.
+The owner approved model 2's timbre; model 3 adds a 3 dB membrane mix lift
+while preserving that voicing and replay of both previous models.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
