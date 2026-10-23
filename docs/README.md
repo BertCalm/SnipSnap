@@ -87,3 +87,11 @@ The [integration design](superpowers/specs/2026-10-18-aquarium-integration-desig
 and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
 separate that foundation from the planned pad rendering, performance routing
 and controls. The foundation does not yet process app playback.
+
+**Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
+records the whole-app review of 2026-10-17: the six guards that landed with
+it (kit-name containment, a frame-capped share-door WAV decode, an XPN entry
+ceiling, canonical SFZ containment with one copy budget, a NaN-safe DC mean,
+recordings kept out of cloud backup) and the findings recorded for a design
+or listening session. Its sound-quality findings are the review's claims,
+not heard, and nothing in that change alters a shipped sound.
