@@ -119,3 +119,13 @@ tasks.register<JavaExec>("generateOspreyHandoff") {
     args("${rootDir}/testkit/osprey-handoff")
     args(providers.gradleProperty("ospreyGentleBaselineDir").orElse("${rootDir}/testkit/osprey-gentle-audition").get())
 }
+
+/** Focused ORIGAMI gestures, one-zone held references and a portable C4 listening page. */
+tasks.register<JavaExec>("generateOrigamiGestureAudition") {
+    group = "distribution"
+    description = "Render the ORIGAMI gesture listening study and its self-contained starter."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiGestureAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiGestureOutput").orElse(rootDir.resolve("testkit/origami-gestures").absolutePath).get())
+}

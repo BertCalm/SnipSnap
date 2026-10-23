@@ -17,7 +17,10 @@ import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiGesture
+import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Chamber
@@ -127,6 +130,8 @@ import kotlin.random.Random
  * ORIGAMI model-4 FAN/STILL and OPENSKY HALO keep their authored attack and accept release only.
  * ORIGAMI also accepts --patch JSON replay, retaining the saved note, velocity,
  * seed and finite render model. Its held zones span C3-C5 and override TUNE.
+ * Its model-4 voices accept --gesture STEADY|BLOOM|UNFOLD and all six controls
+ * through --macros; MOTION sets gesture duration in BLOOM/UNFOLD.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
@@ -173,7 +178,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--tempo", "--beats"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--tempo", "--beats"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -182,6 +187,11 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
+        val gestureOverride = opts["--gesture"]?.let { raw ->
+            if (engine != OrigamiPatch.ENGINE) throw CliError("--gesture is only supported by ORIGAMI, got $engine")
+            OrigamiGesture.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
+                ?: throw CliError("--gesture wants ${OrigamiGesture.entries.joinToString("|") { it.name }}, got '$raw'")
+        }
         val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
@@ -226,15 +236,18 @@ object SynthCommand {
             ShoalMaterial.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
                 ?: throw CliError("--material wants ${ShoalMaterial.entries.joinToString("|") { it.name }}, got '$raw'")
         }
-        val contourMacros = opts["--macros"]?.let { raw ->
-            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
-            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+        val macroOverrides = opts["--macros"]?.let { raw ->
+            val names = when (engine) {
+                ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
+                OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
+                else -> throw CliError("--macros is only supported by CONTOUR and ORIGAMI, got $engine")
+            }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
                 val fields = entry.split('=')
                 if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
                 val name = fields[0].trim().uppercase(Locale.ROOT)
-                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name !in names) throw CliError("--macros unknown $engine control '$name'; choose ${names.joinToString()}")
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
@@ -464,7 +477,18 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is OpenSkyPatch) {
+            if (withNote is OrigamiPatch) {
+                val gesture = gestureOverride ?: withNote.gesture
+                if (gesture != OrigamiGesture.STEADY && withNote.model != OrigamiGestures.GEOMETRY_MODEL) {
+                    throw CliError("--gesture $gesture requires ORIGAMI model 4; saved model ${withNote.model} keeps its original motion")
+                }
+                withNote.copy(
+                    macros = withNote.macros + macroOverrides,
+                    // Deliberately editing TUNE also edits an authored note, as in the native editor.
+                    midi = macroOverrides["TUNE"]?.let { Origami.midiFor(withNote.voice, it) } ?: withNote.midi,
+                    gesture = gesture,
+                )
+            } else if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
             } else if (withNote is ShoalPatch && materialOverride != null) {
                 if (!Shoal.supportsHold(Shoal.MODEL_VERSION, materialOverride) &&
@@ -472,8 +496,8 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
-            } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
-                withNote.copy(macros = withNote.macros + contourMacros)
+            } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(

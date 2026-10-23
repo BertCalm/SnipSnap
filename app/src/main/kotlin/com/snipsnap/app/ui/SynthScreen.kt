@@ -287,6 +287,8 @@ import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiGesture
+import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.Vent
@@ -879,6 +881,19 @@ fun SynthScreen(
         val source = loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] as? OhmPatch
             ?: OhmPatch(engine.patchDisplayName(voice), Ohm.defaults())
         keepOhmPatch(edit(Patches.edited(source, source.name, macrosByVoice.getValue(engine to voice)) as OhmPatch))
+    }
+    fun updateOrigamiGesture(gesture: OrigamiGesture) {
+        if (engine != Engine.ORIGAMI) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
+        if (patch.model != Origami.MODEL_VERSION || patch.gesture == gesture) return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val next = patch.copy(gesture = gesture)
+        loadedPatchesByVoice[engine to voice] = next
+        // A gesture tap can be followed immediately by navigation, before the
+        // state effect runs. Keep the complete recipe with the edit itself.
+        settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] = next.toJsonText()
     }
     fun updateStoopRoot(midi: Int) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
@@ -2510,6 +2525,47 @@ fun SynthScreen(
                     TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
+                val origamiPatch = if (engine == Engine.ORIGAMI)
+                    buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch else null
+                if (origamiPatch != null) {
+                    if (origamiPatch.model == Origami.MODEL_VERSION) {
+                        TapeText("GESTURE", TapeType.pixelSmall, scheme.ink2.tape)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (gesture in OrigamiGesture.entries) {
+                                ActionButton(
+                                    gesture.name,
+                                    scheme,
+                                    enabled = true,
+                                    lit = origamiPatch.gesture == gesture,
+                                    modifier = Modifier.weight(1f).semantics { selected = origamiPatch.gesture == gesture },
+                                    accessibilityLabel = "ORIGAMI ${gesture.name}",
+                                ) {
+                                    updateOrigamiGesture(gesture)
+                                }
+                            }
+                        }
+                        TapeText(
+                            when (origamiPatch.gesture) {
+                                OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
+                                OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
+                                OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
+                            },
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        )
+                        if (origamiPatch.gesture != OrigamiGesture.STEADY) {
+                            TapeText(
+                                "MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE",
+                                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                            )
+                        }
+                    } else {
+                        TapeText(
+                            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES.",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    }
+                }
+
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 val macroSpecs = remember(engine, voice, creaseModel) {
                     if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
@@ -2549,6 +2605,8 @@ fun SynthScreen(
                                     (loadedPatch as? OrigamiPatch)?.midi
                                         ?: Origami.midiFor(voice as OrigamiVoice, macros.getValue(spec.name)),
                                 )
+                                origamiPatch != null && spec.name == "MOTION" && origamiPatch.gesture != OrigamiGesture.STEADY ->
+                                    "%.2fs".format(Locale.ROOT, OrigamiGestures.durationSeconds(origamiPatch.voice, macros.getValue(spec.name)))
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"

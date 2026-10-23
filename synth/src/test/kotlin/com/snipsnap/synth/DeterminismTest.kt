@@ -12,6 +12,17 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
+        for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
+            val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,
+                Origami.defaults(OrigamiVoice.STILL) + ("MOTION" to .65f),
+                midi = 60, velocity = .7f, seed = Long.MIN_VALUE + 20261023L, gesture = gesture)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
