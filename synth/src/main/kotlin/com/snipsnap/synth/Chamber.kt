@@ -33,7 +33,7 @@ object Chamber {
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_SEED = 0L
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val MAX_SECONDS = 6f
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
@@ -60,6 +60,9 @@ object Chamber {
     // this gain never changes the energy exchanged with the room.
     private const val MEMBRANE_PORT_RATE = .5
     private const val MEMBRANE_PRESSURE_CALIBRATION = 24.0
+    // The model-2 membrane voicing was accepted. Model 3 is only a +3 dB
+    // listener mix lift; it never changes the membrane or room energy states.
+    private val MEMBRANE_MIX_LIFT = 10.0.pow(3.0 / 20.0)
 
     fun macrosFor(voice: ChamberVoice): List<MacroSpec> {
         val d = if (voice == ChamberVoice.HYBRID) floatArrayOf(.50f,.45f,.40f,.90f,.60f)
@@ -434,7 +437,12 @@ object Chamber {
                         if(options.returnsEnabled) change else -sourceS[s]*v))
                 }
                 banks[s].step()
-                sourceWave[s]=banks[s].port()*sourceS[s]*observerGain*(when { s==1 -> BAR_PRESSURE_CALIBRATION; s==0 && model>=2 -> MEMBRANE_PRESSURE_CALIBRATION; else -> 1.0 })
+                sourceWave[s]=banks[s].port()*sourceS[s]*observerGain*(when {
+                    s==1 -> BAR_PRESSURE_CALIBRATION
+                    s==0 && model>=3 -> MEMBRANE_PRESSURE_CALIBRATION*MEMBRANE_MIX_LIFT
+                    s==0 && model==2 -> MEMBRANE_PRESSURE_CALIBRATION
+                    else -> 1.0
+                })
                 if(options.recordStems) instrumentTaps[s][frame]=sourceWave[s].toFloat()
             }
             primaryWork += frameWork

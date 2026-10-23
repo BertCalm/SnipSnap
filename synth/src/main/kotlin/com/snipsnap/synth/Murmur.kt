@@ -438,7 +438,7 @@ object Murmur {
     }
 
     /** Stable TPT bandpass, constant peak gain, with retained state during every retune. */
-    private class Formant {
+    private class Formant(private val stationary: Boolean) {
         private var ic1 = 0.0
         private var ic2 = 0.0
         private var g = .001
@@ -447,17 +447,25 @@ object Murmur {
         private var dg = 0.0
         private var dk = 0.0
         private var dGain = 0.0
+        private var fixedA1 = 0.0
+        private var fixedA2 = 0.0
+        private var fixedA3 = 0.0
         fun tune(center: Double, width: Double, amplitude: Double, immediate: Boolean) {
             val nextG = tan(PI * center.coerceIn(150.0, 7_000.0) / INTERNAL_RATE)
             val nextK = (width / center).coerceIn(1.0 / MAX_FORMANT_Q, 2.0)
             if (immediate) { g = nextG; k = nextK; gain = amplitude; dg = 0.0; dk = 0.0; dGain = 0.0 }
             else { dg = (nextG - g) / CONTROL_STRIDE; dk = (nextK - k) / CONTROL_STRIDE; dGain = (amplitude - gain) / CONTROL_STRIDE }
+            if (stationary && immediate) {
+                fixedA1 = 1.0 / (1.0 + g * (g + k))
+                fixedA2 = g * fixedA1
+                fixedA3 = g * fixedA2
+            }
         }
         fun next(x: Double): Double {
             g += dg; k += dk; gain += dGain
-            val a1 = 1.0 / (1.0 + g * (g + k))
-            val a2 = g * a1
-            val a3 = g * a2
+            val a1 = if (stationary) fixedA1 else 1.0 / (1.0 + g * (g + k))
+            val a2 = if (stationary) fixedA2 else g * a1
+            val a3 = if (stationary) fixedA3 else g * a2
             val v3 = x - ic2
             val v1 = a1 * ic1 + a2 * v3
             val v2 = ic2 + a2 * ic1 + a3 * v3
@@ -492,7 +500,9 @@ object Murmur {
         val fullness = body
         val motionDepth = if (motion == 0.0) 0.0 else .86 * motion.pow(.65)
         val targets = config.targets
-        val bands = Array(targets.first().centers.size) { Formant() }
+        // A stationary mouth never changes g/k. Retain the exact initial coefficients instead
+        // of repeating five divisions on every internal sample; filter history still advances.
+        val bands = Array(targets.first().centers.size) { Formant(motion == 0.0) }
         val indexCeiling = minOf(MAX_INDEX_RADIANS, 7_200.0 / (root * ratios.max())).coerceAtLeast(.12)
         val indexBase = if (profile == null) minOf(indexCeiling, (.10 + edge * 3.8) * (.25 + .75 * velocity))
             else minOf(indexCeiling, (profile.indexFloor + edge * profile.indexEdge) * (.25 + .75 * velocity))
@@ -639,9 +649,17 @@ object Murmur {
             val chest = if (profile == null) fullness * (.55 * cos(2.0 * p0) + .24 * cos(3.0 * p0))
                 else fullness * (profile.chestSecond * cos(2.0 * p0) + profile.chestThird * cos(3.0 * p0))
             val direct = if (profile == null) fm * (.60 - .42 * fullness) + .40 * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator])
-            else fm * profile.direct * (1.25 - .80 * fullness) +
-                profile.thinCarrier * (1.0 - fullness) * cos(2.0 * PI * phases[upperOperator]) +
-                profile.ringGain * (.65 + .35 * edge) * (if (held) 1.0 else .55 + .45 * transient) * cos(2.0 * PI * phases[profile.ringOperator])
+            else {
+                val upperCos = cos(2.0 * PI * phases[upperOperator])
+                // BASS/CHOIR have no ring source; PLUCK uses the same operator for both reads.
+                // Keep the original sum/product order while avoiding redundant cosine reads.
+                val ringCos = if (profile.ringGain == 0.0) 0.0
+                    else if (profile.ringOperator == upperOperator) upperCos
+                    else cos(2.0 * PI * phases[profile.ringOperator])
+                fm * profile.direct * (1.25 - .80 * fullness) +
+                    profile.thinCarrier * (1.0 - fullness) * upperCos +
+                    profile.ringGain * (.65 + .35 * edge) * (if (held) 1.0 else .55 + .45 * transient) * ringCos
+            }
             var y = anchor + chest + direct + formant * (1.30 + .60 * sqrt(motion)) * (profile?.bankGain ?: 1.0)
             highLow = highA * highLow + (1.0 - highA) * y
             y = .06 * y + .94 * highLow

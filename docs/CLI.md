@@ -185,7 +185,7 @@ each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
 CLI-only model-1 comparison each from `VentPresets`. The voice selects its
 saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK, four WOOD and five BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
