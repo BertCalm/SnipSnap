@@ -12,6 +12,8 @@ import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockHeld
+import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -497,8 +499,13 @@ object UserPresets {
         }
         if (patch is FlockPatch) {
             val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
+            val held = if (patch.playback != FlockPlayback.FINITE ||
+                patch.releaseSeconds != FlockHeld.DEFAULT_RELEASE_SECONDS) {
+                ".copy(playback = FlockPlayback.${patch.playback.name}, releaseSeconds = ${patch.releaseSeconds}f, " +
+                    "heldVersion = ${patch.heldVersion})"
+            } else ""
             return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
-                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})$held,"
         }
         if (patch is ShoalPatch) {
             // Construct the complete recipe at once: a harmonic held recipe cannot

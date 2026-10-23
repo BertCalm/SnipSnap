@@ -126,7 +126,12 @@ FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
 ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
 2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
 renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
-SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
+SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
+saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
+nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
+retaining the editable held recipe. HOLD stays finite. See the
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). Phone playback
+remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available
 for listening and device review.

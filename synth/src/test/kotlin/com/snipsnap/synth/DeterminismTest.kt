@@ -12,6 +12,22 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
