@@ -222,6 +222,9 @@ import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.LatticeVoice
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
@@ -544,10 +547,10 @@ fun SynthScreen(
             }
         }
     }
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, LATTICE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // OBBLIGATO also retains its renderer model and independent-player seed.
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS, OVERLAP and CREASE retain their synthesis model, saved pitch and velocity.
+    // REGISTERS, OVERLAP, CREASE and LATTICE retain their synthesis model, saved pitch and velocity.
     // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
@@ -2284,6 +2287,7 @@ fun SynthScreen(
                                 engine == Engine.TANGLE && spec.name == "HOLD" && Tangle.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.SHOAL && spec.name == "HOLD" && Shoal.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CREASE && spec.name == "HOLD" && Crease.isLoop(macros.getValue(spec.name)) -> "LOOP"
+                                engine == Engine.LATTICE && spec.name == "HOLD" && Lattice.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "HOLD" && Relay.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.RELAY && spec.name == "TUNE" ->
                                     Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(spec.name)))
@@ -2317,6 +2321,8 @@ fun SynthScreen(
                         val scrambled = when {
                             engine == Engine.CREASE ->
                                 Crease.scramble(voice as CreaseVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.LATTICE ->
+                                Lattice.scramble(voice as LatticeVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.FLOCK ->
                                 Flock.scramble(voice as FlockVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3242,7 +3248,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO;
+    THUMP, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO;
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
@@ -3294,6 +3300,7 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
+        LATTICE -> LatticeVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -3347,6 +3354,7 @@ private enum class Engine {
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
         SHOAL -> Shoal.macrosFor(voice as ShoalVoice)
         CREASE -> Crease.macrosFor(voice as CreaseVoice)
+        LATTICE -> Lattice.macrosFor(voice as LatticeVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
@@ -3400,6 +3408,7 @@ private enum class Engine {
         TANGLE -> Tangle.defaults(voice as TangleVoice)
         SHOAL -> Shoal.defaults(voice as ShoalVoice)
         CREASE -> Crease.defaults(voice as CreaseVoice)
+        LATTICE -> Lattice.defaults(voice as LatticeVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
@@ -3455,6 +3464,7 @@ private enum class Engine {
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
         SHOAL -> Shoal.scramble(voice as ShoalVoice, random)
         CREASE -> Crease.scramble(voice as CreaseVoice, random)
+        LATTICE -> Lattice.scramble(voice as LatticeVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
@@ -3513,6 +3523,7 @@ private enum class Engine {
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
         SHOAL -> ShoalPatch("Preview", voice as ShoalVoice, macros).render()
         CREASE -> Crease.render(voice as CreaseVoice, macros)
+        LATTICE -> Lattice.render(voice as LatticeVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -3572,6 +3583,7 @@ private enum class Engine {
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
         SHOAL -> Shoal.drumClassFor(voice as ShoalVoice, macros)
         CREASE -> Crease.drumClassFor(voice as CreaseVoice, macros)
+        LATTICE -> Lattice.drumClassFor(voice as LatticeVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
@@ -3625,6 +3637,7 @@ private enum class Engine {
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
         SHOAL -> ShoalPatch(name, voice as ShoalVoice, macros)
         CREASE -> CreasePatch(name, voice as CreaseVoice, macros)
+        LATTICE -> LatticePatch(name, voice as LatticeVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)

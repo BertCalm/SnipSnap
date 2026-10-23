@@ -85,6 +85,7 @@ object Patches {
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)
             OspreyPatch.ENGINE -> OspreyPatch.fromJsonValue(value)
             PrismPatch.ENGINE -> PrismPatch.fromJsonValue(value)
+            LatticePatch.ENGINE -> LatticePatch.fromJsonValue(value)
             AlloyPatch.ENGINE -> AlloyPatch.fromJsonValue(value)
             ContourPatch.ENGINE -> ContourPatch.fromJsonValue(value)
             StoopPatch.ENGINE -> StoopPatch.fromJsonValue(value)

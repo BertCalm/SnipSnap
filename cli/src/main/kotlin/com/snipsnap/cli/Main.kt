@@ -76,9 +76,12 @@ object Cli {
         |                        (TRIO: TRES/BERIMBAU/CHARANGO/ENSEMBLE; --midi 48..84
         |                        --velocity 0..1 --tempo 60..200 --beats 1..4; gesture <=2s)
         |                        render factory presets to wav, to hear them
-        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
+        |                        (ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/LATTICE/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO: --midi N --velocity 0..1)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
         |                        six factory positions with saved root and velocity)
+        |                        (LATTICE: WARM/PLUCK/HOLLOW; --midi 36..84 --velocity 0..1;
+        |                        --patch recipe.patch --macros COLOR=.8,HOLD=1;
+        |                        WAV + complete .patch; HOLD=1 exports a sustained loop)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)

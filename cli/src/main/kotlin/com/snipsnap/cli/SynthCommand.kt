@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
@@ -32,6 +33,9 @@ import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.LatticeVoice
 import com.snipsnap.synth.Orphica
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
@@ -125,7 +129,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -143,6 +147,9 @@ import kotlin.random.Random
  * TUNE in --macros cannot combine with --midi; choose one pitch control.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
+ * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.
+ * Its `--midi 36..84` resets relative TUNE to .5; velocity-only edits keep saved tuning.
+ * Every LATTICE WAV has a complete `.patch` beside it, including held-loop settings.
  * VENT accepts `--seed N` for its initial trajectory. PULSE, COIL and PLUME
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
@@ -177,8 +184,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR and CHAMBER, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, LatticePatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER and LATTICE, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -217,15 +224,18 @@ object SynthCommand {
             ShoalMaterial.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
                 ?: throw CliError("--material wants ${ShoalMaterial.entries.joinToString("|") { it.name }}, got '$raw'")
         }
-        val contourMacros = opts["--macros"]?.let { raw ->
-            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
-            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+        val macroOverrides = opts["--macros"]?.let { raw ->
+            val names = when (engine) {
+                ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
+                LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
+                else -> throw CliError("--macros is only supported by CONTOUR and LATTICE, got $engine")
+            }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
                 val fields = entry.split('=')
                 if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
                 val name = fields[0].trim().uppercase(Locale.ROOT)
-                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name !in names) throw CliError("--macros unknown $engine control '$name'; choose ${names.joinToString()}")
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
@@ -255,6 +265,7 @@ object SynthCommand {
                 CreasePatch.ENGINE -> Crease.MIDI_MIN..Crease.MIDI_MAX
                 ShoalPatch.ENGINE -> Shoal.MIN_MIDI..Shoal.MAX_MIDI
                 LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
+                LatticePatch.ENGINE -> Lattice.MIDI_MIN..Lattice.MIDI_MAX
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
@@ -280,7 +291,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER and TRIO, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER and TRIO, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -381,6 +392,10 @@ object SynthCommand {
                 is RegistersPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is LacquerPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is LatticePatch -> patch.copy(
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to .5f),
+                )
                 is SpoolPatch -> patch.copy(
                     macros = midiOverride?.let { midi ->
                         patch.macros + ("TUNE" to (midi - Spool.rootMidi(patch.voice)) / Spool.TUNE_SEMITONES.toFloat())
@@ -449,8 +464,10 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
-            } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
-                withNote.copy(macros = withNote.macros + contourMacros)
+            } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
+            } else if (withNote is LatticePatch && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(
@@ -502,9 +519,12 @@ object SynthCommand {
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
-            if (patch is ObbligatoPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
+            if (patch is ObbligatoPatch || patch is LatticePatch) {
+                File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
+            }
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
+                patch is LatticePatch && Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.LOOP -> "  (held loop, mono)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"
                 else -> ""
             }

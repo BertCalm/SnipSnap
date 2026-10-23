@@ -2,6 +2,22 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite LATTICE proof: common-gain restoration, spectral passage and actual rejected sound. */
+tasks.register<JavaExec>("generateLatticeAudition") {
+    group = "distribution"
+    description = "Render the finite LATTICE listening proof, replayable recipes and measured diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LatticeAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("latticeRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("latticeReplayOutput").get())
+    } else {
+        args(providers.gradleProperty("latticeOutput").orNull ?: "${rootDir}/testkit/lattice-audition")
+    }
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"

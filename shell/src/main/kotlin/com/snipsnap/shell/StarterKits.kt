@@ -228,6 +228,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.crease() },
         Starter(
+            "lattice", "LATTICE",
+            "Warm, plucked and hollow notes in C minor pentatonic, shaped by directional gates and a rejected outline.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lattice() },
+        Starter(
             "flock", "FLOCK",
             "Gathering notes, traveling ribbons and split harmonics in C minor pentatonic. Finite moving flocks.",
             seeded = false,

@@ -10,6 +10,8 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -96,6 +98,7 @@ object Spread {
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()

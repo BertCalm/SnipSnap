@@ -247,6 +247,7 @@ object Velocity {
         is OspreyPatch -> Osprey.macrosFor(patch.voice)
         is OpenSkyPatch -> OpenSky.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
+        is LatticePatch -> Lattice.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
         is ContourPatch -> ContourEngine.macrosFor(patch.voice)
         is StoopPatch -> Stoop.macrosFor(patch.voice)
@@ -389,6 +390,8 @@ object Velocity {
         is OspreyPatch -> patch.copy(velocity = v).render()
         is OpenSkyPatch -> patch.copy(velocity = v).render()
         is PrismPatch -> patch.copy(velocity = v).render()
+        // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
+        is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.

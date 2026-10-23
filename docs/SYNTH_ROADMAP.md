@@ -494,6 +494,27 @@ awaits the owner's listening verdict. [REVEL](REVEL.md) documents current
 contracts and measured validation; phone/MPC verification and release naming
 remain separate gates.
 
+### LATTICE — directional passage and a rejected outline
+
+LATTICE adapts the supplied projection-gate concept to the offline melodic
+renderer. One deterministic harmonic source feeds four directional groups;
+ordered gates transmit surviving components and send actual rejection into a
+bounded resonant outline. TURN, STAGES, TWIST, COLOR and REJECT expose the
+mechanism; the audition retains common source gain while crossed transmission
+disappears and intermediate orientations restore it.
+
+The owner accepted R2's source and contrast direction on 2026-10-23: “New sounds
+are better”, then “Clearer, we can proceed to the next steps”. The next native
+milestone implements WARM/PLUCK/HOLLOW voices, model-2 patches with explicit MIDI
+and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
+top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
+CLI routing and the Android picker. New presets and HOLD still await hearing.
+Native validation and physical phone/MPC checks remain separately recorded in
+[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
+engineering specification remain later work. `generateLatticeAudition` retains
+the accepted comparisons and adds R3 native/held examples plus patch and MPC
+starter downloads. The original R1 and accepted R2 evidence stays preserved.
+
 ### PRISM — harmonics with different lifetimes
 
 PRISM ports the [engineering specification](superpowers/specs/2026-10-11-prism-engine-engineering-spec.md)

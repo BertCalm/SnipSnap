@@ -12,6 +12,34 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /**
+     * Eight WARM notes in C minor pentatonic from C3, followed by all three source profiles
+     * as finite and held recipes. Every pad retains its exact MIDI root and source velocity.
+     * The engine's fixed gain and dry routing preserve the directional passage differences.
+     */
+    fun lattice(): List<ArrangedPad?> {
+        fun arranged(patch: LatticePatch, factoryName: String = patch.name) = pad(patch, Lattice.drumClassFor(patch.voice, patch.macros))
+            .copy(displayName = patch.name, source = mapOf(
+                "rootMidi" to patch.midi.toString(), "rootNote" to Scales.nameOf(patch.midi),
+                "factoryPreset" to factoryName,
+            ))
+        val voices = LatticeVoice.entries
+        val finite = voices.associateWith { voice ->
+            LatticePresets.forVoice(voice).filterNot { Lattice.isLoop((Lattice.defaults(voice) + it.macros).getValue("HOLD")) }
+        }
+        val anchor = finite.getValue(LatticeVoice.WARM).first()
+        val melody = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(anchor.copy(name = "${anchor.name} ${index + 1}", midi = Lattice.DEFAULT_MIDI + semitone,
+                macros = anchor.macros + mapOf("TUNE" to .5f, "HOLD" to 0f)), anchor.name)
+        }
+        val sourceChoices = voices.map { finite.getValue(it).first() }
+        val held = voices.map { voice ->
+            LatticePresets.forVoice(voice).first { Lattice.isLoop((Lattice.defaults(voice) + it.macros).getValue("HOLD")) }
+        }
+        val alternatives = listOf(finite.getValue(LatticeVoice.WARM)[1], finite.getValue(LatticeVoice.PLUCK)[1])
+        return melody + (sourceChoices + alternatives + held).map { arranged(it) }
+    }
+
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
