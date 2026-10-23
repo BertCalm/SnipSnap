@@ -283,7 +283,13 @@ data class Kit(
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }
-        require(name.isNotBlank()) { "kit name must not be blank" }
+        // The name is a folder name everywhere it lands — the shelf folder,
+        // the export folder, the `.xpn`/`.xpj` stem — yet unlike [Project]
+        // (which already holds its name to this), a kit loaded from a
+        // stranger's kit.json could carry "../" and walk an export out of
+        // its destination. One segment, no separators: same rule as pads'
+        // sample files below.
+        require(SafePath.isSafe(name)) { "kit name cannot be a folder name: '$name'" }
         require(pads.map { it.slot }.toSet().size == pads.size) {
             "duplicate pad slots: ${pads.groupBy { it.slot }.filterValues { it.size > 1 }.keys}"
         }

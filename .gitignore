@@ -338,8 +338,15 @@ testkit/relay-performance-audition/
 testkit/oven-audition/
 testkit/oven-kit/
 
+# Curated OSPREY preset samples, listening previews and MPC/source kit.
+testkit/osprey-curated-audition/
+
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
+
+# CAUSTIC's finite circular first-listen audio, recipes and portable pack.
+testkit/caustic-audition/
+testkit/.caustic-audition-building-*/
 
 # RUSH's listening audio and measurements regenerate from the shared board DSP.
 testkit/rush-audition/
@@ -363,3 +370,4 @@ testkit/scanned-chain-listen.html
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/
 testkit/contour-edge-audition/
+testkit/fade-law-audition/
