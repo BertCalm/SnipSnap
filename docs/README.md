@@ -87,8 +87,8 @@ finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.
 
 **Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
-finite native pad-printing bridge, saved sources, replay and export contracts.
-Dedicated controls and continuous performance routing remain later stages of
+the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved sources,
+replay and export contracts. Continuous performance routing remains a later stage of
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
