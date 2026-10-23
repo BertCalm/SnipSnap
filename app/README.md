@@ -69,8 +69,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (41 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY and VENT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (42 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY and VENT,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -142,8 +142,12 @@ seeded recipe through edits, saving and pad placement; see [TRIO](../docs/TRIO.m
 
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
-owner's positive feedback; final listening and phone/MPC handoff remain open for
-its fifteen presets and sixteen-pad starter.
+owner's positive feedback and confirmed in-app listening. The fifteen original
+coast/weather presets and sixteen-pad OSPREY starter remain unchanged. Sixteen
+named musical presets add a separate OSPREY CURATED starter in C minor pentatonic.
+The owner approved the published curated listening bank on 2026-10-19, saying,
+“Sounds great”. Curated in-app/device listening, save/reopen, recipe replay and
+MPC playback remain unconfirmed.
 OHM adds STRING with five auditioned model-2 family encounters: Solo, Argument,
 Communion, Quiet Company and Gather. NOTE, VELOCITY and STEADY/GATHER sit beside
 TOUCH, BODY, LENGTH, MEDDLING and COMMUNE. Its complete recipe survives navigation,

@@ -337,7 +337,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 41 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -500,8 +500,11 @@ positively received, with a request for slightly more distinct voices. R2 was
 rejected as harsh and for losing that character. Model 3 retains the original
 ocean, calls, envelopes and defaults, with a small coast-specific adjustment to
 the existing modal body balance. SHORE, SEA, MOTION, DEPTH, SPACE and finite HOLD
-shape the gesture. Fifteen dry presets, a sixteen-pad starter, the SYNTH picker
-and CLI share saved note/velocity/seed/duration/model recipes. Models 1 and 2
+shape the gesture. The fifteen dry coast/weather comparisons and original
+sixteen-pad starter remain unchanged. Sixteen named curated presets add low
+foundations, soft gestures, moving textures and long swells, with a separate
+OSPREY CURATED starter in C minor pentatonic. The SYNTH picker and CLI share
+saved note/velocity/seed/duration/model recipes. Models 1 and 2
 remain frozen for existing pads. Run `./gradlew :synth:generateOspreyGentleAudition`
 for paired R1/R3 renders and creature-muted body comparisons. The original
 46-clip study remains preserved. After the [private audition](https://snipsnap-osprey-audition.bertcalm.chatgpt.site),
