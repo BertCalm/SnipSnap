@@ -344,6 +344,10 @@ testkit/osprey-curated-audition/
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
 
+# CAUSTIC's finite circular first-listen audio, recipes and portable pack.
+testkit/caustic-audition/
+testkit/.caustic-audition-building-*/
+
 # RUSH's listening audio and measurements regenerate from the shared board DSP.
 testkit/rush-audition/
 

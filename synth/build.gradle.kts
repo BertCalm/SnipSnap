@@ -1551,3 +1551,14 @@ tasks.register<JavaExec>("generateOvenKit") {
     maxHeapSize = "768m"
     args("${rootDir}/testkit/oven-kit")
 }
+
+/** The first static circular SOURCE/FOCUS listening experiment, with portable recipes. */
+tasks.register<JavaExec>("generateCausticAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC static native/matched WAVs, exact prototype recipes, diagnostics and a portable listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
+}
