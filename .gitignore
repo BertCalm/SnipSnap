@@ -384,3 +384,8 @@ testkit/fade-law-audition/
 
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
+
+# OBLITERATE core prototype: reproducible Kotlin inputs and Python auditions.
+testkit/obliterate-core-inputs/
+testkit/obliterate-core-audition/
+experiments/obliterate-core/__pycache__/
