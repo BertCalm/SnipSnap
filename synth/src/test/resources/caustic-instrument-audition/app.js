@@ -3,7 +3,7 @@
   const $ = id => document.getElementById(id);
   const manifest = window.CAUSTIC_INSTRUMENT_MANIFEST;
   const audio = $('audio');
-  const state = { mode: 'matched', active: null, filter: 'all', clips: [], cards: new Map(), request: 0 };
+  const state = { mode: 'matched', active: null, filter: 'all', clips: [], cards: new Map(), request: 0, handoff: null };
   const sections = {
     anchors: ['Start with the instrument', 'Three requested notes, rebuilt by the same native Alloy renderer.'],
     body: ['Two anchors. One new midpoint.', 'BODY 0 follows Preferred Alloy; BODY 1 is the Fuller Body default above. The midpoint is a new listening candidate.'],
@@ -41,6 +41,7 @@
   }
   async function select(clip, play = true) {
     const request = ++state.request;
+    state.handoff?.abort(); state.handoff = null;
     $('playback-error').hidden = true;
     if (state.active?.id === clip.id && play && !audio.paused) { audio.pause(); updatePlayer(); return; }
     audio.pause(); state.active = clip; audio.src = address(path(clip)); audio.load(); updatePlayer();
@@ -81,15 +82,47 @@
     }
     updatePlayer();
   }
+  function mediaReady(test, events, signal) {
+    if (signal.aborted) return Promise.reject(new DOMException('Playback selection changed', 'AbortError'));
+    if (test()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+      let timer;
+      const clear = () => { clearTimeout(timer); events.forEach(event => audio.removeEventListener(event, check)); audio.removeEventListener('error', fail); signal.removeEventListener('abort', abort); };
+      const check = () => { if (test()) { clear(); resolve(); } };
+      const fail = () => { clear(); reject(new Error('The selected WAV could not load.')); };
+      const abort = () => { clear(); reject(new DOMException('Playback selection changed', 'AbortError')); };
+      events.forEach(event => audio.addEventListener(event, check)); audio.addEventListener('error', fail); signal.addEventListener('abort', abort, { once: true });
+      timer = setTimeout(() => { clear(); reject(new Error('The WAV did not become ready in time.')); }, 8000);
+    });
+  }
   async function level(mode) {
     if (state.mode === mode) return;
     const request = ++state.request;
+    state.handoff?.abort();
+    const handoff = new AbortController(); state.handoff = handoff;
     const playing = !audio.paused; const offset = audio.currentTime || 0; state.mode = mode;
     $('matched-mode').setAttribute('aria-pressed', String(mode === 'matched')); $('native-mode').setAttribute('aria-pressed', String(mode === 'native'));
     $('level-explanation').textContent = mode === 'matched' ? 'Level matched reduces loudness differences so you can compare tone. Each matched file uses AuditionLevel once.' : 'Native output is exactly the finished CausticPatch render. It includes the instrument’s house finish and has no extra audition leveling.';
     if (state.active) {
-      audio.pause(); audio.src = address(path(state.active)); audio.load();
-      audio.addEventListener('loadedmetadata', () => { if (request !== state.request) return; audio.currentTime = Math.min(offset, Math.max(0, audio.duration - .02)); if (playing) audio.play().catch(() => {}); }, { once: true });
+      audio.pause(); audio.preload = 'auto'; audio.src = address(path(state.active)); audio.load();
+      try {
+        // WAV metadata can arrive before Chrome can retain a seek. Buffer first,
+        // then complete the seek while paused, and only then resume playback.
+        await mediaReady(() => audio.readyState >= 3 && Number.isFinite(audio.duration), ['canplay', 'loadeddata', 'progress'], handoff.signal);
+        if (request !== state.request) return;
+        const target = Math.min(offset, Math.max(0, audio.duration - .02));
+        if (target > .01 && Math.abs(audio.currentTime - target) > .02) {
+          audio.currentTime = target;
+          await mediaReady(() => !audio.seeking && audio.readyState >= 2 && Math.abs(audio.currentTime - target) < .08, ['seeked', 'canplay'], handoff.signal);
+        }
+        if (request !== state.request) return;
+        if (playing) await audio.play();
+      } catch (error) {
+        if (request !== state.request || error.name === 'AbortError') return;
+        $('playback-error').textContent = `${error.message} Press Play to retry, or download the WAV.`; $('playback-error').hidden = false;
+      } finally {
+        if (state.handoff === handoff) { state.handoff = null; audio.preload = 'none'; }
+      }
     }
     updatePlayer();
   }

@@ -337,7 +337,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 43 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -400,7 +400,7 @@ CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
 through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
 bounded static-geometry cache and exact linear modal response support editable
 finite notes. Native patches retain model, note and velocity through presets,
-pads and CLI edits. Eight starter positions and a dry sixteen-pad kit accompany
+pads and CLI edits. Eight presets and a dry sixteen-pad kit accompany
 the instrument; six positions are new listening candidates. HOLD is reserved.
 Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
 for the control study and dual-generation MPC starter. The archived listening
