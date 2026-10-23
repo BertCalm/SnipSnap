@@ -364,3 +364,6 @@ testkit/scanned-chain-listen.html
 
 # Generated R6 Skitter listening proof
 testkit/skitter-character-r6/
+
+# Generated R7 Skitter quartet listening proof
+testkit/skitter-quartet/

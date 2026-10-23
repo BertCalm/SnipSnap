@@ -1427,6 +1427,20 @@ tasks.register<JavaExec>("generateSkitterCharacterR6Audition") {
     if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
 }
 
+/** Compact R7 quartet comparisons plus the two unchanged, accepted R6 references. */
+tasks.register<JavaExec>("generateSkitterQuartetAudition") {
+    group = "distribution"
+    description = "Render four R6/R7 voice pairs. Requires -PskitterR6References=<raw frozen R6 proof directory> and -PskitterProofSource=<Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterQuartetAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-quartet")
+    if (project.hasProperty("skitterR6References")) args("--references=${project.property("skitterR6References")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"

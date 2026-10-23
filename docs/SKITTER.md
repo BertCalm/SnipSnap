@@ -6,6 +6,153 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Four more sustained bodies (R7 listening candidate)
+
+The characteristic gesture is contact → a voice-specific strain → quick unequal
+recovery → a sustained body that still responds to touch. R7 develops BASS,
+FLUTTER, CHIRP and FRAY alongside the accepted R6 LEAD and HOLLOW. These remain
+six voices of one engine, with its existing filter, six macros and phrase timing.
+
+| Voice | Source mechanism | Intended touch response |
+| --- | --- | --- |
+| BASS | Protected root with asymmetric quadratic/cubic push-pull shaping. | Touch-dependent charge imbalance and even-harmonic growl. |
+| FLUTTER | Positive audio-rate aperture, shaped by oscillator B, on oscillator A. | A more open, perforated pulse with stronger touches. |
+| CHIRP | Smooth, root-cycle windowed resonant packets with an explicit root. | A different packet resonance and sweep through each cycle. |
+| FRAY | Protected carrier plus a smooth sine-fold of the beating oscillator pair. | More folding grain as touch and delayed history increase strain. |
+
+Charge is an analogy for asymmetry; polynomial shaping, amplitude products,
+chirplets and folding are literal signal operations. These descriptions are
+design intentions, pending the owner's listening verdict.
+The waves are procedural; no sampled reference instrument is used. The source
+operators feed the same history-sensitive nonlinear filter:
+
+```text
+velocity + BUZZ + previous circuit state
+                  ↓
+A/B phases → voice source → nonlinear filter → 4× decimation/DC block → house output
+     ↑                         ↓
+unequal recovery ← agitation ← signal history
+```
+
+Three operator directions were considered: nonlinear oscillator coupling
+(COUPLE), smooth cycle-local resonant packets (SPLICE), and nonmonotonic source
+shaping (FOLD). A single common formant would repeat R6's architecture across
+more voices. The quartet uses these different operators within the existing
+voice slots, with protected root carriers and bounded, smooth shaping. `Glint`
+already has cycle-windowed formants and `Tide` has folding; the distinguishing
+part here is their interaction with Skitter's delayed history and unequal
+recovery, rather than a claim of a new synthesis technique.
+
+| Control | R7 source contract |
+| --- | --- |
+| BUZZ | Changes each body's harmonic shape or packet/folding depth. |
+| SKITTER | Retains the unequal A/B pitch recoveries that disturb these coupled sources. |
+| AGITATE | Gates the source-color response to the previous circuit state. |
+| VENT | Retains the existing low/band/high filter blend. |
+| STATIC | Retains audible noise and its causal agitation forcing. |
+| HOLD | Retains finite gate extension and the converged periodic gesture path. |
+
+`SkitterProbe.quartetDisabled` restores the R6 quartet path. The existing
+`bodyDisabled` and `articulationDisabled` flags still address their historical
+LEAD/HOLLOW revisions; combine them with `quartetDisabled` for an all-voice
+historical render. The accepted R6 LEAD/HOLLOW path is outside the R7 branch.
+No source adds recursive state or a random stream. Cost is a bounded number of
+operations per internal sample, with no solver or precomputation cache.
+
+The compact proof supplies R6/R7 pairs for the four revised voices and exactly
+one accepted R6 recording for each of LEAD and HOLLOW. It imports those two
+recordings unchanged, including their original recording provenance. Every
+track contains complete soft, medium and hard finite notes at C3, seed 0,
+BUZZ .55, SKITTER .5, AGITATE .6, VENT .35, STATIC .15 and HOLD 0.
+Same-time revision switching uses a 20 ms linear fade; restart returns to
+contact. One common fixed playback gain preserves relative touch. Optional
+matching applies one static gain to a complete note. Raw PCM24 downloads retain
+the original unlevelled samples.
+
+Reproduce with
+`./gradlew --no-daemon :synth:generateSkitterQuartetAudition -PskitterR6References=/absolute/frozen-r6-proof -PskitterProofSource=$(git rev-parse HEAD)`.
+The original [R6 archive](https://skitter-snipsnap-audition.bertcalm.chatgpt.site)
+remains intact. The R7 publication and measured checks are recorded after
+validation in the pull request.
+
+**Evidence ledger.** Verified baseline: SnipSnap
+`65bfeab9e4852eee3567df4618c72bb637089b4b`, merged with upstream
+`6990bfde7867da438a57323f15d45cceeaa3a62b` before this work. Proposed: the four
+source gestures above. Heard: the owner called R6 a better direction; R7 awaits
+listening. Measured results are recorded below after running the candidate.
+The Luthier main skill was available, but its referenced convention, review,
+catalog, inventory and design files could not be read. This implementation uses
+the actual repository and Kotlin render evidence.
+
+### R7 measured checks
+
+All 42 focused tests pass, including all 39 retained checks with their existing
+admission margins. The new tests cover sustained bodies, touch and healthy held
+states, with the actual common-control finite patch.
+
+The actual HOLD 0 common-control patch is measured with eight equal-weight,
+2,048-frame Hann windows wholly inside 500–1247 ms, before BASS's 1.30 s gate.
+Each window's band power is normalized separately. R7/R6 sustained spectral
+redistribution at soft/medium/hard touch is:
+
+| Voice | Soft | Medium | Hard | Soft-to-hard R7 body color |
+| --- | --- | --- | --- | --- |
+| BASS | 22.64% | 25.65% | 21.57% | 7.19% |
+| FLUTTER | 22.53% | 19.18% | 15.80% | 5.64% |
+| CHIRP | 7.91% | 28.84% | 24.53% | 25.01% |
+| FRAY | 31.65% | 26.39% | 22.46% | 6.48% |
+
+All twelve comparisons exceed the existing five-percent body scale, with all
+eight windows above 2.5%. All four touch-color changes meet a five-percent
+floor fixed before the second prototype. Raw energy rises through the three
+velocities. This measures sustained spectral movement; perceived character
+and preferred touch response still belong to listening. Some R7 touch-color
+ranges are smaller than R6's, despite the stronger separation of their bodies.
+
+All fifteen sustained voice pairs exceed twice their measured within-voice
+seed radius. The closest pair is FLUTTER/FRAY at 8.93%; the tightest seed margin
+is HOLLOW/CHIRP at 2.66 percentage points beyond twice its radius. The retained
+hard-touch, quiet-core and gain/phase-ruler checks also retain their old bars.
+The sixty common-control C2–C6 root cases have maximum error 1.810 cents,
+minimum confidence .9558, zero bound hits and maximum raw peak .2981.
+
+All 24 retained causal mechanism checks pass without relaxed thresholds.
+BASS's charged branch and FRAY's folded branch open around the circuit's
+energy-only resting force, keeping agitation audible through their protected
+carriers. This subtracts a control equilibrium, rather than the audio mean;
+actual sustained motion still follows energy rises, gestures and noise.
+
+FRAY also subtracts the phase-conditioned carrier-cycle mean of its biased
+fold. The bounded J0 polynomial has measured error below 8.08e-7 over its
+entire domain. This is quasi-static centering as recovery and history change;
+the existing output DC path and measured guards still apply. All 216 original
+register/velocity/default/all-high stability cases pass. The former FRAY C2
+medium-touch DC/RMS ratio falls from .01102 to .000869, and the full matrix's
+maximum ratio is .006497, in the unchanged LEAD path.
+
+All four held bodies converge in three preroll periods. Maximum state error
+is 8.78e-12 and raw seam error stays below 1.11e-19. The clean stationary C6
+4×/16× comparison measures excess nonharmonic power of −109.60/−114.01/
+−107.66/−111.38 dB for BASS/FLUTTER/CHIRP/FRAY, with maximum harmonic-envelope
+distance .558%. This is one clean setting, not a universal alias floor.
+
+Isolated classloaders compare 72 R6-bypass cases and 24 accepted LEAD/HOLLOW
+cases against retained R6 classes: all 9,896,586 raw samples match bit for bit,
+including finite and held notes. A warmed JVM cost probe on this runner renders a 1.3 s common-control note
+in median 77.9/72.1/73.4/85.3 ms for BASS/FLUTTER/CHIRP/FRAY (seven measurements
+after three warmups per path). R6 baselines are 90.9/82.4/83.1/82.8 ms. This
+checks the bounded offline cost on this machine; phone performance still needs
+device measurement. Broader JVM and published-input verification are recorded
+in the pull request after they finish.
+
+### Why it is built this way
+
+- Different source mechanisms give each voice a body that lasts beyond contact.
+- A protected root keeps stronger upper color from turning a soft note into a different pitch.
+- Velocity changes source geometry throughout the note, so touch changes tone as well as level.
+- Existing history and agitation operate those sources, keeping the faster irregular recovery in the instrument.
+- Smooth sources and unchanged periodic states limit loop and high-register risks; render checks guard those risks, while listening decides the result.
+
 ## Persistent source bodies (R6 listening candidate)
 
 The characteristic gesture is contact → strained upper harmonics → quick

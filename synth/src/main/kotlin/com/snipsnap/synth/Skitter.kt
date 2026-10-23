@@ -29,6 +29,7 @@ data class SkitterProbe(
     val articulationDisabled: Boolean = false,
     val contactMemoryDisabled: Boolean = false,
     val bodyDisabled: Boolean = false,
+    val quartetDisabled: Boolean = false,
 )
 
 /** Control traces include every 5 ms and the final frame, before loudness matching. Offsets are cents. */
@@ -274,7 +275,9 @@ object Skitter {
      */
     private fun source(voice: SkitterVoice, phaseA: Double, phaseB: Double,
                        incrementA: Double, incrementB: Double, buzz: Double, c: Character,
-                       circuit: Circuit, contact: ContactEnvelope?, body: Boolean): Double {
+                       circuit: Circuit, contact: ContactEnvelope?, body: Boolean,
+                       quartet: Boolean, velocity: Double): Double {
+        if(quartet) return quartetSource(voice,phaseA,phaseB,buzz,circuit,velocity)
         if(!body) {
             // Preserve the R4/R5 expression and oscillator evaluations exactly for provenance.
             val oa=oscillator(phaseA,incrementA,buzz,c.source.a)
@@ -313,6 +316,98 @@ object Skitter {
         // Smooth sine PM has no reset discontinuity. At this bounded index its meaningful
         // octave sidebands remain far below the internal Nyquist at the highest root.
         return -.55*sinA-.80*sin(a+index*cos(b))
+    }
+
+    /**
+     * Four source operators, not four settings of the same oscillator morph. Their nonzero
+     * bodies persist after the initial touch. Velocity changes source geometry throughout
+     * the note; previous circuit energy/agitation then loads and releases that geometry.
+     * All are algebraic functions of the existing periodic phases and delayed circuit state.
+     */
+    private fun quartetSource(voice: SkitterVoice, phaseA: Double, phaseB: Double,
+                              buzz: Double, circuit: Circuit, velocity: Double): Double {
+        val a=2.0*PI*phaseA; val b=2.0*PI*phaseB
+        val sinA=sin(a)
+        val motion=circuit.agitate*circuit.position/(.15+abs(circuit.position))
+        val memory=circuit.agitate*circuit.history/(.12+circuit.history)
+        return when(voice) {
+            SkitterVoice.BASS -> {
+                // A centered quadratic supplies charge asymmetry; the centered cubic
+                // controls the third harmonic. B moves charge without a near-DC beat product.
+                val square=sinA*sinA-.5
+                val cubic=sinA*(sinA*sinA-.75)
+                val charge=((.85+1.25*buzz)*(.55+.45*velocity)-.25*memory).coerceIn(.35,2.5)
+                val balance=.45+.35*buzz
+                // Pressure is displacement from the learned energy-only equilibrium,
+                // so small jitters can open and close charge around rest without first
+                // overcoming a steady position offset or a clipped charge coefficient.
+                val rest=.85*tanh(.30*circuit.agitate*circuit.history)
+                val pressure=circuit.agitate*(circuit.position-rest)
+                val aperture=1.0+.90*pressure/(.05+abs(pressure))
+                // Provocation also shifts the push-pull third harmonic independently of
+                // the positive charge aperture; this is source shape, not a final gain.
+                val compression=.70+.50*buzz+.25*memory+2.0*motion
+                val signal=1.6*sinA+aperture*(charge+balance*sin(b))*square+compression*cubic
+                -signal/sqrt(1.6*1.6+aperture*aperture*(.25*charge*charge+.0625*balance*balance)+.0625*compression*compression)
+            }
+            SkitterVoice.FLUTTER -> {
+                // A positive audio-rate aperture gives amplitude-product sidebands. Using
+                // 2B/3B avoids the near-zero difference tone of direct unison ring mixing.
+                val aperture=((.20+1.10*buzz)*(.15+.85*velocity)+.25*motion+.10*memory).coerceIn(.15,1.35)
+                val gate=1.0+aperture*(.55*cos(2.0*b)+.45*cos(3.0*b))
+                -sinA*(.45+gate)/sqrt(1.45*1.45+.25*aperture*aperture*(.55*.55+.45*.45))
+            }
+            SkitterVoice.CHIRP -> {
+                // A chirplet lives inside EVERY root cycle. The fourth-power window has
+                // three zero derivatives at the wrap, avoiding a hard-sync discontinuity.
+                val center=(2.2+1.4*buzz+.25*velocity+.55*motion+.20*memory).coerceIn(1.8,5.2)
+                val sweep=((.65+buzz)*(.65+.35*velocity)+.40*motion).coerceIn(.25,2.2)
+                val window=sin(PI*phaseA).let { val squared=it*it; squared*squared }
+                val packetPhase=2.0*PI*((center-.5*sweep)*phaseA+.5*sweep*phaseA*phaseA+phaseB-phaseA)
+                val level=(1.15+.70*buzz)*(.65+.35*velocity)
+                -(1.6*sinA+level*window*sin(packetPhase))/sqrt(1.6*1.6+.2734375*level*level)
+            }
+            SkitterVoice.FRAY -> {
+                // Nonmonotonic folding changes the beating pair's body, rather than
+                // saturating a completed signal. A remains explicit when fold nulls move.
+                val fold=((2.2+3.0*buzz)*(.70+.30*velocity)+.65*motion+.25*memory).coerceIn(1.5,5.2)
+                val imbalance=circuit.agitate*circuit.signed/.055
+                val bias=(.12+.08*buzz+.15*motion+.12*imbalance).coerceIn(-.20,.32)
+                val pair=.72*sinA+.28*sin(b)
+                // Center the biased fold's carrier-cycle mean, rather than its value at
+                // zero input. The beating pair's phase-conditioned amplitude is R, and
+                // mean(sin(F*(R*sin(t)+bias))) = sin(F*bias)*J0(F*R).
+                val radiusSquared=.5968+.4032*cos(a-b)
+                val grain=sin(fold*(pair+bias))-sin(fold*bias)*foldJ0(fold*fold*radiusSquared)
+                // Open the folded branch around the circuit's energy-only resting force.
+                // This retains grain movement when the fold index reaches its ceiling,
+                // while the protected carrier and steady grain loading remain anchored.
+                val rest=.85*tanh(.30*circuit.agitate*circuit.history)
+                val shake=circuit.agitate*(circuit.position-rest)
+                val aperture=1.0+.90*shake/(.10+abs(shake))
+                // Keep the calibration fixed: normalizing this touch gain away would let
+                // a deeper fold's moving fundamental null make a harder note lose energy.
+                val carrier=1.0+2.2*velocity
+                -(carrier*sinA+1.05*aperture*grain)/sqrt(1.6*1.6+1.05*1.05)
+            }
+            else -> error("accepted R6 voices must bypass the quartet source")
+        }
+    }
+
+    /** J0(x), expressed in x²; x is bounded by 5.2 here. Taylor remainder < 9e-7. */
+    private fun foldJ0(xSquared: Double): Double {
+        val z=.25*xSquared
+        var p=1.0/13168189440000.0
+        p=-1.0/131681894400.0+z*p
+        p=1.0/1625702400.0+z*p
+        p=-1.0/25401600.0+z*p
+        p=1.0/518400.0+z*p
+        p=-1.0/14400.0+z*p
+        p=1.0/576.0+z*p
+        p=-1.0/36.0+z*p
+        p=.25+z*p
+        p=-1.0+z*p
+        return 1.0+z*p
     }
 
     private class Stats {
@@ -711,6 +806,7 @@ object Skitter {
         val contact=if(!probe.articulationDisabled && (voice==SkitterVoice.LEAD || voice==SkitterVoice.HOLLOW))
             ContactEnvelope(voice,rate,vel,probe) else null
         val body=!probe.bodyDisabled && (voice==SkitterVoice.LEAD || voice==SkitterVoice.HOLLOW)
+        val quartet=!probe.quartetDisabled && voice!=SkitterVoice.LEAD && voice!=SkitterVoice.HOLLOW
         val circuit=Circuit(s,c,m,rate,probe,held,contact); val stats=Stats(); val trace=ArrayList<SkitterTrace>()
         val contextSeed=Dsp.seedFor("SKITTER",voice.name,midi,seed)
         val buzz=m.getValue("BUZZ").toDouble(); val skitter=m.getValue("SKITTER").toDouble()
@@ -749,7 +845,7 @@ object Skitter {
                     a=force.a[i].toDouble(); b=force.b[i].toDouble(); gesture=force.gesture[i].toDouble()
                     val fa=plan.rootHz*force.correctionA*2.0.pow(a/1200.0)
                     val fb=plan.rootHz*s.interval*force.correctionB*2.0.pow(b/1200.0)
-                    val input=vel*.35*source(voice,phaseA,phaseB,fa/rate,fb/rate,buzz,c,circuit,contact,body)
+                    val input=vel*.35*source(voice,phaseA,phaseB,fa/rate,fb/rate,buzz,c,circuit,contact,body,quartet,vel)
                     val root=sin(2.0*PI*rootPhase)*vel
                     raw[i]=circuit.step(input,interpolate(force.noise,i.toDouble()/oversample,true)*vel,gesture*vel,
                         root,support,baseCutoff,i).toFloat()
@@ -824,7 +920,7 @@ object Skitter {
                 val brightness=(buzz+.13*vel*exp(-t/.10)).coerceAtMost(1.0)
                 val fa=hz*2.0.pow(a/1200.0)
                 val fb=hz*s.interval*2.0.pow(b/1200.0)
-                val input=excitation*vel*.35*source(voice,phaseA,phaseB,fa/rate,fb/rate,brightness,c,circuit,contact,body)
+                val input=excitation*vel*.35*source(voice,phaseA,phaseB,fa/rate,fb/rate,brightness,c,circuit,contact,body,quartet,vel)
                 val root=sin(2.0*PI*rootPhase)*excitation*vel
                 rawInternal[i]=circuit.step(input,interpolate(nse,i.toDouble()/oversample,false)*excitation*vel,
                     gesture*excitation*vel,root,support,baseCutoff,i).toFloat()
