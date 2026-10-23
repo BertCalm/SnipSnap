@@ -31,7 +31,7 @@ the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE listening prototype,
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE/FLICKER listening prototype,
 recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
