@@ -367,3 +367,6 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 testkit/fade-law-audition/
+
+# BELLOWS sample-player comparisons and exported proof programs regenerate from source.
+testkit/bellows-playback-audition/

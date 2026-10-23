@@ -89,6 +89,13 @@ absolute keyboard pitches independently of TUNE, and substitutes attack plus
 sustain for finite HOLD. Rendering runs off the UI thread with progress and
 cancellation; RELEASE remains an instrument control.
 
+The MAKE INSTRUMENT preview plays a six-second C4 hold followed by the chosen
+release through the JVM sample-player reference. It uses the same layer gain and
+sustain-loop rules as the instrument, so RELEASE changes the audible tail.
+Native-synthesis musical demos remain available separately from the exported
+sample-player comparisons. See [the playtest guide](BELLOWS_PLAYTEST.md) for
+reproduction and the remaining phone/MPC checks.
+
 WHEEL's embedded drones track the rendered melody note. They transpose
 with its sample and retrigger on each hit. A fixed tonic under independent
 melody notes is a separate companion instrument. WHEEL melody keygroups
