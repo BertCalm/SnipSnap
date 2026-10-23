@@ -374,6 +374,17 @@ tasks.register<JavaExec>("generateMurmurAudition") {
     if (project.hasProperty("murmurFull")) args("--full")
 }
 
+/** Experimental KEY contour and low-register CHOIR loop comparisons; factory audio is unchanged. */
+tasks.register<JavaExec>("generateMurmurLuthierAudition") {
+    group = "distribution"
+    description = "Render the reversible MURMUR Luthier comparisons with native/matched WAVs and exact experimental recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurLuthierAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("murmurLuthierOutput").orNull ?: "${rootDir}/testkit/murmur-luthier-audition")
+}
+
 /** Export the sixteen first-listen pads through the standard MPC program pipeline. */
 tasks.register<JavaExec>("generateMurmurKit") {
     group = "distribution"
