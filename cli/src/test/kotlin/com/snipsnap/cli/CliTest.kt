@@ -3476,4 +3476,38 @@ class CliTest {
         // The sane call still lands, so the sweep above is not vacuous.
         assertEquals(0, cli("recipe", dest.path, "A01", "--from", "${src.path}:A01").first)
     }
+
+    @Test
+    fun `treat --pedals puts a board on one pad from the terminal, records it, and undoes it`() {
+        val wav = writeBreak(File(temp, "pd.wav"))
+        val out = File(temp, "pd-out")
+        assertEquals(0, cli("chop", wav.path, "--out", out.path, "--name", "PD", "--slices", "8").first)
+        val kitDir = File(out, "PD")
+        val padFile = File(kitDir, KitStore.load(kitDir).pad(2)!!.sampleFile)
+        val before = padFile.readBytes()
+
+        val (code, stdout, stderr) = cli("treat", kitDir.path, "A02", "--pedals", "compressed@0.7:pre,driven")
+        assertEquals(0, code, "stderr: $stderr")
+        assertContains(stdout, "compressed at 0.70 pre")
+        assertContains(stdout, "driven at 1.00 amp")
+        assertTrue(!before.contentEquals(padFile.readBytes()))
+        val board = com.snipsnap.shell.PadSheet.readPedals(KitStore.load(kitDir).pad(2)!!.recipe)
+        assertEquals(
+            listOf(
+                com.snipsnap.synth.PedalBoard.Pick("compressed", 0.7f, com.snipsnap.synth.PedalSide.PRE),
+                com.snipsnap.synth.PedalBoard.Pick("driven", 1f, com.snipsnap.synth.PedalSide.AMP),
+            ),
+            board!!.picks,
+        )
+
+        assertEquals(0, cli("treat", kitDir.path, "A02", "--undo").first)
+        assertTrue(before.contentEquals(padFile.readBytes()))
+
+        val (badCode, _, badErr) = cli("treat", kitDir.path, "A02", "--pedals", "sparkled")
+        assertTrue(badCode != 0)
+        assertContains(badErr, "driven")
+        val (sideCode, _, sideErr) = cli("treat", kitDir.path, "A02", "--pedals", "driven:pre")
+        assertTrue(sideCode != 0)
+        assertContains(sideErr, "amp")
+    }
 }

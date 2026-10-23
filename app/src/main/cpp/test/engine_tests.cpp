@@ -638,6 +638,116 @@ TEST(pad_engine_a_loop_that_closes_is_as_smooth_across_its_seam_off_the_root) {
     }
 }
 
+// ---- PadEngine: a command lands on its frame, not on the block ----------------
+
+namespace {
+PadCommand at(PadCommand c, int32_t frameOffset) {
+    c.frameOffset = frameOffset;
+    return c;
+}
+}  // namespace
+
+TEST(pad_engine_a_note_at_frame_37_begins_at_frame_37_of_the_block) {
+    PadEngine& e = seeded();
+    // The ramp from frame 100: the first frame played reads 0.100, the next 0.101.
+    CHECK(e.pushCommand(at(noteOn(37, 0, 100, 1000), 37)));
+    auto out = callback(e, 128);
+    for (int32_t i = 0; i < 37; ++i) {
+        CHECK_NEAR(out[2 * i], 0.0f, 1e-7);
+        CHECK_NEAR(out[2 * i + 1], 0.0f, 1e-7);
+    }
+    CHECK_NEAR(out[2 * 37], 0.100f, 1e-6);
+    CHECK_NEAR(out[2 * 37 + 1], 0.100f, 1e-6);
+    CHECK_NEAR(out[2 * 38], 0.101f, 1e-6);
+    // Frame 127 is the note's 91st frame: ramp frame 190.
+    CHECK_NEAR(out[2 * 127], 0.190f, 1e-6);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+}
+
+TEST(pad_engine_a_command_past_the_block_waits_its_turn_in_the_next_one) {
+    PadEngine& e = seeded();
+    // Due at frame 150: silence for all of a 128-frame block, then frame 22 of the next.
+    CHECK(e.pushCommand(at(noteOn(8, 0, 100, 1000), 150)));
+    auto first = callback(e, 128);
+    CHECK_NEAR(peak(first), 0.0f, 1e-7);
+    auto second = callback(e, 128);
+    CHECK_NEAR(second[2 * 21], 0.0f, 1e-7);
+    CHECK_NEAR(second[2 * 22], 0.100f, 1e-6);
+    CHECK_NEAR(second[2 * 23], 0.101f, 1e-6);
+    // Block sizes need not match: the wait is counted in frames, not blocks.
+    PadEngine& f = seeded();
+    CHECK(f.pushCommand(at(noteOn(9, 0, 100, 1000), 100)));
+    callback(f, 64);
+    callback(f, 32);
+    auto third = callback(f, 16);
+    CHECK_NEAR(third[2 * 3], 0.0f, 1e-7);
+    CHECK_NEAR(third[2 * 4], 0.100f, 1e-6);
+}
+
+TEST(pad_engine_commands_apply_by_frame_first_and_push_order_second) {
+    PadEngine& e = seeded();
+    // The Stop was pushed after the NoteOn but is due before it: it finds
+    // nothing to stop, and the note that follows plays untouched.
+    CHECK(e.pushCommand(at(noteOn(5, 0, 100, 1000), 20)));
+    CHECK(e.pushCommand(at(stop(5, 1.0f), 10)));
+    // Due on the same frame as another Stop pushed later: push order holds,
+    // so the second NoteOn's own Stop (pushed after it) stops it.
+    CHECK(e.pushCommand(at(noteOn(6, 0, 500, 1000), 20)));
+    CHECK(e.pushCommand(at(stop(6, 1.0f), 20)));  // 1 ms = 48 frames
+    auto out = callback(e, 128);
+    CHECK_NEAR(out[2 * 19], 0.0f, 1e-7);
+    // Frame 20: voice 5 at full (0.100) plus voice 6 at the first step of its fade.
+    CHECK(out[2 * 20] > 0.100f);
+    CHECK(out[2 * 20] < 0.600f);
+    // By frame 20 + 48 voice 6 has faded out and only voice 5 remains, still at full.
+    CHECK_NEAR(out[2 * 70], 0.150f, 1e-6);
+    CHECK_NEAR(out[2 * 127], 0.207f, 1e-6);
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 6);
+}
+
+TEST(pad_engine_a_stop_due_mid_block_starts_the_fade_there) {
+    PadEngine& e = seeded();
+    e.pushCommand(noteOn(3, 0, 500, 1000, 0.002f, 0.002f));
+    callback(e, 4);
+    e.pushCommand(at(stop(3, 1.0f), 32));  // 1 ms = 48 frames, from frame 32
+    auto out = callback(e, 128);
+    CHECK_NEAR(out[2 * 31], 0.535f * 0.002f, 1e-6);  // ramp frame 504 + 31, untouched before the fade
+    CHECK(out[2 * 40] < out[2 * 31]);                 // falling after it
+    CHECK_NEAR(out[2 * 90], 0.0f, 1e-7);               // gone by 32 + 48
+    CHECK_EQ(static_cast<int>(ended(e).size()), 1);
+}
+
+TEST(pad_engine_stop_reports_a_note_still_waiting_for_its_frame) {
+    PadEngine& e = seeded();
+    e.pushCommand(at(noteOn(11, 0, 100, 1000), 10000));
+    callback(e, 8);  // taken off the ring, held for a frame that never comes
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);
+    e.stop();
+    const auto ids = ended(e);
+    CHECK_EQ(static_cast<int>(ids.size()), 1);
+    if (!ids.empty()) CHECK_EQ(ids[0], 11);
+    // And it is gone: a later callback does not play it.
+    e.pushCommand(allOff(1.0f));
+    auto out = callback(e, 128);
+    CHECK_NEAR(peak(out), 0.0f, 1e-7);
+}
+
+TEST(pad_engine_a_command_that_finds_the_hold_full_plays_now_rather_than_never) {
+    PadEngine& e = seeded();
+    // A bad sample index is refused by apply() with an ended report, so a
+    // report says "applied" and no report says "still held".
+    const int32_t far = 1 << 20;
+    for (int32_t id = 0; id < 255; ++id) CHECK(e.pushCommand(at(noteOn(id, 99, 0, 10), far)));
+    callback(e, 8);
+    CHECK_EQ(static_cast<int>(ended(e).size()), 0);  // 255 held
+    for (int32_t id = 1000; id < 1255; ++id) CHECK(e.pushCommand(at(noteOn(id, 99, 0, 10), far)));
+    callback(e, 8);
+    // One more fits the hold of 256; the other 254 could not wait and were applied at once.
+    CHECK_EQ(static_cast<int>(ended(e).size()), 254);
+}
+
 TEST(latency_is_minus_one_with_no_stream) {
     // The readout's "the device would not say" case: no stream open, so
     // neither engine may dereference one to answer.

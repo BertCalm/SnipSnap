@@ -173,7 +173,8 @@ Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
 finite prototype from the proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-contains 114 clips with raw/matched playback and downloadable recipes.
+opens 16 previous/revised timpani comparisons with raw/matched playback and
+downloadable recipes; the original 114-clip study remains archived there.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
@@ -345,7 +346,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 40 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -473,6 +474,14 @@ recipes retain their original render. The owner accepted the voices and revised
 controls; the expanded presets now have their own listening review.
 [Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
+
+An experimental [BRASS GROW mode](docs/engineering/brass-grow-prototype.md)
+adds two BRASS presets with TUNE, GROW, LENGTH and HOLD. GROW shapes one
+performance from rough through centered to expressive, rather than mixing
+separate takes. It explicitly saves model 3; ordinary patches, the original
+eight presets and the sixteen-pad starter retain their previous models.
+Run `./gradlew :synth:generateBrassGrowPrototype` for its register/velocity
+validation pack. Device playing and listening remain the next acceptance step.
 
 TRIO brings three plucked performers and changing alliances into a finite pad
 performance. TRES, BERIMBAU, CHARANGO and ENSEMBLE share TOUCH, DRAMA, SIDES,
@@ -853,9 +862,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-ONSET, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI and GRAINS round out the lineup —
-fifty-one engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM and GRAINS round out the lineup —
+fifty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1047,7 +1056,7 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
+THUMP, SCANNED CHAIN, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
 GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
 SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, VENT, OVERLAP, TRIO, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
@@ -1073,6 +1082,18 @@ is a topology-preserving (trapezoidal) state-variable filter after Andy
 Simper's Cytomic papers — stable to Nyquist where the Chamberlin design
 went unstable past ~7 kHz. VELVET's CUTOFF, once capped at 5.2 kHz for
 stability, now opens to 12 kHz with the envelope sweeping to 16 kHz.
+
+OHM is a dry coupled-string instrument inspired by XOmnibus's
+family dynamics: MEDDLING introduces two companions, and COMMUNE moves
+their energy through a shared resonating bridge. The finite solo, argument,
+communion and gathering examples, complete recipes and control comparisons
+are generated by `./gradlew :synth:generateOhmAudition`. Its five auditioned
+recipes are available in the synth picker, factory roster and CLI. Model 2
+keeps the plucked foreground present under the companions and broadens
+control variation; saved model-1 recipes retain the original sound. The
+audition includes direct original/revised middle-range comparisons. See
+[`docs/OHM.md`](docs/OHM.md) and the
+[private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
 
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,

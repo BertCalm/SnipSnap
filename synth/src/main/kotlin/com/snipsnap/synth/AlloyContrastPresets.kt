@@ -1,8 +1,8 @@
 package com.snipsnap.synth
 
-/** Opt-in listening proposals, deliberately separate from the released factory bank.
- * Every difference lives in the existing saved recipe: the model, default recipes and
- * rendering path remain unchanged. Numerical separation is not listening approval. */
+/** Alternate listening recipes, kept separate from the named factory bank.
+ * The selected voice configurations are adopted by [Alloy.defaultConfigFor]; each
+ * patch still stores its complete model-1 recipe. Numerical separation is not listening approval. */
 object AlloyContrastPresets {
     private fun mode(r: List<Float>, l: List<Float>, g: List<Float>) = AlloyConfig.Projection(r, l, g)
     private fun route(from: Int, to: Int, depth: Float) = AlloyConfig.Route(from, to, depth)

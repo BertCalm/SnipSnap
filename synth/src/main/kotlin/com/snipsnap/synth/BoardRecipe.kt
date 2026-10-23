@@ -6,15 +6,16 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
 /** A compound board identity, kept separate from the existing fixed rack. */
-enum class BoardType(val id: String) { WIDE("wide") }
+enum class BoardType(val id: String) { WIDE("wide"), RUSH("rush") }
 
 /**
  * A saved board and its macro intensity. No mutable parameter maps or DSP
  * state are retained: the same recipe can safely render multiple pad sources.
  *
  * The `board` field discriminates this format and versions the complete
- * mapping and processing order. Version 1 stores WIDE's accepted first
- * audition. Changing that sound requires an explicit versioning decision.
+ * mapping and processing order for each type. Version 1 keeps WIDE's accepted
+ * first audition and RUSH's first mapping. Changing either sound requires
+ * an explicit versioning decision.
  */
 data class BoardRecipe(
     val type: BoardType = BoardType.WIDE,
@@ -28,6 +29,7 @@ data class BoardRecipe(
 
     fun process(snip: Snip): Snip = when (type) {
         BoardType.WIDE -> Wide.process(snip, amount)
+        BoardType.RUSH -> Rush.process(snip, amount)
     }
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(linkedMapOf(

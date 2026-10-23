@@ -24,7 +24,7 @@ enum class ChamberVoice { HYBRID, AQUARIUM }
  * upper bound. This is a passive-network proof, not a claim that small coefficients
  * or independently stable resonators prove stability. Listener taps do not feed back.
  * The modulated submerged-glass listener branch is excluded from this proof and
- * entirely excluded from feedback. HOLD remains deliberately unsupported in model 1.
+ * entirely excluded from feedback. HOLD remains deliberately unsupported.
  */
 object Chamber {
     const val RATE = Dsp.RATE
@@ -33,7 +33,7 @@ object Chamber {
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
     const val DEFAULT_SEED = 0L
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val MAX_SECONDS = 6f
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
@@ -54,6 +54,12 @@ object Chamber {
     // preserves the original bar attack level in the listener, outside feedback.
     private const val BAR_PORT_RATE = .25
     private const val BAR_PRESSURE_CALIBRATION = 6.0
+    // Model 1's 12/s membrane port swallowed its pitched body within a few
+    // hundred milliseconds. A light, passive acoustic load lets the membrane's
+    // intrinsic decay speak. Radiation is calibrated separately in the observer;
+    // this gain never changes the energy exchanged with the room.
+    private const val MEMBRANE_PORT_RATE = .5
+    private const val MEMBRANE_PRESSURE_CALIBRATION = 24.0
 
     fun macrosFor(voice: ChamberVoice): List<MacroSpec> {
         val d = if (voice == ChamberVoice.HYBRID) floatArrayOf(.50f,.45f,.40f,.90f,.60f)
@@ -194,16 +200,25 @@ object Chamber {
         doubleArrayOf(1.0,1.48,2.17,2.91,4.16),
         doubleArrayOf(1.0,1.527,2.137,2.894,4.103,5.27))
     private fun instrument(index: Int, hz: Double, ratio: Double, hardness: Double,
-        rate: Int, seed: Long): Bank {
-        val random=Random(Dsp.seedFor("CHAMBER", MODEL_VERSION,seed,index))
+        rate: Int, seed: Long, model: Int): Bank {
+        // Keep every source's established random realization across revisions.
+        // Model 2 revises only the membrane; the other three banks are unchanged.
+        val random=Random(Dsp.seedFor("CHAMBER", 1,seed,index))
         val frequencies=ratios[index].mapIndexed { j,r ->
             hz*ratio*r*(if(j==0 || index<2) 1.0 else 1+random.nextDouble(-.002,.002))
         }.takeWhile { it<19000.0 }.toDoubleArray()
-        val base=doubleArrayOf(1.15,2.45,1.20,2.65)[index]
+        val base=if(index==0 && model>=2) 1.65 else doubleArrayOf(1.15,2.45,1.20,2.65)[index]
         val decay=DoubleArray(frequencies.size) { j -> base/(1+.20*j)*(.94+.12*random.nextDouble()) }
         val weights=DoubleArray(frequencies.size) { j ->
             when(index) {
-                0 -> (if(j==0) 1.5 else 1.0)*exp(-j*(.58-.27*hardness))
+                0 -> if(model==1) (if(j==0) 1.5 else 1.0)*exp(-j*(.58-.27*hardness))
+                    else {
+                        // Keep the half-integer family audible without letting
+                        // its shared two-period repeat imply an octave-low root.
+                        // The near-2x/3x/4x body modes retain their full weights.
+                        val weight=(if(j==0) 1.25 else 1.1)*exp(-j*(.42-.18*hardness))
+                        weight*(if(j%2==1) .7 else 1.0)
+                    }
                 1 -> (if(j==0) 1.7 else .70)*exp(-j*(.62-.30*hardness))
                 2 -> doubleArrayOf(.85,1.0,.8,.5,.35)[j]*(.6+.4*hardness).pow(j*.25)
                 else -> doubleArrayOf(.48,.9,1.0,.7,.5,.3)[j]*(.5+.5*hardness).pow(j*.2)
@@ -293,14 +308,14 @@ object Chamber {
         midi: Int = DEFAULT_MIDI, velocity: Float = .75f,
         configuration: ChamberConfig = configFor(voice), seed: Long = DEFAULT_SEED,
         model: Int = MODEL_VERSION, options: ProbeOptions = ProbeOptions()): Probe {
-        require(model==MODEL_VERSION) { "Unsupported CHAMBER model $model" }
+        require(model in 1..MODEL_VERSION) { "Unsupported CHAMBER model $model" }
         require(midi in MIDI_MIN..MIDI_MAX) { "CHAMBER MIDI must be $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "CHAMBER velocity must be 0..1" }
         require(options.seconds.isFinite() && options.seconds in .1f..MAX_SECONDS)
         require(options.isolatedInstrument==null || options.isolatedInstrument in 0..3)
         require(options.oversample==4 || options.oversample==8)
         val m=settled(voice,macros)
-        require(m.getValue("HOLD")==0f) { "CHAMBER model 1 supports finite strikes only; HOLD must be 0" }
+        require(m.getValue("HOLD")==0f) { "CHAMBER model $model supports finite strikes only; HOLD must be 0" }
         val preparationStart=System.nanoTime()
         val rate=RATE*options.oversample
         // Traveling samples use energy-normalized coordinates: their amplitude
@@ -309,7 +324,7 @@ object Chamber {
         val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)
         val geometry=ChamberRoom.prepare(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"))
         val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity).coerceIn(0.0,1.0)
-        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed) }
+        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model) }
         val average=averageMaterials(geometry)
         val materials=if(options.averageSurfaces) List(10) { average } else geometry.regionMaterialWeights
         val boundaries=Array(10) { boundary(it,materials[it],rate) }
@@ -325,7 +340,7 @@ object Chamber {
         val field=Array(8) { i -> Delay(doubleArrayOf(.0233,.0297,.0371,.0419,.0473,.0539,.0611,.0677)[i],rate,.973) }
         val allDelays=outgoing.flatMap { it.toList() }+returning.flatMap { it.toList() }+
             regionToField.toList()+fieldToRegion.toList()+field.toList()
-        val sourceS=DoubleArray(4) { sqrt(2*doubleArrayOf(12.0,BAR_PORT_RATE,15.0,8.0)[it]/rate) }
+        val sourceS=DoubleArray(4) { sqrt(2*doubleArrayOf(if(model==1) 12.0 else MEMBRANE_PORT_RATE,BAR_PORT_RATE,15.0,8.0)[it]/rate) }
         val sourceC=DoubleArray(4) { sqrt(1-sourceS[it]*sourceS[it]) }
         val boundaryS=sqrt(2*28.0/rate); val boundaryC=sqrt(1-boundaryS*boundaryS)
         val sourceTaps=Array(4) { Tap(geometry.directPaths[it].delaySeconds.toDouble(),rate) }
@@ -419,7 +434,7 @@ object Chamber {
                         if(options.returnsEnabled) change else -sourceS[s]*v))
                 }
                 banks[s].step()
-                sourceWave[s]=banks[s].port()*sourceS[s]*observerGain*(if(s==1) BAR_PRESSURE_CALIBRATION else 1.0)
+                sourceWave[s]=banks[s].port()*sourceS[s]*observerGain*(when { s==1 -> BAR_PRESSURE_CALIBRATION; s==0 && model>=2 -> MEMBRANE_PRESSURE_CALIBRATION; else -> 1.0 })
                 if(options.recordStems) instrumentTaps[s][frame]=sourceWave[s].toFloat()
             }
             primaryWork += frameWork

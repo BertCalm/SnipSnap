@@ -111,6 +111,40 @@ class MidiWireTest {
     }
 
     @Test
+    fun `an event carries the stamp of the delivery that completed it`() {
+        val wire = MidiWire()
+        // One delivery, one stamp, on every event it completes - note, note-off and controller alike.
+        assertEquals(
+            listOf(
+                Event.NoteOn(0, 60, 100 / 127f, timestampNanos = 1_000L),
+                Event.NoteOff(0, 60, timestampNanos = 1_000L),
+                Event.Control(0, MidiWire.CC_SUSTAIN, 127, timestampNanos = 1_000L),
+            ),
+            wire.feed(bytes(0x90, 60, 100, 0x80, 60, 0, 0xB0, 64, 127), timestampNanos = 1_000L),
+        )
+        // Running status across deliveries: each delivery's notes carry its own stamp, not the first one's.
+        assertEquals(listOf(Event.NoteOn(1, 60, 100 / 127f, timestampNanos = 2_000L)), wire.feed(bytes(0x91, 60, 100), timestampNanos = 2_000L))
+        assertEquals(listOf(Event.NoteOn(1, 62, 100 / 127f, timestampNanos = 3_000L)), wire.feed(bytes(62, 100), timestampNanos = 3_000L))
+    }
+
+    @Test
+    fun `a message split across deliveries is stamped by the delivery that finished it`() {
+        val wire = MidiWire()
+        assertEquals(emptyList(), wire.feed(bytes(0x90, 60), timestampNanos = 5_000L))
+        // The status and the note arrived at 5000; the velocity, which made it a note, at 7000.
+        assertEquals(listOf(Event.NoteOn(0, 60, 90 / 127f, timestampNanos = 7_000L)), wire.feed(bytes(90), timestampNanos = 7_000L))
+        // The stamp does not linger: a delivery with no stamp completes an unstamped note.
+        assertEquals(listOf(Event.NoteOn(0, 62, 90 / 127f)), wire.feed(bytes(0x90, 62, 90)))
+        assertEquals(0L, wire.feed(bytes(0x90, 64, 90)).single().timestampNanos)
+    }
+
+    @Test
+    fun `an unstamped event equals the same event stamped zero, so the rules in shell keep comparing by note`() {
+        assertEquals(Event.NoteOn(0, 60, 1f), Event.NoteOn(0, 60, 1f, timestampNanos = 0L))
+        assertEquals(Event.NoteOff(0, 60), Event.NoteOff(0, 60, timestampNanos = 0L))
+    }
+
+    @Test
     fun `the window is checked`() {
         // Each refusal must be the window guard's own. With the guard gone, the first of these still throws, but an
         // ArrayIndexOutOfBoundsException, and a negative count reads nothing and answers an empty list.

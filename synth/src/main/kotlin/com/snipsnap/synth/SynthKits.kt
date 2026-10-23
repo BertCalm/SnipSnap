@@ -12,6 +12,27 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    fun tidal(): List<ArrangedPad?> {
+        val notes = intArrayOf(48, 51, 53, 55, 58)
+        return TidalVoice.entries.flatMap { voice ->
+            notes.map { midi ->
+                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
+                pad(patch, Tidal.drumClassFor(voice, patch.macros))
+            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+        }
+    }
+
+    /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
+    fun scannedChain(): List<ArrangedPad?> {
+        val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }
+        return voices.mapIndexed { index, voice ->
+            val scaleIndex = when { index < 8 -> index; index < 12 -> index - 8; else -> index - 12 }
+            val patch = ScannedChainPresets.forVoice(voice).single().copy(name = "Chain ${index + 1}", midi = 48 + PENTATONIC[scaleIndex])
+            pad(patch, DrumClass.TONAL)
+        }
+    }
+
     /** The finite TRIO conversations, in the same order as its factory preset bank. */
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
@@ -629,6 +650,8 @@ object SynthKits {
      * Every pad carries the model, player gesture and native velocity in its recipe.
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
+    // The original sixteen-pad acceptance kit is a saved factory contract. The experimental GROW
+    // presets (EmbouchurePresets.experimental) are available in SYNTH without changing that kit.
     fun embouchure(): List<ArrangedPad?> = embouchureStarterPatches().map(::embouchurePad)
 
     /** The original starter layout remains fixed when the selectable factory roster grows. */

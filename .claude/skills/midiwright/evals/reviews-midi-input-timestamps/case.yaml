@@ -1,0 +1,12 @@
+schema_version: "1.1"
+name: reviews-midi-input-timestamps
+expected_outcome: |
+  A REVIEW in the rubric's Fix now / Try next / Big idea / Disclosed / What I measured
+  format, each finding with a lens letter and a line reference. It finds that
+  MidiInput.Receiver.onSend discards the timestamp, that events hop to the main thread,
+  that PadCommand has no frame offset and commands apply at the top of the callback, and
+  that there is no MIDI output or virtual port. It names docs/MIDI_SYNC.md's four clocks and
+  bench items S1 to S4 as the gate on sync work, recommends master before follower, says
+  what it only read (commit hash), and ends with "Why it is built this way" notes for Josh.
+  It does not invent an API, does not call MidiInput broken (its KDoc documents the design),
+  and does not prescribe timing numbers as measured.

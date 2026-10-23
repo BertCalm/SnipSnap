@@ -232,7 +232,7 @@ class ChamberTest {
 
     @Test
     fun `normal ensemble body remains pitched and outside percussion classification`() {
-        for (voice in ChamberVoice.entries) for (midi in listOf(36, 60, 84)) {
+        for (voice in ChamberVoice.entries) for (midi in listOf(36, 48, 60, 84)) {
             val p = Chamber.probe(voice, midi = midi, options = quick.copy(normalize = true, recordStems = false))
             val snip = Snip(p.samples, 1, Dsp.RATE)
             val detected = assertNotNull(Pitch.detect(snip, .08f, .4f), "$voice MIDI $midi lost the ensemble pitch")

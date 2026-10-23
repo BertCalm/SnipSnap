@@ -310,7 +310,8 @@ object Breed {
         val names = mutableMapOf(pad.sampleFile to assigned.sampleFile)
         val layers = pad.velocityLayers.mapIndexed { index, layer ->
             val name = names.getOrPut(layer.sampleFile) {
-                val stem = assigned.sampleFile.substringBeforeLast('.') + "_wide_layer_${index + 1}"
+                val board = BoardSheet.read(pad.recipe)?.type?.id ?: "board"
+                val stem = assigned.sampleFile.substringBeforeLast('.') + "_${board}_layer_${index + 1}"
                 var candidate = "$stem.wav"
                 var suffix = 2
                 while (File(model.kitDir, candidate).exists()) candidate = "${stem}_${suffix++}.wav"

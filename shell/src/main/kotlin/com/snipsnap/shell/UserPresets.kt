@@ -22,12 +22,14 @@ import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
@@ -40,6 +42,7 @@ import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.ScannedChainPatch
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
@@ -354,7 +357,8 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = when (engine) {
+    fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        ScannedChainPatch.ENGINE -> "ScannedChainVoice"
         OrphicaPatch.ENGINE -> "OrphicaMaterial"
         OpenSkyPatch.ENGINE -> "OpenSkyVoice"
         OverlapPatch.ENGINE -> "OverlapTopology"
@@ -362,7 +366,8 @@ object UserPresets {
     }
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
-    fun rosterFile(engine: String): String = when (engine) {
+    fun rosterFile(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        ScannedChainPatch.ENGINE -> "ScannedChainPresets.kt"
         OpenSkyPatch.ENGINE -> "OpenSkyPresets.kt"
         OverlapPatch.ENGINE -> "OverlapFactoryPresets.kt"
         VentPatch.ENGINE -> "VentKitPresets.kt"
@@ -382,7 +387,8 @@ object UserPresets {
      * WICK, SHOAL and CREASE also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL, SHOAL and CREASE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
-     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * retain their MIDI base, velocity, model and selected player gesture; OHM also
+     * retains its exact excitation seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -393,7 +399,9 @@ object UserPresets {
      * recording roster and HOLD memory mode. RELAY retains its complete source and
      * phrase schedules. SHOAL keeps its root, velocity, material and synthesis model.
      * MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. FLOCK retains its note, velocity,
+     * operator/formant/envelope definition. SCANNED CHAIN keeps its saved 128-point shape,
+     * complete physical configuration, note, velocity and render-model version through JSON.
+     * FLOCK retains its note, velocity,
      * model and exact 64-bit seed. VENT retains note, touch, trajectory seed
      * and either saved renderer through the JSON constructor. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
@@ -413,6 +421,13 @@ object UserPresets {
         if (patch is FilamentPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "FilamentPatch.fromJsonText($recipe),"
+        }
+        if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
+            // The original roster's p helper constructs model 2 before .copy runs;
+            // it cannot accept a GROW macro. Construct the saved model directly.
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "EmbouchurePatch.fromJsonText(\"$recipe\"),"
         }
         if (patch is OrigamiPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -438,6 +453,11 @@ object UserPresets {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "VentPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is ScannedChainPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ScannedChainPatch.fromJsonText(\"$recipe\"),"
         }
         if (patch is OpenSkyPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -520,6 +540,7 @@ object UserPresets {
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
+            is OhmPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, gesture = OhmGesture.${patch.gesture.name}, model = ${patch.model})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is OspreyPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, durationSeconds = ${patch.durationSeconds}f, modelVersion = ${patch.modelVersion})"
             is RevelPatch -> {

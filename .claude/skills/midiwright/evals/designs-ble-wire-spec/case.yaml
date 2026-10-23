@@ -1,0 +1,14 @@
+schema_version: "1.1"
+name: designs-ble-wire-spec
+expected_outcome: |
+  A WIRE spec: in-app scanner on the BLE MIDI service UUID, runtime permissions
+  (BLUETOOTH_SCAN with neverForLocation and BLUETOOTH_CONNECT on 12+, location on 10 and 11),
+  MidiManager.openBluetoothDevice with the returned MidiDevice held for the session in a
+  mediaPlayback foreground service (the manifest today has only microphone and
+  mediaProjection), then MidiInput's existing path picking the device up through
+  onDeviceAdded. It names the Android 13-and-earlier SysEx and disconnect bugs and the
+  Android 12 tablet's exposure to them, matches devices by name plus UUID rather than MAC,
+  gives a reconnect-with-backoff rule, says what the user sees when it fails, lists JVM
+  tests for the pure parts and bench rows for the two devices, cites latency as cited
+  (NIME 2019 and vendors) not measured, and ends with "Why it is built this way". Kotlin
+  lands beside MidiInput.kt in :app with rules in :shell.
