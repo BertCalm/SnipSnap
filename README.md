@@ -173,7 +173,8 @@ Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
 replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
 finite prototype from the proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-contains 114 clips with raw/matched playback and downloadable recipes.
+opens 16 previous/revised timpani comparisons with raw/matched playback and
+downloadable recipes; the original 114-clip study remains archived there.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
@@ -464,6 +465,14 @@ recipes retain their original render. The owner accepted the voices and revised
 controls; the expanded presets now have their own listening review.
 [Implementation notes](docs/EMBOUCHURE.md) describe the prototype registers,
 driver approximations, recipes and held-sample export limits.
+
+An experimental [BRASS GROW mode](docs/engineering/brass-grow-prototype.md)
+adds two BRASS presets with TUNE, GROW, LENGTH and HOLD. GROW shapes one
+performance from rough through centered to expressive, rather than mixing
+separate takes. It explicitly saves model 3; ordinary patches, the original
+eight presets and the sixteen-pad starter retain their previous models.
+Run `./gradlew :synth:generateBrassGrowPrototype` for its register/velocity
+validation pack. Device playing and listening remain the next acceptance step.
 
 TRIO brings three plucked performers and changing alliances into a finite pad
 performance. TRES, BERIMBAU, CHARANGO and ENSEMBLE share TOUCH, DRAMA, SIDES,

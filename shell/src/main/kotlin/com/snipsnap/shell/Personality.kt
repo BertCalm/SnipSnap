@@ -1621,6 +1621,9 @@ object Copy {
     const val WIDE_REMOVE_BEFORE_SOFT_HITS = "REMOVE WIDE BEFORE CHANGING SOFT HITS."
     const val WIDE_REMOVE_BEFORE_STACK = "REMOVE WIDE BEFORE STACK THE TAKES."
     const val WIDE_REMOVE_BEFORE_SPREAD = "REMOVE WIDE BEFORE SPREAD."
+    fun boardRemoveBeforeSoftHits(board: String): String = "REMOVE $board BEFORE CHANGING SOFT HITS."
+    fun boardRemoveBeforeStack(board: String): String = "REMOVE $board BEFORE STACK THE TAKES."
+    fun boardRemoveBeforeSpread(board: String): String = "REMOVE $board BEFORE SPREAD."
     /** The keyed family reads the DESTINATION kit's key; [sourceKey] is named when it differs from what played. */
     fun replayedInKey(word: String, pad: String, key: String, sourceKey: String?): String =
         "$word DONE AGAIN ON $pad, IN $key" +

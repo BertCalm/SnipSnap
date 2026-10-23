@@ -61,6 +61,12 @@ android {
     }
 
     buildTypes {
+        debug {
+            // The experimental audition installs beside the normal app and
+            // keeps its shelf and preferences independent.
+            applicationIdSuffix = ".brassgrow"
+            versionNameSuffix = "-brass-grow"
+        }
         release {
             isMinifyEnabled = false
         }

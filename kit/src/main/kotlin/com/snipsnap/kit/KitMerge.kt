@@ -47,7 +47,7 @@ object KitMerge {
         // the live WAV set. Refuse before touching the destination unless the
         // caller supplies the source-aware importer used by the CLI.
         require(importPad != null || (aKept + bBank).none { "boardPad" in (it.recipe?.entries ?: emptyMap()) }) {
-            "WIDE pads need a source-aware importer to merge; remove WIDE first or use the SnipSnap merge command"
+            "Compound boards need a source-aware importer to merge; remove the board first or use the SnipSnap merge command"
         }
 
         destDir.mkdirs()
