@@ -39,12 +39,12 @@ it is done. The gate column names what has to be true first; S1 to S4 are
 
 | # | Work | Lands | Proof | Gate |
 |---|---|---|---|---|
-| 1 | **Real-time events.** `MidiWire` emits `Clock`, `Start`, `Stop`, `Continue` with stamps instead of dropping `0xF8` to `0xFC`. Hostile fixture first: a flood of `0xF8` interleaved mid-message must not allocate per byte or stall | `MidiWire.kt`, `MidiWireTest` | `:kit:test` | none |
-| 2 | **Absolute frame counter** in `PadEngine`, incremented per callback, read atomically off the audio thread. The `getTimestamp` fit that maps nanoseconds to frames is designed now and held | `PadEngine.{h,cpp}` | engine test with a synthetic clock | counter: none; fit: **S1** |
+| ~~1~~ | ~~**Real-time events.** `MidiWire` emits `Clock`, `Start`, `Stop`, `Continue` with stamps instead of dropping `0xF8` to `0xFC`. Hostile fixture first: a flood of `0xF8` interleaved mid-message must not allocate per byte or stall~~ Done in `f95cd75c9` | `MidiWire.kt`, `MidiWireTest` | `:kit:test` | none |
+| 2 | **Absolute frame counter** (counter done in `aa2583bf9`; the fit is held) in `PadEngine`, incremented per callback, read atomically off the audio thread. The `getTimestamp` fit that maps nanoseconds to frames is designed now and held | `PadEngine.{h,cpp}` | engine test with a synthetic clock | counter: none; fit: **S1** |
 | 3 | **Join the halves.** `NativePads.noteOn` and `jni.cpp` take a `frameOffset`; `MidiPads` and `MidiKeys` carry `timestampNanos` to the screen's `hit`. Two placements: a fixed one-buffer delay (the default, steady latency) or frame 0 (lowest latency) | `NativePads.kt`, `jni.cpp`, `PadEngine.kt`, `:shell` | JVM tests on the offset arithmetic; engine test end to end | step 2's fit, so **S1** |
 | 4 | **MIDI output.** Open each device's input ports, one MIDI-out thread fed by a ring, `send` with timestamps, never from the audio callback | a `MidiOutput.kt` beside `MidiInput` | a loopback cable; the monitor shows what left | none |
-| 5 | **Device fingerprint** `(transport, vendorId, productId, port counts, name hash)` on `Opened` and in `onDevicesChanged`; never the display name alone, never a Bluetooth address | `MidiInput.kt`, a pure class in `:shell` | the same key before and after USB permission | none |
-| 6 | **Stop-drop guard.** `SpscRing` drops on full and a dropped `Stop` is a stuck pad. A refused stop is kept and retried from the screen-rate drain | `PadEngine.kt`, `NativePads.kt`, `jni.cpp` | a 64-pad roll bench row | none |
+| ~~5~~ | ~~**Device fingerprint** `(transport, vendorId, productId, port counts, name hash)` on `Opened` and in `onDevicesChanged`; never the display name alone, never a Bluetooth address | `MidiInput.kt`, a pure class in `:shell` | the same key before and after USB permission~~ Done in `bd95b1baa` | none |
+| ~~6~~ | ~~**Stop-drop guard.** `SpscRing` drops on full and a dropped `Stop` is a stuck pad. A refused stop is kept and retried from the screen-rate drain | `PadEngine.kt`, `NativePads.kt`, `jni.cpp` | a 64-pad roll bench row~~ Done in `27d059a65` and `e7cfc0072`; the bench row is not run | none |
 | 7 | **Diagnostics screen.** Endpoints with transport and protocol, a live monitor with arrival deltas, `latencyMillis`, burst size, a copyable report | `:app`, a model in `:shell` | the report pastes into an issue | step 5 |
 | 8 | **Bluetooth keyboard** per the existing spec: `BleMidiLink`, a `connectedDevice` foreground service, the scanner sheet, reconnection with backoff | per `MIDI_BLE_SPEC_2026_10.md` | its D1 to D9 rows on the Pixel | none |
 | 9 | **Virtual port** "SnipSnap In" and "SnipSnap Out" through `MidiDeviceService` | a new service, manifest, `res/xml` | another app opens it and plays a kit | step 4 |
@@ -97,8 +97,48 @@ MPC that is already running.
 
 ## As built: batch A (2026-10-23)
 
-Filled in by the session that lands steps 1, 2 (counter), 5 and 6. Until then this section
-is the plan: see `superpowers/plans/2026-10-23-midi-batch-a.md`.
+Landed on branch `worktree-midi-batch-a`, one commit per task plus one fix: steps 1, 2
+(counter), 5 and 6 of the table above.
+
+- **Step 1, real-time events: `f95cd75c9`.** `MidiWire.Event` is split into `Event.Channel`
+  (`NoteOn`, `NoteOff`, `Control`, each with `channel`) and `Event.RealTime` (`Clock`, `Start`,
+  `Continue`, `Stop`, carrying the stamp only). `0xF8`, `0xFA`, `0xFB` and `0xFC` are emitted;
+  `0xF9`, `0xFD`, `0xFE` and `0xFF` are still dropped. `MidiKeys` and `MidiPads` ignore
+  `RealTime`. The fixture script `RefWire` in `wire_fixtures.py` was extended to match.
+  Proof: `MidiWireTest`, 24 cases, including a flood of 1000 clocks under running status, a
+  clock between a status byte and its data, and a clock inside a SysEx.
+- **Step 2, frame counter: `aa2583bf9`.** `std::atomic<int64_t> framesRendered_` in
+  `PadEngine`, increased by `numFrames` in every callback and never reset;
+  `framesRendered()` on the C++ side, `NativePads.framesRendered(handle)` through JNI, and
+  `PadEngine.framesRendered()` in Kotlin. Proof: `engine_tests.cpp` (0 before any callback;
+  128 then 64 reads 192; the count survives stop and start) and one case in `jni_tests.cpp`.
+- **Step 5, device fingerprint: `bd95b1baa`.** `shell/.../MidiFingerprint.kt` holds
+  `MidiFingerprint`, `Transport`, `key`, `of(...)` and `MidiDeviceId`. `MidiInput.Listener`
+  now announces `onDevicesChanged(List<MidiDeviceId>)`; `MidiInput.devices` and `Opened.id`
+  carry the same. `KeysScreen` and `KitScreen` print `.name` as before. Nothing reads
+  `PROPERTY_BLUETOOTH_DEVICE`, so no Bluetooth address enters a key. Proof:
+  `MidiFingerprintTest`, 6 cases, and `:app:compileDebugKotlin`.
+- **Step 6, stop-drop guard: `27d059a65`, with the fix `e7cfc0072`.** `jni.cpp` `stopVoice`
+  and `allOff` return `jboolean`; `PadEngine.stop` and `allOff` return `Boolean`. A refused
+  stop is kept in an `ArrayDeque`; a refused all-off is kept and supersedes the kept stops.
+  `drainEnded()` flushes first: the all-off, then the stops in order, stopping at the first
+  refusal. A successful all-off clears everything kept. One `Log.w` the first time anything is
+  kept. Proof: compile and reading. The C++ `pushCommand` contract is the tested half.
+
+Disclosed, not done:
+
+- **The fit waits on S1.** Nothing here maps nanoseconds to frames; the counter is the half
+  that needs no phone.
+- **`frameOffset` is still 0 from Kotlin.** `jni.cpp` sends no offset, so a stamp cannot yet
+  place a note. Step 3 of the table is not in this batch.
+- **The stop guard has no JVM test.** `:app` has no host test source set. The
+  `InstrumentPlayer.kt` (line 117) calls `NativePads.allOff` directly; a refusal is not kept there.
+
+Deferred minors, one line each: the `MidiWire.kt` KDoc header has one unwrapped line; the
+fixture script's note tuples carry no stamp; `MidiInput.fingerprintOf` passes raw, possibly
+blank, strings where `nameOf` treats blank as absent.
+
+Heard: nothing; this session had no phone.
 
 ## Ledger
 
