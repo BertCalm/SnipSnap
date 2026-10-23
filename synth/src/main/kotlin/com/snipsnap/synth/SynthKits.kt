@@ -37,6 +37,41 @@ object SynthKits {
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
     /**
+     * Sixteen dry OHM notes from the five accepted model-2 encounters. A01–A08
+     * play Solo up C minor pentatonic from C3; the other pads compare the four
+     * relationships at C4, three low answers at C3 and a Gather at C5.
+     * Native C4 recipes remain exactly the factory patches. Only a transposed
+     * copy's name and explicit MIDI change; touch, body, length, relationship,
+     * velocity, seed, gesture and model stay with the accepted recipe.
+     * Finite pitched gestures are TONAL one-shots, as in OVEN and COROLLA:
+     * a long tail is not a held loop and must remain available to IN KEY.
+     */
+    fun ohm(): List<ArrangedPad?> {
+        val encounters = OhmPresets.all().associateBy { it.name }
+        fun note(name: String, midi: Int): ArrangedPad {
+            val original = encounters.getValue(name)
+            val displayName = "$name ${Scales.nameOf(midi)}"
+            val patch = if (midi == original.midi) original else original.copy(name = displayName, midi = midi)
+            return pad(patch, DrumClass.TONAL).copy(
+                displayName = displayName,
+                oneShot = true,
+                source = mapOf(
+                    "engine" to OhmPatch.ENGINE,
+                    "preset" to original.name,
+                    "pitchMidi" to midi.toString(),
+                    "model" to patch.model.toString(),
+                    "seed" to patch.seed.toString(),
+                    "gesture" to patch.gesture.name,
+                ),
+            )
+        }
+        return PENTATONIC.take(8).map { note("Solo", 48 + it) } + listOf(
+            note("Argument", 60), note("Communion", 60), note("Quiet Company", 60), note("Gather", 60),
+            note("Argument", 48), note("Communion", 48), note("Quiet Company", 48), note("Gather", 72),
+        )
+    }
+
+    /**
      * Twelve dry model-2 VENT pads in C minor pentatonic: bass, short note,
      * percussive hit and long texture for PULSE, COIL and PLUME. Four slots
      * remain free for captures. Every finite one-shot retains its full recipe.

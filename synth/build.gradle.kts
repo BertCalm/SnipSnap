@@ -30,6 +30,27 @@ tasks.register<JavaExec>("generateOhmAudition") {
     args("${rootDir}/testkit/ohm-audition")
 }
 
+/** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
+tasks.register<JavaExec>("generateOhmKit") {
+    group = "distribution"
+    description = "Export the OHM starter kit, native MPC 3 track, MPC 2 twin, recipes and SnipSnap-Ohm-Kit.zip."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ohmKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Warm render-only timings; this benchmark is explicit rather than a timing assertion in CI. */
+tasks.register<JavaExec>("benchmarkOhm") {
+    group = "verification"
+    description = "Measure OHM raw/final renders at three lengths and relationships, with per-case warmup and timing samples."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmPerformanceProbe")
+    maxHeapSize = "512m"
+    args("bench", providers.gradleProperty("ohmBenchmarkPath").orNull ?: "both")
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"
@@ -119,7 +140,7 @@ tasks.register<JavaExec>("generateOverlapKit") {
     args(providers.gradleProperty("overlapKitOutput").orNull ?: "${rootDir}/testkit")
 }
 
-/** First finite Nacre listening proof: two harps, current, coral and seaweed. */
+/** Model-2 Nacre listening proof: fixed-pattern tone pairs and frozen model-1 comparison. */
 tasks.register<JavaExec>("generateNacreAudition") {
     group = "distribution"
     description = "Render NACRE's finite duet, control and causal comparisons with recipes and a listening page."
@@ -372,6 +393,17 @@ tasks.register<JavaExec>("generateMurmurAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/murmur-audition")
     if (project.hasProperty("murmurFull")) args("--full")
+}
+
+/** Experimental KEY contour and low-register CHOIR loop comparisons; factory audio is unchanged. */
+tasks.register<JavaExec>("generateMurmurLuthierAudition") {
+    group = "distribution"
+    description = "Render the reversible MURMUR Luthier comparisons with native/matched WAVs and exact experimental recipes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurLuthierAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("murmurLuthierOutput").orNull ?: "${rootDir}/testkit/murmur-luthier-audition")
 }
 
 /** Export the sixteen first-listen pads through the standard MPC program pipeline. */
