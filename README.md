@@ -337,7 +337,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 43 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1090,6 +1090,13 @@ control variation; saved model-1 recipes retain the original sound. The
 audition includes direct original/revised middle-range comparisons. See
 [`docs/OHM.md`](docs/OHM.md) and the
 [private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
+
+NEW KIT → STARTERS → OHM places eight Solo notes in C minor pentatonic
+from C3 to F4 beside the four companion relationships and lower/upper
+contrasts. `./gradlew :synth:generateOhmKit` exports sixteen dry finite
+one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
+`testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
+remain open.
 
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
