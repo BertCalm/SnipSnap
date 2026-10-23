@@ -22,6 +22,7 @@ import java.nio.ByteOrder
 import java.security.MessageDigest
 import java.time.Instant
 import java.util.Locale
+import java.util.zip.CRC32
 import java.util.zip.Deflater
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -44,6 +45,7 @@ import kotlin.math.sqrt
 object CreaseKeysAuditionGenerator {
     private const val RATE = 44_100
     private const val MAX_ASSET_BYTES = 25L * 1024 * 1024
+    private const val ARCHIVE_PART_BUDGET = 24L * 1024 * 1024
     private const val RELEASE_SECONDS = .6f
     private const val SEAM_LIMIT = 1e-3
 
@@ -194,11 +196,7 @@ object CreaseKeysAuditionGenerator {
                 "sourceCommit" to sourceCommit, "renderVersion" to CreaseKeys.RENDER_VERSION,
                 "sourcePatch" to "source.patch.json", "releaseSeconds" to RELEASE_SECONDS, "zones" to zoneRows,
             ))
-            val archive = File(output, "downloads/$id-instrument.zip")
-            val zipRows = archive(packageRoot, archive)
-            require(archive.length() < MAX_ASSET_BYTES) {
-                "$id package is ${archive.length()} bytes; keep it off hosting until an ordinary ZIP below 25 MiB is available"
-            }
+            val packs = instrumentArchives(output, id, name, packageRoot)
             instruments += linkedMapOf(
                 "id" to id, "name" to preset.name, "voice" to patch.voice.name, "model" to patch.model,
                 "midi" to patch.midi, "velocity" to patch.velocity, "macros" to patch.macros,
@@ -207,11 +205,10 @@ object CreaseKeysAuditionGenerator {
                 "description" to preset.description,
                 "prefixSeconds" to root.probe.prefixSeconds, "loopSeconds" to loopSeconds,
                 "trace" to trace(root.probe), "zones" to zoneRows,
-                "packs" to listOf(linkedMapOf("file" to relative(output, archive), "label" to "$name instrument ZIP",
-                    "bytes" to archive.length(), "sha256" to sha(archive), "entryCount" to zipRows.size,
-                    "zipRoundTripByteExact" to true)),
+                "packs" to packs,
             )
-            println("$id: ${zones.size} zones; ${archive.length()} archive bytes; held key-up at %.3f s".format(Locale.ROOT, holdSeconds))
+            val archiveBytes = packs.sumOf { (it.getValue("bytes") as Number).toLong() }
+            println("$id: ${zones.size} zones; ${packs.size} ZIPs, $archiveBytes archive bytes; held key-up at %.3f s".format(Locale.ROOT, holdSeconds))
         }
         val zoneMetrics = allZones.map { it.getValue("metrics") as Map<*, *> }
         val summary = linkedMapOf(
@@ -233,6 +230,7 @@ object CreaseKeysAuditionGenerator {
                 "The JVM reference player rendered these performances; phone and MPC hardware playback are unverified.",
                 "One saved-velocity sample per zone. Key touch scales playback gain and does not re-render excitation.",
                 "Keyboard note-off applies the instrument amplitude release; it does not change the baked deformation state.",
+                "Instrument ZIPs are for MPC/desktop use. On the phone, use MAKE INSTRUMENT in the build; Shelf Share/Open does not import keyboard packages.",
                 "The original finite notes and held-loop recipes retain their renderers and audio.",
             ),
         ))
@@ -322,8 +320,60 @@ object CreaseKeysAuditionGenerator {
         }
     }
 
-    private fun archive(bundle: File, target: File): List<String> {
+    /** Each part is a normal ZIP, sharing one extraction folder. No samples are recoded. */
+    private fun instrumentArchives(output: File, id: String, name: String, bundle: File): List<Map<String, Any?>> {
         val files = bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.toList()
+        val complete = File(output, "downloads/$id-instrument.zip")
+        val completeEntries = archive(bundle, complete, files)
+        val archives: List<Pair<File, List<String>>> = if (complete.length() < MAX_ASSET_BYTES) {
+            listOf(complete to completeEntries)
+        } else {
+            // Program/sidecar/source metadata is in part 1 exactly once. Sample WAVs
+            // fill ordinary ZIPs by their original byte counts, leaving 1 MiB for
+            // headers and worst-case deflate overhead under the hosting file limit.
+            val metadata = files.filterNot { it.extension.equals("wav", ignoreCase = true) }
+            val samples = files.filter { it.extension.equals("wav", ignoreCase = true) }
+            require(metadata.sumOf { it.length() } < ARCHIVE_PART_BUDGET) { "$id metadata exceeds the archive-part budget" }
+            val groups = ArrayList<List<File>>()
+            var current = metadata.toMutableList()
+            var bytes = current.sumOf { it.length() }
+            for (sample in samples) {
+                require(sample.length() < ARCHIVE_PART_BUDGET) { "${sample.name} cannot fit an ordinary ZIP part without changing its audio" }
+                if (bytes + sample.length() >= ARCHIVE_PART_BUDGET) {
+                    groups += current
+                    current = ArrayList()
+                    bytes = 0L
+                }
+                current += sample
+                bytes += sample.length()
+            }
+            if (current.isNotEmpty()) groups += current
+            groups.mapIndexed { index, group ->
+                val part = File(output, "downloads/$id-instrument-part-${index + 1}.zip")
+                part to archive(bundle, part, group.sortedBy { relative(bundle, it) })
+            }
+        }
+        val expected = files.map { "${bundle.name}/${relative(bundle, it)}" }.toSet()
+        val actual = archives.flatMap { it.second }
+        require(actual.size == expected.size && actual.toSet() == expected) {
+            "$id ZIP parts must contain every package file exactly once"
+        }
+        require(archives.all { it.first.length() < MAX_ASSET_BYTES }) { "$id has a ZIP part above the hosting file limit" }
+        val retained = archives.map { it.first.canonicalFile }.toSet()
+        File(output, "downloads").listFiles().orEmpty().filter { file ->
+            file.name == "$id-instrument.zip" || file.name.matches(Regex("${Regex.escape(id)}-instrument-part-[0-9]+\\.zip"))
+        }.filter { it.canonicalFile !in retained }.forEach { require(it.delete()) { "Cannot remove superseded ZIP: $it" } }
+        return archives.mapIndexed { index, (file, entries) ->
+            linkedMapOf("file" to relative(output, file),
+                "label" to if (archives.size == 1) "$name instrument ZIP" else "$name instrument ZIP: Part ${index + 1} of ${archives.size}",
+                "bytes" to file.length(), "sha256" to sha(file), "entryCount" to entries.size,
+                "part" to index + 1, "parts" to archives.size, "extractTogether" to (archives.size > 1),
+                "entries" to entries, "zipRoundTripByteExact" to true, "zipCrcVerified" to true,
+                "packageFilesCoveredExactlyOnce" to true)
+        }
+    }
+
+    private fun archive(bundle: File, target: File, files: List<File>): List<String> {
         ZipOutputStream(target.outputStream().buffered()).use { out ->
             out.setLevel(Deflater.BEST_COMPRESSION)
             for (file in files) {
@@ -337,7 +387,9 @@ object CreaseKeysAuditionGenerator {
             require(entries.size == files.size)
             files.zip(entries).map { (file, entry) ->
                 require(entry.name == "${bundle.name}/${relative(bundle, file)}")
-                require(zip.getInputStream(entry).use { sha(it.readBytes()) } == sha(file))
+                val bytes = zip.getInputStream(entry).use { it.readBytes() }
+                require(sha(bytes) == sha(file))
+                require(CRC32().apply { update(bytes) }.value == entry.crc)
                 entry.name
             }
         }
@@ -351,11 +403,19 @@ object CreaseKeysAuditionGenerator {
         MIDI ${patch.midi} and saved excitation velocity ${patch.velocity}.
         Making this instrument changes transport to continuous onset and settled sustain.
 
-        Extract the whole folder. Load the .xty for MPC 3, or the .xpm inside the
-        _[TrackData] folder for MPC 2. SnipSnap reads the adjacent .instrument.json.
+        These archives are for MPC/desktop use. Download every ZIP part when more
+        than one is listed, then extract all parts into the SAME destination.
+        Each is an ordinary ZIP. Their common top-level folder combines into one
+        complete instrument; metadata is in part 1 and every sample appears once.
+        Load the .xty for MPC 3, or the .xpm inside the _[TrackData] folder for MPC 2.
         Keep the program, sidecar and sample folder together. Roots: ${midis.joinToString()}.
         The zones cover ${midis.first()}..${midis.last()} with one saved-velocity layer.
         Each WAV also stores its root and sustain-loop markers in a smpl chunk.
+
+        On the phone, use MAKE INSTRUMENT from this saved sound in the build.
+        Shelf Share/Open imports drum-kit backups, not these keyboard packages.
+        The .instrument.json is included as the generated phone-shelf source
+        metadata; it does not make the ZIP a supported phone import format.
 
         Key touch changes playback gain. It does not re-render excitation or timbre.
         Key-up fades the whole voice over $RELEASE_SECONDS seconds in the player.
