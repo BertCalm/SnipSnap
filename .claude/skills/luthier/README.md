@@ -19,11 +19,60 @@ just describe the job; the description is written so it triggers on the vocabula
 
 ## Codex
 
-Codex reads `AGENTS.md`. Either paste the body of `SKILL.md` into the SnipSnap `AGENTS.md`
-under a "Luthier" heading and keep the `references/` and `scripts/` folders in the repo so the
-paths resolve, or, if the Codex version in use supports a skills directory with the same
-`SKILL.md` format, drop the folder there. Check the current Codex docs for which it is; this
-file does not assert a Codex path.
+The repository includes `.agents/skills/luthier`, a relative symlink to the complete
+`.claude/skills/luthier` folder. Codex discovers the skill there; Claude Code uses the
+canonical folder. There is one copy of the references and scripts to maintain.
+If discovery is unavailable, read `.claude/skills/luthier/SKILL.md` directly and
+resolve its resources from that folder.
+
+Both [Codex](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
+and [Claude Code](https://code.claude.com/docs/en/skills#choose-where-skills-load)
+document repository skill discovery and symlinked skill folders. These paths were
+checked on 2026-10-22. Restart a session if a newly installed skill is not listed.
+
+## Verify access
+
+From the repository root:
+
+```sh
+python3 .claude/skills/luthier/scripts/check_resources.py
+```
+
+The checker needs only Python's standard library. It reads all nine reference
+documents and the three DSP scripts, validates the evaluation JSON and Python
+syntax, checks paths named in `SKILL.md`, and verifies that the Codex entry point
+resolves to the canonical bundle. It works from any working directory when given
+the script's absolute path. A standalone copy of the folder can run the same
+checker without a repository discovery link.
+
+Run this check after changing the bundle or its discovery link. It does not
+execute DSP examples or install NumPy/SciPy.
+
+## Cloud copies and complete exports
+
+Import the entire `luthier/` folder, keeping `SKILL.md`, `references/`, `scripts/`,
+and `evals/` together. To create a ZIP from this checked-in copy:
+
+```sh
+cd .claude/skills
+python3 -m zipfile -c /tmp/luthier.zip luthier
+```
+
+Installing a cloud skill is separate from committing the repository copy. If the
+cloud skill returns `SKILL.md` but cannot return another resource, use the
+corresponding file under `<SnipSnap>/.claude/skills/luthier/`. All resource paths
+are relative to that skill root; they do not depend on an uploaded attachment
+directory or a developer's home directory.
+
+After importing the full ZIP, start a fresh session and ask:
+
+> Use Luthier. Read `references/snipsnap-conventions.md` and
+> `references/review-rubric.md`, and report each document's first heading.
+
+Confirm that actual file contents are returned. A passing local check verifies
+the repository/exported files; it does not establish that a cloud importer has
+made those files available. The current skill tools offer listing and reading,
+so this repository repair does not directly replace an installed cloud skill.
 
 ## The scripts
 
