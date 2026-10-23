@@ -26,6 +26,8 @@ object KitMerge {
         destDir: File,
         name: String = destDir.name,
         replace: Boolean = false,
+        /** Source-only validation before creating any destination directory or sample. */
+        preflightPad: ((sourceDir: File, original: KitPad) -> Unit)? = null,
         /** A higher layer carries source-backed recipes without introducing a :kit -> :shell dependency. */
         importPad: ((sourceDir: File, targetDir: File, original: KitPad, copied: KitPad) -> KitPad)? = null,
     ): Kit {
@@ -43,12 +45,18 @@ object KitMerge {
         val bBank = b.pads.filter { it.slot in 1..BANK_OFFSET }
         require(bBank.isNotEmpty()) { "'${b.name}' has nothing on bank A to merge" }
         val aKept = a.pads.filter { it.slot !in (BANK_OFFSET + 1)..(2 * BANK_OFFSET) }
-        // A printed board's recipe refers to immutable source files outside
-        // the live WAV set. Refuse before touching the destination unless the
-        // caller supplies the source-aware importer used by the CLI.
-        require(importPad != null || (aKept + bBank).none { "boardPad" in (it.recipe?.entries ?: emptyMap()) }) {
-            "WIDE pads need a source-aware importer to merge; remove WIDE first or use the SnipSnap merge command"
+        // Printed boards and Aquarium pads refer to immutable source files
+        // outside the live WAV set. Refuse before touching the destination
+        // unless the caller supplies a source-aware importer.
+        require(importPad != null || (aKept + bBank).none {
+            val recipe = it.recipe?.entries ?: emptyMap()
+            "boardPad" in recipe || "aquariumPad" in recipe
+        }) {
+            "Source-backed pads need a source-aware importer to merge; remove the treatment first or use the SnipSnap merge command"
         }
+
+        aKept.forEach { preflightPad?.invoke(aDir, it) }
+        bBank.forEach { preflightPad?.invoke(bDir, it) }
 
         destDir.mkdirs()
 

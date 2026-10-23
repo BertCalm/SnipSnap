@@ -12,6 +12,30 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `LATTICE native finite and held patches regenerate the saved note and excitation exactly`() {
+        val finite = LatticePresets.patchesForVoice(LatticeVoice.WARM)
+            .first { !Lattice.isLoop(it.macros.getValue("HOLD")) }
+        val held = LatticePresets.patchesForVoice(LatticeVoice.HOLLOW)
+            .first { Lattice.isLoop(it.macros.getValue("HOLD")) }
+        for (preset in listOf(finite, held)) {
+            val patch = preset.copy(midi = 55, velocity = .63f, model = 2)
+            val reopened = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, reopened.render().samples,
+                "${patch.voice} must retain native model, note, velocity and HOLD through its saved patch")
+        }
+    }
+
+    @Test
+    fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
+        for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
+            val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
+            val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recipe.render().samples,
+                "$name must recover the same gestures and settled acoustic state from its saved recipe")
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,

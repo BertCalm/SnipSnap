@@ -241,7 +241,7 @@ object Velocity {
         is SpoolPatch -> Spool.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
-        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice, patch.model)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is OspreyPatch -> Osprey.macrosFor(patch.voice)
@@ -258,15 +258,19 @@ object Velocity {
         is FlockPatch -> Flock.macrosFor(patch.voice)
         is ShoalPatch -> Shoal.macrosFor(patch.voice)
         is RelayPatch -> Relay.macrosFor(patch.voice)
+        is OrigamiPatch -> Origami.macrosFor(patch.voice)
         is OrphicaPatch -> Orphica.macrosFor(patch.config.material)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
-        is NacrePatch -> Nacre.macrosFor(patch.voice)
+        is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
+        is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
+        is OhmPatch -> Ohm.MACROS
     }
 
     /**
@@ -403,15 +407,19 @@ object Velocity {
         is FlockPatch -> patch.copy(velocity = v).render()
         is ShoalPatch -> patch.copy(velocity = v).render()
         is RelayPatch -> patch.copy(velocity = v).render()
+        is OrigamiPatch -> patch.copy(velocity = v).render()
         is OrphicaPatch -> patch.copy(config = patch.config.copy(velocity = v)).render()
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is ScannedChainPatch -> patch.copy(velocity = v).render()
         is ChamberPatch -> patch.copy(velocity = v).render()
+        is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
+        is OhmPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
@@ -481,6 +489,8 @@ object Velocity {
      * rather than folded into [BRIGHTNESS_MACROS] itself.
      */
     fun brightnessSpec(patch: Patch): MacroSpec? {
+        // ORIGAMI's FOLD relocates partials; it is not a monotonic brightness control.
+        if (patch is OrigamiPatch) return null
         val specs = macroSpecsFor(patch)
         brightnessOverride(patch)?.let { name -> return specs.firstOrNull { it.name == name } }
         return BRIGHTNESS_MACROS.firstNotNullOfOrNull { name -> specs.firstOrNull { it.name == name } }
@@ -624,7 +634,8 @@ object Velocity {
     // FOLD is TIDE's: the folder's drive at the strike, which adds partials
     // and nothing else (`TideTest`'s FOLD sweep holds the centroid rising
     // for every voice), so a soft TIDE strike folds less, as a soft strike
-    // should. No other engine has a macro by that name.
+    // should. ORIGAMI also exposes FOLD, but its native velocity path preserves
+    // that geometry and brightnessSpec deliberately excludes it.
     //
     // FOLD and PEAK arrived from two branches at once and neither collides
     // with the other: TIDE exposes no PEAK, GLINT exposes no FOLD, and each

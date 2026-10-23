@@ -1,0 +1,38 @@
+name: luthier-resources
+
+on:
+  push:
+    branches: [claude/mobile-mpc-drum-sampler-t58x74]
+    paths:
+      - ".claude/skills/luthier/**"
+      - ".agents/skills/luthier"
+      - ".agents/skills/luthier/**"
+      - "AGENTS.md"
+      - ".github/workflows/luthier-resources.yml"
+  pull_request:
+    paths:
+      - ".claude/skills/luthier/**"
+      - ".agents/skills/luthier"
+      - ".agents/skills/luthier/**"
+      - "AGENTS.md"
+      - ".github/workflows/luthier-resources.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  luthier-resources:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Check Luthier references, scripts, and discovery paths
+        run: python3 .claude/skills/luthier/scripts/check_resources.py

@@ -1,14 +1,20 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
@@ -20,6 +26,9 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.synth.Eq
 import com.snipsnap.synth.FxChain
+import com.snipsnap.synth.Ohm
+import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OnsetVoice
@@ -44,11 +53,16 @@ import java.util.concurrent.atomic.AtomicReference
  * The update fixture carries an older renderer, a rack and pad metadata so a
  * fresh-patch reconstruction or a plain SEND replacement cannot pass unnoticed.
  * JVM suites cover the codecs; these tests require a device or emulator.
+ * The OHM editor tests also exercise the real editor bindings and recreate its
+ * remember-state from the MAKE bag.
  */
 @RunWith(AndroidJUnit4::class)
 class SynthScreenTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val roots = mutableListOf<File>()
+    private val ohmShelfRoot = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
+        "ohm-editor-${System.nanoTime()}").apply { mkdirs() }
+    private var generation by mutableStateOf(0)
     private var currentEntry by mutableStateOf<KitShelf.Entry?>(null)
     private var screenVisible by mutableStateOf(true)
     private val settings = mutableMapOf<String, String>()
@@ -57,7 +71,83 @@ class SynthScreenTest : ComposeScreenTest() {
     @After
     fun cleanUp() {
         appScope.cancel()
+        ohmShelfRoot.deleteRecursively()
         roots.forEach { it.deleteRecursively() }
+    }
+
+    /** Mount SYNTH on the OHM picker entry, the way the MAKE bag would have left it. */
+    private fun show() {
+        settings.putIfAbsent("engine", "OHM")
+        settings.putIfAbsent("voice", "STRING")
+        setPhoneContent {
+            key(generation) {
+                Box(Modifier.testTag("ohm-synth-generation-$generation")) {
+                    SynthScreen(entry = null, shelfRoot = ohmShelfRoot, onToast = {}, onKitUpdated = {},
+                        onShelfAssetWritten = {}, onDroneToLoop = { _, _, _ -> }, onOpenSurface = {},
+                        appScope = appScope, settings = settings)
+                }
+            }
+        }
+    }
+
+    // Invoke the same accessibility actions as TalkBack. No animated scrolling is
+    // needed on ComposeScreenTest's deliberately hand-driven frame clock.
+    private fun adjust(label: String, value: Float) {
+        button(label).performSemanticsAction(SemanticsActions.SetProgress) { it(value) }
+        pump()
+    }
+
+    private fun progress(label: String) =
+        button(label).fetchSemanticsNode().config[SemanticsProperties.ProgressBarRangeInfo].current
+
+    @Test
+    fun legacyEncounterRetainsItsIdentityThroughEditsAndNavigation() {
+        val source = OhmPatch("MY FAMILY", Ohm.defaults() + ("LENGTH" to .1f), midi = 57,
+            velocity = .65f, seed = -905, gesture = OhmGesture.GATHER, model = 1)
+        settings["patch.OHM.STRING"] = source.toJsonText()
+        settings["preset.OHM.STRING"] = "Gather"
+        show()
+        button("OHM GATHER").assertIsSelected()
+        assertEquals((57 - 48) / 24f, progress("NOTE"), .0001f)
+
+        adjust("NOTE", (64 - 48) / 24f)
+        adjust("VELOCITY", .35f)
+        adjust("COMMUNE", .73f)
+        button("OHM STEADY").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        val expected = source.copy(midi = 64, velocity = .35f, gesture = OhmGesture.STEADY,
+            macros = source.macros + ("COMMUNE" to .73f))
+        compose.runOnIdle {
+            assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+            assertFalse(settings.containsKey("preset.OHM.STRING"))
+            generation++
+        }
+        pump()
+        waitFor("the recreated OHM editor", timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("ohm-synth-generation-$generation").fetchSemanticsNodes().size == 1
+        }
+        button("OHM STEADY").assertIsSelected()
+        assertEquals((64 - 48) / 24f, progress("NOTE"), .0001f)
+        assertEquals(.35f, progress("VELOCITY"), .0001f)
+        assertEquals(.73f, progress("COMMUNE"), .0001f)
+        compose.runOnIdle {
+            assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+        }
+    }
+
+    @Test
+    fun foreignRecipeInTheMakeBagFallsBackToANewModelTwoEncounter() {
+        settings["patch.OHM.STRING"] = """{"engine":"THUMP","version":1,"name":"OTHER","voice":"KICK","macros":{}}"""
+        show()
+        button("OHM STEADY").assertIsSelected()
+        adjust("VELOCITY", .4f)
+        compose.runOnIdle {
+            val patch = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+            assertEquals(2, patch.model)
+            assertEquals(60, patch.midi)
+            assertEquals(.4f, patch.velocity)
+            assertEquals(OhmGesture.STEADY, patch.gesture)
+        }
     }
 
     private fun shelfRoot(): File {
@@ -136,6 +226,8 @@ class SynthScreenTest : ComposeScreenTest() {
     fun onset_follows_skin_and_all_four_voices_expose_their_six_live_controls() {
         show(shelfRoot())
         tap("ENGINE THUMP · TAP FOR NEXT")
+        button("ENGINE SCANNED CHAIN · TAP FOR NEXT").assertExists()
+        tap("ENGINE SCANNED CHAIN · TAP FOR NEXT")
         button("ENGINE SKIN · TAP FOR NEXT").assertExists()
         tap("ENGINE SKIN · TAP FOR NEXT")
         button("ENGINE ONSET · TAP FOR NEXT").assertExists()

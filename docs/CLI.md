@@ -183,7 +183,7 @@ each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
 CLI-only model-1 comparison each from `VentPresets`. The voice selects its
 saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK, four WOOD and five BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
@@ -514,15 +514,31 @@ crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
 toe a decade above it by a sine with a flat top, which never parks at the heel but rests
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
-the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
-gesture, then the wah waits at the heel).
+the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
+gesture, then the wah waits at the heel) and `delayed` (a delay pedal: ECHO's
+long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
+120 ms so a held
+note's attack comes back as a repeat).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
-regenerable; `--undo` restores the previous audio byte-identical. On the
+regenerable; `--undo` restores the previous audio byte-identical.
+`--pedals <key[@amount][:side],...>` is the pedal library's board over the
+same pad instead of one character: every pick with its own AMT and its side
+of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
+passes around the amp from the audio on disk, every velocity layer included
+(the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
+recipe riding the pad. The library today: `driven` (the amp), `compressed`,
+`wahed`, `delayed` (after the amp), and `rig` (a board: compressor, drive,
+slapback); none of these three draws a chip until its gate — e.g.
+`--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
+six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
+refused by name. `--undo` restores as for a character.
+ On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision) and the three wah
+`amped` (its chip is a later layout decision), the three wah
 characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
-`rockwahed` are CLI and saved kits only), sit on the PAD SHEET's
+`rockwahed` are CLI and saved kits only) and `delayed` (the DELAY chip waits
+for its listening gate), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two

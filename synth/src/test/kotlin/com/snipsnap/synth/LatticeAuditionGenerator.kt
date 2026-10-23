@@ -55,6 +55,7 @@ object LatticeAuditionGenerator {
         "synth/src/test/kotlin/com/snipsnap/synth/LatticePatchTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/LatticeHeldTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/PresetsTest.kt",
+        "synth/src/test/kotlin/com/snipsnap/synth/DeterminismTest.kt",
         "shell/src/test/kotlin/com/snipsnap/shell/StarterKitsTest.kt",
         "shell/src/test/kotlin/com/snipsnap/shell/LatticeSurfaceTest.kt",
         "cli/src/test/kotlin/com/snipsnap/cli/LatticeSynthCommandTest.kt",

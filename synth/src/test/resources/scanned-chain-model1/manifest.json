@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "84471534aef0182f9098c38374a62a5aa0899244",
+  "compiledCommit": "6990bfde7867da438a57323f15d45cceeaa3a62b",
+  "format": "Little-endian IEEE-754 float32, mono 44100 Hz, public finished output",
+  "entries": [
+    {
+      "id": "factory-pluck",
+      "resource": "factory-pluck.json",
+      "model": 1,
+      "voice": "PLUCK",
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "pcmFloat32LeSha256": "7c78473b986b6dadfd20bdd2b273de6765dd80e80314ac2e07f7d9acb823da74",
+      "pcm24WavSha256": "661136a6a1c1e85ecb7928160b8cd894695ebd73e808bcdac140732756b4b308",
+      "jsonSha256": "36fa6d65e82ac899bacdc84fd5edf5da20bb2890705a931a424e0980cdeec0c4"
+    },
+    {
+      "id": "factory-metal",
+      "resource": "factory-metal.json",
+      "model": 1,
+      "voice": "METAL",
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "pcmFloat32LeSha256": "3fc7cb16ce37d70e21bc9e3e3c6b205a70aed260b5fcb9027d9242b8e1ccd862",
+      "pcm24WavSha256": "2dac4c642a3301aab4542e4426a33874d91d4c7d5b2aac9336a5a590f9e46617",
+      "jsonSha256": "26a6c867a711385365bae555c9052d79699c605b53443a2f6aa60b32757bc4d9"
+    },
+    {
+      "id": "factory-bloom",
+      "resource": "factory-bloom.json",
+      "model": 1,
+      "voice": "BLOOM",
+      "frames": 132300,
+      "sampleRate": 44100,
+      "channels": 1,
+      "pcmFloat32LeSha256": "3b5af3100a5e71eb0bc6359c79c18034147d2697eab310803cccf61cd8842c68",
+      "pcm24WavSha256": "ebdf7ea61cdb9509c584685498db7584b23e4211312b89cb21e3f1b5fc3c795a",
+      "jsonSha256": "3199951879fc4c8ecf3949dffd0c732dd0dac14c82cb51ae5f096d05642ce21b"
+    },
+    {
+      "id": "custom-bloom",
+      "resource": "custom-bloom.json",
+      "model": 1,
+      "voice": "BLOOM",
+      "frames": 55125,
+      "sampleRate": 44100,
+      "channels": 1,
+      "pcmFloat32LeSha256": "da25d2f0ddb770d713417752a842af359a0ebc710f56b02e3ed4b44b2470a529",
+      "pcm24WavSha256": "f55bb45aabc7fc26b27b2808d4729713544120461a65c6b40b2293678cc5ace2",
+      "jsonSha256": "4b224c1584e29f36b86e3e4755f045bf9403746fa1bb29cdedcc6c1bb885d93a"
+    }
+  ],
+  "numericRenderSourcesIdentical": true,
+  "dependencyQualification": "Scanned Chain, Dsp, Keys, Patches and all audio numeric sources are identical between the compiled and base commits. MacroSpec gained a FadeLaw metadata field; its name/default values read by Scanned Chain are unchanged. Fresh legacy dispatch hashes are checked by the regression suite."
+}
