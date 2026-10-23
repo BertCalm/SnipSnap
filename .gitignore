@@ -246,6 +246,8 @@ testkit/SnipSnap Contour Kit/
 
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
+testkit/skitter-articulation/
+scripts/__pycache__/
 
 # REGISTERS listening packs are reproducible generated audio and manifests.
 testkit/registers-audition/
@@ -371,6 +373,12 @@ testkit/tidal-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Generated R6 Skitter listening proof
+testkit/skitter-character-r6/
+
+# Generated R7 Skitter quartet listening proof
+testkit/skitter-quartet/
 testkit/fade-law-audition/
 
 # Reproducible experimental Murmur comparison audio.

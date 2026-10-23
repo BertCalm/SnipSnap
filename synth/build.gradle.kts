@@ -1458,6 +1458,45 @@ tasks.register<JavaExec>("generateSkitterAudition") {
     if (project.hasProperty("skitterOriginal")) args("--original=${project.property("skitterOriginal")}")
 }
 
+/** Small raw SKITTER articulation proof, independent of the full audition matrix. */
+tasks.register<JavaExec>("generateSkitterArticulationAudition") {
+    group = "distribution"
+    description = "Render the bounded four-track SKITTER R4/R5 articulation proof with raw PCM24, cue/gain records and a listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterArticulationAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-articulation")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+}
+
+/** Two new R6 tracks; R4 and R5 are reused from an immutable raw R5 proof. */
+tasks.register<JavaExec>("generateSkitterCharacterR6Audition") {
+    group = "distribution"
+    description = "Render the compact R4/R5/R6 comparison. Requires -PskitterR5Baseline=<raw R5 proof directory>."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterCharacterR6Audition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-character-r6")
+    if (project.hasProperty("skitterR5Baseline")) args("--baseline=${project.property("skitterR5Baseline")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+}
+
+/** Compact R7 quartet comparisons plus the two unchanged, accepted R6 references. */
+tasks.register<JavaExec>("generateSkitterQuartetAudition") {
+    group = "distribution"
+    description = "Render four R6/R7 voice pairs. Requires -PskitterR6References=<raw frozen R6 proof directory> and -PskitterProofSource=<Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterQuartetAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-quartet")
+    if (project.hasProperty("skitterR6References")) args("--references=${project.property("skitterR6References")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"
