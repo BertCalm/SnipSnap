@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed",
             ),
             Treatments.names,
         )
@@ -111,6 +111,7 @@ class TreatmentsTest {
             "wahed" to "wah",
             "touchwahed" to "wah",
             "rockwahed" to "wah",
+            "delayed" to "echo",
         )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)
@@ -124,6 +125,7 @@ class TreatmentsTest {
                 assertTrue(v != neutrals.getValue(macro), "$name.$macro sits on its neutral $v: AMT could never move it")
             }
         }
+        assertTrue(Treatments.chain("delayed", 0f).isBypass, "delayed at AMT 0 is not a bypass")
     }
 
     @Test

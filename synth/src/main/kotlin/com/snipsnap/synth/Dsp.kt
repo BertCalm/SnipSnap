@@ -457,6 +457,17 @@ internal object Dsp {
         }
     }
 
+    /** A fixed-cutoff [OnePole]: identical state arithmetic, with its coefficient computed once. */
+    class FixedOnePole(cutoffHz: Float, rate: Int = RATE) {
+        private val a = (1.0 - exp(-2.0 * PI * min(cutoffHz, rate * 0.45f) / rate)).toFloat()
+        private var state = 0f
+
+        fun lp(input: Float): Float {
+            state += a * (input - state)
+            return state
+        }
+    }
+
     /**
      * One interpolated tap off a circular delay line, [delay] samples behind
      * [writePos] — the slot just written. The integer index is wrapped rather

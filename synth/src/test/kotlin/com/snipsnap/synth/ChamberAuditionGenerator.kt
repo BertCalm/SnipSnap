@@ -48,14 +48,16 @@ object ChamberAuditionGenerator {
             ChamberDiagnosticReplay.main(args.drop(1).toTypedArray())
             return
         }
-        require(args.all { !it.startsWith("--") || it == "--timpani" || it.startsWith("--previous=") }) {
-            "supply the output directory, --timpani and optionally --previous=/absolute/model-1-audition"
+        require(args.all { !it.startsWith("--") || it == "--timpani" || it == "--timpani-boost" || it.startsWith("--previous=") }) {
+            "supply the output directory, --timpani or --timpani-boost and optionally --previous=/absolute/previous-audition"
         }
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1) { "supply only one output directory" }
-        val timpaniRevision = "--timpani" in args
+        val timpaniBoost = "--timpani-boost" in args
+        require(!timpaniBoost || "--timpani" !in args) { "choose one timpani revision" }
+        val timpaniRevision = "--timpani" in args || timpaniBoost
         val previous = args.firstOrNull { it.startsWith("--previous=") }?.substringAfter('=')?.let(::File)
-        require(previous == null || timpaniRevision) { "--previous is available with --timpani" }
+        require(previous == null || timpaniRevision) { "--previous requires a timpani revision" }
         val root = File(positional.firstOrNull() ?: "../testkit/chamber-audition").canonicalFile
         root.mkdirs()
         File(root, "manifest.json").delete()
@@ -68,8 +70,8 @@ object ChamberAuditionGenerator {
             resource.use { input -> File(root, name).outputStream().use { input.copyTo(it) } }
         }
         val sourceRevision = source.getValue("revision")
-        val previousAudition = previous?.let { archivePrevious(it, root) }
-        val cases = if (timpaniRevision) timpaniCases() else cases()
+        val previousAudition = previous?.let { archivePrevious(it, root, if (timpaniBoost) 2 else 1) }
+        val cases = if (timpaniRevision) timpaniCases(timpaniBoost) else cases()
         require(cases.map { it.id }.distinct().size == cases.size) { "duplicate CHAMBER clip ID" }
         val clips = mutableListOf<Map<String, Any?>>()
         val failures = mutableListOf<Map<String, Any?>>()
@@ -239,13 +241,16 @@ object ChamberAuditionGenerator {
         writeJson(File(root, "checks.json"), linkedMapOf("passed" to failures.isEmpty(), "defaultReplays" to defaultChecks,
             "rendered" to clips.size, "requested" to cases.size, "failures" to failures))
         val manifest = linkedMapOf<String, Any?>(
-            "title" to if (timpaniRevision) "CHAMBER — Timpani Revision" else "CHAMBER — First Listen",
-            "model" to Chamber.MODEL_VERSION, "sourceRevision" to sourceRevision, "createdAt" to Instant.now().toString(),
+            "title" to if (timpaniBoost) "CHAMBER — Timpani Mix Lift" else if (timpaniRevision) "CHAMBER — Timpani Revision" else "CHAMBER — First Listen",
+            "model" to cases.maxOf { it.patch.model }, "sourceRevision" to sourceRevision, "createdAt" to Instant.now().toString(),
             "models" to cases.map { it.patch.model }.distinct().sorted(),
-            "auditionRevision" to if (timpaniRevision) "timpani" else null,
+            "auditionRevision" to if (timpaniBoost) "timpani-boost" else if (timpaniRevision) "timpani" else null,
+            "membraneMixLiftDb" to if (timpaniBoost) 3.0 else null,
             "previousAudition" to previousAudition,
             "sampleRate" to Dsp.RATE,
-            "summary" to if (timpaniRevision)
+            "summary" to if (timpaniBoost)
+                "Timpani mix lift: the accepted model-2 membrane sound with 3 dB more listener pickup in model 3. Before/after quartets and dry membrane solos at C3 and C4 share one gain per room and note from the boosted full quartet. Voicing, strike, tuning, room and feedback are unchanged."
+                else if (timpaniRevision)
                 "Timpani revision: previous and revised quartet strikes at C3 and C4, with the membrane heard alone at its actual mix level. Each four-clip group shares one gain from the revised full quartet. The note, velocity, macros, seed and room remain identical across models."
                 else "One simultaneous membrane, bar, cowbell and triangle strike. Two rooms with independently addressed material regions return energy into those instruments. Actual finite Kotlin engine renders, with direct, surface, position and return comparisons.",
             "limitations" to listOf("First listening prototype: HYBRID and AQUARIUM only; HOLD is unsupported.",
@@ -259,7 +264,9 @@ object ChamberAuditionGenerator {
                 "report" to "checks.json", "provenance" to "source-provenance.json",
                 "renderSeconds" to (System.nanoTime() - started) / 1e9),
             "normalization" to linkedMapOf("format" to "PCM_16 mono 44100 Hz", "rawExportGain" to RAW_GAIN,
-                "description" to if (timpaniRevision)
+                "description" to if (timpaniBoost)
+                    "Accepted/boosted quartets and their dry membrane solos share one gain per room and note, derived from the boosted full quartet. Solos are never boosted separately. Raw uses common gain 1.0."
+                    else if (timpaniRevision)
                     "Previous/revised quartets and their dry membrane solos share one gain per room and note, derived from the revised full quartet. Solos are never boosted separately. Raw uses common gain 1.0."
                     else "Matched full mixes use loudest 200 ms RMS 0.03; mechanism comparisons and stems share their full-reference gain. Raw uses common gain 1.0.",
                 "fullMix" to "AuditionLevel: loudest 200 ms RMS 0.03, 0.99 peak guard on the prelevel mix, followed by the production tail fade.",
@@ -272,14 +279,14 @@ object ChamberAuditionGenerator {
         )
         writeJson(File(root, "manifest.json"), manifest)
         File(root, "README.txt").writeText(
-            "CHAMBER ${if (timpaniRevision) "timpani revision" else "first-listen prototype"}\nActual Kotlin 4x renders, 44.1 kHz mono PCM16.\n" +
+            "CHAMBER ${if (timpaniBoost) "timpani mix lift" else if (timpaniRevision) "timpani revision" else "first-listen prototype"}\nActual Kotlin 4x renders, 44.1 kHz mono PCM16.\n" +
                 "Raw WAVs use common gain $RAW_GAIN; full mixes use AuditionLevel 0.03, diagnostic groups share the full reference gain.\n" +
                 "Production recipes are PadRecipe JSON. Diagnostic recipes explicitly record probe options and output selection.\n" +
                 "Replay a diagnostic: ./gradlew :synth:replayChamberDiagnostic -PchamberRecipe=/absolute/recipe.json -PchamberReplayOutput=/absolute/output.wav\n" +
                 "Use -PchamberReplayMode=raw for common-gain prelevel audio; matched is the default.\n" +
                 "Source revision: $sourceRevision; exact source hashes and copies: source-provenance.json and source/.\n" +
                 "Serve this directory over HTTP (for example python3 -m http.server) to open the included page and JSON manifest.\n" +
-                (if (timpaniRevision) "Previous and revised quartet/solo comparisons share one gain from the revised full quartet for each room and note. The original 114-clip study is archived on the hosted page when supplied with --previous. It is not included in this compact starter ZIP.\n" else "") +
+                (if (timpaniBoost) "Accepted model 2 and boosted model 3 differ only by 3 dB membrane listener pickup. Each quartet/solo group shares the boosted full quartet gain. Previous pages are archived on the hosted page when supplied with --previous; archives are excluded from this compact starter ZIP.\n" else if (timpaniRevision) "Previous and revised quartet/solo comparisons share one gain from the revised full quartet for each room and note. The original 114-clip study is archived on the hosted page when supplied with --previous. It is not included in this compact starter ZIP.\n" else "") +
                 "HOLD, seamless looping, six-voice factory integration and the room editor are future work.\n",
         )
         starterZip(root, clips.filter { it["id"] in starterIds }, manifest)
@@ -289,29 +296,35 @@ object ChamberAuditionGenerator {
     }
 
     /** A bounded listening response; the complete original matrix remains available via cases(). */
-    private fun timpaniCases(): List<Case> = buildList {
+    private fun timpaniCases(boost: Boolean = false): List<Case> = buildList {
+        val previousModel = if (boost) 2 else 1
+        val revisedModel = if (boost) 3 else 2
+        val study = if (boost) "timpani-boost" else "timpani"
+        val revisedLabel = if (boost) "boosted" else "revised"
         for (voice in ChamberVoice.entries) for (midi in listOf(48, 60)) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val note = if (midi == 48) "C3" else "C4"
-            val base = ChamberPresets.forVoice(voice).first().copy(midi = midi, model = 2)
-            val revisedFull = "$slug-timpani-r2-${note.lowercase(Locale.ROOT)}-full"
-            val group = "$slug-timpani-${note.lowercase(Locale.ROOT)}"
-            add(Case(revisedFull, "${voice.name}: revised quartet · $note", if (midi == 48) "first-listen" else "timpani",
-                base.copy(name = "${voice.name} revised quartet $note"),
-                "Model 2 full quartet at $note. The timpani-like membrane, bar, cowbell and triangle share one strike. The following previous/revised clips retain this quartet's gain.",
-                "Can you hear the rounded membrane body beneath the bar and metal voices?",
-                compareGroup = group, variant = "revised quartet", tags = listOf("timpani", "revised", "model-2", "quartet", note)))
-            add(Case("$slug-timpani-r1-${note.lowercase(Locale.ROOT)}-full", "${voice.name}: previous quartet · $note", "timpani",
-                base.copy(name = "${voice.name} previous quartet $note", model = 1),
-                "Model 1 replay of the identical note, velocity, macros, seed and saved room. Its level is tied to the revised quartet, rather than independently matched.",
-                "Which part of the membrane's attack and pitched decay was missing?", reference = revisedFull,
-                compareGroup = group, variant = "previous quartet", tags = listOf("timpani", "previous", "model-1", "quartet", note)))
-            for (model in listOf(1, 2)) {
-                val label = if (model == 1) "previous" else "revised"
-                add(Case("$slug-timpani-r$model-${note.lowercase(Locale.ROOT)}-solo", "${voice.name}: $label timpani alone · $note", "timpani",
+            val base = ChamberPresets.forVoice(voice).first().copy(midi = midi, model = revisedModel)
+            val revisedFull = "$slug-$study-r$revisedModel-${note.lowercase(Locale.ROOT)}-full"
+            val group = "$slug-$study-${note.lowercase(Locale.ROOT)}"
+            add(Case(revisedFull, "${voice.name}: $revisedLabel quartet · $note", if (midi == 48) "first-listen" else "timpani",
+                base.copy(name = "${voice.name} $revisedLabel quartet $note"),
+                if (boost) "The accepted timpani sound with 3 dB more membrane listener pickup. The bar, cowbell, triangle, room and physical strike are unchanged. All following comparisons keep this quartet's gain."
+                else "Model 2 full quartet at $note. The timpani-like membrane, bar, cowbell and triangle share one strike. The following previous/revised clips retain this quartet's gain.",
+                if (boost) "Does the timpani now have the right presence beside the other three instruments?" else "Can you hear the rounded membrane body beneath the bar and metal voices?",
+                compareGroup = group, variant = "$revisedLabel quartet", tags = listOf("timpani", revisedLabel, "model-$revisedModel", "quartet", note)))
+            add(Case("$slug-$study-r$previousModel-${note.lowercase(Locale.ROOT)}-full", "${voice.name}: previous quartet · $note", "timpani",
+                base.copy(name = "${voice.name} previous quartet $note", model = previousModel),
+                if (boost) "Accepted model-2 voicing before the mix lift, with the same note, velocity, controls, seed and saved room. Its level is tied to the boosted quartet."
+                else "Model 1 replay of the identical note, velocity, macros, seed and saved room. Its level is tied to the revised quartet, rather than independently matched.",
+                if (boost) "Compare the timpani's level while its voicing stays the same." else "Which part of the membrane's attack and pitched decay was missing?", reference = revisedFull,
+                compareGroup = group, variant = "previous quartet", tags = listOf("timpani", "previous", "model-$previousModel", "quartet", note)))
+            for (model in listOf(previousModel, revisedModel)) {
+                val label = if (model == previousModel) "previous" else revisedLabel
+                add(Case("$slug-$study-r$model-${note.lowercase(Locale.ROOT)}-solo", "${voice.name}: $label timpani alone · $note", "timpani",
                     base.copy(name = "${voice.name} $label timpani alone $note", model = model),
-                    "Dry membrane source from model $model at its unchanged quartet strike strength and balance. Room paths and returns are disabled. It uses the revised quartet's full-mix gain, with no solo boost.",
-                    "Does the membrane retain a pitched body after the mallet attack?",
+                    "Dry membrane source from model $model at its unchanged quartet strike strength and balance. Room paths and returns are disabled. It uses the $revisedLabel quartet's full-mix gain, with no solo boost.",
+                    if (boost) "The same membrane shape and decay, with only the listener level lifted." else "Does the membrane retain a pitched body after the mallet attack?",
                     options = Chamber.ProbeOptions(normalize = true, roomEnabled = false, returnsEnabled = false, isolatedInstrument = 0),
                     reference = revisedFull, compareGroup = group, variant = "$label timpani solo",
                     tags = listOf("timpani", "solo", label, "model-$model", note)))
@@ -319,22 +332,55 @@ object ChamberAuditionGenerator {
         }
     }
 
-    /** Preserve the original page, PCM, recipes and source records byte for byte. */
-    private fun archivePrevious(previous: File, root: File): Map<String, Any?> {
+    /** Keep historical PCM, recipes and source intact while making the older archive a sibling. */
+    private fun archivePrevious(previous: File, root: File, expectedModel: Int): Map<String, Any?> {
         val source = previous.canonicalFile
         require(source.isDirectory && File(source, "index.html").isFile && File(source, "source-provenance.json").isFile) {
-            "--previous must be a complete original CHAMBER audition directory"
+            "--previous must be a complete previous CHAMBER audition directory"
         }
         require(!source.toPath().startsWith(root.toPath()) && !root.toPath().startsWith(source.toPath())) {
             "previous audition and output directories must not contain each other"
         }
-        val manifest = Json.parse(File(source, "manifest.json").readText()).obj()
-        require(manifest.getValue("model").int() == 1) { "the previous audition must be model 1" }
-        val target = File(root, "archive/model-1")
+        val manifestFile = File(source, "manifest.json")
+        val manifest = Json.parse(manifestFile.readText()).obj()
+        require(manifest.getValue("model").int() == expectedModel) { "the previous audition must be model $expectedModel" }
+        val target = File(root, "archive/model-$expectedModel")
         if (target.exists()) check(target.deleteRecursively()) { "could not replace previous audition archive" }
-        check(source.copyRecursively(target, overwrite = false)) { "could not archive previous audition" }
-        return linkedMapOf("url" to "archive/model-1/index.html", "title" to "Original 114-clip audition · model 1",
-            "model" to 1, "sourceRevision" to manifest["sourceRevision"]?.str())
+        if (expectedModel == 1) {
+            check(source.copyRecursively(target, overwrite = false)) { "could not archive previous audition" }
+        } else {
+            check(target.mkdirs()) { "could not create previous audition archive" }
+            source.listFiles().orEmpty().filter { it.name != "archive" }.forEach { file ->
+                check(file.copyRecursively(File(target, file.name), overwrite = false)) { "could not archive ${file.name}" }
+            }
+            val original = File(target, "manifest-original.json")
+            manifestFile.copyTo(original, overwrite = true)
+            val previousLink = manifest["previousAudition"]?.takeUnless { it is JsonValue.Null }?.obj()
+            if (previousLink != null) {
+                val oldArchive = File(source, "archive/model-1")
+                require(File(oldArchive, "manifest.json").isFile && File(oldArchive, "index.html").isFile) {
+                    "the previous audition's model-1 archive is missing"
+                }
+                val sibling = File(root, "archive/model-1")
+                if (sibling.exists()) check(sibling.deleteRecursively()) { "could not replace original audition archive" }
+                check(oldArchive.copyRecursively(sibling, overwrite = false)) { "could not preserve original audition archive" }
+                val updated = LinkedHashMap(manifest)
+                updated["previousAudition"] = JsonValue.Obj(LinkedHashMap(previousLink).also {
+                    it["url"] = JsonValue.Str("../model-1/index.html")
+                })
+                updated["navigationRelocation"] = JsonValue.Obj(linkedMapOf(
+                    "description" to JsonValue.Str("Only the archived page's previous-audition URL moved to its sibling. Audio, recipes and source snapshots are unchanged."),
+                    "originalManifest" to JsonValue.Str("manifest-original.json"),
+                    "originalManifestSha256" to JsonValue.Str(sha(original)),
+                    "previousUrl" to previousLink.getValue("url"),
+                    "relocatedUrl" to JsonValue.Str("../model-1/index.html"),
+                ))
+                writeJson(File(target, "manifest.json"), JsonValue.Obj(updated))
+            }
+        }
+        return linkedMapOf("url" to "archive/model-$expectedModel/index.html",
+            "title" to if (expectedModel == 1) "Original 114-clip audition · model 1" else "Previous timpani audition · model 2",
+            "model" to expectedModel, "sourceRevision" to manifest["sourceRevision"]?.str())
     }
 
     private fun cases(): List<Case> = buildList {
@@ -459,7 +505,9 @@ object ChamberAuditionGenerator {
             "synth/src/test/kotlin/com/snipsnap/synth/ChamberDiagnosticReplayTest.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ChamberTimpaniTest.kt",
             "synth/src/test/resources/chamber-model-1/hybrid-default.json",
-            "synth/src/test/resources/chamber-model-1/aquarium-default.json", "synth/build.gradle.kts",
+            "synth/src/test/resources/chamber-model-1/aquarium-default.json",
+            "synth/src/test/resources/chamber-model-2/hybrid-timpani-r2-c3-full.json",
+            "synth/src/test/resources/chamber-model-2/aquarium-timpani-r2-c3-full.json", "synth/build.gradle.kts",
             "synth/src/test/resources/chamber-audition/index.html", "synth/src/test/resources/chamber-audition/app.js",
             "synth/src/test/resources/chamber-audition/styles.css")
         val files = paths.map { path ->
@@ -498,7 +546,7 @@ object ChamberAuditionGenerator {
             zip.putNextEntry(ZipEntry("manifest.json"))
             zip.write(Json.write(json(manifest + mapOf("clips" to clips,
                 "checks" to subsetChecks,
-                "summary" to if (manifest["auditionRevision"] == "timpani") manifest["summary"] else
+                "summary" to if (manifest["auditionRevision"] in setOf("timpani", "timpani-boost")) manifest["summary"] else
                     "Starter selection: both first-listen voices and their causal room comparisons. The hosted page contains the complete control and register grids.",
                 "previousAudition" to null,
                 "downloads" to mapOf("manifest" to "manifest.json", "checks" to "checks.json", "provenance" to "source-provenance.json")))).toByteArray())

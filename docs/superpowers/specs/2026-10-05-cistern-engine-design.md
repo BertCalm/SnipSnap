@@ -349,6 +349,19 @@ defaults and recipes are preserved. This selects the default voice character;
 the full control matrix, preset names and physical interpretation still have
 their separate measurement and listening limits.
 
+The owner selected pitch study 1 on 22 October 2026 after comparing it
+with the midpoint and the later three-quarter blend. Audition revision
+`selected-pitch-1` promotes that exact original pitch-study variant, including
+POOL's root/fifth-related dry ratio family. The other voices use their
+selected integer partial families. SKIN retains the study's restrained
+upper-mode spacing law, with the root unchanged. Radiation uses the exact
+pitch-study values; the midpoint's additional RECOVERY adjustment does not
+carry into this selection. The revision-4 physical losses, contact and
+release fields, wet loading, circulation clock, defaults and all recipes
+remain intact. This supersedes the midpoint choice for default voice
+character; the model, control extremes and preset names retain their
+separate measurement and listening limits.
+
 The material/release clock advances every 176 internal samples, approximately
 1002.27 Hz. A smoothed local modal-energy envelope acts on a decaying release
 field. Threshold crossings spend a slot once, bounded propagation reaches

@@ -63,6 +63,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.AquariumPadRenderer
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
@@ -92,6 +93,8 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.AquariumPadSheet
+import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
@@ -140,7 +143,7 @@ import kotlinx.coroutines.withContext
  */
 private const val METADATA_SAVE_DEBOUNCE_MS = 1000L
 private fun boardRemoveFirst(recipe: JsonValue.Obj?): String =
-    "Remove ${BoardSheet.read(recipe)?.type?.name ?: "the board"} before changing treatment"
+    "Remove ${if (PrintedPads.has(recipe)) PrintedPads.label(recipe) else "the board"} before changing treatment"
 
 /**
  * PAD SHEET: the long-press pad inspector, wireframe 1d ("full-screen
@@ -366,7 +369,7 @@ fun PadSheetScreen(
             // depth, not expected to ever bind.
             val s = runCatching {
                 val decoded = WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
-                if (BoardSheet.read(p.recipe) != null) decoded else Cleanup.toMono(decoded)
+                if (PrintedPads.has(p.recipe)) decoded else Cleanup.toMono(decoded)
             }.getOrNull()
             val binned = m.binContents()
                 .filter { it.originalName == p.sampleFile }
@@ -768,7 +771,7 @@ fun PadSheetScreen(
      * same reason, as [applySmear]'s own KDoc above.
      */
     fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
         }
@@ -904,7 +907,7 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             applyingSegment = null
             onToast(boardRemoveFirst(p.recipe))
             return
@@ -1048,7 +1051,10 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
-                        if (BoardSheet.read(freshPad.recipe) != null) {
+                        if (freshPad.recipe?.entries?.containsKey("aquariumPad") == true) {
+                            AquariumPadSheet.remove(f, slot)
+                            state = PadSheet.UnTreat.READY
+                        } else if (BoardSheet.read(freshPad.recipe) != null) {
                             BoardSheet.remove(f, slot)
                             state = PadSheet.UnTreat.READY
                         } else {
@@ -1255,14 +1261,14 @@ fun PadSheetScreen(
                     return@launch
                 }
                 commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
-                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName) { print }.toast
+                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer) { print }.toast
                 }
             }
             return
         }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
-                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
+                RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer).toast
             } catch (e: KitBuilderModel.Unpitched) {
                 Copy.notANote(e.message ?: "not a note")
             }
@@ -1273,8 +1279,8 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
-            onToast(Copy.boardRemoveBeforeSoftHits(BoardSheet.read(p.recipe)?.type?.name ?: "BOARD"))
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
         val enabling = p.velocityLayers.isEmpty()
@@ -1828,8 +1834,8 @@ fun PadSheetScreen(
         if (busy || spreadOpening) return
         val currentSnip = snip ?: return
         val p = model?.kit?.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
-            onToast(Copy.boardRemoveBeforeSpread(BoardSheet.read(p.recipe)?.type?.name ?: "BOARD"))
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSpread(PrintedPads.label(p.recipe)))
             return
         }
         // A chain's file is every take end to end; spreading it would tune
@@ -2541,7 +2547,7 @@ fun PadSheetScreen(
         dustAmount != null -> PadSheet.DUST
         else -> applied?.segment
     }
-    val isNoneState = boardApplied == null && smearAmount == null && dustAmount == null && applied == null
+    val isNoneState = !PrintedPads.has(pad.recipe) && smearAmount == null && dustAmount == null && applied == null
     // The phone ruling, whichever row: a treatment no segment draws is
     // named on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -2654,7 +2660,7 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
         }

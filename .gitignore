@@ -246,6 +246,8 @@ testkit/SnipSnap Contour Kit/
 
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
+testkit/skitter-articulation/
+scripts/__pycache__/
 
 # REGISTERS listening packs are reproducible generated audio and manifests.
 testkit/registers-audition/
@@ -256,6 +258,7 @@ testkit/origami-audition-r1/
 testkit/origami-audition-r2/
 testkit/origami-audition-r3/
 testkit/registers-audition-r4/
+testkit/registers-audition-r5/
 testkit/SnipSnap Skitter Kit/
 
 # OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
@@ -315,6 +318,11 @@ testkit/brass-grow-prototype/
 testkit/ohm-audition/
 testkit/ohm-audition-v1/
 
+# OHM's native MPC starter and regenerable kit artifacts.
+testkit/SnipSnap Ohm Kit/
+testkit/SnipSnap-Ohm-Kit.zip
+testkit/SnipSnap-Ohm-Kit.zip.sha256
+
 # CHAMBER finite first-listen WAVs, diagnostics, page and prototype export regenerate locally.
 testkit/chamber-audition/
 testkit/SnipSnap Chamber Prototype Kit/
@@ -366,7 +374,16 @@ testkit/tidal-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Generated R6 Skitter listening proof
+testkit/skitter-character-r6/
+
+# Generated R7 Skitter quartet listening proof
+testkit/skitter-quartet/
 testkit/fade-law-audition/
 
 # BELLOWS sample-player comparisons and exported proof programs regenerate from source.
 testkit/bellows-playback-audition/
+
+# Reproducible experimental Murmur comparison audio.
+testkit/murmur-luthier-audition/

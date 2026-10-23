@@ -29,6 +29,7 @@ class RegistersIntegrationReviewTest {
         val frames: Int,
         val sha256: String,
         val held: Boolean = false,
+        val model: Int = 3,
     )
 
     private fun pcm24Hash(samples: FloatArray): String {
@@ -38,7 +39,7 @@ class RegistersIntegrationReviewTest {
     }
 
     @Test
-    fun `integrated model three retains the published finite and held PCM`() {
+    fun `accepted pipe reed and historic transistor models retain published finite and held PCM`() {
         // Literal SHA-256 values from the independently verified, published r3-airflow pack:
         // audio fingerprint a79d2f2f9e35a7427bad6a6742aba88b8a7751797d5789bee4b9abe0540ea48f.
         // Every chosen source had rawExportGain = 1. No audition files are needed by this test.
@@ -53,10 +54,16 @@ class RegistersIntegrationReviewTest {
             PublishedCase("musette_held_high", RegistersVoice.MUSETTE,
                 mapOf("HOLD" to 1f, "SPREAD" to .9f, "MOTION" to .9f), .8f, 254865,
                 "84d499276e8495354a2bef5dae8d92f5a02b8abe4551d8a1f89d4951e40dc169", held = true),
+            // Literal hashes from the published r4-transistor pack, both with rawExportGain = 1.
+            PublishedCase("transistor_velocity_100", RegistersVoice.TRANSISTOR, emptyMap(), 1f, 101518,
+                "2914bc32937dbecc79439f68fbc2dc64ee8206ff3b0558bf94b688d3038da396", model = 4),
+            PublishedCase("transistor_held_high", RegistersVoice.TRANSISTOR,
+                mapOf("HOLD" to 1f, "SPREAD" to .9f, "MOTION" to .9f), .8f, 254865,
+                "7a48aa787aa5f22c712fc5d0fd1a6fa264bb876160a2e312d395e7bca796a1d5", held = true, model = 4),
         )
-        assertEquals(4, Registers.MODEL_VERSION, "the current model also supports TRANSISTOR")
+        assertEquals(5, Registers.MODEL_VERSION, "the current model adds a deeper TRANSISTOR registration")
         for (case in cases) {
-            val patch = RegistersPatch(case.id, case.voice, case.macros, midi = 60, velocity = case.velocity, model = 3)
+            val patch = RegistersPatch(case.id, case.voice, case.macros, midi = 60, velocity = case.velocity, model = case.model)
             val probe = patch.probe()
             assertEquals(case.held, probe.isLoop, case.id)
             assertEquals(if (case.held) DrumClass.LOOP else DrumClass.TONAL,
@@ -97,7 +104,7 @@ class RegistersIntegrationReviewTest {
             // Original audition JSON could save any explicit MIDI alongside TUNE .5.
             val imported = RegistersPatch("Saved A4", voice,
                 mapOf("TUNE" to .5f, "SPREAD" to 0f, "MOTION" to 0f), midi = 69, velocity = .7f,
-                model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
+                model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3)
             val editable = imported.forEditing()
             assertEquals(69, editable.midi)
             for ((tune, midi) in listOf(0f to 48, 1f to 72)) {
@@ -117,7 +124,7 @@ class RegistersIntegrationReviewTest {
     fun `scramble stays bounded and finite when its starting recipe is held`() {
         for (voice in RegistersVoice.entries) {
             val held = RegistersPatch("Held A4", voice, mapOf("TUNE" to .5f, "HOLD" to 1f), midi = 69,
-                velocity = .6f, model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
+                velocity = .6f, model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3)
             for (temperature in listOf(-1f, 0f, .35f, 1f, 2f, Float.NaN, Float.POSITIVE_INFINITY)) {
                 val macros = Registers.scramble(voice, Random(37), temperature, held)
                 assertEquals(Registers.defaults(voice).keys, macros.keys)
