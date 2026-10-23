@@ -121,11 +121,11 @@ object OhmV2 {
 
     private fun loop(hz: Float, loopHz: Float, t60: Float): Strings.Loop {
         val tune = Strings.tune(hz * .96f, loopHz, INTERNAL_RATE)
-        return Strings.Loop(tune.n, tune.a, feedback(hz, loopHz, t60), loopHz, INTERNAL_RATE)
+        return Strings.Loop(tune.n, tune.a, feedback(hz, loopHz, t60), loopHz, INTERNAL_RATE, cacheLoopFilter = true)
     }
 
     /** Continuous reply staging: no hard on/off threshold and no common level rescaling. */
-    private fun replyStrength(activity: Float, reply: Int): Float {
+    private fun replyStrength(activity: Float, reply: Int, drive: Double): Float {
         if (activity <= 0f) return 0f
         val opening = when (reply) {
             0 -> 1.0
@@ -134,7 +134,7 @@ object OhmV2 {
             3 -> smooth((activity - .50) / .35)
             else -> smooth((activity - .70) / .30)
         }
-        return (activity.toDouble().pow(.85) * opening).toFloat()
+        return (drive * opening).toFloat()
     }
 
     internal data class Probe(
@@ -217,7 +217,7 @@ object OhmV2 {
         val bridgeFormant = Dsp.Biquad().also {
             it.peaking(root * (4.8f - 1.5f * body), 5f - 10 * body, .9f, INTERNAL_RATE)
         }
-        val outputLp = Dsp.OnePole(INTERNAL_RATE)
+        val outputLp = Dsp.FixedOnePole(minOf(10_000f, root * (14 - 4 * body)), INTERNAL_RATE)
         val raw = FloatArray(count)
         val ports = if (recordPorts) Array(PORTS) { FloatArray(count) } else emptyArray()
         val reflected = FloatArray(PORTS)
@@ -232,8 +232,13 @@ object OhmV2 {
         val primaryGain = .18f + .30f * touch
         val displacementGain = .045f - .017f * touch
         val whistleGain = .014f + .016f * touch
+        val glassGain = .10f + .09f * touch
+        val whistleOvertone = .025 + .20 * touch
+        val glassColorGain = .22f + .28f * touch
         val whistleLoss = (1 - exp(-LOG_1000 / (root * 2 * decay[1]))).toFloat()
         val replyGains = FloatArray(onsets.size)
+        var glassActivity = 0f
+        val tuningTargets = FloatArray(PORTS) { Float.NaN }
         for (i in 0 until count) {
             if (i % 8192 == 0 && Thread.currentThread().isInterrupted) throw InterruptedException("OHM render cancelled")
             val progress = i.toDouble() / count
@@ -247,10 +252,17 @@ object OhmV2 {
                     5 * sin(2 * PI * 1.13 * time + .7 * wanderPhase)) * (1 - .97 * agreement)
                 whistleHz = (root * 2 * 2.0.pow(cents / 1200)).toFloat()
                 val glassHz = (root * 3 * 2.0.pow(-18.0 * (1 - agreement) / 1200)).toFloat()
-                loops[0].retune(bridgeTuned(root, coupling, membrane))
-                loops[1].retune(bridgeTuned(whistleHz, coupling, membrane))
-                loops[2].retune(bridgeTuned(glassHz, coupling, membrane))
-                for (j in replyGains.indices) replyGains[j] = replyStrength(activity, j)
+                // Retuning changes only delay coefficients, not their state. Repeating an
+                // identical target recalculates the same budget and allocates another Tuning.
+                val rootTarget = bridgeTuned(root, coupling, membrane)
+                val whistleTarget = bridgeTuned(whistleHz, coupling, membrane)
+                val glassTarget = bridgeTuned(glassHz, coupling, membrane)
+                if (rootTarget != tuningTargets[0]) { loops[0].retune(rootTarget); tuningTargets[0] = rootTarget }
+                if (whistleTarget != tuningTargets[1]) { loops[1].retune(whistleTarget); tuningTargets[1] = whistleTarget }
+                if (glassTarget != tuningTargets[2]) { loops[2].retune(glassTarget); tuningTargets[2] = glassTarget }
+                val replyDrive = if (activity > 0f) activity.toDouble().pow(.85) else 0.0
+                for (j in replyGains.indices) replyGains[j] = replyStrength(activity, j, replyDrive)
+                glassActivity = activity.pow(.6f)
             }
             for (j in 0 until PORTS) reflected[j] = loops[j].reflected()
             val radiated = bridge.couple(reflected, coupling, back)
@@ -268,10 +280,10 @@ object OhmV2 {
                     }
                     val struck = i - glassStarts[j]
                     if (struck in glassBurst.indices) {
-                        glassInput += (.10f + .09f * touch) * replyGains[j] * activity.pow(.6f) * glassBurst[struck]
+                        glassInput += glassGain * replyGains[j] * glassActivity * glassBurst[struck]
                     }
                 }
-                val tone = sin(2 * PI * phase) + (.025 + .20 * touch) * sin(4 * PI * phase)
+                val tone = sin(2 * PI * phase) + whistleOvertone * sin(4 * PI * phase)
                 whistleInput = (whistleGain * breath * sourceRelease * whistleLoss * tone).toFloat()
                 glassInput *= sourceRelease.toFloat()
             }
@@ -283,11 +295,11 @@ object OhmV2 {
             voice[1] = loops[1].inject(back[1] + whistleInput)
             voice[2] = loops[2].inject(back[2] + glassInput)
             var coloredGlass = voice[2]
-            for (j in glassColor.indices) coloredGlass += (.22f + .28f * touch) * glassColor[j].process(voice[2])
+            for (j in glassColor.indices) coloredGlass += glassColorGain * glassColor[j].process(voice[2])
             val independent = 1 - .80f * agreement
             val mixed = voice[0] + independent * (.55f * voice[1] + .68f * coloredGlass) + (.18f + .36f * agreement) * radiated
             val shaped = bridgeFormant.process(cavity.process(mixed))
-            val warm = outputLp.lp(shaped, minOf(10_000f, root * (14 - 4 * body)))
+            val warm = outputLp.lp(shaped)
             raw[i] = REFERENCE_GAIN * sourceGain * warm
             for (j in 0 until PORTS) {
                 maxState = maxOf(maxState, abs(voice[j]))
@@ -302,8 +314,8 @@ object OhmV2 {
 
     private fun finish(raw: FloatArray): FloatArray {
         val out = Dsp.decimate(raw, RATE)
-        val dc = Dsp.OnePole(RATE)
-        for (i in out.indices) out[i] -= dc.lp(out[i], 3f)
+        val dc = Dsp.FixedOnePole(3f, RATE)
+        for (i in out.indices) out[i] -= dc.lp(out[i])
         Dsp.fadeTail(out, 120f, RATE)
         return out
     }
