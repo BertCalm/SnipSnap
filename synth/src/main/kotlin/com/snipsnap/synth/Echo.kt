@@ -13,6 +13,14 @@ import kotlin.math.ln
  * fades — the era-correct behaviour, and what keeps stacked repeats from
  * turning into hash. The tail is extended until repeats fall below -60 dB,
  * bounded so a scrambled ECHO can't balloon a pad into a phrase.
+ *
+ * HEAD chooses what feeds the repeats: 0 the whole note (ECHO as it always
+ * was, bit for bit), 1 only the note's first [HEAD_SEC], its last third
+ * faded, so a held note's attack comes back as a repeat instead of the whole
+ * note smearing into itself. It is stretched by 1.5 as WAH's weights are, so
+ * the pad sheet's first tap still feeds the head alone, and the window
+ * shrinks with a short TIME so a repeat of the head ends before the next
+ * lands (docs/superpowers/specs/2026-10-22-delay-head-design.md).
  */
 object Echo {
 
