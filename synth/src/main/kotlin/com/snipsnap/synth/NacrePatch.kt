@@ -7,7 +7,8 @@ import com.snipsnap.json.JsonValue
 /**
  * A reproducible finite paired-harp gesture. Root, strike energy, model and exact seed
  * travel beside the controls; string, current and venue states are rebuilt on render.
- * This first listening model refuses HOLD rather than saving an unsupported loop.
+ * The saved model selects its original synthesis and control defaults. Finite models
+ * refuse HOLD rather than saving an unsupported loop.
  */
 data class NacrePatch(
     override val name: String,
@@ -19,18 +20,18 @@ data class NacrePatch(
     val model: Int = Nacre.MODEL_VERSION,
 ) : Patch {
     init {
-        Patches.validateMacros(this, Nacre.macrosFor(voice))
+        require(NacreModels.supports(model)) { "unsupported nacre model $model" }
+        Patches.validateMacros(this, NacreModels.macrosFor(voice, model))
         require(midi in Nacre.MIN_MIDI..Nacre.MAX_MIDI) {
             "NACRE midi must be ${Nacre.MIN_MIDI}..${Nacre.MAX_MIDI}"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be 0..1" }
-        require(model == Nacre.MODEL_VERSION) { "unsupported nacre model $model" }
         require((macros["HOLD"] ?: 0f) == 0f) { "NACRE prototype supports finite gestures only; HOLD must be 0" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Nacre.render(voice, macros, midi, velocity, seed)
+    override fun render() = NacreModels.render(voice, macros, midi, velocity, seed, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -52,7 +53,7 @@ data class NacrePatch(
             fun required(key: String): JsonValue = obj[key]?.takeUnless { it is JsonValue.Null }
                 ?: throw JsonException("NACRE patch has no $key")
             val model = required("model").int()
-            if (model != Nacre.MODEL_VERSION) throw JsonException("unsupported nacre model $model")
+            if (!NacreModels.supports(model)) throw JsonException("unsupported nacre model $model")
             val midi = required("midi").int()
             if (midi !in Nacre.MIN_MIDI..Nacre.MAX_MIDI) {
                 throw JsonException("NACRE midi must be ${Nacre.MIN_MIDI}..${Nacre.MAX_MIDI}")
