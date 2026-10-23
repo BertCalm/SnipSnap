@@ -396,6 +396,17 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
+CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
+through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
+bounded static-geometry cache and exact linear modal response support editable
+finite notes. Native patches retain model, note and velocity through presets,
+pads and CLI edits. Eight starter positions and a dry sixteen-pad kit accompany
+the instrument; six positions are new listening candidates. HOLD is reserved.
+Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
+for the control study and dual-generation MPC starter. The archived listening
+studies remain unchanged. [Implementation notes](docs/CAUSTIC.md) distinguish
+finite duration classification from sustained-loop support.
+
 CREASE's ROUND, PINCH and RUBBER voices bend and recover through positive
 phase maps. The six approved model-3 presets are registered in the SYNTH picker,
 native patch/preset pipeline, CLI and a dry sixteen-pad FRESH TAPE starter.
@@ -858,7 +869,7 @@ that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM and GRAINS round out the lineup —
-fifty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+fifty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs

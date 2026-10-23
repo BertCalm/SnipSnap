@@ -1571,3 +1571,24 @@ tasks.register<JavaExec>("generateCausticAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
+
+/** The finite production voice, kept separate from the archived circular studies. */
+tasks.register<JavaExec>("generateCausticInstrumentAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's editable Alloy voice, control sweeps and native patch recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticInstrumentAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
+}
+
+tasks.register<JavaExec>("generateCausticKit") {
+    group = "distribution"
+    description = "Export CAUSTIC's sixteen dry finite pads, editable recipes and both MPC program formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
+}

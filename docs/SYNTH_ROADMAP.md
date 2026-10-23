@@ -41,13 +41,17 @@ work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
 portable audition recipes and listening limits. The owner's listening verdict
 is pending.
 
-**Caustic circular proof (2026-10-19).** A finite harmonic tone illuminates a
-circular reflective boundary; nine finite pickups route phase-coherent paths
-into sixteen shared damped modes. SOURCE/FOCUS, explicit MIDI and source effort
-are saved in standalone prototype recipes. The 24-clip dry audition includes
-shared-gain/matched positions, phase/bank/gain controls and register/velocity
-probes. Deformation, SCATTER, ORBIT, HOLD, factory/phone integration and the
-owner's sonic acceptance remain open. See [CAUSTIC.md](CAUSTIC.md).
+**Caustic finite instrument (2026-10-23).** The owner selected Alloy and
+heard the fuller tonal body after finding Bloom/Deep indistinguishable. The
+first native ALLOY voice adds SOURCE, FOCUS, BODY and LENGTH with saved ROOT,
+VELOCITY and native model 1; HOLD is reserved. Static coherent paths feed the
+same 24-mode material, with an exact linear response and a bounded geometry
+cache. Native patch/preset/velocity/CLI/phone routing, eight starter positions,
+and a dry sixteen-pad MPC kit develop that heard direction. Six starter
+positions are new listening candidates. The archived 48 recordings, recipes
+and four archives remain unchanged. Deformation, SCATTER, ORBIT, true sustained
+HOLD, additional voices and hardware checks remain later work. See
+[CAUSTIC.md](CAUSTIC.md) for the control contract, verification and limitations.
 
 ## Why this is cheaper than it sounds
 

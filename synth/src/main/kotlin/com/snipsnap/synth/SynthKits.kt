@@ -1022,6 +1022,21 @@ object SynthKits {
     }
 
     /**
+     * Eight fuller Alloy notes in C minor pentatonic from C3, then eight starting
+     * positions. Every pad is finite and dry; a duration-based LOOP class is a
+     * filename/category, not a seamless sustain claim. All sixteen save their patch.
+     */
+    fun caustic(): List<ArrangedPad?> {
+        fun arranged(patch: CausticPatch) = pad(patch, CausticInstrument.drumClassFor(patch.voice, patch.macros, patch.model))
+            .copy(displayName = patch.name)
+        val fuller = CausticPresets.all().first { it.name == "Fuller Body" }
+        val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(fuller.copy(name = "Caustic Key ${index + 1}", midi = 48 + semitone))
+        }
+        return scale + CausticPresets.all().map(::arranged)
+    }
+
+    /**
      * Eight Corner Bass keys in C minor pentatonic from C2, the six approved positions,
      * then two held variants. Every dry pad stores its exact root, velocity and model.
      * Finite notes route as TONAL; the last two pads contain settled LOOP material.

@@ -10,6 +10,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
@@ -105,6 +106,7 @@ object Spread {
         is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
+        is CausticPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }
