@@ -27,7 +27,7 @@ oscillator, envelope and filter state and produces mono 44.1 kHz audio.
 | DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
 | HOLD | Finite sustain length; the top step supplies settled loop-only material |
 | BODY | Root-to-overtone balance: rounded root emphasis through a fuller partial spectrum |
-| EDGE | Independent edge-layer level, from muted through the authored balance to a forward layer |
+| EDGE | Edge-layer level and, in fresh recipes, projection from its saved envelope toward a sustained layer |
 | ATTACK | Amplitude, edge and filter attack times, approximately ⅛–8× the saved recipe |
 | DECAY | Amplitude decay/release and edge/filter decay times, approximately ¼–4× the saved recipe |
 | RATE | Independent scan clock, approximately ⅛–8×; MOTION still sets travel and must be nonzero |
@@ -50,7 +50,7 @@ body more overtone detail and the edge a distinct articulation. Older recipes
 missing these fields decode to neutral settings, including recipes without a
 configuration object; they retain their original rendered samples.
 
-The seven added controls are neutral at .5. Missing values also resolve to .5,
+In legacy recipes the seven added controls are neutral at .5. Missing values also resolve to .5,
 with explicit neutral paths retaining the original model-1 arithmetic. Older
 seven-control patches need no migration. BODY changes the root/partial balance
 before the filter rather than adding distortion: its root contribution spans
@@ -61,6 +61,18 @@ curve and supplies an independent clock multiplier; HOLD fits 1–16 whole motio
 cycles per loop. RESO varies SVF damping from 2.5 to .4 around the authored value.
 ENV adds up to two filter octaves beyond the authored amount, bounded by the
 18 kHz cutoff ceiling. Settled HOLD has no attack or filter-contour gesture.
+
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) found that a low edge sustain
+could hide the layer even at maximum EDGE. Fresh recipes now save
+`edgeResponse: FOREGROUND`: EDGE also blends the saved projection toward one
+across the knob range. Its midpoint intentionally differs from the legacy law.
+Missing/null response fields decode to `LEGACY`, so saved recipes keep their
+original audio, including when macros are edited. No filter bypass or new drive
+stage is added. Load a fresh preset in the updated app to select the new response.
+
+`./gradlew :synth:generateContourEdgeAudition` writes a focused 180-clip comparison
+under `testkit/contour-edge-audition/`, with finite and held forms of all nine
+recipes at five EDGE settings, matched WAVs and complete replay JSON.
 
 Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
@@ -148,7 +160,7 @@ share the exported PCM24 WAVs: a native `.xty` track sits beside its
 `.instrument.json` sidecar sits beside that folder. Keep each track and sidecar
 with their matching folder.
 
-The starter task packages all nine unchanged R05 recipes and 153 zones under
+The starter task packages the current nine recipes and 153 zones under
 `testkit/contour-starter/`, with editable patch JSON, source fingerprints, file
 hashes and a ZIP. It reads back the native JSON, XPM XML, phone sidecars and WAV
 sampler sheets before packaging. Commit the source before running it so the bank

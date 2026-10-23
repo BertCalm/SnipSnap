@@ -587,6 +587,10 @@ keeps its implementation and effect recipe format.
 `testkit/contour-audition/`, including matched/raw controls, note/velocity checks,
 five-point sweeps, required interactions, isolated layers and repeated held loops.
 [CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) addresses a resting envelope
+that could hide the edge layer. Fresh recipes save the foreground response;
+earlier JSON retains the legacy response. `generateContourEdgeAudition` exports
+180 complete finite/held comparisons over five EDGE positions for owner listening.
 The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;

@@ -25,7 +25,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** Repackage the accepted nine recipes as held instruments, with source and file read-back evidence. */
+/** Package the current nine recipes as held instruments, with source and file read-back evidence. */
 object ContourStarterGenerator {
     private const val BANK = "SnipSnap Contour Starter"
 
@@ -175,8 +175,8 @@ object ContourStarterGenerator {
     }
 
     private fun readme() = """
-        CONTOUR STARTER — ACCEPTED R05 RECIPES
-        Nine unchanged recipes, each captured as 17 minor-third sample roots over
+        CONTOUR STARTER — FOREGROUND EDGE RECIPES
+        Nine current recipes, each captured as 17 minor-third sample roots over
         its voice's four-octave range. Each program covers the inclusive range of
         its lowest to highest root. The samples hold the settled tone and omit
         the original finite attack. ATTACK, DECAY and filter-envelope transients
@@ -196,7 +196,7 @@ object ContourStarterGenerator {
         The MPC's velocity response still needs a hardware check.
 
         manifest.json records source commit/hashes, recipes, note maps, levels,
-        WAV hashes and software read-back checks. Original recipes are unchanged;
+        WAV hashes and software read-back checks. Saved source recipes are retained;
         no bank gain or effects are added. Read-back is not a hardware pass.
         Android phone playback, MPC loading, sustain and release are unverified.
         Regenerate with ./gradlew :shell:generateContourStarter from a clean HEAD.
