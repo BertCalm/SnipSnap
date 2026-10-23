@@ -335,6 +335,18 @@ tasks.register<JavaExec>("generateRegistersTransistorAudition") {
     project.findProperty("registersR3Baseline")?.toString()?.let { args("--baseline=$it") }
 }
 
+/** Compare the exact published model-4 sounds with a fuller same-pitch foundation. */
+tasks.register<JavaExec>("generateRegistersTransistorDepthAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R4 audio and reviews, then render matched model-5 TRANSISTOR depth comparisons."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorDepthAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r5")
+    project.findProperty("registersR4Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"
