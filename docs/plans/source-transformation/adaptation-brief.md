@@ -1,6 +1,6 @@
 # Adaptation brief
 
-Status: proposal. Nothing rendered or heard. Code facts below were read at `565551e7974a4c61954199fac56a7a8d3dd502ed`; recheck on the implementation branch.
+Status: original R0 proposal. No audio had been rendered or heard when prepared. R1 implementation and measurements are recorded in the [As built ledger](r1-implementation-plan.md#as-built-r1). Code facts below were read at `565551e7974a4c61954199fac56a7a8d3dd502ed` and rechecked in the R0 review.
 
 The characteristic gesture is **recognizable source attack → transformed cycle structure → changing resonant body → controlled ringing release**.
 
@@ -62,7 +62,7 @@ flowchart TD
 
 This is a proposed conceptual topology, not an exact rack insertion plan. Both filter branches receive the transformed source. Bypass must avoid analysis and processing. Compensate any differential latency before dry/wet blending. Use one explicit final gain policy; serial per-stage normalization must not erase meaningful dynamics. No audio feedback in the first version.
 
-For the R1 body-only proof, bypass source transformation. Keep the dry path, bank, and conventional branch separately auditionable. Prefer two authored body families and a static morph position first; smooth movement during a render is a subsequent gate.
+For the R1 body-only proof, bypass source transformation and omit the conventional filter branch. Audition the original dry source, each bank, their static crossfade, and dry/wet mixtures separately. This deliberately proves only the resonant-body part of the reference topology. A conventional parallel filter and smooth movement during a render are subsequent gates; see the [R1 implementation plan](r1-implementation-plan.md).
 
 ## Macro direction
 

@@ -19,6 +19,19 @@ tasks.register<JavaExec>("generateTidalAudition") {
     }
 }
 
+/** Standalone source processing proof; no saved pad schema changes. */
+tasks.register<JavaExec>("generateResonantBodyAudition") {
+    group = "distribution"
+    description = "Render and replay-verify R1 body audio, metrics and a local listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ResonantBodyAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("bodyOutput").orNull ?: "${rootDir}/testkit/resonant-body-audition")
+    if (project.hasProperty("bodyVerify")) args("--verify")
+    else providers.gradleProperty("bodyCapture").orNull?.let { args("--capture", it) }
+}
+
 /** Dry, finite OHM family encounters and their replayable listening evidence. */
 tasks.register<JavaExec>("generateOhmAudition") {
     group = "distribution"

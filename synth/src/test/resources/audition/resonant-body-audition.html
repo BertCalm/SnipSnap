@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Resonant body R1 audition</title>
+<style>
+body{max-width:1100px;margin:2rem auto;padding:0 1rem;font:16px/1.5 system-ui;background:#151917;color:#e8eae2}
+h1,h2{line-height:1.2}a{color:#d4eea4}section{border-top:1px solid #62705c;margin-top:2rem}article{padding:1rem 0;border-bottom:1px solid #343e32}
+.players{display:flex;flex-wrap:wrap;gap:1rem}.player{display:grid;gap:.3rem}audio{max-width:100%;width:240px}summary,select{cursor:pointer}
+</style>
+<h1>Resonant body R1</h1>
+<p>Two four-mode bodies and static dry/wet comparisons. No listening verdict or phone measurement has been recorded.</p>
+<p>Use matched audio to compare character; its gain is listed. Raw wet float WAVs preserve headroom and may exceed full scale. Silence remains silent.</p>
+<p><a href="manifest.json">Manifest</a> · <a href="metrics.csv">Metrics CSV</a> · <a href="benchmark-desktop.json">Desktop timings</a></p>
+<label>Section <select id="filter"><option value="">All sections</option></select></label><main id="cases"></main>
+<h2>Listening questions</h2><p>Are the bodies distinct at matched level? Are intermediate blends useful? Does the source attack remain useful? Are taps too quiet, or sustained sounds too attenuated? Which cases earn a pad?</p>
+<script id="manifest" type="application/json">__MANIFEST__</script>
+<script>
+const manifest=JSON.parse(document.getElementById('manifest').textContent),main=document.getElementById('cases'),filter=document.getElementById('filter');
+const sections=[...new Set(manifest.cases.map(c=>c.section))];
+for(const name of sections){const o=document.createElement('option');o.value=name;o.textContent=name;filter.append(o)}
+for(const name of sections){
+ const section=document.createElement('section');section.dataset.section=name;const h=document.createElement('h2');h.textContent=name;section.append(h);
+ for(const c of manifest.cases.filter(c=>c.section===name)){
+  const card=document.createElement('article'),title=document.createElement('h3');title.textContent=c.id;card.append(title);
+  const info=document.createElement('p');info.textContent=`MIDI ${Math.round(36+36*c.settings.tune)}, BODY ${c.settings.body}, RING ${c.settings.ring}, DAMP ${c.settings.damp}, MIX ${c.settings.mix}. Matched ×${c.metrics.matchedGain.toFixed(3)}; attenuation ×${c.metrics.attenuation.toFixed(3)}.`;card.append(info);
+  const players=document.createElement('div');players.className='players';
+  for(const [label,path] of [['Original',c.source],['Raw wet',c.wet],['Delivered',c.raw],['Matched delivered',c.matched]]){
+   if(!path)continue;const p=document.createElement('div');p.className='player';const l=document.createElement('span');l.textContent=label;
+   const a=document.createElement('audio');a.controls=true;a.preload='none';a.src=path;a.setAttribute('aria-label',`${c.id}: ${label}`);
+   a.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==a)other.pause()}));p.append(l,a);players.append(p)
+  }card.append(players);
+  const details=document.createElement('details'),summary=document.createElement('summary'),provenance=document.createElement('p'),link=document.createElement('a');
+  summary.textContent='Source and replay evidence';provenance.textContent=c.provenance;link.href=c.recipe;link.textContent='Replay record';details.append(summary,provenance,link);card.append(details);section.append(card)
+ }main.append(section)
+}filter.addEventListener('change',()=>main.querySelectorAll('section').forEach(s=>s.hidden=!!filter.value&&s.dataset.section!==filter.value));
+</script></html>

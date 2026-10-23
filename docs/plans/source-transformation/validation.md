@@ -1,6 +1,6 @@
 # Validation and audition requirements
 
-Status: test design. No tests or audio renders have been run for these proposed processors.
+Status: original test design. Actual R1 implementation results, detector refusals, and pending phone/listening gates are recorded in the [As built ledger](r1-implementation-plan.md#as-built-r1). Requirements here remain distinct from measured passes.
 
 ## Body processor gates
 

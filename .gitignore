@@ -359,3 +359,6 @@ testkit/tidal-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# R1 body audio, replay records, metrics and local listening page regenerate from source.
+/testkit/resonant-body-audition/

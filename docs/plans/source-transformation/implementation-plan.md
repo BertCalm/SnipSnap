@@ -1,6 +1,6 @@
 # Phased plan and open decisions
 
-Status: proposed sequence, not an implementation instruction. The current assignment is R0 only.
+Status: staged sequence. R0 is complete; the owner subsequently authorized R1. The [As built ledger](r1-implementation-plan.md#as-built-r1) records actual desktop validation and remaining phone/listening gates. Later stages are proposals, not instructions to implement them now.
 
 ## R0: repository verification and engineering decisions
 
@@ -21,21 +21,21 @@ Resolve these questions in the review:
 
 ## R1: smallest body-processing proof, after approval
 
-Implement bounded fixed-table resonance, two body families, static morph, decay/damping, dry/wet, explicit sample-rate/channel policy, and exact bypass. Use a tentative 16–32 active modes per bank; choose from spectral and timing evidence, not the reference product's count. Add root preservation only where the table is intended to be pitched; do not promise clear pitch for every inharmonic body.
+The [R0 review](repository-review.md) selects the detailed [R1 implementation plan](r1-implementation-plan.md): bounded fixed-table resonance, two four-mode families, a static crossfade of independent banks, decay/damping, dry/wet, explicit sample-rate/channel policy, and exact bypass. Four modes per family are the proposed first proof; 16–32 modes remain a possible later expansion after listening and timing evidence. The conventional parallel filter is deferred. Add root preservation only where the table is intended to be pitched; do not promise clear pitch for every inharmonic body.
 
 Suggested controls for planning only:
 
 | Control | Proposed default | Quantity | Interaction / proof |
 |---|---|---|---|
 | TUNE | Center / documented root | Resonant reference frequency | TUNE × BODY: verify root or reference-mode location across the morph. |
-| BODY | First model | Interpolation between authored mode sets | BODY × DAMP: compare spectral peaks after loudness matching. |
+| BODY | First model | Static output crossfade between two fixed banks in R1 | BODY × DAMP: compare spectral peaks after loudness matching. |
 | RING | Short, documented T60 | Per-mode decay duration | RING × DAMP: high/low band decay tests. |
 | DAMP | Midpoint | Frequency-dependent decay shortening | Distinguish from simple high-frequency attenuation. |
 | MIX | 0.5 | Dry/wet gain law | MIX × RING: attack retention and tail budget; MIX=0 bypass. |
 
 Codex must replace qualitative defaults with explicit normalized values and units in its plan, justified as initial hypotheses. Add branch blend only if the conventional filter branch is included; stay within the small macro budget.
 
-Cache immutable tables by model version, family pair, mode count, and any body parameters that affect them. Cache coefficients by sample rate, root, morph, decay, and damping. Never cache mutable resonator state across independent renders. Avoid transcendental coefficient computation in the per-sample loop. Cost is O(frames × active modes × channels), doubled when crossfading two full banks. Measure at the intended internal rate; do not assume offline means free.
+Identify immutable tables by model version, family pair, mode count, and all table-defining parameters. Every coefficient-cache key must include that table identity, coefficient-algorithm version, sample rate, root, decay, and damping. Include morph only when it changes coefficients; R1's output crossfade does not. The detailed R1 plan defines bounded cache ownership and invalidation tests. Never cache mutable resonator state across independent renders. Avoid transcendental coefficient computation in the per-sample loop. Cost is O(frames × active modes × channels), doubled when crossfading two full banks. Measure at the intended internal rate; do not assume offline means free.
 
 Deliver tests plus an audition set with original, wet, mixed, and level-matched examples. No large preset bank before the owner listens. Use named sourced or generated inputs with redistribution permission; the manuals provide no demo audio to reuse.
 
