@@ -186,7 +186,8 @@ object FilamentKeysAuditionGenerator {
 
         Load the .xty and its adjacent TrackData folder for MPC 3. The .xpm twin
         inside TrackData is the MPC 2 program. Keep the files together. The phone
-        reads the adjacent instrument.json sidecar. Ordinary WAV players play
+        reads the adjacent Filament Thread Keys.instrument.json sidecar.
+        Ordinary WAV players play
         through the marked sustain once and stop; they do not hold the key.
 
         thread-held-demo.wav plays C3, C4 and C5 from the exported files using
