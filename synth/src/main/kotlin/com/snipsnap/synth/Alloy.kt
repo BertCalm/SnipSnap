@@ -90,7 +90,16 @@ object Alloy {
             cutoffRatio = if (voice == AlloyVoice.BASS) 10f else 14f,
         )
     }
+    /** Frozen model-1 defaults for legacy recipes and the original audition. */
     fun configFor(voice: AlloyVoice) = recipes[voice.ordinal]
+
+    /** Listening-selected defaults for new patches. Keep this lazy: the contrast
+     * recipes themselves use [defaults] while their object is initialized. */
+    fun defaultConfigFor(voice: AlloyVoice): AlloyConfig = when (voice) {
+        AlloyVoice.BASS, AlloyVoice.SOFT -> configFor(voice)
+        AlloyVoice.KEY, AlloyVoice.PLUCK, AlloyVoice.BRASS, AlloyVoice.STRING ->
+            AlloyContrastPresets.configFor(voice)
+    }
 
     internal data class Diagnostics(val rawPeak: Double, val maxPhaseModulation: Double,
         val maxConditionedAttack: Double, val rootHz: Double, val internalRate: Int = INTERNAL_RATE)

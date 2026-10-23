@@ -36,6 +36,11 @@ recipe contracts, musical phrases, held-loop strategy and private audition. The 
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
+**Brass GROW.** [`engineering/brass-grow-prototype.md`](engineering/brass-grow-prototype.md)
+records the experimental single-source EMBOUCHURE BRASS mode, its saved-model
+boundary, pad workflow and reproducible register/velocity checks. The published
+audition remains a sound reference; the in-app prototype still needs device playing.
+
 **Oven.** [`OVEN.md`](OVEN.md) records the approved ten-preset sonic baseline,
 the phone synth integration and finite per-note resonance. Keyboard velocity
 layers, shared resonance and phone/MPC hardware acceptance remain later work.
@@ -82,3 +87,11 @@ The [integration design](superpowers/specs/2026-10-18-aquarium-integration-desig
 and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
 separate that foundation from the planned pad rendering, performance routing
 and controls. The foundation does not yet process app playback.
+
+**Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
+records the whole-app review of 2026-10-17: the six guards that landed with
+it (kit-name containment, a frame-capped share-door WAV decode, an XPN entry
+ceiling, canonical SFZ containment with one copy budget, a NaN-safe DC mean,
+recordings kept out of cloud backup) and the findings recorded for a design
+or listening session. Its sound-quality findings are the review's claims,
+not heard, and nothing in that change alters a shipped sound.

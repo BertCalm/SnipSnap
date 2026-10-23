@@ -43,6 +43,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -344,6 +345,13 @@ private const val SETTINGS_ENGINE = "engine"
 private const val SETTINGS_VOICE = "voice"
 private const val SETTINGS_MACRO_PREFIX = "macro."
 private const val SETTINGS_PRESET_PREFIX = "preset."
+private const val SETTINGS_PATCH_PREFIX = "patch."
+
+/** Initial shelf read only; the screen's public API and normal disk reader stay unchanged. */
+internal val LocalSynthPresetReader = staticCompositionLocalOf<
+    (File) -> Pair<List<UserPresets.Saved>, List<UserPresets.Binned>>
+> { { root -> UserPresets.read(root) to UserPresets.bin(root) } }
+
 private const val SETTINGS_SCANNED_RECIPE_PREFIX = "scanned.recipe."
 
 private fun scannedRecipeSettingsKey(voice: ScannedChainVoice): String = "$SETTINGS_SCANNED_RECIPE_PREFIX${voice.name}"
@@ -376,6 +384,103 @@ private fun macroSettingsKey(engine: Engine, voice: Enum<*>, macro: String): Str
 
 private fun presetSettingsKey(engine: Engine, voice: Enum<*>): String =
     "$SETTINGS_PRESET_PREFIX${engine.name}.${voice.name}"
+
+private fun embouchureSettingsKey(voice: EmbouchureVoice): String =
+    "$SETTINGS_PATCH_PREFIX${EmbouchurePatch.ENGINE}.${voice.name}"
+
+/** The selected BRASS model survives edits even after the preset highlight clears. */
+private fun storedEmbouchurePatch(settings: Map<String, String>, voice: EmbouchureVoice): EmbouchurePatch? =
+    settings[embouchureSettingsKey(voice)]?.let { text ->
+        runCatching { EmbouchurePatch.fromJsonText(text) }.getOrNull()?.takeIf { it.voice == voice }
+    }
+
+/**
+ * What SYNTH restores for EMBOUCHURE when it reopens (BRASS GROW is a different saved model with
+ * different controls, so its recipe must come back whole).
+ */
+private class EmbouchureRestore(
+    settings: Map<String, String>,
+    seededPresets: Map<Pair<Engine, Enum<*>>, String>,
+    reopenedPads: Set<Pair<Engine, Enum<*>>>,
+    /** The initial shelf read (a test seam, see [LocalSynthPresetReader]); kept here to spare SynthScreen a local. */
+    val readShelf: (File) -> Pair<List<UserPresets.Saved>, List<UserPresets.Binned>>,
+) {
+    /**
+     * An unresolved YOURS recipe arrives after the default panel starts writing.
+     * Keep its original macro bag so that temporary legacy defaults cannot erase GROW.
+     */
+    val macroSettings: Map<String, String> = settings.toMap()
+
+    /**
+     * The restorable recipes, oldest source first: the factory preset the bag names, then the
+     * recipe draft, then the `patch.EMBOUCHURE.<VOICE>` snapshot, which is the freshest (it is
+     * written from the loaded patch plus its current sliders).
+     */
+    val patches: Map<Pair<Engine, Enum<*>>, EmbouchurePatch> = buildMap {
+        for ((pair, name) in seededPresets) {
+            if (pair.first != Engine.EMBOUCHURE) continue
+            (Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
+                as? EmbouchurePatch)?.let { put(pair, it) }
+        }
+        for (draft in SynthDrafts.read(settings)) {
+            if (draft !is EmbouchurePatch) continue
+            val v = EmbouchureVoice.entries.firstOrNull { it.name == draft.voiceName } ?: continue
+            put(Engine.EMBOUCHURE to v, draft)
+        }
+        for (v in EmbouchureVoice.entries) {
+            storedEmbouchurePatch(settings, v)?.let { put(Engine.EMBOUCHURE to v, it) }
+        }
+    }
+
+    /** The sliders for a restored EMBOUCHURE [patch]; null for every voice with nothing to restore. */
+    fun macrosFor(engine: Engine, voice: Enum<*>, settings: Map<String, String>): Map<String, Float>? =
+        patches[engine to voice]?.let { restoredMacros(engine, voice, settings, it) }
+
+    /** Adopt the restorable recipes into [loaded], except where a reopened pad already supplied its own. */
+    fun seedInto(loaded: MutableMap<Pair<Engine, Enum<*>>, Patch>, reopenedPads: Set<Pair<Engine, Enum<*>>>) {
+        for ((pair, patch) in patches) if (pair !in reopenedPads) loaded[pair] = patch
+    }
+
+    /**
+     * YOURS recipes still waiting on the shelf read. A reopened pad's working recipe is the
+     * freshest statement of all, so it is never pending.
+     */
+    val pending = mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
+        for (pair in seededPresets.keys) {
+            if (pair.first == Engine.EMBOUCHURE && pair !in patches && pair !in reopenedPads) put(pair, true)
+        }
+    }
+}
+
+@Composable
+private fun rememberEmbouchureRestore(
+    settings: Map<String, String>,
+    seededPresets: Map<Pair<Engine, Enum<*>>, String>,
+    reopenedPads: Set<Pair<Engine, Enum<*>>>,
+): EmbouchureRestore {
+    val reader = LocalSynthPresetReader.current
+    return remember { EmbouchureRestore(settings, seededPresets, reopenedPads, reader) }
+}
+
+/** Restore only the selected model's controls; a legacy BRASS recipe never inherits GROW. */
+private fun restoredMacros(
+    engine: Engine,
+    voice: Enum<*>,
+    settings: Map<String, String>,
+    patch: Patch?,
+): Map<String, Float> {
+    val defaults = if (patch is EmbouchurePatch) Embouchure.defaults(patch.voice, patch.model)
+        else engine.defaults(voice)
+    return defaults.mapValues { (name, fallback) ->
+        val value = settings[macroSettingsKey(engine, voice, name)]?.toFloatOrNull()
+            ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f)
+            ?: if (patch is EmbouchurePatch) patch.macros[name] ?: fallback else fallback
+        if (name == "TUNE" && patch is EmbouchurePatch) {
+            val remaining = (Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat()
+            value.coerceIn(0f, remaining.coerceIn(0f, 1f))
+        } else value
+    }
+}
 
 /** ORIGAMI's source, pitch and frozen model survive editing away from a preset name. */
 private fun restoredOrigamiPatches(settings: Map<String, String>): Map<OrigamiVoice, OrigamiPatch> =
@@ -434,6 +539,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
+    is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     else -> base
 }
 
@@ -496,6 +602,10 @@ private fun editableMacros(editable: Patch): Map<String, Float> =
  *    saved root, strike velocity and model after the preset has been edited.
  *    Where a `patch.` entry and a `recipe.` entry both exist for a voice,
  *    the `patch.` one is the fresher and is adopted.
+ *  - `patch.EMBOUCHURE.<VOICE>` — the active player recipe, including its
+ *    model, gesture, MIDI and velocity. This keeps an edited BRASS GROW
+ *    patch in its four-control mode after returning to SYNTH. It is fresher
+ *    than a `recipe.` entry and is adopted.
  *  - `scanned.recipe.<VOICE>` — SCANNED CHAIN's complete pad recipe (its saved
  *    shape, physical settings and any recalled effects), so a trip to KIT to
  *    hear the rendered pad returns to the same sound.
@@ -564,6 +674,10 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
+    val seededPresets = remember { storedPresetNames(settings) }
+    // EMBOUCHURE's restore state, one holder rather than four locals: this composable is already
+    // near the limit the Kotlin/D8 toolchain verifies (a few more locals failed device verification).
+    val embouchureRestore = rememberEmbouchureRestore(settings, seededPresets, seededWork.keys)
     val restoredOhm = remember { restoredOhmPatch(settings) }
     // Custom coordinates and recalled pad effects are part of this voice's work,
     // including a trip to KIT to hear the rendered pad. The navigation bag holds
@@ -590,7 +704,7 @@ fun SynthScreen(
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {
                 for (v in e.voices()) {
-                    val origami = if (e == Engine.ORIGAMI) restoredOrigami[v as OrigamiVoice] else null
+                    val origami =if (e == Engine.ORIGAMI) restoredOrigami[v as OrigamiVoice] else null
                     val orphica = if (e == Engine.ORPHICA) {
                         storedOrphicaPatch(settings, v as OrphicaMaterial)
                             ?: (Presets.forVoice(e.name, v.name).firstOrNull {
@@ -618,7 +732,9 @@ fun SynthScreen(
                         restoredScanned != null -> defaults + restoredScanned
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
-                        else -> defaults.mapValues { (name, fallback) ->
+                        // EMBOUCHURE restores only the selected model's controls; a legacy
+                        // BRASS recipe never inherits GROW and GROW never inherits model 2.
+                        else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                                 ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                         }
@@ -653,7 +769,6 @@ fun SynthScreen(
     // editing a slider must not discard saved pitch, velocity or model on
     // a trip to the grid. Older bags fall back to their named factory
     // preset; a YOURS preset is adopted when its shelf read lands below.
-    val seededPresets = remember { storedPresetNames(settings) }
     val loadedPatchesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Patch>().apply {
             for (patch in SynthDrafts.read(settings)) {
@@ -673,6 +788,9 @@ fun SynthScreen(
             // complete snapshots below; those are written from this same loaded
             // patch, so they carry the same recipe.
             for ((pair, work) in seededWork) put(pair, editablePreset(requireNotNull(work.recipe.patch)))
+            // EMBOUCHURE's own newest recipe (its model, gesture, pitch and velocity) beats the
+            // draft and preset restores above, but never a reopened pad's working recipe.
+            embouchureRestore.seedInto(this, seededWork.keys)
             for (v in ShoalVoice.entries) {
                 val pair = Engine.SHOAL to v
                 val restored = storedShoalPatch(settings, v)
@@ -716,7 +834,13 @@ fun SynthScreen(
     // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
     // (engine, voice), so this is the one place the bag needs to follow; the
     // pairs the player left earlier already wrote theirs when they were open.
-    LaunchedEffect(engine, voice, macros) {
+    LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
+        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
+        if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        if (engine == Engine.EMBOUCHURE) {
+            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
+            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
+        }
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     val loadedRecipes = loadedPatchesByVoice.toMap()
@@ -803,6 +927,12 @@ fun SynthScreen(
                 buildCurrentPatch(engine.patchDisplayName(voice)).toJsonText()
         }
     }
+    LaunchedEffect(engine, voice, macros, loadedPatch, embouchureRestore.pending.containsKey(engine to voice)) {
+        if (engine == Engine.EMBOUCHURE && !embouchureRestore.pending.containsKey(engine to voice)) {
+            settings[embouchureSettingsKey(voice as EmbouchureVoice)] =
+                buildCurrentPatch(engine.patchDisplayName(voice)).toJsonText()
+        }
+    }
     fun keepOhmPatch(patch: OhmPatch) {
         loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] = patch
         // Write with the edit, before navigation can dispose remember-state.
@@ -867,6 +997,7 @@ fun SynthScreen(
     }
     fun updateMacro(name: String, value: Float) {
         touched = true
+        embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
         val values = macrosByVoice.getValue(engine to voice) + (name to bounded)
@@ -925,7 +1056,8 @@ fun SynthScreen(
         // otherwise leave PUNCH's slider crashing on getValue the moment
         // someone loaded a pre-PUNCH preset.
         // Physical ORPHICA settings, OSPREY's saved model, OVERLAP's saved
-        // model and CREASE's saved model all select their displayed defaults;
+        // model, CREASE's saved model and EMBOUCHURE's saved model (BRASS GROW
+        // has its own four controls) all select their displayed defaults;
         // loading a partial recipe keeps its sound.
         val loadedMacros = editableDefaults(engine.defaults(voice), editable) + editableMacros(editable)
         macrosByVoice[engine to voice] = loadedMacros
@@ -933,6 +1065,7 @@ fun SynthScreen(
             keepOhmPatch(editable.copy(macros = loadedMacros))
             settings[presetSettingsKey(Engine.OHM, OhmVoice.STRING)] = patch.name
         }
+        embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice[engine to voice] = patch.name
     }
 
@@ -948,7 +1081,7 @@ fun SynthScreen(
     var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
-            val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+            val (live, bin) = withContext(Dispatchers.IO) { embouchureRestore.readShelf(shelfRoot) }
             userPresets = live
             binnedPresets = bin
             // The YOURS presets the bag named (§3.6), now that the shelf has
@@ -956,7 +1089,10 @@ fun SynthScreen(
             // preset was forgotten while the lab was away. Live state is
             // re-read here, after the await: a preset tapped meanwhile wins.
             for ((pair, name) in seededPresets) {
-                if (currentPresetByVoice[pair] != name) continue
+                if (currentPresetByVoice[pair] != name) {
+                    embouchureRestore.pending.remove(pair)
+                    continue
+                }
                 val factory = Presets.byName(pair.first.name, pair.second.name, name)
                 // SHOAL always holds a complete snapshot, so a YOURS name must still be adopted whole.
                 if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) {
@@ -966,6 +1102,7 @@ fun SynthScreen(
                         UserPresets.forVoice(live, pair.first.name, pair.second.name).none { it.name == name }) {
                         currentPresetByVoice.remove(pair)
                     }
+                    embouchureRestore.pending.remove(pair)
                     continue
                 }
                 val mine = UserPresets.forVoice(live, pair.first.name, pair.second.name)
@@ -973,6 +1110,9 @@ fun SynthScreen(
                 if (mine != null) {
                     val editable = editablePreset(mine)
                     loadedPatchesByVoice[pair] = editable
+                    if (editable is EmbouchurePatch) {
+                        macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
+                    }
                     if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
                     // The named preset is being restored whole. A partial legacy
                     // OVERLAP recipe must fill its sliders from its saved model.
@@ -980,6 +1120,7 @@ fun SynthScreen(
                         macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
                     }
                 } else currentPresetByVoice.remove(pair)
+                embouchureRestore.pending.remove(pair)
             }
         } catch (e: CancellationException) {
             throw e
@@ -1070,6 +1211,7 @@ fun SynthScreen(
                 }
                 userPresets = all
                 currentPresetByVoice[savedEngine to savedVoice] = saved.name
+                embouchureRestore.pending.remove(savedEngine to savedVoice)
                 onToast(if (check is UserPresets.Check.Replaces) Copy.presetReplaced(name) else Copy.presetSaved(name))
             } catch (e: CancellationException) {
                 throw e
@@ -2374,6 +2516,13 @@ fun SynthScreen(
                     }
                 }
 
+                if (loadedPatch is EmbouchurePatch && loadedPatch.model == Embouchure.BRASS_GROW_MODEL) {
+                    TapeText(
+                        "GROW: ROUGH → CENTERED → EXPRESSIVE. HELD SAMPLE EXCLUDES ATTACK; PADS PLAY ONE LOOP LENGTH.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                    )
+                }
+
                 if (engine == Engine.SCANNED_CHAIN) {
                     key(voice) {
                         ScannedShapeControls(
@@ -2495,8 +2644,10 @@ fun SynthScreen(
                 }
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
-                val macroSpecs = remember(engine, voice, creaseModel) {
+                // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model) {
                     if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
+                    else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else engine.macrosFor(voice)
                 }
                 val registersRoot = if (engine == Engine.REGISTERS)
@@ -2584,6 +2735,7 @@ fun SynthScreen(
                         modifier = Modifier.weight(1f),
                     ) {
                         touched = true
+                        embouchureRestore.pending.remove(engine to voice)
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
@@ -3798,7 +3950,7 @@ private enum class Engine {
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
         OBBLIGATO -> Obbligato.render(macros)
-        ALLOY -> Alloy.render(voice as AlloyVoice, macros)
+        ALLOY -> Alloy.render(voice as AlloyVoice, macros, config = Alloy.defaultConfigFor(voice))
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)

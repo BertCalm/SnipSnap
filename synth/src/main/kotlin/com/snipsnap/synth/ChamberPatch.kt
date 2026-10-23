@@ -25,7 +25,7 @@ data class ChamberPatch(
             "CHAMBER midi must be ${Chamber.MIDI_MIN}..${Chamber.MIDI_MAX}"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "CHAMBER velocity must be 0..1" }
-        require(model == Chamber.MODEL_VERSION) { "unsupported chamber model $model" }
+        require(model in 1..Chamber.MODEL_VERSION) { "unsupported chamber model $model" }
         require((macros["HOLD"] ?: 0f) == 0f) { "CHAMBER first-listen prototype supports finite strikes only; HOLD must be 0" }
     }
 
@@ -54,7 +54,7 @@ data class ChamberPatch(
             fun required(key: String): JsonValue = obj[key]?.takeUnless { it is JsonValue.Null }
                 ?: throw JsonException("CHAMBER patch has no $key")
             val model = required("model").int()
-            if (model != Chamber.MODEL_VERSION) throw JsonException("unsupported chamber model $model")
+            if (model !in 1..Chamber.MODEL_VERSION) throw JsonException("unsupported chamber model $model")
             val midi = required("midi").int()
             val velocity = required("velocity").num()
             if (!velocity.isFinite() || velocity !in 0.0..1.0) throw JsonException("CHAMBER velocity must be 0..1")

@@ -94,10 +94,13 @@ object PadSheet {
     /**
      * Row seven, the pedals: the guitar-pedal words over the rack's own sections (the pedal board's
      * Stage 0, docs/superpowers/specs/2026-10-04-pedal-board-design.md). The one row grouped by what an
-     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. WAH, FUZZ, TREM
-     * and FLANGE join it as their sections pass their listening gates.
+     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. Derived from the
+     * pedal library ([com.snipsnap.synth.Pedals]): the entries that passed their gate, in library
+     * order, so WAH, TREM, FLANGE and the rest join the row the moment their `gated` flag turns
+     * (docs/superpowers/specs/2026-10-21-pedal-library-and-board-design.md). A board entry (RIG) is not a
+     * character and waits for the picker (R2) to draw it.
      */
-    val PEDAL_SEGMENTS: List<String> = listOf("DRIVE", "COMP")
+    val PEDAL_SEGMENTS: List<String> = com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }.map { it.word }
 
     /**
      * All rows, in drawing order. Six of the seven are grouped by what an
@@ -216,13 +219,12 @@ object PadSheet {
         "ENSEMBLE" to "ensembled",
         // The same section as six independent players: one instrument swirled, or several playing.
         "SECTION" to "sectioned",
-        // A drive pedal: VALVE at the top of its gain law with the speaker barely in.
-        "DRIVE" to "driven",
-        // A compressor pedal for now: the strongest SQUASH there is, alone.
-        "COMP" to "compressed",
         // "crushed" stays off the card: CRUSH already draws the crunchier
         // era. It remains reachable from `treat`.
-    )
+    ) +
+        // Row seven's words map to their characters by the library's own say-so (DRIVE to `driven`,
+        // COMP to `compressed`): one quantity in one place, so a pedal is declared once.
+        com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }.associate { it.word to it.key }
 
     private val KEYED_FOR: Map<String, String> = mapOf(
         // Every partial talked into the key.
@@ -351,6 +353,24 @@ object PadSheet {
     }
 
     /**
+     * The pedal board a pad carries (`{"recipe":2,"pedals":{...}}`, written by
+     * `KitBuilderModel.pedalPad`), or null for any other recipe. [read] does
+     * not see it on purpose: a board is several picks with their own AMTs,
+     * and [Applied] names one; lighting one chip for many would be the
+     * "card claims one treatment while the sound carries two" lie the
+     * September UAT found. The picker (R2) reads this and lights each pick.
+     * Reads defensively: a damaged or future board is no board here.
+     */
+    fun readPedals(recipe: JsonValue.Obj?): com.snipsnap.synth.PedalBoard? {
+        if (recipe == null || "pedals" !in recipe.entries || "recipe" !in recipe.entries) return null
+        return try {
+            com.snipsnap.synth.PadRecipe.fromJsonValue(recipe).pedals
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    /**
      * What [NONE] can do on a pad — the answer to the question every other
      * chip on the card already answers, and the one NONE used to duck.
      *
@@ -405,11 +425,12 @@ object PadSheet {
      * kit's bin (`KitBuilderModel.binContents()`).
      *
      * Every recipe reader is consulted: SMEAR and DUST ride their own
-     * shapes and [read] cannot see them (see the object KDoc), but a
-     * smeared or dusted pad is every bit as un-treatable as an aged one.
+     * shapes and [read] cannot see them (see the object KDoc), and a pedal
+     * board rides [readPedals]'s; a smeared, dusted or pedalled pad is every
+     * bit as un-treatable as an aged one.
      */
     fun unTreatState(pad: KitPad, binned: Set<String>): UnTreat {
-        if (read(pad.recipe) == null && readSmear(pad.recipe) == null && readDust(pad.recipe) == null) return UnTreat.NOTHING
+        if (read(pad.recipe) == null && readSmear(pad.recipe) == null && readDust(pad.recipe) == null && readPedals(pad.recipe) == null) return UnTreat.NOTHING
         if (pad.sampleFile !in binned) return UnTreat.NOT_BINNED
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         return if (files.all { it in binned }) UnTreat.READY else UnTreat.GHOSTS_POSTDATE
