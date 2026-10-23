@@ -1,14 +1,18 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -77,9 +81,11 @@ class SynthScreenTest : ComposeScreenTest() {
         settings.putIfAbsent("voice", "STRING")
         setPhoneContent {
             key(generation) {
-                SynthScreen(entry = null, shelfRoot = ohmShelfRoot, onToast = {}, onKitUpdated = {},
-                    onShelfAssetWritten = {}, onDroneToLoop = { _, _, _ -> }, onOpenSurface = {},
-                    appScope = appScope, settings = settings)
+                Box(Modifier.testTag("ohm-synth-generation-$generation")) {
+                    SynthScreen(entry = null, shelfRoot = ohmShelfRoot, onToast = {}, onKitUpdated = {},
+                        onShelfAssetWritten = {}, onDroneToLoop = { _, _, _ -> }, onOpenSurface = {},
+                        appScope = appScope, settings = settings)
+                }
             }
         }
     }
@@ -117,6 +123,9 @@ class SynthScreenTest : ComposeScreenTest() {
             generation++
         }
         pump()
+        waitFor("the recreated OHM editor", timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("ohm-synth-generation-$generation").fetchSemanticsNodes().size == 1
+        }
         button("OHM STEADY").assertIsSelected()
         assertEquals((64 - 48) / 24f, progress("NOTE"), .0001f)
         assertEquals(.35f, progress("VELOCITY"), .0001f)

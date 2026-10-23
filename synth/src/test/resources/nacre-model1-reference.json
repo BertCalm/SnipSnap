@@ -1,0 +1,93 @@
+{
+  "provenance": {
+    "commit": "64f21e03240175a20f6cbe6167b61f8d55a637e9",
+    "engineSourceSha256": "e6036060bc7d3ac760a1443b0ebc0eb42894d782168775306b691137b36a555c",
+    "source": "Published first audition diagnostics/baseline.json, recipes/baseline.json and traces/events/baseline.csv; float hashes are little-endian Float.toRawBits(), not PCM WAV hashes."
+  },
+  "recipe": {
+    "engine": "NACRE",
+    "version": 1,
+    "name": "The paired gesture",
+    "voice": "PEARL",
+    "macros": {
+      "TOUCH": 0.30000001192092896,
+      "DUET": 0.15000000596046448,
+      "CURRENT": 0.20000000298023224,
+      "VENUE": 0.15000000596046448,
+      "BLOOM": 0.3499999940395355,
+      "HOLD": 0
+    },
+    "model": 1,
+    "midi": 48,
+    "velocity": 1,
+    "seed": "7"
+  },
+  "nativeSamplesSha256": "fd0443d1a09e5cb166d9474853b637802d8404e1f0f5074884d12cd2987ae4df",
+  "prelevelSamplesSha256": "83fe0627de26825864ffe36f4184189fa265b65070c0804aa9a335723d93b050",
+  "events": [
+    {
+      "performer": "bass",
+      "stringId": 0,
+      "timeSeconds": 0.018262279070043533,
+      "frequencyHz": 130.81277465820312,
+      "strength": 0.5232749747865019,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 1,
+      "timeSeconds": 0.03400413536297164,
+      "frequencyHz": 261.62554931640625,
+      "strength": 0.1310066318635715,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 0,
+      "timeSeconds": 0.03875178666364008,
+      "frequencyHz": 261.62554931640625,
+      "strength": 0.38539375268023335,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 2,
+      "timeSeconds": 0.04974599165589973,
+      "frequencyHz": 523.2510986328125,
+      "strength": 0.06279739148939151,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 1,
+      "timeSeconds": 0.05298000292951244,
+      "frequencyHz": 523.2510986328125,
+      "strength": 0.11677645682446483,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 3,
+      "timeSeconds": 0.06548784794882782,
+      "frequencyHz": 1046.502197265625,
+      "strength": 0.030105413654089704,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 2,
+      "timeSeconds": 0.06720821919538479,
+      "frequencyHz": 1046.502197265625,
+      "strength": 0.0677443813932154,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 3,
+      "timeSeconds": 0.08143643546125715,
+      "frequencyHz": 2093.00439453125,
+      "strength": 0.03930318537331126,
+      "direction": "ascending"
+    }
+  ]
+}
