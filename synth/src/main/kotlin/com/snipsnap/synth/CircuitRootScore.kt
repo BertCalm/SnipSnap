@@ -7,6 +7,9 @@ package com.snipsnap.synth
  */
 internal object CircuitRootScore {
     const val invitationGain = 1.02
+    // The closing held call occurs under the loop's quieter shared arch.
+    // More pressure on that actual invitation lets its reflected cue be heard.
+    const val heldInvitationGain = 1.08
     const val quietSupportGain = .50
 
     fun permits(event: Circuit.Event, cell: Int, cells: Int, held: Boolean): Boolean {
@@ -30,7 +33,7 @@ internal object CircuitRootScore {
     /** Slight emphasis on an actual tube invitation, not an unconditional reply. */
     fun cueEnergyScale(event: Circuit.Event, cell: Int, cells: Int, held: Boolean): Double =
         if (!event.reply && event.source == 1 && event.reason == "answer-invitation" &&
-            allowsReply(cell, cells, held)) invitationGain else 1.0
+            allowsReply(cell, cells, held)) (if (held) heldInvitationGain else invitationGain) else 1.0
 
     /** All retained stresses scale the gesture's energy before excitation. */
     fun energyScale(event: Circuit.Event, cell: Int, cells: Int, held: Boolean): Double {

@@ -62,7 +62,7 @@ class CircuitRootScoreTest {
         assertEquals(0.0, CircuitRootScore.energyScale(support, 2, 3, false))
         assertTrue(CircuitRootScore.permits(clay, 2, 3, false))
         assertEquals(1.0, CircuitRootScore.cueEnergyScale(invitation, 0, 8, true))
-        assertEquals(1.02, CircuitRootScore.cueEnergyScale(invitation, 1, 8, true))
+        assertEquals(1.08, CircuitRootScore.cueEnergyScale(invitation, 1, 8, true))
         assertEquals(1.0, CircuitRootScore.cueEnergyScale(invitation.copy(reason = "opening-pulse"), 1, 8, true))
         assertEquals(1.0, CircuitRootScore.cueEnergyScale(clay, 1, 8, true))
     }
