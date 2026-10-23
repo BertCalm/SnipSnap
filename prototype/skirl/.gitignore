@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+*.wav
+*.npz
+*.zip
+*_spectrogram.png
+motion_diagnostics.png
+reference/audio/

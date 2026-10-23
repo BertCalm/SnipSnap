@@ -85,6 +85,10 @@ import com.snipsnap.synth.ShoalMaterial
 import com.snipsnap.synth.ShoalPatch
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
+import com.snipsnap.synth.Skirl
+import com.snipsnap.synth.SkirlPatch
+import com.snipsnap.synth.SkirlPresets
+import com.snipsnap.synth.SkirlVoice
 import com.snipsnap.synth.Tessera
 import com.snipsnap.synth.TesseraPatch
 import com.snipsnap.synth.Tangle
@@ -165,6 +169,8 @@ import kotlin.random.Random
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  * TIDAL offers finite PAIR/STREAM encounter prototypes with native note/velocity,
  * exact 64-bit --seed, versioned models, and complete --patch replay. HOLD reconstruction is deferred.
+ * SKIRL offers provisional finite ROLL/WHIRR runouts with native note/velocity
+ * and complete --patch replay. It writes the model and controls beside each WAV; HOLD is unavailable.
  * TRIO accepts `--tempo 60..200 --beats 1..4`; the finite gesture must fit within two seconds.
  * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
  */
@@ -189,8 +195,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER and TIDAL, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, SkirlPatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER, TIDAL and SKIRL, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -222,6 +228,7 @@ object SynthCommand {
             ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
             TidalPatch.ENGINE -> TidalVoice.entries.firstOrNull { it.name == voice }?.let { TidalPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
+            SkirlPatch.ENGINE -> SkirlVoice.entries.firstOrNull { it.name == voice }?.let { SkirlPresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)
         }
         if (presets.isEmpty()) throw CliError("no such engine/voice: $engine $voice")
@@ -264,6 +271,7 @@ object SynthCommand {
                 FlotillaPatch.ENGINE -> Flotilla.MIDI_MIN..Flotilla.MIDI_MAX
                 TesseraPatch.ENGINE -> Tessera.ROOT_MIDI..(Tessera.ROOT_MIDI + Tessera.TUNE_SEMITONES)
                 PitchwheelPatch.ENGINE -> Pitchwheel.MIDI_MIN..Pitchwheel.MIDI_MAX
+                SkirlPatch.ENGINE -> Skirl.MIDI_MIN..Skirl.MIDI_MAX
                 RegistersPatch.ENGINE -> 24..96
                 TanglePatch.ENGINE -> Tangle.MIN_MIDI..Tangle.MAX_MIDI
                 CreasePatch.ENGINE -> Crease.MIDI_MIN..Crease.MIDI_MAX
@@ -297,7 +305,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO and OHM, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, SKIRL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO and OHM, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -397,6 +405,7 @@ object SynthCommand {
                 is CisternPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is FlotillaPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is PitchwheelPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is SkirlPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RegistersPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is LacquerPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -528,7 +537,7 @@ object SynthCommand {
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
-            if (patch is ObbligatoPatch || patch is TidalPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
+            if (patch is ObbligatoPatch || patch is TidalPatch || patch is SkirlPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"

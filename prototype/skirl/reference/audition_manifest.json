@@ -1,0 +1,61 @@
+{
+  "title": "Skirl second audition: mechanically derived motion",
+  "source_commit": "4e36a2bf8cf8bfb07dba35379558b54429b5d73d",
+  "gesture": "knock -> flutter -> whirr -> shudder -> ringing stillness",
+  "primary_comparison": "audio/00_compare_original_texture_late_C3.wav",
+  "comparison_order": [
+    {
+      "file": "01_original_synthetic_C3.wav",
+      "label": "Original synthetic motion",
+      "start_seconds": 0.0,
+      "end_seconds": 5.0
+    },
+    {
+      "file": "09_motion_fine_texture_C3.wav",
+      "label": "Solved disk motion with tilt-engaged texture",
+      "start_seconds": 5.6,
+      "end_seconds": 10.888163265306122
+    },
+    {
+      "file": "10_late_runout_texture_C3.wav",
+      "label": "Shallow launch with later valid finish",
+      "start_seconds": 11.488163265306122,
+      "end_seconds": 17.675374149659863
+    }
+  ],
+  "controlled_pair": "audio/00_original_then_motion_C3.wav",
+  "controlled_pair_note": "Original heard synthetic curve first, solved disk with one coarse feature second; fixed acoustic modal tables.",
+  "recommended_individuals": [
+    "audio/09_motion_fine_texture_C3.wav",
+    "audio/10_late_runout_texture_C3.wav",
+    "audio/11_motion_fine_texture_C2.wav"
+  ],
+  "boundary_fixture": "audio/08_original_default_boundary_C3.wav",
+  "boundary_fixture_note": "The original proposed macro defaults exceed assumed static friction; this fixture withdraws excitation without a successful shudder.",
+  "physical_model": "Constraint-eliminated no-slip rigid cylinder Newton--Euler equations; independently audited numerically for tested cases.",
+  "authored_readouts": [
+    "Periodic support azimuth and body-frame rim texture maps",
+    "Inclination-controlled fine feature transmission",
+    "Finite shudder funded by remaining-energy proxy"
+  ],
+  "reproduction": [
+    "Install requirements.txt in a Python3.12 environment",
+    "python3 verify_mechanics.py",
+    "python3 audit_mechanics.py",
+    "python3 contact_budget.py",
+    "python3 render_audition.py",
+    "python3 plot_motion.py"
+  ],
+  "ledger": {
+    "verified": "Repository conventions at named snapshot; mathematical reduction audited against conservative fixtures and independent finite differences.",
+    "measured": "Python mechanics, PCM16 audio, energy accounting, repeatability and selected pitch windows; reports included.",
+    "proposed": "Geometry, resistance/static friction, texture transmission, modal tables, shudder mapping and production latency targets.",
+    "heard": "Owner liked first synthetic-motion proof; second audition has not yet received listening feedback."
+  },
+  "limits": [
+    "Not a Kotlin engine or measured real disk",
+    "No air-film, slip continuation, elastic deformation or final impact model",
+    "RMS comparison leveling is a Python proxy for house perceived loudness",
+    "No HOLD or phone latency validation"
+  ]
+}

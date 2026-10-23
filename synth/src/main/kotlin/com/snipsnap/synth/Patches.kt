@@ -80,6 +80,7 @@ object Patches {
             SpoolPatch.ENGINE -> SpoolPatch.fromJsonValue(value)
             TesseraPatch.ENGINE -> TesseraPatch.fromJsonValue(value)
             PitchwheelPatch.ENGINE -> PitchwheelPatch.fromJsonValue(value)
+            SkirlPatch.ENGINE -> SkirlPatch.fromJsonValue(value)
             EmbouchurePatch.ENGINE -> EmbouchurePatch.fromJsonValue(value)
             BellowsPatch.ENGINE -> BellowsPatch.fromJsonValue(value)
             MurmurPatch.ENGINE -> MurmurPatch.fromJsonValue(value)

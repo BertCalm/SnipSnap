@@ -1,0 +1,67 @@
+{
+  "measuredBy": "Kotlin Skirl.render in this JVM; no performance assertions",
+  "javaVersion": "21.0.12.1",
+  "os": "Linux",
+  "processors": 4,
+  "voices": [
+    {
+      "voice": "ROLL",
+      "model": 1,
+      "midi": 48,
+      "velocity": 1,
+      "durationSeconds": 5.42031746031746,
+      "jvmWarmupRenders": 3,
+      "warmRepeats": 7,
+      "coldMechanicsCacheTotalMillis": 195.808631,
+      "warmMedianTotalMillis": 148.846383,
+      "warmMinMillis": 136.505275,
+      "warmMaxMillis": 156.165537,
+      "warmMillis": [
+        136.505275,
+        141.118583,
+        141.743467,
+        148.846383,
+        149.007363,
+        155.991477,
+        156.165537
+      ],
+      "warmTargetMillis": 50,
+      "warmTargetMet": false,
+      "separateWarmInspectStageMillis": {
+        "preparation": 0.080458,
+        "synthesis": 84.220598,
+        "output": 67.23252
+      }
+    },
+    {
+      "voice": "WHIRR",
+      "model": 1,
+      "midi": 48,
+      "velocity": 1,
+      "durationSeconds": 6.41140589569161,
+      "jvmWarmupRenders": 3,
+      "warmRepeats": 7,
+      "coldMechanicsCacheTotalMillis": 181.955558,
+      "warmMedianTotalMillis": 160.732035,
+      "warmMinMillis": 152.942545,
+      "warmMaxMillis": 176.688094,
+      "warmMillis": [
+        152.942545,
+        159.712694,
+        159.797093,
+        160.732035,
+        171.633682,
+        173.618664,
+        176.688094
+      ],
+      "warmTargetMillis": 50,
+      "warmTargetMet": false,
+      "separateWarmInspectStageMillis": {
+        "preparation": 0.056542,
+        "synthesis": 110.844628,
+        "output": 72.395165
+      }
+    }
+  ],
+  "limitations": "Desktop/container measurements, not Android. Cold means cleared mechanics cache after JVM warmup. Stage timings use a separate diagnostic render and include its copy overhead."
+}

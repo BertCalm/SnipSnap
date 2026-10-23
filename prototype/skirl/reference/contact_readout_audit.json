@@ -1,0 +1,28 @@
+{
+  "status": "Independent contact-readout audit, Python, not heard",
+  "curated_recomputed_cases": [
+    {
+      "fine_texture": false,
+      "event_count": 30,
+      "assigned_rolling": 0.4789297988143262,
+      "postfilter_energy": 0.5028762845327459,
+      "max_feature_phase_error_cycles": 3.552713678800501e-15,
+      "rest_peak": 0.0
+    },
+    {
+      "fine_texture": true,
+      "event_count": 118,
+      "assigned_rolling": 0.47801847436953293,
+      "postfilter_energy": 0.5019193903696264,
+      "max_feature_phase_error_cycles": 1.4210854715202004e-14,
+      "rest_peak": 0.0
+    }
+  ],
+  "reported_cases_checked": 10,
+  "fine_vs_coarse_assigned_ratio": 0.9980971648724941,
+  "limits": [
+    "The finite-source input proxy is not a bound on radiated acoustic energy.",
+    "Fine-feature transmission follows measured tilt but is an authored acoustic mapping.",
+    "Only the curated pair was rerendered independently here; all other cases were checked from their saved event/energy reports."
+  ]
+}

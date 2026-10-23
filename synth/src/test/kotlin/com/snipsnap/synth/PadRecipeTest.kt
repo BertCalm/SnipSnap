@@ -60,6 +60,7 @@ class PadRecipeTest {
         UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
         PitchwheelPatch("Wheel Test", PitchwheelVoice.RECOIL, mapOf("ADHESION" to 0.8f), midi = 55, velocity = 0.6f),
+        SkirlPatch("Rolling Test", SkirlVoice.WHIRR, mapOf("EDGE" to .7f), midi = 55, velocity = .6f),
         AlloyPatch("Hybrid Test", AlloyVoice.KEY, mapOf("FUSE" to 0.6f), midi = 55, velocity = 0.6f),
         StoopPatch("Groove Test", StoopVoice.TINE, mapOf("TOUCH" to 0.6f), midi = 55, velocity = 0.6f, shadowInterval = 12),
         TanglePatch("Knot Test", TangleVoice.BASS, mapOf("TANGLE" to 0.6f), midi = 36, velocity = 0.6f),

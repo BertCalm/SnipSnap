@@ -1,0 +1,36 @@
+{
+  "status": "Final native audition, standalone JVM run after the complete test gate",
+  "clips": 106,
+  "pitch_windows": 212,
+  "quality_outliers": [],
+  "pitch_outliers": [],
+  "worst_absolute_cents": 18.342176866757953,
+  "minimum_pitch_confidence": 0.7973974347114563,
+  "min_loudness": 0.1833999902009964,
+  "max_abs_dc": 1.6696168421002745e-06,
+  "min_normal": 2.800591331658399,
+  "max_friction": 0.6751297968164223,
+  "max_relative_energy_error": 9.729906991793702e-08,
+  "earlyWindow": {
+    "fromSeconds": 0.15,
+    "lengthSeconds": 0.25
+  },
+  "tailWindow": {
+    "fromRestSeconds": 0.05,
+    "lengthSeconds": 0.35
+  },
+  "guards": {
+    "absoluteCentsExclusive": 50,
+    "minimumConfidence": 0.3
+  },
+  "worst_pitch_case": {
+    "clip": "whirr-note-36",
+    "window": "rollingPitch",
+    "confidence": 0.8091071844100952
+  },
+  "minimum_confidence_case": {
+    "clip": "roll-lean1-brake0",
+    "window": "rollingPitch",
+    "absolute_cents": 5.717208003966901
+  }
+}

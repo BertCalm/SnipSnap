@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "engine": "SKIRL",
+  "feedback": [
+    {
+      "date": "2026-10-22",
+      "subject": "first Python synthetic-motion audition",
+      "owner_message_exact": "Sounds pretty cool",
+      "interpretation": "Positive reaction to the audition; no per-clip preference recorded."
+    },
+    {
+      "date": "2026-10-23",
+      "subject": "second Python mechanics-driven audition",
+      "owner_message_exact": "Sounds good, what's next? Use Luthier",
+      "positive_excerpt": "Sounds good",
+      "interpretation": "Positive reaction to the audition and request to continue using Luthier; no per-clip preference recorded."
+    }
+  ],
+  "kotlin_owner_listening": "pending",
+  "limits": [
+    "The owner messages do not identify a favorite comparison clip.",
+    "Python feedback does not constitute listening approval of Kotlin output.",
+    "Historical copied reports may predate these feedback messages; this file records the later feedback without rewriting those snapshots."
+  ]
+}

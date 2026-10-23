@@ -19,6 +19,8 @@ import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.Skirl
+import com.snipsnap.synth.SkirlPatch
 import com.snipsnap.synth.StoopPatch
 import kotlin.math.roundToInt
 
@@ -99,6 +101,7 @@ object Spread {
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is SkirlPatch -> Skirl.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()

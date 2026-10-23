@@ -1,0 +1,4757 @@
+{
+  "status": "Python reference calibration; finite grid, not proof of a continuum or Kotlin behavior",
+  "time_scale": 1.0,
+  "assumed_available_static_friction": 0.8,
+  "calibration_friction_ceiling": 0.72,
+  "mappings": {
+    "ROLL": {
+      "initial_deg": "18+8*LEAN",
+      "mu": ".006+.004*BRAKE",
+      "terminal_deg": ".42*initial_deg-1.1+2*(1-COLLAPSE)"
+    },
+    "WHIRR": {
+      "initial_deg": "8+4*LEAN",
+      "mu": ".004+.002*BRAKE",
+      "terminal_deg": ".42*initial_deg-1.4+1.2*(1-COLLAPSE)"
+    }
+  },
+  "tolerances": {
+    "rtol": 2e-09,
+    "atol": 2e-11,
+    "max_step_s": 0.004,
+    "diagnostic_sampling_hz": 500
+  },
+  "summary": {
+    "complete": true,
+    "trajectory_count": 84,
+    "macro_grid_cases": 420,
+    "duration_min_s": 1.8731249684274107,
+    "duration_max_s": 5.249749370513641,
+    "max_required_friction": 0.6751299714012093,
+    "min_normal_reaction_N": 2.8006368016322662,
+    "max_energy_work_error_relative": 7.829451955735688e-09
+  },
+  "cases": [
+    {
+      "voice": "ROLL",
+      "lean": 0.0,
+      "brake": 0.0,
+      "initial_deg": 18.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.459999999999999,
+          "duration_s": 3.164659731849109,
+          "end_contact_hz": 11.780337148558225,
+          "max_friction": 0.4533484223524615,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 7.959999999999999,
+          "duration_s": 3.3028431043581437,
+          "end_contact_hz": 12.411420882715317,
+          "max_friction": 0.47951533432269716,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.459999999999999,
+          "duration_s": 3.49496714223333,
+          "end_contact_hz": 12.783415440727566,
+          "max_friction": 0.5170782089048933,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 6.959999999999999,
+          "duration_s": 3.744855015092208,
+          "end_contact_hz": 12.813436448122438,
+          "max_friction": 0.5690466000619694,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.459999999999999,
+          "duration_s": 3.9335242032554625,
+          "end_contact_hz": 13.362555046618452,
+          "max_friction": 0.6109248837194967,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6109248837194967,
+      "min_normal_N": 2.860199696830456,
+      "energy_error_relative": 1.0280192023273646e-10,
+      "nfev": 14792
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.0,
+      "brake": 0.25,
+      "initial_deg": 18.0,
+      "mu": 0.007,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.459999999999999,
+          "duration_s": 2.6990449143596362,
+          "end_contact_hz": 11.873346160842637,
+          "max_friction": 0.450193594387429,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 7.959999999999999,
+          "duration_s": 2.8264167184186673,
+          "end_contact_hz": 12.445414626535266,
+          "max_friction": 0.47846432719239007,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.459999999999999,
+          "duration_s": 3.005269570292615,
+          "end_contact_hz": 12.705185284423434,
+          "max_friction": 0.5194624792957033,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 6.959999999999999,
+          "duration_s": 3.1873727233917384,
+          "end_contact_hz": 13.00333835481273,
+          "max_friction": 0.5634437920307998,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.459999999999999,
+          "duration_s": 3.367114354687298,
+          "end_contact_hz": 13.402549292901517,
+          "max_friction": 0.6096388463384318,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6096388463384318,
+      "min_normal_N": 2.8471145249347165,
+      "energy_error_relative": 5.6368519791744156e-11,
+      "nfev": 12677
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.0,
+      "brake": 0.5,
+      "initial_deg": 18.0,
+      "mu": 0.008,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.459999999999999,
+          "duration_s": 2.349395788841555,
+          "end_contact_hz": 11.970494558548598,
+          "max_friction": 0.4475015116217665,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 7.959999999999999,
+          "duration_s": 2.4692512962674504,
+          "end_contact_hz": 12.478078658070316,
+          "max_friction": 0.477689618669397,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.459999999999999,
+          "duration_s": 2.641512839167344,
+          "end_contact_hz": 12.595750808547038,
+          "max_friction": 0.5224476881920221,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 6.959999999999999,
+          "duration_s": 2.8163713750277912,
+          "end_contact_hz": 12.737223129843189,
+          "max_friction": 0.5711018367300128,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.459999999999999,
+          "duration_s": 2.9268892297614957,
+          "end_contact_hz": 13.605730682936702,
+          "max_friction": 0.6036486541004298,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6036486541004298,
+      "min_normal_N": 2.8353126443419856,
+      "energy_error_relative": 3.6739465717682555e-11,
+      "nfev": 11027
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.0,
+      "brake": 0.75,
+      "initial_deg": 18.0,
+      "mu": 0.009000000000000001,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.459999999999999,
+          "duration_s": 2.0993200348015915,
+          "end_contact_hz": 11.87124731902442,
+          "max_friction": 0.4502252746407208,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 7.959999999999999,
+          "duration_s": 2.2081931440824705,
+          "end_contact_hz": 12.347573473465424,
+          "max_friction": 0.48072867969091126,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.459999999999999,
+          "duration_s": 2.319825025708946,
+          "end_contact_hz": 12.886451873636858,
+          "max_friction": 0.5137667786663805,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 6.959999999999999,
+          "duration_s": 2.4862597360319465,
+          "end_contact_hz": 12.922308072459847,
+          "max_friction": 0.5656595332781352,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.459999999999999,
+          "duration_s": 2.59210477850411,
+          "end_contact_hz": 13.719568099695337,
+          "max_friction": 0.6003539218918031,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6003539218918031,
+      "min_normal_N": 2.823433904645395,
+      "energy_error_relative": 5.678796268704059e-11,
+      "nfev": 9767
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.0,
+      "brake": 1.0,
+      "initial_deg": 18.0,
+      "mu": 0.01,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.459999999999999,
+          "duration_s": 1.8731249684274107,
+          "end_contact_hz": 12.032922219284671,
+          "max_friction": 0.44509192449268936,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 7.959999999999999,
+          "duration_s": 1.9782260340493807,
+          "end_contact_hz": 12.444912341206598,
+          "max_friction": 0.47821566118442804,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.459999999999999,
+          "duration_s": 2.0848512202601497,
+          "end_contact_hz": 12.920120774263623,
+          "max_friction": 0.5128076724259485,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 6.959999999999999,
+          "duration_s": 2.2472007944677004,
+          "end_contact_hz": 12.80535117157879,
+          "max_friction": 0.5685938772504053,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.459999999999999,
+          "duration_s": 2.3476379823325697,
+          "end_contact_hz": 13.521392303599676,
+          "max_friction": 0.6057892054715737,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6057892054715737,
+      "min_normal_N": 2.8089652296751177,
+      "energy_error_relative": 1.1713205871425528e-10,
+      "nfev": 8852
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.25,
+      "brake": 0.0,
+      "initial_deg": 20.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.3,
+          "duration_s": 3.365614303320059,
+          "end_contact_hz": 11.351653989538395,
+          "max_friction": 0.4684111021987283,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.8,
+          "duration_s": 3.5642029285739003,
+          "end_contact_hz": 11.51443786478964,
+          "max_friction": 0.5048311401207296,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.3,
+          "duration_s": 3.761485534717657,
+          "end_contact_hz": 11.722961271861514,
+          "max_friction": 0.5431277234533953,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.800000000000001,
+          "duration_s": 3.9563193262286194,
+          "end_contact_hz": 11.994610401497704,
+          "max_friction": 0.5825966689108164,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.300000000000001,
+          "duration_s": 4.149002540723427,
+          "end_contact_hz": 12.34213820408678,
+          "max_friction": 0.6241018449818264,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6241018449818264,
+      "min_normal_N": 2.8640411312135075,
+      "energy_error_relative": 2.8150132908315957e-11,
+      "nfev": 15602
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.25,
+      "brake": 0.25,
+      "initial_deg": 20.0,
+      "mu": 0.007,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.3,
+          "duration_s": 2.873420180359983,
+          "end_contact_hz": 11.424304996855025,
+          "max_friction": 0.46582425274656053,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.8,
+          "duration_s": 3.059939842393254,
+          "end_contact_hz": 11.48096908162833,
+          "max_friction": 0.5060362284166601,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.3,
+          "duration_s": 3.1835868889034327,
+          "end_contact_hz": 12.012182212614833,
+          "max_friction": 0.5334669442729734,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.800000000000001,
+          "duration_s": 3.36755535259331,
+          "end_contact_hz": 12.171834523949492,
+          "max_friction": 0.576540980098878,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.300000000000001,
+          "duration_s": 3.551817279187897,
+          "end_contact_hz": 12.377109350508448,
+          "max_friction": 0.6228448679318,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6228448679318,
+      "min_normal_N": 2.851453835167555,
+      "energy_error_relative": 5.944085872481073e-11,
+      "nfev": 13367
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.25,
+      "brake": 0.5,
+      "initial_deg": 20.0,
+      "mu": 0.008,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.3,
+          "duration_s": 2.5651795730878684,
+          "end_contact_hz": 11.055355982484187,
+          "max_friction": 0.47785268851705487,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.8,
+          "duration_s": 2.6817302566958587,
+          "end_contact_hz": 11.447581460440487,
+          "max_friction": 0.5069835814843903,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.3,
+          "duration_s": 2.7960954570806322,
+          "end_contact_hz": 11.925041266868343,
+          "max_friction": 0.5362636614031092,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.800000000000001,
+          "duration_s": 2.975318891031793,
+          "end_contact_hz": 11.923786091461931,
+          "max_friction": 0.5850342570699721,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.300000000000001,
+          "duration_s": 3.087242559759117,
+          "end_contact_hz": 12.56672903277194,
+          "max_friction": 0.6166155895854946,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6166155895854946,
+      "min_normal_N": 2.840374755094629,
+      "energy_error_relative": 3.615525003374906e-11,
+      "nfev": 11627
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.25,
+      "brake": 0.75,
+      "initial_deg": 20.0,
+      "mu": 0.009000000000000001,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.3,
+          "duration_s": 2.233267293739234,
+          "end_contact_hz": 11.436069719245854,
+          "max_friction": 0.46512765651460336,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.8,
+          "duration_s": 2.346562771691265,
+          "end_contact_hz": 11.770197350397483,
+          "max_friction": 0.49648926441072744,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.3,
+          "duration_s": 2.518682573321897,
+          "end_contact_hz": 11.620730632667845,
+          "max_friction": 0.5460510805670735,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.800000000000001,
+          "duration_s": 2.626733780682368,
+          "end_contact_hz": 12.096473308690799,
+          "max_friction": 0.5788015846767444,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.300000000000001,
+          "duration_s": 2.733492740027794,
+          "end_contact_hz": 12.678428434501821,
+          "max_friction": 0.6130146709834638,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6130146709834638,
+      "min_normal_N": 2.8292866204702958,
+      "energy_error_relative": 5.3170287347511106e-11,
+      "nfev": 10292
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.25,
+      "brake": 1.0,
+      "initial_deg": 20.0,
+      "mu": 0.01,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.3,
+          "duration_s": 2.0584346889679628,
+          "end_contact_hz": 10.99807197151625,
+          "max_friction": 0.47963070310095135,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.8,
+          "duration_s": 2.1646792539395943,
+          "end_contact_hz": 11.263691511187801,
+          "max_friction": 0.512613079288842,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.3,
+          "duration_s": 2.2700804789304807,
+          "end_contact_hz": 11.587030233750104,
+          "max_friction": 0.546960769396711,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.800000000000001,
+          "duration_s": 2.3740810643340162,
+          "end_contact_hz": 11.987461108036195,
+          "max_friction": 0.5821453242564314,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.300000000000001,
+          "duration_s": 2.476492505253087,
+          "end_contact_hz": 12.486291068934436,
+          "max_friction": 0.6189119055298906,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6189119055298906,
+      "min_normal_N": 2.8150872360958323,
+      "energy_error_relative": 1.842126748137734e-11,
+      "nfev": 9332
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5,
+      "brake": 0.0,
+      "initial_deg": 22.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.14,
+          "duration_s": 3.62962843733219,
+          "end_contact_hz": 10.620273187881873,
+          "max_friction": 0.49269037663994797,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.64,
+          "duration_s": 3.7647786472764055,
+          "end_contact_hz": 11.036258713066772,
+          "max_friction": 0.5173500757558016,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.14,
+          "duration_s": 3.9626610384396046,
+          "end_contact_hz": 11.163748874256497,
+          "max_friction": 0.5544645678717272,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.64,
+          "duration_s": 4.161623647463441,
+          "end_contact_hz": 11.316695028424915,
+          "max_friction": 0.59357210657172,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.14,
+          "duration_s": 4.2944843752271415,
+          "end_contact_hz": 11.91879608130433,
+          "max_friction": 0.6210144517521621,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6210144517521621,
+      "min_normal_N": 2.87069327722772,
+      "energy_error_relative": 1.5648741531165502e-11,
+      "nfev": 16157
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5,
+      "brake": 0.25,
+      "initial_deg": 22.0,
+      "mu": 0.007,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.14,
+          "duration_s": 3.106068993801803,
+          "end_contact_hz": 10.648858349050668,
+          "max_friction": 0.4915037551465433,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.64,
+          "duration_s": 3.2300935113416376,
+          "end_contact_hz": 11.016177557568675,
+          "max_friction": 0.5176850639422259,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.14,
+          "duration_s": 3.421295126044132,
+          "end_contact_hz": 11.004571757536356,
+          "max_friction": 0.5599770790597381,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.64,
+          "duration_s": 3.5424393704039745,
+          "end_contact_hz": 11.484153306966531,
+          "max_friction": 0.5874381841586412,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.14,
+          "duration_s": 3.7306754865213834,
+          "end_contact_hz": 11.556416406111818,
+          "max_friction": 0.6333496608573269,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6333496608573269,
+      "min_normal_N": 2.8560542229149255,
+      "energy_error_relative": 1.332629755123012e-11,
+      "nfev": 14042
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5,
+      "brake": 0.5,
+      "initial_deg": 22.0,
+      "mu": 0.008,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.14,
+          "duration_s": 2.713401946239426,
+          "end_contact_hz": 10.677422520433675,
+          "max_friction": 0.4906108740679331,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.64,
+          "duration_s": 2.830273689886497,
+          "end_contact_hz": 10.987752376141936,
+          "max_friction": 0.5185764565449569,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.14,
+          "duration_s": 2.9478909355581,
+          "end_contact_hz": 11.341690315076843,
+          "max_friction": 0.5480985834149905,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.64,
+          "duration_s": 3.1297342496269915,
+          "end_contact_hz": 11.24941330703027,
+          "max_friction": 0.5958752987782219,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.14,
+          "duration_s": 3.2431216832297856,
+          "end_contact_hz": 11.73048464215157,
+          "max_friction": 0.6271116589200444,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6271116589200444,
+      "min_normal_N": 2.8456916590149373,
+      "energy_error_relative": 1.3705146172367306e-11,
+      "nfev": 12212
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5,
+      "brake": 0.75,
+      "initial_deg": 22.0,
+      "mu": 0.009000000000000001,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.14,
+          "duration_s": 2.431473289084789,
+          "end_contact_hz": 10.531937539704074,
+          "max_friction": 0.4953434957348903,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.64,
+          "duration_s": 2.543013594700385,
+          "end_contact_hz": 10.773802250966678,
+          "max_friction": 0.5259309675645447,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.14,
+          "duration_s": 2.6535755684700058,
+          "end_contact_hz": 11.06399778439512,
+          "max_friction": 0.5576928074620471,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.64,
+          "duration_s": 2.7630009758586196,
+          "end_contact_hz": 11.413996154039014,
+          "max_friction": 0.5895827644838625,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.14,
+          "duration_s": 2.871420800368144,
+          "end_contact_hz": 11.835924085158883,
+          "max_friction": 0.6234081187425895,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6234081187425895,
+      "min_normal_N": 2.8348064344486326,
+      "energy_error_relative": 2.6508785524974755e-11,
+      "nfev": 10817
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5,
+      "brake": 1.0,
+      "initial_deg": 22.0,
+      "mu": 0.01,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.14,
+          "duration_s": 2.177908810405582,
+          "end_contact_hz": 10.616642172152565,
+          "max_friction": 0.49252567935123837,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.64,
+          "duration_s": 2.285299895668707,
+          "end_contact_hz": 10.802429604630895,
+          "max_friction": 0.524657062406608,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.14,
+          "duration_s": 2.3917372546763227,
+          "end_contact_hz": 11.030916423817095,
+          "max_friction": 0.5587360536389242,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.64,
+          "duration_s": 2.4971787539647714,
+          "end_contact_hz": 11.311165381302647,
+          "max_friction": 0.5930159547569407,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.14,
+          "duration_s": 2.6015000230081298,
+          "end_contact_hz": 11.655737399854226,
+          "max_friction": 0.6294474889337178,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6294474889337178,
+      "min_normal_N": 2.821528330846491,
+      "energy_error_relative": 3.227747780270314e-11,
+      "nfev": 9797
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.75,
+      "brake": 0.0,
+      "initial_deg": 24.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.98,
+          "duration_s": 3.826255574852272,
+          "end_contact_hz": 10.267680739930086,
+          "max_friction": 0.503295758598909,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.48,
+          "duration_s": 4.027310025254182,
+          "end_contact_hz": 10.293196471568164,
+          "max_friction": 0.5387077797275126,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.98,
+          "duration_s": 4.160538278619946,
+          "end_contact_hz": 10.675302161040722,
+          "max_friction": 0.5633737587059799,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.48,
+          "duration_s": 4.361863315309439,
+          "end_contact_hz": 10.747465442201552,
+          "max_friction": 0.602067161762863,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.98,
+          "duration_s": 4.495589429704093,
+          "end_contact_hz": 11.223842953522096,
+          "max_friction": 0.6287905424291039,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6287905424291039,
+      "min_normal_N": 2.8745006666057833,
+      "energy_error_relative": 1.803997872896955e-11,
+      "nfev": 16907
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.75,
+      "brake": 0.25,
+      "initial_deg": 24.0,
+      "mu": 0.007,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.98,
+          "duration_s": 3.27517592923761,
+          "end_contact_hz": 10.291441391616145,
+          "max_friction": 0.5020947444071058,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.48,
+          "duration_s": 3.467100277748367,
+          "end_contact_hz": 10.208802422768358,
+          "max_friction": 0.5418590259461151,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.98,
+          "duration_s": 3.5908420134902443,
+          "end_contact_hz": 10.528935698377536,
+          "max_friction": 0.5685372361674882,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.48,
+          "duration_s": 3.713534230384837,
+          "end_contact_hz": 10.903728381352643,
+          "max_friction": 0.5962054957839793,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.98,
+          "duration_s": 3.9051851357766627,
+          "end_contact_hz": 10.882615768797805,
+          "max_friction": 0.6412380346068128,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6412380346068128,
+      "min_normal_N": 2.8607644502756964,
+      "energy_error_relative": 9.593262514286741e-12,
+      "nfev": 14687
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.75,
+      "brake": 0.5,
+      "initial_deg": 24.0,
+      "mu": 0.008,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.98,
+          "duration_s": 2.8618701146221674,
+          "end_contact_hz": 10.315174342246289,
+          "max_friction": 0.5014355748871542,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.48,
+          "duration_s": 2.984450658564971,
+          "end_contact_hz": 10.524875914618447,
+          "max_friction": 0.5301160796107008,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.98,
+          "duration_s": 3.1638791488204316,
+          "end_contact_hz": 10.382378817159438,
+          "max_friction": 0.5743289671363616,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.48,
+          "duration_s": 3.280404975512636,
+          "end_contact_hz": 10.682621585870239,
+          "max_friction": 0.6041115564281732,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.98,
+          "duration_s": 3.3952271069339255,
+          "end_contact_hz": 11.044231837944624,
+          "max_friction": 0.6350328584268037,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6350328584268037,
+      "min_normal_N": 2.8507401252411086,
+      "energy_error_relative": 9.692575920063975e-12,
+      "nfev": 12782
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.75,
+      "brake": 0.75,
+      "initial_deg": 24.0,
+      "mu": 0.009000000000000001,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.98,
+          "duration_s": 2.559939532380949,
+          "end_contact_hz": 10.202901670277686,
+          "max_friction": 0.5051221305018396,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.48,
+          "duration_s": 2.6728323724632026,
+          "end_contact_hz": 10.377981745531855,
+          "max_friction": 0.5354027001457188,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.98,
+          "duration_s": 2.784895741505747,
+          "end_contact_hz": 10.587938069211601,
+          "max_friction": 0.566305934495994,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.48,
+          "duration_s": 2.8960246634091273,
+          "end_contact_hz": 10.840122534178418,
+          "max_friction": 0.5978634074555345,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.98,
+          "duration_s": 3.0061933929451445,
+          "end_contact_hz": 11.14314272812469,
+          "max_friction": 0.6313146477881019,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6313146477881019,
+      "min_normal_N": 2.840606905013622,
+      "energy_error_relative": 1.1284128774308705e-11,
+      "nfev": 11312
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.75,
+      "brake": 1.0,
+      "initial_deg": 24.0,
+      "mu": 0.01,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.98,
+          "duration_s": 2.293564069832612,
+          "end_contact_hz": 10.28206027197855,
+          "max_friction": 0.5024943850655872,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.48,
+          "duration_s": 2.4019780600585063,
+          "end_contact_hz": 10.405906940550235,
+          "max_friction": 0.5342270083867486,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.98,
+          "duration_s": 2.510072480921608,
+          "end_contact_hz": 10.556235226518222,
+          "max_friction": 0.5673466257375341,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.48,
+          "duration_s": 2.6172742673233715,
+          "end_contact_hz": 10.74296031634297,
+          "max_friction": 0.6012897811837951,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.98,
+          "duration_s": 2.7234314256177945,
+          "end_contact_hz": 10.974491137660372,
+          "max_friction": 0.6373745229365573,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6373745229365573,
+      "min_normal_N": 2.8279136640630393,
+      "energy_error_relative": 1.605442452768367e-11,
+      "nfev": 10262
+    },
+    {
+      "voice": "ROLL",
+      "lean": 1.0,
+      "brake": 0.0,
+      "initial_deg": 26.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.82,
+          "duration_s": 4.085091563265511,
+          "end_contact_hz": 9.669108673663423,
+          "max_friction": 0.5224533559875504,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.32,
+          "duration_s": 4.220287898669489,
+          "end_contact_hz": 9.941065692019862,
+          "max_friction": 0.5457749498794032,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.82,
+          "duration_s": 4.426010043558712,
+          "end_contact_hz": 9.920016291296713,
+          "max_friction": 0.5830268290530206,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.32,
+          "duration_s": 4.558232344239665,
+          "end_contact_hz": 10.26358573200201,
+          "max_friction": 0.6076944730795714,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.82,
+          "duration_s": 4.698829538828619,
+          "end_contact_hz": 10.613555265542075,
+          "max_friction": 0.6352888365982834,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6352888365982834,
+      "min_normal_N": 2.8784242268270543,
+      "energy_error_relative": 5.784296672269248e-12,
+      "nfev": 17672
+    },
+    {
+      "voice": "ROLL",
+      "lean": 1.0,
+      "brake": 0.25,
+      "initial_deg": 26.0,
+      "mu": 0.007,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.82,
+          "duration_s": 3.5069379145134003,
+          "end_contact_hz": 9.641926750615157,
+          "max_friction": 0.5234864945413545,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.32,
+          "duration_s": 3.6323587759462117,
+          "end_contact_hz": 9.862861337145628,
+          "max_friction": 0.5486915007377418,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.82,
+          "duration_s": 3.757282343577303,
+          "end_contact_hz": 10.1164234386678,
+          "max_friction": 0.5751501271652176,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.32,
+          "duration_s": 3.8835081682139405,
+          "end_contact_hz": 10.39820658170918,
+          "max_friction": 0.602548005511947,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.82,
+          "duration_s": 4.076614314405995,
+          "end_contact_hz": 10.318550431906266,
+          "max_friction": 0.64663003337209,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.64663003337209,
+      "min_normal_N": 2.865405010644337,
+      "energy_error_relative": 5.128748509831411e-12,
+      "nfev": 15332
+    },
+    {
+      "voice": "ROLL",
+      "lean": 1.0,
+      "brake": 0.5,
+      "initial_deg": 26.0,
+      "mu": 0.008,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.82,
+          "duration_s": 3.0733108779266183,
+          "end_contact_hz": 9.614814715773008,
+          "max_friction": 0.5243950351947182,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.32,
+          "duration_s": 3.192401711576569,
+          "end_contact_hz": 9.779391826706313,
+          "max_friction": 0.551901073620828,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.82,
+          "duration_s": 3.3106683458618638,
+          "end_contact_hz": 9.97313731083513,
+          "max_friction": 0.580830033489872,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.32,
+          "duration_s": 3.4280277257432443,
+          "end_contact_hz": 10.20163963469904,
+          "max_friction": 0.6098330333025862,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.82,
+          "duration_s": 3.5444057272120366,
+          "end_contact_hz": 10.471767315124637,
+          "max_friction": 0.6404267598502196,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6404267598502196,
+      "min_normal_N": 2.8559740268342564,
+      "energy_error_relative": 4.5581595083819404e-12,
+      "nfev": 13337
+    },
+    {
+      "voice": "ROLL",
+      "lean": 1.0,
+      "brake": 0.75,
+      "initial_deg": 26.0,
+      "mu": 0.009000000000000001,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.82,
+          "duration_s": 2.6944981805074324,
+          "end_contact_hz": 9.853557528356601,
+          "max_friction": 0.5146616810196619,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.32,
+          "duration_s": 2.8023452011018217,
+          "end_contact_hz": 10.014761707647558,
+          "max_friction": 0.5425005162266313,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.82,
+          "duration_s": 2.91454015804968,
+          "end_contact_hz": 10.169972562259995,
+          "max_friction": 0.5724914793576902,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.32,
+          "duration_s": 3.026851118506235,
+          "end_contact_hz": 10.349699605165217,
+          "max_friction": 0.6042651508485649,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.82,
+          "duration_s": 3.1385265609087267,
+          "end_contact_hz": 10.56422224967996,
+          "max_friction": 0.6367639718705925,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6367639718705925,
+      "min_normal_N": 2.8464480457375667,
+      "energy_error_relative": 4.0161632482291674e-12,
+      "nfev": 11807
+    },
+    {
+      "voice": "ROLL",
+      "lean": 1.0,
+      "brake": 1.0,
+      "initial_deg": 26.0,
+      "mu": 0.01,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.82,
+          "duration_s": 2.4796285719378774,
+          "end_contact_hz": 9.467751914627547,
+          "max_friction": 0.5305189983309244,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.32,
+          "duration_s": 2.5188035266940814,
+          "end_contact_hz": 10.038977137919034,
+          "max_friction": 0.541431168633934,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.82,
+          "duration_s": 2.6264678836897666,
+          "end_contact_hz": 10.142753168957091,
+          "max_friction": 0.5735171087466981,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.32,
+          "duration_s": 2.7350822186597004,
+          "end_contact_hz": 10.259669071886742,
+          "max_friction": 0.6076824687270526,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.82,
+          "duration_s": 2.843000477235081,
+          "end_contact_hz": 10.406226051712238,
+          "max_friction": 0.6427547407333306,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6427547407333306,
+      "min_normal_N": 2.834406822079688,
+      "energy_error_relative": 3.4288206874261623e-12,
+      "nfev": 10712
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 0.0,
+      "initial_deg": 8.0,
+      "mu": 0.004,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 3.5233936237608168,
+          "end_contact_hz": 20.146324498868356,
+          "max_friction": 0.42233789242411957,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 3.778283644723813,
+          "end_contact_hz": 21.39108975887261,
+          "max_friction": 0.4673530240807472,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 4.104537084487013,
+          "end_contact_hz": 22.089620073102786,
+          "max_friction": 0.5302962077237098,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 4.383962088920061,
+          "end_contact_hz": 23.84812273686365,
+          "max_friction": 0.5897336214338438,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 4.7323159476561445,
+          "end_contact_hz": 25.15872911779713,
+          "max_friction": 0.673483501755993,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.673483501755993,
+      "min_normal_N": 2.845468027704707,
+      "energy_error_relative": 7.829451955735688e-09,
+      "nfev": 18257
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 0.25,
+      "initial_deg": 8.0,
+      "mu": 0.0045000000000000005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 3.1343738883579393,
+          "end_contact_hz": 20.11574388318953,
+          "max_friction": 0.42269761508549625,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 3.376662633307209,
+          "end_contact_hz": 21.143374050525548,
+          "max_friction": 0.47104032849594707,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 3.615515903281589,
+          "end_contact_hz": 22.58760080186838,
+          "max_friction": 0.5229882982177916,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 3.8878629356005634,
+          "end_contact_hz": 24.00317205920115,
+          "max_friction": 0.5875180228652275,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 4.1872307563414335,
+          "end_contact_hz": 25.539201674908195,
+          "max_friction": 0.6674596107251289,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6674596107251289,
+      "min_normal_N": 2.8348986649191446,
+      "energy_error_relative": 7.010444965155564e-09,
+      "nfev": 16157
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 0.5,
+      "initial_deg": 8.0,
+      "mu": 0.005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 2.8231570855586257,
+          "end_contact_hz": 20.08515060225389,
+          "max_friction": 0.4232822638778426,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 3.0178415134164083,
+          "end_contact_hz": 21.462155666037862,
+          "max_friction": 0.46632602083659347,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 3.2878548349072774,
+          "end_contact_hz": 22.017524785448447,
+          "max_friction": 0.531482586925982,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 3.510872517963473,
+          "end_contact_hz": 23.774703394540538,
+          "max_friction": 0.5910290783155595,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 3.7665674607335964,
+          "end_contact_hz": 25.580439794050942,
+          "max_friction": 0.6667719832263471,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6667719832263471,
+      "min_normal_N": 2.823354646609473,
+      "energy_error_relative": 7.129275367548051e-09,
+      "nfev": 14537
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 0.75,
+      "initial_deg": 8.0,
+      "mu": 0.0055,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 2.539164241230076,
+          "end_contact_hz": 20.494329252473836,
+          "max_friction": 0.41684646053102603,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 2.766686365919873,
+          "end_contact_hz": 21.07653230606178,
+          "max_friction": 0.4719032650198569,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 2.952312021720884,
+          "end_contact_hz": 22.69539983654439,
+          "max_friction": 0.5210818974017553,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 3.2083825662694094,
+          "end_contact_hz": 23.424576391822605,
+          "max_friction": 0.5962099950691047,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 3.419094462798179,
+          "end_contact_hz": 25.70227963470719,
+          "max_friction": 0.6648475515929185,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6648475515929185,
+      "min_normal_N": 2.812482152008487,
+      "energy_error_relative": 6.414656890064596e-09,
+      "nfev": 13238
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 1.0,
+      "initial_deg": 8.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 2.3563204814985967,
+          "end_contact_hz": 20.024069139738106,
+          "max_friction": 0.4240309701594479,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 2.537949728316197,
+          "end_contact_hz": 21.042973895479822,
+          "max_friction": 0.472669347554282,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 2.7155205176735353,
+          "end_contact_hz": 22.505028923803046,
+          "max_friction": 0.5235871493410919,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 2.92909417528678,
+          "end_contact_hz": 23.694538281769344,
+          "max_friction": 0.5918171520237787,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 3.1355792900779615,
+          "end_contact_hz": 25.662353329044095,
+          "max_friction": 0.6653965076428455,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6653965076428455,
+      "min_normal_N": 2.8006368016322662,
+      "energy_error_relative": 6.464170435067862e-09,
+      "nfev": 12131
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.25,
+      "brake": 0.0,
+      "initial_deg": 9.0,
+      "mu": 0.004,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.58,
+          "duration_s": 3.736410859385431,
+          "end_contact_hz": 18.783906830703913,
+          "max_friction": 0.43569356760115885,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.28,
+          "duration_s": 3.9941819895459094,
+          "end_contact_hz": 19.590334884513766,
+          "max_friction": 0.4797081147103091,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.98,
+          "duration_s": 4.247001522464781,
+          "end_contact_hz": 20.70075957287643,
+          "max_friction": 0.5258143896922964,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6799999999999997,
+          "duration_s": 4.53765978153712,
+          "end_contact_hz": 21.683246960735456,
+          "max_friction": 0.5837779329342043,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.38,
+          "duration_s": 4.821479568803638,
+          "end_contact_hz": 23.15624150878523,
+          "max_friction": 0.6453554696109509,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6453554696109509,
+      "min_normal_N": 2.855559163969884,
+      "energy_error_relative": 4.9938329911625e-09,
+      "nfev": 18332
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.25,
+      "brake": 0.25,
+      "initial_deg": 9.0,
+      "mu": 0.0045000000000000005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.58,
+          "duration_s": 3.3238449045353917,
+          "end_contact_hz": 18.755709809421923,
+          "max_friction": 0.4362409739815956,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.28,
+          "duration_s": 3.5280343614152687,
+          "end_contact_hz": 19.85281626127368,
+          "max_friction": 0.4753485606288645,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.98,
+          "duration_s": 3.7726846849484246,
+          "end_contact_hz": 20.73162049274639,
+          "max_friction": 0.5253065187200034,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6799999999999997,
+          "duration_s": 4.014400969277463,
+          "end_contact_hz": 21.959861666758,
+          "max_friction": 0.57897894390277,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.38,
+          "duration_s": 4.2874936876159975,
+          "end_contact_hz": 23.126400471109697,
+          "max_friction": 0.6458099831744951,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6458099831744951,
+      "min_normal_N": 2.8448014939897077,
+      "energy_error_relative": 4.458337186724581e-09,
+      "nfev": 16322
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.25,
+      "brake": 0.5,
+      "initial_deg": 9.0,
+      "mu": 0.005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.58,
+          "duration_s": 2.9937832494957384,
+          "end_contact_hz": 18.727595149227085,
+          "max_friction": 0.436346800518238,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.28,
+          "duration_s": 3.190769824733596,
+          "end_contact_hz": 19.648601398290822,
+          "max_friction": 0.4786028716205268,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.98,
+          "duration_s": 3.3854659063228625,
+          "end_contact_hz": 20.8754931448976,
+          "max_friction": 0.5228105964212326,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6799999999999997,
+          "duration_s": 3.61750533359958,
+          "end_contact_hz": 21.884685169104017,
+          "max_friction": 0.5800067585600853,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.38,
+          "duration_s": 3.8859838298811322,
+          "end_contact_hz": 22.632771791705927,
+          "max_friction": 0.6542285755853811,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6542285755853811,
+      "min_normal_N": 2.8316704189526063,
+      "energy_error_relative": 4.384787455937622e-09,
+      "nfev": 14807
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.25,
+      "brake": 0.75,
+      "initial_deg": 9.0,
+      "mu": 0.0055,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.58,
+          "duration_s": 2.6909065378361845,
+          "end_contact_hz": 19.13137550066366,
+          "max_friction": 0.4297077920928601,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.28,
+          "duration_s": 2.882570343319628,
+          "end_contact_hz": 19.909409734235663,
+          "max_friction": 0.4741461741293282,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.98,
+          "duration_s": 3.0730896175646523,
+          "end_contact_hz": 20.948922117446827,
+          "max_friction": 0.5214768650760501,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6799999999999997,
+          "duration_s": 3.29815843678773,
+          "end_contact_hz": 21.714633699705367,
+          "max_friction": 0.582925574298362,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.38,
+          "duration_s": 3.519163002370444,
+          "end_contact_hz": 22.899450054297862,
+          "max_friction": 0.6495571046311208,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6495571046311208,
+      "min_normal_N": 2.8221273732984016,
+      "energy_error_relative": 3.927521667275332e-09,
+      "nfev": 13412
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.25,
+      "brake": 1.0,
+      "initial_deg": 9.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.58,
+          "duration_s": 2.4986716094325856,
+          "end_contact_hz": 18.671568487418693,
+          "max_friction": 0.43718148381127103,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.28,
+          "duration_s": 2.640523052455583,
+          "end_contact_hz": 19.937631335345884,
+          "max_friction": 0.47351978939135453,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.98,
+          "duration_s": 2.8240629968083892,
+          "end_contact_hz": 20.823725699230017,
+          "max_friction": 0.5235633917699054,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6799999999999997,
+          "duration_s": 3.00492266557797,
+          "end_contact_hz": 22.07098382148024,
+          "max_friction": 0.5771759644402313,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.38,
+          "duration_s": 3.2206311245889143,
+          "end_contact_hz": 23.012319831654988,
+          "max_friction": 0.6475783924076034,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6475783924076034,
+      "min_normal_N": 2.8126231191712394,
+      "energy_error_relative": 3.811473584661084e-09,
+      "nfev": 12272
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5,
+      "brake": 0.0,
+      "initial_deg": 10.0,
+      "mu": 0.004,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.0,
+          "duration_s": 3.9391973278527055,
+          "end_contact_hz": 17.663325623602276,
+          "max_friction": 0.44841422346553234,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7,
+          "duration_s": 4.155751646669803,
+          "end_contact_hz": 18.578116952773605,
+          "max_friction": 0.48427931311336975,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4000000000000004,
+          "duration_s": 4.4157632732861165,
+          "end_contact_hz": 19.27845663544508,
+          "max_friction": 0.5296398755844718,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1,
+          "duration_s": 4.67149469144285,
+          "end_contact_hz": 20.23872505277115,
+          "max_friction": 0.5775549333784352,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8000000000000003,
+          "duration_s": 4.965215451822761,
+          "end_contact_hz": 21.034090864192258,
+          "max_friction": 0.6374927689456122,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6374927689456122,
+      "min_normal_N": 2.860599167583903,
+      "energy_error_relative": 3.0336005870570017e-09,
+      "nfev": 18782
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5,
+      "brake": 0.25,
+      "initial_deg": 10.0,
+      "mu": 0.0045000000000000005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.0,
+          "duration_s": 3.504200989129064,
+          "end_contact_hz": 17.637185776266506,
+          "max_friction": 0.44885290058798283,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7,
+          "duration_s": 3.712485777627014,
+          "end_contact_hz": 18.385059281311253,
+          "max_friction": 0.48779481023165355,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4000000000000004,
+          "duration_s": 3.9175807111156593,
+          "end_contact_hz": 19.363779944028348,
+          "max_friction": 0.5278973269779466,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1,
+          "duration_s": 4.164596017834851,
+          "end_contact_hz": 20.085783087545707,
+          "max_friction": 0.5802554474377964,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8000000000000003,
+          "duration_s": 4.406065302366991,
+          "end_contact_hz": 21.136255291239586,
+          "max_friction": 0.6355712582847819,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6355712582847819,
+      "min_normal_N": 2.8509758010187647,
+      "energy_error_relative": 2.577871242517534e-09,
+      "nfev": 16667
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5,
+      "brake": 0.5,
+      "initial_deg": 10.0,
+      "mu": 0.005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.0,
+          "duration_s": 3.156194849334336,
+          "end_contact_hz": 17.611121412672137,
+          "max_friction": 0.44957210726191427,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7,
+          "duration_s": 3.3123598122848645,
+          "end_contact_hz": 18.72007802036949,
+          "max_friction": 0.48170598307522544,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4000000000000004,
+          "duration_s": 3.556295542436352,
+          "end_contact_hz": 18.97973343834416,
+          "max_friction": 0.5350859549198301,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1,
+          "duration_s": 3.7504670030334917,
+          "end_contact_hz": 20.052614233616524,
+          "max_friction": 0.5807830097225004,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8000000000000003,
+          "duration_s": 3.9858730097912227,
+          "end_contact_hz": 20.822671982422474,
+          "max_friction": 0.6413645341533852,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6413645341533852,
+      "min_normal_N": 2.8400239226869695,
+      "energy_error_relative": 2.70499508579916e-09,
+      "nfev": 15092
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5,
+      "brake": 0.75,
+      "initial_deg": 10.0,
+      "mu": 0.0055,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.0,
+          "duration_s": 2.8365574525091306,
+          "end_contact_hz": 17.994834135424632,
+          "max_friction": 0.4423465721551514,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7,
+          "duration_s": 3.0331024590008764,
+          "end_contact_hz": 18.439399786860697,
+          "max_friction": 0.4867531829482104,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4000000000000004,
+          "duration_s": 3.2265768320753088,
+          "end_contact_hz": 19.067133263765076,
+          "max_friction": 0.5331353386621835,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1,
+          "duration_s": 3.4159035548210084,
+          "end_contact_hz": 19.954601815908624,
+          "max_friction": 0.5824626890349064,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8000000000000003,
+          "duration_s": 3.600912747100112,
+          "end_contact_hz": 21.202567325444136,
+          "max_friction": 0.6342681992323069,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6342681992323069,
+      "min_normal_N": 2.8313952188644946,
+      "energy_error_relative": 2.3825303705322037e-09,
+      "nfev": 13637
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5,
+      "brake": 1.0,
+      "initial_deg": 10.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.0,
+          "duration_s": 2.634168120106659,
+          "end_contact_hz": 17.559152865666803,
+          "max_friction": 0.4502214790940444,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7,
+          "duration_s": 2.778338953477472,
+          "end_contact_hz": 18.466456241168565,
+          "max_friction": 0.485828362936772,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4000000000000004,
+          "duration_s": 2.9242208915901733,
+          "end_contact_hz": 19.57602661976239,
+          "max_friction": 0.5239440317035747,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1,
+          "duration_s": 3.106762567493455,
+          "end_contact_hz": 20.361928810056728,
+          "max_friction": 0.5752079278200517,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8000000000000003,
+          "duration_s": 3.2885675770238088,
+          "end_contact_hz": 21.429852780500173,
+          "max_friction": 0.6301387307976762,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6301387307976762,
+      "min_normal_N": 2.8229609919545218,
+      "energy_error_relative": 2.4421283433390243e-09,
+      "nfev": 12452
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.75,
+      "brake": 0.0,
+      "initial_deg": 11.0,
+      "mu": 0.004,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.42,
+          "duration_s": 4.133400445928757,
+          "end_contact_hz": 16.72046970418806,
+          "max_friction": 0.4610019068177315,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.12,
+          "duration_s": 4.3539160947436955,
+          "end_contact_hz": 17.371036276479938,
+          "max_friction": 0.4961687379494575,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.8200000000000003,
+          "duration_s": 4.571780237063532,
+          "end_contact_hz": 18.19500624434589,
+          "max_friction": 0.5328631252897582,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.52,
+          "duration_s": 4.833760162403125,
+          "end_contact_hz": 18.78547783311543,
+          "max_friction": 0.5798485996345338,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.22,
+          "duration_s": 5.090967095592713,
+          "end_contact_hz": 19.606286037202693,
+          "max_friction": 0.6294768073517021,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6294768073517021,
+      "min_normal_N": 2.8657301390375145,
+      "energy_error_relative": 1.8514721994362575e-09,
+      "nfev": 19217
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.75,
+      "brake": 0.25,
+      "initial_deg": 11.0,
+      "mu": 0.0045000000000000005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.42,
+          "duration_s": 3.6769304669080034,
+          "end_contact_hz": 16.695950273922584,
+          "max_friction": 0.4614446606047161,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.12,
+          "duration_s": 3.8417308217988175,
+          "end_contact_hz": 17.63704045123201,
+          "max_friction": 0.4908978173333831,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.8200000000000003,
+          "duration_s": 4.05482801710048,
+          "end_contact_hz": 18.286413899335077,
+          "max_friction": 0.531155583702056,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.52,
+          "duration_s": 4.30485262258259,
+          "end_contact_hz": 18.695271217538075,
+          "max_friction": 0.581630450507206,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.22,
+          "duration_s": 4.508246249104777,
+          "end_contact_hz": 19.81155582519199,
+          "max_friction": 0.6254401548443451,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6254401548443451,
+      "min_normal_N": 2.857199807602331,
+      "energy_error_relative": 1.6880846967177021e-09,
+      "nfev": 16997
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.75,
+      "brake": 0.5,
+      "initial_deg": 11.0,
+      "mu": 0.005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.42,
+          "duration_s": 3.311745846395504,
+          "end_contact_hz": 16.671495154103596,
+          "max_friction": 0.4617145704509332,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.12,
+          "duration_s": 3.4680635268368785,
+          "end_contact_hz": 17.526420761142685,
+          "max_friction": 0.4928400841476059,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.8200000000000003,
+          "duration_s": 3.671815910602036,
+          "end_contact_hz": 18.032049837362134,
+          "max_friction": 0.5357764355515773,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.52,
+          "duration_s": 3.87192338742607,
+          "end_contact_hz": 18.724166018478073,
+          "max_friction": 0.5807506869407159,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.22,
+          "duration_s": 4.0680537621958734,
+          "end_contact_hz": 19.66758070506338,
+          "max_friction": 0.6281897382712174,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6281897382712174,
+      "min_normal_N": 2.847446785507104,
+      "energy_error_relative": 1.4608016235398857e-09,
+      "nfev": 15347
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.75,
+      "brake": 0.75,
+      "initial_deg": 11.0,
+      "mu": 0.0055,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.42,
+          "duration_s": 2.976375006041403,
+          "end_contact_hz": 17.034968199661268,
+          "max_friction": 0.454631855322762,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.12,
+          "duration_s": 3.178009418265974,
+          "end_contact_hz": 17.238704050712908,
+          "max_friction": 0.49875649163544555,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.8200000000000003,
+          "duration_s": 3.3267977658201655,
+          "end_contact_hz": 18.169846348864663,
+          "max_friction": 0.5330713110709058,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.52,
+          "duration_s": 3.5221893653194347,
+          "end_contact_hz": 18.693115116833063,
+          "max_friction": 0.5815347025658661,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.22,
+          "duration_s": 3.7134711914713705,
+          "end_contact_hz": 19.443136081378178,
+          "max_friction": 0.6326018522647188,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6326018522647188,
+      "min_normal_N": 2.8367266533458784,
+      "energy_error_relative": 1.8494347736624237e-09,
+      "nfev": 14027
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.75,
+      "brake": 1.0,
+      "initial_deg": 11.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.42,
+          "duration_s": 2.718465631822061,
+          "end_contact_hz": 17.15116847778598,
+          "max_friction": 0.4521929705401902,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.12,
+          "duration_s": 2.911119830147067,
+          "end_contact_hz": 17.2633732305636,
+          "max_friction": 0.4981440515634474,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.8200000000000003,
+          "duration_s": 3.0557141658946008,
+          "end_contact_hz": 18.08608387870815,
+          "max_friction": 0.5346062164884611,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.52,
+          "duration_s": 3.2002736164962453,
+          "end_contact_hz": 19.11027726982752,
+          "max_friction": 0.5735578909559761,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.22,
+          "duration_s": 3.3861237737839676,
+          "end_contact_hz": 19.72845255494263,
+          "max_friction": 0.6269026289078493,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6269026289078493,
+      "min_normal_N": 2.828989328234955,
+      "energy_error_relative": 1.3871818041250144e-09,
+      "nfev": 12782
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 1.0,
+      "brake": 0.0,
+      "initial_deg": 12.0,
+      "mu": 0.004,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.84,
+          "duration_s": 4.320338205779329,
+          "end_contact_hz": 15.912519042050615,
+          "max_friction": 0.4726936728047188,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.54,
+          "duration_s": 4.544976380886486,
+          "end_contact_hz": 16.365224918622882,
+          "max_friction": 0.5076510595094826,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.24,
+          "duration_s": 4.766655190801429,
+          "end_contact_hz": 16.94086307003964,
+          "max_friction": 0.5441128788552467,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.94,
+          "duration_s": 4.984714166287152,
+          "end_contact_hz": 17.678327272355222,
+          "max_friction": 0.5818027414569412,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.64,
+          "duration_s": 5.249749370513641,
+          "end_contact_hz": 18.14799455982755,
+          "max_friction": 0.631054919925556,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.631054919925556,
+      "min_normal_N": 2.8687514697903516,
+      "energy_error_relative": 1.371743457603289e-09,
+      "nfev": 19742
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 1.0,
+      "brake": 0.25,
+      "initial_deg": 12.0,
+      "mu": 0.0045000000000000005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.84,
+          "duration_s": 3.8432106433545776,
+          "end_contact_hz": 15.889254555566472,
+          "max_friction": 0.47294815036028687,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.54,
+          "duration_s": 4.008049665118186,
+          "end_contact_hz": 16.634393178525738,
+          "max_friction": 0.5019670400980853,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.24,
+          "duration_s": 4.2225032296779,
+          "end_contact_hz": 17.071657034604,
+          "max_friction": 0.541218237728851,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.94,
+          "duration_s": 4.433713778601468,
+          "end_contact_hz": 17.649777129777686,
+          "max_friction": 0.5824564207169408,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.64,
+          "duration_s": 4.641286069310629,
+          "end_contact_hz": 18.41322112828612,
+          "max_friction": 0.6253495418078768,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6253495418078768,
+      "min_normal_N": 2.860895340876567,
+      "energy_error_relative": 1.1711436666421467e-09,
+      "nfev": 17447
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 1.0,
+      "brake": 0.5,
+      "initial_deg": 12.0,
+      "mu": 0.005,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.84,
+          "duration_s": 3.4614992586705795,
+          "end_contact_hz": 15.866055281675365,
+          "max_friction": 0.47361499463880463,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.54,
+          "duration_s": 3.6202644677250584,
+          "end_contact_hz": 16.511222965482677,
+          "max_friction": 0.5043534391831638,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.24,
+          "duration_s": 3.7785731515661523,
+          "end_contact_hz": 17.291057632002587,
+          "max_friction": 0.536469297171538,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.94,
+          "duration_s": 3.982704251061362,
+          "end_contact_hz": 17.732161280412107,
+          "max_friction": 0.580345667344532,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.64,
+          "duration_s": 4.184638699835153,
+          "end_contact_hz": 18.32414663109195,
+          "max_friction": 0.627190248260726,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.627190248260726,
+      "min_normal_N": 2.8516416241693956,
+      "energy_error_relative": 7.05578109464555e-10,
+      "nfev": 15737
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 1.0,
+      "brake": 0.75,
+      "initial_deg": 12.0,
+      "mu": 0.0055,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.84,
+          "duration_s": 3.111099602805991,
+          "end_contact_hz": 16.21131987272222,
+          "max_friction": 0.46612212473850473,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.54,
+          "duration_s": 3.266496972113603,
+          "end_contact_hz": 16.7672459616984,
+          "max_friction": 0.4991571524161552,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.24,
+          "duration_s": 3.469083368199731,
+          "end_contact_hz": 16.9123846768266,
+          "max_friction": 0.5444845039469401,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.94,
+          "duration_s": 3.618346932626913,
+          "end_contact_hz": 17.75890692163968,
+          "max_friction": 0.5800220254794304,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.64,
+          "duration_s": 3.8157653099506836,
+          "end_contact_hz": 18.174213830061145,
+          "max_friction": 0.6303597357492329,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6303597357492329,
+      "min_normal_N": 2.841990625473162,
+      "energy_error_relative": 1.3033969390739083e-09,
+      "nfev": 14357
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 1.0,
+      "brake": 1.0,
+      "initial_deg": 12.0,
+      "mu": 0.006,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.84,
+          "duration_s": 2.8419706442845913,
+          "end_contact_hz": 16.317323410852755,
+          "max_friction": 0.46407051297984253,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.54,
+          "duration_s": 2.9896198718212452,
+          "end_contact_hz": 16.820428527450378,
+          "max_friction": 0.49806737795595585,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.24,
+          "duration_s": 3.1864516001833803,
+          "end_contact_hz": 16.83432428395288,
+          "max_friction": 0.5460608606276234,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.94,
+          "duration_s": 3.3317938866013095,
+          "end_contact_hz": 17.562862267011777,
+          "max_friction": 0.5840341774502465,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.64,
+          "duration_s": 3.4747933736389363,
+          "end_contact_hz": 18.49819305379404,
+          "max_friction": 0.6234385888314565,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6234385888314565,
+      "min_normal_N": 2.834960367369369,
+      "energy_error_relative": 6.047054091604003e-10,
+      "nfev": 13082
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.315397575392415,
+      "brake": 0.596563910699384,
+      "initial_deg": 20.52318060313932,
+      "mu": 0.008386255642797536,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.519735853318515,
+          "duration_s": 2.481363065717145,
+          "end_contact_hz": 10.974411995462637,
+          "max_friction": 0.48068935448299016,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.019735853318515,
+          "duration_s": 2.5949482986712753,
+          "end_contact_hz": 11.326635019148997,
+          "max_friction": 0.5100134548359392,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.519735853318515,
+          "duration_s": 2.7075941860229986,
+          "end_contact_hz": 11.746099700183589,
+          "max_friction": 0.5399420143436353,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.019735853318515,
+          "duration_s": 2.8230697970917076,
+          "end_contact_hz": 12.214984144908389,
+          "max_friction": 0.5722587814222178,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.519735853318515,
+          "duration_s": 2.996058246324112,
+          "end_contact_hz": 12.219945709958761,
+          "max_friction": 0.6231976290267226,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6231976290267226,
+      "min_normal_N": 2.836073964463489,
+      "energy_error_relative": 3.7399906511345786e-11,
+      "nfev": 11282
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9500950125209509,
+      "brake": 0.31638389844918147,
+      "initial_deg": 25.600760100167605,
+      "mu": 0.007265535593796726,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.652319242070394,
+          "duration_s": 3.33969773804544,
+          "end_contact_hz": 9.73704858747713,
+          "max_friction": 0.5203372196602118,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.152319242070394,
+          "duration_s": 3.463048610869873,
+          "end_contact_hz": 9.955474677001902,
+          "max_friction": 0.546590446014268,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.652319242070394,
+          "duration_s": 3.585756191554531,
+          "end_contact_hz": 10.207858294438331,
+          "max_friction": 0.5732915579803937,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.152319242070394,
+          "duration_s": 3.708796967249797,
+          "end_contact_hz": 10.494470841541727,
+          "max_friction": 0.601404129695513,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.652319242070394,
+          "duration_s": 3.900081948497349,
+          "end_contact_hz": 10.390868957484344,
+          "max_friction": 0.6470540740092808,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6470540740092808,
+      "min_normal_N": 2.86126844690078,
+      "energy_error_relative": 1.1426838035249928e-11,
+      "nfev": 14672
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9428878517188058,
+      "brake": 0.2618359604296948,
+      "initial_deg": 25.543102813750448,
+      "mu": 0.007047343841718779,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.628103181775188,
+          "duration_s": 3.458048199461377,
+          "end_contact_hz": 9.646891111700912,
+          "max_friction": 0.5241681880853217,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.128103181775188,
+          "duration_s": 3.583477388863386,
+          "end_contact_hz": 9.870757758615639,
+          "max_friction": 0.5501400775577789,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.628103181775188,
+          "duration_s": 3.7074203846602067,
+          "end_contact_hz": 10.133774409723076,
+          "max_friction": 0.5765547960635126,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.128103181775188,
+          "duration_s": 3.830577726615155,
+          "end_contact_hz": 10.438884776422928,
+          "max_friction": 0.6039015626743239,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.628103181775188,
+          "duration_s": 3.9560581966637467,
+          "end_contact_hz": 10.775026178190322,
+          "max_friction": 0.6327521154980017,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6327521154980017,
+      "min_normal_N": 2.866516567346308,
+      "energy_error_relative": 1.0159226462643483e-11,
+      "nfev": 14882
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.17034874442429104,
+      "brake": 0.8534968426779608,
+      "initial_deg": 19.362789955394327,
+      "mu": 0.009413987370711844,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.032371781265617,
+          "duration_s": 2.081261823361812,
+          "end_contact_hz": 11.689386361485402,
+          "max_friction": 0.4570232789975897,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.532371781265617,
+          "duration_s": 2.1973892848571093,
+          "end_contact_hz": 11.987423604190973,
+          "max_friction": 0.49055786386629974,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.032371781265617,
+          "duration_s": 2.359809782506563,
+          "end_contact_hz": 11.877868591128985,
+          "max_friction": 0.5395759848162965,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.532371781265617,
+          "duration_s": 2.4653268930430245,
+          "end_contact_hz": 12.379338415280708,
+          "max_friction": 0.5734647754854969,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.032371781265617,
+          "duration_s": 2.5698878322745187,
+          "end_contact_hz": 12.993153219108727,
+          "max_friction": 0.608932486600988,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.608932486600988,
+      "min_normal_N": 2.8222816920688607,
+      "energy_error_relative": 6.737389217688183e-11,
+      "nfev": 9677
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9397298966875849,
+      "brake": 0.18078153947027809,
+      "initial_deg": 25.51783917350068,
+      "mu": 0.006723126157881112,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.617492452870286,
+          "duration_s": 3.6098330748480048,
+          "end_contact_hz": 9.71183924351576,
+          "max_friction": 0.5216723912442629,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.117492452870286,
+          "duration_s": 3.737080531707644,
+          "end_contact_hz": 9.960867643953659,
+          "max_friction": 0.5467870316678771,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.617492452870286,
+          "duration_s": 3.863927395343304,
+          "end_contact_hz": 10.2458403609107,
+          "max_friction": 0.5723382529456448,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.117492452870286,
+          "duration_s": 3.997278090292699,
+          "end_contact_hz": 10.534852909089325,
+          "max_friction": 0.6005143707664429,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.617492452870286,
+          "duration_s": 4.1864677149627365,
+          "end_contact_hz": 10.534808261249033,
+          "max_friction": 0.6420472840129972,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6420472840129972,
+      "min_normal_N": 2.8679023505978836,
+      "energy_error_relative": 5.819319889280166e-12,
+      "nfev": 15737
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.7541017142609522,
+      "brake": 0.2619411422793899,
+      "initial_deg": 24.032813714087617,
+      "mu": 0.00704776456911756,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.993781759916798,
+          "duration_s": 3.263464772450326,
+          "end_contact_hz": 10.243498878179727,
+          "max_friction": 0.5037296370898232,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.493781759916798,
+          "duration_s": 3.3943871345065553,
+          "end_contact_hz": 10.495897319086206,
+          "max_friction": 0.531182253058509,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.993781759916798,
+          "duration_s": 3.5821339397971843,
+          "end_contact_hz": 10.445802149406033,
+          "max_friction": 0.5717662723381147,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.493781759916798,
+          "duration_s": 3.704078840159096,
+          "end_contact_hz": 10.81361542398771,
+          "max_friction": 0.5992094001699626,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.993781759916798,
+          "duration_s": 3.827423672359995,
+          "end_contact_hz": 11.23006841402519,
+          "max_friction": 0.6282109915792907,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6282109915792907,
+      "min_normal_N": 2.863031347239192,
+      "energy_error_relative": 1.3609898284131435e-11,
+      "nfev": 14402
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9278825638484792,
+      "brake": 0.9489206001159045,
+      "initial_deg": 25.423060510787835,
+      "mu": 0.009795682400463619,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.57768541453089,
+          "duration_s": 2.4720570663488766,
+          "end_contact_hz": 9.723269587136565,
+          "max_friction": 0.5211162104656667,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.07768541453089,
+          "duration_s": 2.5820507391033987,
+          "end_contact_hz": 9.808424979555232,
+          "max_friction": 0.5529014198457196,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.57768541453089,
+          "duration_s": 2.6273130306091264,
+          "end_contact_hz": 10.413910336482425,
+          "max_friction": 0.5666000425868446,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.07768541453089,
+          "duration_s": 2.7300321216140717,
+          "end_contact_hz": 10.619313656571512,
+          "max_friction": 0.5974718850674741,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.57768541453089,
+          "duration_s": 2.8369943627951324,
+          "end_contact_hz": 10.822505788681088,
+          "max_friction": 0.6316213368043445,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6316213368043445,
+      "min_normal_N": 2.837481231642234,
+      "energy_error_relative": 3.747127214253433e-12,
+      "nfev": 10682
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.5265832677892462,
+      "brake": 0.8341869116374053,
+      "initial_deg": 22.21266614231397,
+      "mu": 0.009336747646549622,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.229319779771867,
+          "duration_s": 2.3335995381404846,
+          "end_contact_hz": 10.674303832898751,
+          "max_friction": 0.4899236684916171,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.729319779771867,
+          "duration_s": 2.443834891452373,
+          "end_contact_hz": 10.897169970009156,
+          "max_friction": 0.5213204163237805,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.229319779771867,
+          "duration_s": 2.5531917621295603,
+          "end_contact_hz": 11.165305041481753,
+          "max_friction": 0.5527934569372488,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.729319779771867,
+          "duration_s": 2.6616782262525227,
+          "end_contact_hz": 11.48791413521971,
+          "max_friction": 0.5861909651652126,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.229319779771867,
+          "duration_s": 2.7696161227424874,
+          "end_contact_hz": 11.873883859033647,
+          "max_friction": 0.6204071031338279,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6204071031338279,
+      "min_normal_N": 2.832831752700976,
+      "energy_error_relative": 2.983648901236072e-11,
+      "nfev": 10427
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9245392431203848,
+      "brake": 0.3674618539006379,
+      "initial_deg": 25.39631394496308,
+      "mu": 0.0074698474156025515,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.566451856884493,
+          "duration_s": 3.2067986756166484,
+          "end_contact_hz": 9.90590509006577,
+          "max_friction": 0.5141903322049829,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.066451856884493,
+          "duration_s": 3.329603073828489,
+          "end_contact_hz": 10.120210055004318,
+          "max_friction": 0.5406795976286474,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.566451856884493,
+          "duration_s": 3.4534075364421017,
+          "end_contact_hz": 10.358912642885588,
+          "max_friction": 0.5685501850287248,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.066451856884493,
+          "duration_s": 3.642151448947293,
+          "end_contact_hz": 10.226784784667913,
+          "max_friction": 0.6132264610436372,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.566451856884493,
+          "duration_s": 3.7618662871386315,
+          "end_contact_hz": 10.544043947228017,
+          "max_friction": 0.6426198909289669,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6426198909289669,
+      "min_normal_N": 2.8593517385678995,
+      "energy_error_relative": 1.3904928760715405e-11,
+      "nfev": 14147
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.1979855958552892,
+      "brake": 0.8016778201942867,
+      "initial_deg": 19.583884766842313,
+      "mu": 0.009206711280777147,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.125231602073772,
+          "duration_s": 2.181878679486954,
+          "end_contact_hz": 11.304220932478488,
+          "max_friction": 0.4692920784994758,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.625231602073772,
+          "duration_s": 2.2907191062472787,
+          "end_contact_hz": 11.659420683405122,
+          "max_friction": 0.5006257054916687,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.125231602073772,
+          "duration_s": 2.3986709498340426,
+          "end_contact_hz": 12.08669377826838,
+          "max_friction": 0.5326570914839015,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.625231602073772,
+          "duration_s": 2.507317536762372,
+          "end_contact_hz": 12.58726862911258,
+          "max_friction": 0.5660782850388123,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.125231602073772,
+          "duration_s": 2.676372755738237,
+          "end_contact_hz": 12.517689217855,
+          "max_friction": 0.6217879374594307,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6217879374594307,
+      "min_normal_N": 2.8220288891270098,
+      "energy_error_relative": 2.2304053824875593e-11,
+      "nfev": 10082
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.2145784904649619,
+      "brake": 0.8025057428546132,
+      "initial_deg": 19.716627923719695,
+      "mu": 0.009210022971418453,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 9.180983727962271,
+          "duration_s": 2.190108932073639,
+          "end_contact_hz": 11.273900309704933,
+          "max_friction": 0.47044137929768104,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.680983727962271,
+          "duration_s": 2.29902827854805,
+          "end_contact_hz": 11.621848013747424,
+          "max_friction": 0.5011662961927886,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 8.180983727962271,
+          "duration_s": 2.407086426177304,
+          "end_contact_hz": 12.039965175749892,
+          "max_friction": 0.533132573107815,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.680983727962271,
+          "duration_s": 2.5157394531908737,
+          "end_contact_hz": 12.530290239916217,
+          "max_friction": 0.5671340778837157,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 7.180983727962271,
+          "duration_s": 2.685151966196366,
+          "end_contact_hz": 12.449529420463449,
+          "max_friction": 0.6227905967430012,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6227905967430012,
+      "min_normal_N": 2.82234399732242,
+      "energy_error_relative": 3.3508473334923633e-11,
+      "nfev": 10112
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9219134260121977,
+      "brake": 0.43717428347606424,
+      "initial_deg": 25.375307408097584,
+      "mu": 0.007748697133904257,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.557629111400985,
+          "duration_s": 3.0792615333225313,
+          "end_contact_hz": 9.969051160402598,
+          "max_friction": 0.5118578568610014,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.057629111400985,
+          "duration_s": 3.2010530013654086,
+          "end_contact_hz": 10.16668201391396,
+          "max_friction": 0.539263511081335,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.557629111400985,
+          "duration_s": 3.386893204197304,
+          "end_contact_hz": 9.998544077422585,
+          "max_friction": 0.5829784510268887,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.057629111400985,
+          "duration_s": 3.5064832528600602,
+          "end_contact_hz": 10.250503016421671,
+          "max_friction": 0.6123668465454813,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.557629111400985,
+          "duration_s": 3.624140151685162,
+          "end_contact_hz": 10.55453865777713,
+          "max_friction": 0.6423525256627207,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6423525256627207,
+      "min_normal_N": 2.8564208293567064,
+      "energy_error_relative": 1.0409470385449685e-11,
+      "nfev": 13637
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.9723055126545955,
+      "brake": 0.8687379605798504,
+      "initial_deg": 25.778444101236765,
+      "mu": 0.009474951842319402,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 11.726946522519441,
+          "duration_s": 2.5420193479040405,
+          "end_contact_hz": 9.91332491112859,
+          "max_friction": 0.5129817366826824,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 11.226946522519441,
+          "duration_s": 2.646439950851019,
+          "end_contact_hz": 10.066039332128954,
+          "max_friction": 0.5412141856204874,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 10.726946522519441,
+          "duration_s": 2.7566645423029024,
+          "end_contact_hz": 10.199854344220315,
+          "max_friction": 0.5723070993673053,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 10.226946522519441,
+          "duration_s": 2.867014247191142,
+          "end_contact_hz": 10.356434703766777,
+          "max_friction": 0.6053196397044296,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 9.726946522519441,
+          "duration_s": 2.9766325882975257,
+          "end_contact_hz": 10.54694021828065,
+          "max_friction": 0.6391376537582308,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6391376537582308,
+      "min_normal_N": 2.8401179264111045,
+      "energy_error_relative": 4.01617585050868e-12,
+      "nfev": 11207
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.4612729897577962,
+      "brake": 0.9895010081446755,
+      "initial_deg": 21.69018391806237,
+      "mu": 0.009958004032578703,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.009877245586196,
+          "duration_s": 2.164056068131975,
+          "end_contact_hz": 10.711750073357374,
+          "max_friction": 0.4892639250822939,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.509877245586196,
+          "duration_s": 2.271393233624349,
+          "end_contact_hz": 10.913554461723926,
+          "max_friction": 0.5219150955800073,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.009877245586196,
+          "duration_s": 2.3777695927248765,
+          "end_contact_hz": 11.160835044224708,
+          "max_friction": 0.555314111744507,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.509877245586196,
+          "duration_s": 2.4831091591849264,
+          "end_contact_hz": 11.463755289669578,
+          "max_friction": 0.5895014097354047,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.009877245586196,
+          "duration_s": 2.5873007522674456,
+          "end_contact_hz": 11.835862986328907,
+          "max_friction": 0.6258507126568982,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6258507126568982,
+      "min_normal_N": 2.8215849903105084,
+      "energy_error_relative": 2.477984837969196e-11,
+      "nfev": 9752
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.04220862339408027,
+      "brake": 0.1625483027303689,
+      "initial_deg": 18.337668987152643,
+      "mu": 0.006650193210921476,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 8.60182097460411,
+          "duration_s": 2.8597696352963333,
+          "end_contact_hz": 11.877038667474125,
+          "max_friction": 0.45071576945299496,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 8.10182097460411,
+          "duration_s": 3.0496807825775614,
+          "end_contact_hz": 12.043269446769642,
+          "max_friction": 0.49015043707711037,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 7.601820974604109,
+          "duration_s": 3.2370882826759595,
+          "end_contact_hz": 12.27265343123122,
+          "max_friction": 0.531400884063759,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 7.101820974604109,
+          "duration_s": 3.361852491794501,
+          "end_contact_hz": 13.056848381860316,
+          "max_friction": 0.5597287061816912,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 6.601820974604109,
+          "duration_s": 3.5446604697585733,
+          "end_contact_hz": 13.495362170777073,
+          "max_friction": 0.6038073448775974,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6038073448775974,
+      "min_normal_N": 2.8543188315745613,
+      "energy_error_relative": 3.898662378260265e-11,
+      "nfev": 13337
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.6945318285029182,
+      "brake": 0.3670982859508506,
+      "initial_deg": 23.556254628023346,
+      "mu": 0.007468393143803403,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.793626943769805,
+          "duration_s": 3.0657574801622616,
+          "end_contact_hz": 10.187750564919495,
+          "max_friction": 0.506650984329127,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 10.293626943769805,
+          "duration_s": 3.1865462612867645,
+          "end_contact_hz": 10.462549982240901,
+          "max_friction": 0.5337528446240201,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.793626943769805,
+          "duration_s": 3.3067495131380604,
+          "end_contact_hz": 10.781707364622028,
+          "max_friction": 0.5613621667888354,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 9.293626943769805,
+          "duration_s": 3.429656453157528,
+          "end_contact_hz": 11.131799175003636,
+          "max_friction": 0.5904924619447124,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.793626943769805,
+          "duration_s": 3.6141206039641407,
+          "end_contact_hz": 11.092954166942159,
+          "max_friction": 0.6369681346781276,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6369681346781276,
+      "min_normal_N": 2.8549592123539873,
+      "energy_error_relative": 1.6364230729405723e-11,
+      "nfev": 13592
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.03666124740353893,
+      "brake": 0.22684652819520434,
+      "initial_deg": 8.146644989614156,
+      "mu": 0.004453693056390409,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.221590895637945,
+          "duration_s": 3.1772750171787085,
+          "end_contact_hz": 20.11599058997767,
+          "max_friction": 0.42157448678255505,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.9215908956379453,
+          "duration_s": 3.4219834911622224,
+          "end_contact_hz": 21.102099249648994,
+          "max_friction": 0.4691420320744462,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.6215908956379455,
+          "duration_s": 3.702900339325026,
+          "end_contact_hz": 21.89975695055839,
+          "max_friction": 0.528800775790139,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.321590895637945,
+          "duration_s": 3.976067099256554,
+          "end_contact_hz": 23.183085236588695,
+          "max_friction": 0.5933710263865077,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.0215908956379454,
+          "duration_s": 4.240937302512252,
+          "end_contact_hz": 25.21530852726734,
+          "max_friction": 0.6623436722055757,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6623436722055757,
+      "min_normal_N": 2.8378927487373597,
+      "energy_error_relative": 6.968918122811939e-09,
+      "nfev": 16307
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.2282340932618745,
+      "brake": 0.8146348397609777,
+      "initial_deg": 8.912936373047497,
+      "mu": 0.005629269679521955,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.5434332766799486,
+          "duration_s": 2.649910907220356,
+          "end_contact_hz": 18.784779300926008,
+          "max_friction": 0.43609468575219035,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.2434332766799487,
+          "duration_s": 2.797849482534379,
+          "end_contact_hz": 20.135838344074884,
+          "max_friction": 0.47178822709001084,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.943433276679949,
+          "duration_s": 3.025634380510745,
+          "end_contact_hz": 20.53573750155101,
+          "max_friction": 0.5305439019660749,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.6434332766799487,
+          "duration_s": 3.2072146576920253,
+          "end_contact_hz": 21.98470900751995,
+          "max_friction": 0.5815467828950512,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.343433276679949,
+          "duration_s": 3.4262646609267238,
+          "end_contact_hz": 23.178805876458632,
+          "max_friction": 0.6493697680232936,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6493697680232936,
+      "min_normal_N": 2.8196608954810105,
+      "energy_error_relative": 4.19407573407768e-09,
+      "nfev": 13067
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.4680929873118568,
+      "brake": 0.1915704942918275,
+      "initial_deg": 9.872371949247427,
+      "mu": 0.004383140988583655,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.946396218683919,
+          "duration_s": 3.5706402030827036,
+          "end_contact_hz": 17.805066164619387,
+          "max_friction": 0.4467558178771369,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.646396218683919,
+          "duration_s": 3.7799892842111156,
+          "end_contact_hz": 18.635040948492392,
+          "max_friction": 0.48478692944396284,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.3463962186839193,
+          "duration_s": 4.0330599856989515,
+          "end_contact_hz": 19.188583724152366,
+          "max_friction": 0.5335688779191184,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.046396218683919,
+          "duration_s": 4.238181027974792,
+          "end_contact_hz": 20.522615795058915,
+          "max_friction": 0.5760286486723131,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.7463962186839193,
+          "duration_s": 4.521779625141749,
+          "end_contact_hz": 21.17074670367745,
+          "max_friction": 0.6400929261731336,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6400929261731336,
+      "min_normal_N": 2.851839134730747,
+      "energy_error_relative": 2.98357597703322e-09,
+      "nfev": 17132
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.13662560677997126,
+      "brake": 0.12995361006384942,
+      "initial_deg": 8.546502427119885,
+      "mu": 0.004259907220127699,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.3895310193903514,
+          "duration_s": 3.4088379927100654,
+          "end_contact_hz": 19.476040396261215,
+          "max_friction": 0.42789390794217214,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.0895310193903516,
+          "duration_s": 3.659123013393258,
+          "end_contact_hz": 20.35821888739099,
+          "max_friction": 0.47391329328439075,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.7895310193903518,
+          "duration_s": 3.9061381958870895,
+          "end_contact_hz": 21.57352514922131,
+          "max_friction": 0.5231594952194067,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.4895310193903515,
+          "duration_s": 4.186492326089694,
+          "end_contact_hz": 22.71851971178209,
+          "max_friction": 0.5837779062396622,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.1895310193903517,
+          "duration_s": 4.499858094364442,
+          "end_contact_hz": 23.797401791305166,
+          "max_friction": 0.6597993622037468,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6597993622037468,
+      "min_normal_N": 2.8445487284938267,
+      "energy_error_relative": 6.123927000635484e-09,
+      "nfev": 17222
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.18451788732524632,
+      "brake": 0.1663364194119039,
+      "initial_deg": 8.738071549300985,
+      "mu": 0.004332672838823808,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.4699900507064134,
+          "duration_s": 3.3762298373146433,
+          "end_contact_hz": 19.35723165663724,
+          "max_friction": 0.42818551828030965,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.1699900507064136,
+          "duration_s": 3.6264595892168163,
+          "end_contact_hz": 20.133405722030904,
+          "max_friction": 0.47441390478565215,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.8699900507064138,
+          "duration_s": 3.872659233667726,
+          "end_contact_hz": 21.217509358489465,
+          "max_friction": 0.5239659418392573,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.5699900507064135,
+          "duration_s": 4.154290161494559,
+          "end_contact_hz": 22.159234518457584,
+          "max_friction": 0.5851577908522715,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.2699900507064137,
+          "duration_s": 4.42844567696502,
+          "end_contact_hz": 23.63315164582559,
+          "max_friction": 0.65143962160229,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.65143962160229,
+      "min_normal_N": 2.8459776222264295,
+      "energy_error_relative": 5.353638183879827e-09,
+      "nfev": 16892
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.13012128608974316,
+      "brake": 0.7933228150832984,
+      "initial_deg": 8.520485144358972,
+      "mu": 0.005586645630166597,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.378603760630768,
+          "duration_s": 2.5996017503722197,
+          "end_contact_hz": 19.44949580630803,
+          "max_friction": 0.42848279821670776,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.078603760630768,
+          "duration_s": 2.7879817587863367,
+          "end_contact_hz": 20.37360251321832,
+          "max_friction": 0.47397613694251783,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.778603760630768,
+          "duration_s": 2.9731717547288787,
+          "end_contact_hz": 21.654199840673325,
+          "max_friction": 0.5224489327240704,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.478603760630768,
+          "duration_s": 3.194988565632772,
+          "end_contact_hz": 22.66234110758423,
+          "max_friction": 0.5856889857206119,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.178603760630768,
+          "duration_s": 3.410694689620982,
+          "end_contact_hz": 24.26111035734565,
+          "max_friction": 0.6536342920460738,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6536342920460738,
+      "min_normal_N": 2.817061763402973,
+      "energy_error_relative": 5.262352380519179e-09,
+      "nfev": 13052
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.2370858955546944,
+      "brake": 0.177819167870802,
+      "initial_deg": 8.948343582218778,
+      "mu": 0.004355638335741604,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.5583043045318865,
+          "duration_s": 3.408219855368057,
+          "end_contact_hz": 18.98581289255666,
+          "max_friction": 0.4327597269882992,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.2583043045318862,
+          "duration_s": 3.65979411614829,
+          "end_contact_hz": 19.652481069070554,
+          "max_friction": 0.4794959839693465,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.9583043045318864,
+          "duration_s": 3.9060063541939805,
+          "end_contact_hz": 20.60711857414228,
+          "max_friction": 0.5287954283700547,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.658304304531886,
+          "duration_s": 4.147186482360143,
+          "end_contact_hz": 21.959637970811986,
+          "max_friction": 0.5806982965270576,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.3583043045318863,
+          "duration_s": 4.42365378745928,
+          "end_contact_hz": 23.24100663629421,
+          "max_friction": 0.6465864146079066,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6465864146079066,
+      "min_normal_N": 2.8474985110995683,
+      "energy_error_relative": 4.644830131366307e-09,
+      "nfev": 16832
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5070026504400662,
+      "brake": 0.7448612555786895,
+      "initial_deg": 10.028010601760265,
+      "mu": 0.005489722511157379,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.011764452739311,
+          "duration_s": 2.8433237642336096,
+          "end_contact_hz": 17.99588980063419,
+          "max_friction": 0.4423910436452758,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.7117644527393114,
+          "duration_s": 3.0397045410939723,
+          "end_contact_hz": 18.44319958850244,
+          "max_friction": 0.48613434017614787,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4117644527393116,
+          "duration_s": 3.233471359618348,
+          "end_contact_hz": 19.067126012792222,
+          "max_friction": 0.532776983608368,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.1117644527393113,
+          "duration_s": 3.4231060415479626,
+          "end_contact_hz": 19.948591157227956,
+          "max_friction": 0.5818879119434772,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8117644527393115,
+          "duration_s": 3.6085191347363805,
+          "end_contact_hz": 21.18569700868181,
+          "max_friction": 0.6334773168439047,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6334773168439047,
+      "min_normal_N": 2.832178888164172,
+      "energy_error_relative": 2.4790563410941467e-09,
+      "nfev": 13667
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.7379067379871787,
+      "brake": 0.45461331946889494,
+      "initial_deg": 10.951626951948715,
+      "mu": 0.00490922663893779,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.39968331981846,
+          "duration_s": 3.331418201984746,
+          "end_contact_hz": 17.03724895871611,
+          "max_friction": 0.45494591989927335,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.09968331981846,
+          "duration_s": 3.538994411737053,
+          "end_contact_hz": 17.432255969356184,
+          "max_friction": 0.4954931456009591,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.7996833198184605,
+          "duration_s": 3.7434501543779795,
+          "end_contact_hz": 17.971191274025156,
+          "max_friction": 0.5379510178197433,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.4996833198184603,
+          "duration_s": 3.9440823594156313,
+          "end_contact_hz": 18.70442964506095,
+          "max_friction": 0.5823513526880486,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.1996833198184604,
+          "duration_s": 4.140666517130896,
+          "end_contact_hz": 19.69880848185746,
+          "max_friction": 0.6291094331524792,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6291094331524792,
+      "min_normal_N": 2.8484109593723392,
+      "energy_error_relative": 1.4397131061980589e-09,
+      "nfev": 15632
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.5441888352535786,
+      "brake": 0.14571837165746304,
+      "initial_deg": 10.176755341014314,
+      "mu": 0.004291436743314926,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.074237243226011,
+          "duration_s": 3.708532007659988,
+          "end_contact_hz": 17.446457737396628,
+          "max_friction": 0.4513899780975907,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.774237243226011,
+          "duration_s": 3.92075705648173,
+          "end_contact_hz": 18.210164147403784,
+          "max_friction": 0.48866809431520836,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.4742372432260114,
+          "duration_s": 4.130692429287526,
+          "end_contact_hz": 19.19045199134566,
+          "max_friction": 0.5277169801482902,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.174237243226011,
+          "duration_s": 4.381622093136564,
+          "end_contact_hz": 19.951728935065702,
+          "max_friction": 0.5778425238069543,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.8742372432260113,
+          "duration_s": 4.628792149462643,
+          "end_contact_hz": 21.01261014046623,
+          "max_friction": 0.6310451859521243,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6310451859521243,
+      "min_normal_N": 2.8567955104705276,
+      "energy_error_relative": 2.6058424529396023e-09,
+      "nfev": 17507
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.47871841681227856,
+      "brake": 0.6470281785702351,
+      "initial_deg": 9.914873667249115,
+      "mu": 0.00529405635714047,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.964246940244628,
+          "duration_s": 2.9694107233857934,
+          "end_contact_hz": 17.68336193597908,
+          "max_friction": 0.4486945305106254,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.6642469402446283,
+          "duration_s": 3.120425201292274,
+          "end_contact_hz": 18.77174148657794,
+          "max_friction": 0.4814676478654887,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.3642469402446284,
+          "duration_s": 3.3154838976545036,
+          "end_contact_hz": 19.52437165468546,
+          "max_friction": 0.5266634481378062,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.064246940244628,
+          "duration_s": 3.5089303490335584,
+          "end_contact_hz": 20.52883283291781,
+          "max_friction": 0.574657338930133,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.7642469402446284,
+          "duration_s": 3.7385337904962848,
+          "end_contact_hz": 21.250840677818108,
+          "max_friction": 0.6368058548773787,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6368058548773787,
+      "min_normal_N": 2.834430902578116,
+      "energy_error_relative": 2.5641547753236956e-09,
+      "nfev": 14162
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.05231865074298725,
+      "brake": 0.28776579443613615,
+      "initial_deg": 8.209274602971949,
+      "mu": 0.004575531588872273,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.247895333248218,
+          "duration_s": 3.107754034134121,
+          "end_contact_hz": 19.9840881993253,
+          "max_friction": 0.42278828191171675,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.9478953332482183,
+          "duration_s": 3.3506383137576115,
+          "end_contact_hz": 20.875970325023538,
+          "max_friction": 0.4716441190843884,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.6478953332482185,
+          "duration_s": 3.5889951442237966,
+          "end_contact_hz": 22.15044213700588,
+          "max_friction": 0.5233392598311796,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.347895333248218,
+          "duration_s": 3.861063290233032,
+          "end_contact_hz": 23.331970625507974,
+          "max_friction": 0.5882377570272836,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.0478953332482184,
+          "duration_s": 4.128223083767666,
+          "end_contact_hz": 25.161544830757883,
+          "max_friction": 0.65902850560099,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.65902850560099,
+      "min_normal_N": 2.836485851651499,
+      "energy_error_relative": 6.8144423968820215e-09,
+      "nfev": 15857
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.30572486989689074,
+      "brake": 0.3599130244273602,
+      "initial_deg": 9.222899479587563,
+      "mu": 0.0047198260488547205,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.673617781426776,
+          "duration_s": 3.2027354920199693,
+          "end_contact_hz": 18.5461303953373,
+          "max_friction": 0.437850931584524,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.373617781426776,
+          "duration_s": 3.4044826687509624,
+          "end_contact_hz": 19.48567250024718,
+          "max_friction": 0.47807070537969215,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.073617781426776,
+          "duration_s": 3.647951489805723,
+          "end_contact_hz": 20.138242242322626,
+          "max_friction": 0.5302429082925078,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.773617781426776,
+          "duration_s": 3.8855632571689793,
+          "end_contact_hz": 21.116423765206317,
+          "max_friction": 0.5856200815950445,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.473617781426776,
+          "duration_s": 4.116779780389236,
+          "end_contact_hz": 22.566537819813885,
+          "max_friction": 0.6441644052710557,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6441644052710557,
+      "min_normal_N": 2.841379154906992,
+      "energy_error_relative": 3.932677632475013e-09,
+      "nfev": 15647
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.043094087612781884,
+      "brake": 0.22837232820418052,
+      "initial_deg": 8.172376350451128,
+      "mu": 0.004456744656408361,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.2323980671894734,
+          "duration_s": 3.181221362131342,
+          "end_contact_hz": 20.064526068003516,
+          "max_friction": 0.42174314944550334,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.9323980671894736,
+          "duration_s": 3.4259254450121164,
+          "end_contact_hz": 21.035724204134063,
+          "max_friction": 0.4697385257678752,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.632398067189474,
+          "duration_s": 3.707243857637363,
+          "end_contact_hz": 21.809493221118874,
+          "max_friction": 0.529844521229087,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.3323980671894735,
+          "duration_s": 3.980592964563069,
+          "end_contact_hz": 23.062803481221234,
+          "max_friction": 0.5940592581247147,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 2.0323980671894737,
+          "duration_s": 4.245121996634116,
+          "end_contact_hz": 25.05910983107792,
+          "max_friction": 0.6630558383533255,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6630558383533255,
+      "min_normal_N": 2.8379987923673924,
+      "energy_error_relative": 6.54016216795621e-09,
+      "nfev": 16322
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.6383368487842399,
+      "brake": 0.8340445658692552,
+      "initial_deg": 10.55334739513696,
+      "mu": 0.00566808913173851,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.232405905957523,
+          "duration_s": 2.8264992729759353,
+          "end_contact_hz": 17.46380738598863,
+          "max_friction": 0.448812207651657,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 3.9324059059575234,
+          "duration_s": 3.0243104175583793,
+          "end_contact_hz": 17.71347970417749,
+          "max_friction": 0.49387932206758073,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 3.6324059059575236,
+          "duration_s": 3.1706155436973207,
+          "end_contact_hz": 18.744470226774347,
+          "max_friction": 0.5292600769483041,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.3324059059575233,
+          "duration_s": 3.361821383521415,
+          "end_contact_hz": 19.370050300881797,
+          "max_friction": 0.578913827622743,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.0324059059575235,
+          "duration_s": 3.5491071997583097,
+          "end_contact_hz": 20.262844339717432,
+          "max_friction": 0.6313200619019682,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6313200619019682,
+      "min_normal_N": 2.8320730555224207,
+      "energy_error_relative": 2.006427752736003e-09,
+      "nfev": 13412
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.8957945199047146,
+      "brake": 0.820438814147098,
+      "initial_deg": 11.583178079618857,
+      "mu": 0.005640877628294196,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 4.66493479343992,
+          "duration_s": 2.971266112258074,
+          "end_contact_hz": 16.62310201581829,
+          "max_friction": 0.45999786331124887,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 4.36493479343992,
+          "duration_s": 3.1726832029567476,
+          "end_contact_hz": 16.699447690077196,
+          "max_friction": 0.5039846630429295,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 4.06493479343992,
+          "duration_s": 3.321884406919447,
+          "end_contact_hz": 17.445126955870993,
+          "max_friction": 0.5390506399871956,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 3.7649347934399198,
+          "duration_s": 3.470146272364218,
+          "end_contact_hz": 18.372930832339602,
+          "max_friction": 0.5753962971019901,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 3.46493479343992,
+          "duration_s": 3.66297634386877,
+          "end_contact_hz": 18.89370811223792,
+          "max_friction": 0.6264224882888612,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6264224882888612,
+      "min_normal_N": 2.8385550504020123,
+      "energy_error_relative": 1.0246540159865018e-09,
+      "nfev": 13787
+    },
+    {
+      "voice": "ROLL",
+      "lean": 0.55,
+      "brake": 0.4,
+      "initial_deg": 22.4,
+      "mu": 0.0076,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 10.308,
+          "duration_s": 2.881304306663945,
+          "end_contact_hz": 10.641896122142933,
+          "max_friction": 0.4911852895402399,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 9.808,
+          "duration_s": 3.0028626081177006,
+          "end_contact_hz": 10.950441452755873,
+          "max_friction": 0.5189713586267659,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 9.308,
+          "duration_s": 3.188984020875066,
+          "end_contact_hz": 10.860713409787843,
+          "max_friction": 0.5632062838122719,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 8.808,
+          "duration_s": 3.306455229839776,
+          "end_contact_hz": 11.2730423053218,
+          "max_friction": 0.5924284935717335,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 8.308,
+          "duration_s": 3.423280750013807,
+          "end_contact_hz": 11.76065217057711,
+          "max_friction": 0.6228670707042134,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6228670707042134,
+      "min_normal_N": 2.852727663003094,
+      "energy_error_relative": 1.7552977294379576e-11,
+      "nfev": 12887
+    },
+    {
+      "voice": "WHIRR",
+      "lean": 0.0,
+      "brake": 0.2,
+      "initial_deg": 8.0,
+      "mu": 0.0044,
+      "tight": true,
+      "reason": "terminal",
+      "collapse_cases": [
+        {
+          "collapse": 0.0,
+          "terminal_deg": 3.16,
+          "duration_s": 3.2091153340536933,
+          "end_contact_hz": 20.074239090500384,
+          "max_friction": 0.4232303977312496,
+          "complete": true
+        },
+        {
+          "collapse": 0.25,
+          "terminal_deg": 2.86,
+          "duration_s": 3.452912426836094,
+          "end_contact_hz": 21.150013490324945,
+          "max_friction": 0.4709458659538463,
+          "complete": true
+        },
+        {
+          "collapse": 0.5,
+          "terminal_deg": 2.56,
+          "duration_s": 3.733320052271987,
+          "end_contact_hz": 22.060777457815554,
+          "max_friction": 0.5307399547779422,
+          "complete": true
+        },
+        {
+          "collapse": 0.75,
+          "terminal_deg": 2.26,
+          "duration_s": 4.005300005325205,
+          "end_contact_hz": 23.51375880186785,
+          "max_friction": 0.5948512557652992,
+          "complete": true
+        },
+        {
+          "collapse": 1.0,
+          "terminal_deg": 1.96,
+          "duration_s": 4.307507234423075,
+          "end_contact_hz": 25.05356860135007,
+          "max_friction": 0.6751299714012093,
+          "complete": true
+        }
+      ],
+      "max_friction": 0.6751299714012093,
+      "min_normal_N": 2.835261469936753,
+      "energy_error_relative": 7.455686280210076e-09,
+      "nfev": 16622
+    }
+  ],
+  "between_grid_seed": 20261023,
+  "between_grid_pairs_per_voice": 16,
+  "recommended_defaults": {
+    "ROLL": {
+      "LEAN": 0.55,
+      "BRAKE": 0.4,
+      "COLLAPSE": 0.65
+    },
+    "WHIRR": {
+      "LEAN": 0.0,
+      "BRAKE": 0.2,
+      "COLLAPSE": 1.0
+    }
+  },
+  "authored_mapping_notes": [
+    "Physical ranges intentionally replace the original unsafe all-voice macro map.",
+    "COLLAPSE is an explicitly launch-dependent chosen threshold. No solver failure is repaired or relabelled.",
+    "The exact original curated trajectories remain independent regression fixtures.",
+    "All five COLLAPSE exits share the same valid rolling prefix; later thresholds are integrated directly.",
+    "Finite grid plus between-grid sampling is evidence, not a mathematical proof over a continuum.",
+    "Production must retain normal-force, friction, rate, finite-state and work-limit guards.",
+    "Mechanical macro activity is demonstrated by timing and trajectory changes; audibility after Kotlin leveling still needs probes and owner listening."
+  ],
+  "exact_default_measurements": {
+    "ROLL": {
+      "angle_deg": 22.4,
+      "mu": 0.0076,
+      "target_deg": 9.008,
+      "tight": true,
+      "reason": "terminal",
+      "duration_s": 3.2203156570623523,
+      "nfev": 12122,
+      "end_angle_deg": 9.007999999999987,
+      "friction_max": 0.5712212589383868,
+      "normal_min_N": 2.8606152264992395,
+      "contact_start_hz": 8.209070652343936,
+      "contact_end_hz": 11.380232469160925,
+      "energy_error_relative": 1.871234396988639e-11,
+      "runtime_s": 1.4378145850000124,
+      "solver_rtol": 2e-09,
+      "solver_max_step_s": 0.004
+    },
+    "WHIRR": {
+      "collapse": 1.0,
+      "terminal_deg": 1.96,
+      "duration_s": 4.307507234423075,
+      "end_contact_hz": 25.05356860135007,
+      "max_friction": 0.6751299714012093,
+      "complete": true
+    }
+  },
+  "tighter_spot_checks": [
+    {
+      "voice": "WHIRR",
+      "precise": {
+        "angle_deg": 8.0,
+        "mu": 0.004,
+        "target_deg": 1.96,
+        "tight": true,
+        "reason": "terminal",
+        "duration_s": 4.732315979590583,
+        "nfev": 35537,
+        "end_angle_deg": 1.959999999999956,
+        "friction_max": 0.6734835131966221,
+        "normal_min_N": 2.845146630244816,
+        "contact_start_hz": 13.340016158252,
+        "contact_end_hz": 25.158730137414885,
+        "energy_error_relative": 4.31727475725107e-11,
+        "runtime_s": 4.155619251000019,
+        "solver_rtol": 2e-10,
+        "solver_max_step_s": 0.002
+      },
+      "duration_difference_s": 3.193443820492803e-08,
+      "end_contact_rate_difference_hz": 1.0196177555599206e-06,
+      "nominal_energy_error_relative": 7.829451955735688e-09
+    },
+    {
+      "voice": "ROLL",
+      "precise": {
+        "angle_deg": 26.0,
+        "mu": 0.007,
+        "target_deg": 9.82,
+        "tight": true,
+        "reason": "terminal",
+        "duration_s": 4.0766143144150115,
+        "nfev": 30617,
+        "end_angle_deg": 9.819999999999986,
+        "friction_max": 0.6466300333782493,
+        "normal_min_N": 2.8653193658473235,
+        "contact_start_hz": 7.695174017654539,
+        "contact_end_hz": 10.318550432107322,
+        "energy_error_relative": 4.192112851573171e-14,
+        "runtime_s": 3.847959510999999,
+        "solver_rtol": 2e-10,
+        "solver_max_step_s": 0.002
+      },
+      "duration_difference_s": 9.016787316795671e-12,
+      "end_contact_rate_difference_hz": 2.0105694886751735e-10,
+      "nominal_energy_error_relative": 5.128748509831411e-12
+    }
+  ]
+}

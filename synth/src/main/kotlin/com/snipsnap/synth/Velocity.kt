@@ -241,6 +241,7 @@ object Velocity {
         is SpoolPatch -> Spool.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
+        is SkirlPatch -> Skirl.macrosFor(patch.voice)
         is EmbouchurePatch -> Embouchure.macrosFor(patch.voice, patch.model)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
@@ -336,6 +337,7 @@ object Velocity {
      * preserving the weighted-flap recipe, and
      * SUTURE uses finite opening and release energy in the selected vessel.
      * PITCHWHEEL scales the initial wheel impulse while preserving PUSH's character.
+     * SKIRL changes acoustic contact energy and hardness, retaining the saved runout and root.
      * REVEL scales each phrase event's energy while keeping its saved [RevelConfig].
      * EMBOUCHURE scales player energy while preserving EFFORT and the saved gesture.
      * OBBLIGATO scales player excitation while preserving the saved duet, note, seed and model.
@@ -386,6 +388,7 @@ object Velocity {
         is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
+        is SkirlPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
         is ObbligatoPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()

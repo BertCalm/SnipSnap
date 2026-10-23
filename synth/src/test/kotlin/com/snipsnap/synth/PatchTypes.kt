@@ -63,10 +63,11 @@ internal object PatchTypes {
      * NACRE's finite PEARL duet likewise has provisional listening recipes only.
      * CHAMBER's finite HYBRID/AQUARIUM room recipes stay outside [Presets] and the phone picker too.
      * TIDAL's finite PAIR/STREAM encounters follow the same first-listen policy.
+     * SKIRL's finite ROLL/WHIRR runouts likewise wait for their native-audio listen.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, SkirlPatch.ENGINE)
 
     /** Only these voices of an otherwise rostered engine remain CLI-only comparisons. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

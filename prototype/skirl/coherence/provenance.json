@@ -1,0 +1,16 @@
+{
+  "original_experiment_sha256": "b8eabb4faada0ad2121c9dca5784674cf460a79a3e2da7a272df7fef94b3b78d",
+  "original_report_sha256": "a72750a8cb3900f2f720b6aee551aade9f0612663ce4ef5f4cbe645729d75f0d",
+  "portable_changes": [
+    "Resolve helpers from ../reference instead of the original workspace scratch folder.",
+    "Write no audio by default; --audio-dir explicitly selects optional scratch output.",
+    "Allow --report to select a report destination."
+  ],
+  "comparison": "Original measured report is copied byte-for-byte; no signal or measurement algorithm changed.",
+  "portable_verification": {
+    "command": "python3 prototype/skirl/coherence/experiment.py --report /tmp/skirl-coherence-portable-report.json",
+    "original_seed_and_all_28_variant_measurements_identical": true,
+    "audio_written": false,
+    "date_utc": "2026-10-23"
+  }
+}

@@ -1,0 +1,7 @@
+import org.gradle.api.tasks.testing.Test
+
+gradle.projectsEvaluated {
+    gradle.rootProject.project(":synth").tasks.withType(Test).configureEach {
+        maxParallelForks = 3
+    }
+}

@@ -1,0 +1,230 @@
+{
+  "status": "Python two-route contact accumulator, not Kotlin; not heard",
+  "units": "squared acoustic-input proxy amplitude times seconds; not calibrated joules",
+  "law": "q*a^2+2*c*a <= budget, with a <= sqrt(budget)",
+  "rate": 176400,
+  "rate_cases": [
+    {
+      "contact_hz": 5.0,
+      "pulse_width_seconds": 0.002,
+      "schedule_seconds": 2.0,
+      "events": 10,
+      "assigned_total_energy": 0.6000000000000001,
+      "budgeted_measured_total_energy": 0.6,
+      "naive_measured_total_energy": 0.6,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.3,
+      "naive_mean_power": 0.3,
+      "naive_to_intended_ratio": 0.9999999999999998,
+      "filtered_measured_total_energy": 0.5999999893882161,
+      "minimum_attenuation": 1.0,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 1.1102230246251565e-16
+    },
+    {
+      "contact_hz": 20.0,
+      "pulse_width_seconds": 0.002,
+      "schedule_seconds": 2.0,
+      "events": 40,
+      "assigned_total_energy": 0.6000000000000004,
+      "budgeted_measured_total_energy": 0.6,
+      "naive_measured_total_energy": 0.6,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.3,
+      "naive_mean_power": 0.3,
+      "naive_to_intended_ratio": 0.9999999999999992,
+      "filtered_measured_total_energy": 0.5999999893882161,
+      "minimum_attenuation": 1.0,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 1.1102230246251565e-16
+    },
+    {
+      "contact_hz": 80.0,
+      "pulse_width_seconds": 0.002,
+      "schedule_seconds": 2.0,
+      "events": 160,
+      "assigned_total_energy": 0.5999999999999994,
+      "budgeted_measured_total_energy": 0.6,
+      "naive_measured_total_energy": 0.6,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.3,
+      "naive_mean_power": 0.3,
+      "naive_to_intended_ratio": 1.0000000000000009,
+      "filtered_measured_total_energy": 0.5999999893882161,
+      "minimum_attenuation": 1.0,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 1.1102230246251565e-16
+    },
+    {
+      "contact_hz": 5.0,
+      "pulse_width_seconds": 0.05,
+      "schedule_seconds": 2.0,
+      "events": 10,
+      "assigned_total_energy": 0.6000000000000001,
+      "budgeted_measured_total_energy": 0.6,
+      "naive_measured_total_energy": 0.6,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.3,
+      "naive_mean_power": 0.3,
+      "naive_to_intended_ratio": 0.9999999999999998,
+      "filtered_measured_total_energy": 0.6000000000000028,
+      "minimum_attenuation": 1.0,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 0.0
+    },
+    {
+      "contact_hz": 20.0,
+      "pulse_width_seconds": 0.05,
+      "schedule_seconds": 2.0,
+      "events": 40,
+      "assigned_total_energy": 0.6000000000000004,
+      "budgeted_measured_total_energy": 0.6,
+      "naive_measured_total_energy": 0.6,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.3,
+      "naive_mean_power": 0.3,
+      "naive_to_intended_ratio": 0.9999999999999992,
+      "filtered_measured_total_energy": 0.5999999999999985,
+      "minimum_attenuation": 1.0,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 0.0
+    },
+    {
+      "contact_hz": 80.0,
+      "pulse_width_seconds": 0.05,
+      "schedule_seconds": 2.0,
+      "events": 160,
+      "assigned_total_energy": 0.5999999999999994,
+      "budgeted_measured_total_energy": 0.5974786038164868,
+      "naive_measured_total_energy": 1.5810148985802934,
+      "intended_mean_power": 0.3,
+      "budgeted_mean_power": 0.2987393019082434,
+      "naive_mean_power": 0.7905074492901467,
+      "naive_to_intended_ratio": 2.6350248309671582,
+      "filtered_measured_total_energy": 0.5974399945139001,
+      "minimum_attenuation": 0.5385735572325501,
+      "maximum_attenuation": 1.0,
+      "increment_energy_sum_error": 1.1102230246251565e-16
+    }
+  ],
+  "boundary_cases": [
+    {
+      "name": "left_clipped",
+      "amplitude": 0.2,
+      "nominal_amplitude": 0.2,
+      "attenuation": 1.0,
+      "incremental_energy": 0.020000000000000004,
+      "incremental_energy_quadratic": 0.020000000000000004,
+      "assigned_budget": 0.04,
+      "unused_budget": 0.019999999999999997,
+      "pulse_energy_present": 0.5,
+      "cross_energy": 0.0,
+      "frames_added": 4410,
+      "truncated": true,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    },
+    {
+      "name": "right_clipped",
+      "amplitude": 0.2,
+      "nominal_amplitude": 0.2,
+      "attenuation": 1.0,
+      "incremental_energy": 0.019999999999999997,
+      "incremental_energy_quadratic": 0.02,
+      "assigned_budget": 0.04,
+      "unused_budget": 0.02,
+      "pulse_energy_present": 0.49999999999999994,
+      "cross_energy": 0.0,
+      "frames_added": 4410,
+      "truncated": true,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    },
+    {
+      "name": "entirely_before",
+      "amplitude": 0.0,
+      "nominal_amplitude": 0.2,
+      "attenuation": 0.0,
+      "incremental_energy": 0.0,
+      "incremental_energy_quadratic": 0.0,
+      "assigned_budget": 0.04,
+      "unused_budget": 0.04,
+      "pulse_energy_present": 0.0,
+      "cross_energy": 0.0,
+      "frames_added": 0,
+      "truncated": true,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    },
+    {
+      "name": "entirely_after",
+      "amplitude": 0.0,
+      "nominal_amplitude": 0.2,
+      "attenuation": 0.0,
+      "incremental_energy": 0.0,
+      "incremental_energy_quadratic": 0.0,
+      "assigned_budget": 0.04,
+      "unused_budget": 0.04,
+      "pulse_energy_present": 0.0,
+      "cross_energy": 0.0,
+      "frames_added": 0,
+      "truncated": true,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    }
+  ],
+  "coincident_contacts": {
+    "first": {
+      "amplitude": 0.19999999999999998,
+      "nominal_amplitude": 0.2,
+      "attenuation": 0.9999999999999999,
+      "incremental_energy": 0.03999999999999999,
+      "incremental_energy_quadratic": 0.039999999999999994,
+      "assigned_budget": 0.04,
+      "unused_budget": 6.938893903907228e-18,
+      "pulse_energy_present": 1.0,
+      "cross_energy": 0.0,
+      "frames_added": 8820,
+      "truncated": false,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    },
+    "second": {
+      "amplitude": 0.082842712474619,
+      "nominal_amplitude": 0.2,
+      "attenuation": 0.414213562373095,
+      "incremental_energy": 0.03999999999999999,
+      "incremental_energy_quadratic": 0.039999999999999994,
+      "assigned_budget": 0.04,
+      "unused_budget": 6.938893903907228e-18,
+      "pulse_energy_present": 1.0,
+      "cross_energy": 0.2,
+      "frames_added": 8820,
+      "truncated": false,
+      "direction": [
+        0.8,
+        0.6
+      ]
+    },
+    "total_energy": 0.08
+  },
+  "zero_budget_unchanged": true,
+  "deterministic": true,
+  "limits": [
+    "Pulse and accumulated unfiltered routes must be nonnegative.",
+    "Budgeted energy is the combined energy of the two acoustic input routes, not the radiated waveform or mechanical energy.",
+    "Truncated contacts are never amplified to spend their unconsumed budget.",
+    "The proxy can lower amplitudes when contacts overlap; its audible effect needs the owner's audition.",
+    "Only this input accumulator and a zero-state Butterworth LP were checked here; modal/filter state stability and aliasing require separate probes."
+  ]
+}

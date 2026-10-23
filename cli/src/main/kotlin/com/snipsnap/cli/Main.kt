@@ -82,6 +82,8 @@ object Cli {
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
+        |                        (SKIRL prototype: ROLL/WHIRR; --midi 36..84 --velocity 0..1;
+        |                        finite runout, --patch replay, WAV + .patch recipe; HOLD unavailable)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N)
         |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)

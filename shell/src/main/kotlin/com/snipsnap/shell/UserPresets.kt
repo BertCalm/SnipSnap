@@ -26,6 +26,7 @@ import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
+import com.snipsnap.synth.SkirlPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.Embouchure
@@ -415,6 +416,12 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is SkirlPatch) {
+            // This provisional table has no p helper, and the saved model and
+            // performance must survive promotion together with the controls.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "SkirlPatch.fromJsonText($recipe),"
+        }
         if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
             // The original roster's p helper constructs model 2 before .copy runs;
             // it cannot accept a GROW macro. Construct the saved model directly.

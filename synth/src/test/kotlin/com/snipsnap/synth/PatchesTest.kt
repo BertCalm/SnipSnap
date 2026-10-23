@@ -51,6 +51,7 @@ class PatchesTest {
         NacrePresets.all().first(),
         ChamberPresets.all().first(),
         TidalPresets.all().first(),
+        SkirlPresets.all().first(),
     )
 
     @Test

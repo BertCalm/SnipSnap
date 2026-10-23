@@ -1,0 +1,101 @@
+{
+  "copied_date": "2026-10-23",
+  "source_repository_commit": "4e36a2bf8cf8bfb07dba35379558b54429b5d73d",
+  "portability_changes": [
+    "safe_domain.py imports the bundled reference directory",
+    "reference/first_proof.py uses the bundled snipkit.py and probes.py",
+    "Remove redundant terminal blank lines from reference/probes.py and reference/snipkit.py; algorithms are unchanged"
+  ],
+  "files": [
+    {
+      "file": "safe_domain.py",
+      "source_sha256": "ec5eb6529af919eb30089d6ead85d5c6991682f76aaf05023f516d3fd2f0fbb4",
+      "copied_sha256": "1a6c1ce5a2a05ec7a938229b782413aca39ec1b82b835eedfaf858ccddfd577d"
+    },
+    {
+      "file": "safe_domain_report.json",
+      "source_sha256": "c007c40b92ed4e6a053512290405dc7358744a3b131f1fe3c14b0574bc56bf5f",
+      "copied_sha256": "c007c40b92ed4e6a053512290405dc7358744a3b131f1fe3c14b0574bc56bf5f"
+    },
+    {
+      "file": "exploration.json",
+      "source_sha256": "219ac306dad35408ded88061d52f539e292a22af021815740398ed11dcc61c5e",
+      "copied_sha256": "219ac306dad35408ded88061d52f539e292a22af021815740398ed11dcc61c5e"
+    },
+    {
+      "file": "reference/mechanics.py",
+      "source_sha256": "0f3bc59516d0621582c67d2ac0ad54809e710bb3f23957cd51f4bcbc787715a4",
+      "copied_sha256": "0f3bc59516d0621582c67d2ac0ad54809e710bb3f23957cd51f4bcbc787715a4"
+    },
+    {
+      "file": "reference/contact_budget.py",
+      "source_sha256": "fc4647738138e502159c702a50a87794f64a62d31058bc06debec9a6539b7990",
+      "copied_sha256": "fc4647738138e502159c702a50a87794f64a62d31058bc06debec9a6539b7990"
+    },
+    {
+      "file": "reference/first_proof.py",
+      "source_sha256": "68ebeb9c1f0fb5e0cd776f68d4217cbbb15d965ab77b23f41d25fb34c3ed2517",
+      "copied_sha256": "200f1bb5432613bd0acda2b4bd3eb68199ed439c536207c0a24e87b23f84aaad"
+    },
+    {
+      "file": "reference/render_audition.py",
+      "source_sha256": "79d44e181f9fcf7b73292cfee19c0021a676ab03069d1d48991f0e622a28c5af",
+      "copied_sha256": "79d44e181f9fcf7b73292cfee19c0021a676ab03069d1d48991f0e622a28c5af"
+    },
+    {
+      "file": "reference/snipkit.py",
+      "source_sha256": "b9dad644af4adf86d4c2fe39b169abcce083d854506760cf795e6013616ddf68",
+      "copied_sha256": "51cb3b20c9f637630ecc4a25fe6041c0dcf40de4fccac703d1e59f036fe7d5db"
+    },
+    {
+      "file": "reference/probes.py",
+      "source_sha256": "16bf87d40f0f801266540e727ed3a2a20eb95ac7ba1d13e342c2bcd4d37f1cbb",
+      "copied_sha256": "a444e22456c0512f849781d3830d580293a39e3575e74544f5434c95afd5a745"
+    },
+    {
+      "file": "reference/steady_family_fixture.py",
+      "source_sha256": "f6ce13d3c536933da318f3959347d124270e98519384bae91f70a7639f0804a5",
+      "copied_sha256": "f6ce13d3c536933da318f3959347d124270e98519384bae91f70a7639f0804a5"
+    },
+    {
+      "file": "reference/verify_mechanics.py",
+      "source_sha256": "ce7882be2ea2be6415eaaff0f194cb2e24fd9d918bb5e3dd9b0005dd0bde0a42",
+      "copied_sha256": "ce7882be2ea2be6415eaaff0f194cb2e24fd9d918bb5e3dd9b0005dd0bde0a42"
+    },
+    {
+      "file": "reference/audit_mechanics.py",
+      "source_sha256": "c21da4c893b0031b50a1a5f03786a3d7f7f70307b9c6794aac372f6f422f9503",
+      "copied_sha256": "c21da4c893b0031b50a1a5f03786a3d7f7f70307b9c6794aac372f6f422f9503"
+    },
+    {
+      "file": "reference/plot_motion.py",
+      "source_sha256": "6febb7f1a889130840d7050b2487a8b57a328267a3c11d6a61bb0af454151f98",
+      "copied_sha256": "6febb7f1a889130840d7050b2487a8b57a328267a3c11d6a61bb0af454151f98"
+    },
+    {
+      "file": "reference/mechanics_report.json",
+      "source_sha256": "dbf3d2b9f371866f0e05039c56b240c65fdee38b6d4c96d70e50ea72f26c7bae",
+      "copied_sha256": "dbf3d2b9f371866f0e05039c56b240c65fdee38b6d4c96d70e50ea72f26c7bae"
+    },
+    {
+      "file": "reference/independent-mechanics-audit.json",
+      "source_sha256": "435d831ce72889ba6a344a094ec93f90112752afea396642b42d9de826fc35b3",
+      "copied_sha256": "435d831ce72889ba6a344a094ec93f90112752afea396642b42d9de826fc35b3"
+    },
+    {
+      "file": "reference/contact_budget_report.json",
+      "source_sha256": "1c224238c75321f17ce4fb074cbffc9ee7dd1585e3e3869895dd68d098f44368",
+      "copied_sha256": "1c224238c75321f17ce4fb074cbffc9ee7dd1585e3e3869895dd68d098f44368"
+    },
+    {
+      "file": "reference/contact_readout_audit.json",
+      "source_sha256": "0c71d4957aa6c2744926795c7f83598578cd9a3ccede6b59bd77179a90b064e3",
+      "copied_sha256": "0c71d4957aa6c2744926795c7f83598578cd9a3ccede6b59bd77179a90b064e3"
+    },
+    {
+      "file": "reference/audition_manifest.json",
+      "source_sha256": "d5f31f21cf9cd4124c35093e37741c0c22954e8f6e2ede9a7d953966a12f95b9",
+      "copied_sha256": "d5f31f21cf9cd4124c35093e37741c0c22954e8f6e2ede9a7d953966a12f95b9"
+    }
+  ]
+}

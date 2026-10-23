@@ -2,6 +2,19 @@ plugins {
     kotlin("jvm")
 }
 
+/** Native first-listen pack and measured cache-cold/cache-warm SKIRL render costs. */
+tasks.register<JavaExec>("generateSkirlAudition") {
+    group = "distribution"
+    description = "Render native SKIRL auditions, Python reference pairs and latency measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkirlAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "2g"
+    args("${rootDir}/testkit/skirl-audition")
+    systemProperty("skirl.quick", (project.findProperty("skirlQuick") ?: "false").toString())
+    project.findProperty("skirlPythonReference")?.let { systemProperty("skirl.pythonReference", it.toString()) }
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"

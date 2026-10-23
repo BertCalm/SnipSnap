@@ -1,0 +1,133 @@
+{
+  "status": "Python independent mechanics audit; not Kotlin or measured real-disk validation",
+  "model_version": 1,
+  "exact_conservative_precession": [
+    {
+      "alpha_degrees": 8.0,
+      "physical_seconds": 0.25,
+      "max_rotation_matrix_error": 5.68295410730002e-15,
+      "max_omega_error_rad_s": 5.248112429754055e-13,
+      "max_energy_error_J": 8.049116928532385e-16,
+      "max_COM_displacement_m": 2.631758267180197e-16
+    },
+    {
+      "alpha_degrees": 22.85,
+      "physical_seconds": 0.25,
+      "max_rotation_matrix_error": 4.6074255521944e-15,
+      "max_omega_error_rad_s": 7.392718276365717e-14,
+      "max_energy_error_J": 3.0531133177191805e-16,
+      "max_COM_displacement_m": 1.185164766092984e-16
+    },
+    {
+      "alpha_degrees": 35.0,
+      "physical_seconds": 0.25,
+      "max_rotation_matrix_error": 3.3861802251067274e-15,
+      "max_omega_error_rad_s": 4.359318663136956e-14,
+      "max_energy_error_J": 1.942890293094024e-16,
+      "max_COM_displacement_m": 9.486821485614632e-17
+    }
+  ],
+  "dissipative_equations": {
+    "original_default_late_exit": {
+      "audited_config": {
+        "lean": 0.55,
+        "brake": 0.4,
+        "collapse": 0.65,
+        "mass_kg": 0.3,
+        "radius_m": 0.04,
+        "thickness_m": 0.01,
+        "gravity_m_s2": 9.81,
+        "physical_seconds_per_musical_second": 1.0,
+        "max_physical_seconds": 12.0,
+        "descriptor_rate_hz": 1000.0,
+        "max_musical_contact_hz": 200.0,
+        "assumed_static_friction": 0.8,
+        "epsilon_omega_rad_s": 0.1,
+        "rtol": 2e-09,
+        "atol": 2e-11,
+        "max_step_s": 0.004,
+        "max_rhs_evaluations": 250000,
+        "mu_roll_override": null,
+        "model_version": 1
+      },
+      "finite_difference_step_s": 2e-05,
+      "sampled_states": 19,
+      "maxima": {
+        "no_slip_position_derivative_m_s": 4.4231449938554204e-08,
+        "angular_momentum_residual_Nm": 5.500323386070493e-08,
+        "resistance_work_residual_W": 5.812954562145478e-10,
+        "selected_rim_derivative_error_m_s": 1.5238333203991146e-06,
+        "independent_reaction_error_N": 1.129575074086051e-06
+      },
+      "min_effective_inertia_eigenvalue_kg_m2": 0.00012396013553019248,
+      "RK45_versus_DOP853": {
+        "final_rotation_matrix_error": 2.3531723306047247e-08,
+        "final_omega_error_rad_s": 2.076915326303432e-06,
+        "final_energy_work_error_J": 9.525095295837005e-11
+      },
+      "trajectory_status": "FAILURE",
+      "trajectory_exit": "static_friction_exceeded",
+      "reached_chosen_terminal": false,
+      "distinct_readouts": {
+        "contact_phase_span_rad": 195.18680618590545,
+        "rim_phase_span_rad": 187.36923899643182,
+        "face_marker_phase_span_rad": 8.01303694545301,
+        "integrated_axial_spin_rad": 1.5949865370075424,
+        "max_unwrap_step_rad": 0.08388527013005387
+      }
+    },
+    "curated_earlier_valid_exit": {
+      "audited_config": {
+        "lean": 0.55,
+        "brake": 0.4,
+        "collapse": 0.0,
+        "mass_kg": 0.3,
+        "radius_m": 0.04,
+        "thickness_m": 0.01,
+        "gravity_m_s2": 9.81,
+        "physical_seconds_per_musical_second": 1.0,
+        "max_physical_seconds": 12.0,
+        "descriptor_rate_hz": 1000.0,
+        "max_musical_contact_hz": 200.0,
+        "assumed_static_friction": 0.8,
+        "epsilon_omega_rad_s": 0.1,
+        "rtol": 2e-09,
+        "atol": 2e-11,
+        "max_step_s": 0.004,
+        "max_rhs_evaluations": 250000,
+        "mu_roll_override": null,
+        "model_version": 1
+      },
+      "finite_difference_step_s": 2e-05,
+      "sampled_states": 19,
+      "maxima": {
+        "no_slip_position_derivative_m_s": 3.380239702110913e-08,
+        "angular_momentum_residual_Nm": 4.437832268940896e-08,
+        "resistance_work_residual_W": 4.389717703917606e-10,
+        "selected_rim_derivative_error_m_s": 1.1093902636088867e-06,
+        "independent_reaction_error_N": 7.666796934529527e-07
+      },
+      "min_effective_inertia_eigenvalue_kg_m2": 0.00012396013553019248,
+      "RK45_versus_DOP853": {
+        "final_rotation_matrix_error": 2.247789440690262e-08,
+        "final_omega_error_rad_s": 1.977035058544724e-06,
+        "final_energy_work_error_J": 9.163710762427613e-11
+      },
+      "trajectory_status": "TERMINAL_TRANSITION",
+      "trajectory_exit": "chosen_terminal_threshold",
+      "reached_chosen_terminal": true,
+      "distinct_readouts": {
+        "contact_phase_span_rad": 184.88794873385817,
+        "rim_phase_span_rad": 176.98368425920424,
+        "face_marker_phase_span_rad": 8.013042601462349,
+        "integrated_axial_spin_rad": 1.7541657973339126,
+        "max_unwrap_step_rad": 0.07968781295571148
+      }
+    }
+  },
+  "limits": [
+    "Only the selected ideal no-slip cylinder model and tested settings are checked.",
+    "No air film, elastic deformation, sliding, real stopping prediction or audio is validated."
+  ],
+  "python_audit_seconds": 12.774860489000275
+}

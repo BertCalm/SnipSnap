@@ -2357,3 +2357,19 @@ What this is not: a fluid simulation, a kangaroo-hide model, or evidence
 that a vessel comes home because the loop's seam is quiet. The held note
 is a stationary orbit. The audition page is the listen; nothing in the
 roster has been heard.
+
+## SKIRL: first finite Kotlin prototype
+
+ROLL and WHIRR adapt the owner's 20 October 2026 handoff into a constraint-eliminated
+rolling cylinder, contact-phase excitation and six disk/five support modes. Both Python
+auditions received positive feedback; Kotlin listening remains pending. Smaller,
+launch-dependent terminal bands replace the broad handoff cube because it contains
+friction failures. Python calibration checked 84 complete trajectories and 420 exits,
+with required friction at most .67513 against assumed .8 and rolling durations
+1.873–5.250 s. The full 5,994-test JVM gate passed. Native register/material tests stayed
+within 19.753 cents; the 106-case audition passed 212 pitch windows and reproduced all
+production WAVs across separate JVM runs. Warm default render medians of 148.85/160.73 ms
+miss the 50 ms target; phone timing is unmeasured. Versioned recipes, CLI and shell
+replay are included; HOLD is refused. Additional voices, reviewed presets,
+kit, held instrument and SDK-verified phone picker follow the native listening gate.
+See [SKIRL.md](SKIRL.md) and the [finite design](superpowers/specs/2026-10-23-skirl-engine-design.md).

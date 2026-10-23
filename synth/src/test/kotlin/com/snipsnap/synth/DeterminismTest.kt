@@ -12,6 +12,15 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `SKIRL saved finite runouts are byte identical in both native voices`() {
+        for (voice in SkirlVoice.entries) {
+            val patch = SkirlPatch("Runout canary", voice,
+                Skirl.defaults(voice) + mapOf("EDGE" to .8f, "PLATE" to .65f), midi = 57, velocity = .6f)
+            assertContentEquals(patch.render().samples, patch.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
