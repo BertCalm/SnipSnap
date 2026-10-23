@@ -119,3 +119,14 @@ tasks.register<JavaExec>("generateOspreyHandoff") {
     args("${rootDir}/testkit/osprey-handoff")
     args(providers.gradleProperty("ospreyGentleBaselineDir").orElse("${rootDir}/testkit/osprey-gentle-audition").get())
 }
+
+/** Package and play the approved CREASE sounds as continuous-onset held keys. */
+tasks.register<JavaExec>("generateCreaseKeysAudition") {
+    group = "distribution"
+    description = "Render CREASE held-key performances and dual-MPC/phone instrument packages under testkit/crease-keys-audition/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CreaseKeysAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("creaseKeysOutput").orNull ?: "${rootDir}/testkit/crease-keys-audition")
+}

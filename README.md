@@ -402,7 +402,10 @@ native patch/preset pipeline, CLI and a dry sixteen-pad FRESH TAPE starter.
 Saved patches retain model, MIDI root and playing velocity; finite notes file as
 TONAL and only the top HOLD step files as LOOP. The
 [private audition](https://snipsnap-crease-audition.bertcalm.chatgpt.site) provides
-listening references, native patch downloads and reproducible source.
+listening references, native patch downloads and reproducible source. Model-3
+MAKE INSTRUMENT and CLI `--instrument` turn the same patch into minor-third
+keyboard zones with a continuous onset and measured sustain loop. The sampler
+owns the key-release fade; Paper Keys and Ink Ribbon are the first listening pair.
 [Implementation notes](docs/CREASE.md) cover controls and model compatibility.
 
 OVERLAP is a finite six-delay resonator: a strike rings

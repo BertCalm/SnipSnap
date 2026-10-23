@@ -13,6 +13,7 @@ import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
+import com.snipsnap.shell.CreasePadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Origami
@@ -121,12 +122,12 @@ import kotlin.random.Random
  * A preset that lands with a rack chain (the string machines - VELVET BRASS
  * STRING MACHINE and THIN STRINGS, RESIN BRASS WIDE STRINGS and DARK STRINGS)
  * renders through it, as SEND TO PAD would, and comes out a stereo file.
- * `--instrument` and `--drone` rebuild from the preset's macros alone and stay
- * dry: an instrument is nine held zones and a drone a loop, each with its own
- * shape, and neither is a one-shot pad.
+ * `--instrument` and `--drone` use their builders' envelope and loop rules.
+ * CREASE, REGISTERS and OPENSKY retain their complete saved patches rather
+ * than reconstructing only the macros; a drone remains a loop-grid sound.
  *
  * `--instrument [--attack S] [--release S]` renders the preset as keys that
- * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS and
+ * sound while held. RESIN accepts attack and release; CREASE, ORPHICA, REGISTERS and
  * OPENSKY HALO keep their authored attack and accept release only.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
@@ -144,6 +145,10 @@ import kotlin.random.Random
  * OPENSKY also accepts a saved `--patch <json>`, `--gate S`, and `--dry` /
  * `--wet`. The complete source timbre survives those overrides; OPENSKY HALO
  * can become a held instrument with `--instrument [--release S]`.
+ * CREASE accepts saved `--patch <json>` recipes. Model 3 can become a held
+ * instrument with `--instrument [--release S]`; the saved root and velocity
+ * choose its sample bank and excitation. Earlier models need an explicit
+ * `--model 3` override rather than being silently upgraded.
  * SHOAL accepts `--material HARMONIC|BOWL|WOOD|WIRE`. Material bodies are finite;
  * a finite-material override on a held preset is refused before any files are written.
  * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
@@ -189,8 +194,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER and TIDAL, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CreasePatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER, TIDAL and CREASE, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -254,7 +259,7 @@ object SynthCommand {
         val drone = opts.has("--drone")
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
@@ -352,7 +357,8 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO and ORPHICA export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA and CREASE export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its authored attack - use --release to shape the held instrument")
             if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
@@ -510,10 +516,20 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
         } else null
+        val creaseInstrumentSpec = if (instrument && engine == CreasePatch.ENGINE) try {
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() }
+                    ?: throw CliError("--release wants finite seconds, got '$raw'")
+            } ?: CreasePadMaker.RELEASE.default
+            CreasePadMaker.Spec(chosen.single() as CreasePatch, releaseSeconds = release)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("--instrument: ${e.message ?: "invalid CREASE instrument"}")
+        } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
+        if (creaseInstrumentSpec != null) return makeCreaseInstrument(creaseInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -551,6 +567,21 @@ object SynthCommand {
         OpenSkyPadMaker.export(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, each holds - RELEASE ${OpenSkyPadMaker.secondsLabel(spec.releaseSeconds)}, stereo")
+        return 0
+    }
+
+    private fun makeCreaseInstrument(spec: CreasePadMaker.Spec, dir: File, out: PrintStream): Int {
+        val patch = spec.patch
+        val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
+        val midis = CreasePadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { index, midi ->
+            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            CreasePadMaker.renderZone(spec, midi)
+        }
+        CreasePadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, pressure attack and moving sustain - RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}")
+        out.println("CREASE model ${patch.model}, saved root ${Scales.nameOf(patch.midi)}, saved velocity ${patch.velocity}")
         return 0
     }
 

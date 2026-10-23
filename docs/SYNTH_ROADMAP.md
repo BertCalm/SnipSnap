@@ -99,8 +99,12 @@ had insufficient variation; the owner preferred model 2's wider analytic phase
 maps. Model 3 retains those shapes and refines lag/recovery, with six named
 listening presets and constant-level gesture comparisons. Models 1 and 2 remain
 exactly replayable. The approved three voices and six presets are registered in native patches,
-velocity routing, the SYNTH picker, FRESH TAPE and CLI. Voice expansion and a
-dedicated multisampled instrument builder remain separate work. [CREASE](CREASE.md) records the prototype scope and
+velocity routing, the SYNTH picker, FRESH TAPE and CLI. Model-3 MAKE INSTRUMENT and
+CLI `--instrument` retain one continuous attack/settling/held history, sample
+bounded minor-third zones around the saved root, and export through the existing
+phone/dual-MPC package path with a player-controlled release. Paper Keys and Ink
+Ribbon are the first held-instrument listening pair. Voice expansion remains
+separate work. [CREASE](CREASE.md) records the scope and
 reproduction commands.
 
 ### THUMP — analog-style drum voices (the drum synth engine)

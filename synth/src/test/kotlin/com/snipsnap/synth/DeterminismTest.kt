@@ -11,6 +11,18 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
 
+    // The attack, slow pressure memory and streaming output filters all survive to the
+    // same loop boundary. No state from the previous key render may enter a fresh note.
+    @Test
+    fun `CREASE speaking keys reproduce the same attack and measured loop boundary`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = Keys.creasePad(patch, midi = 60)
+        val second = Keys.creasePad(patch.copy(macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        assertTrue(first.loopStartFrame > 0)
+        assertTrue(first.loopStartFrame == second.loopStartFrame, "fresh convergence picked another loop boundary")
+        assertContentEquals(first.snip.samples, second.snip.samples, "source state or macro iteration order changed the note")
+    }
+
     @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {

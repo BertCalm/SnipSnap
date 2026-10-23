@@ -106,6 +106,7 @@ import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
+import com.snipsnap.shell.CreasePadMaker
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
@@ -1495,9 +1496,10 @@ fun SynthScreen(
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
-    val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
+    val supportsHeldInstrument = engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
     val heldInstrumentReady = when (engine) {
+        Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
         else -> true
@@ -1534,6 +1536,10 @@ fun SynthScreen(
         Engine.OPENSKY -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
             if (OpenSkyPadMaker.supports(patch)) HeldSpec.OpenSky(OpenSkyPadMaker.spec(patch, holdRelease)) else null
+        }
+        Engine.CREASE -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
+            if (CreasePadMaker.supports(patch)) HeldSpec.Crease(CreasePadMaker.spec(patch, holdRelease)) else null
         }
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
@@ -1580,9 +1586,10 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows) {
-                        // OPENSKY has larger wet state; BELLOWS renders three
-                        // velocity layers per zone. Render serially so phones never hold nine
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease) {
+                        // OPENSKY has larger wet state, BELLOWS has three
+                        // velocity layers, and CREASE evolves its attack and
+                        // held control history. Render serially so phones never hold nine
                         // independent oversampled states at once; CANCEL and
                         // the same zone counter remain live between them.
                         midis.map { midi ->
@@ -2822,7 +2829,8 @@ fun SynthScreen(
                 }
                 // RESIN, SIREN, GLINT or OPENSKY HALO, held: the sound as a
                 // keys instrument when its renderer closes its own loop.
-                // REGISTERS retains the authored attack before its held region.
+                // REGISTERS retains the authored attack before its held region;
+                // CREASE keeps its pressure attack before continuous held motion.
                 // ORPHICA holds a captured sustain behind its own plucked onset.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
@@ -2840,8 +2848,11 @@ fun SynthScreen(
                     }
                     if (!heldInstrumentReady) {
                         TapeText(
-                            if (engine == Engine.BELLOWS) "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
-                            else "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}",
+                            when (engine) {
+                                Engine.CREASE -> "MAKE INSTRUMENT NEEDS MODEL 3. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
+                                Engine.BELLOWS -> "MAKE INSTRUMENT NEEDS A CURRENT BELLOWS SOUND. THE SAVED ORIGINAL STILL PLAYS AS BEFORE."
+                                else -> "MAKE INSTRUMENT NEEDS ROOT ${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MIN)}–${Scales.nameOf(OpenSkyPadMaker.ROOT_MIDI_MAX)}"
+                            },
                             TapeType.pixelSmall,
                             scheme.ink2.tape,
                             maxLines = 2,
@@ -3282,6 +3293,7 @@ private fun PresetNameDialog(
  * so their slider never appears. REGISTERS likewise has no attack knob: its
  * speaking onset is in the instrument sample, before the verified held cycle.
  * ORPHICA keeps its plucked onset, with the captured grain cycle supplying sustain.
+ * CREASE keeps its first pressure attack before the repeating moving sustain.
  */
 private sealed interface HeldSpec {
     val zoneMidis: List<Int>
@@ -3353,6 +3365,17 @@ private sealed interface HeldSpec {
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Crease(private val spec: CreasePadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = CreasePadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CreasePadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = CreasePadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Bellows(private val spec: BellowsPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = BellowsPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -3367,7 +3390,7 @@ private sealed interface HeldSpec {
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, BELLOWS or OPENSKY HALO): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, CREASE, BELLOWS or OPENSKY HALO): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,

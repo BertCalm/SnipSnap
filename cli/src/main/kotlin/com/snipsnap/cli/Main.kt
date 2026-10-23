@@ -78,7 +78,9 @@ object Cli {
         |                        render factory presets to wav, to hear them
         |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO/SCANNED_CHAIN: --midi N --velocity 0..1)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
-        |                        six factory positions with saved root and velocity)
+        |                        six factory positions with saved root and velocity;
+        |                        model 3: --instrument [--release .1..1.5] keeps
+        |                        pressure attack/motion; --midi/--velocity/--patch apply)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
