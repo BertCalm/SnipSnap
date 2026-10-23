@@ -315,6 +315,11 @@ testkit/brass-grow-prototype/
 testkit/ohm-audition/
 testkit/ohm-audition-v1/
 
+# OHM's native MPC starter and regenerable kit artifacts.
+testkit/SnipSnap Ohm Kit/
+testkit/SnipSnap-Ohm-Kit.zip
+testkit/SnipSnap-Ohm-Kit.zip.sha256
+
 # CHAMBER finite first-listen WAVs, diagnostics, page and prototype export regenerate locally.
 testkit/chamber-audition/
 testkit/SnipSnap Chamber Prototype Kit/

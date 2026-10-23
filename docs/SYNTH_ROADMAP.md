@@ -394,6 +394,28 @@ does not claim a circuit recreation of its historical starting point.
 [TANGLE.md](TANGLE.md) records the saved-format and integration contracts,
 HOLD constraint and remaining acceptance work.
 
+### OHM — finite coupled family strings
+
+One plucked foreground and two answering companions exchange waves through a
+shared bridge and membrane. TOUCH, BODY, LENGTH, MEDDLING and COMMUNE shape
+the note; native MIDI 48–72, velocity, seed, STEADY/GATHER gesture and renderer
+model survive recipes, edits, presets and pad placement. Model 2 retains a
+clearer foreground and middle-range control variation after the owner's
+listening feedback. Saved model-1 recipes keep the original renderer.
+
+The five auditioned factory recipes join the synth picker and CLI. NEW KIT
+→ STARTERS → OHM adds eight Solo notes in C minor pentatonic from
+C3 to F4 and eight companion/register contrasts, preserving the accepted
+macro maps. All sixteen pads are dry, unchoked TONAL one-shots.
+`./gradlew :synth:generateOhmKit` writes `testkit/SnipSnap Ohm Kit/`, native
+MPC 3 and MPC 2 programs sharing PCM24 WAVs, editable kit and pad recipes,
+a manifest and a ZIP beside the kit. [OHM.md](OHM.md) records the layout,
+performance measurements and device handoff.
+
+Phone response, phone save/reopen and MPC hardware acceptance remain open.
+Separate rendered notes start fresh; bowed excitation, sustained loops,
+FM elder, grains and freeze remain future sound-development work.
+
 ### FLOCK — finite oscillator flocks
 
 GATHER, RIBBON and SPLIT use twenty-four audible oscillators with changing

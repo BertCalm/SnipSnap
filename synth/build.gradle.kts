@@ -30,6 +30,27 @@ tasks.register<JavaExec>("generateOhmAudition") {
     args("${rootDir}/testkit/ohm-audition")
 }
 
+/** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
+tasks.register<JavaExec>("generateOhmKit") {
+    group = "distribution"
+    description = "Export the OHM starter kit, native MPC 3 track, MPC 2 twin, recipes and SnipSnap-Ohm-Kit.zip."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ohmKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Warm render-only timings; this benchmark is explicit rather than a timing assertion in CI. */
+tasks.register<JavaExec>("benchmarkOhm") {
+    group = "verification"
+    description = "Measure OHM raw/final renders at three lengths and relationships, with per-case warmup and timing samples."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmPerformanceProbe")
+    maxHeapSize = "512m"
+    args("bench", providers.gradleProperty("ohmBenchmarkPath").orNull ?: "both")
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"

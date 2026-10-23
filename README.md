@@ -1089,6 +1089,13 @@ audition includes direct original/revised middle-range comparisons. See
 [`docs/OHM.md`](docs/OHM.md) and the
 [private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
 
+NEW KIT → STARTERS → OHM places eight Solo notes in C minor pentatonic
+from C3 to F4 beside the four companion relationships and lower/upper
+contrasts. `./gradlew :synth:generateOhmKit` exports sixteen dry finite
+one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
+`testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
+remain open.
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones
