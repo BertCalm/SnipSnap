@@ -139,3 +139,13 @@ tasks.register<JavaExec>("generateOspreyCuratedAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/osprey-curated-audition")
 }
+
+/** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
+tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
+    group = "distribution"
+    description = "Render BELLOWS native/program A/B and release previews through exported WAVs and the JVM player."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BellowsPlaybackAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("bellowsPlaybackOutput").orElse("${rootDir}/testkit/bellows-playback-audition").get())
+}
