@@ -1,8 +1,8 @@
 # Aquarium native foundation
 
-A JUCE-free C++17 processor for future offline pad rendering and continuous stereo performance buses. This change adds the processing foundation and serializable controls. It does not attach Aquarium to an existing engine, add JNI, or change pad baking/export/PRINT/UI behavior.
+A JUCE-free C++17 processor for offline pad rendering and future continuous stereo performance buses. The native layer now includes a bounded offline renderer and a separate JNI entry point. It adds no stream ownership, live-engine routing or UI behavior; app-side pad rendering and export policy sit above this layer.
 
-`AquariumProcessor.h` is the public API. `AquariumProcessor.cpp` is the only production source to add to the native target. All upstream-derived math and DSP live in the private `snipsnap::aquarium::detail` namespace; none of these functions are added to SnipSnap's `DspMath.h`.
+`AquariumProcessor.h` is the stateful block API and `OfflineRender.h` is the fresh-render API. Production sources are `AquariumProcessor.cpp`, `OfflineRender.cpp`, and `AquariumJni.cpp`. All upstream-derived math and DSP live in the private `snipsnap::aquarium::detail` namespace; none of these functions are added to SnipSnap's `DspMath.h`.
 
 ## Basic use
 
@@ -38,6 +38,20 @@ Applying controls preserves envelopes, delay contents and modulation clocks. Con
 Processing uses writable, planar float stereo with disjoint channel buffers. Exact and partial aliasing are rejected. Negative or oversized frame counts, invalid pointers, non-finite BPM or BPM outside 0..1000, and non-finite/input magnitudes above 32 are rejected before buffers or processor state change. After `prepare`, zero frames is a no-op and permits null buffers. As with any pointer API, the host must supply actual writable storage for the declared length.
 
 Output is floating-point, unclipped and unnormalized. This layer has no limiter, automatic tail trimming or loudness matching. Rejected calls return a `ProcessResult` status and leave input and DSP state untouched; callers must handle that status before forwarding a buffer.
+
+## Offline PCM and JNI bridge
+
+`renderOffline` accepts a nonempty interleaved mono or stereo float source at its actual 8..192 kHz sample rate, a complete 52-control snapshot, and an explicit uint32 seed. Each call starts fresh at clock origin zero. Mono is duplicated to L/R before effects; stereo channels remain separate. Output is always interleaved stereo at the same rate. There is no resampling, normalization, clipping or WAV parsing in native code.
+
+`OfflineRenderOptions` supplies BPM, zero-input tail frames, end-fade frames, fixed output gain, peak ceiling and block size. Gain is applied before the fade and final peak check. A zero fade disables fading, one fade frame zeroes the final frame, and longer fades ramp linearly from 1 to 0 over the final requested frames. A non-finite or above-ceiling output rejects the complete render; callers choose a lower explicit gain rather than receiving a clipped or automatically normalized result. Valid block sizes are 1..8192; fade length may not exceed source plus tail.
+
+Source plus tail is capped by `kMaxOfflineOutputFrames = 8,000,000` frames, checked before source copying or output allocation. This is a hard size bound, not a guarantee that an Android heap can hold every maximum-size render. Allocation failure is reported. Native output swaps into the caller's vector only after the entire render passes; source and prior output remain unchanged on failure. Input may not alias the output vector's storage.
+
+`NativeAquarium.renderOffline` is a blocking worker-thread JNI call, separate from the existing stream bridge. It uses checked array-region copies rather than pinning Java arrays. `NativeAquarium.maximumOutputFrames()` queries the native limit so Kotlin does not duplicate it. Wrong arguments, invalid controls or peak rejection throw `IllegalArgumentException`; allocation failures throw `OutOfMemoryError`; processor/non-finite-output failures throw `IllegalStateException`. Pending JVM copy/allocation exceptions are preserved, and no native exception crosses JNI.
+
+The raw renderer receives finite PCM only and has no sustain-loop metadata. The app-side pad wrapper separately refuses embedded sustain loops and supplies a finite printed source; that host policy is not inferred or implemented by the native PCM renderer. Future live buses continue to use the stateful `Processor` API instead of invoking a fresh offline render per callback.
+
+The host `aquarium_offline_tests` target covers dry stereo/mono, direct-core parity with seed/tempo/tails, actual-rate block partitioning, explicit gain/fade, strict bounds, peak rejection, allocation failures and JNI copy/exception handling. The existing callback-allocation tests remain separate from the deliberately allocating offline path.
 
 ## Parameters and render model
 
