@@ -33,6 +33,9 @@ object FilamentKeysAuditionGenerator {
         require(args.size <= 1) { "Supply only an optional output directory." }
         val repository = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile && File(it, ".git").exists() }
+        // Capture source state before creating generated files, including a custom output path.
+        val sourceCommit = git(repository, "rev-parse", "HEAD")
+        val sourceDirty = git(repository, "status", "--porcelain").isNotEmpty()
         val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-thread-keys").path).canonicalFile
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }
         check(output.mkdirs() || output.isDirectory)
@@ -126,8 +129,8 @@ object FilamentKeysAuditionGenerator {
         val demoFile = WavWriter.write(File(bundle, "thread-held-demo.wav"), Snip(demo, 2, RATE))
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "FILAMENT", "voice" to "THREAD", "model" to patch.model,
-            "generatedAt" to Instant.now().toString(), "sourceCommit" to git(repository, "rev-parse", "HEAD"),
-            "workingTreeDirty" to git(repository, "status", "--porcelain").isNotEmpty(),
+            "generatedAt" to Instant.now().toString(), "sourceCommit" to sourceCommit,
+            "workingTreeDirty" to sourceDirty,
             "sourcePatch" to patch.toJsonValue(), "sourcePatchFile" to relative(bundle, sourceFile),
             "sourcePatchSha256" to sha(sourceFile), "programReleaseSeconds" to instrument.release,
             "nativeRootCount" to roots.size, "velocityLayersPerRoot" to 1,
