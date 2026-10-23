@@ -334,12 +334,10 @@ internal object OrigamiHeld {
      * A short-lived worker bridges that contract without changing its accepted arithmetic.
      * Only the caller evaluates cancelled(); cancelling its Future interrupts the worker.
      */
-    private fun finiteReference(patch: OrigamiPatch, midi: Int, cancelled: () -> Boolean): FloatArray {
+    internal fun reference(voice: OrigamiVoice, midi: Int, cancelled: () -> Boolean, render: () -> FloatArray): FloatArray {
         stop(cancelled)
-        val task = FutureTask {
-            Origami.renderRaw(patch.voice, patch.macros, patch.velocity, midi, patch.seed, model = 4)
-        }
-        val worker = Thread(task, "origami-held-reference-${patch.voice}-$midi").apply { isDaemon = true }
+        val task = FutureTask<FloatArray> { render() }
+        val worker = Thread(task, "origami-held-reference-$voice-$midi").apply { isDaemon = true }
         worker.start()
         try {
             while (true) {
@@ -370,6 +368,15 @@ internal object OrigamiHeld {
         }
     }
 
+    private fun finiteReference(patch: OrigamiPatch, midi: Int, cancelled: () -> Boolean): FloatArray =
+        reference(patch.voice, midi, cancelled) {
+            if (patch.gesture == OrigamiGesture.STEADY) {
+                Origami.renderRaw(patch.voice, patch.macros, patch.velocity, midi, patch.seed, model = 4)
+            } else {
+                OrigamiGestureRenderer.renderRaw(patch, midi)
+            }
+        }
+
     private fun relativeError(a: FloatArray, b: FloatArray): Double {
         var error = 0.0; var energy = 0.0
         for (i in a.indices) { val d = a[i] - b[i].toDouble(); error += d * d; energy += a[i].toDouble() * a[i] }
@@ -378,8 +385,9 @@ internal object OrigamiHeld {
 
     fun probe(patch: OrigamiPatch, midi: Int, cancelled: () -> Boolean): Probe {
         stop(cancelled)
+        val bodyPatch = OrigamiGestures.settledPatch(patch)
         val m = Origami.defaults(patch.voice).mapValues { (key, default) ->
-            (patch.macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)
+            (bodyPatch.macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)
         }
         val rawReference = finiteReference(patch, midi, cancelled)
         val reference = rawReference.copyOf()
@@ -387,9 +395,13 @@ internal object OrigamiHeld {
         stop(cancelled)
         val requested = Keys.midiHz(midi).toDouble()
         val plan = plan(patch.voice, requested)
-        val joinStart = ((if (patch.voice == OrigamiVoice.FAN) .12 else .58) * RATE).roundToInt()
+        val acceptedPrefix = ((if (patch.voice == OrigamiVoice.FAN) .12 else .58) * RATE).roundToInt()
+        val joinStart = if (patch.gesture == OrigamiGesture.STEADY) acceptedPrefix else maxOf(acceptedPrefix,
+            ceil((OrigamiGestures.endSeconds(patch) + .04) * RATE).toInt())
         val joinEnd = aligned(joinStart + ((if (patch.voice == OrigamiVoice.FAN) .16 else .24) * RATE).roundToInt())
-        val field = makeField(patch, m, midi, requested, plan, (joinStart + joinEnd) / 2, cancelled)
+        val releaseAt = if (patch.voice == OrigamiVoice.FAN) 2.2 else 3.0
+        check(joinEnd < releaseAt * RATE) { "ORIGAMI gesture must settle before the finite release" }
+        val field = makeField(bodyPatch, m, midi, requested, plan, (joinStart + joinEnd) / 2, cancelled)
         val phaseClosure = field.tracks.indices.maxOf { p ->
             val values = field.frequencies[p]
             val turns = if (values.size == 1) (values[0] + field.corrections[p]) * plan.seconds
