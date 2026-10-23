@@ -12,7 +12,6 @@ import java.security.MessageDigest
 import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
@@ -108,10 +107,7 @@ object PrismOpeningAuditionGenerator {
             check(previous.template.ratioOverrides == List(Prism.PARTIALS) { it + 1f }) {
                 "$family reference does not use the expected harmonic carrier map"
             }
-            val opening = priorMotion.amplitudesB.mapIndexed { index, weight ->
-                (weight * (.03 + .97 / (1.0 + (index / 4.0).pow(4)))).toFloat()
-                    .let { if (index == 0) it.coerceAtLeast(.05f) else it }
-            }
+            val opening = PrismOpeningPresets.bodyAmplitudes(priorMotion.amplitudesB)
             check(opening.indices.all { opening[it] <= priorMotion.amplitudesB[it] }) { "$family opening boosts B" }
             check(opening.first() == priorMotion.amplitudesB.first()) { "$family opening changes its root coefficient" }
             val body = previous.copy(

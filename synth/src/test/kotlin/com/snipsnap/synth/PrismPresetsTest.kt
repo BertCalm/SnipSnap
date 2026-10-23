@@ -11,10 +11,10 @@ class PrismPresetsTest {
     @Test
     fun `the complete bank gives each voice its approved share`() {
         val presets = PrismPresets.all()
-        assertEquals(36, presets.size)
+        assertEquals(40, presets.size)
         assertEquals(mapOf(
-            PrismVoice.KEY to 5, PrismVoice.PLUCK to 5, PrismVoice.ORGAN to 6,
-            PrismVoice.BASS to 6, PrismVoice.VEIL to 8, PrismVoice.GLASS to 6,
+            PrismVoice.KEY to 8, PrismVoice.PLUCK to 5, PrismVoice.ORGAN to 6,
+            PrismVoice.BASS to 7, PrismVoice.VEIL to 8, PrismVoice.GLASS to 6,
         ), presets.groupingBy { it.voice }.eachCount())
         assertEquals(presets.size, presets.map { it.name }.toSet().size)
         val auditionIds = presets.map { it.name.lowercase().replace(Regex("[^a-z0-9]+"), "_").trim('_') }
@@ -22,7 +22,7 @@ class PrismPresetsTest {
         for (voice in PrismVoice.entries) {
             val group = PrismPresets.forVoice(voice)
             assertEquals(presets.filter { it.voice == voice }, group)
-            assertEquals(group.size, group.map { Triple(it.macros - setOf("TUNE", "HOLD"), it.template, it.velocity) }.toSet().size,
+            assertEquals(group.size, group.map { listOf(it.macros - setOf("TUNE", "HOLD"), it.template, it.velocity, it.motion) }.toSet().size,
                 "$voice must offer different timbres, not copies moved to a different note or sustain mode")
         }
     }

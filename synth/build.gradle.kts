@@ -1392,6 +1392,17 @@ tasks.register<JavaExec>("generatePrismOpeningAudition") {
     providers.gradleProperty("prismOpeningReferenceManifest").orNull?.let { args(it) }
 }
 
+/** Check the delivered body-opening presets across pitch and playing strength. */
+tasks.register<JavaExec>("generatePrismOpeningReleaseAudition") {
+    group = "distribution"
+    description = "Render PRISM body-opening factory presets at three notes and two velocities, with replay and JVM timing evidence."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismOpeningReleaseAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/prism-opening-release-audition")
+}
+
 /** Render Alloy's provisional dry hybrid patches, causal FUSE comparisons and held-loop listening pack. */
 tasks.register<JavaExec>("generateAlloyAudition") {
     group = "distribution"

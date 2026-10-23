@@ -548,7 +548,7 @@ spectral organization, DRIFT separates group timing, SHAPE moves broad partial
 masks, STRIKE articulates the onset and BODY reinforces lower and middle energy.
 TUNE keeps the requested root stable; HOLD exports settled loop-only material.
 
-The complete 36-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
+The 40-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
 picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
 Finite notes route as TONAL and held material as LOOP. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
@@ -558,6 +558,15 @@ five-point sweeps, interaction corners and HOLD extremes. Run
 [PRISM](PRISM.md) records saving, rendering and loop contracts. The owner's dry
 sonic review is positive. Phone and MPC playback still require device validation;
 PRISM remains a working name pending release naming checks.
+
+The source-derived [body opening](PRISM_OPENING.md) is the owner's preferred
+motion direction. Soft Arrival, Wire Bloom, Bowed Bloom and Hollow Rise append
+their complete saved A/B recipes after the preceding 36 presets, preserving
+existing sounds and selection indices. Their finite 0.8-second movement needs
+no donor audio at playback. The phone keeps HOLD below its loop threshold for
+these recipes; factory promotion retains their motion. A separate release
+matrix covers three notes and two velocities per opening. Repeating motion,
+additional motion controls and a donor picker remain later work.
 
 ### SHOAL — materials animated by moving energy
 

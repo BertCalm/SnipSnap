@@ -549,6 +549,15 @@ object UserPresets {
                     "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
             }
             is PrismPatch -> {
+                if (patch.motion != null) {
+                    // Keep the table's p(...) entry shape while restoring the whole saved
+                    // instrument. Both authored spectra and the travel law belong to it;
+                    // reconstructing only the template would silently remove the opening.
+                    val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+                    val savedName = Json.write(JsonValue.Str(patch.name)).replace("$", "\\$")
+                    return "p(PrismVoice.${patch.voiceName}, $savedName, $macros)" +
+                        ".let { PrismPatch.fromJsonText($recipe) },"
+                }
                 val t = patch.template
                 fun floats(values: List<Float>) = values.joinToString(", ", "listOf(", ")") { "${it}f" }
                 val groups = t.groupProfiles.joinToString(", ", "listOf(", ")") { group ->

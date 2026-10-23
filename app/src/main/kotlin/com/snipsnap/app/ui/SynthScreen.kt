@@ -981,6 +981,11 @@ fun SynthScreen(
     // landing on SYNTH never plays a kick unasked.
     var touched by remember { mutableStateOf(false) }
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
+        // Motion recipes contain a finite opening. Keep HOLD below the loop
+        // threshold so a slider or accessibility edit cannot discard that gesture.
+        if (name == "HOLD" && (loadedPatch as? PrismPatch)?.motion != null) {
+            return 0f..Math.nextDown(Prism.LOOP_THRESHOLD)
+        }
         if (name != "TUNE") return 0f..1f
         return when (val patch = loadedPatch) {
             is EmbouchurePatch -> 0f..((Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat())
@@ -2668,6 +2673,9 @@ fun SynthScreen(
                     TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
+                if ((loadedPatch as? PrismPatch)?.motion != null) {
+                    TapeText("FINITE NOTE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape)
+                }
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
                 val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model) {
@@ -2693,6 +2701,7 @@ fun SynthScreen(
                             // hold (Siren.isLoop), the way GLINT's PEAK readout
                             // would say the harmonic it snapped to.
                             readout = when {
+                                engine == Engine.PRISM && spec.name == "HOLD" && loadedPatch is PrismPatch && loadedPatch.motion != null -> "NOTE"
                                 engine == Engine.SHOAL && spec.name == "HOLD" && !shoalHoldSupported -> "NOTE"
                                 engine == Engine.OVERLAP && spec.name == "HOLD" -> {
                                     val hold = macros.getValue(spec.name)
