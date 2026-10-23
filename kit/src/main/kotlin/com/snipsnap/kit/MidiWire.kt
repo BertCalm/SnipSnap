@@ -31,6 +31,18 @@ package com.snipsnap.kit
  * writes (`velocity * 127`, rounded): a velocity played in and written
  * out comes back as the same seven bits.
  *
+ * Every event carries [Event.timestampNanos]: the clock reading the
+ * transport gave the delivery that completed it, passed into [feed] by
+ * the caller (Android's `MidiReceiver.onSend` hands one over in the
+ * `System.nanoTime()` domain, the same clock the audio stream's own
+ * timestamps and a touch's event time are read from). The parser never
+ * reads a clock itself, so a test can hand it any number and a reader
+ * on a desktop has nothing to stub. A message split across deliveries
+ * is stamped by the delivery that finished it - the one whose last byte
+ * made it a note - because that is the earliest moment anything could
+ * have known there was a note. Zero is "unstamped", what a caller that
+ * has no clock passes.
+ *
  * Hostile input is a stream, not a file: a parser is never more than
  * one message behind, holds at most two pending data bytes, and skips a
  * SysEx byte by byte until its 0xF7 or the next status byte that is not
@@ -45,14 +57,33 @@ class MidiWire {
     sealed interface Event {
         val channel: Int
 
+        /**
+         * When the delivery that completed this event arrived, in the
+         * nanoseconds of the clock the caller gave [feed]; 0 when it gave
+         * none. A note's "when" from the edge of the phone, so the engine
+         * can place it on a frame rather than on whichever block the main
+         * thread got round to.
+         */
+        val timestampNanos: Long
+
         /** A key down, [velocity] in (0, 1]. */
-        data class NoteOn(override val channel: Int, val note: Int, val velocity: Float) : Event
+        data class NoteOn(
+            override val channel: Int,
+            val note: Int,
+            val velocity: Float,
+            override val timestampNanos: Long = 0L,
+        ) : Event
 
         /** A key up. The release velocity, when a keyboard sends one, is not kept: nothing here plays it. */
-        data class NoteOff(override val channel: Int, val note: Int) : Event
+        data class NoteOff(override val channel: Int, val note: Int, override val timestampNanos: Long = 0L) : Event
 
         /** A continuous controller: [controller] 0..127 at [value] 0..127. */
-        data class Control(override val channel: Int, val controller: Int, val value: Int) : Event
+        data class Control(
+            override val channel: Int,
+            val controller: Int,
+            val value: Int,
+            override val timestampNanos: Long = 0L,
+        ) : Event
     }
 
     /** The status byte the last channel message carried, for running status; 0 before any. */
@@ -64,16 +95,22 @@ class MidiWire {
     private var data0 = -1
     private var inSysEx = false
 
+    /** The stamp of the delivery being read, put on every event it completes. */
+    private var stamp = 0L
+
     /**
      * Read [count] bytes of [bytes] from [offset] and return every whole
-     * event they completed, in order. A message still in flight at the
-     * end is kept for the next call.
+     * event they completed, in order, each stamped [timestampNanos] - the
+     * delivery's own clock reading, or 0 for none. A message still in
+     * flight at the end is kept for the next call, and takes that call's
+     * stamp when it completes.
      */
-    fun feed(bytes: ByteArray, offset: Int = 0, count: Int = bytes.size - offset): List<Event> {
+    fun feed(bytes: ByteArray, offset: Int = 0, count: Int = bytes.size - offset, timestampNanos: Long = 0L): List<Event> {
         // `count <= size - offset`, not `offset + count <= size`: the sum can overflow an Int and pass.
         require(offset >= 0 && count >= 0 && count <= bytes.size - offset) {
             "window $offset+$count is outside ${bytes.size} bytes"
         }
+        stamp = timestampNanos
         val out = ArrayList<Event>()
         for (i in offset until offset + count) {
             val b = bytes[i].toInt() and 0xFF
@@ -130,9 +167,9 @@ class MidiWire {
     private fun complete(status: Int, first: Int, second: Int): Event? {
         val channel = status and 0x0F
         return when (status and 0xF0) {
-            NOTE_ON -> if (second == 0) Event.NoteOff(channel, first) else Event.NoteOn(channel, first, velocity(second))
-            NOTE_OFF -> Event.NoteOff(channel, first)
-            CONTROL_CHANGE -> Event.Control(channel, first, second)
+            NOTE_ON -> if (second == 0) Event.NoteOff(channel, first, stamp) else Event.NoteOn(channel, first, velocity(second), stamp)
+            NOTE_OFF -> Event.NoteOff(channel, first, stamp)
+            CONTROL_CHANGE -> Event.Control(channel, first, second, stamp)
             else -> null
         }
     }

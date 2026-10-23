@@ -59,6 +59,16 @@ struct PadCommand {
     bool reverse = false;
     /** Stop / AllOff: the fade, so a choke is a short fade and not a cut. SetGain: the glide. */
     float fadeMs = 5.0f;
+    /**
+     * The frame this lands on, counted from the first frame of the block
+     * in which the callback first sees it. 0 (and anything below it) is
+     * the top of that block, which is where every command used to land;
+     * 37 is the thirty-eighth frame of it; a value past the block's end
+     * carries over, less the block, into the next one, so a command may
+     * be queued any number of frames ahead. Commands due on one frame
+     * apply in the order they were pushed.
+     */
+    int32_t frameOffset = 0;
     /** Stamped by pushCommand: the bank the sample index belongs to. */
     uint32_t generation = 0;
 };
@@ -78,6 +88,11 @@ struct PadCommand {
  *    drainEnded.
  *  - Audio thread: onAudioReady only. It reads the command ring, adopts a
  *    pending bank, writes the ended ring; it never allocates or blocks.
+ *  - A command lands on the frame its `frameOffset` names: the callback
+ *    takes every command off the ring into a held set (audio thread
+ *    only, fixed size), renders up to the earliest frame due, applies
+ *    what is due there, and renders on; what is still due after the
+ *    block's last frame waits, its offset less the block, for the next.
  *  - A bank swap parks the new bank in `pending_`; the callback adopts it
  *    (silencing every voice, which belonged to the old one) and parks the
  *    old bank in `retired_` for the UI to free. The audio thread frees
@@ -191,6 +206,10 @@ private:
     };
 
     void adoptPendingBank();
+    /** Ring to held set. Full means the command applies at the top of this block rather than never. */
+    void takeCommands();
+    /** Apply every held command due at or before `frame`, in push order; return the next frame something is due on, or `numFrames`. */
+    int32_t applyDue(int32_t frame, int32_t numFrames);
     void apply(const PadCommand& c);
     Voice& freeVoice();
     void endVoice(Voice& v);
@@ -213,6 +232,17 @@ private:
 
     SpscRing<PadCommand, 256> commands_;
     SpscRing<int32_t, 256> ended_;
+
+    /**
+     * Commands taken off the ring and not yet due, audio thread only. As
+     * deep as the ring, so one block's whole drain fits; a command that
+     * finds it full plays at the top of the block it arrived in, which is
+     * early rather than lost. A NoteOn waiting here is reported ended by
+     * stop(), the way one waiting on the ring is.
+     */
+    static constexpr int32_t kHeldMax = 256;
+    PadCommand held_[kHeldMax];
+    int32_t heldCount_ = 0;
 
     PrintBuffer print_;
 };

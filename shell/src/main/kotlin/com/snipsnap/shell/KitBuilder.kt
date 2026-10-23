@@ -752,6 +752,28 @@ class KitBuilderModel private constructor(
         }
     }
 
+    /**
+     * The pedal library's board over every file the pad references
+     * (docs/superpowers/specs/2026-10-21-pedal-library-and-board-design.md):
+     * the picks rendered as passes around the amp from the audio on disk,
+     * originals binned, the `pedals` recipe riding the pad. The same door
+     * shape as [characterPad]; the caller restores first ([unEraPad]) when
+     * the bin can, so picks never stack, as the sheet does for a chip. A
+     * board at AMT 0 everywhere is a no-op that touches neither the file
+     * nor the bin. A WIDE (or any compound) board pad refuses, as it refuses
+     * a chip: the two boards do not share a key or a store. Undo is [unEraPad].
+     */
+    fun pedalPad(slot: Int, board: com.snipsnap.synth.PedalBoard): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        BoardSheet.read(pad.recipe)?.let {
+            throw IllegalArgumentException("pad $slot carries a ${it.type.name} board - remove it before adding pedals")
+        }
+        if (board.isBypass) return pad
+        return rewriteEveryFile(pad, "pedals") { original ->
+            board.process(original) to com.snipsnap.synth.PadRecipe(pedals = board).toJsonValue()
+        }
+    }
+
     /** The keyed family's honest refusal: the pad is a drum or noise, not a note. */
     class Unpitched(message: String) : IllegalArgumentException(message)
 
