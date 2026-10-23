@@ -785,16 +785,24 @@ The owner approved the C4 starting note and the continuous one-minute ROOT
 ceremony (“Sounds good”). The minute remains a fixed offline audition.
 The current candidate brings call → listening → causal answer → settle into
 regular ROOT finite phrases and held material, using shared pressure and
-deliberate gaps in supporting gestures. The other five voices and the approved
-minute are intended to remain unchanged, pending verification.
+deliberate gaps in supporting gestures. Seven unchanged comparison cases,
+including all five other voice defaults and the approved minute, remain
+bit-identical to their baselines.
 
 Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
 kit use the current patch, recipe and app workflows. New C4 ROOT presets
 FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
 finite returns and a settled recurring pulse. Existing presets and kit notes
-are retained. HOLD at .99 returns settled loop material. The new ROOT score
-and presets await listening; current-candidate performance and physical-device
-results are not yet established. Earlier R4/R5/R6 measurements remain historical.
+are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
+render guards, 209/209 artifact checks and 36/36 transition checks; held listening
+cells 1/3/5 receive causal replies. Desktop EXPANSE held median render time
+fell from 12.336657 s to 11.185123 s (9.334%), with unchanged thread allocation.
+Android debug assembly, Android test-source compilation and APK verification
+passed against runtime `1cd56a1bc759dfcdd825c242ed1ad1d80d042b50`. The full nine-module
+JVM suite passed all 5,922 tests with zero failures, errors or skips.
+The new ROOT score and presets await listening;
+physical-phone and Circuit-specific MPC validation remain pending. Earlier
+R4/R5/R6 measurements remain historical.
 Design, limits and audition commands: [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
 
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure

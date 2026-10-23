@@ -6,7 +6,7 @@ stone rattle, paired wooden clapper, clay vessel and intermittent synthesized
 grunt/uh-huh gestures surround them. The instruments and performance rules are
 invented. The engine makes no claim to reproduce a real tradition.
 
-## Current status: approved direction, playable ROOT candidate
+## Current status: approved direction, verified ROOT candidate
 
 The C4 starting note and the continuous one-minute ROOT ceremony are merged.
 The owner heard the minute and replied, “Sounds good.” That approves this
@@ -17,10 +17,11 @@ earlier audition. The minute remains a fixed offline performance produced by
 The current candidate brings **call → listening → causal answer → settle**
 into regular ROOT finite phrases and held material. Pressure and selected
 supporting gestures leave room for a response; an answer still requires its
-actual acoustic cue. Held material uses paired call/listening cells. This
-candidate awaits listening and verification. The other five voices and the
-approved minute are intended to retain their existing behavior; that is not
-yet a measured identity claim for this change.
+actual acoustic cue. Held material uses paired call/listening cells. The v2
+render and artifact checks below have passed; the new score and presets still
+await the owner's listening verdict. Seven comparison cases are bit-identical
+to their baselines: the five other voice defaults, EXPANSE held material and
+the approved sixty-second minute. This is the measured compatibility scope.
 
 There are now fifteen dry factory presets: five ROOT presets and two for each
 other voice. The twelve existing names, complete macro maps, relative order,
@@ -35,9 +36,9 @@ starting points are added:
 
 All three store TUNE 1 (C4). They use the existing seven macros and ordinary
 `CircuitPatch`/`PadRecipe` formats. ROOT's existing preset picker exposes them;
-there is no new app API, product macro or factory-kit replacement. Recipe
-round-trip and legacy-setting checks are part of the candidate's validation,
-not a claim of completed validation here.
+there is no new app API, product macro or factory-kit replacement. The full
+nine-module JVM suite, including recipe round-trip and legacy-setting checks,
+passed all 5,922 tests with zero failures, errors or skips.
 
 ### Why it is built this way
 
@@ -51,12 +52,53 @@ not a claim of completed validation here.
    current picker, editing and saved-recipe workflow without a separate host
    integration.
 
-Performance verification for the current candidate is pending. Earlier
-desktop timings and APK checks do not establish its render-time improvement
-or physical-phone performance. Physical-phone and Circuit-specific MPC
-validation are not established by the listening approval. The R4/R5/R6
-measurements and older twelve-preset audition descriptions below remain
-historical snapshots; they do not verify this candidate.
+The [playable audition](https://circuit-snipsnap-audition.bertcalm.chatgpt.site/#playable)
+compares the ROOT phrase, ROOT held loop and three new presets. Regenerate this
+five-case set with:
+
+```sh
+./gradlew --no-daemon :synth:generateCircuitPlayable
+```
+
+The output is `testkit/circuit-playable/`; `-PcircuitPlayableOut=/absolute/path`
+selects another directory. Each case includes raw and matched PCM24 WAVs, a
+PCM16 web WAV, its exact recipe and numerical diagnostics. `playable.json`
+pins the source and case hashes. Web WAVs already carry their audition gain;
+the player uses unity gain before the listener's volume control.
+
+### Current verification evidence
+
+Runtime source `1cd56a1bc759dfcdd825c242ed1ad1d80d042b50` has the following
+completed checks:
+
+- The full nine-module JVM suite passed all 5,922 tests across 685 suites,
+  with zero failures, errors or skips and Gradle exit code 0. This includes
+  Circuit's control-corner loops and exact finite/held recipe regeneration.
+- The v2 five-clip render passed 90 native engine guards, followed by 209/209
+  independent artifact checks and 36/36 transition checks. Held listening
+  cells `1`, `3` and `5` (zero-based) contain accepted causal replies.
+- All seven unchanged comparison cases match their baseline floating-point
+  PCM bit for bit, including the approved sixty-second minute.
+- An unchanged EXPANSE HOLD fixture rendered at a desktop median of
+  12.336657 s before the fast path and 11.185123 s after it, a 9.334% reduction.
+  Each separate 1 GiB JVM used one warmup and three sequential timed renders.
+  Render-thread allocation was unchanged. These are desktop render timings;
+  physical-phone performance remains unmeasured.
+- Android `:app:assembleDebug` and `:app:compileDebugAndroidTestKotlin` passed.
+  The debug APK's source binding, signature, packaged engine classes and four
+  native ABIs were verified against that exact runtime source. Android test
+  compilation is complete; physical-device execution has not been performed.
+
+The compatibility/performance harness ran at `4ac572b9f2b8a81c024ae692d5ba2a691c8a5b65`.
+The only subsequent runtime change in `1cd56a1` raises ROOT's held invitation
+energy; `Circuit.kt`, the timed EXPANSE path and the other six compatibility
+fixture paths are unchanged.
+
+The new ROOT score and three presets still need musical acceptance;
+physical-phone and Circuit-specific MPC
+validation remain pending. R4/R5/R6 measurements and older twelve-preset
+audition descriptions below remain historical snapshots, separate from the
+current evidence above.
 
 ## Earlier listening history
 
