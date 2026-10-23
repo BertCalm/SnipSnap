@@ -1,6 +1,9 @@
 package com.snipsnap.synth
 
-/** Thirty-six dry playing roles. The accepted starting eight stay first and keep their recipes. */
+/**
+ * Thirty-six dry playing roles, plus two experimental BRASS GROW entry points that are deliberately
+ * not part of the factory bank ([experimental]).
+ */
 object EmbouchurePresets {
     enum class Role(val id: String, val label: String) {
         LEAD("lead", "Lead"),
@@ -250,10 +253,26 @@ object EmbouchurePresets {
     private val presets = entries.map { it.patch }
     private val byName = entries.associateBy { it.patch.name }
 
+    /**
+     * Experimental single-source BRASS GROW entry points (model 3). They are NOT part of the 36-preset
+     * factory bank, [all], [forVoice], [catalog], the MPC banks or the starter kit; the SYNTH picker and
+     * roster promotion reach them through `Presets`.
+     */
+    private fun grow(name: String, hold: Float) = EmbouchurePatch(
+        name, EmbouchureVoice.BRASS,
+        mapOf("TUNE" to .5f, "GROW" to 1f, "LENGTH" to .5f, "HOLD" to hold),
+        velocity = .75f, model = Embouchure.BRASS_GROW_MODEL,
+    )
+    private val experimentalPresets = listOf(grow("Brass GROW", 0f), grow("Brass GROW Held", 1f))
+
     /** The exact first eight, in their established starter-kit and reference order. */
     fun initial(): List<EmbouchurePatch> = initialPresets
+    /** Alias of [initial] kept for callers that still say "legacy". */
+    fun legacy(): List<EmbouchurePatch> = initialPresets
     fun forVoice(voice: EmbouchureVoice): List<EmbouchurePatch> = presets.filter { it.voice == voice }
     fun all(): List<EmbouchurePatch> = presets
+    /** Experimental model-3 presets that stay out of [all] and the factory banks. */
+    fun experimental(): List<EmbouchurePatch> = experimentalPresets
     fun catalog(): List<Entry> = entries
     fun metadataFor(name: String): Entry? = byName[name]
 }

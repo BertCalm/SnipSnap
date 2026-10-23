@@ -121,7 +121,27 @@ object Wah {
         return FloatArray(snip.frameCount) { f -> touchAt(20f * log10((env[f] / peak).coerceAtLeast(1e-6f))) }
     }
 
-    fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip {
+    fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip = run(snip, macros, minCycles = 0f)
+
+    /**
+     * AUTO's rate with a floor of [minCycles] cycles over a pad of [frames] frames at [rate]: the
+     * shipped [lfoHz] where the pad is long enough to hear that many cycles, and the rate that fits
+     * exactly that many where it is not. Zero cycles is no floor at all.
+     */
+    internal fun autoHz(lfoHz: Float, frames: Int, rate: Int, minCycles: Float): Float =
+        if (minCycles <= 0f || frames <= 0) lfoHz else max(lfoHz, minCycles * rate / frames)
+
+    /**
+     * [process] with a floor on AUTO's rate (see [autoHz]), so a short pad hears at least [minCycles]
+     * of the sweep: on an 85 ms hat at the default 2 Hz the shipped move completes a sixth of a
+     * cycle, a dull band-pass, and the floor makes it one whole wah. A listening door for the
+     * pedal board's Stage 1b (docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md), not a
+     * macro: only AUTO's rate moves; TOUCH's release and ROCK's length keep the SPEED they have.
+     * At [minCycles] 0 it is [process] itself, sample for sample.
+     */
+    internal fun fitted(snip: Snip, macros: Map<String, Float>, minCycles: Float): Snip = run(snip, macros, minCycles)
+
+    private fun run(snip: Snip, macros: Map<String, Float>, minCycles: Float): Snip {
         val m = defaults().toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
         val touch = m.getValue("TOUCH")
@@ -133,6 +153,7 @@ object Wah {
         val reach = reach(m)
         val lfoHz = Dsp.expMap(m.getValue("SPEED"), SLOW_HZ, FAST_HZ)
         val scale = DEFAULT_HZ / lfoHz
+        val autoHz = autoHz(lfoHz, snip.frameCount, rate, minCycles)
         val k = Dsp.expMap(1f - m.getValue("Q"), DAMPING_TIGHT, DAMPING_OPEN)
         val touched = if (touch > 0f) touchPositions(snip, scale) else null
         val filters = Array(snip.channels) { Dsp.TptSvf(rate) }
@@ -143,7 +164,7 @@ object Wah {
             val t = f.toFloat() / rate
             var move = 0f
             if (touched != null) move += touch * touched[f]
-            if (auto > 0f) move += auto * autoAt(t, lfoHz)
+            if (auto > 0f) move += auto * autoAt(t, autoHz)
             if (rock > 0f) move += rock * rockAt(t, scale)
             val centre = centreHz((REACH_GAIN * move).coerceIn(0f, 1f), rate)
             for (ch in 0 until snip.channels) {

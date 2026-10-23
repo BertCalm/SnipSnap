@@ -64,7 +64,9 @@ enum class EmbouchureGesture { SOFT_ENTRY, LEANING_SWELL, OVERPRESSURE, PRESSURE
  */
 object Embouchure {
     const val MODEL_VERSION = 2
-    fun supportsModel(model: Int): Boolean = model == 1 || model == MODEL_VERSION
+    /** Explicit opt-in; ordinary patches and omitted model fields keep their existing meanings. */
+    const val BRASS_GROW_MODEL = 3
+    fun supportsModel(model: Int): Boolean = model == 1 || model == MODEL_VERSION || model == BRASS_GROW_MODEL
     /** Preserve the source realization across versions for direct control comparisons. */
     internal fun seedFor(voice: EmbouchureVoice, midi: Int): Int = Dsp.seedFor("EMBOUCHURE",1,voice,midi)
     const val TUNE_SEMITONES = 24
@@ -99,18 +101,25 @@ object Embouchure {
     fun midiFor(voice: EmbouchureVoice, tune: Float): Int = rootMidi(voice)+Math.round(unit(tune,.5f)*TUNE_SEMITONES)
     fun frequencyFor(voice: EmbouchureVoice, tune: Float): Float = Keys.midiHz(midiFor(voice,tune))
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= .999f
-    fun macrosFor(voice: EmbouchureVoice): List<MacroSpec> {
+    fun macrosFor(voice: EmbouchureVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
+        require(supportsModel(model)) { "unsupported embouchure model $model" }
+        if(model==BRASS_GROW_MODEL) {
+            require(voice==EmbouchureVoice.BRASS) { "EMBOUCHURE model 3 is BRASS only" }
+            return BrassGrow.MACROS
+        }
         val d = voice(voice).defaults
         return listOf(MacroSpec("TUNE",.5f,neutral=.5f), MacroSpec("EFFORT",d[0],neutral=.40f),
             MacroSpec("REED",d[1],neutral=.45f), MacroSpec("SHAPE",d[2],neutral=.40f),
             MacroSpec("GRAIN",d[3],neutral=.10f), MacroSpec("LENGTH",d[4],neutral=.50f),
             MacroSpec("HOLD",0f,neutral=0f))
     }
-    fun defaults(voice: EmbouchureVoice): Map<String,Float> = macrosFor(voice).associate { it.name to it.default }
+    fun defaults(voice: EmbouchureVoice, model: Int = MODEL_VERSION): Map<String,Float> =
+        macrosFor(voice,model).associate { it.name to it.default }
     internal fun settled(macros: Map<String,Float>, voice: EmbouchureVoice): Map<String,Float> =
         defaults(voice).mapValues { (key,value) -> unit(macros[key] ?: value,value) }
-    fun scramble(voice: EmbouchureVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String,Float> {
-        val d = defaults(voice)
+    fun scramble(voice: EmbouchureVoice, random: Random, temperature: Float = .35f, near: Patch? = null,
+                 model: Int = MODEL_VERSION): Map<String,Float> {
+        val d = defaults(voice,if(near is EmbouchurePatch) near.model else model)
         val m = d + (near?.macros ?: emptyMap()).filterKeys { it in d }
         return Dsp.scrambleNear(m,unit(temperature,.35f),random).toMutableMap().also {
             it["HOLD"] = it.getValue("HOLD").coerceAtMost(.95f)
@@ -130,11 +139,26 @@ object Embouchure {
     fun drumClassFor(voice: EmbouchureVoice, macros: Map<String,Float> = emptyMap()): DrumClass =
         if(isLoop(settled(macros,voice).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
 
+    /** A normalized mouth-pressure score, applied before the nonlinear contact junction. */
+    internal class PressureScore(times: List<Float>, values: List<Float>) {
+        val times: List<Float> = java.util.Collections.unmodifiableList(times.toList())
+        val values: List<Float> = java.util.Collections.unmodifiableList(values.toList())
+        init {
+            require(this.times.size in 2..32 && this.times.size==this.values.size)
+            require(this.times.first()==0f && this.times.last()==1f &&
+                this.times.all { it.isFinite() && it in 0f..1f } &&
+                this.times.zipWithNext().all { (a,b) -> a<b }) { "pressure score times must rise from 0 to 1" }
+            require(this.values.all { it.isFinite() && it in 0f..2f }) { "pressure score values must be finite and bounded" }
+        }
+    }
+
     internal class Probe(
         val velocity: Float=1f,
         val feedback: Boolean=true,
         val sourceStopSeconds: Float?=null,
         val totalSeconds: Float?=null,
+        val gestureDurationSeconds: Float?=null,
+        val pressureScore: PressureScore?=null,
         val rate: Int=INTERNAL_RATE,
         val seed: Int?=null,
         val midi: Int?=null,
@@ -236,7 +260,8 @@ object Embouchure {
         return values.last()
     }
     private class Player(v: Voice, private val gesture: EmbouchureGesture, effort: Float, length: Float,
-                         val duration: Float, private val held: Boolean, private val period: Int, private val rate: Int) {
+                         val duration: Float, private val held: Boolean, private val period: Int, private val rate: Int,
+                         pressureScore: PressureScore?=null) {
         private val effortMotion=relative(effort,v.defaults[0])
         private val lengthMotion=relative(length,v.defaults[4])
         private val attack=if(held) (v.attack*(1.35f-.7f*effort)).coerceAtLeast(.018f) else
@@ -258,7 +283,11 @@ object Embouchure {
             knots[5] *= 1f+.12f*lengthMotion
         }
         private val heldDepth=.007f+.025f*effort*(.35f+.65f*length)
+        private val scoreTimes=pressureScore?.times?.toFloatArray()
+        private val scoreValues=pressureScore?.values?.toFloatArray()
+        fun finiteScore() = PressureScore(times.toList(),expressiveValues.toList())
         fun at(i: Int): Float {
+            if(!held && scoreTimes!=null) return segment(i.toFloat()/rate/duration,scoreTimes,scoreValues!!)
             if(!held) return segment(i.toFloat()/rate/duration,times,expressiveValues)
             val phase=(i%period).toDouble()/period
             val contour=1f+heldDepth*sin(2*PI*phase).toFloat()+heldDepth*.35f*sin(4*PI*phase).toFloat()
@@ -266,11 +295,19 @@ object Embouchure {
         }
     }
 
+    /** Reuse the exact finite articulation math when constructing a model-3 source score. */
+    internal fun finitePressureScore(voice: EmbouchureVoice, macros: Map<String,Float>,
+                                     gesture: EmbouchureGesture, duration: Float): PressureScore {
+        val m=settled(macros,voice)
+        return Player(voice(voice),gesture,m.getValue("EFFORT"),m.getValue("LENGTH"),
+            duration,false,1,INTERNAL_RATE).finiteScore()
+    }
+
     private class Engine(val name: EmbouchureVoice, val m: Map<String,Float>, val probe: Probe,
                          val midi: Int, val hz: Float, val gesture: EmbouchureGesture, val heldFrames: Int=0) {
         private val v=voice(name)
         val rate=probe.rate
-        val duration=gestureSeconds(name,m)
+        val duration=probe.gestureDurationSeconds ?: gestureSeconds(name,m)
         val stop=probe.sourceStopSeconds?.let { if(it.isFinite()) it.coerceAtLeast(0f) else duration } ?: duration
         val seed=probe.seed ?: seedFor(name,midi)
         private val effort=m.getValue("EFFORT")
@@ -313,7 +350,7 @@ object Embouchure {
         private val contactGrain=sqrt(max(0f,grainMotion))*(if(held)
             if(grain>0f) .10f*sourceGrain/grain else 0f else 1f)
         private val period=if(heldFrames>0) heldFrames else (heldSeconds(m)*rate).toInt()
-        private val player=Player(v,gesture,effort,m.getValue("LENGTH"),duration,held,period,rate)
+        private val player=Player(v,gesture,effort,m.getValue("LENGTH"),duration,held,period,rate,probe.pressureScore)
         private val noise=Dsp.Noise(seed)
         private val periodicNoise=FloatArray(4096).also { b ->
             val n=Dsp.Noise(seed)
@@ -503,6 +540,10 @@ object Embouchure {
     }
     internal fun play(voice: EmbouchureVoice, macros: Map<String,Float>, probe: Probe=Probe()): Played {
         require(supportsModel(probe.model)) { "unsupported embouchure model ${probe.model}" }
+        require(probe.model!=BRASS_GROW_MODEL) { "use BrassGrow.playSource for model-3 physical diagnostics" }
+        require(probe.gestureDurationSeconds==null || (probe.gestureDurationSeconds.isFinite() &&
+            probe.gestureDurationSeconds in .05f..16f)) { "gesture duration override must be .05..16 seconds" }
+        require(probe.pressureScore==null || !probe.held) { "custom pressure scores use the finite-calibration source" }
         if(probe.model==1) {
             val p=EmbouchureV1.play(voice,macros,EmbouchureV1.Probe(
                 velocity=probe.velocity,feedback=probe.feedback,sourceStopSeconds=probe.sourceStopSeconds,
@@ -521,7 +562,8 @@ object Embouchure {
         val midi=effectiveMidi(voice,m,probe.midi ?: rootMidi(voice))
         val hz=Keys.midiHz(midi)
         val e=Engine(voice,m,probe,midi,hz,probe.gesture ?: gestureFor(voice))
-        val seconds=probe.totalSeconds?.let { if(it.isFinite()) it.coerceIn(.02f,20f) else 6f }
+        val seconds=(probe.totalSeconds ?: probe.gestureDurationSeconds?.plus(.85f))?.let {
+            if(it.isFinite()) it.coerceIn(.02f,20f) else 6f }
         val frames=seconds?.let { (it*probe.rate).toInt() } ?: renderFrames(voice,m)*(probe.rate/Dsp.RATE)
         val raw=FloatArray(frames)
         val trace=Trace(probe.rate.toFloat()/probe.traceHop,probe.traceHop,if(probe.record) (frames+probe.traceHop-1)/probe.traceHop else 0)
@@ -579,6 +621,7 @@ object Embouchure {
                                     velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice),
                                     normalize: Boolean=true, model: Int=MODEL_VERSION): LoopRender {
         require(supportsModel(model)) { "unsupported embouchure model $model" }
+        require(model!=BRASS_GROW_MODEL) { "model 3 uses played-source capture; use BrassGrow.renderMeasured" }
         if(model==1) {
             val p=EmbouchureV1.renderLoopMeasured(voice,macros,midi,velocity,gesture,normalize)
             return LoopRender(p.audio,p.loopStart,p.seam,p.settleSeconds,p.converged,p.stateError,p.hz,p.seed,p.rawRms)
@@ -660,6 +703,10 @@ object Embouchure {
     fun render(voice: EmbouchureVoice, macros: Map<String,Float> = emptyMap(), midi: Int=rootMidi(voice),
                velocity: Float=1f, gesture: EmbouchureGesture=gestureFor(voice), model: Int=MODEL_VERSION): Snip {
         require(supportsModel(model)) { "unsupported embouchure model $model" }
+        if(model==BRASS_GROW_MODEL) {
+            require(voice==EmbouchureVoice.BRASS) { "EMBOUCHURE model 3 is BRASS only" }
+            return BrassGrow.render(macros,midi,velocity)
+        }
         if(model==1) return EmbouchureV1.render(voice,macros,midi,velocity,gesture)
         val m=settled(macros,voice)
         if(isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice,m,midi,velocity,gesture),channels=1,sampleRate=Dsp.RATE)
