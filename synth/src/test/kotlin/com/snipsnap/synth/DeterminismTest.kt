@@ -23,6 +23,22 @@ class DeterminismTest {
     }
 
     @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
+    }
+
+    @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }

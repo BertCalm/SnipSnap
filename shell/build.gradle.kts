@@ -130,6 +130,17 @@ tasks.register<JavaExec>("generateOrigamiGestureAudition") {
     args(providers.gradleProperty("origamiGestureOutput").orElse(rootDir.resolve("testkit/origami-gestures").absolutePath).get())
 }
 
+/** Render the saved held RIBBON through the production exporter and reference sample player. */
+tasks.register<JavaExec>("generateFlockHeldInstrument") {
+    group = "distribution"
+    description = "Export held RIBBON for SnipSnap/MPC, with exact recipes, reference playback, measurements and ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FlockHeldInstrumentGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
+}
+
 /** Audition and package the new musical presets on the unchanged model-3 OSPREY engine. */
 tasks.register<JavaExec>("generateOspreyCuratedAudition") {
     group = "distribution"

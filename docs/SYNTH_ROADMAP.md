@@ -440,9 +440,13 @@ recipes, all dry TONAL pads without choking.
 a native MPC 3 `.xtd`, an MPC 2 `.xpm` twin and shared PCM24 WAVs in its
 `_[TrackData]` folder, complete editable recipes, a manifest and a ZIP beside
 the kit. [FLOCK.md](FLOCK.md) records the exact layout and listening evidence.
-Phone playback, render latency and MPC hardware checks remain open. Sustained
-loops, held instruments and live interaction between separately rendered notes
-remain outside this finite integration.
+RIBBON now also offers explicit saved HELD playback, separate from finite HOLD.
+It captures a two-second opening and roughly six-second body, supplies native
+press/release audition, and makes a nine-root phone/MPC keygroup instrument with
+saved release and source recipe. See
+[FLOCK_RIBBON_INSTRUMENT.md](FLOCK_RIBBON_INSTRUMENT.md). Live interaction between
+separately rendered notes remains outside this sample-based path. Phone playback,
+target render latency and MPC hardware checks remain open.
 
 ### EMBOUCHURE — effort changes how the note speaks
 

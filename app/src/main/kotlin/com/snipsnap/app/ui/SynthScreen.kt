@@ -107,6 +107,7 @@ import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
+import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
@@ -142,6 +143,7 @@ import com.snipsnap.synth.FathomPatch
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.Resin
 import com.snipsnap.synth.ResinDrone
@@ -754,7 +756,7 @@ fun SynthScreen(
     // targets and envelope definitions. OSPREY retains its variation seed, finite duration
     // and model version. VENT keeps its note, velocity, trajectory seed and saved model.
     // FLOCK retains its explicit note, velocity, full-width
-    // variation seed and finite renderer model. OPENSKY retains its authored timbre, note,
+    // variation seed, renderer model, explicit playback mode and held release. OPENSKY retains its authored timbre, note,
     // velocity, gate, effect mode and model. ORPHICA retains its material, mode,
     // capture, seed and physical grain configuration. TRIO retains its seeded performance
     // and model. ORIGAMI retains its model, seed, absolute MIDI override and velocity.
@@ -1044,6 +1046,12 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
+    fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        loadedPatchesByVoice[engine to voice] = change(patch)
+    }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
         touched = true
@@ -1245,6 +1253,9 @@ fun SynthScreen(
 
     var snip by remember { mutableStateOf<Snip?>(null) }
     var rendering by remember { mutableStateOf(false) }
+    val flockHeldPreview = rememberFlockHeldPreview(
+        if (engine == Engine.FLOCK) buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch else null,
+    ) { onToast(Copy.RENDER_FAILED) }
 
     var voicePlayer by remember { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(Unit) { onDispose { voicePlayer?.release() } }
@@ -1285,6 +1296,14 @@ fun SynthScreen(
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
     LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe) {
+        if (flockHeldPreview != null) {
+            // Its cancellable root capture is rendered once by rememberFlockHeldPreview.
+            // A held gesture starts/stops that cached sample through InstrumentPlayer.
+            voicePlayer?.stop()
+            snip = null
+            rendering = false
+            return@LaunchedEffect
+        }
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
@@ -1400,9 +1419,13 @@ fun SynthScreen(
                         // A held Murmur source is seamless, but a one-shot pad stops
                         // at its final frame. Save the delivery fade with that pad;
                         // gated pads and SURFACE keep the unfaded loop source.
-                        val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true) &&
-                            patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f)
-                        ) 8f else null
+                        val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
+                            when {
+                                patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
+                                patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
+                                else -> null
+                            }
+                        } else null
                         // A reopened pad keeps its whole processing recipe (alias flag,
                         // treatment, board); only the source and the delivery fade
                         // are re-stated from the sliders and the target pad.
@@ -1525,7 +1548,8 @@ fun SynthScreen(
     var holdName by remember { mutableStateOf("") }
     val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
-        (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch))
+        (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
+        (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch))
     val heldInstrumentReady = when (engine) {
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
@@ -1571,6 +1595,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, holdRelease)) else null
         }
+        Engine.FLOCK -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
+            if (FlockPadMaker.supports(patch)) HeldSpec.Flock(FlockPadMaker.Spec(patch)) else null
+        }
         Engine.ORIGAMI -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
             if (OrigamiPadMaker.supports(patch)) HeldSpec.Origami(OrigamiPadMaker.spec(patch, holdRelease)) else null
@@ -1603,6 +1631,7 @@ fun SynthScreen(
         if (holdDone >= 0 || holdPreviewing) return
         // Captured now: the sheet's own sound, before anything can move it.
         val spec = heldSpec() ?: return
+        flockHeldPreview?.silence()
         val base = holdBase
         val midis = spec.zoneMidis
         holdTotal = midis.size
@@ -1613,7 +1642,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Origami) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Origami || spec is HeldSpec.Flock) {
                         // OPENSKY has larger wet state; BELLOWS renders three
                         // velocity layers per zone. ORIGAMI also keeps its
                         // oversampled attack and sustain work to one zone at a time.
@@ -1664,6 +1693,7 @@ fun SynthScreen(
     fun closeHeld() {
         // Every zone rendered means the write is under way; let it land.
         if (holdDone >= 0 && holdDone >= holdTotal) return
+        flockHeldPreview?.silence()
         val job = holdJob
         if (job == null) {
             holdDone = -1
@@ -1959,7 +1989,8 @@ fun SynthScreen(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ScopeLcd(snip, rendering, scheme, Modifier.fillMaxWidth().height(104.dp))
+                ScopeLcd(if (flockHeldPreview != null) flockHeldPreview.snip else snip, flockHeldPreview?.rendering ?: rendering,
+                    scheme, Modifier.fillMaxWidth().height(104.dp))
 
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
                 VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
@@ -2311,42 +2342,14 @@ fun SynthScreen(
                     )
                 }
 
-                // FLOCK's note and initial energy live beside its six macros.
-                // Copy the full recipe so a note/velocity edit keeps its seed
-                // and saved model, including a model-1 audition recipe.
+                // Copy the full FLOCK recipe so finite/held edits retain its
+                // exact note, velocity, Long seed and original renderer model.
                 if (engine == Engine.FLOCK) {
-                    val flockPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (flockPatch.midi - Flock.MIN_MIDI).toFloat() / (Flock.MAX_MIDI - Flock.MIN_MIDI),
-                        fillColor = classColor,
+                    FlockPerformanceControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch,
+                        fill = classColor,
                         scheme = scheme,
-                        readout = Scales.nameOf(flockPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val midi = (Flock.MIN_MIDI + value * (Flock.MAX_MIDI - Flock.MIN_MIDI)).roundToInt()
-                                .coerceIn(Flock.MIN_MIDI, Flock.MAX_MIDI)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch).copy(midi = midi)
-                        },
-                    )
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = flockPatch.velocity,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
-                    TapeText(
-                        "FINITE GESTURE · HOLD SETS LENGTH",
-                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        onEdit = { edited -> updateFlockPatch { edited } },
                     )
                 }
 
@@ -2742,6 +2745,9 @@ fun SynthScreen(
                 } else true
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     for (spec in macroSpecs) {
+                        // HOLD remains a finite 2–6 s control. Held RIBBON uses
+                        // its saved release instead, without changing HOLD's value.
+                        if (flockHeldPreview != null && spec.name == "HOLD") continue
                         MacroSlider(
                             label = spec.name,
                             value = macros.getValue(spec.name),
@@ -2960,16 +2966,20 @@ fun SynthScreen(
                 }
             }
 
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
-                    .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                    .tapeClick(label = "AUDITION") { snip?.let { audition(it) } }
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+            if (flockHeldPreview != null) {
+                FlockHeldAudition(flockHeldPreview, classColor, scheme)
+            } else {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                        .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
+                        .tapeClick(label = "AUDITION") { snip?.let { audition(it) } }
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
+                }
             }
         }
 
@@ -3061,16 +3071,22 @@ fun SynthScreen(
                     name = holdName,
                     hasAttack = spec.hasAttack,
                     attack = holdAttack,
-                    release = holdRelease,
+                    release = spec.releaseFraction ?: holdRelease,
                     knobLabel = spec.knobLabel,
                     instrumentNote = spec.instrumentNote,
                     done = holdDone,
                     total = holdTotal,
                     previewing = holdPreviewing,
+                    heldPreview = flockHeldPreview,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { holdAttack = it },
-                    onRelease = { holdRelease = it },
+                    onRelease = { fraction ->
+                        if (engine == Engine.FLOCK) updateFlockPatch {
+                            it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
+                                .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
+                        } else holdRelease = fraction
+                    },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
                     onCancel = ::closeHeld,
@@ -3384,6 +3400,7 @@ private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
+    val releaseFraction: Float? get() = null
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
@@ -3462,6 +3479,19 @@ private sealed interface HeldSpec {
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BellowsPadMaker.export(name, spec, notes, destRoot)
     }
 
+    class Flock(private val spec: FlockPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = FlockPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val releaseFraction get() = FlockPadMaker.RELEASE.fraction(spec.releaseSeconds)
+        override val knobLabel get() = "RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "DRY RIBBON · KEEPS THE ATTACK, THEN REPEATS CAPTURED MOTION UNTIL NOTE-OFF."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(FlockPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            FlockPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Origami(private val spec: OrigamiPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OrigamiPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -3497,6 +3527,7 @@ private fun HeldInstrumentSheet(
     done: Int,
     total: Int,
     previewing: Boolean,
+    heldPreview: FlockHeldPreviewState?,
     fillColor: Color,
     scheme: Scheme,
     onAttack: (Float) -> Unit,
@@ -3543,10 +3574,14 @@ private fun HeldInstrumentSheet(
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
+                if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
+                    accessibilityLabel = "INSTRUMENT AUDITION")
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 ActionButton("CANCEL", scheme, enabled = !writing, modifier = Modifier.weight(1f), onClick = onCancel)
-                ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
+                if (heldPreview == null) {
+                    ActionButton("PREVIEW", scheme, enabled = !busy, dimmed = busy, modifier = Modifier.weight(1f), onClick = onPreview)
+                }
                 ActionButton("MAKE", scheme, enabled = !busy, dimmed = busy, lit = !busy, modifier = Modifier.weight(1f), onClick = onMake)
             }
         }

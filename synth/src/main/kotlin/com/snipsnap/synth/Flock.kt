@@ -138,7 +138,7 @@ object Flock {
 
     private class Cloud(
         val voice: FlockVoice, val m: Map<String, Float>, velocity: Float, seed: Long,
-        val mode: FlockMode, val perturb: Boolean, val motionRate: Double,
+        val mode: FlockMode, val perturb: Boolean, val motionRate: Double, val collectAnalysis: Boolean = true,
     ) {
         val spread = m.getValue("SPREAD").toDouble()
         val pull = m.getValue("PULL").toDouble()
@@ -192,7 +192,7 @@ object Flock {
             val radius2 = radius * radius
             val damping = if (voice == FlockVoice.RIBBON) .65 + 1.7 * pull else .95 + 2.1 * pull
             val decay = exp(-damping * dt)
-            val recordGraph = tick in CONTROL_RATE..(CONTROL_RATE * 5 / 4)
+            val recordGraph = collectAnalysis && tick in CONTROL_RATE..(CONTROL_RATE * 5 / 4)
             val zeroReceivers = if (recordGraph) mutableListOf<Int>() else null
             for (i in 0 until PARTICLES) {
                 var weight = 0.0
@@ -313,10 +313,21 @@ object Flock {
         seed: Long,
         oversample: Int = 4,
         cancelled: () -> Boolean = { false },
+        model: Int = MODEL_VERSION,
     ): Probe {
         require(seconds.isFinite() && seconds in .1..90.0) { "FLOCK continuous source must be .1..90 seconds" }
         return renderSource(FlockVoice.RIBBON, macros, midi, velocity, seed, FlockMode.FLOCK, false,
-            cancelled, oversample, MODEL_VERSION, seconds)
+            cancelled, oversample, model, seconds)
+    }
+
+    /** Capture-only source: identical synthesis and decimation, without trace, leveling or comparison arrays. */
+    internal fun captureContinuousRibbon(
+        frames: Int, macros: Map<String, Float>, midi: Int, velocity: Float, seed: Long,
+        model: Int, cancelled: () -> Boolean, oversample: Int = 4,
+    ): FloatArray {
+        require(frames > 0)
+        return renderSource(FlockVoice.RIBBON, macros, midi, velocity, seed, FlockMode.FLOCK, false,
+            cancelled, oversample, model, frames.toDouble() / Dsp.RATE, collectAnalysis = false).rawSamples
     }
 
     private fun renderSource(
@@ -331,6 +342,7 @@ object Flock {
         oversample: Int,
         model: Int,
         continuousSeconds: Double? = null,
+        collectAnalysis: Boolean = true,
     ): Probe {
         require(supportsModel(model)) { "unsupported flock model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "FLOCK midi must be $MIN_MIDI..$MAX_MIDI" }
@@ -345,8 +357,9 @@ object Flock {
         val frames = (seconds * rate).roundToInt()
         val raw = FloatArray(frames)
         val motionRate = motionRate(voice, m.getValue("FLOW"), model)
-        val cloud = Cloud(voice, m, velocity, seed, mode, perturb, motionRate)
-        val trace = mutableListOf(cloud.trace(0))
+        val cloud = Cloud(voice, m, velocity, seed, mode, perturb, motionRate, collectAnalysis)
+        val trace = mutableListOf<TraceFrame>()
+        if (collectAnalysis) trace += cloud.trace(0)
         val hz = Keys.midiHz(midi).toDouble()
         val edge = m.getValue("EDGE").toDouble()
         val frequency = DoubleArray(PARTICLES)
@@ -394,11 +407,17 @@ object Flock {
             }
             frame += count
             cloud.commit(); tick++
-            if (tick % 10 == 0 || tick in CONTROL_RATE..(CONTROL_RATE * 5 / 4) || frame == frames) trace += cloud.trace(tick)
+            if (collectAnalysis && (tick % 10 == 0 || tick in CONTROL_RATE..(CONTROL_RATE * 5 / 4) || frame == frames)) trace += cloud.trace(tick)
         }
         stopIfUnwanted(cancelled)
         val native = if (oversample == 4) Dsp.decimate(raw, Dsp.RATE) else raw
         if (continuousSeconds == null) Dsp.fadeTail(native)
+        if (!collectAnalysis) {
+            stopIfUnwanted(cancelled)
+            return Probe(Snip(native, channels = 1, sampleRate = Dsp.RATE), native, emptyList(),
+                Diagnostics(native.size.toDouble() / Dsp.RATE, 0.0, 0.0, 0.0,
+                    minHz, maxHz, cloud.maxSpeed, 0.0, null, emptyList(), emptyList(), motionRate))
+        }
         val samples = native.copyOf()
         // The shared project loudness measurement leaves scatter and motion intact; velocity
         // retains an amplitude component after leveling as well as disturbing the initial state.
