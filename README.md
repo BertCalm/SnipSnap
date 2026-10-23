@@ -784,22 +784,29 @@ includes the full matrix and before/after comparisons for the revised voices.
 
 CIRCUIT is an invented moving ensemble: three rooted breath resonators,
 stone rattle, paired wood, clay vessel and synthesized coordination voice.
-The current listening candidate gives them one authored four-pulse figure,
-with shared breath, a slow rise and settle across the phrase, stable player
-identity and quiet overlapping support. ROOT adds a firmer pitched foundation
-only at faster playing rates.
-DIAMETER, ORBIT and PACE independently set formation, movement and playing;
-CANYON supplies asymmetric mono paths and bounded replies at authored answer
-opportunities. A common energy scale keeps accepted replies in the phrase.
-Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
-clips. HOLD at .99 returns its settled procession without an opening gesture.
-The owner heard R4 (stone, wood and breath overpowered the sound) and R5
-(“I think it's still a bit too abrupt”); the current candidate, R6, eases
-force onset and release. The completed-pack evidence in docs/CIRCUIT.md is
-R4's, which it marks historical: it does not verify R6. R6 calibration and
-verification are in progress, and the owner's listening verdict remains pending.
-Contract and audition commands:
-[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+The owner approved the C4 starting note and the continuous one-minute ROOT
+ceremony (“Sounds good”). The minute remains a fixed offline audition.
+The current candidate brings call → listening → causal answer → settle into
+regular ROOT finite phrases and held material, using shared pressure and
+deliberate gaps in supporting gestures. Seven unchanged comparison cases,
+including all five other voice defaults and the approved minute, remain
+bit-identical to their baselines.
+
+Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
+kit use the current patch, recipe and app workflows. New C4 ROOT presets
+FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+finite returns and a settled recurring pulse. Existing presets and kit notes
+are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
+render guards, 209/209 artifact checks and 36/36 transition checks; held listening
+cells 1/3/5 receive causal replies. Desktop EXPANSE held median render time
+fell from 12.336657 s to 11.185123 s (9.334%), with unchanged thread allocation.
+Android debug assembly, Android test-source compilation and APK verification
+passed against runtime `1cd56a1bc759dfcdd825c242ed1ad1d80d042b50`. The full nine-module
+JVM suite passed all 5,922 tests with zero failures, errors or skips.
+The new ROOT score and presets await listening;
+physical-phone and Circuit-specific MPC validation remain pending. Earlier
+R4/R5/R6 measurements remain historical.
+Design, limits and audition commands: [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
 
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
 travels between four trees, and synthesized owls answer the disturbances
