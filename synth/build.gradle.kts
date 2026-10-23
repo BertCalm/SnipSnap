@@ -505,6 +505,21 @@ tasks.register<JavaExec>("generateCircuitCeremony") {
     }
 }
 
+/** Five ordinary ROOT patches with complete native, audition and web diagnostics. */
+tasks.register<JavaExec>("generateCircuitPlayable") {
+    group = "distribution"
+    description = "Render CIRCUIT finite/held ROOT defaults and three presets with raw/matched PCM24, web PCM16 and replayable diagnostics."
+    dependsOn("testClasses")
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CircuitPlayableGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("circuitPlayableOut").orElse("${rootDir}/testkit/circuit-playable").get())
+    providers.gradleProperty("circuitPlayableInputs").orNull?.let {
+        systemProperty("circuit.playable.inputs", it)
+    }
+}
+
 /** Render the THUMP acceptance kit into testkit/. See ThumpKitGenerator. */
 tasks.register<JavaExec>("generateThumpKit") {
     group = "distribution"

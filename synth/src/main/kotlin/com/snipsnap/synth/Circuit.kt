@@ -190,9 +190,18 @@ object Circuit {
                        phrase: CircuitPhrase, velocity: Double, probe: Probe, ceremony: Boolean): List<Event> {
         val cutoff = min(p.phraseSeconds - if (p.held) 0.0 else CircuitPhrase.RELEASE_PAD,
             probe.inputOffSeconds ?: Double.POSITIVE_INFINITY)
+        val rootScore = voice == CircuitVoice.ROOT && !ceremony
+        fun cell(event: Event) = floor((event.timeSeconds - CircuitPhrase.ORIGIN) / phrase.cellSeconds).toInt()
         val base = phrase.targets(velocity).filter {
-            it.timeSeconds < cutoff && (!ceremony || CircuitCeremony.permits(it))
-        }.map { if (ceremony) CircuitCeremony.accentInvitation(it) else it }
+            it.timeSeconds < cutoff && (!ceremony || CircuitCeremony.permits(it)) &&
+                (!rootScore || CircuitRootScore.permits(it, cell(it), phrase.cellCount, p.held))
+        }.map {
+            when {
+                ceremony -> CircuitCeremony.accentInvitation(it)
+                rootScore -> it.copy(energy = it.energy * CircuitRootScore.energyScale(it, cell(it), phrase.cellCount, p.held))
+                else -> it
+            }
+        }
         if (!probe.responses || velocity == 0.0) return base
         val canyon = m.getValue("CANYON").toDouble()
         if (canyon < .015) return base
@@ -215,8 +224,12 @@ object Circuit {
         // only the first cells and leave an otherwise identical closing half mute.
         val stride = ceil(phrase.cellCount.toDouble() / MAX_REPLIES).toInt()
         for (target in phrase.responseTargets()) {
-            if ((if (ceremony) !CircuitCeremony.replyCell(target.cell) else target.cell % stride != 0) ||
-                target.timeSeconds >= cutoff) continue
+            val mayAnswer = when {
+                ceremony -> CircuitCeremony.replyCell(target.cell)
+                rootScore -> CircuitRootScore.allowsReply(target.cell, phrase.cellCount, p.held)
+                else -> target.cell % stride == 0
+            }
+            if (!mayAnswer || target.timeSeconds >= cutoff) continue
             val cueReason = if (target.cueSource == 4) "opening-wood" else "answer-invitation"
             val cues = base.filter { it.source == target.cueSource && it.reason == cueReason }
             val cue = (cues.lastOrNull { it.timeSeconds <= target.timeSeconds }
@@ -573,8 +586,10 @@ object Circuit {
     private fun read(source: FloatArray, position: Double, cyclic: Boolean): Double {
         val lower = floor(position).toInt()
         val fraction = position - lower
-        fun sample(index: Int): Double = if (cyclic) source[Math.floorMod(index, source.size)].toDouble()
-            else if (index in source.indices) source[index].toDouble() else 0.0
+        // Almost every held read already lies inside the buffer. Keep the exact
+        // wrapped value at its seam without dividing for every interior sample.
+        fun sample(index: Int): Double = if (index in source.indices) source[index].toDouble()
+            else if (cyclic) source[Math.floorMod(index, source.size)].toDouble() else 0.0
         return sample(lower) * (1 - fraction) + sample(lower + 1) * fraction
     }
 

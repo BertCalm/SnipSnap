@@ -6,6 +6,60 @@ stone rattle, paired wooden clapper, clay vessel and intermittent synthesized
 grunt/uh-huh gestures surround them. The instruments and performance rules are
 invented. The engine makes no claim to reproduce a real tradition.
 
+## Current status: approved direction, playable ROOT candidate
+
+The C4 starting note and the continuous one-minute ROOT ceremony are merged.
+The owner heard the minute and replied, “Sounds good.” That approves this
+musical direction; it does not retrospectively approve every voice, preset or
+earlier audition. The minute remains a fixed offline performance produced by
+`CircuitCeremonyGenerator`, rather than a saved performance mode in the app.
+
+The current candidate brings **call → listening → causal answer → settle**
+into regular ROOT finite phrases and held material. Pressure and selected
+supporting gestures leave room for a response; an answer still requires its
+actual acoustic cue. Held material uses paired call/listening cells. This
+candidate awaits listening and verification. The other five voices and the
+approved minute are intended to retain their existing behavior; that is not
+yet a measured identity claim for this change.
+
+There are now fifteen dry factory presets: five ROOT presets and two for each
+other voice. The twelve existing names, complete macro maps, relative order,
+lower explicit notes and sixteen-pad factory kit are retained. Three C4 ROOT
+starting points are added:
+
+| Preset | Intent | HOLD |
+|---|---|---|
+| FIRE CIRCLE | Softer pressure in a close, slowly moving circle, with moderate canyon space | 0: finite |
+| NIGHT REPLY | Wider placement and more canyon return over a longer finite gesture | .55: finite |
+| EMBER PULSE | Warmer pressure and a recurring pulse in a compact moving formation | 1: settled loop |
+
+All three store TUNE 1 (C4). They use the existing seven macros and ordinary
+`CircuitPatch`/`PadRecipe` formats. ROOT's existing preset picker exposes them;
+there is no new app API, product macro or factory-kit replacement. Recipe
+round-trip and legacy-setting checks are part of the candidate's validation,
+not a claim of completed validation here.
+
+### Why it is built this way
+
+1. Shared pressure and deliberate role omissions make room for an intentional
+   call and a listening turn. Replies follow received cues rather than filling
+   every gap automatically.
+2. Paired held cells let the call and listening turn repeat together. Closure
+   belongs to the synthesis and acoustic state; an output gate does not cut
+   off the bodies or room to disguise a join.
+3. Existing ROOT macros and ordinary presets put this behavior through the
+   current picker, editing and saved-recipe workflow without a separate host
+   integration.
+
+Performance verification for the current candidate is pending. Earlier
+desktop timings and APK checks do not establish its render-time improvement
+or physical-phone performance. Physical-phone and Circuit-specific MPC
+validation are not established by the listening approval. The R4/R5/R6
+measurements and older twelve-preset audition descriptions below remain
+historical snapshots; they do not verify this candidate.
+
+## Earlier listening history
+
 The owner rejected the initial audio: “It all sounds the same. The brrrr sound
 overpowered everything.” After the balance revision, the owner could distinguish
 the parts, but described the vocal as honking and the ensemble as chaotic and
@@ -14,12 +68,12 @@ R4 introduced a shared breath and an authored four-pulse figure. The owner next
 reported that stone, wood and breath overpowered the sound and felt like separate
 voices. R5 retained that figure while lowering surrounding radiation and shaping
 each gesture's excitation with the continuing shared effort. The owner then said,
-“I think it's still a bit too abrupt.” The current R6 candidate eases force
-onset and release and gives resonant states a freer passive response. Its aim
-remains one imagined instrument whose materials articulate its sound.
-Owner listening acceptance remains pending. Numerical checks and patch
-round-trips do not establish that its sound is useful. Vocal integration,
-phrasing, mono movement and the feeling of shared intention still need listening.
+“I think it's still a bit too abrupt.” R6 eased force onset and release and
+gave resonant states a freer passive response. Its aim remained one imagined
+instrument whose materials articulate its sound. Listening acceptance was
+pending at that stage. Numerical checks and patch round-trips alone did not
+establish musical usefulness; the later C4 and minute approvals are recorded
+above.
 
 ## Listening revisions
 
