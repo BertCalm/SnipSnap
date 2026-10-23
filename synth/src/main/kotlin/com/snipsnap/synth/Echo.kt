@@ -1,7 +1,9 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import kotlin.math.PI
 import kotlin.math.ceil
+import kotlin.math.cos
 import kotlin.math.ln
 
 /**
@@ -19,10 +21,17 @@ object Echo {
         MacroSpec("REPEAT", 0.4f),  // feedback: one slapback up to a long trail
         MacroSpec("TONE", 0.5f),    // how dark each repeat gets
         MacroSpec("MIX", 0.4f),     // wet level against the untouched dry
+        MacroSpec("HEAD", 0f),      // what feeds the repeats: 0 the whole note, 1 only its first HEAD_SEC
     )
 
     /** The most tail any setting may add, seconds. The one-shot promise. */
     const val MAX_TAIL_SECONDS = 1.1f
+
+    /** At or below this HEAD is off: the whole note feeds the repeats, through a factor of exactly 1f. */
+    const val HEAD_OFF = 0.001f
+
+    /** The head a full HEAD feeds the repeats: the pick and a little of the body, its last third faded. */
+    const val HEAD_SEC = 0.12f
 
     fun defaults(): Map<String, Float> = MACROS.associate { it.name to it.default }
 
@@ -32,6 +41,29 @@ object Echo {
     /** Delay between repeats for a TIME setting, in frames at [sampleRate]. */
     fun delayFrames(time: Float, sampleRate: Int): Int =
         (Dsp.expMap(time, 0.06f, 0.35f) * sampleRate).toInt()
+
+    /**
+     * How far HEAD has moved the feed toward the head alone: 0 at or below [HEAD_OFF], then HEAD stretched by 1.5
+     * and capped at 1, as WAH's weights are, so the pad sheet's first tap (HEAD 0.7) still feeds the head alone.
+     */
+    internal fun reach(macros: Map<String, Float>): Float {
+        val head = macros["HEAD"] ?: 0f
+        return if (head <= HEAD_OFF) 0f else (1.5f * head).coerceIn(0f, 1f)
+    }
+
+    /** The head's length in frames: [HEAD_SEC], never past 0.8 of [delay], so a repeat of the head ends before the next lands. */
+    internal fun headFrames(delay: Int, sampleRate: Int): Int =
+        minOf((HEAD_SEC * sampleRate).toInt(), (0.8f * delay).toInt())
+
+    /** The head window at frame [f]: 1, then a raised-cosine fade over the last third of [head] frames, then 0. */
+    internal fun window(f: Int, head: Int): Float {
+        val fade = head / 3
+        return when {
+            f >= head -> 0f
+            f < head - fade -> 1f
+            else -> (0.5 + 0.5 * cos(PI * (f - (head - fade)) / fade)).toFloat()
+        }
+    }
 
     fun process(snip: Snip, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults().toMutableMap()
@@ -43,6 +75,8 @@ object Echo {
         val delay = delayFrames(m.getValue("TIME"), snip.sampleRate)
         val feedback = Dsp.lin(m.getValue("REPEAT"), 0.15f, 0.75f)
         val toneHz = Dsp.expMap(m.getValue("TONE"), 1_200f, 9_000f)
+        val reach = reach(m)
+        val head = headFrames(delay, snip.sampleRate)
 
         // Repeats below -60 dB are silence; cap the tail regardless.
         val taps = ceil(-6.9078 / ln(feedback.toDouble())).toInt().coerceAtLeast(1)
@@ -61,7 +95,9 @@ object Echo {
             for (f in 0 until outFrames) {
                 val dry = if (f < snip.frameCount) snip.samples[f * snip.channels + ch] else 0f
                 val fed = if (f >= delay) d[f - delay] else 0f
-                d[f] = lp.lp(dry + feedback * fed, toneHz)
+                // HEAD's feed: the whole note at reach 0 (a factor of exactly 1f), the head alone at reach 1.
+                val feed = 1f - reach * (1f - window(f, head))
+                d[f] = lp.lp(dry * feed + feedback * fed, toneHz)
                 val wet = if (f >= delay) d[f - delay] else 0f
                 out[f * snip.channels + ch] = dry + mix * wet
             }
