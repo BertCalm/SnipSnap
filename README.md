@@ -337,7 +337,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 43 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 44 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -395,6 +395,17 @@ and capture/control diagnostics. The
 [private audition](https://tangle-snipsnap-audition.bertcalm.chatgpt.site)
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
+
+CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
+through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
+bounded static-geometry cache and exact linear modal response support editable
+finite notes. Native patches retain model, note and velocity through presets,
+pads and CLI edits. Eight presets and a dry sixteen-pad kit accompany
+the instrument; six positions are new listening candidates. HOLD is reserved.
+Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
+for the control study and dual-generation MPC starter. The archived listening
+studies remain unchanged. [Implementation notes](docs/CAUSTIC.md) distinguish
+finite duration classification from sustained-loop support.
 
 CREASE's ROUND, PINCH and RUBBER voices bend and recover through positive
 phase maps. The six approved model-3 presets are registered in the SYNTH picker,
@@ -871,7 +882,7 @@ that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
-54 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+55 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1069,7 +1080,7 @@ THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL
 RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
 COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
-VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, plus GRAINS, SNAP and DRAW, which sit beside the
+VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
 TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
 MERCURY's picker entry carries PING, SING and BLADE, the three voices kept at

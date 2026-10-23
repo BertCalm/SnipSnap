@@ -51,6 +51,14 @@ class DeterminismTest {
     }
 
     @Test
+    fun `native Caustic saved finite notes are byte identical across renders`() {
+        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
+            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+            midi = 57, velocity = .63f, model = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }

@@ -110,6 +110,7 @@ object Patches {
             CreasePatch.ENGINE -> CreasePatch.fromJsonValue(value)
             TrioPatch.ENGINE -> TrioPatch.fromJsonValue(value)
             OhmPatch.ENGINE -> OhmPatch.fromJsonValue(value)
+            CausticPatch.ENGINE -> CausticPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

@@ -253,6 +253,9 @@ import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.Crease
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.CreaseVoice
+import com.snipsnap.synth.CausticInstrument
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.Overlap
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.OverlapTopology
@@ -533,7 +536,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
 /**
  * The slider defaults a loaded patch fills its missing macros from: its own
  * model/configuration's defaults where those differ by recipe (ORPHICA, OSPREY,
- * OVERLAP, CREASE), the engine's [base] otherwise. Shared by `loadPreset` and
+ * OVERLAP, CREASE, CAUSTIC), the engine's [base] otherwise. Shared by `loadPreset` and
  * by reopening a pad, so both put a saved recipe on the same sliders.
  */
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
@@ -541,6 +544,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
+    is CausticPatch -> CausticInstrument.defaults(editable.voice, editable.model)
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     else -> base
 }
@@ -737,7 +741,10 @@ fun SynthScreen(
                         // EMBOUCHURE restores only the selected model's controls; a legacy
                         // BRASS recipe never inherits GROW and GROW never inherits model 2.
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
-                            settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                            // CAUSTIC's reserved HOLD has no adjustment: a stale
+                            // navigation value must not leave the finite voice stuck.
+                            if (e == Engine.CAUSTIC && name == "HOLD") fallback
+                            else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                                 ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                         }
                     })
@@ -748,7 +755,7 @@ fun SynthScreen(
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // OBBLIGATO also retains its renderer model and independent-player seed.
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS, OVERLAP and CREASE retain their synthesis model, saved pitch and velocity.
+    // REGISTERS, OVERLAP, CREASE and CAUSTIC retain their synthesis model, saved pitch and velocity.
     // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
@@ -2098,6 +2105,28 @@ fun SynthScreen(
                     )
                 }
 
+                // CAUSTIC is a finite instrument. Keep its explicit root and
+                // strike velocity in the loaded recipe, beside its macros.
+                if (engine == Engine.CAUSTIC) {
+                    CausticNoteControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onRootChange = { root ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(midi = root)
+                        },
+                        onVelocityChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(velocity = value)
+                        },
+                    )
+                }
+
                 // CREASE's five shape controls and HOLD leave pitch and playing
                 // intensity in the saved recipe. Copy the current patch so a
                 // legacy model keeps its timing through root/velocity edits.
@@ -2746,8 +2775,9 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model) {
                     if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
+                    else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else engine.macrosFor(voice)
                 }
@@ -2781,6 +2811,7 @@ fun SynthScreen(
                                 // hold (Siren.isLoop), the way GLINT's PEAK readout
                                 // would say the harmonic it snapped to.
                                 readout = when {
+                                    engine == Engine.CAUSTIC && spec.name == "HOLD" -> "OFF"
                                     engine == Engine.SHOAL && spec.name == "HOLD" && !shoalHoldSupported -> "NOTE"
                                     engine == Engine.OVERLAP && spec.name == "HOLD" -> {
                                         val hold = macros.getValue(spec.name)
@@ -2836,7 +2867,7 @@ fun SynthScreen(
                                 },
                                 onValueChange = { v -> updateMacro(spec.name, v) },
                                 valueRange = macroRange(spec.name),
-                                enabled = spec.name != "HOLD" || shoalHoldSupported,
+                                enabled = spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC),
                             )
                         }
                     }
@@ -2854,6 +2885,9 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.CAUSTIC ->
+                                CausticInstrument.scramble(voice as CausticVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.CREASE ->
                                 Crease.scramble(voice as CreaseVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.FLOCK ->
@@ -3868,7 +3902,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC;
 
     val displayName: String get() = name.replace('_', ' ')
 
@@ -3924,6 +3958,7 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
+        CAUSTIC -> CausticVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -3983,6 +4018,7 @@ private enum class Engine {
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
         SHOAL -> Shoal.macrosFor(voice as ShoalVoice)
         CREASE -> Crease.macrosFor(voice as CreaseVoice)
+        CAUSTIC -> CausticInstrument.macrosFor(voice as CausticVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
@@ -4040,6 +4076,7 @@ private enum class Engine {
         TANGLE -> Tangle.defaults(voice as TangleVoice)
         SHOAL -> Shoal.defaults(voice as ShoalVoice)
         CREASE -> Crease.defaults(voice as CreaseVoice)
+        CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
@@ -4099,6 +4136,7 @@ private enum class Engine {
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
         SHOAL -> Shoal.scramble(voice as ShoalVoice, random)
         CREASE -> Crease.scramble(voice as CreaseVoice, random)
+        CAUSTIC -> CausticInstrument.scramble(voice as CausticVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
@@ -4163,6 +4201,7 @@ private enum class Engine {
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
         SHOAL -> ShoalPatch("Preview", voice as ShoalVoice, macros).render()
         CREASE -> Crease.render(voice as CreaseVoice, macros)
+        CAUSTIC -> CausticInstrument.render(voice as CausticVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -4226,6 +4265,7 @@ private enum class Engine {
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
         SHOAL -> Shoal.drumClassFor(voice as ShoalVoice, macros)
         CREASE -> Crease.drumClassFor(voice as CreaseVoice, macros)
+        CAUSTIC -> CausticInstrument.drumClassFor(voice as CausticVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
@@ -4284,6 +4324,7 @@ private enum class Engine {
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
         SHOAL -> ShoalPatch(name, voice as ShoalVoice, macros)
         CREASE -> CreasePatch(name, voice as CreaseVoice, macros)
+        CAUSTIC -> CausticPatch(name, voice as CausticVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
@@ -4710,6 +4751,41 @@ private fun ReopenPadOverlay(
 }
 
 // ---------- macro slider ----------
+
+/** Note controls stay outside the large screen body and retain the whole native recipe. */
+@Composable
+private fun CausticNoteControls(
+    patch: CausticPatch,
+    fillColor: Color,
+    scheme: Scheme,
+    onRootChange: (Int) -> Unit,
+    onVelocityChange: (Float) -> Unit,
+) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - CausticInstrument.MIDI_MIN).toFloat() /
+            (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN),
+        fillColor = fillColor,
+        scheme = scheme,
+        readout = Scales.nameOf(patch.midi),
+        onValueChange = { value ->
+            onRootChange((CausticInstrument.MIDI_MIN + value *
+                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN)).roundToInt()
+                .coerceIn(CausticInstrument.MIDI_MIN, CausticInstrument.MIDI_MAX))
+        },
+    )
+    MacroSlider(
+        label = "VELOCITY",
+        value = patch.velocity,
+        fillColor = fillColor,
+        scheme = scheme,
+        onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
+    )
+    TapeText(
+        "FINITE NOTE · LENGTH SETS DECAY · HOLD RESERVED.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+    )
+}
 
 /**
  * The stepper-slider idiom from `PadSheetScreen.kt`'s `StepperSlider` is
