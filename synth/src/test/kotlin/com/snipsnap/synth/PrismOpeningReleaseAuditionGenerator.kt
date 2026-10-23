@@ -167,13 +167,14 @@ object PrismOpeningReleaseAuditionGenerator {
     private fun page(clips: List<Map<String, Any?>>): String {
         fun escape(value: Any?) = value.toString().replace("&", "&amp;").replace("<", "&lt;").replace("\"", "&quot;")
         val rows = clips.joinToString("\n") { c ->
-            "<tr><th>${escape(c["preset"])}<br>${escape(c["register"])} · MIDI ${escape(c["midi"])} · ${escape(c["velocityLabel"])}</th>" +
-                "<td><audio controls preload=\"none\" src=\"${escape(c["native"])}\"></audio></td>" +
-                "<td><audio controls preload=\"none\" src=\"${escape(c["matched"])}\"></audio></td>" +
-                "<td>${"%.2f".format(c["warmedSingleRenderMillis"])} ms<br><a href=\"${escape(c["recipe"])}\">Recipe</a></td></tr>"
+            "<tr><th scope=\"row\">${escape(c["preset"])}<br>${escape(c["register"])} · MIDI ${escape(c["midi"])} · ${escape(c["velocityLabel"])}</th>" +
+                "<td><span class=\"cell-label\">Native</span><audio controls preload=\"none\" aria-label=\"Native ${escape(c["preset"])} ${escape(c["register"])} ${escape(c["velocityLabel"])}\" src=\"${escape(c["native"])}\"></audio></td>" +
+                "<td><span class=\"cell-label\">Matched</span><audio controls preload=\"none\" aria-label=\"Matched ${escape(c["preset"])} ${escape(c["register"])} ${escape(c["velocityLabel"])}\" src=\"${escape(c["matched"])}\"></audio></td>" +
+                "<td><span class=\"cell-label\">JVM render</span>${"%.2f".format(c["warmedSingleRenderMillis"])} ms<br><a href=\"${escape(c["recipe"])}\">Recipe</a></td></tr>"
         }
         return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-            <title>PRISM body opening playability</title><style>body{font:16px system-ui;margin:2rem;background:#16181b;color:#eee}a{color:#ffb2a3}table{border-collapse:collapse}th,td{padding:1rem;border-bottom:1px solid #555;text-align:left}audio{max-width:30vw}</style>
+            <title>PRISM body opening playability</title><style>body{font:16px system-ui;margin:2rem;background:#16181b;color:#eee}a{color:#ffb2a3}table{border-collapse:collapse}th,td{padding:1rem;border-bottom:1px solid #555;text-align:left}audio{max-width:30vw}.cell-label{display:none}
+            @media(max-width:700px){body{margin:1rem}h1{font-size:1.8rem}table,tbody,tr,th,td{display:block}table{width:100%}thead{display:none}tr{margin:1rem 0;border:1px solid #555;border-radius:.5rem;overflow:hidden}th,td{padding:.75rem;border-bottom:0;box-sizing:border-box}th{background:#22262b}td{padding-top:.35rem}audio{display:block;width:100%;max-width:100%}.cell-label{display:block;font-size:.85rem;font-weight:600;margin-bottom:.35rem}}</style>
             <h1>PRISM body opening playability</h1><p>Three notes and two touches for each delivered opening. Native keeps performance dynamics; matched uses the shared listening level. Measurements support listening and do not establish sonic approval.</p>
             <p>Render times are warmed single-call JVM measurements. Phone and MPC playback remain device checks. <a href="manifest.json">Manifest</a> · <a href="diagnostics.json">Diagnostics</a></p>
             <table><thead><tr><th>Case</th><th>Native</th><th>Matched</th><th>JVM render</th></tr></thead><tbody>$rows</tbody></table></html>""".trimIndent()
