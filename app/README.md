@@ -69,16 +69,16 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (45 starters including CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (48 starters including CIRCUIT,
 THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 56 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+The SYNTH source picker has 59 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
-RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
 COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
 VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC and FILAMENT.
@@ -86,6 +86,11 @@ MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
 (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
 round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT
 path yet (R2b, round 6, awaits the listen).
+AEROSTAT exposes the approved PVC voice and five factory recipes. TREMOR exposes
+the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and glass
+model, with the glass voice displayed as TILES; GLINT remains its saved identity
+and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
+and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit

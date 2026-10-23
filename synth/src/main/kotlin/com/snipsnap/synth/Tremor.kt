@@ -224,12 +224,15 @@ object Tremor {
     fun frequencyFor(voice: TremorVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
     /**
-     * What a pad is filed as, matched to the classifier on the built engine.
+     * Authored pad filing, normally aligned with generic file-import classification.
      *
      * A short HIDE files KICK through A#2 (the centroid sits under the kick stretch) and TOM from
      * C3 through F3. C4 leaves the bass band and files PERC. A dense fault on a low note lifts the
      * centroid out of that kick rule and files TOM. HOLD at [HOLD_LOOP] or above is past 1.5 s and
-     * files LOOP by the length rule. The kit and preset tests compare this to the classifier.
+     * files LOOP by the length rule. Factory roles can intentionally override the generic
+     * classifier: SETTLING BED stays TOM despite its audible bead texture, and CHARGED TAIL
+     * stays PERC after its feedback tone was removed. Kit and preset tests pin those roles
+     * explicitly and compare the other factory sounds with generic classification.
      */
     fun drumClassFor(voice: TremorVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)

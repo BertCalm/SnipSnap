@@ -334,6 +334,22 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.cistern() },
         Starter(
+            "aerostat", "AEROSTAT",
+            "Paddle-struck PVC, catching pipes and drifting steam. Five distinct factory gestures.",
+            seeded = false,
+        ) { SynthKits.aerostat() },
+        Starter(
+            "tremor", "TREMOR",
+            "Tuned hides, returning beads and a wire cage, with clean and powered voices.",
+            seeded = false,
+        ) { SynthKits.tremor() },
+        Starter(
+            "ballast", "BALLAST",
+            "Deep bass drives sympathetic wires, a resonant frame and hanging glass tiles.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ballast() },
+        Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",
             seeded = false,

@@ -93,6 +93,10 @@ object Presets {
             val v = MercuryVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             MercuryPresets.forVoice(v)
         }
+        BallastPatch.ENGINE -> {
+            val v = BallastVoice.fromName(voice) ?: return emptyList()
+            BallastPresets.forVoice(v)
+        }
         AerostatPatch.ENGINE -> {
             val v = AerostatVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             AerostatPresets.forVoice(v)
@@ -284,7 +288,7 @@ object Presets {
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() + FlotillaPresets.all() + CisternPresets.all() +
-            AerostatPresets.all() +
+            AerostatPresets.all() + BallastPresets.all() +
             TremorPresets.all() + CircuitPresets.all() + ThawPresets.all() + MurkPresets.all() + NimbusPresets.all() +
             CorollaPresets.all() + UndertowPresets.all() + SuturePresets.all() + TesseraPresets.all() + PitchwheelPresets.all() +
             RevelPresets.all() + PrismPresets.all() + OrigamiPresets.all() + FilamentPresets.all() + AlloyPresets.all() + ContourPresets.all() + StoopPresets.all() + LacquerPresets.all() + SpoolPresets.all() + SkitterPresets.all() + TanglePresets.all() + FlockPresets.all() + OverlapFactoryPresets.all() + ShoalPresets.all() + RelayPresets.all() + EmbouchurePresets.all() + EmbouchurePresets.experimental() + BellowsPresets.all() + MurmurPresets.all() + OspreyPresets.all() + RegistersPresets.all() + OpenSkyPresets.all() + ScannedChainPresets.all() + OrphicaPresets.all() + OvenPresets.all() + VentKitPresets.all() + CreasePresets.patches() + TrioPresets.all() + OhmPresets.all() + CausticPresets.all()

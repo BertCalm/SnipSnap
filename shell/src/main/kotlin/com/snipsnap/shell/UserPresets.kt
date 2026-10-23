@@ -4,6 +4,8 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
@@ -178,7 +180,8 @@ object UserPresets {
      * voice name leaves room for.
      */
     fun suggest(engine: String, voice: String, saved: List<Saved>): String {
-        val base = voice.replace('_', ' ')
+        val label = if (engine == BallastPatch.ENGINE) BallastVoice.fromName(voice)?.displayName ?: voice else voice
+        val base = label.replace('_', ' ')
         var n = 1
         while (true) {
             val candidate = "$base $n"
