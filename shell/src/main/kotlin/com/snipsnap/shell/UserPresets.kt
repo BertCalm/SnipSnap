@@ -11,6 +11,7 @@ import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockHeld
@@ -414,10 +415,16 @@ object UserPresets {
      * note and velocity through the complete JSON constructor in its factory
      * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
      * through the complete JSON constructor. TRIO retains its note, velocity and complete
-     * seeded performance, including the synthesis model. Names and embedded JSON are escaped
+     * seeded performance, including the synthesis model. FILAMENT retains its root,
+     * velocity, geometry seed, profile, retention setting and saved model through
+     * the complete JSON constructor. Names and embedded JSON are escaped
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is FilamentPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "FilamentPatch.fromJsonText($recipe),"
+        }
         if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
             // The original roster's p helper constructs model 2 before .copy runs;
             // it cannot accept a GROW macro. Construct the saved model directly.

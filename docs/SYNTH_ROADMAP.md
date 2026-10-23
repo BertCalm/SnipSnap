@@ -42,6 +42,15 @@ work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
 portable audition recipes and listening limits. The owner's listening verdict
 is pending.
 
+**Filament first listening prototype (2026-10-19).** THREAD, PULSE and CURL
+test contain → bend → spill in the offline pitched renderer: normalized
+launches, ordered endpoint depletion and escaped input, up to four persistent
+routes, and a damped halo. Six controls, saved root/velocity/configuration,
+provisional recipes, a dry kit helper and the audition generator support
+review before factory/phone promotion. See [FILAMENT.md](FILAMENT.md) for
+reproduction, model boundaries and the private listening page. The owner's
+sonic acceptance and the larger proposed roster remain open.
+
 **Caustic finite instrument (2026-10-23).** The owner selected Alloy and
 heard the fuller tonal body after finding Bloom/Deep indistinguishable. The
 first native ALLOY voice adds SOURCE, FOCUS, BODY and LENGTH with saved ROOT,

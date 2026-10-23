@@ -43,7 +43,7 @@ object Names {
         "TUNGSTEN", "CADMIUM", "SLAG",
         // light
         "FLARE", "GLOW", "BEAM", "DAWN", "DUSK", "SHEEN", "LUSTER", "GLEAM", "EMBER", "FLICKER",
-        "LANTERN", "FILAMENT", "TWILIGHT", "STROBE", "CANDLE", "TORCH", "DAZZLE", "HALOGEN",
+        "LANTERN", "GLIMMER", "TWILIGHT", "STROBE", "CANDLE", "TORCH", "DAZZLE", "HALOGEN",
         "FLASH", "SPECTRUM", "RAINBOW", "LASER", "SUNSET", "DIMMER",
         // geology
         "SHALE", "GRANITE", "BASALT", "QUARTZ", "LODE", "SILT", "LOAM", "SCREE", "MORAINE",
