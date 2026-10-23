@@ -6,7 +6,7 @@ import com.snipsnap.audio.Snip
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class WickVoice { PLUCK, BUBBLE, WOOD }
+enum class WickVoice { PLUCK, BUBBLE, WOOD, BREATH }
 
 /**
  * First WICK listening prototype: one continuously powered complex source feeds three parallel
@@ -37,7 +37,7 @@ object Wick {
 
     fun rootMidi(voice: WickVoice): Int = when (voice) {
         WickVoice.PLUCK, WickVoice.WOOD -> 48
-        WickVoice.BUBBLE -> 60
+        WickVoice.BUBBLE, WickVoice.BREATH -> 60
     }
     fun macrosFor(voice: WickVoice): List<MacroSpec> {
         val d = when (voice) {
@@ -45,6 +45,7 @@ object Wick {
             // Listening revision: separate the bubbles; Busy Bubbles retains the original feed.
             WickVoice.BUBBLE -> floatArrayOf(.40f, .25f, .70f, .45f, .50f, 0f)
             WickVoice.WOOD -> floatArrayOf(.60f, .15f, .40f, .40f, .40f, 0f)
+            WickVoice.BREATH -> floatArrayOf(.20f, .60f, .35f, .20f, .70f, 0f)
         }
         return names.mapIndexed { i, name ->
             // Clearing supply, transmission and source complexity has a real no-effect value.
@@ -223,8 +224,14 @@ object Wick {
             WickVoice.PLUCK -> 2.1 + 1.1 * recovery + .5 * feed
             WickVoice.BUBBLE -> 3.0 + 1.3 * recovery + .8 * feed
             WickVoice.WOOD -> 2.3 + .9 * recovery + .35 * feed
+            WickVoice.BREATH -> 3.5 + 1.0 * recovery + .5 * feed
         } + bassTime
-        val finiteSeconds = if (roundedBubble) legacyFiniteSeconds + .4 else legacyFiniteSeconds
+        val finiteSeconds = when {
+            roundedBubble -> legacyFiniteSeconds + .4
+            // Soft secondary openings need a longer real ring-out, not a longer FEED window.
+            voice == WickVoice.BREATH -> legacyFiniteSeconds + .9
+            else -> legacyFiniteSeconds
+        }
         val finiteSamples = (finiteSeconds * rate).roundToInt()
         // Stop all *admission*, including late cascade events, before an actual decaying tail.
         // The added BUBBLE tail lets its actual gates ring; it admits no extra feed or cascades.
@@ -234,9 +241,15 @@ object Wick {
                 WickVoice.PLUCK -> doubleArrayOf(.19, .14, .115)[j]
                 WickVoice.BUBBLE -> if (roundedBubble && j == 0) .24 else doubleArrayOf(.092, .075, .11)[j]
                 WickVoice.WOOD -> doubleArrayOf(.15, .09, .065)[j]
+                // The first gate must still close. Longer answering gates bridge its later
+                // soft re-openings rather than holding it permanently above the release edge.
+                WickVoice.BREATH -> doubleArrayOf(.24, .35, .45)[j]
             }
-            val stretch = if (roundedBubble && j == 0) 1.0 + .2 * (registerRelease - 1.0)
-                else 1.0 + (registerRelease - 1.0) / (1.0 + 2.0 * j)
+            val stretch = when {
+                voice == WickVoice.BREATH -> 1.0 + .08 * (registerRelease - 1.0)
+                roundedBubble && j == 0 -> 1.0 + .2 * (registerRelease - 1.0)
+                else -> 1.0 + (registerRelease - 1.0) / (1.0 + 2.0 * j)
+            }
             exp(-1.0 / (rate * base * (.62 + 1.05 * recovery) * stretch))
         }
         val recoveryPole = DoubleArray(STAGES) { j ->
@@ -247,13 +260,15 @@ object Wick {
             WickVoice.PLUCK -> .017 - .014 * spark
             WickVoice.BUBBLE -> if (roundedBubble) .034 - .022 * spark else .017 - .014 * spark
             WickVoice.WOOD -> .015 - .010 * spark
+            WickVoice.BREATH -> .070 - .050 * spark
         }
         val attack = 1.0 - exp(-1.0 / (rate * attackSeconds))
-        val closing = 1.0 - exp(-1.0 / (rate * .007))
+        val closing = 1.0 - exp(-1.0 / (rate * (if (voice == WickVoice.BREATH) .025 else .007)))
         val ratio = when (voice) {
             WickVoice.PLUCK -> 2.0
             WickVoice.BUBBLE -> 3.0
             WickVoice.WOOD -> 1.0
+            WickVoice.BREATH -> 2.0
         }
         val reach: Double = run {
             val a = 3.2 * 1.8 * ratio
@@ -319,7 +334,11 @@ object Wick {
             // still open far enough to arm a real release and its answering cascade. Finite
             // notes keep the initial-only FEED 0 gesture; FEED still changes held pulse count
             // and supply strongly. Velocity zero never reaches this point.
-            val supply = if (held) .54 + .46 * feed else .42 + .58 * feed
+            val supply = if (held) {
+                // A soft attack loses peak opening while charge decays. BREATH's recurrent
+                // floor lets its default SPARK arm a real release even at FEED zero.
+                if (voice == WickVoice.BREATH) .70 + .30 * feed else .54 + .46 * feed
+            } else .42 + .58 * feed
             val strength = (.40 + .48 * spark) * supply * velocity
             admit(Pending(sample, 0, strength, -1, -1, -1, "FEED"))
         }
@@ -375,6 +394,9 @@ object Wick {
                 val blend = when (voice) {
                     WickVoice.PLUCK, WickVoice.BUBBLE -> .25 + .48 * timbre
                     WickVoice.WOOD -> .20 + .26 * timbre
+                    // Keep a plainly pitched carrier under the soft articulation. BREATH is
+                    // a gate gesture, with no noise bed, formant model or separate air layer.
+                    WickVoice.BREATH -> .12 + .30 * timbre
                 }
                 val source = (1.0 - blend) * root + blend * complex
                 var mixed = 0.0
@@ -394,6 +416,11 @@ object Wick {
                             2 -> (1.0 - .14 * timbre) * source + .14 * timbre * sin(1.5 * rootPhase)
                             else -> source
                         }
+                        WickVoice.BREATH -> {
+                            val partial = if (j == 2) 3.0 else 2.0
+                            val color = (if (j == 0) .06 else .10) * timbre
+                            (1.0 - color) * source + color * sin(partial * rootPhase)
+                        }
                         WickVoice.WOOD -> {
                             // A quiet generated body partial follows this same gate's opening.
                             // It is a perceptual wooden knock, not a sampled or measured body.
@@ -406,20 +433,27 @@ object Wick {
                     val low = when (voice) {
                         WickVoice.PLUCK, WickVoice.BUBBLE -> max(15.0, hz * .60)
                         WickVoice.WOOD -> max(15.0, hz * .72)
+                        WickVoice.BREATH -> max(15.0, hz * .95)
                     }
                     val high = when (voice) {
                         WickVoice.PLUCK, WickVoice.BUBBLE -> max(5_500.0, hz * (18.0 - 3.0 * j)).coerceAtMost(14_000.0)
                         WickVoice.WOOD -> max(when (j) { 0 -> 4_400.0; 1 -> 3_400.0; else -> 2_600.0 },
                             hz * (12.0 - 2.0 * j)).coerceAtMost(11_000.0)
+                        WickVoice.BREATH -> max(3_200.0 - 450.0 * j,
+                            hz * (14.0 - 2.0 * j)).coerceAtMost(10_000.0)
                     }
                     val toneExponent = when (voice) {
                         WickVoice.PLUCK, WickVoice.BUBBLE -> .64 + .07 * j
                         WickVoice.WOOD -> .58 + .09 * j
+                        WickVoice.BREATH -> .50 + .08 * j
                     }
                     val cutoff = low * exp(ln(high / low) * gate.opening.pow(toneExponent))
                     val filtered = gate.filter.next(sourceMix, cutoff)
                     maxFilter = max(maxFilter, max(abs(gate.filter.first), abs(gate.filter.second)))
-                    val vca = gate.opening.pow(1.22)
+                    // A closing BREATH gate stays gently audible below the causal closing
+                    // threshold. Its actual residual tail meets the next opening; no bypass
+                    // drone is mixed in, and CASCADE still comes from the real closing edge.
+                    val vca = gate.opening.pow(if (voice == WickVoice.BREATH) .78 else 1.22)
                     val weight = if (j == 0) 1.0 else (.60 + .42 * cascade) / (1.0 + .15 * j)
                     val voicedWeight = when {
                         roundedBubble && j > 0 -> weight * (if (j == 1) .55 else .42)
@@ -443,14 +477,17 @@ object Wick {
                                 WickVoice.PLUCK -> .065
                                 WickVoice.BUBBLE -> .028
                                 WickVoice.WOOD -> .045
+                                WickVoice.BREATH -> .025
                             }
                             val stageDelay = when (voice) {
                                 WickVoice.PLUCK, WickVoice.BUBBLE -> .025
                                 WickVoice.WOOD -> .020
+                                WickVoice.BREATH -> .020
                             }
                             val recoveryDelay = when (voice) {
                                 WickVoice.PLUCK, WickVoice.BUBBLE -> .07
                                 WickVoice.WOOD -> .055
+                                WickVoice.BREATH -> .040
                             }
                             val delay = (delayBase + stageDelay * j + recoveryDelay * recovery) * rate
                             val strength = transmission * (if (j == STAGES - 1) .24 else 1.0)

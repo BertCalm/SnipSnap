@@ -87,12 +87,93 @@ These are finite samples. Separate notes and pads do not share an ensemble.
 Bowing, captured exciters, FM elder, grains, freeze and seamless HOLD are
 future work. No live plugin, cross-pad coupling or sustain-loop claim is made.
 
+## Render responsiveness
+
+Model 2 computes its fixed string/output/DC filter coefficients once per
+render. The coefficient formula and Float state update are identical to the
+original shared one-pole filter. The string helper's fixed-filter path is
+opt-in; existing callers retain their original path. OHM also skips a retune
+when its target is unchanged, and computes repeated excitation constants at
+the note or control tick where they actually change. No resonator state or
+rendered sample buffer is shared between notes.
+
+`OhmPerformanceCompatibilityTest` checks 134 saved model-2 recipes against
+the clean `b437cafc` baseline: the five factory encounters, quarter control
+sweeps, relationship grid, note/velocity/gesture cases, all 32 macro corners
+and 24 seeded interiors. Raw Float bits, final Float bits and both complete
+PCM16 WAV files match exactly on the recorded JDK 17 host. The existing five
+published factory PCM16 pins and frozen model-1 tests remain unchanged.
+This is arithmetic and file-format evidence; phone timing is a separate check.
+
+Run `./gradlew -q :synth:benchmarkOhm -PohmBenchmarkPath=final` for render-only
+timing JSON. The default path `both` measures raw and final rendering;
+`raw` measures only the raw path. Each case has 12 warmup renders and 45 timed
+renders. Encoding, hashing, disk I/O, the bench's 100 ms debounce and playback
+are outside the timer. The house goal is a rerender in tens of milliseconds;
+device measurements are still required before claiming that phone response.
+
+On the Linux amd64 host with Temurin 17.0.20.1 and a 512 MiB heap, warm
+final-render medians changed as follows. The baseline and candidate used
+the same probe and audio/JSON dependencies; only the synth JAR changed.
+
+| Note length | Solo, before → after | Active, before → after | GATHER, before → after |
+| --- | --- | --- | --- |
+| 1.8 s | 47.5 → 26.7 ms | 49.5 → 30.7 ms | 50.2 → 32.5 ms |
+| 4.53 s (default) | 110.6 → 63.5 ms | 126.4 → 79.0 ms | 124.7 → 78.5 ms |
+| 6 s | 146.2 → 80.3 ms | 169.4 → 102.6 ms | 167.8 → 102.7 ms |
+
+These nine cases reduced median render cost by 35.2–45.1%. They do not
+establish phone latency or a worst-case bound: the longest active notes
+still exceed 100 ms on this host, and the benchmark retains every timing
+sample so scheduling/GC outliers remain visible.
+
+## Sixteen-pad starter kit
+
+NEW KIT → STARTERS offers a fixed OHM starter. A01–A08 play Solo in C minor
+pentatonic: C3, Eb3, F3, G3, Bb3, C4, Eb4 and F4. A09–A12 keep Argument,
+Communion, Quiet Company and Gather at their auditioned C4. A13–A15 put
+Argument, Communion and Quiet Company at C3; A16 puts Gather at C5.
+The five factory macro maps, velocity .8, seed 731 and renderer model 2
+remain intact. Transposition changes the explicit native note, rather than
+resampling a C4 recording. Every pad retains its complete editable recipe.
+
+All sixteen pads are dry, unchoked TONAL one-shots. The generic classifier's
+duration-based LOOP bucket does not make these finite performances held
+instruments. Both exported programs play the whole note once, including its
+natural tail, with no loop region or effects.
+
+`./gradlew :synth:generateOhmKit` writes `testkit/SnipSnap Ohm Kit/`, containing
+the native MPC 3 `.xtd`, an MPC 2 `.xpm` twin and shared mono 44.1 kHz PCM24
+WAVs, editable `kit.json`, individual pad recipes and a manifest with audio
+hashes. `testkit/SnipSnap-Ohm-Kit.zip` keeps the program and its
+`_[TrackData]` folder together. `-PohmKitOutput=/path/to/output` changes the
+destination root.
+
+The export test checks both programs' actual one-shot, loop and frame-end
+fields, every saved recipe and the complete PCM24 WAV bytes. It imports the
+generated ZIP through the phone's combined-package importer and checks all
+sixteen recipes again. Changing a WAV byte makes import refuse the stale
+history without landing a partial kit.
+
+On the phone, choose NEW KIT → STARTERS → OHM, then open a pad in SYNTH, edit a
+control, save, leave and reopen it. Confirm the note, relationship, gesture
+and seed survive. On MPC 3, load the `.xtd` with its adjacent data folder;
+on MPC 2, load the `.xpm` inside that data folder. Play the rising first
+eight pads, compare the three low companion relationships, and let Gather
+finish. Check clean endings and that releasing a pad does not truncate the
+one-shot. These are physical-device acceptance checks, separate from the
+automated export and replay checks.
+The complete ZIP also imports back into SnipSnap with editable recipes:
+keep `kit.json` beside the programs and WAVs in the data folder. Its sample
+fingerprints guard against attaching a recipe to a changed recording.
+
 ## Reproduce and listen
 
 ```sh
 ./gradlew :synth:test --tests '*Ohm*'
 ./gradlew :cli:test --tests '*OhmSynthCommandTest'
 ./gradlew :synth:generateOhmAudition
+./gradlew :synth:generateOhmKit
 ./gradlew :cli:run --args="synth OHM STRING --all --midi 60 --velocity 0.8 --seed 731 --out /tmp/ohm"
 ```
 

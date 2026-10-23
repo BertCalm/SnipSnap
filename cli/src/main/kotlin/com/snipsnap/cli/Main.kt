@@ -85,7 +85,7 @@ object Cli {
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N)
-        |                        (WICK: provisional PLUCK/WOOD/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE; --midi 24..84 --velocity 0..1)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
         |                        (REGISTERS: PIPE/MUSETTE/TRANSISTOR; --instrument [--release S])

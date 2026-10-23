@@ -115,6 +115,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "ohm", "OHM",
+            "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ohm() },
+        Starter(
             "cloud", "CLOUD",
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
