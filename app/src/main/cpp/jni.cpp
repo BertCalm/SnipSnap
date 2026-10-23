@@ -420,21 +420,23 @@ Java_com_snipsnap_app_NativePads_setVoiceGain(
     pads(handle)->pushCommand(c);
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the stop was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::Stop;
     c.voiceId = voiceId;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the all-off was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::AllOff;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 
 JNIEXPORT jlong JNICALL

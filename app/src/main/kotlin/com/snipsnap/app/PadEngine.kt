@@ -1,5 +1,6 @@
 package com.snipsnap.app
 
+import android.util.Log
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
@@ -56,6 +57,11 @@ class PadEngine(preferredSampleRate: Int) {
      * what makes a close on the main thread wait. This lock serialises
      * builders against each other and nothing else.
      */
+    // Stops the command ring refused; only touched under @Synchronized.
+    private val pendingStops = ArrayDeque<Pair<Int, Float>>()
+    private var pendingAllOff: Float? = null
+    private var keptWarned = false
+
     private val bankLock = Any()
 
     private var sampleIndex: Map<String, Int> = emptyMap()
@@ -387,21 +393,70 @@ class PadEngine(preferredSampleRate: Int) {
         if (open) NativePads.setVoiceGain(handle, voiceId, gainLeft, gainRight, glideMs)
     }
 
-    /** Stop one voice with a short fade: a choke, a steal, a gate's release. */
+    /**
+     * Stop one voice with a short fade: a choke, a steal, a gate's release.
+     *
+     * The command ring drops on full by design, which is right for a fader
+     * (the next value supersedes the lost one) and wrong for a stop: a dropped
+     * stop is a stuck pad until PANIC. So a refused stop is kept and retried
+     * from [drainEnded], which the frame loop already runs at screen rate; no
+     * new loop. Returns true when queued now, false when kept to retry.
+     */
     @Synchronized
-    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS) {
-        if (open) NativePads.stopVoice(handle, voiceId, fadeMs)
+    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS): Boolean {
+        if (!open) return true
+        if (NativePads.stopVoice(handle, voiceId, fadeMs)) return true
+        noteKept()
+        pendingStops.add(Pair(voiceId, fadeMs))
+        return false
     }
 
-    /** Everything, with a slightly longer fade (leaving PLAY, the panic). */
+    /**
+     * Everything, with a slightly longer fade (leaving PLAY, the panic).
+     *
+     * Kept and retried from [drainEnded] when the ring refuses it, for the
+     * reason [stop] gives. A kept all-off supersedes any kept stops, which are
+     * cleared, so they can never replay after it. Returns true when queued
+     * now, false when kept to retry.
+     */
     @Synchronized
-    fun allOff(fadeMs: Float = PANIC_FADE_MS) {
-        if (open) NativePads.allOff(handle, fadeMs)
+    fun allOff(fadeMs: Float = PANIC_FADE_MS): Boolean {
+        if (!open) return true
+        if (NativePads.allOff(handle, fadeMs)) return true
+        noteKept()
+        pendingAllOff = fadeMs
+        pendingStops.clear()
+        return false
     }
 
-    /** The ids of voices that ended since the last call; drain at screen rate. */
+    /** Retries what the ring refused, then returns the ids of voices that ended since the last call; drain at screen rate. */
     @Synchronized
-    fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
+    fun drainEnded(): IntArray {
+        if (!open) return IntArray(0)
+        flushPending()
+        return NativePads.drainEnded(handle)
+    }
+
+    /** The all-off first, then the stops from the front, until the ring refuses one. */
+    private fun flushPending() {
+        val fade = pendingAllOff
+        if (fade != null) {
+            if (!NativePads.allOff(handle, fade)) return
+            pendingAllOff = null
+        }
+        while (pendingStops.isNotEmpty()) {
+            val (voiceId, stopFade) = pendingStops.first()
+            if (!NativePads.stopVoice(handle, voiceId, stopFade)) return
+            pendingStops.removeFirst()
+        }
+    }
+
+    /** One warning the first time anything is kept; never per frame. */
+    private fun noteKept() {
+        if (keptWarned) return
+        keptWarned = true
+        Log.w(TAG, "command ring full: keeping a refused stop to retry at screen rate")
+    }
 
     /** Frames the audio callback has rendered since this engine was created; 0 when closed. For diagnostics. */
     @Synchronized
@@ -514,6 +569,8 @@ class PadEngine(preferredSampleRate: Int) {
     }
 
     companion object {
+        private const val TAG = "PadEngine"
+
         /** The engine's polyphony; the VoiceAllocator in PLAY is built at the same number. */
         const val MAX_VOICES = 32
 
