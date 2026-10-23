@@ -144,7 +144,7 @@ object Treatments {
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
 
     /**
-     * Characters that run a hot amp, and the fade that goes ahead of it. VALVE lifts a quiet tail by
+     * The fade that goes ahead of a hot amp ([needsPreAmpFade] says which chains run one). VALVE lifts a quiet tail by
      * its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends in a click through it,
      * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
      * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
@@ -160,9 +160,20 @@ object Treatments {
      * few percent from one millisecond to the next, so a pass that close to its bar is fragile, and
      * a power of 8 is not mild. No claim is made of a 1 ms optimum.
      */
-    private val PRE_AMP_FADE: Map<String, EndFade> = mapOf("driven" to EndFade(ms = 95f, power = 5))
+    private val PRE_AMP = EndFade(ms = 95f, power = 5)
 
     private class EndFade(val ms: Float, val power: Int)
+
+    /**
+     * Whether [chain] runs the hot amp the fade exists for: its VALVE DRIVE sits above VALVE's own
+     * default. Keyed on the chain, not on a character's name, so a pedal board's amp pass and any
+     * later character that pushes DRIVE get the same fade `driven` does; `amped` (DRIVE 0.6, under
+     * the default 0.7) does not, as before.
+     */
+    fun needsPreAmpFade(chain: FxChain): Boolean {
+        val drive = chain.section("valve")?.get("DRIVE") ?: return false
+        return drive > Valve.defaults().getValue("DRIVE")
+    }
 
     /** The log of the gain the chain's VALVE DRIVE sets, never under 0: an amp that does not lift needs no fade. */
     private fun ampLift(fx: FxChain): Double {
@@ -171,29 +182,34 @@ object Treatments {
     }
 
     /**
-     * [snip] with its tail faded ahead of the amp, for a character in [PRE_AMP_FADE] at [amount];
-     * [snip] itself for any other, or where the amp does not lift. The fade is the character's
-     * [EndFade.ms] times the amp's lift at [amount] over its lift at 1 (the dB of the gain DRIVE sets
-     * then, against the dB it sets at the full character), at most the pad's second half, and
-     * shapes the gain by `x^power` (x is 0 at the last frame, 1 at the fade's start). Everything
-     * before the fade is [snip]'s own samples.
+     * [snip] with its tail faded ahead of the amp that [faded] runs, where [full] (the same chain
+     * before AMT faded it) [needsPreAmpFade]; [snip] itself otherwise, or where the amp does not
+     * lift. The fade is [PRE_AMP]'s length times the amp's lift in [faded] over its lift in [full]
+     * (the dB of the gain DRIVE sets at this AMT, against the dB it sets at the full character), at
+     * most the pad's second half, and shapes the gain by `x^power` (x is 0 at the last frame, 1 at
+     * the fade's start). Everything before the fade is [snip]'s own samples.
      */
-    internal fun endFaded(snip: Snip, name: String, amount: Float): Snip {
-        val fade = PRE_AMP_FADE[name] ?: return snip
-        if (amount <= 0f) return snip
-        val full = ampLift(chain(name, 1f))
-        if (full <= 0.0) return snip
-        val lift = (ampLift(chain(name, amount)) / full).coerceAtMost(1.0)
+    internal fun endFaded(snip: Snip, faded: FxChain, full: FxChain): Snip {
+        if (!needsPreAmpFade(full)) return snip
+        val fullLift = ampLift(full)
+        if (fullLift <= 0.0) return snip
+        val lift = (ampLift(faded) / fullLift).coerceAtMost(1.0)
         val frames = snip.frameCount
-        val n = minOf(frames / 2, (fade.ms / 1000.0 * lift * snip.sampleRate).toInt())
+        val n = minOf(frames / 2, (PRE_AMP.ms / 1000.0 * lift * snip.sampleRate).toInt())
         if (n <= 0) return snip
         val out = snip.samples.copyOf()
         for (d in 0 until n) {
-            val g = Math.pow(d.toDouble() / n, fade.power.toDouble()).toFloat()
+            val g = Math.pow(d.toDouble() / n, PRE_AMP.power.toDouble()).toFloat()
             val frame = frames - 1 - d
             for (c in 0 until snip.channels) out[frame * snip.channels + c] *= g
         }
         return Snip(out, snip.channels, snip.sampleRate)
+    }
+
+    /** [endFaded] for the character [name] at [amount]: the chain AMT made against the full one. */
+    internal fun endFaded(snip: Snip, name: String, amount: Float): Snip {
+        if (amount <= 0f) return snip
+        return endFaded(snip, chain(name, amount), chain(name, 1f))
     }
 
     fun apply(name: String, snip: Snip, amount: Float = 1f): Treated {

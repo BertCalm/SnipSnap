@@ -85,3 +85,11 @@ export. Phone and MPC listening checks remain open.
 finite native pad-printing bridge, saved sources, replay and export contracts.
 Dedicated controls and continuous performance routing remain later stages of
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
+
+**Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
+records the whole-app review of 2026-10-17: the six guards that landed with
+it (kit-name containment, a frame-capped share-door WAV decode, an XPN entry
+ceiling, canonical SFZ containment with one copy budget, a NaN-safe DC mean,
+recordings kept out of cloud backup) and the findings recorded for a design
+or listening session. Its sound-quality findings are the review's claims,
+not heard, and nothing in that change alters a shipped sound.

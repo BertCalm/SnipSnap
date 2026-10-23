@@ -45,6 +45,8 @@ object RecipeReplay {
         data class Board(val amount: Float, val type: BoardType = BoardType.WIDE) : Plan()
         /** Copy complete Aquarium controls/context; the destination keeps its own immutable baseline. */
         data class Aquarium(val recipe: AquariumRenderRecipe) : Plan()
+        /** The pedal library's board: every pick with its AMT and side, re-rendered on the destination's own audio. */
+        data class Pedals(val board: com.snipsnap.synth.PedalBoard) : Plan()
         /** [sourceKey] is the key label the recipe was written in — a label, not an input: the destination kit's own key is what plays. */
         data class KeyedPlan(val name: String, val amount: Float, val seed: Long, val dials: Keyed.Dials, val sourceKey: String?) : Plan()
         data class Smear(val amount: Float) : Plan()
@@ -79,6 +81,9 @@ object RecipeReplay {
         if ("board" in e && "recipe" in e) {
             return runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()
                 ?.let { Plan.Board(it.amount, it.type) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+        }
+        if ("pedals" in e && "recipe" in e) {
+            return PadSheet.readPedals(recipe)?.let { Plan.Pedals(it) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         MutateSheet.read(recipe)?.let { m ->
             return Plan.Refused(Copy.replayNeedsPartner(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
@@ -165,6 +170,7 @@ object RecipeReplay {
                 val renderer = requireNotNull(aquariumRenderer) { PrintedPads.AQUARIUM_RENDERER_REQUIRED }
                 Done(AquariumPadSheet.apply(model, slot, p.recipe, renderer), Copy.replayedBoard("AQUARIUM", padName))
             }
+            is Plan.Pedals -> Done(model.pedalPad(slot, p.board), Copy.replayed(word, padName))
             is Plan.KeyedPlan -> {
                 val pad = model.keyedPad(slot, p.name, p.amount, p.seed, p.dials)
                 val key = model.lastKeyLabel

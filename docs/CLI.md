@@ -518,7 +518,18 @@ the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
-regenerable; `--undo` restores the previous audio byte-identical. On the
+regenerable; `--undo` restores the previous audio byte-identical.
+`--pedals <key[@amount][:side],...>` is the pedal library's board over the
+same pad instead of one character: every pick with its own AMT and its side
+of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
+passes around the amp from the audio on disk, every velocity layer included
+(the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
+recipe riding the pad. The library today: `driven` (the amp), `compressed`,
+`wahed`, and `rig` (a board: compressor, drive, slapback) — e.g.
+`--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
+six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
+refused by name. `--undo` restores as for a character.
+ On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
 `amped` (its chip is a later layout decision) and the three wah
 characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
