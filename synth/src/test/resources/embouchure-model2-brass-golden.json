@@ -1,0 +1,198 @@
+{
+  "sourceCommit": "03fcd3802d420084f00eaa77f5abbc9196e41327",
+  "method": "Unmodified model-2 PCM16 captured before BRASS GROW implementation; Embouchure.kt blob matches the pinned audition source.",
+  "clips": [
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Rough finite",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.25,
+          "SHAPE": 0.25,
+          "GRAIN": 0.75,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "OVERPRESSURE"
+      },
+      "frames": 131391,
+      "sha256": "c6029ac01c037468498db6b1f3bb0b429a60ebdb2a76f95f169d49e10fadfd4d"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Rough held",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.3499999940395355,
+          "REED": 0.25,
+          "SHAPE": 0.25,
+          "GRAIN": 0.75,
+          "LENGTH": 0.5,
+          "HOLD": 1
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "OVERPRESSURE"
+      },
+      "frames": 84955,
+      "sha256": "2531236fbd660a6fb458f8ebf913068299acdc82dae35a6e4c1f9d792722319b"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Centered finite",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.550000011920929,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.44999998807907104,
+          "GRAIN": 0.15000000596046448,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "PRESSURE_RELEASE"
+      },
+      "frames": 132132,
+      "sha256": "66fe20ef3920dcbbe428ada494f993732f31b6468be84bf61a500de27626c9d5"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Centered held",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.550000011920929,
+          "REED": 0.44999998807907104,
+          "SHAPE": 0.44999998807907104,
+          "GRAIN": 0.15000000596046448,
+          "LENGTH": 0.5,
+          "HOLD": 1
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "PRESSURE_RELEASE"
+      },
+      "frames": 84955,
+      "sha256": "cf41d33c63357b988fa848dd7054c60605e8bb5ffc71bcb7f502086405085e3a"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Expressive finite",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.8199999928474426,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.18000000715255737,
+          "GRAIN": 0.05999999865889549,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 133132,
+      "sha256": "c0cf69e197848723e5aff62a9842eaf25c63c332ec803689a68d24e7ac760abc"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Expressive held",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.8199999928474426,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.18000000715255737,
+          "GRAIN": 0.05999999865889549,
+          "LENGTH": 0.5,
+          "HOLD": 1
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "driver": "LIP",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 84955,
+      "sha256": "4a79762d2f17651a395b91a87b7a0f8c83399395e5e63360a51c608eff9b52d2"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Expressive 48",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.8199999928474426,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.18000000715255737,
+          "GRAIN": 0.05999999865889549,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.30000001192092896,
+        "driver": "LIP",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 133132,
+      "sha256": "f90049d907b321426e61970a2120cef2f27db77148ce2cb7548e6a0efe58f514"
+    },
+    {
+      "recipe": {
+        "engine": "EMBOUCHURE",
+        "version": 1,
+        "name": "Legacy Expressive 72",
+        "voice": "BRASS",
+        "macros": {
+          "TUNE": 0,
+          "EFFORT": 0.8199999928474426,
+          "REED": 0.6499999761581421,
+          "SHAPE": 0.18000000715255737,
+          "GRAIN": 0.05999999865889549,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 72,
+        "velocity": 0.8999999761581421,
+        "driver": "LIP",
+        "gesture": "LEANING_SWELL"
+      },
+      "frames": 133132,
+      "sha256": "786571d43e9b119961e927e3307545683a1c51c66e82fb76f74dfd252f63624e"
+    }
+  ]
+}

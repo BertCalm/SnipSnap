@@ -372,7 +372,19 @@ object WavReader {
      * Throws only [IllegalArgumentException] — never any other exception —
      * for any malformed, truncated, or unsupported input.
      */
-    fun read(bytes: ByteArray): Snip {
+    fun read(bytes: ByteArray): Snip = read(bytes, maxFrames = Int.MAX_VALUE)
+
+    /**
+     * [read], refusing a file whose header declares more than [maxFrames]
+     * frames — judged after the header is parsed but **before** the float
+     * buffer is allocated. The byte length of a WAV says little about its
+     * decoded weight (96 MB of 8-bit mono is ~96M frames, ~384 MB as
+     * floats), so a caller working from a byte budget alone — the share
+     * sheet's WAV path is the one — needs the frame count itself capped,
+     * the same ceiling [DecodeLimits] puts on the compressed path.
+     */
+    fun read(bytes: ByteArray, maxFrames: Int): Snip {
+        require(maxFrames >= 0) { "maxFrames must not be negative: $maxFrames" }
         require(bytes.size >= 12) { "not a WAV: only ${bytes.size} bytes" }
         require(tag(bytes, 0) == "RIFF") { "not a WAV: missing RIFF header" }
         require(tag(bytes, 8) == "WAVE") { "not a WAV: missing WAVE tag" }
@@ -455,6 +467,9 @@ object WavReader {
         val bytesPerSample = bits / 8
         val stride = bytesPerSample * channels
         val frames = dataLen / stride
+        require(frames <= maxFrames) {
+            "that WAV runs $frames frames - over the $maxFrames-frame cap for this door"
+        }
         val out = FloatArray(frames * channels)
         for (i in out.indices) {
             val at = dataAt + i * bytesPerSample
