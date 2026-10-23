@@ -1,6 +1,6 @@
 # DELAY: ECHO's HEAD Knob, Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL, if available: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task; otherwise run the tasks in order. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Give ECHO a fifth macro, HEAD, that feeds the repeats only the note's first 120 ms, so a held note's attack comes back as a repeat. Add the `delayed` character, an ungated DELAY entry in the pedal library, and the owner's listening gate. At HEAD 0, ECHO renders every existing recipe and saved kit bit for bit. The DELAY chip is NOT drawn by this plan: it appears on the pad sheet only if the gate passes (see "After the gate").
 
@@ -21,18 +21,18 @@
 
 ## Global Constraints
 
-- **Branch.** The controller names the branch: the session's designated branch, restarted from the default branch if PR #619 (this spec and plan) has merged. If the default branch has moved, merge it in before Task 1. Use a merge commit; never rebase or force-push a branch that has an open PR.
+- **Branch.** The controller names the branch: the session's designated branch, restarted from the default branch if PR #619 (this spec and plan) has merged. If the default branch has moved, merge it in before Task 1. Use a merge commit; never rebase or force-push a branch that has an open PR. "The base" below means the default branch's tip as merged before Task 1 (`origin/claude/mobile-mpc-drum-sampler-t58x74` at that moment).
 - **Saved keys.** `FxChain.VERSION` stays 1, and `echo` keeps its saved key. HEAD is appended AFTER MIX in `Echo.MACROS`. A recipe that does not set HEAD writes no HEAD key.
 - **`Shuffle.TREATMENTS` is never touched.** `Treatments.EXTRA` is appended to at its END. Re-read it first: it ends with `rockwahed` at the time of writing. `TreatmentsTest`'s names list moves with it.
-- **Neutrals.** A recipe never sets a macro exactly at its neutral. All five of ECHO's neutrals are 0, and `delayed` sets none of its macros to 0.
+- **Neutrals and fade laws.** A recipe never sets a macro exactly at its neutral. All five of ECHO's neutrals are 0, and `delayed` sets none of its macros to 0. HEAD takes `MacroSpec`'s default fade law, `FadeLaw.LINEAR`, like every ECHO macro (only VALVE's DRIVE fades by `LOG`), so AMT scales each of `delayed`'s macros by AMT exactly, and EchoTest's `mapValues { it.value * amount }` is `Treatments.fade`'s own result for ECHO.
 - **The `:shell` source laws** apply to main source, and they run only when forced:
   - never hardcode a sample rate (no literal `44100`);
   - no `.format` with digit conversions without `Locale.ROOT`;
   - no stacked KDoc;
-  - no double-asterisk-slash.
+  - no double-asterisk-slash. This last law (`ConventionTest`'s comment-closer law) also scans `synth/src/test`, so `EchoTest` and the generator must not contain one either.
 - **Verification.**
   - Each task runs its own targeted tests.
-  - The whole suite runs once, in Task 7: `./gradlew :shell:cleanTest :cli:cleanTest`, then `./gradlew --no-daemon test`, which takes about two hours.
+  - The whole suite runs once, in Task 7: `./gradlew :shell:cleanTest :cli:cleanTest`, then `./gradlew --no-daemon test`, which takes about two hours. Run it detached with its exit code written to a file, and wait on that file; a background shell with a 30-minute limit would kill it.
   - Judge green by gradle's exit code, never by grepping output. The steward skill (`.claude/skills/steward/SKILL.md`) is the authority.
 - **Commits.**
   - One commit per task.
@@ -68,7 +68,7 @@
   - `EchoTest.PINS`: 18 hashes.
   - The test `HEAD 0 is ECHO as it shipped`.
 
-- [ ] **Step 1: Confirm `Echo.kt` is unchanged from the base.** Run `git diff <base> -- synth/src/main/kotlin/com/snipsnap/synth/Echo.kt`, where `<base>` is the commit you branched from. The diff must be empty. If it is not, stop: the pins must be recorded on the shipped ECHO.
+- [ ] **Step 1: Confirm `Echo.kt` is unchanged from the base.** Run `git diff origin/claude/mobile-mpc-drum-sampler-t58x74 -- synth/src/main/kotlin/com/snipsnap/synth/Echo.kt` (the base, merged in before this task). The diff must be empty. If it is not, stop: the pins must be recorded on the shipped ECHO.
 
 - [ ] **Step 2: Write the one-off printer and run it.** Create `EchoPinsPrinter.kt`:
 
@@ -187,7 +187,7 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
 
 **Interfaces:**
 - Consumes:
-  - `MacroSpec(name, default, neutral = 0f)` and `Echo.delayFrames(time, rate)`.
+  - `MacroSpec(name, default, neutral = 0f, law = FadeLaw.LINEAR)` and `Echo.delayFrames(time, rate)`.
   - `FxChain.fromJsonText` / `toJsonText` and `Treatments.chain("slapback")`.
   - `Magnet.render(MagnetVoice.JANGLE)` and `Magnet.landingChain(MagnetVoice.JANGLE)`.
 - Produces:
@@ -234,6 +234,23 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
         val delay = Echo.delayFrames(macros.getValue("TIME"), r)
         val head = Echo.headFrames(delay, r)
         return db(rms(out, delay + head + ms(r, 10f), 2 * delay - ms(r, 5f)), rms(out, delay, delay + ms(r, 20f)))
+    }
+
+    /**
+     * [gap]'s two windows on a mono pad's wet alone, `(out / k - dry) / mix`, with k read off the loudest dry frame
+     * before the first repeat (where the output is the dry times the peak match's one gain).
+     */
+    private fun wetGap(dry: Snip, macros: Map<String, Float>): Double {
+        val r = dry.sampleRate
+        val out = Echo.process(dry, macros)
+        val delay = Echo.delayFrames(macros.getValue("TIME"), r)
+        val head = Echo.headFrames(delay, r)
+        var f0 = 0
+        for (f in 0 until delay) if (abs(dry.samples[f]) > abs(dry.samples[f0])) f0 = f
+        val k = out.samples[f0] / dry.samples[f0]
+        val mix = macros.getValue("MIX")
+        val wet = Snip(FloatArray(out.frameCount) { f -> (out.samples[f] / k - (if (f < dry.frameCount) dry.samples[f] else 0f)) / mix }, 1, r)
+        return db(rms(wet, delay + head + ms(r, 10f), 2 * delay - ms(r, 5f)), rms(wet, delay, delay + ms(r, 20f)))
     }
 
     /** A held 220 Hz tone with a 2 ms click at its start: a picked note with nothing else in it. */
@@ -308,12 +325,14 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
         val choirOff = gap(Echo.process(choir, off), off)
         println(String.format(Locale.ROOT, "DELAY gap, choir: HEAD 0 %.1f dB, HEAD 1 %.1f dB", choirOff, choirOn))
         assertTrue(choirOff - choirOn >= 7.0, "HEAD opened only ${choirOff - choirOn} dB on the choir (measured 9.8)")
+        // A held tone never decays, so with the dry note included its gap is set by the delay's phase against the tone,
+        // not by HEAD (at 220 Hz the plain repeat lands near antiphase: HEAD 0 -5.0 dB, HEAD 1 +3.2). Its wet alone shows HEAD.
         val tone = heldTone()
-        val toneOn = gap(Echo.process(tone, recipe), recipe)
-        val toneOff = gap(Echo.process(tone, off), off)
-        println(String.format(Locale.ROOT, "DELAY gap, held tone: HEAD 0 %.1f dB, HEAD 1 %.1f dB", toneOff, toneOn))
-        // Set HELD_BAR in Step 2: the held tone's measured difference less 3 dB.
-        assertTrue(toneOff - toneOn >= HELD_BAR, "HEAD opened only ${toneOff - toneOn} dB on a held tone")
+        val toneOn = wetGap(tone, recipe)
+        val toneOff = wetGap(tone, off)
+        println(String.format(Locale.ROOT, "DELAY wet gap, held tone: HEAD 0 %.1f dB, HEAD 1 %.1f dB", toneOff, toneOn))
+        assertTrue(toneOn < -60.0, "with HEAD on, a held tone's wet between repeats is only $toneOn dB under its first repeat")
+        assertTrue(toneOff >= -6.7, "with HEAD off, a held tone's body should keep feeding the repeats (measured -3.7 dB; the bar is 3 dB under), got $toneOff")
     }
 
     @Test
@@ -339,7 +358,7 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
     }
 
     @Test
-    fun `HEAD is stretched by 1.5 so the first tap still feeds the head alone`() {
+    fun `HEAD is stretched by 1_5 so the first tap still feeds the head alone`() {
         assertEquals(1f, Echo.reach(mapOf("HEAD" to 2f / 3f)))
         assertEquals(1f, Echo.reach(mapOf("HEAD" to 0.7f)), "the recipe at AMT 70")
         assertEquals(0.9f, Echo.reach(mapOf("HEAD" to 0.6f)), 1e-6f)
@@ -352,8 +371,9 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
     // ---------------------------------------------------------------- the numbers the recipe's MIX rests on
 
     @Test
-    fun `the jangle's pick and the snare's repeat at the first tap - the figures MIX 0.75 was chosen from`() {
+    fun `the jangle's pick and the snare's repeat at the first tap - the figures MIX 0_75 was chosen from`() {
         val jangle = Magnet.landingChain(MagnetVoice.JANGLE).process(Magnet.render(MagnetVoice.JANGLE))
+        val chug = Magnet.landingChain(MagnetVoice.CHUG).process(Magnet.render(MagnetVoice.CHUG))
         fun at(mix: Float, amount: Float) = (recipe + ("MIX" to mix)).mapValues { it.value * amount }
         // The pick over the body: the first repeat's first 25 ms over the 20 ms ending 5 ms before it, peak.
         fun pick(out: Snip, delay: Int) = db(peak(out, delay, delay + ms(out.sampleRate, 25f)), peak(out, delay - ms(out.sampleRate, 25f), delay - ms(out.sampleRate, 5f)))
@@ -365,6 +385,10 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
             println(String.format(Locale.ROOT, "DELAY probe AMT %.0f, recipe MIX %.2f: jangle pick %.1f dB, snare repeat %.1f dB, choir gap HEAD 0 %.1f / HEAD 1 %.1f dB",
                 amount * 100, mix, pick(Echo.process(jangle, m), delay), repeat(Echo.process(snare, m), delay),
                 gap(Echo.process(choir, m + ("HEAD" to 0f)), m), gap(Echo.process(choir, m), m)))
+            for ((name, s) in linkedMapOf("choir" to choir, "chug" to chug, "jangle" to jangle, "snare" to snare)) {
+                println(String.format(Locale.ROOT, "DELAY gap AMT %.0f, recipe MIX %.2f, %s: HEAD 0 %.1f dB, HEAD 1 %.1f dB",
+                    amount * 100, mix, name, gap(Echo.process(s, m + ("HEAD" to 0f)), m), gap(Echo.process(s, m), m)))
+            }
         }
         val first = at(0.75f, 0.7f)
         val delay = Echo.delayFrames(first.getValue("TIME"), 44_100)
@@ -372,8 +396,6 @@ The test passes on today's ECHO, because the shipped `Echo.process` ignores a ke
         assertEquals(-7.8, repeat(Echo.process(snare, first), delay), 0.5, "the snare's repeat at AMT 70 (spec: -7.8 dB)")
     }
 ```
-
-Add `private val HELD_BAR = 0.0` beside `recipe` for now; Step 2 sets it.
 
 Run `./gradlew :synth:test --tests 'com.snipsnap.synth.EchoTest'`. Expect a compile failure, because `Echo.HEAD_OFF`, `reach` and `headFrames` do not exist yet. That is the failing state.
 
@@ -443,18 +465,25 @@ In the loop, replace `d[f] = lp.lp(dry + feedback * fed, toneHz)` with:
 
 `out[...] = dry + mix * wet` stays as it is. The dry note is added back untouched at full level.
 
-- [ ] **Step 3: Set the held-tone bar.**
-  - Run `./gradlew :synth:test --tests 'com.snipsnap.synth.EchoTest' -i 2>&1 | grep 'DELAY '`. Read the held tone's HEAD 0 and HEAD 1 gaps.
-  - Set `HELD_BAR` to their difference less 3 dB, rounded down to one decimal place.
-  - Add a comment that gives the measurement, e.g. `/** The held tone's gap difference, measured X dB at HEAD 0 vs 1 (Task 2), less 3 dB. */`.
-  - If the measured difference is under 4 dB, the bar would be meaningless. In that case stop and report it.
-  - The choir's line must read about HEAD 0 −0.5 dB and HEAD 1 −10.3 dB.
-  - The probe lines must reproduce the spec's MIX table: the jangle 1.8, 2.4 / 3.1, 3.5 / 4.3, 4.6, and the snare −8.1, −11.3 / −4.6, −7.8 / −2.1, −5.3, each to ± 0.1 dB. Record any larger difference in the commit body.
+- [ ] **Step 3: Read the measurements.**
+  - Run `./gradlew :synth:test --tests 'com.snipsnap.synth.EchoTest' -i 2>&1 | grep 'DELAY '`.
+  - The held tone's wet gap reads about HEAD 0 −3.7 dB and HEAD 1 under −140 dB (a dry run measured −230.2). Its bars are fixed in the test at −6.7 dB (the HEAD 0 measurement less 3 dB, the spec's rule) and −60 dB. The spec's Tests section already says the held tone is read on the wet alone, and why.
+  - The choir's gap line must read about HEAD 0 −0.5 dB and HEAD 1 −10.3 dB.
+  - The probe lines must reproduce the spec's MIX table, each to ± 0.1 dB:
+    - the jangle 1.8, 2.4 / 3.1, 3.5 / 4.3, 4.6;
+    - the snare −8.1, −11.3 / −4.6, −7.8 / −2.1, −5.3.
+  - The MIX 0.75 gap lines must reproduce the spec's discreteness table, each to ± 0.1 dB (AMT 100, then AMT 70):
+    - the choir −0.5 / −10.3 and −4.6 / −9.7;
+    - the chug −0.7 / −2.4 and −0.2 / −0.9;
+    - the jangle 0.0 / −0.7 and −0.5 / −1.9;
+    - the snare −39.9 / silence and −36.8 / −48.1.
+  - Record any larger difference in the commit body.
+  - While `PedalListensGenerator.attackEcho` still exists (Task 6 deletes it), print once, in a scratch test you then delete, the liked clip's figures by the same metrics: `PedalListensGenerator.attackEcho(dry, PedalListensGenerator.Feed.HEAD, PedalListensGenerator.DELAYED.echo!!)` on the jangle (the spec: 5.3 dB) and on the choir's mono fold (the spec: 0.5 dB peak, 3.0 dB rms). It lifts each channel on its own, which the spec's 2026-10-23 probe did not. Record them in the commit body.
 
 - [ ] **Step 4: Run green, then mutation-check.**
   - Run `./gradlew :synth:test --tests 'com.snipsnap.synth.EchoTest' --tests 'com.snipsnap.synth.FxTest'`. Expect exit 0.
   - FxTest's random rolls now draw HEAD too. Their contract (finite, within −1..1, peak within 0.05) holds because ECHO's own peak match runs on any feed. No exemption may be added to `contractExcluded` or `stereoExcluded`.
-  - Then make each mutation below. Run `EchoTest` after each one and see the named test fail. Revert each before the next:
+  - Then make each mutation below. Run `EchoTest` after each one and see the named test fail (others may fail too). Revert each before the next. The JSON precedent pin is structural (the key is absent from the text), so it has no mutation in `Echo.kt`:
 
 | Mutation in `Echo.kt` | Test that must fail |
 |---|---|
@@ -463,13 +492,15 @@ In the loop, replace `d[f] = lp.lp(dry + feedback * fed, toneHz)` with:
 | `f < head - fade - 200 -> 1f` | the first repeat's onset |
 | `return 0f` as `reach`'s body | HEAD makes the repeats discrete |
 | drop `0.8f * delay` from `headFrames` (use `HEAD_SEC` alone) | the head window shrinks |
-| `1f * head` for `1.5f * head` | HEAD is stretched by 1.5 |
-| delete the peak-match block | the jangle's pick and the snare's repeat |
+| `1f * head` for `1.5f * head` | HEAD is stretched by 1_5 |
+| `out[f * snip.channels + ch] = dry + wet` (MIX dropped) | the jangle's pick and the snare's repeat |
+| `head < HEAD_OFF` for `head <= HEAD_OFF` in `reach` | HEAD off renders the shipped samples on a mono, a doubled and a hard-left pad |
+| `MacroSpec("HEAD", 0f)` moved to the front of `MACROS` | HEAD is the last macro, off by default |
 
 - [ ] **Step 5: Commit.** Commit message: "Give ECHO a HEAD knob that feeds its repeats only the note's head". The body says:
   - what HEAD does;
   - why HEAD 0 is bit for bit (a factor of exactly 1f, proved by the Task 1 pins);
-  - the measured choir gap and held-tone gap, and the probe table;
+  - the measured choir gap, the held tone's wet gaps, both probe tables and the liked clip's figures;
   - that FxTest's random rolls now reach HEAD with no exemption.
 
 ---
@@ -486,7 +517,7 @@ In the loop, replace `d[f] = lp.lp(dry + feedback * fed, toneHz)` with:
 
 - [ ] **Step 1: Write the failing test edits.**
   - In TreatmentsTest's names test (`the named characters are the bank's five and then the extras…`), append `"delayed"` after `"rockwahed"`.
-  - In `the pedal recipes set only their own section, and none sits on a neutral`, add `"delayed" to "echo"`.
+  - In `the pedal recipes set only their own section, and none sits on a neutral`, add `"delayed" to "echo"`, and add after its loop `assertTrue(Treatments.chain("delayed", 0f).isBypass, "delayed at AMT 0 is not a bypass")`.
   - Run `./gradlew :synth:test --tests 'com.snipsnap.synth.TreatmentsTest'`. Expect a failure: `delayed` is unknown.
 
 - [ ] **Step 2: Append the character.** Re-read `EXTRA`, then add this at its end, after `rockwahed`:
@@ -501,7 +532,6 @@ In the loop, replace `d[f] = lp.lp(dry + feedback * fed, toneHz)` with:
 - [ ] **Step 3: Run green.**
   - Run `./gradlew :synth:test --tests 'com.snipsnap.synth.TreatmentsTest' --tests 'com.snipsnap.synth.FxTest'`. Expect exit 0.
   - FxTest's `AMT scales every section a treatment sets` now covers `delayed`. So does TreatmentsTest's door-equivalence loop over `Treatments.names`.
-  - AMT 0 is a bypass for every name through `Treatments.chain`'s own `amount <= 0f` branch.
 
 - [ ] **Step 4: Commit.** Commit message: "Add the delayed character: ECHO's long repeats fed by the note's head". Cite the spec and the owner's MIX 0.75.
 
@@ -558,7 +588,7 @@ Then update the object's KDoc sentence that lists the day-one entries: add "and 
   - its side and why;
   - that it draws no chip;
   - that `treat --pedals delayed` and saved kits reach it;
-  - the RIG + DELAY budget test, which the library's As built list deferred while RIG was its only tail-making entry.
+  - the RIG + DELAY budget test, a two-pick form of the three-tail-pick budget test the library's R1 deferred while RIG was its only tail-making entry.
 
 ---
 
@@ -584,26 +614,26 @@ Then update the object's KDoc sentence that lists the day-one entries: add "and 
 
 Keep one KDoc block. The shell law forbids stacked KDoc.
 
-- [ ] **Step 2: `README.md`.** In the rack list, change "ECHO (one delay line and one filter, repeats darkening as they fade)" to "ECHO (one delay line and one filter, repeats darkening as they fade; HEAD feeds the repeats only the note's first 120 ms, so a held note's attack comes back as a repeat)".
+- [ ] **Step 2: `README.md`.** In the rack list, the ECHO entry wraps after "and" (`README.md` around line 1018). Change "ECHO (one delay line and⏎one filter, repeats darkening as they fade)" to "ECHO (one delay line and⏎one filter, repeats darkening as they fade; HEAD feeds the repeats only the note's first 120 ms, so a held note's attack comes back as a repeat)", where ⏎ is the existing line break. Rewrap the paragraph to its neighbours' width if you like.
 
-- [ ] **Step 3: `docs/CLI.md`.**
-  - In `treat`'s character list, change "and `rockwahed` (…)" to "`rockwahed` (…) and `delayed` (a delay pedal: ECHO's long, dark repeats 225 ms apart, fed only the note's first 120 ms so a held note's attack comes back as a repeat)".
-  - In the `--pedals` paragraph, change "`wahed`, and `rig` …" to "`wahed`, `delayed` (after the amp; no chip until its gate), and `rig` …".
-  - In "On the phone the same characters, less …", add "and `delayed` (the DELAY chip waits for its listening gate)".
+- [ ] **Step 3: `docs/CLI.md`.** Three edits; the quoted text wraps where ⏎ shows.
+  - In `treat`'s character list, change "as the note dies) and `rockwahed` (one heel-to-toe-to-heel⏎gesture, then the wah waits at the heel)." to "as the note dies), `rockwahed` (one heel-to-toe-to-heel⏎gesture, then the wah waits at the heel) and `delayed` (a delay pedal: ECHO's long, dark repeats 225 ms apart, fed only the note's first 120 ms so a held note's attack comes back as a repeat)."
+  - In the `--pedals` paragraph, change "`wahed`, and `rig` (a board: compressor, drive, slapback)" to "`wahed`, `delayed` (after the amp; no chip until its gate), and `rig` (a board: compressor, drive, slapback)".
+  - In "On the phone the same characters, less …", change "`amped` (its chip is a later layout decision) and the three wah⏎characters (the WAH chip is not on the pad sheet yet; `touchwahed` and⏎`rockwahed` are CLI and saved kits only), sit" to "`amped` (its chip is a later layout decision), the three wah⏎characters (the WAH chip is not on the pad sheet yet; `touchwahed` and⏎`rockwahed` are CLI and saved kits only) and `delayed` (the DELAY chip waits for its listening gate), sit".
 
 - [ ] **Step 4: The library design.** After its "As built (R1, …)" section, add a dated section. Leave the R1 record as it is.
 
 ```markdown
 ## After R1
 
-- **2026-10-23, DELAY** (`2026-10-22-delay-head-design.md`): one entry appended after RIG, `Entry("DELAY", "delayed", …, POST, movable = false, gated = false)`. The library now holds two tail-making entries, RIG and DELAY; `PedalBoardTest` holds their shared tail budget (the test R1 deferred). `PedalsTest`'s entries list gained DELAY; the gated list, row seven and `PadSheetTest`'s pins move only when its gate passes.
+- **2026-10-23, DELAY** (`2026-10-22-delay-head-design.md`): one entry appended after RIG, `Entry("DELAY", "delayed", …, POST, movable = false, gated = false)`. The library now holds two tail-making entries, RIG and DELAY; `PedalBoardTest` holds their shared tail budget (a two-pick form of the three-tail-pick test R1 deferred). `PedalsTest`'s entries list gained DELAY; the gated list, row seven and `PadSheetTest`'s pins move only when its gate passes.
 ```
 
 Use the date the task is done, not necessarily 2026-10-23.
 
 - [ ] **Step 5: `docs/SYNTH_ROADMAP.md`, the S30 row.** Before the row's "Specs:" sentence, add one sentence:
 
-> DELAY (`docs/superpowers/specs/2026-10-22-delay-head-design.md`): ECHO gains HEAD, a macro and not a section. At 0 it is ECHO bit for bit, pinned by 18 hashes recorded before the change; at 1 the repeats are fed only the note's first 120 ms. It ships with the `delayed` character (MIX 0.75, the owner's pick) and an ungated DELAY entry in the pedal library. The long-note sheet and its prototypes are retired, and the DELAY gate is on the Stage 1b page.
+> DELAY (`docs/superpowers/specs/2026-10-22-delay-head-design.md`): on the long-note sheet (2026-10-22) the owner named the plain DELAY at 100 and the head-fed echo at 120 ms the most like a delay, kept ROLL where it is as a secondary option, and asked for HEAD on ECHO. ECHO gains HEAD, a macro and not a section. At 0 it is ECHO bit for bit, pinned by 18 hashes recorded before the change; at 1 the repeats are fed only the note's first 120 ms. It ships with the `delayed` character (MIX 0.75, the owner's pick) and an ungated DELAY entry in the pedal library. The long-note sheet and its prototypes are retired, and the DELAY gate is on the Stage 1b page.
 
 Add the spec to the row's "Specs:" list.
 
@@ -625,13 +655,13 @@ Add the spec to the row's "Specs:" list.
   - Delete sheet (5)'s loop.
   - Delete `attackEcho`, `Feed`, `HEAD_SEC`, `HEAD_FADE_SEC`, `DUCK_DB`, `MAX_FEED_GAIN` and `ROLL_BPM`. `ROLL_BPM` is used only by that sheet.
   - Delete any import left unused.
-  - Rewrite item (5) of the object KDoc to describe the gate (Step 2), and keep the KDoc's count of sheets true.
+  - Rewrite item (5) of the object KDoc to describe the gate (Step 2). Change its opening "Four sheets." to "Five sheets." (it already lists five), and change "the 48 clips as its files" (or whatever the KDoc says of the files) to say the page carries the clips of sheets (1) to (4), the gate's 28, and, on the published artifact only, the ten retired long-note clips.
   - Do not touch sheets (1) to (4): their 48 clips are already published, and their verdicts point at those bytes.
 
-- [ ] **Step 2: Add the gate's sheet.** After sheet (4):
+- [ ] **Step 2: Add the gate's sheet.** After sheet (4), as the new (5):
 
 ```kotlin
-        // (6) The DELAY gate: `delayed` as built (ECHO with HEAD), HEAD off at the same level (the recipe with HEAD 0, so
+        // (5) The DELAY gate: `delayed` as built (ECHO with HEAD), HEAD off at the same level (the recipe with HEAD 0, so
         // HEAD alone is heard), the plain DELAY the owner passed, and the owner's MIX 0.75 between its two neighbours.
         val chug = Magnet.landingChain(MagnetVoice.CHUG).process(Magnet.render(MagnetVoice.CHUG))
         val built = Treatments.chain("delayed").echo!!
@@ -652,7 +682,7 @@ Add the spec to the row's "Specs:" list.
             gate(name, dry, "gate_pad", "$name AS THE KIT HAS IT", dry)
             for (amount in AMOUNTS) gate(name, dry, "gate_delay_${pct(amount)}", "$name DELAY AT ${pct(amount)}, AS BUILT", Treatments.apply("delayed", dry, amount).snip)
             for (amount in AMOUNTS) gate(name, dry, "gate_head0_${pct(amount)}", "$name DELAY AT ${pct(amount)} WITH HEAD OFF, THE SAME LEVEL", Treatments.fade(variant("HEAD" to 0f), amount).process(dry))
-            gate(name, dry, "gate_plain_70", "$name THE PLAIN DELAY YOU PASSED, AT 70", Treatments.fade(DELAYED, 0.7f).process(dry))
+            gate(name, dry, "gate_plain_70", "$name THE PLAIN DELAY FROM YOUR FIRST LISTEN (MIX 50, HEAD OFF), AT 70", Treatments.fade(DELAYED, 0.7f).process(dry))
             if (name == "SNARE" || name == "JANGLE") for (mix in listOf(1f, 0.5f)) {
                 gate(name, dry, "gate_mix${pct(mix)}_70", "$name DELAY AT 70 WITH MIX ${pct(mix)}", Treatments.fade(variant("MIX" to mix), 0.7f).process(dry))
             }
@@ -667,15 +697,15 @@ Change the count check to:
 
 Notes on the snippet:
 - `DELAYED` is sheet (4)'s plain recipe, MIX 0.5 with no HEAD. It stays, because sheet (4) still uses it.
-- The cut is the peak of the 20 ms before the rack's 10 ms fade, against the clip's peak. That matches the spec's 2026-10-23 probe.
+- The cut is the peak of the 20 ms before the rack's 10 ms fade, against the clip's peak: the review's probe's window on the capped clip. The spec's 2026-10-23 probe read the 20 ms before the cut on the uncapped render; the two agree (the spec's figures were reproduced both ways).
 - `"%.1f".format(Locale.ROOT, …)` keeps the format law's habit, even in test source.
 
 - [ ] **Step 3: The page.** In `pedal-listens.html`:
 
   **3a. Remove the long-note sheet and its leftovers.**
   - Delete `longNoteSheet()`, and `LONG4` if nothing else uses it.
-  - In `verdictSheet()`, delete the `s1b_slate` question and the `s1b_attack_section` question. Delete `SLATE4` and `SECTION4` if they are then unused. The owner answered both in chat: the slate became the pedal library (PR #623), and the attack-fed echo became a HEAD knob, not a section.
-  - Keep `s1b_floor`, which is unanswered.
+  - In `verdictSheet()`, delete the `s1b_attack_section` question, and `SECTION4` if it is then unused: its subject (ROLL and the attack-fed echo as a section) leaves the page with the long-note sheet, and the owner's request for a HEAD knob settled it (spec decision 1).
+  - Keep `s1b_slate`, `SLATE4` and `s1b_floor`: the spec does not retire them.
 
   **3b. Add the option sets** next to the others:
 
@@ -698,7 +728,7 @@ function delayGateSheet() {
       [src + '/gate_delay_100', 'Delay 100', name + ', DELAY at 100, as built'],
       [src + '/gate_head0_70', 'Head off 70', name + ', DELAY at 70 with HEAD off, at the same level'],
       [src + '/gate_head0_100', 'Head off 100', name + ', DELAY at 100 with HEAD off, at the same level'],
-      [src + '/gate_plain_70', 'Plain 70', name + ', the plain DELAY you passed, at 70'],
+      [src + '/gate_plain_70', 'Plain 70', name + ', the plain DELAY from your first listen (MIX 50, HEAD off), at 70'],
     ];
     if (mix) row.push([src + '/gate_mix100_70', 'Mix 100', name + ', DELAY at 70 with MIX 100'], [src + '/gate_mix50_70', 'Mix 50', name + ', DELAY at 70 with MIX 50']);
     const parts = [setRow(name, row), chipGroup('dly_' + id + '_delay', 'Is it a delay, on ' + name + '?', YES4, name + ' delay')];
@@ -711,7 +741,7 @@ function delayGateSheet() {
   };
   return setSheet('The DELAY gate', [
     'ECHO now has the HEAD knob you asked for. DELAY is the long, dark ECHO with HEAD on: its repeats are fed only the first 120 ms of the note, so a held note\'s attack comes back as a repeat instead of the whole note smearing into itself. It plays at your MIX 75.',
-    'Head off is the same recipe with HEAD off at the same level, so you hear what HEAD alone does. The head clip you liked before was also 8 to 10 dB louder than the plain one, so this is the fair test. Plain 70 is the DELAY you passed on the first sheet. On the snare and the jangle, MIX 100 and MIX 50 sit beside your 75. At 70 the repeats are 151 ms apart; at 100, 225 ms.',
+    'Head off is the same recipe with HEAD off at the same level, so you hear what HEAD alone does. The head clip you liked before was also 8 to 10 dB louder than the plain one, so this is the fair test. Plain 70 is the plain DELAY from the DELAY sheet of your first listen (MIX 50, HEAD off): you passed it on the snare; on the choir and the jangle it did not repeat the attack; the chug did not have it. On the snare and the jangle, MIX 100 and MIX 50 sit beside your 75. At 70 the repeats are 151 ms apart; at 100, 225 ms.',
   ], ...one('SNARE', 'snare', 'the snare', false, true), ...one('CHOIR', 'choir', 'the choir', true, false),
      ...one('JANGLE', 'jangle', 'the jangle', true, true), ...one('CHUG', 'chug', 'the chug', true, false),
      chipGroup('dly_spacing', 'At 70 the repeats are 151 ms apart and at 100 225 ms. Is that spacing right?', SPACE3, 'spacing'),
@@ -724,15 +754,23 @@ function delayGateSheet() {
   **3e. Update the lede's second paragraph.** "A fifth sheet, DELAY on long notes, was added after your first listen." becomes "The DELAY on long notes sheet you heard has made way for the DELAY gate: ECHO with the HEAD knob, as built."
 
 - [ ] **Step 4: Render and check.**
-  - Run `./gradlew :synth:generatePedalListens`. Expect `pedal listens: 76 clips …` and 16 `gate cap:` lines (the spec expects any cut at AMT 100 at least 35 dB under, the chug the hottest).
-  - Check that every key the page references exists in the CLIPS table:
-    `grep -o "'[A-Z]*/gate_[a-z0-9_]*'\|src + '/gate_[a-z0-9_]*'" synth/src/test/resources/audition/pedal-listens.html`, compared against `grep -o '"[A-Z]*/gate_[a-z0-9_]*"' testkit/pedal-listens/index.html | sort -u | wc -l`. Expect 28.
-  - Open `testkit/pedal-listens/index.html` in the pre-installed Chromium (Playwright). Confirm the gate sheet draws its 28 clip buttons and 15 questions, and that the console is free of errors.
+  - Run `./gradlew :synth:generatePedalListens`. Expect `pedal listens: 76 clips …` and 28 `gate cap:` lines, one per clip: the four `gate_pad` lines end before the cap, and the 24 DELAY clips each print a cut (ECHO's own tail is 1.1 s, past the rack's one second). The HEAD-on snare and choir cuts land on silence and print a figure near 239 dB, because the cut is floored at 1e-12. The hottest cut is the chug's HEAD 0 clip at 100, about 35 dB under (a dry run measured 34.7); every cut at AMT 70 is about 66 dB or more under.
+  - Check the clips the page needs exist. The page builds its keys at runtime (`src + '/gate_pad'`), so check the rendered table and the files:
+
+```bash
+for s in SNARE CHOIR JANGLE CHUG; do for id in gate_pad gate_delay_70 gate_delay_100 gate_head0_70 gate_head0_100 gate_plain_70; do grep -q "\"$s/$id\":" testkit/pedal-listens/index.html || echo "missing $s/$id"; done; done
+for s in SNARE JANGLE; do for id in gate_mix100_70 gate_mix50_70; do grep -q "\"$s/$id\":" testkit/pedal-listens/index.html || echo "missing $s/$id"; done; done
+grep -o '"[A-Z]*/gate_[a-z0-9_]*":' testkit/pedal-listens/index.html | sort -u | wc -l
+ls testkit/pedal-listens/*/gate_*.wav | wc -l
+```
+
+    Expect no `missing` lines, then 28, then 28.
+  - Open `testkit/pedal-listens/index.html` in the pre-installed Chromium (Playwright; `PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`). Confirm the gate sheet draws its 28 clip buttons, each with its length badge (`clipBtn` draws one only for a key in CLIPS), and 13 questions (four "is it a delay", three HEAD, two snare loudness, two MIX, spacing, join), and that the console shows no errors other than the Google Fonts stylesheet failing to load offline.
 
 - [ ] **Step 5: Commit.** Commit message: "Trade the long-note delay sheet for the DELAY gate". The body says:
   - the 28 clips and why each is there;
   - the retired prototypes;
-  - the two dropped verdict questions and how they were answered;
+  - the one dropped verdict question and why;
   - the count of 58 → 76;
   - the `gate cap:` figures.
 
@@ -744,13 +782,14 @@ function delayGateSheet() {
   - Run `./gradlew :shell:cleanTest :cli:cleanTest`, then `./gradlew --no-daemon test`, in the background (about two hours).
   - Expect exit 0. If any test fails, root-cause it; never skip, disable or quarantine a test.
   - Run the native suite too, as the steward skill gives it. It is unaffected, and its green state is part of what CI runs.
-- [ ] **Step 2: Re-read the diff adversarially.** `git diff <base>...HEAD`. Check:
+- [ ] **Step 2: Record the build in the spec.** Change the spec's Status line from "not built" to built (with the date), and append an "As built" section: the 18 pins, both probe tables as measured, the held tone's wet gaps, the liked clip's figures, and the `gate cap:` figures. This is the repo's habit (an As built record in the same branch as the code).
+- [ ] **Step 3: Re-read the diff adversarially.** `git diff origin/claude/mobile-mpc-drum-sampler-t58x74...HEAD`. Check:
   - Is `Echo.kt`'s loop change the one multiply?
   - Is `delayed` at the end of `EXTRA`?
   - Is DELAY ungated?
-  - Are no published clip ids re-rendered?
+  - Does Task 8 upload no path that is already published? (Sheets (1) to (4) re-render locally, and since DRIVE's LOG fade law, `CHOIR/bloom_70.wav` and `bloom_100` may differ from the published bytes: they must never be uploaded.)
   - Are the shell laws respected?
-- [ ] **Step 3: Push, and open or update the PR.** Follow the steward skill and the session's rules. The PR body names:
+- [ ] **Step 4: Push, and open or update the PR.** Follow the steward skill and the session's rules. The PR body names:
   - the hash pins;
   - the probe table as measured;
   - the held-tone bar;
@@ -762,10 +801,10 @@ function delayGateSheet() {
 ### Task 8: The owner's gate (last)
 
 - [ ] **Step 1: Publish the gate.** Update the Stage 1b artifact in place (https://claude.ai/artifact/Lnj9v78sJA4u1BaHm1aAvh):
-  - Read it first, with the Artifact tool's `read`.
-  - Publish the rendered `testkit/pedal-listens/index.html` as the page, keeping its `db` capability.
-  - Upload only the 28 `gate_*` WAVs, through `files`, at their published paths (e.g. `SNARE/gate_pad.wav`).
-  - Never re-upload the 48 clips already there, and never remove the retired long-note clips: recorded verdicts point at those bytes.
+  - Read it first, with the Artifact tool's `read`. Then list its files (`action: "list"`, `scope: "files"`): expect 59 (58 WAVs and the page) and no `*/gate_*` path.
+  - Publish with `url` set to the artifact, `file_path` set to `testkit/pedal-listens/index.html`, `root` set to `testkit/pedal-listens`, and `files` set to exactly the 28 gate paths as a list (e.g. `{"path": "SNARE/gate_pad.wav"}`).
+  - Leave `capabilities` out: omitting it keeps the page's `db`, and `{}` would clear it.
+  - Never publish the whole folder, never re-upload the 48 clips already there, and never remove the ten retired long-note clips: recorded verdicts point at those bytes.
   - Answers land under `verdicts/dly_*`.
 - [ ] **Step 2: Send the owner the link,** with one plain paragraph:
   - what HEAD does;
@@ -773,13 +812,13 @@ function delayGateSheet() {
   - the questions.
 
   Say that nothing changes on the pad sheet until they say so. Then wait. Do not chase.
-- [ ] **Step 3: Read the verdicts** with `ArtifactData` (list `verdicts`), plus anything the owner says in chat. Decide by the spec's rules:
-  - **MIX:** a MIX picked by ear becomes `delayed`'s MIX. The two pins in Task 2's last test move to the re-measured figures.
+- [ ] **Step 3: Read the verdicts** with `ArtifactData` (list `verdicts`), plus anything the owner says in chat. Decide by the spec's rules, and record the decision only: this plan changes no recipe, no entry and no pin. Every change lands in the follow-up under "After the gate".
+  - **MIX:** a MIX picked by ear becomes `delayed`'s MIX, and every bar measured at MIX 0.75 moves with it: `EchoTest`'s `recipe` literal, the two pins in Task 2's last test (re-measured), and the discreteness bar (re-set at the measurement less 3 dB; the choir's separation is 6.8 dB at MIX 0.5, under today's 7 dB bar).
   - **HEAD:** if HEAD off wins on the held notes, `delayed` drops HEAD and keeps its MIX, and HEAD stays a macro for kits and the CLI.
   - **Spacing:** a spacing answer moves `delayed`'s TIME. TIME 1.0 gives 206 ms at 70 and 350 ms at 100.
   - **Not a delay:** if no setting is a delay to the owner, the chip does not ship, and DELAY stays ungated (the registry's standing rule).
   - **Delay, but not yet:** "Should DELAY join the pedals: not yet" leaves it ungated, and the answer is recorded.
-- [ ] **Step 4: Record the verdict.** Write the answers into the spec as a dated "The gate (date)" section, quoting the owner verbatim. Add a note to the S30 roadmap row. Commit.
+- [ ] **Step 4: Record the verdict.** Write the answers into the spec as a dated "The gate (date)" section, quoting the owner verbatim. Add a note to the S30 roadmap row. Commit, push, and add the verdict to the pull request's body.
 
 ---
 
