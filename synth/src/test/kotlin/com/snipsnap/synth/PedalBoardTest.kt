@@ -95,6 +95,18 @@ class PedalBoardTest {
     }
 
     @Test
+    fun `RIG and DELAY on one board run two echoes, one per pass, inside the board's one tail budget`() {
+        val board = PedalBoard(listOf(pick("rig", 1f), pick("delayed", 1f)))
+        assertEquals("rig", board.owner(PedalSide.AMP, "echo")!!.key, "RIG's slapback is the AMP pass's echo")
+        assertEquals("delayed", board.owner(PedalSide.POST, "echo")!!.key, "DELAY is the POST pass's echo")
+        val out = board.process(snare)
+        assertTrue(
+            out.frameCount <= snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt(),
+            "two tail-making picks ran past the board's budget",
+        )
+    }
+
+    @Test
     fun `deterministic, finite, bypassed at AMT 0, and refused above six, twice, or on a side it cannot sit`() {
         val board = PedalBoard(listOf(pick("compressed", 0.6f), pick("driven", 0.8f)))
         assertContentEquals(board.process(snare).samples, board.process(snare).samples)

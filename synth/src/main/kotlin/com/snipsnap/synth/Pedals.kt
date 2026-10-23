@@ -33,8 +33,8 @@ enum class PedalSide(val id: String) {
  *
  * Nothing here is heard: the day-one entries are the two chips the owner
  * picked at the pedal board's round two (DRIVE, COMP), the WAH section
- * awaiting its gate, and RIG as the first board, authored as a hypothesis
- * for its own gate.
+ * awaiting its gate, RIG as the first board, authored as a hypothesis
+ * for its own gate, and DELAY, added after its own spec, awaiting its gate.
  */
 object Pedals {
 
@@ -122,6 +122,9 @@ object Pedals {
             ),
             PedalSide.AMP, movable = false, gated = false,
         ),
+        // A delay pedal: the `delayed` character, ECHO's repeats fed by the note's head. After the amp, where a rig
+        // puts a delay; not movable. Gate pending (docs/superpowers/specs/2026-10-22-delay-head-design.md).
+        Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = false),
     )
 
     init {
