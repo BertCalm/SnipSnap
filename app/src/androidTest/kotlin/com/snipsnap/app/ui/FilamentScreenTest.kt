@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTextReplacement
@@ -108,6 +109,23 @@ class FilamentScreenTest : ComposeScreenTest() {
         val node = compose.onNodeWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNode()
         assertFalse("$label is disabled", node.config.getOrNull(SemanticsProperties.Disabled) != null)
         val action = node.config.getOrNull(SemanticsActions.OnClick)?.action ?: error("$label has no click action")
+        compose.runOnIdle { assertTrue(action.invoke()) }
+        pump(16)
+    }
+
+    // A YOURS chip is a combinedClickable (tap adopts, hold forgets), so its
+    // name is the label of its click action, not a content description: the
+    // factory chips' tapeClick sets one and these do not. Find it by that label.
+    private fun yours(name: String) = compose.onNode(
+        SemanticsMatcher("click label YOUR PRESET $name") {
+            it.config.getOrNull(SemanticsActions.OnClick)?.label == "YOUR PRESET $name"
+        },
+        useUnmergedTree = true,
+    )
+
+    private fun activateYours(name: String) {
+        val action = yours(name).fetchSemanticsNode().config.getOrNull(SemanticsActions.OnClick)?.action
+            ?: error("YOUR PRESET $name has no click action")
         compose.runOnIdle { assertTrue(action.invoke()) }
         pump(16)
     }
@@ -219,11 +237,9 @@ class FilamentScreenTest : ComposeScreenTest() {
         waitFor("the name-only factory recipe") { currentPatch(factory.voice) == factory }
         for ((macro, value) in factory.macros) assertEquals(value, progress(macro), 0f)
         waitFor("the YOURS strip") {
-            runCatching {
-                button("YOUR PRESET ${mine.name}").fetchSemanticsNode()
-            }.isSuccess
+            runCatching { yours(mine.name).fetchSemanticsNode() }.isSuccess
         }
-        activate("YOUR PRESET ${mine.name}")
+        activateYours(mine.name)
         waitFor("YOURS replacing the factory draft") { currentPatch(mine.voice) == mine }
         for ((macro, value) in mine.macros) assertEquals(value, progress(macro), 0f)
         assertEquals(31f / 48f, progress("ROOT"), 0f)
