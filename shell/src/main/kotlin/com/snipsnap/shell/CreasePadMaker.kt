@@ -13,6 +13,7 @@ import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
+import kotlin.math.roundToInt
 
 /**
  * A saved model-3 CREASE sound as an attack followed by the engine's continuous
@@ -92,13 +93,40 @@ object CreasePadMaker {
         return program
     }
 
-    /** Hear the saved root's actual arrival and a second pass around its held region. */
+    /** Hear the saved root's arrival, another full held pass, then the selected key-up fade. */
     fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
         val note = renderZone(spec, spec.patch.midi, cancelled)
+        fun checkCancelled() {
+            if (cancelled() || Thread.currentThread().isInterrupted)
+                throw java.util.concurrent.CancellationException("CREASE preview cancelled")
+        }
+        checkCancelled()
         val samples = note.snip.samples
         val start = note.loopStartFrame.toInt()
-        val out = samples.copyOf(samples.size + samples.size - start)
-        samples.copyInto(out, destinationOffset = samples.size, startIndex = start)
+        val period = samples.size - start
+        val noteOff = samples.size + period
+        val releaseFrames = (spec.releaseSeconds * note.snip.sampleRate).roundToInt().coerceAtLeast(2)
+        val out = FloatArray(noteOff + releaseFrames)
+        var at = 0
+        while (at < samples.size) {
+            checkCancelled()
+            val end = minOf(at + 8192, samples.size)
+            samples.copyInto(out, destinationOffset = at, startIndex = at, endIndex = end)
+            at = end
+        }
+        for (i in 0 until period) {
+            if (i % 8192 == 0) checkCancelled()
+            out[samples.size + i] = samples[start + i]
+        }
+        // Key-up keeps reading the same loop. Only the player's amplitude release changes;
+        // no new deformation trajectory, leveling or DSP render is introduced here.
+        for (i in 0 until releaseFrames) {
+            if (i % 8192 == 0) checkCancelled()
+            val gain = 1f - i.toFloat() / (releaseFrames - 1)
+            out[noteOff + i] = samples[start + i % period] * gain
+        }
+        out[out.lastIndex] = 0f
+        checkCancelled()
         return Snip(out, channels = 1, sampleRate = note.snip.sampleRate)
     }
 }

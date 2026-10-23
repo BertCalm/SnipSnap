@@ -17,6 +17,7 @@ import java.io.File
 import java.util.concurrent.CancellationException
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.test.AfterTest
 import kotlin.test.Test
@@ -146,13 +147,36 @@ class CreasePadMakerTest {
     }
 
     @Test
-    fun `preview includes the saved root arrival and another complete pass around its held region`() {
+    fun `preview preserves the full arrival and held pass then demonstrates the selected release`() {
         val root = notes[CreasePadMaker.zoneMidis(spec).indexOf(patch.midi)]
-        val preview = CreasePadMaker.preview(spec)
-        assertEquals(root.snip.frameCount * 2 - root.loopStartFrame.toInt(), preview.frameCount)
-        assertContentEquals(root.snip.samples, preview.samples.copyOf(root.snip.frameCount))
-        assertContentEquals(root.snip.samples.copyOfRange(root.loopStartFrame.toInt(), root.snip.frameCount),
-            preview.samples.copyOfRange(root.snip.frameCount, preview.frameCount))
+        val source = root.snip.samples.copyOf()
+        val noteOff = root.snip.frameCount * 2 - root.loopStartFrame.toInt()
+        val shortSpec = spec.copy(releaseSeconds = .1f)
+        val longSpec = spec.copy(releaseSeconds = .7f)
+        val short = CreasePadMaker.preview(shortSpec)
+        val long = CreasePadMaker.preview(longSpec)
+        for ((setting, preview) in listOf(shortSpec to short, longSpec to long)) {
+            val releaseFrames = (setting.releaseSeconds * root.snip.sampleRate).roundToInt()
+            assertEquals(noteOff + releaseFrames, preview.frameCount, "RELEASE adds its selected duration")
+            assertContentEquals(source, preview.samples.copyOf(root.snip.frameCount), "the complete authored prefix is unchanged")
+            assertContentEquals(source.copyOfRange(root.loopStartFrame.toInt(), source.size),
+                preview.samples.copyOfRange(root.snip.frameCount, noteOff), "one extra held pass remains unmodified")
+            assertEquals(source[root.loopStartFrame.toInt()], preview.samples[noteOff], "key-up continues the next loop")
+            assertEquals(0f, preview.samples.last(), "the audition reaches exact silence instead of cutting a nonzero sample")
+            val window = releaseFrames / 8
+            assertTrue(rms(preview.samples, preview.samples.size - window, preview.samples.size) <
+                rms(preview.samples, noteOff, noteOff + window) * .35,
+                "the late released tail is quiet relative to the start of the fade")
+        }
+        val shortReleaseFrames = short.frameCount - noteOff
+        val from = noteOff + shortReleaseFrames * 3 / 4
+        assertTrue(rms(long.samples, from, short.frameCount) > rms(short.samples, from, short.frameCount) * 2,
+            "the longer release retains more level at the same post-key-up time")
+        assertTrue(long.frameCount > short.frameCount)
+        assertContentEquals(source, root.snip.samples, "preview never fades the reusable exported KeyNote in place")
+        val after = CreasePadMaker.renderZone(spec, patch.midi)
+        assertEquals(root.loopStartFrame, after.loopStartFrame)
+        assertContentEquals(source, after.snip.samples, "subsequent exports retain the exact authored source")
     }
 
     @Test
