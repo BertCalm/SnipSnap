@@ -114,7 +114,6 @@ work in this PR":
 - Steps 3 to 8 are open. `.claude/skills/midiwright/references/snipsnap-midi-state.md` says
   what the tree has now; this review stays as read at `b429ec2`.
 
-
 **Update 2026-10-23 (batch A, recorded in `MIDI_GAPS_2026_10.md`).** The clock half of step 1
 landed in `f95cd75c9`: `MidiWire` emits `Clock`, `Start`, `Continue` and `Stop`, with the
 hostile fixture this review asked for. The counter half of step 3, which the review's T3 named,

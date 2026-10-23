@@ -124,6 +124,14 @@ Landed in `f95cd75c9` to `e7cfc0072`, one commit per task plus one fix: steps 1,
   `drainEnded()` flushes first: the all-off, then the stops in order, stopping at the first
   refusal. A successful all-off clears everything kept. One `Log.w` the first time anything is
   kept. Proof: a full `SpscRing` refusing a push is pinned by `ring_keeps_order_and_drops_when_full`; the Kotlin retry above it is proved by compile and reading.
+- **Final-review fixes: `758e4a659`.** F1: `PadEngine.hit` and `hitLayers` call `flushPending()`
+  right after the `isUp()` guard, so a kept all-off is retried before any later hit is queued
+  and nothing played after PANIC is cut by it. F3: `jni_pads_stop_voice_reports_a_full_ring_and_recovers`
+  pushes 255 stops (all `JNI_TRUE`), sees the 256th refused, and sees one callback make room.
+  F6: `MidiInput.Receiver.onSend` drops real-time events before the main-thread post, so
+  clock bytes no longer cross threads for nothing. Also: a static_assert that the frame
+  counter is lock-free, blank fingerprint strings read as absent, and the `MidiWire.kt`
+  KDoc reworded and rewrapped.
 
 Disclosed, not done:
 
@@ -131,12 +139,21 @@ Disclosed, not done:
   that needs no phone.
 - **`frameOffset` is still 0 from Kotlin.** `jni.cpp` sends no offset, so a stamp cannot yet
   place a note. Step 3 of the table is not in this batch.
-- **The stop guard has no JVM test.** `:app` has no host test source set. The
-  `InstrumentPlayer.kt` (line 117) calls `NativePads.allOff` directly; a refusal is not kept there.
+- **The stop guard has no JVM test.** `:app` has no host test source set.
+- **KEYS does not keep a refused stop.** `InstrumentPlayer.kt` calls `NativePads` directly:
+  `:90` (steal) and `:109` (noteOff) ignore the new `stopVoice` result, and `:117` ignores
+  the `allOff` result. KEYS runs at most eight voices (`InstrumentEngine.MAX_VOICES`), so it
+  cannot fill a 255-slot ring and a refusal there is not reachable today.
+- **SPLIT and ORBIT never drain.** `ui/SplitScreen.kt` and `ui/OrbitScreen.kt` construct a
+  `PadEngine` directly and never call `drainEnded`, so a kept stop or all-off there waits
+  until the engine closes. That is acceptable today: three SPLIT voices or one ORBIT
+  audition cannot fill a 255-slot ring. Since the final-review fix, any later `hit` or
+  `hitLayers` flushes it first.
+- **Departure from the binding review, needs owner sign-off.** The review's T2 named a
+  `portIndex` in the fingerprint. This batch keys per device with port counts instead:
+  nothing on an event yet says which port of a two-port controller it came from.
 
-Deferred minors, one line each: the `MidiWire.kt` KDoc header has one unwrapped line; the
-fixture script's note tuples carry no stamp; `MidiInput.fingerprintOf` passes raw, possibly
-blank, strings where `nameOf` treats blank as absent.
+Deferred minors, one line each: the fixture script's note tuples carry no stamp.
 
 Heard: nothing; this session had no phone.
 
@@ -150,3 +167,6 @@ Heard: nothing; this session had no phone.
   design.
 - **Untestable here**: S1 to S4, the Pixel's burst size and output delay, a Launchpad's port
   counts.
+- **Untestable here, compile checks**: `:app` and native compile warnings were checked only with
+  `-q` and `tail`; the final review's non-quiet `:kit`/`:shell` compile showed three
+  pre-existing warnings in untouched files and none in this branch's files.
