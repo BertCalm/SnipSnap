@@ -81,7 +81,7 @@ class RegistersPatchTest {
     @Test
     fun `velocity dispatch passes one performance velocity and keeps note and model`() {
         for (voice in RegistersVoice.entries) for (hold in listOf(.35f, 1f)) {
-            val model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3
+            val model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3
             val patch = RegistersPatch("Quiet recipe", voice, Registers.defaults(voice) + ("HOLD" to hold),
                 midi = 69, velocity = .2f, model = model)
             assertNull(Velocity.brightnessSpec(patch))
@@ -111,7 +111,7 @@ class RegistersPatchTest {
             for (preset in group) {
                 assertEquals(60, preset.midi)
                 assertEquals(1f, preset.velocity)
-                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 4 else 3, preset.model)
+                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 5 else 3, preset.model)
                 assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
                 assertEquals(preset, Presets.byName("REGISTERS", voice.name, preset.name))
                 assertTrue(preset.name.length <= 14)
@@ -137,24 +137,26 @@ class RegistersPatchTest {
     }
 
     @Test
-    fun `transistor pad recipes replay model four and reject unsupported legacy models`() {
-        val original = RegistersPatch("Saved keys", RegistersVoice.TRANSISTOR,
-            Registers.defaults(RegistersVoice.TRANSISTOR) + ("HOLD" to .6f), midi = 69, velocity = .37f, model = 4)
-        val recipe = PadRecipe.fromJsonText(PadRecipe(original).toJsonText())
-        val decoded = recipe.patch as RegistersPatch
-        assertEquals(original, decoded)
-        assertContentEquals(original.render().samples, decoded.render().samples)
-        val editable = decoded.forEditing()
-        val edited = Patches.edited(editable, "More drive", editable.macros + ("EDGE" to .8f)) as RegistersPatch
-        assertEquals(69, edited.midi)
-        assertEquals(.37f, edited.velocity)
-        assertEquals(4, edited.model)
-        for (model in 1..3) {
-            assertFailsWith<IllegalArgumentException> { original.copy(model = model) }
-            val old = JsonValue.Obj(original.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
-            assertFailsWith<JsonException> { Patches.fromJsonValue(old) }
+    fun `transistor pad recipes retain current or historic model and reject unsupported legacy models`() {
+        for (version in 4..5) {
+            val original = RegistersPatch("Saved keys", RegistersVoice.TRANSISTOR,
+                Registers.defaults(RegistersVoice.TRANSISTOR) + ("HOLD" to .6f), midi = 69, velocity = .37f, model = version)
+            val recipe = PadRecipe.fromJsonText(PadRecipe(original).toJsonText())
+            val decoded = recipe.patch as RegistersPatch
+            assertEquals(original, decoded)
+            assertContentEquals(original.render().samples, decoded.render().samples)
+            val editable = decoded.forEditing()
+            val edited = Patches.edited(editable, "More drive", editable.macros + ("EDGE" to .8f)) as RegistersPatch
+            assertEquals(69, edited.midi)
+            assertEquals(.37f, edited.velocity)
+            assertEquals(version, edited.model)
+            for (model in 1..3) {
+                assertFailsWith<IllegalArgumentException> { original.copy(model = model) }
+                val old = JsonValue.Obj(original.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
+                assertFailsWith<JsonException> { Patches.fromJsonValue(old) }
+            }
+            val withoutModel = JsonValue.Obj(original.toJsonValue().entries.filterKeys { it != "model" })
+            assertFailsWith<JsonException> { Patches.fromJsonValue(withoutModel) }
         }
-        val withoutModel = JsonValue.Obj(original.toJsonValue().entries.filterKeys { it != "model" })
-        assertFailsWith<JsonException> { Patches.fromJsonValue(withoutModel) }
     }
 }
