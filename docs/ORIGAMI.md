@@ -201,12 +201,48 @@ The ORIGAMI starter kit contains sixteen dry tonal one-shots: eight CRANE
 notes, the six factory presets and unfolded FAN/STILL references. The kit's
 notes use C minor pentatonic. It carries replayable recipes and source roots.
 
+## Held keys
+
+Model-4 FAN and STILL offer **MAKE INSTRUMENT ▸** in SYNTH. Set RELEASE
+between 0.1 and 1.5 seconds (default 0.6), then MAKE. Open the saved instrument
+in MAKE's INSTRUMENTS list and play KEYS: press to sustain, release to fade.
+PREVIEW plays middle C for three seconds followed by the chosen release.
+The six sound controls stay the same; the instrument sheet adds no attack
+control because the sample retains the voice's authored onset.
+
+Each instrument has nine sampled roots, three semitones apart, covering
+C3–C5 only. The played zone overrides the source recipe's TUNE and explicit
+MIDI; its seed, velocity and spectral settings remain intact. Keyboard velocity
+adds the normal player gain. The mono 44.1 kHz samples carry an attack followed
+by a periodic sustain region. Phone metadata, WAV sampler markers and both
+MPC keygroup formats share the same loop and note-off release.
+
+Held renderer model 1 is versioned separately from finite model 4. It fits
+oscillator cycles and geometry motion to one repeat period, integrating moving
+frequencies before closing phase. FAN's motion period is about 2.86 seconds;
+STILL uses about ten seconds, with its slower motion at roughly 0.10/0.20 Hz.
+These held motion rates are fitted rather than preserving finite STILL's
+0.10/0.17 Hz pair. The original finite attack leads into that periodic field;
+the loop has no end fade. Tests compare independently synthesized cycles,
+not a duplicated tail that can conceal a phase reset.
+
+Every export also writes `<name>.origami-keys.json`, containing the unchanged
+finite patch recipe, release and held model. It is separate from the phone's
+playback sidecar. On the desk:
+
+```sh
+snipsnap synth ORIGAMI FAN --instrument --release 0.6 --out /path/to/instruments
+snipsnap synth ORIGAMI STILL --patch /path/to/finite-patch.json --instrument --out /path/to/instruments
+```
+
+CRANE and models 1–3 keep their finite renderer. SEND TO PAD remains a finite
+sound for every voice; MAKE INSTRUMENT supplies held playing through KEYS.
+
 ## Current limits
 
-Rendering produces finite mono 44.1 kHz samples. STILL is a finite texture,
-not a certified sustain loop. HOLD, live spectral processing and keygroup
-instrument integration remain future work. A seeded render
-does not establish periodic phase/modulation state at a loop boundary.
+ORIGAMI renders samples offline. Live spectral processing and externally
+recorded sources remain future work. A deterministic finite recipe alone does
+not establish periodic phase/modulation state at a loop boundary.
 
 The first comparisons establish whether the direct-partial method is useful.
 STFT processing remains a possible later route for genuine broadband noise or
