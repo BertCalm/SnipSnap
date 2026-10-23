@@ -337,7 +337,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 43 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -784,22 +784,29 @@ includes the full matrix and before/after comparisons for the revised voices.
 
 CIRCUIT is an invented moving ensemble: three rooted breath resonators,
 stone rattle, paired wood, clay vessel and synthesized coordination voice.
-The current listening candidate gives them one authored four-pulse figure,
-with shared breath, a slow rise and settle across the phrase, stable player
-identity and quiet overlapping support. ROOT adds a firmer pitched foundation
-only at faster playing rates.
-DIAMETER, ORBIT and PACE independently set formation, movement and playing;
-CANYON supplies asymmetric mono paths and bounded replies at authored answer
-opportunities. A common energy scale keeps accepted replies in the phrase.
-Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
-clips. HOLD at .99 returns its settled procession without an opening gesture.
-The owner heard R4 (stone, wood and breath overpowered the sound) and R5
-(“I think it's still a bit too abrupt”); the current candidate, R6, eases
-force onset and release. The completed-pack evidence in docs/CIRCUIT.md is
-R4's, which it marks historical: it does not verify R6. R6 calibration and
-verification are in progress, and the owner's listening verdict remains pending.
-Contract and audition commands:
-[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+The owner approved the C4 starting note and the continuous one-minute ROOT
+ceremony (“Sounds good”). The minute remains a fixed offline audition.
+The current candidate brings call → listening → causal answer → settle into
+regular ROOT finite phrases and held material, using shared pressure and
+deliberate gaps in supporting gestures. Seven unchanged comparison cases,
+including all five other voice defaults and the approved minute, remain
+bit-identical to their baselines.
+
+Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
+kit use the current patch, recipe and app workflows. New C4 ROOT presets
+FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+finite returns and a settled recurring pulse. Existing presets and kit notes
+are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
+render guards, 209/209 artifact checks and 36/36 transition checks; held listening
+cells 1/3/5 receive causal replies. Desktop EXPANSE held median render time
+fell from 12.336657 s to 11.185123 s (9.334%), with unchanged thread allocation.
+Android debug assembly, Android test-source compilation and APK verification
+passed against runtime `1cd56a1bc759dfcdd825c242ed1ad1d80d042b50`. The full nine-module
+JVM suite passed all 5,922 tests with zero failures, errors or skips.
+The new ROOT score and presets await listening;
+physical-phone and Circuit-specific MPC validation remain pending. Earlier
+R4/R5/R6 measurements remain historical.
+Design, limits and audition commands: [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
 
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
 travels between four trees, and synthesized owls answer the disturbances
@@ -1097,6 +1104,13 @@ audition includes direct original/revised middle-range comparisons. See
 [`docs/OHM.md`](docs/OHM.md) and the
 [private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
 
+NEW KIT → STARTERS → OHM places eight Solo notes in C minor pentatonic
+from C3 to F4 beside the four companion relationships and lower/upper
+contrasts. `./gradlew :synth:generateOhmKit` exports sixteen dry finite
+one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
+`testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
+remain open.
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones
@@ -1116,7 +1130,13 @@ phone/MPC checks.
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
 CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
-SEND saves a replayable recipe and authored pitch for kit tuning. See the
+SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
+and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
+on the desk, use
+`snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
+`--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
+renderer has its own model 1, separate from finite model 4; the six controls
+and patch JSON stay unchanged, with no HOLD macro. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`
