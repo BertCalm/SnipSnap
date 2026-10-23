@@ -29,8 +29,25 @@ enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, R
  * [neutral] is 0 for a macro that fades to silence and 0.5 for a centered
  * one (EQ's flat, PITCH's native) — `Treatments.chain` fades toward it, so
  * a centered macro is not dragged off centre as AMT falls.
+ *
+ * [law] is how AMT walks the macro toward [neutral]: [FadeLaw.LINEAR] (every
+ * macro but one) moves the knob, [FadeLaw.LOG] moves what the knob sets, in
+ * the section's own gain domain (`FxChain.gainOf`), so 70 percent of the way
+ * is 70 percent of the way in decibels.
  */
-data class MacroSpec(val name: String, val default: Float, val neutral: Float = 0f)
+data class MacroSpec(val name: String, val default: Float, val neutral: Float = 0f, val law: FadeLaw = FadeLaw.LINEAR)
+
+/**
+ * How the pad sheet's AMT fades a macro toward its neutral (`Treatments.fade`).
+ *
+ * LINEAR moves the knob by the fraction. LOG is for a knob whose law is a gain
+ * spanning decades (VALVE's DRIVE: 0.05 to 1000): a linear walk of that knob
+ * leaves the gain at a hundredth of the character's at AMT 0.7 (the pedal
+ * board's Stage 0 "not enough"), so LOG walks the gain in decibels instead and
+ * finds the knob that sets it. A LOG macro must name its gain law in its
+ * section's `gains`; the fade law's tests hold every LOG macro to one.
+ */
+enum class FadeLaw { LINEAR, LOG }
 
 object Thump {
 

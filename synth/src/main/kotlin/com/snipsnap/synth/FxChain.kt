@@ -184,6 +184,8 @@ data class FxChain(
             val with: (FxChain, Map<String, Float>?) -> FxChain,
             val run: (Snip, Map<String, Float>) -> Snip,
             val stage: Stage = Stage.RACK,
+            /** The gain law of each [FadeLaw.LOG] macro, by name: what `Treatments.fade` walks in decibels. */
+            val gains: Map<String, (Float) -> Float> = emptyMap(),
         )
 
         internal val SECTIONS: List<Section> = listOf(
@@ -196,7 +198,7 @@ data class FxChain(
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
-            Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process),
+            Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process, gains = mapOf("DRIVE" to Valve::gainFor)),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
             Section("dub", Dub.MACROS, { it.dub }, { c, m -> c.copy(dub = m) }, Dub::process),
@@ -218,6 +220,9 @@ data class FxChain(
 
         /** [name]'s macro specs, or an error naming the sections there are. */
         fun macrosOf(name: String): List<MacroSpec> = sectionOf(name).macros
+
+        /** The gain law [section] declares for its [FadeLaw.LOG] macro [macro], or null where it declares none. */
+        fun gainOf(section: String, macro: String): ((Float) -> Float)? = sectionOf(section).gains[macro]
 
         internal fun sectionOf(name: String): Section =
             SECTIONS.firstOrNull { it.name == name }
