@@ -46,7 +46,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 
-/** The phone glue: absolute pitch must survive recall, edits, SCRAMBLE and SEND TO PAD. */
+/** The phone glue: finite recipe preservation and the separate FAN/STILL held-keys door. */
 @RunWith(AndroidJUnit4::class)
 class OrigamiSynthScreenTest {
     @get:Rule
@@ -168,9 +168,28 @@ class OrigamiSynthScreenTest {
                 compose.onNodeWithContentDescription(macro).assertExists()
             }
             compose.onNodeWithContentDescription("HOLD").assertDoesNotExist()
-            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+            if (voice == "CRANE") {
+                compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+            } else {
+                compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
+            }
             compose.onNodeWithContentDescription("DRONE TO LOOP").assertDoesNotExist()
         }
+    }
+
+    @Test
+    fun fanInstrumentSheetSetsReleaseWithoutRenderingZones() {
+        show()
+        click("FAN")
+        click("MAKE INSTRUMENT")
+        compose.onNodeWithContentDescription("RELEASE").assertExists()
+        compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
+        compose.onNodeWithText("C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE.").assertExists()
+        compose.onNodeWithText("RELEASE 0.60 s").assertExists()
+        dial("RELEASE", 1f)
+        compose.onNodeWithText("RELEASE 1.50 s").assertExists()
+        // Opening the maker and changing its release needs no zone rendering.
+        // The nine-zone render/export itself is covered by the maker's JVM tests.
     }
 
     @Test
@@ -226,6 +245,11 @@ class OrigamiSynthScreenTest {
         )
         show(saved, key = KeySpec.parse("Cmin"), withReplacement = true)
         loadSavedPreset(saved)
+        if (model == Origami.MODEL_VERSION) {
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
+        } else {
+            compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+        }
         assertEquals(19f / 24f, macroValue("TUNE"), .0001f)
         // Sparse older recipes must use their frozen defaults, not R4's
         // recalibrated FAN crease, before the first edit or render.

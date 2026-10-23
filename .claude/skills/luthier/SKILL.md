@@ -16,9 +16,32 @@ Voice: direct, specific, measured. Say what you verified, what you measured, wha
 and what nobody has heard yet. No hype words, no em dashes, no padding. When you decline a
 direction, say why in one sentence and offer the better one.
 
+## Resource access
+
+Resolve `references/`, `scripts/`, and `evals/` relative to the directory
+containing this `SKILL.md`. In SnipSnap, the canonical bundle is
+`.claude/skills/luthier/`; `.agents/skills/luthier` points to the same folder
+for Codex discovery. Keep the complete folder together when installing or
+exporting the skill.
+
+If an installed cloud skill returns these instructions but cannot return a
+reference, locate the SnipSnap checkout and read the corresponding file under
+`.claude/skills/luthier/` with the filesystem tools. Do not depend on temporary
+chat attachment paths. Verify actual contents before claiming a reference was
+read. The standard-library-only [resource checker](scripts/check_resources.py)
+verifies the bundle and, in the repository, the discovery link:
+
+```sh
+python3 .claude/skills/luthier/scripts/check_resources.py
+```
+
+For a standalone installation, run `python3 scripts/check_resources.py` from
+the skill folder. If neither the installed bundle nor a repository checkout
+provides a required file, name that file and disclose the limit.
+
 ## 0. Ground truth first (every time)
 
-1. Read `references/snipsnap-conventions.md`. It is the contract: offline mono 44.1 kHz,
+1. Read [SnipSnap conventions](references/snipsnap-conventions.md). It is the contract: offline mono 44.1 kHz,
    4× internal, the house output stage, 3 to 6 macros plus HOLD, determinism via
    `Dsp.seedFor`, the registration checklist, the probe set, the writing discipline.
 2. If the SnipSnap repo is on disk, **grep before you name any API**. The three specs written
@@ -166,15 +189,15 @@ three directions he leans toward, what he loved or hated last time.
 
 ## Reference map
 
-- `references/snipsnap-conventions.md`: the contract, the checklist, the probes, the discipline, the known spec drift. Always.
-- `references/engine-inventory.md`: 66 engines by family with macros; heavy and thin areas. CONCEIVE (sibling check), GAP SCAN, REVIEW.
-- `references/omnibus-mine.md`: the XOceanus map, reusable primitives, coupling vocabulary, doctrines, ports done. MINE, GAP SCAN, CONCEIVE.
-- `references/dsp-catalog.md`: techniques by role with "breaks when", costs, what SnipSnap has, review heuristics, sources. CONCEIVE, REVIEW, MINE.
-- `references/combination-grammar.md`: the operators, the idea-to-DSP translation table, the three-directions discipline, a worked example. CONCEIVE.
-- `references/gear-modeling.md`: research procedure, pedal/amp/instrument archetypes, where a reference lands, multi-tool synthesis. BENCHMARK, CONCEIVE.
-- `references/review-rubric.md`: the five lenses, findings format, gap and benchmark formats, pre-skill spec checks. REVIEW, GAP SCAN, BENCHMARK.
-- `references/spec-template.md`: short brief and long spec, diagram conventions, the ledger, what the house sends back. CONCEIVE.
-- `references/reuse-and-licenses.md`: license table (verified dates), the reuse procedure, the missing-LICENSE flag. MINE, BENCHMARK.
-- `scripts/snipkit.py`: the Python stand-in for the house toolkit (modal ring, KS loop, output stage, seam error, WAV I/O, macro maps).
-- `scripts/probes.py`: the house probes on any WAV (`python3 probes.py a.wav b.wav`).
-- `scripts/proto_template.py`: copy, replace `render`, run; it writes WAVs, a spectrogram and a JSON report that mirrors a Kotlin test.
+- [SnipSnap conventions](references/snipsnap-conventions.md): the contract, the checklist, the probes, the discipline, the known spec drift. Always.
+- [Engine inventory](references/engine-inventory.md): 66 engines by family with macros; heavy and thin areas. CONCEIVE (sibling check), GAP SCAN, REVIEW.
+- [Omnibus mine](references/omnibus-mine.md): the XOceanus map, reusable primitives, coupling vocabulary, doctrines, ports done. MINE, GAP SCAN, CONCEIVE.
+- [DSP catalog](references/dsp-catalog.md): techniques by role with "breaks when", costs, what SnipSnap has, review heuristics, sources. CONCEIVE, REVIEW, MINE.
+- [Combination grammar](references/combination-grammar.md): the operators, the idea-to-DSP translation table, the three-directions discipline, a worked example. CONCEIVE.
+- [Gear modeling](references/gear-modeling.md): research procedure, pedal/amp/instrument archetypes, where a reference lands, multi-tool synthesis. BENCHMARK, CONCEIVE.
+- [Review rubric](references/review-rubric.md): the five lenses, findings format, gap and benchmark formats, pre-skill spec checks. REVIEW, GAP SCAN, BENCHMARK.
+- [Spec template](references/spec-template.md): short brief and long spec, diagram conventions, the ledger, what the house sends back. CONCEIVE.
+- [Reuse and licenses](references/reuse-and-licenses.md): license table (verified dates), the reuse procedure, the missing-LICENSE flag. MINE, BENCHMARK.
+- [Snipkit](scripts/snipkit.py): the Python stand-in for the house toolkit (modal ring, KS loop, output stage, seam error, WAV I/O, macro maps).
+- [Probes](scripts/probes.py): the house probes on any WAV (`python3 probes.py a.wav b.wav`).
+- [Prototype template](scripts/proto_template.py): copy, replace `render`, run; it writes WAVs, a spectrogram and a JSON report that mirrors a Kotlin test.

@@ -37,6 +37,41 @@ object SynthKits {
     fun trio(): List<ArrangedPad?> = TrioKits.classic()
 
     /**
+     * Sixteen dry OHM notes from the five accepted model-2 encounters. A01–A08
+     * play Solo up C minor pentatonic from C3; the other pads compare the four
+     * relationships at C4, three low answers at C3 and a Gather at C5.
+     * Native C4 recipes remain exactly the factory patches. Only a transposed
+     * copy's name and explicit MIDI change; touch, body, length, relationship,
+     * velocity, seed, gesture and model stay with the accepted recipe.
+     * Finite pitched gestures are TONAL one-shots, as in OVEN and COROLLA:
+     * a long tail is not a held loop and must remain available to IN KEY.
+     */
+    fun ohm(): List<ArrangedPad?> {
+        val encounters = OhmPresets.all().associateBy { it.name }
+        fun note(name: String, midi: Int): ArrangedPad {
+            val original = encounters.getValue(name)
+            val displayName = "$name ${Scales.nameOf(midi)}"
+            val patch = if (midi == original.midi) original else original.copy(name = displayName, midi = midi)
+            return pad(patch, DrumClass.TONAL).copy(
+                displayName = displayName,
+                oneShot = true,
+                source = mapOf(
+                    "engine" to OhmPatch.ENGINE,
+                    "preset" to original.name,
+                    "pitchMidi" to midi.toString(),
+                    "model" to patch.model.toString(),
+                    "seed" to patch.seed.toString(),
+                    "gesture" to patch.gesture.name,
+                ),
+            )
+        }
+        return PENTATONIC.take(8).map { note("Solo", 48 + it) } + listOf(
+            note("Argument", 60), note("Communion", 60), note("Quiet Company", 60), note("Gather", 60),
+            note("Argument", 48), note("Communion", 48), note("Quiet Company", 48), note("Gather", 72),
+        )
+    }
+
+    /**
      * Twelve dry model-2 VENT pads in C minor pentatonic: bass, short note,
      * percussive hit and long texture for PULSE, COIL and PLUME. Four slots
      * remain free for captures. Every finite one-shot retains its full recipe.
@@ -1094,14 +1129,15 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD and BUBBLE each speak at C3 and C4. The remaining ten pads
-     * compare every nondefault recipe, including three held buffers. Each
-     * voice's native-root default is its exact library patch, so all thirteen
-     * provisional recipes are represented within the sixteen pads.
+     * PLUCK, WOOD, BUBBLE and BREATH each speak at C3 and C4. The remaining
+     * eight pads compare one alternate articulation and one held buffer per
+     * voice. Each voice's native-root default is its exact library patch.
+     * This sixteen-pad selection samples the seventeen-recipe library;
+     * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1111,7 +1147,11 @@ object SynthKits {
                 )
             }
         }
-        val recipes = WickPresets.all().filterNot { it in defaults }
+        val recipeNames = listOf(
+            "Soft Wick", "Held Glow", "Small Rebounds", "Held Wood",
+            "Busy Bubbles", "Held Bubbles", "Single Breath", "Held Breath",
+        )
+        val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
         return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 

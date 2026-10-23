@@ -69,8 +69,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (43 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (44 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -118,8 +118,10 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
 MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR
 adds electronic keying, square-wave ranks, vibrato and drive and awaits listening
 review. AIR controls TRANSISTOR's brief key-click. Saved audition recipes retain
-note, velocity and model; existing presets stay on model 3 and TRANSISTOR uses
-model 4. Instrument samples preserve the finite attack before a verified held
+note, velocity and model. PIPE/MUSETTE presets stay on model 3; original
+TRANSISTOR patches retain model 4. Its current factory settings use model 5 with
+a rounder same-pitch foundation. Instrument samples preserve the finite attack
+before a verified held
 loop and export through the existing MPC 2/MPC 3 and phone keygroup package.
 
 FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.

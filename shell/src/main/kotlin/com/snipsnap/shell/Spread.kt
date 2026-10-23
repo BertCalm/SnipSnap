@@ -202,9 +202,11 @@ object Spread {
      */
     fun apply(model: KitBuilderModel, snip: Snip, plan: Plan, sound: Sound): List<Note> {
         // SPREAD renames the main WAV and lands single-sample pads. Carrying
-        // an active board's old file inventory would strand REMOVE/UNDO.
-        require(sound.recipe?.entries?.containsKey("boardPad") != true &&
-            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeSpread(BoardSheet.read(sound.recipe)?.type?.name ?: BoardSheet.read(sound.like?.recipe)?.type?.name ?: "BOARD") }
+        // an active treatment's old file inventory would strand REMOVE/UNDO.
+        require(!PrintedPads.has(sound.recipe) && !PrintedPads.has(sound.like?.recipe)) {
+            val recipe = sound.recipe?.takeIf(PrintedPads::has) ?: sound.like?.recipe
+            Copy.boardRemoveBeforeSpread(PrintedPads.label(recipe))
+        }
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {

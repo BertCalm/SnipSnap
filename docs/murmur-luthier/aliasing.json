@@ -1,0 +1,418 @@
+{
+  "source_commit": "84471534a",
+  "settings": {
+    "model": 2,
+    "velocity": 1,
+    "edge": 1,
+    "body": 0,
+    "breath": 0,
+    "motion": 0,
+    "hold": 1,
+    "mouth": [
+      0.25,
+      0.75
+    ],
+    "voices": [
+      "LEAD",
+      "METAL"
+    ],
+    "midi": [
+      48,
+      60,
+      72,
+      84,
+      96
+    ]
+  },
+  "method": "Actual production4x probe versus scratch4x/8x/16x copies of unchanged engine. Rates scale control stride to preserve control time. Pre-decimator coherent stationary periods are independently Fourier-resampled with exact brickwall at output Nyquist. Off-harmonic power sums all FFT bins except DC and n*rootCycles harmonic bins.",
+  "limits": [
+    "Off-harmonic energy quantifies the distinguishable foldback component plus floating-point/settling leakage; aliases that coincide with legitimate harmonic bins are excluded.",
+    "Source harmonic order frames/gcd(rootCycles,frames) is the first exact harmonic-grid repetition.",
+    "Total waveform residual includes TPT/one-pole discretization, polyBLEP rate dependence and passband response. It is not an alias estimate.",
+    "Stationary integer-ratio cases deliberately omit breath, moving-control sidebands, finite transients, custom detuned configurations, model1, and hearing claims."
+  ],
+  "claim": "Measured stationary foldback component, not total alias bound or audibility verdict. Production audio unchanged.",
+  "clone4_all20_bit_exact": true,
+  "cases": [
+    {
+      "voice": "LEAD",
+      "midi": 48,
+      "mouth": 0.25,
+      "frames": 81584,
+      "root_cycles": 242,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -124.07188764142938,
+        "off_harmonic_below20k_db": -101.31202705949255,
+        "off_harmonic_power_share": 1.0392009986939015e-09,
+        "off_harmonic_db": -89.83300444568744,
+        "strongest_off_harmonic_hz": 21992.702000392233,
+        "strongest_off_harmonic_peak_relative_db": -87.94933992176281
+      },
+      "ideal4_off_harmonic_db": -122.13753321865806,
+      "ideal16_off_harmonic_db": -157.518423306049,
+      "shared_decimator16_off_harmonic_db": -89.4652636350127
+    },
+    {
+      "voice": "LEAD",
+      "midi": 48,
+      "mouth": 0.75,
+      "frames": 81584,
+      "root_cycles": 242,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -115.32383837814244,
+        "off_harmonic_below20k_db": -94.54035493719161,
+        "off_harmonic_power_share": 4.8450926120207105e-09,
+        "off_harmonic_db": -83.14697917167365,
+        "strongest_off_harmonic_hz": 21992.702000392233,
+        "strongest_off_harmonic_peak_relative_db": -82.14716175765993
+      },
+      "ideal4_off_harmonic_db": -113.97629541496741,
+      "ideal16_off_harmonic_db": -150.16299337103132,
+      "shared_decimator16_off_harmonic_db": -82.75591919660957
+    },
+    {
+      "voice": "LEAD",
+      "midi": 60,
+      "mouth": 0.25,
+      "frames": 96080,
+      "root_cycles": 570,
+      "gcd_cycles_frames": 10,
+      "production": {
+        "off_harmonic_below16k_db": -112.54760635178954,
+        "off_harmonic_below20k_db": -68.51938944221533,
+        "off_harmonic_power_share": 3.844457839832061e-06,
+        "off_harmonic_db": -54.15164897415476,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -50.787495225951744
+      },
+      "ideal4_off_harmonic_db": -118.30762007175966,
+      "ideal16_off_harmonic_db": -154.37265846644138,
+      "shared_decimator16_off_harmonic_db": -54.67201998170124
+    },
+    {
+      "voice": "LEAD",
+      "midi": 60,
+      "mouth": 0.75,
+      "frames": 96080,
+      "root_cycles": 570,
+      "gcd_cycles_frames": 10,
+      "production": {
+        "off_harmonic_below16k_db": -112.57039843329107,
+        "off_harmonic_below20k_db": -71.7889210854144,
+        "off_harmonic_power_share": 1.8028231404323436e-06,
+        "off_harmonic_db": -57.44046876107174,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -56.88358507639342
+      },
+      "ideal4_off_harmonic_db": -113.27490712965985,
+      "ideal16_off_harmonic_db": -148.97616280933386,
+      "shared_decimator16_off_harmonic_db": -57.955870322835196
+    },
+    {
+      "voice": "LEAD",
+      "midi": 72,
+      "mouth": 0.25,
+      "frames": 96080,
+      "root_cycles": 1140,
+      "gcd_cycles_frames": 20,
+      "production": {
+        "off_harmonic_below16k_db": -93.8716117659299,
+        "off_harmonic_below20k_db": -47.848870117397496,
+        "off_harmonic_power_share": 0.0005546656569542621,
+        "off_harmonic_db": -32.559687233531626,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -29.506116100637698
+      },
+      "ideal4_off_harmonic_db": -113.43927907187953,
+      "ideal16_off_harmonic_db": -149.58221335476514,
+      "shared_decimator16_off_harmonic_db": -33.06771725405711
+    },
+    {
+      "voice": "LEAD",
+      "midi": 72,
+      "mouth": 0.75,
+      "frames": 96080,
+      "root_cycles": 1140,
+      "gcd_cycles_frames": 20,
+      "production": {
+        "off_harmonic_below16k_db": -96.91908576259415,
+        "off_harmonic_below20k_db": -51.19049485964672,
+        "off_harmonic_power_share": 0.00025759282410811314,
+        "off_harmonic_db": -35.89066239501888,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -34.46061224557073
+      },
+      "ideal4_off_harmonic_db": -107.2399131820284,
+      "ideal16_off_harmonic_db": -144.73724418782456,
+      "shared_decimator16_off_harmonic_db": -36.406189611662974
+    },
+    {
+      "voice": "LEAD",
+      "midi": 84,
+      "mouth": 0.25,
+      "frames": 102064,
+      "root_cycles": 2422,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -104.23457849402253,
+        "off_harmonic_below20k_db": -69.16134080700874,
+        "off_harmonic_power_share": 1.9929295504933648e-06,
+        "off_harmonic_db": -57.00508053217604,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -57.24920378513943
+      },
+      "ideal4_off_harmonic_db": -109.39524228583274,
+      "ideal16_off_harmonic_db": -145.82381917130706,
+      "shared_decimator16_off_harmonic_db": -57.55270143655974
+    },
+    {
+      "voice": "LEAD",
+      "midi": 84,
+      "mouth": 0.75,
+      "frames": 102064,
+      "root_cycles": 2422,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -101.50076463644517,
+        "off_harmonic_below20k_db": -69.92030394600492,
+        "off_harmonic_power_share": 1.6905713920654699e-06,
+        "off_harmonic_db": -57.719664844513574,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -57.107452245699484
+      },
+      "ideal4_off_harmonic_db": -102.17566080706399,
+      "ideal16_off_harmonic_db": -138.76227730547095,
+      "shared_decimator16_off_harmonic_db": -58.25110930186342
+    },
+    {
+      "voice": "LEAD",
+      "midi": 96,
+      "mouth": 0.25,
+      "frames": 102064,
+      "root_cycles": 4844,
+      "gcd_cycles_frames": 4,
+      "production": {
+        "off_harmonic_below16k_db": -107.08053657227754,
+        "off_harmonic_below20k_db": -76.84581601645846,
+        "off_harmonic_power_share": 2.2368230127016215e-07,
+        "off_harmonic_db": -66.50368377838062,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -65.2465177458867
+      },
+      "ideal4_off_harmonic_db": -105.6632044878155,
+      "ideal16_off_harmonic_db": -141.77412003863685,
+      "shared_decimator16_off_harmonic_db": -66.66619240005639
+    },
+    {
+      "voice": "LEAD",
+      "midi": 96,
+      "mouth": 0.75,
+      "frames": 102064,
+      "root_cycles": 4844,
+      "gcd_cycles_frames": 4,
+      "production": {
+        "off_harmonic_below16k_db": -102.26099703002754,
+        "off_harmonic_below20k_db": -79.80366511563209,
+        "off_harmonic_power_share": 2.5961702195624544e-07,
+        "off_harmonic_db": -65.85666836142411,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -64.40967924693655
+      },
+      "ideal4_off_harmonic_db": -101.15627158448768,
+      "ideal16_off_harmonic_db": -135.5169727081675,
+      "shared_decimator16_off_harmonic_db": -65.69981103772409
+    },
+    {
+      "voice": "METAL",
+      "midi": 48,
+      "mouth": 0.25,
+      "frames": 81584,
+      "root_cycles": 242,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -119.90158187377892,
+        "off_harmonic_below20k_db": -73.08813462469863,
+        "off_harmonic_power_share": 1.2957155117333677e-06,
+        "off_harmonic_db": -58.8749034202015,
+        "strongest_off_harmonic_hz": 21731.077171994508,
+        "strongest_off_harmonic_peak_relative_db": -53.995276009678214
+      },
+      "ideal4_off_harmonic_db": -139.27423521668865,
+      "ideal16_off_harmonic_db": -163.70397333213225,
+      "shared_decimator16_off_harmonic_db": -59.313011018037116
+    },
+    {
+      "voice": "METAL",
+      "midi": 48,
+      "mouth": 0.75,
+      "frames": 81584,
+      "root_cycles": 242,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -115.69052267882057,
+        "off_harmonic_below20k_db": -69.72398626734514,
+        "off_harmonic_power_share": 2.6736700512196583e-06,
+        "off_harmonic_db": -55.72892188613311,
+        "strongest_off_harmonic_hz": 21731.077171994508,
+        "strongest_off_harmonic_peak_relative_db": -51.413151795630945
+      },
+      "ideal4_off_harmonic_db": -132.46114187705172,
+      "ideal16_off_harmonic_db": -162.78089775303346,
+      "shared_decimator16_off_harmonic_db": -56.16584414459784
+    },
+    {
+      "voice": "METAL",
+      "midi": 60,
+      "mouth": 0.25,
+      "frames": 96080,
+      "root_cycles": 570,
+      "gcd_cycles_frames": 10,
+      "production": {
+        "off_harmonic_below16k_db": -96.05177382928508,
+        "off_harmonic_below20k_db": -48.59141069866954,
+        "off_harmonic_power_share": 0.00015719558272842528,
+        "off_harmonic_db": -38.03559662009229,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -33.04746774993792
+      },
+      "ideal4_off_harmonic_db": -135.8530512425458,
+      "ideal16_off_harmonic_db": -163.47117729964964,
+      "shared_decimator16_off_harmonic_db": -38.468961845309195
+    },
+    {
+      "voice": "METAL",
+      "midi": 60,
+      "mouth": 0.75,
+      "frames": 96080,
+      "root_cycles": 570,
+      "gcd_cycles_frames": 10,
+      "production": {
+        "off_harmonic_below16k_db": -96.02972145065502,
+        "off_harmonic_below20k_db": -47.977551940776436,
+        "off_harmonic_power_share": 0.0001739943601363501,
+        "off_harmonic_db": -37.59464828736701,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -32.16552674932561
+      },
+      "ideal4_off_harmonic_db": -129.77835628857542,
+      "ideal16_off_harmonic_db": -161.8892624231447,
+      "shared_decimator16_off_harmonic_db": -38.028849336085585
+    },
+    {
+      "voice": "METAL",
+      "midi": 72,
+      "mouth": 0.25,
+      "frames": 96080,
+      "root_cycles": 1140,
+      "gcd_cycles_frames": 20,
+      "production": {
+        "off_harmonic_below16k_db": -121.80790376548589,
+        "off_harmonic_below20k_db": -75.31278926116828,
+        "off_harmonic_power_share": 2.805129623796815e-07,
+        "off_harmonic_db": -65.52047065388577,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -67.92838151111461
+      },
+      "ideal4_off_harmonic_db": -136.32312774325231,
+      "ideal16_off_harmonic_db": -163.95260844961263,
+      "shared_decimator16_off_harmonic_db": -65.99031229981901
+    },
+    {
+      "voice": "METAL",
+      "midi": 72,
+      "mouth": 0.75,
+      "frames": 96080,
+      "root_cycles": 1140,
+      "gcd_cycles_frames": 20,
+      "production": {
+        "off_harmonic_below16k_db": -119.195030213848,
+        "off_harmonic_below20k_db": -73.1793572269031,
+        "off_harmonic_power_share": 4.185649872242112e-07,
+        "off_harmonic_db": -63.782371030190355,
+        "strongest_off_harmonic_hz": 21600.1873438801,
+        "strongest_off_harmonic_peak_relative_db": -65.87686301832227
+      },
+      "ideal4_off_harmonic_db": -129.15433117694633,
+      "ideal16_off_harmonic_db": -161.99080616604346,
+      "shared_decimator16_off_harmonic_db": -64.25312166012654
+    },
+    {
+      "voice": "METAL",
+      "midi": 84,
+      "mouth": 0.25,
+      "frames": 102064,
+      "root_cycles": 2422,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -120.28193065272507,
+        "off_harmonic_below20k_db": -88.16858084218563,
+        "off_harmonic_power_share": 1.368359813714516e-07,
+        "off_harmonic_db": -68.63799688753497,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -68.37766893907168
+      },
+      "ideal4_off_harmonic_db": -132.3867532021741,
+      "ideal16_off_harmonic_db": -162.75549657784057,
+      "shared_decimator16_off_harmonic_db": -69.09695652794983
+    },
+    {
+      "voice": "METAL",
+      "midi": 84,
+      "mouth": 0.75,
+      "frames": 102064,
+      "root_cycles": 2422,
+      "gcd_cycles_frames": 2,
+      "production": {
+        "off_harmonic_below16k_db": -118.89774625285304,
+        "off_harmonic_below20k_db": -87.09780902276367,
+        "off_harmonic_power_share": 1.666248141989315e-07,
+        "off_harmonic_db": -67.78260321853696,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -67.18918545900493
+      },
+      "ideal4_off_harmonic_db": -126.15658111307872,
+      "ideal16_off_harmonic_db": -159.956060883322,
+      "shared_decimator16_off_harmonic_db": -68.2408232664658
+    },
+    {
+      "voice": "METAL",
+      "midi": 96,
+      "mouth": 0.25,
+      "frames": 102064,
+      "root_cycles": 4844,
+      "gcd_cycles_frames": 4,
+      "production": {
+        "off_harmonic_below16k_db": -128.27231528213912,
+        "off_harmonic_below20k_db": -96.77253368137654,
+        "off_harmonic_power_share": 1.1725746929728232e-07,
+        "off_harmonic_db": -69.30859483186237,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -69.1489589675613
+      },
+      "ideal4_off_harmonic_db": -125.80009171093761,
+      "ideal16_off_harmonic_db": -160.7013275213737,
+      "shared_decimator16_off_harmonic_db": -69.76133303996035
+    },
+    {
+      "voice": "METAL",
+      "midi": 96,
+      "mouth": 0.75,
+      "frames": 102064,
+      "root_cycles": 4844,
+      "gcd_cycles_frames": 4,
+      "production": {
+        "off_harmonic_below16k_db": -121.91591574362621,
+        "off_harmonic_below20k_db": -95.36896628069707,
+        "off_harmonic_power_share": 1.2917019544031592e-07,
+        "off_harmonic_db": -68.88837683314829,
+        "strongest_off_harmonic_hz": 21076.951716569994,
+        "strongest_off_harmonic_peak_relative_db": -68.73514607368402
+      },
+      "ideal4_off_harmonic_db": -119.64408154037719,
+      "ideal16_off_harmonic_db": -155.47762637760263,
+      "shared_decimator16_off_harmonic_db": -69.33862551811043
+    }
+  ]
+}
