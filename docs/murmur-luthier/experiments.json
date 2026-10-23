@@ -1,0 +1,173 @@
+{
+  "method": "Python/NumPy analysis of actual Kotlin-generated PCM24;8192-point Hann spectra at .10/.22/.38/.55/.75/1.05sec;67 logarithmic/residual bands;time-averaged spectrum excludes .10sec. Normalized power L1 distance0..2 is mechanical change, not perceptual acceptance.",
+  "key": {
+    "current": {
+      "motions": [
+        0,
+        0.5,
+        0.75,
+        1
+      ],
+      "centroidsHz": [
+        477.21986856651176,
+        481.01563688444367,
+        479.78757751929686,
+        479.5388228506983
+      ],
+      "h1h3PowerFractions": [
+        0.9533383301689902,
+        0.9509815779398187,
+        0.951811313914918,
+        0.9534925218975772
+      ],
+      "motionStepChanges": [
+        {
+          "activeContourL1": 0.02588734306570875,
+          "averageSpectralL1": 0.0091126302937926
+        },
+        {
+          "activeContourL1": 0.019137728109803593,
+          "averageSpectralL1": 0.004734801577987616
+        },
+        {
+          "activeContourL1": 0.021581409747849487,
+          "averageSpectralL1": 0.007997225845888885
+        }
+      ],
+      "minimumHalfToFullStepContourL1": 0.019137728109803593
+    },
+    "candidate": {
+      "motions": [
+        0,
+        0.5,
+        0.75,
+        1
+      ],
+      "centroidsHz": [
+        518.0511915339,
+        531.0363837077431,
+        527.5392466815514,
+        526.0312506816706
+      ],
+      "h1h3PowerFractions": [
+        0.959938553994652,
+        0.9464866588725163,
+        0.9447696447759746,
+        0.9487866173849997
+      ],
+      "motionStepChanges": [
+        {
+          "activeContourL1": 0.06970661959380713,
+          "averageSpectralL1": 0.03290662417397352
+        },
+        {
+          "activeContourL1": 0.05568114468917732,
+          "averageSpectralL1": 0.019088100335663338
+        },
+        {
+          "activeContourL1": 0.06323107477891028,
+          "averageSpectralL1": 0.017908788602889667
+        }
+      ],
+      "minimumHalfToFullStepContourL1": 0.05568114468917732
+    }
+  },
+  "choir": {
+    "choir_hold_c2_current": {
+      "durationSeconds": 1.957006812095642,
+      "seamError": 1.5395073558631916e-17,
+      "loopPlan": {
+        "rootCycles": 128,
+        "ratios": [
+          1,
+          1,
+          2,
+          1
+        ],
+        "requestedDetuneCents": 5.185927140112161,
+        "detuneCents": 0,
+        "requestedBeatHz": 0.1962191619872976,
+        "beatHz": 0,
+        "contourCycles": 1,
+        "rootErrorCents": -0.010075542692700421
+      },
+      "renderMilliseconds": 301.279562,
+      "rawSha256": "d7e03af16d9f2d86970acb135a8811c07aa31a40b5d43e3ccf4d5c009e81e30f"
+    },
+    "choir_hold_c2_candidate": {
+      "durationSeconds": 5.106575965881348,
+      "seamError": 3.9082790863088985e-18,
+      "loopPlan": {
+        "rootCycles": 334,
+        "ratios": [
+          1,
+          1,
+          2,
+          1.0029940119760479
+        ],
+        "requestedDetuneCents": 5.185927140112161,
+        "detuneCents": 5.175591445299013,
+        "requestedBeatHz": 0.1962191619872976,
+        "beatHz": 0.1958259325044384,
+        "contourCycles": 3,
+        "rootErrorCents": -0.013919317051359676
+      },
+      "renderMilliseconds": 647.347911,
+      "rawSha256": "737cde38826cab81b5b5cdff9e1f72ec757c9a591888433e0a985353603797c7"
+    },
+    "choir_hold_c3_current": {
+      "durationSeconds": 1.8499773740768433,
+      "seamError": 0,
+      "loopPlan": {
+        "rootCycles": 242,
+        "ratios": [
+          1,
+          1,
+          2,
+          1.0041322314049588
+        ],
+        "requestedDetuneCents": 5.185927140112161,
+        "detuneCents": 7.139119597423841,
+        "requestedBeatHz": 0.3924383239745952,
+        "beatHz": 0.5405471661110148,
+        "contourCycles": 1,
+        "rootErrorCents": -0.00477048472661222
+      },
+      "renderMilliseconds": 231.82439,
+      "rawSha256": "135758134a1942e1d9ef39b78743a59930c00b5fb163603f88030745974f95bd"
+    },
+    "choir_hold_c3_candidate": {
+      "durationSeconds": 2.5531065464019775,
+      "seamError": 8.356489038369242e-20,
+      "loopPlan": {
+        "rootCycles": 334,
+        "ratios": [
+          1,
+          1,
+          2,
+          1.0029940119760479
+        ],
+        "requestedDetuneCents": 5.185927140112161,
+        "detuneCents": 5.175591445299013,
+        "requestedBeatHz": 0.3924383239745952,
+        "beatHz": 0.3916796930510119,
+        "contourCycles": 2,
+        "rootErrorCents": 0.10908569554582002
+      },
+      "renderMilliseconds": 319.487889,
+      "rawSha256": "4c814db899f7cc6851d0603b1df49527b7a578cefbc626b8f6e3838586668ad1"
+    }
+  },
+  "pcm": {
+    "allFinite": true,
+    "maxPeak": 0.270438551902771,
+    "maxAbsDc": 3.0492641920052045e-10,
+    "wavCount": 24
+  },
+  "publishedKeyControlsExactPcm24": {
+    "0": true,
+    "50": true,
+    "75": true,
+    "100": true
+  }
+}

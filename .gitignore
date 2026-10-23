@@ -367,3 +367,6 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 testkit/fade-law-audition/
+
+# Reproducible experimental Murmur comparison audio.
+testkit/murmur-luthier-audition/
