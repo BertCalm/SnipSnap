@@ -293,6 +293,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.osprey() },
         Starter(
+            "osprey-curated", "OSPREY CURATED",
+            "Warm foundations, soft gestures, moving textures and long swells in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ospreyCurated() },
+        Starter(
             "opensky", "OPENSKY",
             "Wide anthems, clear leads, glowing pads and bells in C minor pentatonic.",
             seeded = false,

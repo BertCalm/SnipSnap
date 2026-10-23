@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Dry comparisons in the current model: each coastline at calm, rough and storm energy. */
+/** Stable coast/weather references followed by musical model-3 starting points. */
 object OspreyPresets {
     /** Missing controls stay absent until the saved render model resolves its defaults. */
     private fun p(voice: OspreyVoice, name: String, vararg macros: Pair<String, Float>) =
@@ -11,7 +11,7 @@ object OspreyPresets {
         "PACIFIC" to .75f, "SOUTHERN" to 1f,
     )
     private val seas = listOf("CALM" to .1f, "ROUGH" to .5f, "STORM" to .9f)
-    private val presets = shores.flatMap { (shore, position) ->
+    private val comparisons = shores.flatMap { (shore, position) ->
         seas.map { (sea, energy) ->
             p(
                 OspreyVoice.SWELL, "$shore $sea",
@@ -21,6 +21,10 @@ object OspreyPresets {
         }
     }
 
+    private val presets = comparisons + OspreyCuratedPresets.all()
+
+    /** The original fifteen dry comparisons, in their published order. */
+    fun coastWeather(): List<OspreyPatch> = comparisons
     fun forVoice(voice: OspreyVoice): List<OspreyPatch> = presets.filter { it.voice == voice }
     fun all(): List<OspreyPatch> = presets
 }
