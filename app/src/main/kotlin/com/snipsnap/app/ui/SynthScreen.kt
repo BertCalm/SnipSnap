@@ -111,6 +111,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
+import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
@@ -1505,7 +1506,8 @@ fun SynthScreen(
     // so the sheet can say it; MAKE asks the shelf again at write time.
     var holdName by remember { mutableStateOf("") }
     val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
-        (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice))
+        (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
+        (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch))
     val heldInstrumentReady = when (engine) {
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
@@ -1551,6 +1553,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, holdRelease)) else null
         }
+        Engine.ORIGAMI -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
+            if (OrigamiPadMaker.supports(patch)) HeldSpec.Origami(OrigamiPadMaker.spec(patch, holdRelease)) else null
+        }
         else -> null
     }
 
@@ -1589,9 +1595,11 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Origami) {
                         // OPENSKY has larger wet state; BELLOWS renders three
-                        // velocity layers per zone. Render serially so phones never hold nine
+                        // velocity layers per zone. ORIGAMI also keeps its
+                        // oversampled attack and sustain work to one zone at a time.
+                        // Render serially so phones never hold nine
                         // independent oversampled states at once; CANCEL and
                         // the same zone counter remain live between them.
                         midis.map { midi ->
@@ -1638,10 +1646,27 @@ fun SynthScreen(
     fun closeHeld() {
         // Every zone rendered means the write is under way; let it land.
         if (holdDone >= 0 && holdDone >= holdTotal) return
-        holdJob?.cancel()
-        holdJob = null
-        holdDone = -1
-        holdPreviewing = false
+        val job = holdJob
+        if (job == null) {
+            holdDone = -1
+            holdPreviewing = false
+        } else {
+            job.invokeOnCompletion {
+                appScope.launch(Dispatchers.Main.immediate) {
+                    // Cancellation before the body starts skips its finally.
+                    // A later job must never be cleared by this one's handler.
+                    if (holdJob === job) {
+                        holdJob = null
+                        holdDone = -1
+                        holdPreviewing = false
+                    }
+                }
+            }
+            job.cancel()
+        }
+        // Hide now, but retain the busy state until the worker's finally
+        // drains. Reopening must not launch another render that the old
+        // worker's cleanup could then overwrite.
         makingInstrument = false
     }
 
@@ -2833,6 +2858,8 @@ fun SynthScreen(
                 // keys instrument when its renderer closes its own loop.
                 // REGISTERS retains the authored attack before its held region.
                 // ORPHICA holds a captured sustain behind its own plucked onset.
+                // ORIGAMI offers held keys for current FAN/STILL sounds; CRANE
+                // and saved earlier models retain their finite-only path.
                 // Full width under SPREAD's row, the DELETED PRESETS door's
                 // shape. Shown regardless of SIREN's own HOLD slider: MAKE
                 // always substitutes the loop-and-release envelope, the
@@ -3373,10 +3400,21 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = BellowsPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = BellowsPadMaker.export(name, spec, notes, destRoot)
     }
+
+    class Origami(private val spec: OrigamiPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OrigamiPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
+        override val instrumentNote get() = "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OrigamiPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            OrigamiPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
 }
 
 /**
- * MAKE INSTRUMENT ▸'s sheet (RESIN, SIREN, GLINT, REGISTERS, BELLOWS or OPENSKY HALO): [PresetNameDialog]'s frame -
+ * MAKE INSTRUMENT ▸'s sheet (including ORIGAMI FAN/STILL): [PresetNameDialog]'s frame -
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
