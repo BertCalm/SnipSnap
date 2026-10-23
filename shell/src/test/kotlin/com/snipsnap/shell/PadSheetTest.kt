@@ -155,6 +155,18 @@ class PadSheetTest {
     }
 
     @Test
+    fun `row seven is the library's gated pedals, word for word and key for key`() {
+        val gated = com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }
+        assertEquals(gated.map { it.word }, PadSheet.PEDAL_SEGMENTS, "the row is not the library's gated pedals")
+        for (e in gated) {
+            assertEquals(PadSheet.Treatment.Character(e.key), PadSheet.treatmentFor(e.word), "${e.word} does not tap its own key")
+        }
+        for (e in com.snipsnap.synth.Pedals.entries.filter { !it.gated }) {
+            assertFalse(e.word in PadSheet.ALL_SEGMENTS, "${e.word} draws a chip before its gate")
+        }
+    }
+
+    @Test
     fun `the pedals are the last row, and each chip draws a rack character`() {
         assertEquals(PadSheet.PEDAL_SEGMENTS, PadSheet.ROWS.last())
         assertEquals(PadSheet.Treatment.Character("driven"), PadSheet.treatmentFor("DRIVE"))

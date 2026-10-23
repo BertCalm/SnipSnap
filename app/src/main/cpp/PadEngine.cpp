@@ -69,6 +69,12 @@ void PadEngine::stop() {
     while (commands_.pop(dropped)) {
         if (dropped.type == PadCommand::Type::NoteOn) ended_.push(dropped.voiceId);
     }
+    // A command the callback had taken off the ring and was holding for a
+    // later frame belonged to that stream as much as one still queued.
+    for (int32_t i = 0; i < heldCount_; ++i) {
+        if (held_[i].type == PadCommand::Type::NoteOn) ended_.push(held_[i].voiceId);
+    }
+    heldCount_ = 0;
 }
 
 void PadEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
@@ -356,12 +362,53 @@ void PadEngine::render(float* out, int32_t numFrames) {
     }
 }
 
+void PadEngine::takeCommands() {
+    PadCommand c;
+    while (commands_.pop(c)) {
+        if (heldCount_ < kHeldMax) {
+            held_[heldCount_++] = c;
+        } else {
+            // No room to wait: play it now. Early beats dropped - a dropped
+            // NoteOn would be counted by nothing, a dropped Stop a stuck note.
+            apply(c);
+        }
+    }
+}
+
+int32_t PadEngine::applyDue(int32_t frame, int32_t numFrames) {
+    int32_t next = numFrames;
+    int32_t kept = 0;
+    for (int32_t i = 0; i < heldCount_; ++i) {
+        const PadCommand& c = held_[i];
+        if (c.frameOffset <= frame) {
+            apply(c);
+        } else {
+            if (c.frameOffset < next) next = c.frameOffset;
+            // Compacting in place keeps push order, which is the order
+            // two commands due on the same frame must apply in.
+            if (kept != i) held_[kept] = c;
+            ++kept;
+        }
+    }
+    heldCount_ = kept;
+    return next;
+}
+
 oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
     adoptPendingBank();
-    PadCommand c;
-    while (commands_.pop(c)) apply(c);
+    takeCommands();
     auto* out = static_cast<float*>(audioData);
-    render(out, numFrames);
+    // The block in pieces: from each frame something is due on to the next,
+    // every command due at the start of a piece applied before it renders,
+    // so a note asked for at frame 37 begins at frame 37 and not at the top.
+    int32_t cursor = 0;
+    while (cursor < numFrames) {
+        const int32_t next = applyDue(cursor, numFrames);
+        render(out + 2 * cursor, next - cursor);
+        cursor = next;
+    }
+    // What is still waiting is due in a later block: count this one off.
+    for (int32_t i = 0; i < heldCount_; ++i) held_[i].frameOffset -= numFrames;
     // The print tap takes the bus after the mix, so what it captures is
     // what the speaker got: the clamp, the stolen voices and the fades
     // are already in these frames. It is a no-op unless a print is armed.
