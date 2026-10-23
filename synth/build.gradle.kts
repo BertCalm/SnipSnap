@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Native previous/revised EDGE comparisons in complete finite notes and held periods. */
+tasks.register<JavaExec>("generateContourEdgeAudition") {
+    group = "distribution"
+    description = "Render nine Contour recipes at five EDGE positions, finite/held, previous/revised, with exact replay JSON and matched WAVs."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourEdgeAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"

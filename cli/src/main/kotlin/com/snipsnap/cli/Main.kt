@@ -88,7 +88,10 @@ object Cli {
         |                        --velocity 0..1 --seed N)
         |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER; --midi 24..84 --velocity 0..1)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
-        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
+        |                        --instrument [--release S] [--velocity 0..1] makes
+        |                        17 settled-sustain zones, omitting the finite attack;
+        |                        instrument zones own TUNE/HOLD; --midi is finite only)
         |                        (REGISTERS: PIPE/MUSETTE/TRANSISTOR; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
