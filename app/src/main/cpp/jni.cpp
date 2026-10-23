@@ -437,6 +437,11 @@ Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat f
     pads(handle)->pushCommand(c);
 }
 
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jlong>(pads(handle)->framesRendered());
+}
+
 JNIEXPORT jintArray JNICALL
 Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) {
     int32_t buf[256];

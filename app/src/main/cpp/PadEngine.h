@@ -115,6 +115,11 @@ public:
     void stop();
     int32_t sampleRate() const { return sampleRate_; }
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
+    /**
+     * Frames onAudioReady has written since construction: monotonic, never
+     * reset by start() or stop(). Safe from any thread.
+     */
+    int64_t framesRendered() const { return framesRendered_.load(std::memory_order_acquire); }
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
@@ -220,6 +225,9 @@ private:
     int32_t sampleRate_ = 48000;
     std::atomic<bool> restartNeeded_{false};
     std::atomic<bool> sharedMode_{false};
+    // The engine's only clock, the one the loudspeaker is on. The fit from
+    // nanoseconds to these frames waits for bench S1; it will read this.
+    std::atomic<int64_t> framesRendered_{0};
 
     std::unique_ptr<Bank> building_;  // UI thread only
     std::atomic<uint32_t> uiGeneration_{0};  // the last committed bank's generation

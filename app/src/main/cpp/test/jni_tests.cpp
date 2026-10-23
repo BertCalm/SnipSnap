@@ -41,6 +41,7 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
 jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong);
@@ -347,6 +348,14 @@ TEST(jni_refuses_a_sample_it_cannot_copy) {
     CHECK_EQ(static_cast<int>(pads->drainEnded(buf, 8)), 1);
     CHECK_EQ(buf[0], 5);
 
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_pads_reports_the_frames_rendered) {
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    pull(reinterpret_cast<PadEngine*>(h), 24);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_framesRendered(e, nullptr, h), jlong{24});
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 

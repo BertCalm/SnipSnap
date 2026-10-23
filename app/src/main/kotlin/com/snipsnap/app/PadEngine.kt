@@ -403,6 +403,10 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
 
+    /** Frames the audio callback has rendered since this engine was created; 0 when closed. For diagnostics. */
+    @Synchronized
+    fun framesRendered(): Long = if (open) NativePads.framesRendered(handle) else 0L
+
     // ---- the resample tap -------------------------------------------------
 
     /**
