@@ -22,7 +22,7 @@ One scalar derived from the original is shared across all three listening WAVs, 
 
 **Verified in source:** model-1 VENUE selects a feed-forward return. Its endpoint selection cannot feed back into string, body or sympathetic state. The helper checks unchanged stems and events, exact original hashes, finite samples and separation of production patch from audition postmix.
 
-**Proposed review guardrails:** at most 15% additional total energy, E99 extension at most 0.12 s, post-1 s energy at most 0.6% of original total energy, and 1–4 kHz early-body spectral fraction addition at most 0.001. These conservative limits constrain density and upper-mid growth; they are not a musical acceptance test. The test and manifest report the measured result.
+**Proposed review guardrails:** at most 15% additional total energy, E99 extension at most 0.12 s, post-1 s energy at most 0.6% of original total energy, and 1–4 kHz early-body spectral fraction addition at most 0.001. These conservative limits constrain density and upper-mid growth; they are not a musical acceptance test. The test reports measured guardrail results; the manifest includes general signal metrics.
 
 **Listening pending:** whether either return is clearer, useful and still pleasant. No numerical result establishes that it sounds better.
 

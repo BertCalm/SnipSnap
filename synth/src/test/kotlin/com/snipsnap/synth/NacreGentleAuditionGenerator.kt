@@ -170,7 +170,8 @@ object NacreGentleAuditionGenerator {
             "venueLift" to clip.venueLift, "venueGeometry" to clip.venueGeometry,
             "originalVenueGeometry" to original.venueGeometry, "originalReferenceId" to original.id,
             "auditionOnly" to (clip.id != "original"), "productionModelUnchanged" to true,
-            "operation" to "Render the saved model-1 patch without independent output leveling, then multiply only its conditioned venue stem by venueLift and sum it with the unchanged direct/body and sympathetic contributions.",
+            "operation" to if (clip.id == "original") "Identity: retain the published original.raw samples, then apply the common playback gain."
+                else "Float(original.raw - originalVenue + Float(venueLift * endpointVenue)); start from the published original reference, then apply the common playback gain.",
             "playbackGain" to listeningGain, "rawExportGain" to rawGain,
         )
         val recipeFile = writeJson(File(root, recipePath), linkedMapOf(
@@ -350,7 +351,7 @@ object NacreGentleAuditionGenerator {
         Production code, defaults and models are unchanged by this test-only comparison.
 
         Open index.html through a web server, or listen to gentle/audio/*.wav directly.
-        Extract both ZIPs into the same folder for both playback modes.
+        Each ZIP has its own fixed-mode player. The hosted page offers both playback modes.
         gentle/recipes/*.json wrappers save the exact model-1 patch and explicit audition factor.
         Separate *-patch.json files reproduce only the unlifted production source render.
         Native source hashes are evidence, not candidate playback sources.
