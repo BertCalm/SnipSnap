@@ -95,6 +95,23 @@ class PedalBoardTest {
     }
 
     @Test
+    fun `RIG and DELAY on one board run two echoes, one per pass, inside the board's one tail budget`() {
+        val board = PedalBoard(listOf(pick("rig", 1f), pick("delayed", 1f)))
+        assertEquals("rig", board.owner(PedalSide.AMP, "echo")!!.key, "RIG's slapback is the AMP pass's echo")
+        assertEquals("delayed", board.owner(PedalSide.POST, "echo")!!.key, "DELAY is the POST pass's echo")
+        val out = board.process(snare)
+        val budget = snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        assertTrue(out.frameCount <= budget, "two tail-making picks ran past the board's budget")
+        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and up to the board's own
+        // 10 ms fade the pair is DELAY's chain on RIG's render.
+        val rigOnly = PedalBoard(listOf(pick("rig", 1f))).process(snare)
+        assertTrue(rigOnly.frameCount < budget, "RIG alone already fills the budget, so this test proves nothing")
+        assertEquals(budget, out.frameCount, "the board's cap did not engage: DELAY did not run on RIG's output")
+        val keep = (budget - (0.02f * snare.sampleRate).toInt()) * out.channels
+        assertContentEquals(Treatments.chain("delayed").process(rigOnly).samples.copyOfRange(0, keep), out.samples.copyOfRange(0, keep))
+    }
+
+    @Test
     fun `deterministic, finite, bypassed at AMT 0, and refused above six, twice, or on a side it cannot sit`() {
         val board = PedalBoard(listOf(pick("compressed", 0.6f), pick("driven", 0.8f)))
         assertContentEquals(board.process(snare).samples, board.process(snare).samples)

@@ -15,6 +15,8 @@ add_library(snipsnap_surface SHARED
     PadEngine.cpp
     LiveSnapEngine.cpp
     aquarium/AquariumProcessor.cpp
+    aquarium/OfflineRender.cpp
+    aquarium/AquariumJni.cpp
     jni.cpp
 )
 
