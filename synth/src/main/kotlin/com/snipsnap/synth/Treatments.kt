@@ -77,7 +77,8 @@ object Treatments {
         // in order, so the two pedal recipes below follow it.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
         // A drive pedal: VALVE at the top of its gain law (DRIVE 1.0 is gain 1000; at the pad sheet's
-        // AMT 0.7 the recipe's DRIVE fades to 0.7, which is VALVE's own default gain 11.3) with little
+        // AMT 0.7 DRIVE's LOG fade law walks the gain 70 percent of the way there in dB, to gain 51 at
+        // DRIVE 0.80, where the old linear walk of the knob left it at 0.7, VALVE's own gain 11.3) with little
         // sag and the speaker barely in. TONE is left out (its centre is its neutral); CAB takes a small
         // non-neutral value so AMT can move it (a missing macro would be VALVE's default 0.6). The
         // owner's pick, heard against a hot crunch and a lead tone at the pedal board's round two
@@ -125,20 +126,60 @@ object Treatments {
      * centered one (EQ's flat, PITCH's native) fades to its centre instead of
      * being dragged off it.
      */
-    fun fade(chain: FxChain, amount: Float): FxChain {
+    fun fade(chain: FxChain, amount: Float): FxChain = fade(chain, amount, laws = true)
+
+    /**
+     * [fade] with every macro walked linearly, the law before [FadeLaw] existed: what a [FadeLaw.LOG]
+     * macro would have faded to. For the tests that pin "byte-identical except where a LOG macro is
+     * faded" and the fade-law listen; nothing in the product calls it.
+     */
+    internal fun linearFade(chain: FxChain, amount: Float): FxChain = fade(chain, amount, laws = false)
+
+    private fun fade(chain: FxChain, amount: Float, laws: Boolean): FxChain {
         var out = chain
         for (name in FxChain.SECTION_NAMES) {
             val macros = chain.section(name) ?: continue
-            val neutrals = FxChain.macrosOf(name).associate { it.name to it.neutral }
+            val specs = FxChain.macrosOf(name).associateBy { it.name }
             out = out.withSection(
                 name,
                 macros.mapValues { (macro, v) ->
-                    val neutral = neutrals[macro] ?: 0f
-                    (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                    val spec = specs[macro]
+                    val neutral = spec?.neutral ?: 0f
+                    if (laws && spec?.law == FadeLaw.LOG) {
+                        val gain = FxChain.gainOf(name, macro)
+                            ?: error("$name $macro fades by LOG but its section declares no gain law")
+                        logFade(gain, neutral, v, amount)
+                    } else {
+                        (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                    }
                 },
             )
         }
         return out
+    }
+
+    /**
+     * The knob between [neutral] and [value] whose [gain] is [amount] of the way from the neutral's
+     * gain to the value's in decibels (log gain): exactly [neutral] at 0, exactly [value] at 1. The
+     * law is VALVE's own ([Valve.gainFor]), searched by bisection rather than inverted by hand, so the
+     * gain law lives in one place. It must be positive and monotonic between the two ends; VALVE's is
+     * strictly increasing (V1's exponential up to its pivot, log-linear above it).
+     */
+    private fun logFade(gain: (Float) -> Float, neutral: Float, value: Float, amount: Float): Float {
+        if (amount <= 0f) return neutral
+        if (amount >= 1f || value == neutral) return value
+        val gn = gain(neutral).toDouble()
+        val gv = gain(value).toDouble()
+        require(gn > 0.0 && gv > 0.0) { "a LOG macro's gain must be positive at both ends: $gn and $gv" }
+        val target = ln(gn) + (ln(gv) - ln(gn)) * amount
+        var lo = minOf(neutral, value).toDouble()
+        var hi = maxOf(neutral, value).toDouble()
+        val rising = gain(hi.toFloat()) >= gain(lo.toFloat())
+        repeat(60) {
+            val mid = 0.5 * (lo + hi)
+            if ((ln(gain(mid.toFloat()).toDouble()) < target) == rising) lo = mid else hi = mid
+        }
+        return (0.5 * (lo + hi)).toFloat().coerceIn(0f, 1f)
     }
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
@@ -147,8 +188,9 @@ object Treatments {
      * The fade that goes ahead of a hot amp ([needsPreAmpFade] says which chains run one). VALVE lifts a quiet tail by
      * its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends in a click through it,
      * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
-     * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
-     * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
+     * its length follows the amp's lift (see [endFaded]: 57 percent of the full length at the pad
+     * sheet's AMT 0.7 under DRIVE's LOG fade law, a third under the old linear one; none where the amp
+     * does not lift, which is AMT under about 0.30), and it never reaches the first half of a
      * pad. The full length and shape are chosen against the spec's bars and no others, from a declared grid:
      * the fade must leave a snare and a choir ending at least 53 dB under their peaks (the spec's 50 dB
      * plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9 and 1, and the grid is 30 to

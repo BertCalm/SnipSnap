@@ -1085,6 +1085,15 @@ tasks.register<JavaExec>("generateValveAudition") {
 }
 
 /** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
+tasks.register<JavaExec>("generateFadeLawAudition") {
+    group = "distribution"
+    description = "Render the fade law's listen (DRIVE at AMT 0.7, the linear and the LOG walk) under testkit/fade-law-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FadeLawAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/fade-law-audition")
+}
+
 tasks.register<JavaExec>("generatePedalAudition") {
     group = "distribution"
     description = "Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/."
@@ -1589,4 +1598,15 @@ tasks.register<JavaExec>("generateOvenKit") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args("${rootDir}/testkit/oven-kit")
+}
+
+/** The first static circular SOURCE/FOCUS listening experiment, with portable recipes. */
+tasks.register<JavaExec>("generateCausticAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC static native/matched WAVs, exact prototype recipes, diagnostics and a portable listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
