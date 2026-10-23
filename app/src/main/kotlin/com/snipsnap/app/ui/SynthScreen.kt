@@ -1488,7 +1488,9 @@ fun SynthScreen(
     var makingInstrument by remember { mutableStateOf(false) }
     var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
     var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
-    // Zones landed during MAKE, of [holdTotal]; -1 when no MAKE is running.
+    // An instrument-building choice, separate from the saved synthesis recipe.
+    var holdTouchLayers by remember { mutableStateOf(false) }
+    // Completed zones (or CREASE touch samples), of [holdTotal]; -1 when idle.
     var holdDone by remember { mutableStateOf(-1) }
     var holdTotal by remember { mutableStateOf(0) }
     var holdPreviewing by remember { mutableStateOf(false) }
@@ -1539,7 +1541,8 @@ fun SynthScreen(
         }
         Engine.CREASE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
-            if (CreasePadMaker.supports(patch)) HeldSpec.Crease(CreasePadMaker.spec(patch, holdRelease)) else null
+            if (CreasePadMaker.supports(patch))
+                HeldSpec.Crease(CreasePadMaker.spec(patch, holdRelease, holdTouchLayers)) else null
         }
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
@@ -1578,7 +1581,7 @@ fun SynthScreen(
         val spec = heldSpec() ?: return
         val base = holdBase
         val midis = spec.zoneMidis
-        holdTotal = midis.size
+        holdTotal = midis.size * spec.progressPerZone
         holdDone = 0
         holdJob = appScope.launch {
             try {
@@ -1590,13 +1593,13 @@ fun SynthScreen(
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, and CREASE evolves its attack and
                         // held control history. Render serially so phones never hold nine
-                        // independent oversampled states at once; CANCEL and
-                        // the same zone counter remain live between them.
+                        // independent oversampled states at once. CANCEL stays live;
+                        // the counter advances after each note's samples finish.
                         midis.map { midi ->
                             val note = withContext(Dispatchers.Default) {
                                 spec.renderZone(midi) { !isActive }
                             }
-                            withContext(Dispatchers.Main) { holdDone += 1 }
+                            withContext(Dispatchers.Main) { holdDone += spec.progressPerZone }
                             note
                         }
                     } else {
@@ -1605,7 +1608,7 @@ fun SynthScreen(
                                 // CANCEL cancels the scope; each zone asks and stops,
                                 // rather than all nine running on for seconds.
                                 val note = spec.renderZone(midi) { !isActive }
-                                withContext(Dispatchers.Main) { holdDone += 1 }
+                                withContext(Dispatchers.Main) { holdDone += spec.progressPerZone }
                                 note
                             }
                         }.awaitAll()
@@ -2978,6 +2981,7 @@ fun SynthScreen(
                     release = holdRelease,
                     knobLabel = spec.knobLabel,
                     instrumentNote = spec.instrumentNote,
+                    touchLayers = if (engine == Engine.CREASE) holdTouchLayers else null,
                     done = holdDone,
                     total = holdTotal,
                     previewing = holdPreviewing,
@@ -2985,6 +2989,7 @@ fun SynthScreen(
                     scheme = scheme,
                     onAttack = { holdAttack = it },
                     onRelease = { holdRelease = it },
+                    onTouchLayers = { holdTouchLayers = it },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
                     onCancel = ::closeHeld,
@@ -3299,6 +3304,8 @@ private sealed interface HeldSpec {
     val zoneMidis: List<Int>
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
+    /** CREASE counts its touch samples; other makers retain their existing zone count. */
+    val progressPerZone: Int get() = 1
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
@@ -3368,12 +3375,14 @@ private sealed interface HeldSpec {
     class Crease(private val spec: CreasePadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = CreasePadMaker.zoneMidis(spec)
         override val hasAttack get() = false
+        override val progressPerZone get() = spec.layerCount
         override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() =
-            "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CreasePadMaker.renderZone(spec, midi, cancelled))
+        override val instrumentNote get() = if (spec.touchLayers)
+            "KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE."
+        else "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = CreasePadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = CreasePadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Bellows(private val spec: BellowsPadMaker.Spec) : HeldSpec {
@@ -3394,7 +3403,8 @@ private sealed interface HeldSpec {
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
- * and [knobLabel] spells out whichever of the two apply in seconds. While
+ * and [knobLabel] spells out whichever of the two apply in seconds. CREASE's
+ * optional touch-layer button leaves the saved recipe alone. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
  * RENDERING… the way the scope does. CANCEL stays live until the last
@@ -3409,6 +3419,7 @@ private fun HeldInstrumentSheet(
     release: Float,
     knobLabel: String,
     instrumentNote: String?,
+    touchLayers: Boolean?,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -3416,6 +3427,7 @@ private fun HeldInstrumentSheet(
     scheme: Scheme,
     onAttack: (Float) -> Unit,
     onRelease: (Float) -> Unit,
+    onTouchLayers: (Boolean) -> Unit,
     onPreview: () -> Unit,
     onMake: () -> Unit,
     onCancel: () -> Unit,
@@ -3457,6 +3469,19 @@ private fun HeldInstrumentSheet(
                 if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
+                if (touchLayers != null) {
+                    ActionButton(
+                        "TOUCH LAYERS ${if (touchLayers) "ON" else "OFF"}", scheme,
+                        enabled = !busy,
+                        lit = touchLayers,
+                        accessibilityLabel = "TOUCH LAYERS",
+                        modifier = Modifier.fillMaxWidth().semantics { selected = touchLayers },
+                    ) { onTouchLayers(!touchLayers) }
+                    TapeText(
+                        "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
+                    )
+                }
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -3631,7 +3656,7 @@ private fun DroneSheet(
     }
 }
 
-/** MAKE's progress: a bar filling zone by zone, and [Copy.instrumentRendering] counting them. */
+/** MAKE advances per completed zone; CREASE's count includes each touch sample in that zone. */
 @Composable
 private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme) {
     val fraction = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)

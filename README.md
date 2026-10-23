@@ -407,6 +407,9 @@ MAKE INSTRUMENT and CLI `--instrument` turn the same patch into minor-third
 keyboard zones with a continuous onset and measured sustain loop. The sampler
 owns the key-release fade; Paper Keys and Ink Ribbon are the first listening pair.
 [Implementation notes](docs/CREASE.md) cover controls and model compatibility.
+Optional TOUCH LAYERS adds three independent pressure/timbre responses to held
+instruments. The default one-layer path stays unchanged; the touch study pairs
+player output with matched-level comparisons and retains each layer's own loop.
 
 OVERLAP is a finite six-delay resonator: a strike rings
 through selectable self, three-cycle, reflected-pair or six-cycle routing.

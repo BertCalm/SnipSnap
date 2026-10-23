@@ -161,8 +161,16 @@ retain their original model behavior.
 The waveform owns its attack. RELEASE is a separate 0.1–1.5 second phone/MPC
 volume-envelope control, defaulting to 0.6 seconds. Note-off fades the currently
 playing sample; it does not simulate a new deformation-release trajectory.
-RELAX still controls recovery inside the held pressure gesture. There is one
-authored velocity layer; live key velocity applies the existing player gain.
+RELAX still controls recovery inside the held pressure gesture. By default there
+is one authored velocity layer; live key velocity applies the existing player
+gain. Optional TOUCH LAYERS adds independently rendered soft, medium and firm
+pressure histories, with MIDI windows 1–42, 43–84 and 85–127. The saved velocity
+remains the firm excitation anchor; soft and medium use 0.35 and 0.65 times it.
+Each complete note is matched by its converged sustain, then all three receive
+one shared headroom attenuation. Live velocity still applies linear player gain.
+The three layers have separate onset/settling prefixes and loop markers. They
+increase generation and audio storage by approximately three times. They use
+discrete sample selection rather than a continuously morphing velocity model.
 
 The builder exports the native `.xty`, compatibility `.xpm`, WAV loop metadata
 and phone instrument sidecar through `OneNote`. The sidecar retains playback
@@ -183,6 +191,7 @@ CLI example:
 ./gradlew :cli:run --args='synth crease round --preset 2 --midi 60 --velocity .8 --model 3 --out /tmp/crease-native'
 ./gradlew :cli:run --args='synth crease round --preset 2 --instrument --release .6 --out /tmp/crease-keys'
 ./gradlew :cli:run --args='synth crease rubber --preset 2 --instrument --release .6 --out /tmp/crease-keys'
+./gradlew :cli:run --args='synth crease round --preset 2 --instrument --touch --release .6 --out /tmp/crease-touch'
 ```
 
 Saved native recipes can replace `--preset` using `--patch recipe.json`.
@@ -199,6 +208,18 @@ The separate `testkit/crease-keys-audition/` output contains measured zone rende
 dual-format instrument packages, native source recipes and actual
 `InstrumentEngine` hold/release, velocity-gain and phrase performances. It does
 not replace the original 87-clip model-3 listening set.
+
+Reproduce the separate touch-layer study with:
+
+```sh
+./gradlew --no-daemon :shell:generateCreaseTouchAudition
+```
+
+`testkit/crease-touch-audition/` contains three-layer Paper Keys and Ink Ribbon
+packages, native-level player performances, matched timbre comparisons and a
+root-only Reed Mark study. Each package includes its native source recipe and
+measured render evidence. The [touch design](superpowers/specs/2026-10-23-crease-touch-design.md)
+records the level policy, cost and discrete-layer limits.
 
 The audition offers six native patch JSON files and a shelf backup with a
 playable starter kit and editable saved presets. The official shelf import

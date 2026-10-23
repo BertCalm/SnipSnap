@@ -88,6 +88,10 @@ loop. RELEASE controls the existing phone/MPC volume fade after key-up; older
 models keep their original finite/HOLD renders. Paper Keys and Ink Ribbon form
 the first held-keyboard listening pair. Generation is serial and cancellable;
 actual phone timing and MPC playback still require the device acceptance pass.
+The optional TOUCH LAYERS switch renders soft, medium and firm pressure/timbre
+responses with their own loops. It defaults off and uses roughly three times
+the generation work and audio storage. Live key velocity selects a layer and
+applies gain; key-up retains the selected RELEASE fade.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY and VENT also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds

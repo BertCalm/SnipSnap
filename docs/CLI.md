@@ -249,7 +249,7 @@ note and velocity in its native Patch JSON; `--patch recipe.json` replays
 a saved patch, with explicit note, velocity or model flags overriding only
 those fields. See [CREASE](CREASE.md) for examples.
 
-CREASE model 3 also accepts `--instrument [--release S]` for an onset followed by
+CREASE model 3 also accepts `--instrument [--touch] [--release S]` for an onset followed by
 a continuously evolved, measured sustain loop. Release is 0.1–1.5 seconds,
 default 0.6, and belongs to the sampler volume envelope after key-up. The saved
 patch supplies the voice, macros, root and excitation velocity; `--midi`,
@@ -258,6 +258,14 @@ Instrument mode samples minor-third roots around the saved note within MIDI
 24–84, accepts `--patch`, and refuses `--all` and `--attack`. Older models remain
 replayable as finite/HOLD sounds and are refused by this builder without an
 explicit model-3 override.
+
+`--touch` adds three independently rendered pressure/timbre layers, selected at
+MIDI velocities 1–42, 43–84 and 85–127. Firm touch retains the saved excitation
+anchor; soft and medium use 0.35/0.65 times it. Sustain level is matched before
+live key gain, and each layer retains its own onset and loop. Generation and
+audio storage are approximately three times the default one-layer instrument.
+The flag is valid only for CREASE `--instrument`; key-up still uses the program
+volume fade.
 
 ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
 accepts the full signed 64-bit range. `--instrument [--release S]` packages

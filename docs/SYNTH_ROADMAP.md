@@ -111,7 +111,10 @@ velocity routing, the SYNTH picker, FRESH TAPE and CLI. Model-3 MAKE INSTRUMENT 
 CLI `--instrument` retain one continuous attack/settling/held history, sample
 bounded minor-third zones around the saved root, and export through the existing
 phone/dual-MPC package path with a player-controlled release. Paper Keys and Ink
-Ribbon are the first held-instrument listening pair. Voice expansion remains
+Ribbon are the first held-instrument listening pair. Optional TOUCH LAYERS retains three independent velocity-driven
+pressure histories, level-matched by their sustained loops before live key
+gain; default single-layer rendering stays unchanged. The touch study adds a
+PINCH root comparison without a new factory voice. Voice expansion remains
 separate work. [CREASE](CREASE.md) records the scope and
 reproduction commands.
 

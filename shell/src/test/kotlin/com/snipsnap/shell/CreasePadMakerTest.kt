@@ -1,6 +1,8 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Fft
+import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.json.Json
@@ -10,13 +12,20 @@ import com.snipsnap.mpc3.Acvs
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.Crease
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.CreasePresets
+import com.snipsnap.synth.CreaseTouchKeys
 import com.snipsnap.synth.CreaseVoice
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
 import java.io.File
+import java.security.MessageDigest
 import java.util.concurrent.CancellationException
+import javax.xml.parsers.DocumentBuilderFactory
+import org.w3c.dom.Element
 import kotlin.math.abs
+import kotlin.math.cos
 import kotlin.math.ln
+import kotlin.math.log10
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.test.AfterTest
@@ -43,6 +52,11 @@ class CreasePadMakerTest {
         val spec = CreasePadMaker.Spec(patch, releaseSeconds = .4f)
         val notes: List<KeyNote> by lazy {
             CreasePadMaker.zoneMidis(spec).map { CreasePadMaker.renderZone(spec, it) }
+        }
+        val paper = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val touchSpec = CreasePadMaker.Spec(paper, releaseSeconds = .4f, touchLayers = true)
+        val touchNotes: List<List<KeyNote>> by lazy {
+            CreasePadMaker.zoneMidis(touchSpec).map { CreasePadMaker.renderLayers(touchSpec, it) }
         }
     }
 
@@ -205,6 +219,160 @@ class CreasePadMakerTest {
         assertFalse(untouched.exists(), "all zones are validated before the package writer creates a directory")
     }
 
+    @Test
+    fun `default single layer retains the approved package audio names and all metadata bytes`() {
+        // SHA256s from the published 3fb2c43c Paper Keys instrument, not this implementation.
+        val expected = mapOf(
+            "Crease Paper Keys.instrument.json" to "27c7c2e15c9c2dddb233d82a7a03c2c46a6d00a3b1b30865651bc4c0a64b326d",
+            "Crease Paper Keys.xty" to "b006a0ec2da53fabafbd250addd809e98fa3a1403f890bc1c2c01d7552a46788",
+            "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "911765091dd9ab48ccb871827a0e142f2fccb5b21dcee42f23f7440c438749ad",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_A3.wav" to "973f4979c6dba53b72e8de565aba6717cebc64d79e957d155cb65d0ac888f680",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_A4.wav" to "bd9a81541cea931a6052954a891236bd86e6e7a6209144d8bb40d4d15fe17103",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_C3.wav" to "a22d0f9005f0b45feff46f87a4d5b4ffc00b7cc4cf9a72aa1df455624c7de90e",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_C4.wav" to "ee96b1e51ed50f77beb2bc903f5e976f30f3dd2a3adb6ab87ea5b652f55fa8ab",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_C5.wav" to "b904c0d0660023c3dbd53c0cb03567171327282bfe28a6ebdc2769c7f1ff2ee8",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_D#3.wav" to "e25645ad5df66d7d51214626ae542ecfb20df52796998622adfff941bc0741e6",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_D#4.wav" to "25f223b081b512e620d21577ccfe7736423fe4446899c3acd85d15475e208344",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_F#3.wav" to "5c6961701c2d59a2676d833bf260bbfbfe48fc4a1b0b9ea1d7db2a063cab5e70",
+            "Crease Paper Keys_[TrackData]/CreasePaperKeys_F#4.wav" to "0c4ac53bca6efc50c279bf09db4503e4aa91ddfbb0455d6374c5ebc143388d20",
+        )
+        val legacy = CreasePadMaker.Spec(paper)
+        assertFalse(legacy.touchLayers)
+        assertEquals(1, legacy.layerCount)
+        val rendered = CreasePadMaker.zoneMidis(legacy).map { CreasePadMaker.renderLayers(legacy, it) }
+        CreasePadMaker.exportLayers("Crease Paper Keys", legacy, rendered, dest)
+        val actual = dest.walkTopDown().filter { it.isFile }.associate { it.relativeTo(dest).invariantSeparatorsPath to sha(it) }
+        assertEquals(expected, actual, "no --touch must retain every original package byte")
+    }
+
+    @Test
+    fun `touch export retains every layer window root independent loop and common sustain level`() {
+        val before = paper.toJsonText()
+        val program = CreasePadMaker.exportLayers("TOUCH KEYS", touchSpec, touchNotes, dest)
+        val (sidecar, instrument) = InstrumentStore.list(dest).single()
+        assertEquals(3, touchSpec.layerCount)
+        assertEquals(27, instrument.sampleFiles.size)
+        val data = File(dest, Mpc3TrackWriter.trackDataDirName("TOUCH KEYS"))
+        val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(data, "TOUCH KEYS.xpm"))
+        val xmlNodes = xml.getElementsByTagName("Layer")
+        val xmlLayers = (0 until xmlNodes.length).map { xmlNodes.item(it) as Element }.filter {
+            it.getElementsByTagName("SampleName").item(0).textContent.isNotEmpty()
+        }.associateBy { it.getElementsByTagName("SampleName").item(0).textContent }
+        val payload = Json.parse(Acvs.read(File(dest, "TOUCH KEYS.xty")).payloadText)
+        val mpcLayers = objects(payload).filter { "sliceInfo" in it && it["sampleName"]?.str()?.isNotEmpty() == true }.toList()
+        assertEquals(27, xmlLayers.size)
+        assertEquals(27, mpcLayers.size)
+        val mpcByName = mpcLayers.associateBy { it.getValue("sampleName").str() }
+        assertEquals(program.keygroups.first().layers.asReversed().map { it.sampleName },
+            mpcLayers.take(3).map { it.getValue("sampleName").str() }, "MPC3 layers descend hard-first")
+        for ((zoneIndex, zone) in instrument.zones.withIndex()) {
+            assertEquals(CreaseTouchKeys.VELOCITY_WINDOWS, zone.layers.map { it.velStart..it.velEnd })
+            assertEquals(zone.layers.last().sample, zone.sample, "the legacy headline is the hard layer")
+            val levels = zone.layers.mapIndexed { layerIndex, layer ->
+                assertTrue(layer.sample.endsWith("_v${layerIndex + 1}.wav"))
+                val source = touchNotes[zoneIndex][layerIndex]
+                val wav = File(sidecar.parentFile, layer.sample)
+                val decoded = WavReader.read(wav)
+                assertEquals(source.snip.frameCount.toLong(), layer.frameCount)
+                assertEquals(source.loopStartFrame, layer.loopStartFrame)
+                assertEquals(com.snipsnap.audio.SmplChunk(zone.rootNote,
+                    com.snipsnap.audio.SmplChunk.Loop(layer.loopStartFrame, layer.frameCount)), WavReader.readSmpl(wav))
+                assertTrue(decoded.samples.all { it.isFinite() && abs(it) <= .991f })
+                assertTrue(decoded.samples.indices.all { abs(decoded.samples[it] - source.snip.samples[it]) < 2e-7f })
+                assertTrue(Keys.seamError(decoded.samples, layer.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)
+                val stem = wav.nameWithoutExtension
+                val x = xmlLayers.getValue(stem)
+                fun xmlText(name: String) = x.getElementsByTagName(name).item(0).textContent
+                assertEquals(layer.velStart.toString(), xmlText("VelStart"))
+                assertEquals(layer.velEnd.toString(), xmlText("VelEnd"))
+                assertEquals(zone.rootNote.toString(), xmlText("RootNote"))
+                assertEquals(layer.loopStartFrame.toString(), xmlText("SliceLoopStart"))
+                val m = mpcByName.getValue(stem)
+                assertEquals(layer.velStart, m.getValue("velocityStart").int())
+                assertEquals(layer.velEnd, m.getValue("velocityEnd").int())
+                assertEquals(zone.rootNote, m.getValue("rootNote").int())
+                assertEquals(layer.loopStartFrame, m.getValue("sliceInfo").obj().getValue("LoopStart").long())
+                Loudness.of(decoded.samples.copyOfRange(layer.loopStartFrame.toInt(), decoded.samples.size), 1, Crease.RATE).toDouble()
+            }
+            val spread = 20 * log10(levels.max() / levels.min())
+            assertTrue(spread <= .25, "MIDI${zone.rootNote} baked steady level steps $spread dB")
+            println("CREASE TOUCH EXPORT MIDI${zone.rootNote} steadySpreadDb=$spread")
+        }
+        assertEquals(before, paper.toJsonText(), "touch authoring keeps the saved hard-touch anchor and macros")
+    }
+
+    @Test
+    fun `actual layered playback changes spectrum and avoids extra level steps at MIDI window boundaries`() {
+        CreasePadMaker.exportLayers("TOUCH PLAYER", touchSpec, touchNotes, dest)
+        val (sidecar, instrument) = InstrumentStore.list(dest).single()
+        val samples = instrument.sampleFiles.associateWith { WavReader.read(File(sidecar.parentFile, it)).samples }
+        val loaded = InstrumentEngine.Loaded(instrument, Crease.RATE, samples)
+        val zone = instrument.zones.single { it.rootNote == paper.midi }
+        for ((midiVelocity, layerIndex) in listOf(1 to 0, 42 to 0, 43 to 1, 84 to 1, 85 to 2, 127 to 2)) {
+            val touch = midiVelocity / 127f
+            val hit = assertNotNull(KeyHit.resolve(instrument, paper.midi, touch) { samples[it]?.size?.toLong() })
+            assertEquals(zone.layers[layerIndex].sample, hit.sampleFile, "MIDI velocity$midiVelocity")
+            assertEquals(touch * InstrumentEngine.VOICE_LEVEL, hit.gain)
+        }
+        val loopFrames = zone.layers.last().frameCount.toInt() - zone.layers.last().loopStartFrame.toInt()
+        val start = zone.layers.maxOf { it.loopStartFrame.toInt() }
+        val played = listOf(32, 42, 43, 84, 85, 127).associateWith { midiVelocity ->
+            val player = InstrumentEngine(loaded, Crease.RATE)
+            assertTrue(player.noteOn(paper.midi, midiVelocity / 127f))
+            val audio = FloatArray((start + loopFrames) * 2)
+            player.render(audio, start + loopFrames)
+            assertTrue(audio.all { abs(it) < .9f }, "reference soft clip must not disguise level switching")
+            FloatArray(loopFrames) { audio[(start + it) * 2] }
+        }
+        fun level(velocity: Int) = Loudness.of(played.getValue(velocity), 1, Crease.RATE).toDouble()
+        for ((low, high) in listOf(42 to 43, 84 to 85)) {
+            val actual = 20 * log10(level(high) / level(low))
+            val ideal = 20 * log10(high.toDouble() / low)
+            assertTrue(abs(actual - ideal) <= .35, "$low->$high adds a baked level step: $actual vs $ideal dB")
+            println("CREASE TOUCH CROSSOVER $low->$high actualDb=$actual linearIdealDb=$ideal")
+        }
+        val a = harmonicPower(played.getValue(32), Keys.midiHz(paper.midi).toDouble())
+        val b = harmonicPower(played.getValue(127), Keys.midiHz(paper.midi).toDouble())
+        val tv = a.indices.sumOf { abs(a[it] - b[it]) } / 2
+        assertTrue(tv > .05, "actual soft/hard playback has no substantive harmonic redistribution: $tv")
+        println("CREASE TOUCH PLAYER softHardHarmonicTv=$tv")
+    }
+
+    @Test
+    fun `touch mode refuses single layer export and incomplete banks before writing`() {
+        val subnormal = paper.copy(velocity = Float.MIN_VALUE)
+        assertFalse(CreasePadMaker.Spec(subnormal).touchLayers, "the default keeps its existing patch domain")
+        assertFailsWith<IllegalArgumentException> { CreasePadMaker.Spec(subnormal, touchLayers = true) }
+        assertTrue(CreasePadMaker.Spec(paper.copy(velocity = CreaseTouchKeys.MIN_POSITIVE_ANCHOR), touchLayers = true).touchLayers)
+        val refused = File(dest, "refused")
+        assertFailsWith<IllegalArgumentException> { CreasePadMaker.export("NO LOSS", touchSpec, notes, refused) }
+        assertFalse(refused.exists())
+        val fixture = KeyNote(Snip(floatArrayOf(0f, .2f, 0f, -.2f, 0f, .2f, 0f, -.2f), 1, Crease.RATE), 4L)
+        val incomplete = CreasePadMaker.zoneMidis(touchSpec).map { listOf(fixture, fixture) }
+        assertFailsWith<IllegalArgumentException> { CreasePadMaker.exportLayers("NO LOSS", touchSpec, incomplete, refused) }
+        assertFalse(refused.exists())
+        assertFailsWith<CancellationException> { CreasePadMaker.renderLayers(touchSpec, paper.midi) { true } }
+        assertFailsWith<CancellationException> { CreasePadMaker.preview(touchSpec) { true } }
+    }
+
+    @Test
+    fun `touch preview plays three short presses and each selected release without changing source samples`() {
+        val source = touchNotes[CreasePadMaker.zoneMidis(touchSpec).indexOf(paper.midi)]
+        val before = source.map { it.snip.samples.copyOf() }
+        val heard = CreasePadMaker.preview(touchSpec)
+        assertEquals(2, heard.channels)
+        val held = (Crease.RATE * .9f).roundToInt()
+        val tail = (Crease.RATE * (touchSpec.releaseSeconds + .12f)).roundToInt()
+        assertEquals((held + tail) * 3, heard.frameCount)
+        for (i in 0 until 3) {
+            val from = i * (held + tail) * 2
+            assertTrue(rms(heard.samples, from, from + held * 2) > .001)
+            val end = (i + 1) * (held + tail) * 2
+            assertTrue(heard.samples.copyOfRange(end - 256, end).all { it == 0f }, "each press completes its selected release")
+        }
+        before.zip(source).forEach { (saved, note) -> assertContentEquals(saved, note.snip.samples) }
+    }
+
     private fun objects(value: JsonValue): Sequence<Map<String, JsonValue>> = sequence {
         when (value) {
             is JsonValue.Obj -> {
@@ -225,4 +393,22 @@ class CreasePadMakerTest {
 
     private fun rms(samples: FloatArray, start: Int, end: Int): Double =
         sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))
+
+    private fun sha(file: File): String = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+        .joinToString("") { "%02x".format(it.toInt() and 255) }
+
+    private fun harmonicPower(samples: FloatArray, hz: Double): DoubleArray {
+        val size = 65_536
+        val frames = minOf(samples.size, Crease.RATE / 4)
+        val window = FloatArray(size)
+        for (i in 0 until frames) window[i] = (samples[i] * (.5 - .5 * cos(2 * Math.PI * i / (frames - 1)))).toFloat()
+        val magnitude = Fft.magnitudeSpectrum(window, size)
+        val powers = DoubleArray(32)
+        for (h in powers.indices) for (bin in 1 until magnitude.size) {
+            if (abs(bin * Crease.RATE.toDouble() / size - hz * (h + 1)) <= 12)
+                powers[h] += magnitude[bin].toDouble() * magnitude[bin]
+        }
+        val total = powers.sum().coerceAtLeast(1e-30)
+        return DoubleArray(powers.size) { powers[it] / total }
+    }
 }

@@ -11,6 +11,18 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
 
+    @Test
+    fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = CreaseTouchKeys.render(patch, midi = 60)
+        val second = CreaseTouchKeys.render(patch.copy(
+            macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        for ((a, b) in first.zip(second)) {
+            assertTrue(a.loopStartFrame > 0 && a.loopStartFrame == b.loopStartFrame)
+            assertContentEquals(a.snip.samples, b.snip.samples)
+        }
+    }
+
     // The attack, slow pressure memory and streaming output filters all survive to the
     // same loop boundary. No state from the previous key render may enter a fresh note.
     @Test

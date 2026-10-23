@@ -149,6 +149,8 @@ import kotlin.random.Random
  * instrument with `--instrument [--release S]`; the saved root and velocity
  * choose its sample bank and excitation. Earlier models need an explicit
  * `--model 3` override rather than being silently upgraded.
+ * `--touch` adds soft/mid/hard excitation layers up to that saved velocity;
+ * the usual player gain still follows the live key touch.
  * SHOAL accepts `--material HARMONIC|BOWL|WOOD|WIRE`. Material bodies are finite;
  * a finite-material override on a held preset is refused before any files are written.
  * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
@@ -182,7 +184,7 @@ object SynthCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--tempo", "--beats"),
-            boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
+            boolean = setOf("--all", "--instrument", "--touch", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
             ?: throw CliError("synth wants an engine and a voice: snipsnap synth TINES BELL --all --out <dir>")
@@ -257,6 +259,9 @@ object SynthCommand {
 
         val instrument = opts.has("--instrument")
         val drone = opts.has("--drone")
+        if (opts.has("--touch") && (!instrument || engine != CreasePatch.ENGINE)) {
+            throw CliError("--touch requires CREASE --instrument")
+        }
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
@@ -521,7 +526,7 @@ object SynthCommand {
                 raw.toFloatOrNull()?.takeIf { it.isFinite() }
                     ?: throw CliError("--release wants finite seconds, got '$raw'")
             } ?: CreasePadMaker.RELEASE.default
-            CreasePadMaker.Spec(chosen.single() as CreasePatch, releaseSeconds = release)
+            CreasePadMaker.Spec(chosen.single() as CreasePatch, releaseSeconds = release, touchLayers = opts.has("--touch"))
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument: ${e.message ?: "invalid CREASE instrument"}")
         } else null
@@ -575,13 +580,16 @@ object SynthCommand {
         val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
         val midis = CreasePadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { index, midi ->
-            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            CreasePadMaker.renderZone(spec, midi)
+            val progress = if (spec.touchLayers)
+                " (layers ${index * spec.layerCount + 1}..${(index + 1) * spec.layerCount}/${midis.size * spec.layerCount})" else ""
+            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}$progress")
+            CreasePadMaker.renderLayers(spec, midi)
         }
-        CreasePadMaker.export(name, spec, notes, dir)
+        CreasePadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, pressure attack and moving sustain - RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}")
         out.println("CREASE model ${patch.model}, saved root ${Scales.nameOf(patch.midi)}, saved velocity ${patch.velocity}")
+        if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         return 0
     }
 
