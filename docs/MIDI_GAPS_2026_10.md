@@ -170,3 +170,11 @@ Heard: nothing; this session had no phone.
 - **Untestable here, compile checks**: `:app` and native compile warnings were checked only with
   `-q` and `tail`; the final review's non-quiet `:kit`/`:shell` compile showed three
   pre-existing warnings in untouched files and none in this branch's files.
+- **Measured, and not this batch's**: the full JVM suite on the author's macOS arm64 machine
+  at the end of the batch ran 3127 tests with 5 failures, all golden SHA-256 audio fixtures
+  in `OrigamiTest` (2), `OspreyLegacyTest`, `OspreyV3Test` and `TidalTest`. The same five
+  fail on the untouched base `84471534a` on the same machine, and CI's x86 Linux run of that
+  base (tests run 39991096898, 2026-10-23) passed them. The batch changed no file under
+  `synth`, `audio`, `json`, `xpm` or `mpc3`, and those engines import nothing it touched.
+  31 of the 35 golden-hash synth tests pass on arm64; these three engines' float paths do
+  not. Disclosed, not fixed: the fixtures are platform-fragile, and CI is their authority.
