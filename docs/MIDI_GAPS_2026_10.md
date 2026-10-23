@@ -40,7 +40,7 @@ it is done. The gate column names what has to be true first; S1 to S4 are
 | # | Work | Lands | Proof | Gate |
 |---|---|---|---|---|
 | ~~1~~ | ~~**Real-time events.** `MidiWire` emits `Clock`, `Start`, `Stop`, `Continue` with stamps instead of dropping `0xF8` to `0xFC`. Hostile fixture first: a flood of `0xF8` interleaved mid-message must not allocate per byte or stall~~ Done in `f95cd75c9` | `MidiWire.kt`, `MidiWireTest` | `:kit:test` | none |
-| 2 | **Absolute frame counter** (counter done in `aa2583bf9`; the fit is held) in `PadEngine`, incremented per callback, read atomically off the audio thread. The `getTimestamp` fit that maps nanoseconds to frames is designed now and held | `PadEngine.{h,cpp}` | engine test with a synthetic clock | counter: none; fit: **S1** |
+| 2 | **Absolute frame counter** in `PadEngine`, incremented per callback, read atomically off the audio thread. The `getTimestamp` fit that maps nanoseconds to frames is designed now and held | `PadEngine.{h,cpp}` | engine test with a synthetic clock | counter: none; fit: **S1**. Counter done in `aa2583bf9`; the fit is held |
 | 3 | **Join the halves.** `NativePads.noteOn` and `jni.cpp` take a `frameOffset`; `MidiPads` and `MidiKeys` carry `timestampNanos` to the screen's `hit`. Two placements: a fixed one-buffer delay (the default, steady latency) or frame 0 (lowest latency) | `NativePads.kt`, `jni.cpp`, `PadEngine.kt`, `:shell` | JVM tests on the offset arithmetic; engine test end to end | step 2's fit, so **S1** |
 | 4 | **MIDI output.** Open each device's input ports, one MIDI-out thread fed by a ring, `send` with timestamps, never from the audio callback | a `MidiOutput.kt` beside `MidiInput` | a loopback cable; the monitor shows what left | none |
 | ~~5~~ | ~~**Device fingerprint** `(transport, vendorId, productId, port counts, name hash)` on `Opened` and in `onDevicesChanged`; never the display name alone, never a Bluetooth address | `MidiInput.kt`, a pure class in `:shell` | the same key before and after USB permission~~ Done in `bd95b1baa` | none |
@@ -97,7 +97,7 @@ MPC that is already running.
 
 ## As built: batch A (2026-10-23)
 
-Landed on branch `worktree-midi-batch-a`, one commit per task plus one fix: steps 1, 2
+Landed in `f95cd75c9` to `e7cfc0072`, one commit per task plus one fix: steps 1, 2
 (counter), 5 and 6 of the table above.
 
 - **Step 1, real-time events: `f95cd75c9`.** `MidiWire.Event` is split into `Event.Channel`
@@ -123,7 +123,7 @@ Landed on branch `worktree-midi-batch-a`, one commit per task plus one fix: step
   stop is kept in an `ArrayDeque`; a refused all-off is kept and supersedes the kept stops.
   `drainEnded()` flushes first: the all-off, then the stops in order, stopping at the first
   refusal. A successful all-off clears everything kept. One `Log.w` the first time anything is
-  kept. Proof: compile and reading. The C++ `pushCommand` contract is the tested half.
+  kept. Proof: a full `SpscRing` refusing a push is pinned by `ring_keeps_order_and_drops_when_full`; the Kotlin retry above it is proved by compile and reading.
 
 Disclosed, not done:
 
