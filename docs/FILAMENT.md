@@ -55,6 +55,78 @@ replay and native velocity layers. Held pads contain a settled sustain cycle
 and retain the starter's one-shot playback setting; playing them once does
 not add an attack or automatically repeat the sample.
 
+## Rendering and playable THREAD keys
+
+Ordinary rendering and diagnostics share the same synthesis core. Playback
+skips optional stem buffers and energy ledgers; the activity memory, filters,
+DC state, arithmetic order and held convergence rule remain part of both
+paths. Routing uses fixed arrays at the sample rate. Rendering checks
+cancellation during source generation and propagation, including thread
+interrupts from the phone preview job.
+
+The phone keeps at most eight dry previews and 16 MiB of sample data for one
+SYNTH visit. The cache key includes voice, settled controls, root, velocity,
+configuration and model. Stored audio and returned hits own their arrays;
+processing a reopened pad cannot mutate a later preview. Effects run after
+the cache. Cache hits improve repeated previews; a newly edited patch still
+requires synthesis. Benchmark cold edits separately from cache hits.
+
+Model-3 THREAD also exposes MAKE INSTRUMENT. The pilot renders native C3,
+C4 and C5 roots covering MIDI 48–72, with one velocity layer. It retains
+the actual zero-state onset of the periodically driven network and marks
+its settled final cycle for repetition. Independently advanced preceding
+and following cycles check recurrence. It does not splice a finite pluck
+onto a different sustain source. The ordinary HOLD pad remains sustain-only.
+
+The existing keygroup host owns note-velocity gain and note-off release.
+The captured velocity still changes source articulation and routing; exported
+layers remove its separate native gain law once. Standalone previews retain
+native gain. The program release fades the whole note, including its halo;
+an independent post-release halo tail is outside this pilot.
+
+`FilamentKeys`, `FilamentPadMaker` and the phone's existing instrument sheet
+use the established `KeyNote`, `OneNote` and MPC 2/MPC 3 package paths. WAV
+sampler markers, native roots and loop boundaries accompany the audio.
+`TrackData/filament.patch.json` retains the original source recipe, while
+release remains a program property. Other voices and older saved models
+continue through their existing pad renderer.
+
+A render-only Java 17 benchmark on this workspace's four-vCPU Linux host used
+separate before/after JVMs, two warmups and five complete renders per recipe.
+Median times below exclude caching, file encoding and I/O. Both runs produced
+identical native Float32 hashes; a separate pass also matched all 36 complete
+factory recipes across models 1–3, including frame counts.
+
+| Recipe | Before | After | Speedup |
+| --- | ---: | ---: | ---: |
+| Glass Thread | 1.830 s | 0.998 s | 1.83× |
+| Four Routes | 2.958 s | 1.440 s | 2.05× |
+| Held Thread | 4.444 s | 1.853 s | 2.40× |
+| Held Procession | 5.934 s | 2.646 s | 2.24× |
+
+These are desktop measurements, not phone latency guarantees. New edits still
+cost a full render; the cache only reuses an identical dry recipe. Run
+`./gradlew :synth:benchmarkFilament -PfilamentBenchmarkOutput=/fresh/results.json`
+for the explicit benchmark. Its JSON includes patches, timing samples, JVM
+configuration, loaded engine/audio JAR hashes and native sample hashes. The
+same compiled probe can run against preserved baseline JARs without relying
+on the checkout label to identify the measured code.
+
+Generate the small instrument and its listening handoff with
+`./gradlew :shell:generateFilamentKeysAudition`. A fresh
+`testkit/filament-thread-keys/` contains the MPC package, source settings,
+three native attack/loop WAVs and a stereo reference-player demo. The demo
+loads the exported files, holds each root beyond its first wrap and checks
+note-off release. Its manifest labels the host gain and records sample
+markers and hashes. Hardware import and listening acceptance remain separate.
+
+Why it is built this way:
+
+- One DSP core keeps optimization and diagnostic evidence tied to the same sound.
+- Retaining genuine startup preserves the guide's opening gesture before sustain.
+- Three roots and one layer make a small export and playback proof before wider zoning.
+- Existing keygroup formats already carry the attack and loop; no new sample format is needed.
+
 ## Revised voice character
 
 Model 2 gives the same three voices different overtone envelopes: THREAD
@@ -175,8 +247,9 @@ HOLD fits the excitation and pulse schedule to a loop, populates delay
 history and settles the filters in a bounded search. Evidence must compare
 genuinely synthesized successive cycles before wrap treatment, including
 exported PCM. Individual path delays need not divide the loop period.
-A held pad is sustain-only material; a separate attack-plus-loop keygroup
-adapter and physical phone/MPC hardware acceptance are later work.
+A held pad is sustain-only material. The separate THREAD keygroup pilot
+retains an attack before its loop; physical phone/MPC hardware acceptance
+remains outstanding.
 
 ## Reproduction and listening
 

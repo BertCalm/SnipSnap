@@ -143,6 +143,8 @@ import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FilamentVoice
+import com.snipsnap.shell.FilamentPadMaker
+import com.snipsnap.shell.FilamentPreviewCache
 import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockVoice
@@ -1304,6 +1306,9 @@ fun SynthScreen(
         v.start(0)
     }
 
+    val filamentPreviews = remember { FilamentPreviewCache() }
+    DisposableEffect(filamentPreviews) { onDispose { filamentPreviews.clear() } }
+
     // The debounced re-render + retrigger loop: LaunchedEffect's own key
     // change cancels whatever render was in flight and restarts the delay,
     // which is exactly the trailing-edge debounce `touched()` does by hand
@@ -1316,8 +1321,16 @@ fun SynthScreen(
         try {
             val previewJob = coroutineContext[Job]
             val rendered = runInterruptible(Dispatchers.Default) {
-                val patch = if (loadedPatch != null || engine == Engine.OPENSKY) buildCurrentPatch(engine.patchDisplayName(voice)) else null
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT)
+                    buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
+                    patch is FilamentPatch -> {
+                        val cancelled = { previewJob?.isActive == false || Thread.currentThread().isInterrupted }
+                        filamentPreviews.getOrRender(patch, cancelled) {
+                            Filament.render(patch.voice, patch.macros, patch.midi, patch.velocity, patch.config,
+                                patch.model, cancelled)
+                        }
+                    }
                     patch is OpenSkyPatch -> patch.render {
                         previewJob?.isActive == false || Thread.currentThread().isInterrupted
                     }
@@ -1565,10 +1578,12 @@ fun SynthScreen(
     var holdName by remember { mutableStateOf("") }
     val supportsHeldInstrument = engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
-        (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch))
+        (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
+        (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch))
     val heldInstrumentReady = when (engine) {
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
+        Engine.FILAMENT -> FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch)
         else -> true
     }
     val holdBase = currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"
@@ -1615,6 +1630,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
             if (OrigamiPadMaker.supports(patch)) HeldSpec.Origami(OrigamiPadMaker.spec(patch, holdRelease)) else null
         }
+        Engine.FILAMENT -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
+            if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(patch, holdRelease)) else null
+        }
         else -> null
     }
 
@@ -1653,10 +1672,11 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Origami) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Origami || spec is HeldSpec.Filament) {
                         // OPENSKY has larger wet state; BELLOWS renders three
                         // velocity layers per zone. ORIGAMI also keeps its
                         // oversampled attack and sustain work to one zone at a time.
+                        // FILAMENT similarly bounds its network history to one root.
                         // Render serially so phones never hold nine
                         // independent oversampled states at once; CANCEL and
                         // the same zone counter remain live between them.
@@ -3500,6 +3520,17 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
             OrigamiPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Filament(private val spec: FilamentPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = FilamentPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${FilamentPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(FilamentPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = FilamentPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            FilamentPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 }
 

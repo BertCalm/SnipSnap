@@ -42,14 +42,18 @@ work. See [CONFLUENCE.md](CONFLUENCE.md) for reproduction, source attribution,
 portable audition recipes and listening limits. The owner's listening verdict
 is pending.
 
-**Filament first listening prototype (2026-10-19).** THREAD, PULSE and CURL
-test contain → bend → spill in the offline pitched renderer: normalized
-launches, ordered endpoint depletion and escaped input, up to four persistent
-routes, and a damped halo. Six controls, saved root/velocity/configuration,
-provisional recipes, a dry kit helper and the audition generator support
-review before factory/phone promotion. See [FILAMENT.md](FILAMENT.md) for
-reproduction, model boundaries and the private listening page. The owner's
-sonic acceptance and the larger proposed roster remain open.
+**Filament, approved three-voice instrument.** THREAD, PULSE and CURL implement
+contain → bend → spill: normalized launches, ordered endpoint depletion,
+reactive exchange between guided routes and a damped escaped halo. Twelve
+approved dry model-3 recipes are in the factory library, phone SYNTH picker
+and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
+replayable. Playback shares the diagnostic DSP core while skipping optional
+capture work, supports cancellation and uses a bounded dry-preview cache.
+The model-3 THREAD keygroup pilot retains actual startup before settled
+sustain, with C3/C4/C5 roots, one velocity layer and host note-off release.
+Physical phone/MPC acceptance and the larger proposed roster remain later
+work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
+the private listening page.
 
 **Caustic circular proof (2026-10-19).** A finite harmonic tone illuminates a
 circular reflective boundary; nine finite pickups route phase-coherent paths
