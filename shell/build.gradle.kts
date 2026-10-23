@@ -119,3 +119,13 @@ tasks.register<JavaExec>("generateOspreyHandoff") {
     args("${rootDir}/testkit/osprey-handoff")
     args(providers.gradleProperty("ospreyGentleBaselineDir").orElse("${rootDir}/testkit/osprey-gentle-audition").get())
 }
+
+/** Audition and package the new musical presets on the unchanged model-3 OSPREY engine. */
+tasks.register<JavaExec>("generateOspreyCuratedAudition") {
+    group = "distribution"
+    description = "Render sixteen new OSPREY presets, matched listening previews and an editable shared-WAV MPC kit under testkit/osprey-curated-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OspreyCuratedAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-curated-audition")
+}
