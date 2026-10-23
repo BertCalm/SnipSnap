@@ -552,9 +552,9 @@ The 40-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
 picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
 Finite notes route as TONAL and held material as LOOP. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-contains the full factory bank, raw/matched voices across register and velocity,
+preserves the earlier factory bank, raw/matched voices across register and velocity,
 five-point sweeps, interaction corners and HOLD extremes. Run
-`./gradlew :synth:generatePrismAudition` to regenerate the listening pack.
+`./gradlew :synth:generatePrismAudition` to generate the current 40-preset pack.
 [PRISM](PRISM.md) records saving, rendering and loop contracts. The owner's dry
 sonic review is positive. Phone and MPC playback still require device validation;
 PRISM remains a working name pending release naming checks.
