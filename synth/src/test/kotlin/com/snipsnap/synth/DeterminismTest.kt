@@ -16,7 +16,8 @@ class DeterminismTest {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
                 Shoal.defaults(voice) + mapOf("CURRENT" to .7f, "STRAY" to .5f, "HOLD" to hold),
-                midi = 57, velocity = .6f)
+                midi = 57, velocity = .6f,
+                material = if (Shoal.isLoop(hold)) ShoalMaterial.HARMONIC else ShoalMaterial.WOOD)
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice HOLD$hold")
         }
     }

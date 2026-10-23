@@ -158,6 +158,8 @@ threshold by.
 ```
 snipsnap synth TINES BELL --all --out <dir>
 snipsnap synth RELAY KEY --all --midi 60 --velocity 0.6 --out <dir>
+snipsnap synth TRIO ENSEMBLE --all --out <dir>
+snipsnap synth TRIO ENSEMBLE --midi 67 --velocity 0.6 --tempo 120 --beats 3 --out <dir>
 snipsnap synth OVEN FELT --all --midi 60 --velocity 0.65 --out <dir>
 snipsnap synth WICK BUBBLE --all --midi 48 --velocity 0.65 --out <dir>
 snipsnap synth RESIN BRASS --preset 1 --instrument --out <dir>
@@ -191,6 +193,11 @@ and authoring velocity. The ranges are `SynthCommand`'s note-range
 table; a `--midi` outside the voice's range is refused with the range in
 the message.
 
+SHOAL also accepts `--material WOOD|BOWL|WIRE|HARMONIC`. Material selects the
+resonant body; GLASS/RIPPLE still select its movement. WOOD, BOWL and WIRE play
+finite notes, so overriding a held preset with one of those materials is refused
+before any output is written. HARMONIC supports the captured HOLD loop.
+
 | Engine | `--midi` |
 |---|---|
 | ALLOY | 24–96 |
@@ -215,10 +222,16 @@ the message.
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
 | BELLOWS | 48–72 |
 | MURMUR | 36–96 |
+| TRIO | 48–84 |
 | OSPREY | 36–84 |
 | OPENSKY | 0–127 finite; HALO instrument root 36–96 |
 | VENT | 36–84 |
 | WICK | 24–84 |
+
+TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
+and `--beats 1..4` edit the finite performance while preserving its saved seed,
+articulation and model. The selected beats must fit within two seconds;
+the output remains a 3.5-second one-shot with room for the replies to decay.
 
 ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
@@ -505,7 +518,18 @@ the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
-regenerable; `--undo` restores the previous audio byte-identical. On the
+regenerable; `--undo` restores the previous audio byte-identical.
+`--pedals <key[@amount][:side],...>` is the pedal library's board over the
+same pad instead of one character: every pick with its own AMT and its side
+of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
+passes around the amp from the audio on disk, every velocity layer included
+(the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
+recipe riding the pad. The library today: `driven` (the amp), `compressed`,
+`wahed`, and `rig` (a board: compressor, drive, slapback) — e.g.
+`--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
+six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
+refused by name. `--undo` restores as for a character.
+ On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
 `amped` (its chip is a later layout decision) and the three wah
 characters (the WAH chip is not on the pad sheet yet; `touchwahed` and

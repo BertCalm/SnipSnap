@@ -180,6 +180,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.prism() },
         Starter(
+            "origami", "ORIGAMI",
+            "Paper keys, warm fifths and soft upper chords in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.origami() },
+        Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
             seeded = false,
@@ -241,7 +247,7 @@ object StarterKits {
         ) { SynthKits.relay() },
         Starter(
             "shoal", "SHOAL",
-            "Glass and ripples gather into moving harmonic groups in C minor pentatonic.",
+            "Wood, bowl and wire bodies carried by moving energy in C minor pentatonic.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.shoal() },
@@ -263,6 +269,18 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.murmur() },
+        Starter(
+            "scanned-chain", "SCANNED CHAIN",
+            "Moving shapes become plucks, metal and growing tones in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.scannedChain() },
+        Starter(
+            "trio", "TRIO",
+            "Plucked performers and single-strike replies in C minor pentatonic. Low, middle and high drama.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.trio() },
         Starter(
             "osprey", "OSPREY",
             "Five coasts at calm, rough and storm energy. Dry finite sea gestures rooted at C4.",

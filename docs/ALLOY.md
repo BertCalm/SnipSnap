@@ -93,8 +93,21 @@ FUSE zero, and held MATERIAL/FUSE changes after the initial gesture is absent.
 The owner's expanded-roster review identified similarity both within and between
 voices. A separate [voice contrast audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/contrast/)
 therefore compares twelve candidate voicing recipes, two per voice. These use
-explicit model-1 configurations; the released engine defaults, all 36 factory
-patches, original listening assets and their saved reviews remain intact.
+explicit model-1 configurations. The original listening assets and their saved
+reviews remain available as a fixed reference.
+
+The listening selection uses the revised KEY, PLUCK, BRASS and STRING voices,
+and the original BASS and SOFT voices. `Alloy.defaultConfigFor` supplies that
+selection to new patches, factory presets and the patchless app preview. The
+36 factory names and macro settings remain the same; the 24 presets in the four
+revised voices adopt their selected configuration. Selecting one of those factory
+names again therefore uses its revised sound.
+
+Saved patch and pad JSON keeps its explicit configuration, including original
+sounds. Model-1 JSON with a missing or null configuration still decodes with the
+original recipe through `Alloy.configFor`; low-level diagnostic render defaults
+also retain that reference. New code should construct an `AlloyPatch` or pass
+`Alloy.defaultConfigFor(voice)` explicitly when making the selected voice.
 
 ```sh
 ./gradlew --no-daemon :synth:generateAlloyContrastAudition
@@ -108,7 +121,9 @@ measurements and source/compiled-class provenance. Twelve raw PCM24 references,
 twelve patch JSONs and a sixteen-pad MPC kit accompany the page. Pads A13–A16 are
 loop-only BASS/BRASS/STRING/SOFT candidates; enable whole-sample looping on the MPC
 for indefinite HOLD. The new page keeps its listening notes separate from the
-released audition. Candidate voicing and naming await listening approval.
+released audition. The page marks the selected original/revised voice for each
+comparison. The two-role candidates, expanded preset sweep and naming still need
+listening review; the voice choice does not approve every proposed preset.
 
 ## Validation and remaining acceptance
 

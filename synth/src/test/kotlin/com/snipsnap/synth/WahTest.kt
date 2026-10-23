@@ -11,7 +11,9 @@ import kotlin.math.log10
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class WahTest {
@@ -288,5 +290,24 @@ class WahTest {
             val end = endDb(landed)
             assertTrue(end <= -50.0, "$voice: the last 20 ms ends $end dB under the peak, over the -50 bar")
         }
+    }
+
+    @Test
+    fun `the one-cycle floor leaves a long pad sample-exact and raises AUTO's rate on a short one`() {
+        val macros = mapOf("AUTO" to 1f)
+        val choir = Vox.render(VoxVoice.CHOIR)
+        assertEquals(2f, Wah.autoHz(2f, choir.frameCount, choir.sampleRate, 1f), "a pad longer than one cycle keeps the shipped rate")
+        assertContentEquals(Wah.process(choir, macros).samples, Wah.fitted(choir, macros, 1f).samples, "the floor must not touch a pad long enough to hear one cycle at 2 Hz")
+        val hat = Thump.render(ThumpVoice.HAT_CLOSED)
+        val seconds = hat.frameCount.toFloat() / hat.sampleRate
+        assertTrue(seconds < 0.5f, "the hat is $seconds s: not short enough to need the floor at 2 Hz")
+        assertEquals(1f / seconds, Wah.autoHz(2f, hat.frameCount, hat.sampleRate, 1f), 1e-3f, "one cycle over the hat is its length's reciprocal")
+        val plain = Wah.process(hat, macros)
+        assertFalse(plain.samples.contentEquals(Wah.fitted(hat, macros, 1f).samples), "the floor changes a hat that cannot hear one cycle at 2 Hz")
+        assertContentEquals(plain.samples, Wah.fitted(hat, macros, 0f).samples, "a floor of zero cycles is process itself, sample for sample")
+        val touchOnly = mapOf("TOUCH" to 1f)
+        assertContentEquals(Wah.process(hat, touchOnly).samples, Wah.fitted(hat, touchOnly, 1f).samples, "the floor moves AUTO's rate only: TOUCH keeps its SPEED")
+        val rockOnly = mapOf("ROCK" to 1f)
+        assertContentEquals(Wah.process(hat, rockOnly).samples, Wah.fitted(hat, rockOnly, 1f).samples, "the floor moves AUTO's rate only: ROCK keeps its SPEED")
     }
 }

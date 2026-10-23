@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ backup/transfer rules (android:dataExtractionRules).
+
+     SnipSnap is a capture app: the shelf (Kits/), the raw snips (snips/)
+     and loop sessions (sessions/) are *recordings* — mic audio, other
+     apps' audio, whole kits built from them. Auto Backup and
+     device-to-device transfer must not carry recordings off the phone
+     silently; the app's own BACKUP (KitBackup, one explicit file through
+     the share chooser) is the designed way for kits to leave. Small
+     state — preferences, presets metadata outside these folders — still
+     backs up as usual. Keep this list in step with backup_rules.xml. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="Kits/" />
+        <exclude domain="file" path="snips/" />
+        <exclude domain="file" path="sessions/" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="Kits/" />
+        <exclude domain="file" path="snips/" />
+        <exclude domain="file" path="sessions/" />
+    </device-transfer>
+</data-extraction-rules>

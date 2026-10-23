@@ -1,0 +1,15 @@
+schema_version: "1.1"
+name: designs-expressive-pad-grid
+expected_outcome: |
+  A GLASS design (with an EXPRESS tail): starts from what PlayScreen and PadHit do today
+  (position velocity with a 0.20 floor, TalkBack click at CENTER, pointer-id tracking in
+  KeysScreen as the pattern), proposes the velocity mode set (fixed, position, contact
+  area, accelerometer, hybrid) with calibration and a curve, MPC-style 16 levels and
+  pressure-driven note repeat, aftertouch from contact area change with a deadzone and
+  smoothing, an isomorphic grid mode sharing one layout code path with row offset as a
+  parameter and scale lock on by default, gesture exclusion and immersive mode, and an
+  accessibility mode. It gives the research reasons (steady latency beats minimum, respond
+  at the touch point, phones are acceptable expressive instruments), places pure functions
+  in :shell beside PadHit with JVM tests and a tap-to-tone bench row, and respects that the
+  engines render offline (expression drives sample playback parameters, not a live synth
+  voice). Ends with "Why it is built this way". No em dashes.
