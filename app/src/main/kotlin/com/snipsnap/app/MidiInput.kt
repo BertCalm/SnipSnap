@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import android.content.Context
 import android.content.pm.PackageManager
+import android.hardware.usb.UsbDevice
 import android.media.midi.MidiDevice
 import android.media.midi.MidiDeviceInfo
 import android.media.midi.MidiManager
@@ -12,6 +13,8 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.MidiDeviceId
+import com.snipsnap.shell.MidiFingerprint
 
 /**
  * A keyboard plugged into the phone, as events on the main thread.
@@ -40,8 +43,10 @@ import com.snipsnap.kit.MidiWire
  *
  * Nothing here decides what a note means - [Listener.onEvent] hands the
  * typed event to the screen, and `:shell`'s `MidiKeys` and `MidiPads`
- * are the tested rules. [Listener.onDevicesChanged] is for the LCD: the
- * names of what is connected, empty when nothing is; and
+ * are the tested rules. [Listener.onDevicesChanged] is for the LCD and
+ * for whatever will key on a device: each [MidiDeviceId] carries the name
+ * to print and a [MidiFingerprint] steadier than it, empty when nothing
+ * is connected; and
  * [Listener.onDeviceRemoved] is the cable coming out, which the screen
  * answers by letting every note go, because the keyboard's own
  * note-offs are never coming.
@@ -53,7 +58,7 @@ class MidiInput(context: Context) {
 
     interface Listener {
         fun onEvent(event: MidiWire.Event)
-        fun onDevicesChanged(names: List<String>)
+        fun onDevicesChanged(devices: List<MidiDeviceId>)
 
         /**
          * A device went away - the cable was pulled. Its note-offs will
@@ -75,15 +80,15 @@ class MidiInput(context: Context) {
     private var listener: Listener? = null
     private var callback: MidiManager.DeviceCallback? = null
 
-    private class Opened(val info: MidiDeviceInfo, val device: MidiDevice, val ports: List<Pair<MidiOutputPort, Receiver>>)
+    private class Opened(val info: MidiDeviceInfo, val id: MidiDeviceId, val device: MidiDevice, val ports: List<Pair<MidiOutputPort, Receiver>>)
 
     private val opened = LinkedHashMap<Int, Opened>()
 
     /** The phone can do MIDI at all; false on one with no `android.software.midi`. */
     val supported: Boolean get() = manager != null
 
-    /** What is connected right now, by name, in the order it was found. */
-    val deviceNames: List<String> get() = opened.values.map { nameOf(it.info) }
+    /** What is connected right now, by name and fingerprint, in the order it was found. */
+    val devices: List<MidiDeviceId> get() = opened.values.map { it.id }
 
     /**
      * Start listening: every device present now is opened, and the
@@ -135,8 +140,8 @@ class MidiInput(context: Context) {
                 port.connect(receiver)
                 ports += port to receiver
             }
-            opened[info.id] = Opened(info, device, ports)
-            listener?.onDevicesChanged(deviceNames)
+            opened[info.id] = Opened(info, MidiDeviceId(nameOf(info), fingerprintOf(info)), device, ports)
+            listener?.onDevicesChanged(devices)
         }, handler)
     }
 
@@ -148,7 +153,7 @@ class MidiInput(context: Context) {
         // the shorter list. In this order, so the readout never names a
         // device whose notes are still sounding.
         listener?.onDeviceRemoved()
-        listener?.onDevicesChanged(deviceNames)
+        listener?.onDevicesChanged(devices)
     }
 
     private fun release(it: Opened) {
@@ -203,6 +208,38 @@ class MidiInput(context: Context) {
 
     companion object {
         private const val TAG = "MidiInput"
+
+        /**
+         * What the device says it is: transport, USB vendor and product ids
+         * (0 when it is not USB), port counts, manufacturer and product.
+         * The Bluetooth device property is deliberately not read - its
+         * address randomises.
+         */
+        fun fingerprintOf(info: MidiDeviceInfo): MidiFingerprint {
+            val p = info.properties
+            val transport = when (info.type) {
+                MidiDeviceInfo.TYPE_USB -> MidiFingerprint.Transport.USB
+                MidiDeviceInfo.TYPE_BLUETOOTH -> MidiFingerprint.Transport.BLUETOOTH
+                MidiDeviceInfo.TYPE_VIRTUAL -> MidiFingerprint.Transport.VIRTUAL
+                else -> MidiFingerprint.Transport.UNKNOWN
+            }
+            val usb: UsbDevice? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                p.getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE, UsbDevice::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                p.getParcelable(MidiDeviceInfo.PROPERTY_USB_DEVICE)
+            }
+            return MidiFingerprint.of(
+                transport,
+                usb?.vendorId ?: 0,
+                usb?.productId ?: 0,
+                info.inputPortCount,
+                info.outputPortCount,
+                p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER),
+                p.getString(MidiDeviceInfo.PROPERTY_PRODUCT),
+                p.getString(MidiDeviceInfo.PROPERTY_NAME),
+            )
+        }
 
         /** The device's own name, falling back to product and manufacturer, then to its id. */
         fun nameOf(info: MidiDeviceInfo): String {

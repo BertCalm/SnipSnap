@@ -82,6 +82,7 @@ import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
+import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -376,7 +377,7 @@ fun KitScreen(
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
-    var midiDevices by remember(entry.dir) { mutableStateOf<List<String>>(emptyList()) }
+    var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
         MidiPads.handle(event, midiMap, onHit = ::playHeld, onRelease = ::release, onPanic = ::panic)
     })
@@ -384,7 +385,7 @@ fun KitScreen(
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = onMidi(event)
-            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: a gated pad it held would ring until PANIC.
             override fun onDeviceRemoved() = onPanic()
         }
