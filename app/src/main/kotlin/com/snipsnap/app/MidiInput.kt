@@ -32,7 +32,11 @@ import com.snipsnap.kit.MidiWire
  * to the main thread in order. That hop is deliberate, not laziness: a
  * screen's `hit` touches Compose state and the allocator, and a touch on
  * a pad reaches the same `hit` through the main thread too, so a MIDI
- * note is no further from the engine than a finger is.
+ * note is no further from the engine than a finger is. What the hop
+ * must not cost is the note's *when*: the service stamps each delivery
+ * in the `System.nanoTime()` domain, and that stamp rides on every event
+ * as `timestampNanos`, so a screen that learns of a note a frame late
+ * can still say when it was played.
  *
  * Nothing here decides what a note means - [Listener.onEvent] hands the
  * typed event to the screen, and `:shell`'s `MidiKeys` and `MidiPads`
@@ -184,7 +188,10 @@ class MidiInput(context: Context) {
         var alive = true
 
         override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
-            val events = wire.feed(msg, offset, count)
+            // The service's own stamp for this delivery, kept on the event:
+            // the one fact about timing that is lost for good if it is
+            // dropped here, because nothing downstream can read it again.
+            val events = wire.feed(msg, offset, count, timestamp)
             if (events.isEmpty()) return
             handler.post {
                 if (!alive) return@post

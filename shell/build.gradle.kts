@@ -129,3 +129,13 @@ tasks.register<JavaExec>("generateOrigamiGestureAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("origamiGestureOutput").orElse(rootDir.resolve("testkit/origami-gestures").absolutePath).get())
 }
+
+/** Audition and package the new musical presets on the unchanged model-3 OSPREY engine. */
+tasks.register<JavaExec>("generateOspreyCuratedAudition") {
+    group = "distribution"
+    description = "Render sixteen new OSPREY presets, matched listening previews and an editable shared-WAV MPC kit under testkit/osprey-curated-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OspreyCuratedAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/osprey-curated-audition")
+}

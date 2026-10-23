@@ -115,6 +115,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "ohm", "OHM",
+            "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ohm() },
+        Starter(
             "cloud", "CLOUD",
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,
@@ -286,6 +292,12 @@ object StarterKits {
             "Five coasts at calm, rough and storm energy. Dry finite sea gestures rooted at C4.",
             seeded = false,
         ) { SynthKits.osprey() },
+        Starter(
+            "osprey-curated", "OSPREY CURATED",
+            "Warm foundations, soft gestures, moving textures and long swells in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ospreyCurated() },
         Starter(
             "opensky", "OPENSKY",
             "Wide anthems, clear leads, glowing pads and bells in C minor pentatonic.",

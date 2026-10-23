@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed",
             ),
             Treatments.names,
         )
@@ -111,6 +111,7 @@ class TreatmentsTest {
             "wahed" to "wah",
             "touchwahed" to "wah",
             "rockwahed" to "wah",
+            "delayed" to "echo",
         )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)
@@ -124,6 +125,7 @@ class TreatmentsTest {
                 assertTrue(v != neutrals.getValue(macro), "$name.$macro sits on its neutral $v: AMT could never move it")
             }
         }
+        assertTrue(Treatments.chain("delayed", 0f).isBypass, "delayed at AMT 0 is not a bypass")
     }
 
     @Test
@@ -173,6 +175,28 @@ class TreatmentsTest {
     }
 
     private fun pct(v: Double) = String.format(Locale.ROOT, "%.2f", v)
+
+    /**
+     * The fade law on DRIVE, heard as distortion: `driven` on a steady 220 Hz sine at AMT 0.1 to 1. THD
+     * never falls as AMT rises (a tolerance of half a point for the tube's own wobble near the top), and
+     * at the pad sheet's AMT 0.7 the LOG walk makes more THD than the old linear walk of the knob did,
+     * which is what the Stage 0 "not enough" asked for. The measured table is in the benchmark spec's
+     * F2 As built note.
+     */
+    @Test
+    fun `DRIVE's THD rises with AMT, and the LOG walk is hotter than the linear one at the sheet's 0_7`() {
+        val rate = 44_100
+        val sine = Snip(FloatArray(rate) { (0.5 * sin(2.0 * PI * 220.0 * it / rate)).toFloat() }, 1, rate)
+        val steps = (1..10).map { it / 10f }
+        val thd = steps.map { thdPercent(Treatments.chain("driven", it).process(sine)) }
+        for (i in 1 until thd.size) {
+            assertTrue(thd[i] >= thd[i - 1] - 0.5, "THD fell from ${pct(thd[i - 1])} at AMT ${steps[i - 1]} to ${pct(thd[i])} at ${steps[i]}")
+        }
+        val linear = thdPercent(Treatments.linearFade(Treatments.chain("driven", 1f), 0.7f).process(sine))
+        val log = thd[6]
+        assertTrue(log > linear + 1.0, "at AMT 0.7 the LOG walk makes ${pct(log)} percent THD, the linear walk ${pct(linear)}")
+    }
+
 
     /**
      * What makes DRIVE a drive pedal and not a speaker in front of a clean tube: the recipe's own
@@ -292,9 +316,12 @@ class TreatmentsTest {
 
     /**
      * The fade is the tail's alone. Read off a pad of ones, so the samples are the gain itself: it is
-     * a fade of tens of milliseconds, at most 110 at full (95 shipped) and 40 at the pad sheet's AMT
-     * 0.7 (33 shipped), shorter at the lower amount; it ends at silence and falls all the way; and it
-     * never reaches the first half of a pad, however short the pad is (a 20 ms pad fades its last 10).
+     * a fade of tens of milliseconds, at most 110 at full (95 shipped) and 70 at the pad sheet's AMT
+     * 0.7 (54 shipped since DRIVE's fade law became LOG: the amp then lifts by 57 percent of its full
+     * lift in dB, and the fade's length follows the lift; under the old linear walk it lifted by 35
+     * percent and the fade was 33 ms), shorter at the lower amount; it ends at silence and falls all
+     * the way; and it never reaches the first half of a pad, however short the pad is (a 20 ms pad
+     * fades its last 10).
      */
     @Test
     fun `the end fade is the tail's alone - tens of milliseconds, shorter at a lower AMT, never the first half of a pad`() {
@@ -303,7 +330,7 @@ class TreatmentsTest {
         val seventy = fadeMs(Treatments.endFaded(long, "driven", 0.7f))
         val full = fadeMs(Treatments.endFaded(long, "driven", 1f))
         assertTrue(full in 50.0..110.0, "the fade at full is $full ms of a long pad, outside 50 to 110 (95 shipped)")
-        assertTrue(seventy in 10.0..40.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 10 to 40 (33 shipped)")
+        assertTrue(seventy in 40.0..70.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 40 to 70 (54 shipped)")
         assertTrue(seventy < full, "the fade at AMT 0.7 ($seventy ms) is shorter than at full ($full ms)")
         for (ms in listOf(20, 60, 120, 333, 1500)) {
             for (amount in listOf(0.7f, 1f)) {
@@ -320,8 +347,8 @@ class TreatmentsTest {
     }
 
     /**
-     * Where the amp does not lift (its gain at or under 1, DRIVE up to about 0.46, so AMT up to about
-     * 0.46) there is no fade: the door's output is the chain's, byte for byte. There is no click to
+     * Where the amp does not lift (its gain at or under 1, DRIVE up to about 0.46, which DRIVE's LOG
+     * fade law reaches at AMT about 0.30) there is no fade: the door's output is the chain's, byte for byte. There is no click to
      * hide there, and a fade ahead of a nearly clean amp would only shorten the pad's tail.
      */
     @Test

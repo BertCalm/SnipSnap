@@ -154,6 +154,10 @@ testkit/pedal-audition/
 # and published as the listening artifact; never committed.
 testkit/wah-audition/
 
+# The pedal board's Stage 1b listens (clips, manifest and page), rendered by :synth:generatePedalListens
+# and published as the listening artifact; never committed.
+testkit/pedal-listens/
+
 # The BECOME A1 gate's clips, manifest and page, rendered by :shell:generateBecomeAudition
 # and published as the listening artifact; never committed.
 testkit/become-audition/
@@ -242,6 +246,8 @@ testkit/SnipSnap Contour Kit/
 
 # Skitter's generated dry WAVs, diagnostic traces and listening page.
 testkit/skitter-audition/
+testkit/skitter-articulation/
+scripts/__pycache__/
 
 # REGISTERS listening packs are reproducible generated audio and manifests.
 testkit/registers-audition/
@@ -252,6 +258,7 @@ testkit/origami-audition-r1/
 testkit/origami-audition-r2/
 testkit/origami-audition-r3/
 testkit/registers-audition-r4/
+testkit/registers-audition-r5/
 testkit/SnipSnap Skitter Kit/
 
 # OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
@@ -304,9 +311,17 @@ testkit/shoal-audition/
 testkit/shoal-audition-v1/
 testkit/shoal-playable-audition/
 
+# Experimental single-source brass validation outputs.
+testkit/brass-grow-prototype/
+
 # Reproducible OHM listening assets; sources and recipes live under synth/.
 testkit/ohm-audition/
 testkit/ohm-audition-v1/
+
+# OHM's native MPC starter and regenerable kit artifacts.
+testkit/SnipSnap Ohm Kit/
+testkit/SnipSnap-Ohm-Kit.zip
+testkit/SnipSnap-Ohm-Kit.zip.sha256
 
 # CHAMBER finite first-listen WAVs, diagnostics, page and prototype export regenerate locally.
 testkit/chamber-audition/
@@ -331,8 +346,18 @@ testkit/relay-performance-audition/
 testkit/oven-audition/
 testkit/oven-kit/
 
+# Curated OSPREY preset samples, listening previews and MPC/source kit.
+testkit/osprey-curated-audition/
+
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
+
+# CAUSTIC's finite circular first-listen audio, recipes and portable pack.
+testkit/caustic-audition/
+testkit/.caustic-audition-building-*/
+
+# RUSH's listening audio and measurements regenerate from the shared board DSP.
+testkit/rush-audition/
 
 # TRIO generated auditions and playable bank.
 testkit/trio-audition/
@@ -342,7 +367,20 @@ testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
 
+# TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
+testkit/tidal-audition/
+
 # Reproducible scanned-chain experiment audio and offline listening artifacts.
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Generated R6 Skitter listening proof
+testkit/skitter-character-r6/
+
+# Generated R7 Skitter quartet listening proof
+testkit/skitter-quartet/
+testkit/fade-law-audition/
+
+# Reproducible experimental Murmur comparison audio.
+testkit/murmur-luthier-audition/

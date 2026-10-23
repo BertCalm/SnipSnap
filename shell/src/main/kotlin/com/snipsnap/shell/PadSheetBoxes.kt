@@ -117,7 +117,9 @@ object PadSheetBoxes {
 
     /** Every strip at once, in [ORDER]. */
     fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> = linkedMapOf(
-        Box.TREATMENT to (BoardSheet.read(pad.recipe)?.let { "WIDE · ${(it.amount * 100).roundToInt()}%" }
+        Box.TREATMENT to (AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
+            ?: BoardSheet.read(pad.recipe)?.let { "${it.type.name} · ${(it.amount * 100).roundToInt()}%" }
+            ?: pad.recipe?.takeIf(PrintedPads::has)?.let { "${PrintedPads.label(it)} · CHECK RECIPE" }
             ?: treatment(PadSheet.read(pad.recipe))),
         Box.SHAPE to shape(pad),
         Box.MUTATE to mutate(MutateSheet.read(pad.recipe)),
