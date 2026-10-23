@@ -57,12 +57,12 @@ class PadEngine(preferredSampleRate: Int) {
      * what makes a close on the main thread wait. This lock serialises
      * builders against each other and nothing else.
      */
+    private val bankLock = Any()
+
     // Stops the command ring refused; only touched under @Synchronized.
     private val pendingStops = ArrayDeque<Pair<Int, Float>>()
     private var pendingAllOff: Float? = null
     private var keptWarned = false
-
-    private val bankLock = Any()
 
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
@@ -407,7 +407,8 @@ class PadEngine(preferredSampleRate: Int) {
         if (!open) return true
         if (NativePads.stopVoice(handle, voiceId, fadeMs)) return true
         noteKept()
-        pendingStops.add(Pair(voiceId, fadeMs))
+        // A kept all-off already covers this voice; a stop behind it must never replay after it.
+        if (pendingAllOff == null) pendingStops.add(Pair(voiceId, fadeMs))
         return false
     }
 
@@ -422,7 +423,12 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun allOff(fadeMs: Float = PANIC_FADE_MS): Boolean {
         if (!open) return true
-        if (NativePads.allOff(handle, fadeMs)) return true
+        if (NativePads.allOff(handle, fadeMs)) {
+            // This all-off covers whatever was kept; replaying it later would cut notes started since.
+            pendingAllOff = null
+            pendingStops.clear()
+            return true
+        }
         noteKept()
         pendingAllOff = fadeMs
         pendingStops.clear()
@@ -455,7 +461,7 @@ class PadEngine(preferredSampleRate: Int) {
     private fun noteKept() {
         if (keptWarned) return
         keptWarned = true
-        Log.w(TAG, "command ring full: keeping a refused stop to retry at screen rate")
+        Log.w(TAG, "command ring full: keeping a refused stop or all-off to retry at screen rate")
     }
 
     /** Frames the audio callback has rendered since this engine was created; 0 when closed. For diagnostics. */
