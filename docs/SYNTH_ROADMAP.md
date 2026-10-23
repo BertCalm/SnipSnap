@@ -549,7 +549,7 @@ mechanism; the audition retains common source gain while crossed transmission
 disappears and intermediate orientations restore it.
 
 The owner accepted R2's source and contrast direction on 2026-10-23: “New sounds
-are better”, then “Clearer, we can proceed to the next steps”. The next native
+are better”, then “Clearer, we can proceed to the next steps”. The native
 milestone implements WARM/PLUCK/HOLLOW voices, model-2 patches with explicit MIDI
 and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
 top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,

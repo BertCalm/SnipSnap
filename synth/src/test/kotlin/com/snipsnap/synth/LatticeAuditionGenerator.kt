@@ -341,14 +341,14 @@ object LatticeAuditionGenerator {
             val preset = nativePresets.first { it.voice == voice && !Lattice.isLoop(it.macros.getValue("HOLD")) }
             add(
                 "native-${voice.name.lowercase()}", "${preset.name} · native patch",
-                "The saved ${voice.name.lowercase()} factory patch plays C3, G3 and C4 through the native instrument path. The performance wrapper stores each complete note patch. Patch downloads open as ordinary SnipSnap instrument recipes.",
+                "${preset.name} plays C3, G3 and C4 with the ${voice.name.lowercase()} source. Compare its short notes with the sustained HOLD example below. Use Patch to keep this instrument in SnipSnap.",
                 "instrument", listOf("NATIVE PATCH", "C3 → C4"), nativePhraseRecipe(preset),
                 patchFile = patchFiles.getValue(preset),
             )
             val held = nativePresets.first { it.voice == voice && Lattice.isLoop(it.macros.getValue("HOLD")) }
             add(
                 "hold-${voice.name.lowercase()}", "${held.name} · four seamless cycles",
-                "The native held patch supplies one settled loop, repeated four times without a new attack, fade, crossfade or level makeup. Separate evidence files retain its actual preceding cycle and one exported loop. The held preset is a new listening proposal.",
+                "Four uninterrupted repeats of ${held.name}. Listen across the joins: the held tone continues without being struck again. This held voice is a new listening proposal.",
                 "hold", listOf("NATIVE HOLD", "FOUR CYCLES"), nativeHoldRecipe(held),
                 patchFile = patchFiles.getValue(held),
             )

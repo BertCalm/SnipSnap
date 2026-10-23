@@ -45,6 +45,11 @@ including one held position. The starter has eight WARM notes in C minor
 pentatonic from C3, five finite source choices and three held choices. Each pad
 retains its complete recipe and its actual root-note metadata.
 
+The standard drum-program exporter leaves sample looping disabled. On MPC pads
+A14–A16, enable looping across the whole sample for indefinite HOLD; choose
+note-on/gate playback if releasing the pad should stop the sound. The supplied
+WAVs contain periodic sustain, but those device settings are not preconfigured.
+
 Native patches are registered with common patch decoding, presets, velocity
 rendering, the CLI, starter-kit selection and the Android synth picker. This does
 not add a separate MAKE INSTRUMENT keygroup workflow.
@@ -159,9 +164,13 @@ comparisons require the stage-sensitive collector.
   R2 WAV identity, loop pitch/seam measurements, pack validation and browser
   playback. Physical phone and MPC tests have not been run.
 
-Repository APIs were inspected at base commit
-`c5112c507ccb75a8b95313c4ebbe26f8823700aa`. Generated recipes record exact
-working-tree source hashes as well, because implementation may be uncommitted.
+The accepted finite prototype and first native implementation were developed
+against `c5112c507ccb75a8b95313c4ebbe26f8823700aa`. The branch then integrated
+upstream `3ecbdb78de41e13f9603cb9cb6b54fb2a93dd934` through merge `f07669d15`,
+retaining the newer engine registrations alongside Lattice. These commits
+identify source history, not a completed validation result. Each generated
+audition records its actual render commit and exact working-tree source hashes;
+its source download must match that recorded state.
 The broad JVM gate remains `./gradlew --no-daemon test`; a passing targeted suite
 does not establish that this entire repository gate passed.
 
