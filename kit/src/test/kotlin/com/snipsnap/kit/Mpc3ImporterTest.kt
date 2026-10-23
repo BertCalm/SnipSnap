@@ -71,7 +71,7 @@ class Mpc3ImporterTest {
         assertEquals(20, kick.tuneFine)
         assertEquals("#e8542e", kick.colorHex, "class colours survive the native trip")
         assertTrue(kick.oneShot)
-        assertEquals(DrumClass.UNKNOWN, kick.drumClass, "import never invents a class")
+        assertEquals(DrumClass.KICK, kick.drumClass, "the validated adjacent sidecar restores its saved class")
 
         val snare = result.kit.pad(2)!!
         assertEquals(2, snare.velocityLayers.size, "velocity zones survive")

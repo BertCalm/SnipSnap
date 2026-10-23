@@ -11,6 +11,7 @@ import kotlin.math.roundToInt
  * the macros. Driver selection is fixed by voice and model, and is explicit in JSON.
  * TUNE offsets the stored MIDI base over 24 semitones, as in TESSERA. A resulting note
  * outside the voice's supported register is refused rather than silently clamped.
+ * BRASS GROW is an explicit model-3 opt-in; ordinary new patches still use model 2.
  */
 data class EmbouchurePatch(
     override val name: String,
@@ -22,14 +23,17 @@ data class EmbouchurePatch(
     val gesture: EmbouchureGesture = Embouchure.gestureFor(voice),
 ) : Patch {
     init {
-        Patches.validateMacros(this, Embouchure.macrosFor(voice))
+        require(Embouchure.supportsModel(model)) { "unsupported embouchure model $model" }
+        require(model != Embouchure.BRASS_GROW_MODEL || voice == EmbouchureVoice.BRASS) {
+            "EMBOUCHURE model $model only supports BRASS, got $voice"
+        }
+        Patches.validateMacros(this, Embouchure.macrosFor(voice, model))
         val range = Embouchure.midiRange(voice)
         require(midi in range) { "EMBOUCHURE $voice midi out of ${range.first}..${range.last}: $midi" }
-        val tune = macros["TUNE"] ?: Embouchure.defaults(voice).getValue("TUNE")
+        val tune = macros["TUNE"] ?: Embouchure.defaults(voice, model).getValue("TUNE")
         val playedMidi = midi + (tune * Embouchure.TUNE_SEMITONES).roundToInt()
         require(playedMidi in range) { "EMBOUCHURE $voice played midi out of ${range.first}..${range.last}: $playedMidi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "EMBOUCHURE velocity out of 0..1: $velocity" }
-        require(Embouchure.supportsModel(model)) { "unsupported embouchure model $model" }
     }
 
     val driver get() = Embouchure.driverFor(voice)
@@ -58,6 +62,9 @@ data class EmbouchurePatch(
             val model = obj["model"]?.takeUnless { it is JsonValue.Null }?.int() ?: INITIAL_MODEL
             if (!Embouchure.supportsModel(model)) throw JsonException("unsupported embouchure model $model")
             return Patches.decode(value, ENGINE, { n -> EmbouchureVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
+                if (model == Embouchure.BRASS_GROW_MODEL && voice != EmbouchureVoice.BRASS) {
+                    throw JsonException("EMBOUCHURE model $model only supports BRASS, got $voice")
+                }
                 val midi = obj["midi"]?.takeUnless { it is JsonValue.Null }?.int() ?: Embouchure.rootMidi(voice)
                 val velocity = obj["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
                 val driver = obj["driver"]?.takeUnless { it is JsonValue.Null }?.str()

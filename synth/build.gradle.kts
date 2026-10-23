@@ -2,6 +2,85 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
+tasks.register<JavaExec>("generateTidalAudition") {
+    group = "distribution"
+    description = "Render finite PAIR/STREAM raw and matched WAVs, replayable recipes and the TIDAL listening page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalAuditionGenerator")
+    workingDir = projectDir
+    val replay = providers.gradleProperty("tidalReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("tidalReplayOutput").get(),
+            providers.gradleProperty("tidalReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("tidalOutput").orNull ?: "${rootDir}/testkit/tidal-audition")
+    }
+}
+
+/** Dry, finite OHM family encounters and their replayable listening evidence. */
+tasks.register<JavaExec>("generateOhmAudition") {
+    group = "distribution"
+    description = "Render OHM solo/argument/communion comparisons, control trials and the audition page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args("${rootDir}/testkit/ohm-audition")
+}
+
+/** The retained DRAMA development comparisons. */
+tasks.register<JavaExec>("generateTrioAudition") {
+    group = "distribution"
+    description = "Render TRIO solos, alliances, moving relationships and companion entrances with raw/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
+}
+
+/** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
+tasks.register<JavaExec>("generateTrioMusicalBank") {
+    group = "distribution"
+    description = "Render TRIO presets, musical demos and the regenerable MPC kit with its listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioMusicalBankGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioMusicalOutput").orNull ?: "${rootDir}/testkit/trio-musical-bank")
+}
+
+/** First finite CHAMBER proof: a shared quartet, mixed boundaries and causal listening comparisons. */
+tasks.register<JavaExec>("generateChamberAudition") {
+    group = "distribution"
+    description = "Render CHAMBER raw/matched WAVs, complete room recipes and the first-listen audition page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
+    providers.gradleProperty("chamberRevision").orNull?.let {
+        require(it == "timpani") { "chamberRevision must be timpani" }
+        args("--timpani")
+    }
+    providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
+}
+
+tasks.register<JavaExec>("replayChamberDiagnostic") {
+    group = "distribution"
+    description = "Replay an exact diagnostic room/stem recipe saved by the CHAMBER listening bench."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberDiagnosticReplay")
+    workingDir = projectDir
+    doFirst {
+        args(providers.gradleProperty("chamberRecipe").get(), providers.gradleProperty("chamberReplayOutput").get(),
+            providers.gradleProperty("chamberReplayMode").orNull ?: "matched")
+    }
+}
+
 /** Twelve approved model-two patches, three dry studies, and the downloadable starter kit. */
 tasks.register<JavaExec>("generateOverlapMusicalAudition") {
     group = "distribution"
@@ -268,6 +347,21 @@ tasks.register<JavaExec>("generateVentVoiceAudition") {
     args("${rootDir}/testkit/vent-voice-audition")
 }
 
+/** Three finite ORIGAMI voices, unfolded comparisons and note-relative geometry sweeps. */
+tasks.register<JavaExec>("generateOrigamiAudition") {
+    group = "distribution"
+    description = "Render the ORIGAMI first-listen raw/matched WAVs, recipes, measurements and offline listening page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OrigamiAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/origami-audition")
+    if (project.hasProperty("origamiQuick")) args("--quick")
+    if (project.hasProperty("origamiEmbedAudio")) args("--embed-audio")
+    if (project.hasProperty("origamiRefreshPage")) args("--refresh-page")
+    project.findProperty("origamiBaseline")?.toString()?.let { args("--comparison-baseline=$it") }
+}
+
 /** Real JVM-engine listening evidence: dry voices, macro grids and settled held loops. */
 tasks.register<JavaExec>("generateMurmurAudition") {
     group = "distribution"
@@ -317,6 +411,14 @@ dependencies {
     testImplementation(project(":xpm"))
     // The MPC 3 generators write native tracks with embedded groove clips.
     testImplementation(project(":mpc3"))
+}
+
+// The native processor and the JVM recipe reader share one canonical registry.
+// This is data copying only: the JVM module still builds without an Android SDK.
+tasks.processResources {
+    from(rootProject.file("app/src/main/cpp/aquarium/parameters.json")) {
+        into("com/snipsnap/synth/aquarium")
+    }
 }
 
 // Java 17 bytecode so the Android app can consume this module directly.
@@ -631,6 +733,17 @@ tasks.register<JavaExec>("generateWideAudition") {
     mainClass.set("com.snipsnap.synth.WideAuditionGenerator")
     workingDir = projectDir
     args(project.findProperty("wideOutput")?.toString() ?: "${rootDir}/testkit/wide-audition")
+}
+
+/** RUSH's reproducible compound-board listening proof, including level response. */
+tasks.register<JavaExec>("generateRushAudition") {
+    group = "distribution"
+    description = "Render RUSH original/intensity, cumulative-stage and input-level stereo/mono comparisons."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RushAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("rushOutput")?.toString() ?: "${rootDir}/testkit/rush-audition")
 }
 
 tasks.register<JavaExec>("generateStringMachineAudition") {
@@ -991,6 +1104,16 @@ tasks.register<JavaExec>("generateWahAudition") {
     args("${rootDir}/testkit/wah-audition")
 }
 
+/** Render the pedal board's Stage 1b listens (short pads through WAH with and without the one-cycle floor, and the FADE IN, VIBRATO and DELAY comparisons) under testkit/pedal-listens/. See PedalListensGenerator. */
+tasks.register<JavaExec>("generatePedalListens") {
+    group = "distribution"
+    description = "Render the pedal board's Stage 1b listening clips, manifest and page under testkit/pedal-listens/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PedalListensGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/pedal-listens")
+}
+
 tasks.register<JavaExec>("generateFlotillaKit") {
     group = "distribution"
     description = "Render the FLOTILLA acceptance kit under testkit/."
@@ -1292,6 +1415,18 @@ tasks.register<JavaExec>("generateRelayAudition") {
     if (project.hasProperty("relayBaseline")) args("--baseline=${project.property("relayBaseline")}")
 }
 
+/** ONSET's dry four-voice experiment, preserved accepted sounds and compact MPC acceptance kit. */
+tasks.register<JavaExec>("generateOnsetAudition") {
+    group = "distribution"
+    description = "Render 20 ONSET raw/matched hits, 3 four-voice beats, first-pass kick references, listening page and 16-pad MPC sample kit under testkit/onset-audition/."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OnsetAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/onset-audition")
+    providers.gradleProperty("onsetReferenceDir").orNull?.let { args("--reference-dir=$it") }
+}
+
 /** CREASE's reproducible dry prototype matrix and standalone audition assets. */
 tasks.register<JavaExec>("generateCreaseAudition") {
     group = "distribution"
@@ -1305,7 +1440,7 @@ tasks.register<JavaExec>("generateCreaseAudition") {
     if (project.hasProperty("creaseFull")) args("--full")
 }
 
-/** Render Shoal's first two voices with causal comparisons and moving held loops. */
+/** Preserve model 2's voice comparison and original model 1 fixtures. */
 tasks.register<JavaExec>("generateShoalAudition") {
     group = "distribution"
     description = "Render SHOAL dry raw/matched24-bit WAVs, recipes, state traces, measurements and a listening page under testkit/shoal-audition/."
@@ -1326,6 +1461,50 @@ tasks.register<JavaExec>("generateOpenSkyAudition") {
     mainClass.set("com.snipsnap.synth.OpenSkyAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/opensky-audition")
+}
+
+/** Experimental, single-source BRASS GROW register/velocity/loop validation pack. */
+tasks.register<JavaExec>("generateBrassGrowPrototype") {
+    group = "distribution"
+    description = "Render the single-source BRASS GROW prototype matrix and checks under testkit/brass-grow-prototype/."
+    maxHeapSize = "1024m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BrassGrowPrototypeGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/brass-grow-prototype")
+}
+
+/** A finite scanned-chain experiment: frozen versus moving physics, with saved source shapes. */
+tasks.register<JavaExec>("generateScannedChainAudition") {
+    group = "distribution"
+    description = "Render the experimental scanned-chain frozen/moving comparisons, source previews, manifest and listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/scanned-chain-audition")
+}
+
+/** Isolated controls on the unchanged scanned-chain listening core. */
+tasks.register<JavaExec>("generateScannedChainSweeps") {
+    group = "distribution"
+    description = "Render the scanned-chain parameter sweeps, shared-level comparisons and auditable sweep manifest."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainSweepGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/scanned-chain-audition")
+}
+
+/** Production model 3 materials at three native velocities, with matched comparisons. */
+tasks.register<JavaExec>("generateShoalMaterialAudition") {
+    group = "distribution"
+    description = "Render SHOAL material/motion/root/velocity comparisons with ordinary replayable recipes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ShoalMaterialAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("shoalMaterialOutput").orNull ?: "${rootDir}/testkit/shoal-playable-audition/playable")
 }
 
 /** Real VENT starter kit, explicit dry/effects pairs and two replayable MPC sampler grooves. */

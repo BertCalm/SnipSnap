@@ -6,6 +6,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
+import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.CreasePatch
@@ -14,16 +15,20 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
+import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
@@ -36,6 +41,8 @@ import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
+import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
 import java.io.File
@@ -349,7 +356,8 @@ object UserPresets {
     // ---- the desk: promotion into the roster ----
 
     /** The voice enum a roster line names: `THUMP` → `ThumpVoice`, `TONEWHEEL` → `TonewheelVoice`. */
-    fun voiceEnum(engine: String): String = when (engine) {
+    fun voiceEnum(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        ScannedChainPatch.ENGINE -> "ScannedChainVoice"
         OrphicaPatch.ENGINE -> "OrphicaMaterial"
         OpenSkyPatch.ENGINE -> "OpenSkyVoice"
         OverlapPatch.ENGINE -> "OverlapTopology"
@@ -357,7 +365,8 @@ object UserPresets {
     }
 
     /** The table a roster line pastes into, under [ROSTER_DIR]: `ThumpPresets.kt`. */
-    fun rosterFile(engine: String): String = when (engine) {
+    fun rosterFile(engine: String): String = when (engine.uppercase(Locale.ROOT)) {
+        ScannedChainPatch.ENGINE -> "ScannedChainPresets.kt"
         OpenSkyPatch.ENGINE -> "OpenSkyPresets.kt"
         OverlapPatch.ENGINE -> "OverlapFactoryPresets.kt"
         VentPatch.ENGINE -> "VentKitPresets.kt"
@@ -377,7 +386,8 @@ object UserPresets {
      * WICK, SHOAL and CREASE also copy the saved
      * note and strike velocity, which live outside the macro map.
      * PITCHWHEEL, SHOAL and CREASE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
-     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * retain their MIDI base, velocity, model and selected player gesture; OHM also
+     * retains its exact excitation seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -386,8 +396,11 @@ object UserPresets {
      * its render-model version. LACQUER carries its entire layered recipe through
      * the JSON constructor. SPOOL writes its complete machine constructor, including
      * recording roster and HOLD memory mode. RELAY retains its complete source and
-     * phrase schedules. MURMUR keeps its root, velocity and complete
-     * operator/formant/envelope definition. FLOCK retains its note, velocity,
+     * phrase schedules. SHOAL keeps its root, velocity, material and synthesis model.
+     * MURMUR keeps its root, velocity and complete
+     * operator/formant/envelope definition. SCANNED CHAIN keeps its saved 128-point shape,
+     * complete physical configuration, note, velocity and render-model version through JSON.
+     * FLOCK retains its note, velocity,
      * model and exact 64-bit seed. VENT retains note, touch, trajectory seed
      * and either saved renderer through the JSON constructor. OPENSKY retains its complete source
      * timbre, pitch, velocity, gate, wet mode and render model through the JSON
@@ -397,9 +410,28 @@ object UserPresets {
      * arguments before the macros. OVERLAP likewise keeps its explicit model, geometry reference
      * note and velocity through the complete JSON constructor in its factory
      * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
-     * through the complete JSON constructor. Names and embedded JSON are escaped Kotlin string literals.
+     * through the complete JSON constructor. TRIO retains its note, velocity and complete
+     * seeded performance, including the synthesis model. Names and embedded JSON are escaped
+     * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
+            // The original roster's p helper constructs model 2 before .copy runs;
+            // it cannot accept a GROW macro. Construct the saved model directly.
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "EmbouchurePatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is OrigamiPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "OrigamiPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is ChamberPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ChamberPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OverlapPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -415,6 +447,11 @@ object UserPresets {
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "VentPatch.fromJsonText(\"$recipe\"),"
         }
+        if (patch is ScannedChainPatch) {
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "ScannedChainPatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OpenSkyPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -425,10 +462,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            return "LacquerPatch.fromJsonText(\"$recipe\"),"
+            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
         if (patch is StoopPatch) {
@@ -451,6 +489,9 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is OnsetPatch) {
+            return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
+        }
         if (patch is OvenPatch) {
             return "OvenPatch(\"$name\", OvenVoice.${patch.voice}, mapOf($macros), midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
         }
@@ -458,6 +499,13 @@ object UserPresets {
             val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
             return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
                 ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+        }
+        if (patch is ShoalPatch) {
+            // Construct the complete recipe at once: a harmonic held recipe cannot
+            // first pass through the finite WOOD default before a later copy.
+            return "ShoalPatch(\"$name\", ShoalVoice.${patch.voiceName}, mapOf($macros), " +
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, " +
+                "material = ShoalMaterial.${patch.material.name}),"
         }
         if (patch is SpoolPatch) {
             val m = patch.machine
@@ -478,7 +526,6 @@ object UserPresets {
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
-            is ShoalPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                     .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
@@ -486,6 +533,7 @@ object UserPresets {
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
+            is OhmPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, gesture = OhmGesture.${patch.gesture.name}, model = ${patch.model})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is OspreyPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, durationSeconds = ${patch.durationSeconds}f, modelVersion = ${patch.modelVersion})"
             is RevelPatch -> {

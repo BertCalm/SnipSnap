@@ -44,6 +44,7 @@ object Patches {
         val engine = value.obj()["engine"]?.str() ?: throw JsonException("patch has no engine")
         return when (engine) {
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
+            OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
             TinesPatch.ENGINE -> TinesPatch.fromJsonValue(value)
             PluckPatch.ENGINE -> PluckPatch.fromJsonValue(value)
@@ -100,9 +101,15 @@ object Patches {
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
+            ScannedChainPatch.ENGINE -> ScannedChainPatch.fromJsonValue(value)
+            OrigamiPatch.ENGINE -> OrigamiPatch.fromJsonValue(value)
+            ChamberPatch.ENGINE -> ChamberPatch.fromJsonValue(value)
+            TidalPatch.ENGINE -> TidalPatch.fromJsonValue(value)
             NacrePatch.ENGINE -> NacrePatch.fromJsonValue(value)
             OvenPatch.ENGINE -> OvenPatch.fromJsonValue(value)
             CreasePatch.ENGINE -> CreasePatch.fromJsonValue(value)
+            TrioPatch.ENGINE -> TrioPatch.fromJsonValue(value)
+            OhmPatch.ENGINE -> OhmPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }

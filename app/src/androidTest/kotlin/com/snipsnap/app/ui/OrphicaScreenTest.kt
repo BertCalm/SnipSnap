@@ -74,7 +74,7 @@ class OrphicaScreenTest : ComposeScreenTest() {
         }
         // Invoke semantics directly, as PadSheetScreenTest does for sliders:
         // controls below the fold need no animated scroll on the frozen clock.
-        for (engine in listOf("THUMP", "SKIN", "TINES", "VELVET", "VOX", "PLUCK")) {
+        for (engine in listOf("THUMP", "SCANNED CHAIN", "SKIN", "ONSET", "TINES", "VELVET", "VOX", "PLUCK")) {
             click(button("ENGINE $engine · TAP FOR NEXT"))
         }
         button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()

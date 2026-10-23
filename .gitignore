@@ -154,6 +154,10 @@ testkit/pedal-audition/
 # and published as the listening artifact; never committed.
 testkit/wah-audition/
 
+# The pedal board's Stage 1b listens (clips, manifest and page), rendered by :synth:generatePedalListens
+# and published as the listening artifact; never committed.
+testkit/pedal-listens/
+
 # The BECOME A1 gate's clips, manifest and page, rendered by :shell:generateBecomeAudition
 # and published as the listening artifact; never committed.
 testkit/become-audition/
@@ -247,6 +251,10 @@ testkit/skitter-audition/
 testkit/registers-audition/
 testkit/registers-audition-r2/
 testkit/registers-audition-r3/
+testkit/origami-audition/
+testkit/origami-audition-r1/
+testkit/origami-audition-r2/
+testkit/origami-audition-r3/
 testkit/registers-audition-r4/
 testkit/SnipSnap Skitter Kit/
 
@@ -298,6 +306,19 @@ testkit/SnipSnap-Wick-Prototype-Kit.zip
 # Generated Shoal listening assets; recipes and player sources live under synth/.
 testkit/shoal-audition/
 testkit/shoal-audition-v1/
+testkit/shoal-playable-audition/
+
+# Experimental single-source brass validation outputs.
+testkit/brass-grow-prototype/
+
+# Reproducible OHM listening assets; sources and recipes live under synth/.
+testkit/ohm-audition/
+testkit/ohm-audition-v1/
+
+# CHAMBER finite first-listen WAVs, diagnostics, page and prototype export regenerate locally.
+testkit/chamber-audition/
+testkit/SnipSnap Chamber Prototype Kit/
+testkit/SnipSnap-Chamber-Prototype-Kit.zip
 
 # Provisional OVERLAP musical bank, native/matched audio and replayable studies.
 testkit/overlap-musical-audition/
@@ -322,3 +343,22 @@ testkit/osprey-curated-audition/
 
 # OSPREY's dry field-sketch WAV, MIDI, score and performance archive.
 testkit/osprey-field-sketch/
+
+# RUSH's listening audio and measurements regenerate from the shared board DSP.
+testkit/rush-audition/
+
+# TRIO generated auditions and playable bank.
+testkit/trio-audition/
+testkit/trio-audition-model1/
+testkit/trio-audition-model2/
+testkit/trio-audition-model3/
+testkit/trio-audition-model4/
+testkit/trio-musical-bank/
+
+# TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
+testkit/tidal-audition/
+
+# Reproducible scanned-chain experiment audio and offline listening artifacts.
+testkit/scanned-chain-audition/
+testkit/scanned-chain-audition.zip
+testkit/scanned-chain-listen.html

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pre-Android-12 Auto Backup rules (android:fullBackupContent).
+     Same exclusions as data_extraction_rules.xml, for the same reason:
+     Kits/, snips/ and sessions/ are recordings, and the app's own BACKUP
+     is the explicit way they leave the phone. Keep in step with it. -->
+<full-backup-content>
+    <exclude domain="file" path="Kits/" />
+    <exclude domain="file" path="snips/" />
+    <exclude domain="file" path="sessions/" />
+</full-backup-content>

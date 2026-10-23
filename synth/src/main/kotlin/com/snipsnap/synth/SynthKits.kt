@@ -12,6 +12,30 @@ import com.snipsnap.kit.ArrangedPad
  */
 object SynthKits {
 
+    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    fun tidal(): List<ArrangedPad?> {
+        val notes = intArrayOf(48, 51, 53, 55, 58)
+        return TidalVoice.entries.flatMap { voice ->
+            notes.map { midi ->
+                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
+                pad(patch, Tidal.drumClassFor(voice, patch.macros))
+            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+        }
+    }
+
+    /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
+    fun scannedChain(): List<ArrangedPad?> {
+        val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }
+        return voices.mapIndexed { index, voice ->
+            val scaleIndex = when { index < 8 -> index; index < 12 -> index - 8; else -> index - 12 }
+            val patch = ScannedChainPresets.forVoice(voice).single().copy(name = "Chain ${index + 1}", midi = 48 + PENTATONIC[scaleIndex])
+            pad(patch, DrumClass.TONAL)
+        }
+    }
+
+    /** The finite TRIO conversations, in the same order as its factory preset bank. */
+    fun trio(): List<ArrangedPad?> = TrioKits.classic()
+
     /**
      * Twelve dry model-2 VENT pads in C minor pentatonic: bass, short note,
      * percussive hit and long texture for PULSE, COIL and PLUME. Four slots
@@ -626,6 +650,8 @@ object SynthKits {
      * Every pad carries the model, player gesture and native velocity in its recipe.
      * Finite notes are TONAL; Held Effort is a settled LOOP for repeated playback.
      */
+    // The original sixteen-pad acceptance kit is a saved factory contract. The experimental GROW
+    // presets (EmbouchurePresets.experimental) are available in SYNTH without changing that kit.
     fun embouchure(): List<ArrangedPad?> = embouchureStarterPatches().map(::embouchurePad)
 
     /** The original starter layout remains fixed when the selectable factory roster grows. */
@@ -858,6 +884,40 @@ object SynthKits {
     }
 
     /**
+     * Eight CRANE notes climb C minor pentatonic, followed by the six model-4 presets and
+     * the accepted FAN/STILL source tones. Every pad is a dry finite tonal note with its
+     * complete editable recipe; TUNE chooses the note without an overriding MIDI field.
+     */
+    fun origami(): List<ArrangedPad?> {
+        fun arranged(patch: OrigamiPatch): ArrangedPad {
+            val midi = patch.midi ?: Origami.midiFor(patch.voice, patch.macros.getValue("TUNE"))
+            require(midi in Origami.MIDI_MIN..Origami.MIDI_MAX) { "ORIGAMI starter note out of range: $midi" }
+            return pad(patch, DrumClass.TONAL).copy(
+                displayName = patch.name,
+                source = mapOf("rootMidi" to midi.toString(), "rootNote" to Scales.nameOf(midi), "rootOrigin" to "authored"),
+                oneShot = true,
+            )
+        }
+        val crane = OrigamiPresets.forVoice(OrigamiVoice.CRANE).first()
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            val midi = Origami.MIDI_MIN + semitone
+            require(midi in Origami.MIDI_MIN..Origami.MIDI_MAX) { "ORIGAMI starter note out of range: $midi" }
+            crane.copy(
+                name = "Paper ${index + 1}",
+                macros = crane.macros + ("TUNE" to (midi - Origami.MIDI_MIN) / Origami.TUNE_SEMITONES.toFloat()),
+            )
+        }
+        val sources = listOf(OrigamiVoice.FAN, OrigamiVoice.STILL).map { voice ->
+            val reference = OrigamiPresets.forVoice(voice).first()
+            reference.copy(
+                name = if (voice == OrigamiVoice.FAN) "Fan Source" else "Still Source",
+                macros = reference.macros + mapOf("FOLD" to 0f, "MOTION" to 0f),
+            )
+        }
+        return (notes + OrigamiPresets.all() + sources).map(::arranged)
+    }
+
+    /**
      * A dry groove kit: anchored bass and tine rows, then a muted/bright clav pair,
      * hollow organ, whistle, bright fifth chord and octave bell answer. The final two pads hold.
      * Exact note, source registration, answer and chord voicing stay in every recipe.
@@ -942,6 +1002,23 @@ object SynthKits {
             preset("Catch Wire"), preset("Hollow Pair"), preset("Crawling Teeth"), preset("Metal Recoil"),
             preset("Tight Knot"), preset("Quiet Trap"), preset("Long Escape"), preset("Held Struggle"),
         )
+    }
+
+    /** Finite CHAMBER first-listen kit, kept outside FRESH TAPE pending listening review. */
+    fun chamber(): List<ArrangedPad?> {
+        val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            ChamberPatch(
+                "Chamber ${index + 1}", ChamberVoice.HYBRID, Chamber.defaults(ChamberVoice.HYBRID),
+                midi = 48 + semitone,
+            ).let { pad(it, Chamber.drumClassFor(it.voice, it.macros)) }
+        }
+        val comparisons = ChamberPresets.all() + listOf(
+            ChamberPatch("Uniform Room", ChamberVoice.HYBRID,
+                Chamber.defaults(ChamberVoice.HYBRID) + ("DIVIDE" to 0f)),
+            ChamberPatch("Low Canopy", ChamberVoice.AQUARIUM,
+                Chamber.defaults(ChamberVoice.AQUARIUM) + ("PLACEMENT" to .15f)),
+        )
+        return notes + comparisons.map { pad(it, Chamber.drumClassFor(it.voice, it.macros)) }
     }
 
     /**
@@ -1135,12 +1212,12 @@ object SynthKits {
         )
     }
 
-    /** Eight GLASS scale notes, six finite contrasts and two moving held loops, all dry. */
+    /** Eight wooden GLASS-motion scale notes, six material contrasts and two harmonic loops, all dry. */
     fun shoal(): List<ArrangedPad?> {
         fun arranged(patch: ShoalPatch) = pad(patch, Shoal.drumClassFor(patch.voice, patch.macros))
         val notes = PENTATONIC.take(8).mapIndexed { index, semitone ->
             ShoalPatch(
-                "Glass ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
+                "Wood ${index + 1}", ShoalVoice.GLASS, Shoal.defaults(ShoalVoice.GLASS),
                 midi = Shoal.rootMidi(ShoalVoice.GLASS) + semitone,
             ).let(::arranged)
         }

@@ -12,7 +12,10 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
+import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -99,8 +102,10 @@ object Spread {
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
+        is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
+        is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }
 
@@ -197,7 +202,7 @@ object Spread {
         // SPREAD renames the main WAV and lands single-sample pads. Carrying
         // an active board's old file inventory would strand REMOVE/UNDO.
         require(sound.recipe?.entries?.containsKey("boardPad") != true &&
-            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SPREAD }
+            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeSpread(BoardSheet.read(sound.recipe)?.type?.name ?: BoardSheet.read(sound.like?.recipe)?.type?.name ?: "BOARD") }
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {
