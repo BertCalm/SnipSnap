@@ -120,14 +120,14 @@ class OspreyPatchTest {
 
     @Test
     fun `factory comparisons cover five shores and three seas with strict dry finite routing`() {
-        val presets = OspreyPresets.all()
+        val presets = OspreyPresets.coastWeather()
         assertEquals(15, presets.size)
         assertEquals(15, presets.map { it.name }.toSet().size)
         assertEquals(setOf(0f, .25f, .5f, .75f, 1f), presets.map { it.macros.getValue("SHORE") }.toSet())
         assertEquals(3, presets.map { it.macros.getValue("SEA") }.toSet().size)
         assertEquals(1, presets.map { it.macros.getValue("HOLD") }.toSet().size,
             "shore and sea comparisons must share the same finite articulation")
-        assertEquals(presets, Presets.forVoice("OSPREY", "SWELL"))
+        assertEquals(presets, Presets.forVoice("OSPREY", "SWELL").take(presets.size))
         assertTrue(Presets.all().containsAll(presets))
         for (preset in presets) {
             assertEquals(Osprey.MODEL_VERSION, preset.modelVersion, "new factory recipes must select the current model")

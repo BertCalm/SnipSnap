@@ -31,6 +31,11 @@ the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
 
+**Caustic.** [`CAUSTIC.md`](CAUSTIC.md) records the first static circular
+reflection prototype, portable recipes and dry position/mechanism audition.
+Its singing-body identity awaits listening; moving geometry, HOLD and phone
+integration remain later work.
+
 **Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE listening prototype,
 recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
