@@ -33,8 +33,8 @@ enum class PedalSide(val id: String) {
  *
  * Nothing here is heard: the day-one entries are the two chips the owner
  * picked at the pedal board's round two (DRIVE, COMP), the WAH section
- * awaiting its gate, RIG as the first board, authored as a hypothesis
- * for its own gate, and DELAY, added after its own spec, awaiting its gate.
+ * awaiting its gate, and RIG as the first board, authored as a hypothesis
+ * for its own gate. DELAY, added after its own spec, awaits its gate.
  */
 object Pedals {
 

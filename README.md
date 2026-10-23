@@ -1019,9 +1019,10 @@ pitch drift, vibrato, onset, tone and level, which is the difference between
 one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
-one filter, repeats darkening as they fade; HEAD feeds the repeats only the
-note's first 120 ms, so a held note's attack comes back as a repeat),
-SPRING (a Schroeder network, 1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
+one filter, repeats darkening as they fade; its HEAD macro, turned up,
+feeds the repeats only the note's first 120 ms, so a held note's attack
+comes back as a repeat), SPRING (a Schroeder network, 1962), REVERSE,
+SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the

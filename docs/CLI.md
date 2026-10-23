@@ -516,7 +516,8 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel) and `delayed` (a delay pedal: ECHO's
-long, dark repeats 225 ms apart, fed only the note's first 120 ms so a held
+long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
+120 ms so a held
 note's attack comes back as a repeat).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
@@ -527,8 +528,8 @@ of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
 recipe riding the pad. The library today: `driven` (the amp), `compressed`,
-`wahed`, `delayed` (after the amp; no chip until its gate), and `rig` (a board:
-compressor, drive, slapback) — e.g.
+`wahed`, `delayed` (after the amp), and `rig` (a board: compressor, drive,
+slapback); none of these three draws a chip until its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
 six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
 refused by name. `--undo` restores as for a character.

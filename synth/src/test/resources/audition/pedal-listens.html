@@ -123,6 +123,8 @@ const LOUD3 = [['loud', 'Too loud'], ['right', 'Right'], ['quiet', 'Too quiet']]
 const MIX3 = [['100', 'MIX 100'], ['75', 'MIX 75, as built'], ['50', 'MIX 50']];
 const SPACE3 = [['closer', 'Closer together'], ['right', 'Right'], ['apart', 'Further apart']];
 const JOIN3 = [['yes', 'Yes'], ['not_yet', 'Not yet'], ['no', 'No']];
+const REV3 = [['fix', 'Yes, fix it'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
+const TAIL3 = [['miss', 'Yes, I miss the echo after the note'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
 const QIDS = [];
 const state = {};
 const els = {};
@@ -405,19 +407,26 @@ function delayGateSheet() {
     ];
     if (mix) row.push([src + '/gate_mix100_70', 'Mix 100', name + ', DELAY at 70 with MIX 100'], [src + '/gate_mix50_70', 'Mix 50', name + ', DELAY at 70 with MIX 50']);
     const parts = [setRow(name, row), chipGroup('dly_' + id + '_delay', 'Is it a delay, on ' + name + '?', YES4, name + ' delay')];
-    if (held) parts.push(chipGroup('dly_' + id + '_head', 'With HEAD off beside it at the same level, is the head-fed one still the better delay, on ' + name + '?', HEAD3, name + ' head'));
+    if (held) parts.push(chipGroup('dly_' + id + '_head', 'With HEAD off beside it at the same level, which is the better delay, on ' + name + '?', HEAD3, name + ' head'));
     if (id === 'snare') parts.push(
       chipGroup('dly_snare_loud70', 'On the snare at 70, are the repeats too loud?', LOUD3, 'snare loud 70'),
       chipGroup('dly_snare_loud100', 'On the snare at 100, are the repeats too loud?', LOUD3, 'snare loud 100'));
-    if (mix) parts.push(chipGroup('dly_' + id + '_mix', 'Which MIX is the DELAY, on ' + name + '?', MIX3, name + ' mix'));
+    if (mix) parts.push(chipGroup('dly_' + id + '_mix', 'Which MIX sounds right for DELAY, on ' + name + '?', MIX3, name + ' mix'));
     return parts;
   };
   return setSheet('The DELAY gate', [
     'ECHO now has the HEAD knob you asked for. DELAY is the long, dark ECHO with HEAD on: its repeats are fed only the first 120 ms of the note, so a held note\'s attack comes back as a repeat instead of the whole note smearing into itself. It plays at your MIX 75.',
-    'Head off is the same recipe with HEAD off at the same level, so you hear what HEAD alone does. The head clip you liked before was also 8 to 10 dB louder than the plain one, so this is the fair test. Plain 70 is the plain DELAY from the DELAY sheet of your first listen (MIX 50, HEAD off): you passed it on the snare; on the choir and the jangle it did not repeat the attack; the chug did not have it. On the snare and the jangle, MIX 100 and MIX 50 sit beside your 75. At 70 the repeats are 151 ms apart; at 100, 225 ms.',
+    'Head off is the same recipe with HEAD off at the same level, so you hear what HEAD alone does. The head clip you liked before was also 8 to 10 dB louder than the plain one, so this is the fair test. Plain 70 is the plain DELAY from the DELAY sheet of your first listen (MIX 50, HEAD off): you passed it on the snare; on the choir and the jangle it did not repeat the attack; the chug was not on that sheet. On the snare and the jangle, MIX 100 and MIX 50 sit beside your 75. At 70 the repeats are 151 ms apart; at 100, 225 ms.',
+    'Two things HEAD trades away, to judge by ear. On a held note, HEAD on leaves almost no echo after the note ends, because the repeats only ever carried its start; Head off keeps that echo. And HEAD repeats the first 120 ms of a pad, so a pad that starts quiet, like a reversed snare, gets faint repeats: the last row plays one with HEAD on and off.',
   ], ...one('SNARE', 'snare', 'the snare', false, true), ...one('CHOIR', 'choir', 'the choir', true, false),
      ...one('JANGLE', 'jangle', 'the jangle', true, true), ...one('CHUG', 'chug', 'the chug', true, false),
-     chipGroup('dly_spacing', 'At 70 the repeats are 151 ms apart and at 100 225 ms. Is that spacing right?', SPACE3, 'spacing'),
+     setRow('the snare, reversed', [
+       ['SNARE/gate_rev_delay_70', 'Reversed, delay 70', 'the reversed snare, then DELAY at 70'],
+       ['SNARE/gate_rev_head0_70', 'Reversed, head off 70', 'the reversed snare, then DELAY at 70 with HEAD off'],
+     ]),
+     chipGroup('dly_reversed', 'HEAD repeats the first 120 ms of a pad. A reversed snare starts quiet, so with HEAD on its repeats are faint. Is that a problem?', REV3, 'reversed'),
+     chipGroup('dly_tail', 'On the choir and the guitars, HEAD on leaves almost no echo after the note ends; HEAD off keeps one. Does that matter?', TAIL3, 'tail'),
+     chipGroup('dly_spacing', 'At 70 the repeats are 151 ms apart, and at 100 they are 225 ms apart. Is that spacing right?', SPACE3, 'spacing'),
      chipGroup('dly_join', 'Should DELAY join the pedals?', JOIN3, 'join'));
 }
 

@@ -100,10 +100,15 @@ class PedalBoardTest {
         assertEquals("rig", board.owner(PedalSide.AMP, "echo")!!.key, "RIG's slapback is the AMP pass's echo")
         assertEquals("delayed", board.owner(PedalSide.POST, "echo")!!.key, "DELAY is the POST pass's echo")
         val out = board.process(snare)
-        assertTrue(
-            out.frameCount <= snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt(),
-            "two tail-making picks ran past the board's budget",
-        )
+        val budget = snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        assertTrue(out.frameCount <= budget, "two tail-making picks ran past the board's budget")
+        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and up to the board's own
+        // 10 ms fade the pair is DELAY's chain on RIG's render.
+        val rigOnly = PedalBoard(listOf(pick("rig", 1f))).process(snare)
+        assertTrue(rigOnly.frameCount < budget, "RIG alone already fills the budget, so this test proves nothing")
+        assertEquals(budget, out.frameCount, "the board's cap did not engage: DELAY did not run on RIG's output")
+        val keep = (budget - (0.02f * snare.sampleRate).toInt()) * out.channels
+        assertContentEquals(Treatments.chain("delayed").process(rigOnly).samples.copyOfRange(0, keep), out.samples.copyOfRange(0, keep))
     }
 
     @Test

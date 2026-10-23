@@ -20,10 +20,13 @@ import kotlin.test.assertTrue
 /**
  * ECHO's HEAD macro (docs/superpowers/specs/2026-10-22-delay-head-design.md).
  *
- * The first test pins ECHO as it shipped before HEAD existed: SHA-256 hashes of its output, recorded on the base and
- * never re-recorded. Every setting is a literal, so a later change to a recipe, to Siren, or to the macro list (whose
- * scramble gains a fifth draw) cannot move what the pin compares. The rest pin what HEAD does when it is on, at the
- * values the spec measured, with the bars at the measured value less a stated margin.
+ * The first test pins ECHO as it shipped before HEAD existed: SHA-256 hashes of its output, recorded on the base.
+ * Every setting is a literal, so a later change to a recipe, to Siren, or to the macro list (whose scramble gains a
+ * fifth draw) cannot move what the pin compares. The sources are engine renders (the spec's choice), so their own hashes
+ * are pinned first: if a source moves, the test says the source moved, not ECHO. Only then may the output pins be
+ * re-recorded, and only by running the base Echo.kt (as of e9d62a05, unchanged since #335) on the new render. The rest
+ * pin what HEAD does when it is on, at the values the spec measured, with the bars at the measured value less a stated
+ * margin.
  */
 class EchoTest {
 
@@ -43,7 +46,14 @@ class EchoTest {
         "random2" to mapOf("TIME" to 0.84498405f, "REPEAT" to 0.28444004f, "TONE" to 0.91098607f, "MIX" to 0.0035728216f),
     )
 
-    /** Recorded on the base before HEAD existed (plan Task 1). Never re-record: a mismatch means HEAD 0 is no longer ECHO. */
+    /** The three sources as they render on the base: a mismatch here means a source moved, not ECHO. */
+    private val SOURCE_PINS: Map<String, String> = mapOf(
+        "kick" to "8ea2ee2d857e0dc74ad4d7f81a30db5c3c92b3000c2e5080d983c153e72a660d",
+        "snare" to "a5d3bed7f4a5f64dfb127096d7e0b855b19d6b2f4a3d791f7d694e7b39dc5a51",
+        "choir" to "8980c33ae0658f771a66eba27c5317bc3dd616df5fade7d90d6833f6cdfa98a7",
+    )
+
+    /** Recorded on the base before HEAD existed (plan Task 1). With the sources unmoved, a mismatch means HEAD 0 is no longer ECHO. */
     private val PINS: Map<String, String> = mapOf(
         "kick/slapback" to "979160c2327daedc29f8cc69a2a991bfd3e63ea3b9f0d88c0bc0f0675118b44e",
         "kick/landing" to "beeec4a2b1ccd365d06eade56dd90135cc4e6ab04c19a1980a64f04a6be9fce5",
@@ -65,8 +75,11 @@ class EchoTest {
         "choir/random2" to "1c9a6551e31d9a3a6e9e3cc40d830c87d50757c5c33edc12b3bd1774e9e4bdf4",
     )
 
-    /** `delayed` at full, spelled out so this file does not lean on Treatments: the values the spec measured. */
+    /** `delayed` at full, spelled out so the figures below are read off a literal; the recipe test ties it to Treatments. */
     private val recipe = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1f)
+
+    /** The recipe with [mix] for its MIX, faded to [amount] the way the pad sheet fades ECHO (every macro linear, neutral 0). */
+    private fun at(mix: Float, amount: Float) = (recipe + ("MIX" to mix)).mapValues { it.value * amount }
 
     private fun hash(samples: FloatArray): String {
         val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -108,20 +121,27 @@ class EchoTest {
     }
 
     /**
-     * [gap]'s two windows on a mono pad's wet alone, `(out / k - dry) / mix`, with k read off the loudest dry frame
-     * before the first repeat (where the output is the dry times the peak match's one gain).
+     * A mono pad's wet alone, `(out / k - dry) / mix`, with k read off the loudest dry frame before the first repeat
+     * (where the output is the dry times the peak match's one gain).
      */
-    private fun wetGap(dry: Snip, macros: Map<String, Float>): Double {
+    private fun wet(dry: Snip, macros: Map<String, Float>): Snip {
         val r = dry.sampleRate
         val out = Echo.process(dry, macros)
         val delay = Echo.delayFrames(macros.getValue("TIME"), r)
-        val head = Echo.headFrames(delay, r)
         var f0 = 0
         for (f in 0 until delay) if (abs(dry.samples[f]) > abs(dry.samples[f0])) f0 = f
         val k = out.samples[f0] / dry.samples[f0]
         val mix = macros.getValue("MIX")
-        val wet = Snip(FloatArray(out.frameCount) { f -> (out.samples[f] / k - (if (f < dry.frameCount) dry.samples[f] else 0f)) / mix }, 1, r)
-        return db(rms(wet, delay + head + ms(r, 10f), 2 * delay - ms(r, 5f)), rms(wet, delay, delay + ms(r, 20f)))
+        return Snip(FloatArray(out.frameCount) { f -> (out.samples[f] / k - (if (f < dry.frameCount) dry.samples[f] else 0f)) / mix }, 1, r)
+    }
+
+    /** [gap]'s two windows on a mono pad's [wet] alone. */
+    private fun wetGap(dry: Snip, macros: Map<String, Float>): Double {
+        val r = dry.sampleRate
+        val w = wet(dry, macros)
+        val delay = Echo.delayFrames(macros.getValue("TIME"), r)
+        val head = Echo.headFrames(delay, r)
+        return db(rms(w, delay + head + ms(r, 10f), 2 * delay - ms(r, 5f)), rms(w, delay, delay + ms(r, 20f)))
     }
 
     /** A held 220 Hz tone with a 2 ms click at its start: a picked note with nothing else in it. */
@@ -135,7 +155,10 @@ class EchoTest {
 
     @Test
     fun `HEAD 0 is ECHO as it shipped, byte for byte - absent, zero, under the off point and at it`() {
-        assertEquals(18, PINS.size, "18 pins: three sources by six settings")
+        assertEquals(sources.keys.flatMap { src -> settings.keys.map { "$src/$it" } }.toSet(), PINS.keys, "one pin per source and setting")
+        for ((src, snip) in sources) {
+            assertEquals(SOURCE_PINS.getValue(src), hash(snip.samples), "the $src render moved, not ECHO: re-record its PINS with the base Echo.kt (e9d62a05) on the new render")
+        }
         for ((src, snip) in sources) for ((set, m) in settings) {
             val want = PINS.getValue("$src/$set")
             assertEquals(want, hash(Echo.process(snip, m).samples), "$src/$set: HEAD absent is no longer the shipped ECHO")
@@ -226,20 +249,46 @@ class EchoTest {
         assertEquals(2116, Echo.headFrames(Echo.delayFrames(0f, r), r))
         assertEquals(4100, Echo.headFrames(Echo.delayFrames(0.375f, r), r))
         assertEquals(5292, Echo.headFrames(Echo.delayFrames(0.75f, r), r))
-        val tone = heldTone()
         val m = recipe + ("TIME" to 0f)
-        val out = Echo.process(tone, m)
+        val w = wet(heldTone(), m).samples
         val delay = Echo.delayFrames(0f, r)
         val head = Echo.headFrames(delay, r)
-        // Before the first repeat the output is the dry times the peak match's gain: read the gain off the loudest dry frame there.
-        var f0 = 0
-        for (f in 0 until delay) if (abs(tone.samples[f]) > abs(tone.samples[f0])) f0 = f
-        val k = out.samples[f0] / tone.samples[f0]
-        val mix = m.getValue("MIX")
-        val wet = FloatArray(out.frameCount) { f -> (out.samples[f] / k - (if (f < tone.frameCount) tone.samples[f] else 0f)) / mix }
-        val wetPeak = wet.maxOf { abs(it) }.toDouble()
-        val worst = (delay + head + ms(r, 2f)..2 * delay - ms(r, 1f)).maxOf { abs(wet[it]) }.toDouble()
+        val wetPeak = w.maxOf { abs(it) }.toDouble()
+        val worst = (delay + head + ms(r, 2f)..2 * delay - ms(r, 1f)).maxOf { abs(w[it]) }.toDouble()
         assertTrue(db(worst, wetPeak) < -60.0, "the wet between repeats at TIME 0 is ${db(worst, wetPeak)} dB under its peak")
+    }
+
+    @Test
+    fun `the head window holds, fades on a raised cosine over its last third, then closes`() {
+        for (h in listOf(5292, 4100, 2116)) {
+            val fade = h / 3
+            assertEquals(1f, Echo.window(0, h))
+            assertEquals(1f, Echo.window(h - fade, h), "the fade starts at the window's last third")
+            assertEquals(0.5f, Echo.window(h - fade / 2, h), 2e-3f, "half way down at the fade's middle")
+            assertEquals(0f, Echo.window(h, h))
+            for (f in 1..h) {
+                val step = Echo.window(f - 1, h) - Echo.window(f, h)
+                assertTrue(step >= 0f, "the window rose at frame $f of $h")
+                assertTrue(step <= PI / (2 * fade) + 1e-6, "a step of $step at frame $f of $h: the fade is not a raised cosine")
+            }
+        }
+    }
+
+    @Test
+    fun `on a pad that ends inside the head, HEAD changes nothing - every repeat and the tail are ECHO's own`() {
+        // The feed factor is exactly 1f wherever the window is open, and the dry is 0 after the pad, so the bus, its feedback
+        // and the tail's length are the same with HEAD on and off: the feedback path is checked repeat by repeat.
+        val click = Snip(FloatArray(44_100) { if (it < 32) 0.9f else 0f }, 1, 44_100)
+        for (time in listOf(0.75f, 0f)) for (s in listOf(click, doubled(click))) {
+            val m = recipe + ("TIME" to time)
+            assertContentEquals(Echo.process(s, m + ("HEAD" to 0f)).samples, Echo.process(s, m).samples, "TIME $time on ${s.channels} channels")
+        }
+    }
+
+    @Test
+    fun `the recipe measured here is the delayed character, and its first tap is the sheet's`() {
+        assertEquals(recipe, Treatments.chain("delayed").echo, "delayed moved: re-measure, and move this file's recipe and bars with it")
+        assertEquals(Treatments.chain("delayed", 0.7f).echo, at(0.75f, 0.7f), "the pad sheet no longer fades ECHO linearly: the AMT 70 figures here are not what it plays")
     }
 
     @Test
@@ -247,7 +296,9 @@ class EchoTest {
         assertEquals(1f, Echo.reach(mapOf("HEAD" to 2f / 3f)))
         assertEquals(1f, Echo.reach(mapOf("HEAD" to 0.7f)), "the recipe at AMT 70")
         assertEquals(0.9f, Echo.reach(mapOf("HEAD" to 0.6f)), 1e-6f)
+        assertEquals(0.001f, Echo.HEAD_OFF, "the off point is the spec's")
         assertEquals(0f, Echo.reach(mapOf("HEAD" to Echo.HEAD_OFF)))
+        assertTrue(Echo.reach(mapOf("HEAD" to 0.0011f)) > 0f, "just above the off point HEAD is on")
         assertEquals(0f, Echo.reach(emptyMap()))
         assertContentEquals(Echo.process(choir, recipe).samples, Echo.process(choir, recipe + ("HEAD" to 0.7f)).samples)
         assertNotEquals(Echo.process(choir, recipe).samples.toList(), Echo.process(choir, recipe + ("HEAD" to 0.6f)).samples.toList())
@@ -259,7 +310,6 @@ class EchoTest {
     fun `the jangle's pick and the snare's repeat at the first tap - the figures MIX 0_75 was chosen from`() {
         val jangle = Magnet.landingChain(MagnetVoice.JANGLE).process(Magnet.render(MagnetVoice.JANGLE))
         val chug = Magnet.landingChain(MagnetVoice.CHUG).process(Magnet.render(MagnetVoice.CHUG))
-        fun at(mix: Float, amount: Float) = (recipe + ("MIX" to mix)).mapValues { it.value * amount }
         // The pick over the body: the first repeat's first 25 ms over the 20 ms ending 5 ms before it, peak.
         fun pick(out: Snip, delay: Int) = db(peak(out, delay, delay + ms(out.sampleRate, 25f)), peak(out, delay - ms(out.sampleRate, 25f), delay - ms(out.sampleRate, 5f)))
         // The repeat against the hit: the first repeat's first 20 ms over the hit's first 20 ms, rms.

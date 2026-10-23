@@ -23,13 +23,14 @@ import kotlin.math.roundToInt
  * JANGLE. The rack's one-second tail cap runs from the pad's own end, so on these sources it lands on
  * repeats already 48 to 80 dB under the hit (measured 2026-10-20); the page asks whether that cut is
  * heard at all, rather than telling the owner it is. (5) The DELAY gate, after the owner's long-note
- * verdict (2026-10-22) and answers (2026-10-23): `delayed` as built (ECHO with HEAD,
- * docs/superpowers/specs/2026-10-22-delay-head-design.md) at 70 and at 100, the same values with HEAD 0
- * at the same level, the plain DELAY from the first listen at 70, and MIX 1.0 and 0.5 beside the owner's
- * 0.75 at 70 on the snare and JANGLE, on the snare, the choir, JANGLE and CHUG; each clip that reaches
- * the rack's tail cap prints where the cut lands. It replaces the long-note sheet (ROLL and three
- * attack-fed echo prototypes), retired with its test-source DSP once HEAD was built; that sheet's ten
- * clips stay on the published page only.
+ * verdict (2026-10-22) and answers (2026-10-23), on the snare, the choir, JANGLE and CHUG: `delayed` as
+ * built (ECHO with HEAD, docs/superpowers/specs/2026-10-22-delay-head-design.md) at 70 and at 100, the
+ * same values with HEAD 0 at the same level, the plain DELAY from the first listen at 70, and, on the
+ * snare and JANGLE only, MIX 1.0 and 0.5 beside the owner's 0.75 at 70; then the spec's known edge, the
+ * bank-B reversed snare through DELAY at 70 with HEAD on and off, because the head is the pad's start and
+ * every other gate source starts on its hit. Each clip that reaches the rack's tail cap prints where the
+ * cut lands. It replaces the long-note sheet (ROLL and three attack-fed echo prototypes), retired with its
+ * test-source DSP once HEAD was built; that sheet's ten clips stay on the published page only.
  *
  * JANGLE is heard as the kit has it (the dry string through its landing amp). A pedal that belongs
  * in front of the amp (SWELL) is put there, in the rig order, with the amp's own values; a pedal that
@@ -38,7 +39,7 @@ import kotlin.math.roundToInt
  * index.html (the page at src/test/resources/audition/pedal-listens.html with the clip table
  * written in). Run via `./gradlew :synth:generatePedalListens`. The page is published as a listening
  * artifact with root testkit/pedal-listens and the answer store (the db capability), as the WAH listen
- * is. Its files are the clips of sheets (1) to (4), the gate's 28, and the ten retired long-note clips,
+ * is. Its files are the clips of sheets (1) to (4), the gate's 30, and the ten retired long-note clips,
  * which stay on the published artifact only: a published clip is never re-uploaded, because the owner's
  * answers (its verdicts/ documents) point at the bytes they heard.
  */
@@ -53,7 +54,7 @@ object PedalListensGenerator {
     /** The floor: one whole sweep per pad. */
     const val MIN_CYCLES = 1f
 
-    /** The DELAY recipe the brainstorm named: repeats 225 ms apart at feedback 0.66 (the fifth about 14 dB under the first), darkening; at 70, 152 ms apart at 0.51. */
+    /** The DELAY recipe the brainstorm named: repeats 225 ms apart at feedback 0.66 (the fifth about 14 dB under the first), darkening; at 70, 151 ms apart at 0.51. */
     internal val DELAYED = FxChain(echo = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.5f))
 
     /**
@@ -185,8 +186,13 @@ object PedalListensGenerator {
                 gate(name, dry, "gate_mix${pct(mix)}_70", "$name DELAY AT 70 WITH MIX ${pct(mix)}", Treatments.fade(variant("MIX" to mix), 0.7f).process(dry))
             }
         }
+        // The spec's known edge, played so the gate can hear it: the head is the pad's start, so on a pad that does not start
+        // on its hit (the bank-B reversed twin) HEAD feeds the repeats the pad's quiet start. HEAD off beside it, at the same level.
+        val reversed = Treatments.apply("reversed", snare, 1f).snip
+        gate("SNARE", reversed, "gate_rev_delay_70", "SNARE REVERSED (THE BANK-B TWIN), THEN DELAY AT 70", Treatments.apply("delayed", reversed, 0.7f).snip)
+        gate("SNARE", reversed, "gate_rev_head0_70", "SNARE REVERSED, THEN DELAY AT 70 WITH HEAD OFF", Treatments.fade(variant("HEAD" to 0f), 0.7f).process(reversed))
 
-        check(entries.size == 76) { "expected 76 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, the DELAY gate 28), wrote ${entries.size}" }
+        check(entries.size == 78) { "expected 78 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, the DELAY gate 30), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         val template = PedalListensGenerator::class.java.getResourceAsStream("/audition/pedal-listens.html")
             ?.bufferedReader()?.use { it.readText() }
