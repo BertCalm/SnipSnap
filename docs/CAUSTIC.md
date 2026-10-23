@@ -272,6 +272,7 @@ ray-traced engine is required for this sample workflow.
   requested-pitch check. Register/geometry corners, 4× versus 16× aliasing,
   causal modal evolution, low/middle control authority, deterministic replay
   and finite decay checks also passed in the recovered regression run.
-- **Pending:** the broader JVM suite is still running. The initial 64 focused
-  Caustic tests and authored-note SPREAD check passed; a full-suite result
-  must be recorded separately.
+- **JVM verification:** the initial 64 focused Caustic tests and authored-note
+  SPREAD check passed. The added chromatic scan and DSP checks above also pass.
+  The broader nine-module suite result is recorded in the change's pull-request
+  validation section, separately from these focused and artifact checks.
