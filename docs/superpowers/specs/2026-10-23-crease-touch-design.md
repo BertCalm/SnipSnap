@@ -1,7 +1,9 @@
 # CREASE touch-responsive held instruments
 
-Status: implementation in progress. Listening and physical-device acceptance remain open.
+Status: implemented. Focused core checks pass; final integration, listening and
+physical-device acceptance remain open.
 Repository truth: `461cbc8e3e4323a7155dbbee63b62e486d644832`.
+Integration base: `ace3fcb2962dba4b26bba1b4c79e19af855954b4`.
 
 The characteristic gesture is **soft or firm touch → different pressure and
 deformation → independently settled recurring motion → key-up volume fade**.
@@ -153,9 +155,20 @@ The independent full-state error stayed below 1.101e-8. MIDI-84 4×/16× harmoni
 power distance was at most 2.611e-7. This is a reference-shape comparison, not a
 complete off-harmonic alias measurement.
 
-The later adapter-domain guard and explicit common-gain assertion require the
-final combined gate. Full package, Android, all-module JVM and listening
-verification are tracked separately from these initial measurements.
+The adapter-domain guard and explicit common-gain assertion subsequently passed
+with the existing model and held-key checks: 45 focused synth tests passed.
+The first actual-player guard sampled only the first 250 ms of the recurring
+gesture and measured soft/firm harmonic TV 0.0492423, below its 0.05 floor.
+That failed result is retained. Before measuring other phases, the trajectory
+check was specified as four fixed 250 ms windows at 0, 0.25, 0.5 and 0.75 of
+the loop, requiring mean TV at least 0.05 and maximum at least 0.075.
+The actual reloaded player produced 0.04924, 0.10688, 0.25452 and 0.11567,
+with mean 0.13158. Both trajectory requirements passed. This measures the
+moving gesture rather than requiring equal contrast at every pressure phase;
+the DSP and touch factors were not changed to make the check pass.
+
+Full package, Android, all-module JVM and listening verification are tracked
+separately from these focused measurements.
 
 ## Why it is built this way
 
