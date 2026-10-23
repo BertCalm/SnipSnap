@@ -41,6 +41,7 @@ app/.cxx/
 design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
+!design/nacre-gentle-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -367,3 +368,6 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 testkit/fade-law-audition/
+
+# Three-clip model-1 venue-return experiment, regenerated from testkit sources.
+testkit/nacre-gentle-audition/
