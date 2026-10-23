@@ -394,7 +394,14 @@ fun PadSheetScreen(
         discardAquariumDraft()
     }
     DisposableEffect(model, slot) {
-        onDispose { stopAquariumPreview(cancelRefresh = false) }
+        onDispose {
+            // Ordinary pad navigation already owns generic voice cleanup.
+            // Only invalidate Aquarium state when it has an actual request
+            // or audition; unrelated benches need no extra state writes here.
+            if (aquariumPreviewJob != null || aquariumPreviewing || aquariumAuditionActive || aquariumAction != null) {
+                stopAquariumPreview(cancelRefresh = false)
+            }
+        }
     }
     // The caller also owns the accordion selection. External box changes must
     // revoke a hidden panel's request even when they bypass one of its buttons.

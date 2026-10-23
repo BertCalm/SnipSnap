@@ -1,16 +1,25 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.getBoundsInRoot
+import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -122,7 +131,10 @@ class AquariumPanelTest : ComposeScreenTest() {
     private fun showPanel(initial: AquariumEditor) {
         editor = initial
         setPhoneContent {
-            AquariumPanel(
+            // Match the real PAD host: content receives unbounded vertical
+            // measurement, while the phone viewport remains scrollable.
+            Box(Modifier.fillMaxSize().testTag("aquarium-test-scroll").verticalScroll(rememberScrollState())) {
+                AquariumPanel(
                 editor = editor,
                 applied = false,
                 canPreview = true,
@@ -139,9 +151,40 @@ class AquariumPanelTest : ComposeScreenTest() {
                 color = Schemes.DEFAULT.accent.tape,
                 onEditorChange = { editor = it },
                 onBefore = {}, onHear = {}, onKeep = {}, onRemove = {}, onUndo = {}, onCancel = {},
-            )
+                )
+            }
         }
         waitForTag("aquarium-panel")
+    }
+
+    /**
+     * ScrollBy starts a frame-clock coroutine. Invoke it on the UI thread, then
+     * advance the frozen clock in a separate call; performScrollTo waits for
+     * that animation before this test gets a chance to supply its frames.
+     * Both geometry APIs are used by the existing StarterMenuTest as well.
+     */
+    private fun revealPanelAction(id: String) {
+        repeat(8) {
+            val viewportNode = tagged("aquarium-test-scroll")
+            val viewport = viewportNode.getBoundsInRoot()
+            val target = tagged(id).getUnclippedBoundsInRoot()
+            val delta = when {
+                target.top < viewport.top -> target.top - viewport.top
+                target.bottom > viewport.bottom -> target.bottom - viewport.bottom
+                else -> {
+                    assertTrue("$id must fit horizontally at the phone width",
+                        target.left >= viewport.left && target.right <= viewport.right)
+                    tagged(id).assertIsDisplayed()
+                    return
+                }
+            }
+            val scrollBy = viewportNode.fetchSemanticsNode().config.getOrNull(SemanticsActions.ScrollBy)?.action
+                ?: error("the stateless Aquarium fixture must expose ScrollBy")
+            val pixels = with(compose.density) { delta.toPx() }
+            compose.runOnIdle { assertTrue("the fixture refused to scroll to $id", scrollBy(0f, pixels)) }
+            pump(2_000)
+        }
+        throw AssertionError("$id did not fit in the scroll viewport after eight frame-stepped scrolls")
     }
 
     private fun context(): AquariumRenderRecipe = AquariumRenderRecipe(
@@ -233,10 +276,15 @@ class AquariumPanelTest : ComposeScreenTest() {
     @Test
     fun phone_width_actions_have_complete_labels_touch_targets_and_busy_semantics() {
         showPanel(AquariumEditor(context()).selectPreset("full"))
-        for (label in listOf("AQUARIUM · PAD", "◄ PAD", "BEFORE", "PREVIEW", "KEEP", "REMOVE", "UNDO"))
-            assertReadsInFull(label)
-        for (id in listOf("before", "hear", "keep", "remove", "undo", "cancel"))
+        revealPanelAction("aquarium-cancel")
+        assertReadsInFull("AQUARIUM · PAD")
+        assertReadsInFull("◄ PAD")
+        tagged("aquarium-cancel").assertHeightIsAtLeast(44.dp)
+        for ((id, label) in listOf("before" to "BEFORE", "hear" to "PREVIEW", "keep" to "KEEP", "remove" to "REMOVE", "undo" to "UNDO")) {
+            revealPanelAction("aquarium-$id")
             tagged("aquarium-$id").assertHeightIsAtLeast(44.dp)
+            assertReadsInFull(label)
+        }
         tagged("aquarium-remove").assertIsNotEnabled()
         tagged("aquarium-undo").assertIsNotEnabled()
         assertNotNull(tagged("aquarium-cancel").fetchSemanticsNode().config.getOrNull(SemanticsProperties.ContentDescription))
@@ -266,7 +314,8 @@ class AquariumPanelTest : ComposeScreenTest() {
             (.18 * sin(2 * PI * (if (channel == 0) 233 else 519) * (sample / 2) / 48000)).toFloat()
         }, 2, 48000)
         val soft = Snip(FloatArray(768) { frame -> (.1 * sin(2 * PI * 233 * frame / 44100)).toFloat() }, 1, 44100)
-        WavWriter.write(File(directory, "hard.wav"), hard, WavWriter.BitDepth.PCM_24, smpl = SmplChunk(60))
+        WavWriter.write(File(directory, "hard.wav"), hard, WavWriter.BitDepth.PCM_24,
+            allowNonMpcRate = true, smpl = SmplChunk(60))
         WavWriter.write(File(directory, "soft.wav"), soft, WavWriter.BitDepth.PCM_24)
         WavWriter.write(File(directory, "neighbour.wav"), soft, WavWriter.BitDepth.PCM_24)
         val prior = Json.parse("""{"capture":1,"future":{"opaque":[1,"keep",null]}}""") as JsonValue.Obj
