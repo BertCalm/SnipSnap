@@ -83,8 +83,8 @@ tasks.register<JavaExec>("generateChamberAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
     providers.gradleProperty("chamberRevision").orNull?.let {
-        require(it == "timpani") { "chamberRevision must be timpani" }
-        args("--timpani")
+        require(it in setOf("timpani", "timpani-boost")) { "chamberRevision must be timpani or timpani-boost" }
+        args("--$it")
     }
     providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
 }
@@ -240,7 +240,7 @@ tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
     args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
-/** Three-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
+/** Four-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
     description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
@@ -333,6 +333,18 @@ tasks.register<JavaExec>("generateRegistersTransistorAudition") {
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r4")
     project.findProperty("registersR3Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
+/** Compare the exact published model-4 sounds with a fuller same-pitch foundation. */
+tasks.register<JavaExec>("generateRegistersTransistorDepthAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R4 audio and reviews, then render matched model-5 TRANSISTOR depth comparisons."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorDepthAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r5")
+    project.findProperty("registersR4Baseline")?.toString()?.let { args("--baseline=$it") }
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
@@ -1456,6 +1468,45 @@ tasks.register<JavaExec>("generateSkitterAudition") {
     if (project.hasProperty("skitterBaseline")) args("--baseline=${project.property("skitterBaseline")}")
     if (project.hasProperty("skitterPrevious")) args("--previous=${project.property("skitterPrevious")}")
     if (project.hasProperty("skitterOriginal")) args("--original=${project.property("skitterOriginal")}")
+}
+
+/** Small raw SKITTER articulation proof, independent of the full audition matrix. */
+tasks.register<JavaExec>("generateSkitterArticulationAudition") {
+    group = "distribution"
+    description = "Render the bounded four-track SKITTER R4/R5 articulation proof with raw PCM24, cue/gain records and a listening page."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterArticulationAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-articulation")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+}
+
+/** Two new R6 tracks; R4 and R5 are reused from an immutable raw R5 proof. */
+tasks.register<JavaExec>("generateSkitterCharacterR6Audition") {
+    group = "distribution"
+    description = "Render the compact R4/R5/R6 comparison. Requires -PskitterR5Baseline=<raw R5 proof directory>."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterCharacterR6Audition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-character-r6")
+    if (project.hasProperty("skitterR5Baseline")) args("--baseline=${project.property("skitterR5Baseline")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+}
+
+/** Compact R7 quartet comparisons plus the two unchanged, accepted R6 references. */
+tasks.register<JavaExec>("generateSkitterQuartetAudition") {
+    group = "distribution"
+    description = "Render four R6/R7 voice pairs. Requires -PskitterR6References=<raw frozen R6 proof directory> and -PskitterProofSource=<Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterQuartetAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-quartet")
+    if (project.hasProperty("skitterR6References")) args("--references=${project.property("skitterR6References")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */

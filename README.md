@@ -376,14 +376,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Thirteen provisional recipes stay outside
+PLUCK, WOOD, BREATH and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Seventeen provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, three-voice
-musical phrases, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, four solo
+musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/WICK.md) describe this first round; the remaining
-three proposed voices and full preset library follow the listening verdict.
+two proposed voices and full preset library follow the listening verdict.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -539,12 +539,15 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
+Its latest body revision adds a rounded same-pitch foundation while retaining
+the opening click and all original model-4 recipes.
 Nine starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?voice=TRANSISTOR#listen)
-introduces TRANSISTOR alongside the working PIPE/MUSETTE baseline and retains
-the original chiff and airflow comparisons. TRANSISTOR awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
+compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
+baseline and retains the original chiff and airflow comparisons. TRANSISTOR
+awaits listening review;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,

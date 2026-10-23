@@ -18,7 +18,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * WICK listening evidence: PLUCK, WOOD and BUBBLE from the actual JVM engine.
+ * WICK listening evidence: PLUCK, WOOD, BUBBLE and BREATH from the actual JVM engine.
  * Native, prelevel raw and matched audio have separate files; diagnostic options
  * have explicit replay recipes rather than masquerading as ordinary patches.
  * A failed held convergence remains visible in the manifest and fails the task.
@@ -85,12 +85,16 @@ object WickAuditionGenerator {
                 metrics["onsetClassifier"] = onsetClassification.drumClass.name
                 metrics["onsetClassifierConfidence"] = onsetClassification.confidence
                 metrics["onsetClassifierWindowSeconds"] = onset.durationSeconds
+                if (case.voice == WickVoice.BREATH) {
+                    metrics["onsetClassifierDecayMs"] = onsetClassification.features.decayMs
+                    metrics.putAll(onsetEnvelopeEvidence(onset.samples, onset.sampleRate))
+                }
                 metrics["matchedLoudness"] = Loudness.of(matched)
                 metrics["nativeLoudness"] = Loudness.of(native)
                 metrics["matchedPeak"] = matched.peak()
                 metrics["rawExportGain"] = RAW_EXPORT_GAIN
                 metrics["eventCount"] = probe.diagnostics.events.size
-                if (case.groupId == "bubble-tone") {
+                if (case.groupId == "bubble-tone" || case.groupId == "breath-sustain") {
                     metrics["toneWindows"] = toneWindows(probe.raw, matched.samples, case.midi)
                     metrics["toneWindowMeasurement"] = "Fixed post-onset time windows: raw RMS, matched RMS, and coherent power at the requested root. The coherent share is a sinusoidal projection of the raw samples, with no pitch search; short-window energy and root share support comparison but do not establish pitch audibility."
                 }
@@ -274,14 +278,15 @@ object WickAuditionGenerator {
             "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native single-note PCM24 files are the engine's normal dry output. Native musical-pattern PCM24 files instead apply one fixed 0.25 assembly gain to the sum of unlevelled raw note renders, preserving the source velocity response without per-hit leveling. Matched PCM16 files use the shared 0.03 loudest-200-ms loudness target on the complete clip.",
             "holdNote" to "HOLD uses periodic source timing and periodic-state convergence. A causal-schedule-replay strategy is explicitly reported when used. The seam-context WAV holds an independently generated preceding period and current period, at the matched export gain; it is not a duplicated loop.",
             "pcmSeamNote" to "Exported PCM16 seam error is the squared difference between independently generated preceding/current final 256-frame windows, divided by preceding-window energy. If both windows are exactly zero, error is 0 and silentBoundary=true; a zero-energy reference with a nonzero difference fails. The actual loop join is screened separately: absolute wrap step divided by local derivative RMS plus one PCM16 unit must be at most 8. This numerical screening does not replace listening.",
-            "scope" to "Three-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "scope" to "Four-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
             "patternNote" to "Musical phrases share an exact eight-note score at 100 BPM. Native pattern WAVs use one fixed 0.25 assembly gain applied to the sum of probe.raw note renders; they bypass the engine's per-note loudness scaling so its velocity response survives. Raw files apply the same common 0.5 export gain as other clips. Only completed phrases are loudness matched. Complete note tails ring out after the two-bar score. Each note resets the engine state, while its own FEED and cascade can add articulations between scored onsets.",
-            "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. Neither classifier is a substitute for the requested-root pitch measurements or listening.",
+            "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. BREATH's late swell can place its first near-peak late in that window: when no 20 dB decay is observed, the classifier reports only the remaining window as decay time and may label a sustained low note KICK or TOM. BREATH also reports onsetEnvelopePeakSeconds, onset20dBCrossingObserved, onsetPostPeakMinimumRatio and onsetDecayCensored using the same 1024-frame peak windows and 256-frame hop. The original classifier result is retained. Neither classifier is a substitute for requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
                 "Does the revised BUBBLE response make the underlying note clearer than the earlier pops at the same controls?",
                 "Does one spark audibly start a chain of gate openings?", "Does disconnecting the cascade remove later articulations?",
                 "Does rapid feeding reveal depletion and recovery memory?", "Does gain-only gating lose the changing brightness of the low-pass gates?",
-                "Do all three voices remain useful pitched samples?", "Does WOOD add a useful firm, woody articulation?",
+                "Do all four voices remain useful pitched samples?", "Does BREATH keep a clear note through its soft overlapping openings?",
+                "Does BREATH contrast usefully with the accepted PLUCK, WOOD and revised BUBBLE voices?",
                 "Do the same musical notes and soft/strong velocities retain each voice's character?", "Do held patterns repeat without audible clicks or stutters?",
             ),
             "summary" to summary, "higherRateReferences" to higherRateReferences, "groups" to groups, "entries" to entries,
@@ -357,9 +362,13 @@ object WickAuditionGenerator {
     private fun cases(quick: Boolean): List<Case> = buildList {
         for (voice in WickVoice.entries) add(Case(
             "default_${voice.name.lowercase()}", "${voice.name} · first spark", "Dry voice default at MIDI ${Wick.rootMidi(voice)}, velocity 1. " +
-                (if (voice == WickVoice.BUBBLE) "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. " else "") +
+                (when (voice) {
+                    WickVoice.BUBBLE -> "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. "
+                    WickVoice.BREATH -> "Soft gate openings overlap around the requested note. Listen for a stable pitched body and a gradual release. "
+                    else -> ""
+                }) +
                 "The same initial excitation and release network used by every normal patch.",
-            "defaults", voice, "defaults", "Start here · three dry voices",
+            "defaults", voice, "defaults", "Start here · four dry voices",
         ))
         val toneControls = linkedMapOf("SPARK" to .40f, "FEED" to .25f, "CASCADE" to .70f, "TIMBRE" to .45f, "RECOVERY" to .50f, "HOLD" to 0f)
         for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
@@ -372,11 +381,14 @@ object WickAuditionGenerator {
             options = Wick.Options(legacyBubbleEnvelope = reference), comparison = "bubble-tone-$midi",
             variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) BUBBLE_REFERENCE_REVISION else null,
         ))
-        for (preset in WickPresets.all().filter { it.name !in setOf("Small Spark", "Dry Wood", "Bubble Chain") }) add(Case(
+        val variations = WickPresets.all().filterNot {
+            it.macros == Wick.defaults(it.voice) && it.midi == Wick.rootMidi(it.voice) && it.velocity == 1f
+        }
+        for (preset in variations) add(Case(
             "preset_${slug(preset.name)}", preset.name,
             if (preset.name == "Busy Bubbles") "Busy BUBBLE recipe at FEED 65%, now using the revised gate response. The earlier-response A/B comparison uses FEED 25% with all other controls unchanged."
             else "Provisional ${preset.voice.name.lowercase()} recipe. Dry engine output, with no rack effects.",
-            "preset", preset.voice, "presets", "Ten provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
+            "preset", preset.voice, "presets", "${variations.size} provisional patches", preset.macros, preset.midi, preset.velocity, preset = preset,
         ))
         val base = Wick.defaults(WickVoice.BUBBLE) + mapOf("SPARK" to .65f, "FEED" to .85f, "CASCADE" to .90f, "RECOVERY" to .90f)
         val comparisons = listOf(
@@ -394,6 +406,28 @@ object WickAuditionGenerator {
             }, "comparison", WickVoice.BUBBLE, "mechanism-$id", title, base,
             options = if (altered) options else Wick.Options(), comparison = id, variant = if (altered) "ablated" else "full",
         ))
+        // BREATH has the same causal mechanisms, heard through longer, softer openings.
+        // Use its unaltered defaults for these pairs so they explain the first listening clip.
+        for ((id, title, options) in comparisons) for (altered in listOf(false, true)) add(Case(
+            "mechanism_breath_${id}_${if (altered) "off" else "on"}",
+            if (!altered) "BREATH · full network" else when (id) {
+                "cascade" -> "BREATH · cascade disconnected"
+                "depletion" -> "BREATH · constant availability"
+                else -> "BREATH · gain-only gates"
+            },
+            when (id) {
+                "cascade" -> "BREATH defaults at C4. The altered version disconnects release transmission; listen for what the later gate answers contribute to continuity."
+                "depletion" -> "BREATH defaults at C4. The altered version keeps availability constant; compare the shape and strength of successive openings."
+                else -> "BREATH defaults at C4. The altered version removes the low-pass gate's opening-to-brightness coupling; compare the swell and closing tone."
+            }, "comparison", WickVoice.BREATH, "breath-mechanism-$id", "BREATH · $title",
+            options = if (altered) options else Wick.Options(), comparison = "breath-$id",
+            variant = if (altered) "ablated" else "full",
+        ))
+        for (midi in listOf(48, 60, 72)) add(Case(
+            "breath_sustain_$midi", "BREATH · ${note(midi)} soft openings",
+            "BREATH defaults at MIDI $midi, velocity 1. Compare the soft rise, pitched body, overlapping answers and finite ring-out across C3, C4 and C5. No effects or note-off envelope.",
+            "sustain", WickVoice.BREATH, "breath-sustain", "BREATH · soft openings across registers", midi = midi,
+        ))
         for (voice in WickVoice.entries) for (macro in timbral) for (value in if (quick) listOf(0f, 1f) else steps) add(Case(
             "sweep_${voice.name.lowercase()}_${macro.lowercase()}_${tag(value)}", "$macro ${(value * 100).toInt()}%",
             "${voice.name}: only $macro changes. All companion controls retain this voice's defaults; finite sample, loudness matched.",
@@ -405,6 +439,12 @@ object WickAuditionGenerator {
             "BUBBLE HOLD: one recurrent period. Only $macro changes; companion controls retain BUBBLE defaults.",
             "held-sweep", WickVoice.BUBBLE, "held-sweep-bubble-${macro.lowercase()}", "BUBBLE HOLD · $macro",
             Wick.defaults(WickVoice.BUBBLE) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
+        ))
+        if (!quick) for (macro in listOf("FEED", "RECOVERY")) for (value in steps) add(Case(
+            "held_sweep_breath_${macro.lowercase()}_${tag(value)}", "Held $macro ${(value * 100).toInt()}%",
+            "BREATH HOLD: one recurrent period. Only $macro changes; companion controls retain BREATH defaults. Repeat compares the continuity of soft openings after convergence.",
+            "held-sweep", WickVoice.BREATH, "held-sweep-breath-${macro.lowercase()}", "BREATH HOLD · $macro",
+            Wick.defaults(WickVoice.BREATH) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
         ))
         for (voice in WickVoice.entries) for ((id, title, controls) in listOf(
             Triple("default", "Default held pattern", emptyMap()),
@@ -436,13 +476,14 @@ object WickAuditionGenerator {
     private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
         "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
     } else when (case.kind) {
-        "defaults" -> "Listen first to the three dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Ten provisional recipes, including three WOOD variations, Busy Bubbles at FEED 65%, and held recipes for all three voices. BUBBLE recipes use the revised gate response. Every clip uses its saved pitch, velocity and six controls."
+        "defaults" -> "Listen first to the four dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
+        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD and revised BUBBLE recipes remain available alongside BREATH. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."
         "hold" -> "Default, minimum feed, dense slow recovery and disconnected transmission. These files contain one held period; turn on repeat to audition the wrap."
         "range" -> "C1, C3 and C6, each at 25%, 65% and 100% velocity. Both native and matched playback are available."
+        "sustain" -> "BREATH defaults at C3, C4 and C5. Listen for a soft rise, a clear note through successive openings, and a gradual finite release. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
         else -> "Four corners of the interaction, with companion controls at BUBBLE defaults."
     }
 
@@ -451,6 +492,40 @@ object WickAuditionGenerator {
         "gainOnly" to options.gainOnly, "oversample" to options.oversample,
         "legacyBubbleEnvelope" to options.legacyBubbleEnvelope,
     )
+
+    /**
+     * Mirror FeatureExtractor's onset envelope without changing its reported class. A soft swell
+     * may reach 99% of its peak late in the 1.2 s crop. If no 20 dB crossing follows, the crop only
+     * supplies a lower bound on decay; its short remaining duration is not an observed decay.
+     */
+    private fun onsetEnvelopeEvidence(samples: FloatArray, sampleRate: Int): Map<String, Any?> {
+        val hop = 256
+        val window = 1024
+        val envelope = FloatArray(maxOf(1, samples.size / hop)) { index ->
+            var peak = 0f
+            val start = index * hop
+            for (frame in start until minOf(samples.size, start + window)) peak = maxOf(peak, abs(samples[frame]))
+            peak
+        }
+        val peak = envelope.maxOrNull() ?: 0f
+        if (peak <= 0f) return linkedMapOf(
+            "onsetEnvelopePeakSeconds" to null, "onset20dBCrossingObserved" to false,
+            "onsetPostPeakMinimumRatio" to null, "onsetDecayCensored" to false,
+        )
+        val peakIndex = envelope.indexOfFirst { it >= peak * .99f }
+        var minimum = peak
+        var crossingObserved = false
+        for (index in peakIndex until envelope.size) {
+            minimum = minOf(minimum, envelope[index])
+            if (envelope[index] <= peak * .1f) crossingObserved = true
+        }
+        return linkedMapOf(
+            "onsetEnvelopePeakSeconds" to peakIndex.toDouble() * hop / sampleRate,
+            "onset20dBCrossingObserved" to crossingObserved,
+            "onsetPostPeakMinimumRatio" to minimum.toDouble() / peak,
+            "onsetDecayCensored" to !crossingObserved,
+        )
+    }
 
     private fun toneWindows(raw: FloatArray, matched: FloatArray, midi: Int): List<Map<String, Any?>> {
         val hz = Keys.midiHz(midi).toDouble()

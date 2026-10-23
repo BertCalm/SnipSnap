@@ -29,7 +29,8 @@ for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the so
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
 opens a 16-clip model-2 timpani revision after the owner found the membrane
 inaudible. Model 1 and its original 114-clip matrix remain reproducible and archived.
-The revised balance awaits the owner's listening verdict.
+The owner approved model 2's timbre; model 3 adds a 3 dB membrane mix lift
+while preserving that voicing and replay of both previous models.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry
@@ -347,25 +348,27 @@ Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### WICK — ignite, cascade, recover
 
-The [supplied specification](WICK_SPEC.md) is being tested as a three-voice
-PLUCK/WOOD/BUBBLE listening prototype. One pitched complex source feeds three
+The [supplied specification](WICK_SPEC.md) is being tested as a four-voice
+PLUCK/WOOD/BREATH/BUBBLE listening prototype. One pitched complex source feeds three
 parallel low-pass gates. Each has bounded charge and recoverable availability;
 real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
 TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
 and velocity. The oscillator/filter techniques draw on TIDE; the gate network
 and release scheduler are new.
 
-Thirteen provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+Seventeen provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
 kit support the first audition. WICK stays outside the factory preset roster,
 phone picker and starter menu pending listening. Run
 `./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
-controls, register/velocity probes, mechanism ablations, held examples and four
-musical phrases using one shared score across the three voices.
+controls, register/velocity probes, mechanism ablations, held examples and five
+musical phrases: four solo voices using one score and the retained three-voice arrangement.
 The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](WICK.md) retain the scope and current limits.
-BREATH, FLICKER, RATTLE and the proposed 36-preset library follow listening.
+FLICKER, RATTLE and the proposed 36-preset library follow listening.
 The longer pitched BUBBLE response is the owner's preferred working baseline;
-WOOD now tests a dry pitched body with smaller answering rebounds.
+the owner also accepted WOOD's dry pitched body with smaller answering rebounds.
+BREATH now tests a clear sustained root with soft overlapping gate openings;
+[design notes](WICK_BREATH.md) explain the listening target and its limits.
 
 ### TANGLE — oscillators that catch and release
 

@@ -1114,14 +1114,15 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD and BUBBLE each speak at C3 and C4. The remaining ten pads
-     * compare every nondefault recipe, including three held buffers. Each
-     * voice's native-root default is its exact library patch, so all thirteen
-     * provisional recipes are represented within the sixteen pads.
+     * PLUCK, WOOD, BUBBLE and BREATH each speak at C3 and C4. The remaining
+     * eight pads compare one alternate articulation and one held buffer per
+     * voice. Each voice's native-root default is its exact library patch.
+     * This sixteen-pad selection samples the seventeen-recipe library;
+     * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1131,7 +1132,11 @@ object SynthKits {
                 )
             }
         }
-        val recipes = WickPresets.all().filterNot { it in defaults }
+        val recipeNames = listOf(
+            "Soft Wick", "Held Glow", "Small Rebounds", "Held Wood",
+            "Busy Bubbles", "Held Bubbles", "Single Breath", "Held Breath",
+        )
+        val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
         return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }
     }
 

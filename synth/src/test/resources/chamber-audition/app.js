@@ -203,6 +203,15 @@
       $('first-intro').textContent = 'Start with the revised C3 quartet in each room. Then compare previous and revised strikes at C3 and C4 below. The room, controls and note stay fixed within each group.';
       $('comparison-intro').textContent = 'Previous and revised full quartets, followed by their dry timpani sources. Each room and note uses one gain from the revised quartet.';
     }
+    if (manifest.auditionRevision === 'timpani-boost') {
+      const lift = Number(manifest.membraneMixLiftDb);
+      const liftText = Number.isFinite(lift) ? String(lift) : '3';
+      $('hero-eyebrow').textContent = 'TIMPANI MIX LIFT';
+      $('hero-note').textContent = `The same timpani sound, with ${liftText} dB more presence in the quartet. Compare the accepted and boosted mix, then hear the membrane source at the same playback gain.`;
+      $('first-title').replaceChildren(document.createTextNode('The timpani.'), create('br'), document.createTextNode(`Lifted ${liftText} dB.`));
+      $('first-intro').textContent = 'Start with the boosted C3 quartet in each room. The membrane voicing and decay stay the same. Compare the previous and boosted mixes at C3 and C4 below.';
+      $('comparison-intro').textContent = 'Accepted model 2 and boosted model 3 quartets, followed by their dry timpani sources. Each room and note shares one gain from the boosted quartet.';
+    }
     const previous = manifest.previousAudition;
     const previousUrl = fileUrl(previous?.url);
     if (previousUrl) {
