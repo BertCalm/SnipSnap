@@ -46,6 +46,8 @@ add_executable(engine_tests
     "${ENGINE_DIR}/PadEngine.cpp"
     "${ENGINE_DIR}/LiveSnapEngine.cpp"
     "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+    "${ENGINE_DIR}/aquarium/OfflineRender.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumJni.cpp"
     # The bridge, built here against stub/jni.h. It needs a JVM to link in
     # the app, which is why it went untested for so long; the stub is
     # enough to run it, and android-build against the NDK's own header is
@@ -76,3 +78,20 @@ add_executable(aquarium_tests
 target_include_directories(aquarium_tests PRIVATE "${ENGINE_DIR}")
 target_compile_options(aquarium_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME aquarium_tests COMMAND aquarium_tests)
+
+# Fresh seeded offline renders plus the separate JNI boundary, without streams.
+# Kept separate from aquarium_tests so its callback allocation interceptor still
+# tests only the allocation-free block processor contract.
+add_executable(aquarium_offline_tests
+    offline_render_tests.cpp
+    offline_jni_tests.cpp
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+    "${ENGINE_DIR}/aquarium/OfflineRender.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumJni.cpp"
+)
+target_include_directories(aquarium_offline_tests PRIVATE
+    "${ENGINE_DIR}"
+    "${CMAKE_CURRENT_SOURCE_DIR}/stub"
+)
+target_compile_options(aquarium_offline_tests PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME aquarium_offline_tests COMMAND aquarium_offline_tests)

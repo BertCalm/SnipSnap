@@ -59,6 +59,12 @@ object Breed {
         require(a.pads.isNotEmpty()) { "'${a.name}' has no pads to breed from" }
         require(b.pads.isNotEmpty()) { "'${b.name}' has no pads to breed with" }
 
+        // Source-backed A pads are always kept rather than crossed. Validate
+        // their transferable baselines before create() makes a visible child
+        // kit. B's printed pads are never copied by this path: they only make
+        // their A partner stay as A, so do not preflight unused B sources.
+        a.pads.filter { PrintedPads.has(it.recipe) }.forEach { PrintedPads.requireImportable(aDir, it) }
+
         val rng = Random(seed.toLong())
         val model = KitBuilderModel.create(name, destDir)
         model.setKey(a.key)
@@ -104,7 +110,7 @@ object Breed {
     fun partnerOf(pad: KitPad, b: Kit): KitPad? =
         b.pad(pad.slot) ?: b.pads.sortedBy { it.slot }.firstOrNull { it.drumClass == pad.drumClass }
 
-    private fun hasPrintedBoard(pad: KitPad): Boolean = "boardPad" in (pad.recipe?.entries ?: emptyMap())
+    private fun hasPrintedBoard(pad: KitPad): Boolean = PrintedPads.has(pad.recipe)
 
     /**
      * Whether the coin has anything to throw for: A's own patch or rack,
@@ -310,7 +316,7 @@ object Breed {
         val names = mutableMapOf(pad.sampleFile to assigned.sampleFile)
         val layers = pad.velocityLayers.mapIndexed { index, layer ->
             val name = names.getOrPut(layer.sampleFile) {
-                val board = BoardSheet.read(pad.recipe)?.type?.id ?: "board"
+                val board = PrintedPads.label(pad.recipe).lowercase(java.util.Locale.ROOT)
                 val stem = assigned.sampleFile.substringBeforeLast('.') + "_${board}_layer_${index + 1}"
                 var candidate = "$stem.wav"
                 var suffix = 2
@@ -321,7 +327,7 @@ object Breed {
             layer.copy(sampleFile = name)
         }
         val copied = pad.copy(sampleFile = assigned.sampleFile, velocityLayers = layers, source = pad.source + stamp)
-        val imported = BoardSheet.importPad(sourceDir, model.kitDir, pad, copied)
+        val imported = PrintedPads.importPad(sourceDir, model.kitDir, pad, copied)
         model.update(pad.slot) { imported }
     }
 
