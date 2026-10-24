@@ -82,6 +82,24 @@ class MidiInput(context: Context) {
     private var listener: Listener? = null
     private var callback: MidiManager.DeviceCallback? = null
 
+    /** SnipSnap's own published port: notes from another app, and its being bound as a device. */
+    private val virtualListener = object : VirtualMidi.Listener {
+        override fun onEvent(event: MidiWire.Event) {
+            listener?.onEvent(event)
+        }
+
+        override fun onBound(id: MidiDeviceId) {
+            listener?.onDevicesChanged(devices)
+        }
+
+        override fun onUnbound() {
+            // The other app is gone with its held notes; let them go first,
+            // as closeDevice does for a pulled cable.
+            listener?.onDeviceRemoved()
+            listener?.onDevicesChanged(devices)
+        }
+    }
+
     /** [inputPorts] pairs each [MidiOut] destination id with the port behind it. */
     private class Opened(
         val info: MidiDeviceInfo,
@@ -98,7 +116,7 @@ class MidiInput(context: Context) {
     val supported: Boolean get() = manager != null
 
     /** What is connected right now, by name and fingerprint, in the order it was found. */
-    val devices: List<MidiDeviceId> get() = opened.values.map { it.id }
+    val devices: List<MidiDeviceId> get() = opened.values.map { it.id } + listOfNotNull(VirtualMidi.boundId)
 
     /**
      * Start listening: every device present now is opened, and the
@@ -109,6 +127,7 @@ class MidiInput(context: Context) {
         val manager = manager ?: return false
         if (this.listener != null) return true
         this.listener = listener
+        VirtualMidi.subscribe(virtualListener)
         val cb = object : MidiManager.DeviceCallback() {
             override fun onDeviceAdded(info: MidiDeviceInfo) = openDevice(info)
             override fun onDeviceRemoved(info: MidiDeviceInfo) = closeDevice(info.id)
@@ -223,6 +242,7 @@ class MidiInput(context: Context) {
     fun close() {
         val manager = manager ?: return
         listener = null
+        VirtualMidi.unsubscribe(virtualListener)
         // One unregister serves both registrations; only the register
         // call grew a transport argument in 33.
         callback?.let(manager::unregisterDeviceCallback)
