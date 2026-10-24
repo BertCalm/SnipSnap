@@ -70,7 +70,7 @@ class WickTest {
 
     @Test
     fun `transmitted excitations follow observed parent releases on a later update`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH)) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) {
             val probe = Wick.inspect(voice, active + mapOf("FEED" to .25f, "CASCADE" to 1f))
             val events = probe.diagnostics.events
             val releases = events.filter { it.kind == "RELEASE" }
@@ -127,7 +127,7 @@ class WickTest {
 
     @Test
     fun `each timbral control moves a finite gesture and its held recurrent gesture`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
             fun at(value: Float): FloatArray {
                 val probe = Wick.inspect(voice, active + mapOf("HOLD" to hold, macro to value))
                 assertReplayProvenance(probe)
@@ -211,8 +211,8 @@ class WickTest {
     }
 
     @Test
-    fun `wood and breath velocity change finite and recurrent articulation while retaining the requested note`() {
-        for (voice in listOf(WickVoice.WOOD, WickVoice.BREATH)) for (hold in listOf(0f, 1f)) {
+    fun `wood breath and flicker velocity change finite and recurrent articulation while retaining the requested note`() {
+        for (voice in listOf(WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) {
             val controls = Wick.defaults(voice) + ("HOLD" to hold)
             val soft = Wick.inspect(voice, controls, midi = 60, velocity = .25f)
             val hard = Wick.inspect(voice, controls, midi = 60, velocity = 1f)
@@ -270,6 +270,55 @@ class WickTest {
             assertTrue(rootShare > .10, "BREATH MIDI$midi root is only a trace in the sustained body: $rootShare")
             assertTrue(probe.diagnostics.events.any { it.kind == "CASCADE" },
                 "BREATH MIDI$midi sustained tone bypasses the answering gate network")
+        }
+    }
+
+    @Test
+    fun `flicker retains its bright requested note while exposing quiet half-order metal partials`() {
+        val controls = Wick.defaults(WickVoice.FLICKER) + mapOf("FEED" to 0f, "CASCADE" to 0f)
+        fun body(samples: FloatArray) = samples.copyOfRange((.05 * Dsp.RATE).toInt(), (.30 * Dsp.RATE).toInt())
+        // These projections divide by each render's own energy, so a louder or quieter copy
+        // cannot pass for metallic color. Isolating the first gate also prevents BUBBLE's
+        // optional later 3:2 component from masquerading as this voice's primary source.
+        fun coherentShare(samples: FloatArray, hz: Double): Double {
+            var real = 0.0
+            var imaginary = 0.0
+            var energy = 0.0
+            for (i in samples.indices) {
+                val sample = samples[i].toDouble()
+                val phase = 2 * PI * hz * i / Dsp.RATE
+                real += sample * cos(phase)
+                imaginary += sample * sin(phase)
+                energy += sample * sample
+            }
+            return 2 * (real * real + imaginary * imaginary) / (samples.size * energy).coerceAtLeast(1e-30)
+        }
+        fun halfOrderShare(samples: FloatArray, hz: Double) = listOf(.5, 1.5, 2.5, 3.5, 5.5)
+            .sumOf { ratio -> coherentShare(samples, hz * ratio) }
+        for (midi in listOf(48, 60, 72)) {
+            val probe = Wick.inspect(WickVoice.FLICKER, controls, midi)
+            val excerpt = body(probe.raw)
+            val wanted = Keys.midiHz(midi)
+            val rootShare = coherentShare(excerpt, wanted.toDouble())
+            val metalShare = halfOrderShare(excerpt, wanted.toDouble())
+            val snip = Snip(excerpt, 1, Dsp.RATE)
+            val measured = FineTuning.measuredHz(snip, wanted, 0f, .25f)
+            val cents = FineTuning.cents(measured, wanted.toDouble())
+            val detected = assertNotNull(Pitch.detect(snip, 0f, .25f), "FLICKER MIDI$midi bright body is unpitched")
+            val detectedCents = FineTuning.cents(detected.hz.toDouble(), wanted.toDouble())
+            println("WICK FLICKER MIDI$midi root share $rootShare, half-order share $metalShare, root $cents cents, detector $detectedCents cents/confidence ${detected.confidence}")
+            assertTrue(rootShare > .10, "FLICKER MIDI$midi requested root is only a trace: $rootShare")
+            assertTrue(abs(cents) < 25.0, "FLICKER MIDI$midi bright body loses the requested root: $cents cents")
+            assertTrue(detected.confidence > .3f && abs(detectedCents) < 35.0,
+                "FLICKER MIDI$midi metallic color obscures the playing pitch: ${detected.hz} Hz, confidence ${detected.confidence}")
+            assertTrue(metalShare > .002, "FLICKER MIDI$midi has negligible half-order color: $metalShare")
+            for (other in listOf(WickVoice.PLUCK, WickVoice.BUBBLE)) {
+                val reference = body(Wick.inspect(other, controls, midi).raw)
+                val referenceShare = halfOrderShare(reference, wanted.toDouble())
+                println("WICK FLICKER vs $other MIDI$midi matched-controls half-order share $metalShare / $referenceShare")
+                assertTrue(metalShare > referenceShare * 2.0 + .001,
+                    "FLICKER MIDI$midi half-order color is not distinct from $other: $metalShare / $referenceShare")
+            }
         }
     }
 
