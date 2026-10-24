@@ -26,6 +26,8 @@ landed since. [`MIDI_BLE_SPEC_2026_10.md`](MIDI_BLE_SPEC_2026_10.md) specifies a
 Bluetooth keyboard that is not implemented. [`MIDI_GAPS_2026_10.md`](MIDI_GAPS_2026_10.md)
 is the current survey of the open work and holds the "As built" record of batch A,
 so trust it first for what the tree has now.
+[`MIDI_CONTROLLER_PLAN_2026_10.md`](MIDI_CONTROLLER_PLAN_2026_10.md) plans full
+support for one keyboard controller (the MiniLab 3) as the archetype for all of them.
 
 **Formats.** [`MPC3_FORMAT.md`](MPC3_FORMAT.md) is the native container,
 and it keeps corpus facts separate from inferences. [`MPC_EXPORT.md`](MPC_EXPORT.md)
