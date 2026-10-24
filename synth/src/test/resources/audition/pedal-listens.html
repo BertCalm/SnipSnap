@@ -93,7 +93,7 @@ textarea { width: 100%; min-height: 64px; resize: vertical; font: 400 1rem/1.4 v
   </div>
   <div class="lede">
     <p>Four short listens that cost no new rack section, from the pedal board brainstorm. They sit beside the WAH gate, not in place of it. First, WAH on the short pads a kit is mostly made of: a closed hat, a rim and a snare cut to 60 ms, each as WAH ships today and with a floor that makes the sweep complete one whole wah before the pad ends. Then three questions the brainstorm could not answer without your ears: whether a SWELL already does what a FADE IN pedal would, whether TAPE's wobble already reads as a VIBRATO, and whether a long ECHO recipe is the DELAY pedal, and whether the rack's one-second tail cap is ever heard on it.</p>
-    <p>The DELAY on long notes sheet you heard has made way for the DELAY gate: ECHO with the HEAD knob, as built. Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
+    <p>The DELAY on long notes sheet you heard has made way for the DELAY gate: ECHO with the HEAD knob, as built. After it, DELAY as you answered the gate, for one last listen before it joins the pedals. Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
   </div>
   <div id="sheet"></div>
   <div class="foot">
@@ -125,6 +125,8 @@ const SPACE3 = [['closer', 'Closer together'], ['right', 'Right'], ['apart', 'Fu
 const JOIN3 = [['yes', 'Yes'], ['not_yet', 'Not yet'], ['no', 'No']];
 const REV3 = [['fix', 'Yes, fix it'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
 const TAIL3 = [['miss', 'Yes, I miss the echo after the note'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
+const CUT3 = [['fine', 'No, Delay 100 is fine'], ['faded', 'Yes: Faded 100 is better'], ['both', 'Yes, and Faded 100 still sounds cut off']];
+const SHIP3 = [['yes', 'Yes, as it is'], ['faded', 'Yes, once the cut is gentler'], ['not_yet', 'Not yet']];
 const QIDS = [];
 const state = {};
 const els = {};
@@ -430,6 +432,25 @@ function delayGateSheet() {
      chipGroup('dly_join', 'Should DELAY join the pedals?', JOIN3, 'join'));
 }
 
+function delayConfirmSheet() {
+  const one = (src, id, name, faded) => {
+    const row = [
+      [src + '/gate_pad', 'Pad', name + ', as the kit has it'],
+      [src + '/confirm_70', 'Delay 70', name + ', DELAY as you answered it, at 70'],
+      [src + '/confirm_100', 'Delay 100', name + ', DELAY as you answered it, at 100'],
+    ];
+    if (faded) row.push([src + '/confirm_fade_100', 'Faded 100', name + ', the same at 100 with its last 300 ms faded out']);
+    return [setRow(name, row), chipGroup('dlc_' + id + '_delay', 'Is this the DELAY, on ' + name + '?', YES4, name + ' confirm')];
+  };
+  return setSheet('DELAY, as you answered it', [
+    'Your gate answers: HEAD off (it beat HEAD on at the same level on every held note), MIX 100, and the repeats further apart. Together that is a recipe nobody has heard as one, so here it is. At 70 the repeats are 206 ms apart; at 100, 350 ms.',
+    'One thing to listen for. The app lets no pad grow by more than one second after it ends. At 100, with the repeats 350 ms apart, only about three fit in that second, so on the choir and the chug the echo is cut off while you can still hear it (at 70 the cut is far quieter). Faded 100 is a prototype of a gentler cut: the same clip with its last 300 ms faded out, so the echo fades away instead of stopping. Bringing the repeats closer was tried and did not help.',
+  ], ...one('SNARE', 'snare', 'the snare', false), ...one('CHOIR', 'choir', 'the choir', true),
+     ...one('JANGLE', 'jangle', 'the jangle', false), ...one('CHUG', 'chug', 'the chug', true),
+     chipGroup('dlc_cut', 'At 100, on the choir and the chug, does the echo stop too abruptly?', CUT3, 'cut'),
+     chipGroup('dlc_ship', 'Put DELAY on the pedal row?', SHIP3, 'ship'));
+}
+
 function verdictSheet() {
   return setSheet('Your verdict', 'After all of that.',
     chipGroup('s1b_slate', 'You said a slate of pedals to choose from, five allowed at once, swappable. Which did you mean?', SLATE4, 'slate'),
@@ -437,7 +458,7 @@ function verdictSheet() {
 }
 
 const sheet = document.getElementById('sheet');
-sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), delayGateSheet(), verdictSheet());
+sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), delayGateSheet(), delayConfirmSheet(), verdictSheet());
 wireNote(document.getElementById('s1b_note'), 's1b_note');
 loadLocal();
 paint();
