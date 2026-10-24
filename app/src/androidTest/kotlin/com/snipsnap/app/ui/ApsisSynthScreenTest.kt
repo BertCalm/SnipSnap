@@ -122,6 +122,8 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.velocity, progress("VELOCITY"), 1e-6f)
             for ((name, value) in preset.macros) assertEquals(value, progress(name), 1e-6f)
         }
+        press("STOP AUDITION")
+        assertEquals(1f, progress("HOLD"), 1e-6f)
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
     }
 

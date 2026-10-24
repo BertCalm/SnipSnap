@@ -1334,6 +1334,7 @@ fun SynthScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                if (engine == Engine.APSIS) touched = false
                 voicePlayer?.release()
                 voicePlayer = null
             }
@@ -3098,6 +3099,11 @@ fun SynthScreen(
 
             if (flockHeldPreview != null) {
                 FlockHeldAudition(flockHeldPreview, classColor, scheme)
+            } else if (engine == Engine.APSIS) {
+                ApsisAuditionControls(classColor, scheme,
+                    onAudition = { touched = true; snip?.let { audition(it) } },
+                    onStop = { touched = false; voicePlayer?.stop(); voicePlayer = null },
+                )
             } else {
                 Box(
                     Modifier
@@ -3269,6 +3275,28 @@ private fun rememberFilamentPreviews(): FilamentPreviewCache {
     val previews = remember { FilamentPreviewCache() }
     DisposableEffect(previews) { onDispose { previews.clear() } }
     return previews
+}
+
+/** Separate transport controls for the repeating Apsis preview. */
+@Composable
+private fun ApsisAuditionControls(
+    classColor: Color,
+    scheme: Scheme,
+    onAudition: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                .raisedBevel(scheme, fill = classColor.copy(alpha = .85f))
+                .tapeClick(label = "AUDITION", onClick = onAudition)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) { TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape) }
+        LabButton("STOP", scheme, enabled = true,
+            modifier = Modifier.weight(.45f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
+            accessibilityLabel = "STOP AUDITION", onClick = onStop)
+    }
 }
 
 /** Apsis playing controls stay outside the large screen's Compose method. */

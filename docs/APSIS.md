@@ -36,6 +36,8 @@ navigation, SAVE PRESET, YOURS and SEND TO PAD. SPREAD uses the authored root
 rather than estimating it from an inharmonic contact.
 
 HOLD at 0.99 or higher previews the entire settled cycle repeatedly until STOP.
+STOP also suppresses autoplay from a render still in flight. Backgrounding the
+screen stops Apsis and prevents a pending render from restarting its audition.
 SEND TO PAD saves it as gated playback with an explicit full-sample loop flag;
 releasing the pad uses the normal player's short stop fade. Finite notes play
 their whole one-shot tail. Changing a held Apsis recipe back to a finite note
