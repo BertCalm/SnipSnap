@@ -36,6 +36,10 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // One worker exercises every starter before the three-minute import
+    // round trip. Retained engine caches plus PCM copies exhaust the
+    // default 512 MiB heap before that test can finish on CI.
+    maxHeapSize = "1g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
