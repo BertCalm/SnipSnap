@@ -46,6 +46,7 @@
     } catch { return null; }
   }
   function soundPath(clip) { return fileUrl(mode === 'raw' ? (clip.raw || clip.matched) : (clip.matched || clip.raw)); }
+  function downloadLabel(clip) { return mode === 'raw' && /\.flac(?:$|[?#])/i.test(clip.raw || '') ? 'Raw FLAC ↓' : 'WAV ↓'; }
   function roomOf(clip) { return /aquarium/i.test([clip.voice, clip.title, clip.id, ...(clip.tags || [])].join(' ')) ? 'AQUARIUM' : /hybrid/i.test([clip.voice, clip.title, clip.id, ...(clip.tags || [])].join(' ')) ? 'HYBRID' : ''; }
   function noteName(midi) {
     if (midi === null || midi === undefined || midi === '') return '';
@@ -130,7 +131,7 @@
     const bottom = create('div', 'clip-bottom');
     const localLabel = create('span', '', 'Rendered audio');
     const downloads = create('div', 'clip-downloads');
-    const wav = create('a', '', 'WAV ↓'); wav.download = ''; wav.dataset.download = 'wav';
+    const wav = create('a', '', downloadLabel(clip)); wav.download = ''; wav.dataset.download = 'wav';
     const path = soundPath(clip); if (path) wav.href = path; else wav.hidden = true;
     downloads.append(wav);
     if (fileUrl(clip.recipe)) { const recipe = create('a', '', 'Recipe ↓'); recipe.href = fileUrl(clip.recipe); recipe.download = ''; downloads.append(recipe); }
@@ -389,7 +390,8 @@
       const link = card.querySelector('[data-download=wav]');
       const clip = clips.find((c) => c.id === id); const url = clip ? soundPath(clip) : null;
       if (url) { link.href = url; link.hidden = false; }
-      link.setAttribute('aria-label', 'Download ' + mode + ' WAV');
+      link.textContent = clip ? downloadLabel(clip) : 'WAV ↓';
+      link.setAttribute('aria-label', 'Download ' + mode + (clip && downloadLabel(clip).includes('FLAC') ? ' FLAC' : ' WAV'));
     });
     $('transport').hidden = !currentClip; document.body.classList.toggle('has-transport', Boolean(currentClip));
     if (!currentClip) return;

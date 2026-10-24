@@ -78,7 +78,16 @@ remain separate acceptance steps.
 ```sh
 ./gradlew --no-daemon :synth:generateChamberKit -PchamberKitOutput=/tmp/chamber-kit
 ./gradlew --no-daemon :synth:generateChamberAudition -PchamberRevision=finite -PchamberOutput=/tmp/chamber-finite -PchamberPrevious=/absolute/model-3-mix-audition -PchamberKit='/tmp/chamber-kit/SnipSnap Chamber Kit'
+python3 scripts/package_chamber_site.py /tmp/chamber-finite /tmp/chamber-hosting
 ```
+
+The final command prepares static hosting within the provider's 256 MiB expanded
+archive limit and requires `ffmpeg`. The full generated study remains in WAV.
+Hosting converts selected raw diagnostics to lossless FLAC, verifies every
+decoded PCM16 frame, and records original/container/PCM hashes in
+`hosting-audio.json`. Matched WAVs, featured raw WAVs, starter/MPC downloads and
+all historical files retain their bytes. The original manifest is retained as
+`manifest-rendered.json`; the hosting manifest names each delivered format.
 
 The finite study uses the current model across registers, velocities, presets,
 macro sweeps and interacting-control corners. Musical context clips use the same
