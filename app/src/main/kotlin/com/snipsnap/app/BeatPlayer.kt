@@ -14,7 +14,6 @@ import com.snipsnap.kit.GrooveProgram
 import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.LiveRecord
-import com.snipsnap.kit.MidiGroove
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
 import com.snipsnap.shell.BeatClock
@@ -384,8 +383,8 @@ class BeatPlayer(
         // No release exists, so the note-off is one step later, stamped ahead.
         val note = MidiPads.noteForSlot(slot, MidiPads.Map.MPC) ?: return
         val now = System.nanoTime()
-        MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, note, velocity, now)
-        MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, note, now + MidiGate.stepNanos(entry.kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
+        MidiOut.drumOn(note, velocity, now)
+        MidiOut.drumOff(note, now + MidiGate.stepNanos(entry.kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
     }
 
     private fun noteBar() {

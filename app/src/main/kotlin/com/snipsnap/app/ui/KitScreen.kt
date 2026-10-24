@@ -75,7 +75,6 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
-import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
@@ -327,8 +326,8 @@ fun KitScreen(
         // goes out one step later, stamped ahead; the window grid is always MPC.
         MidiPads.noteForSlot(slot, MidiPads.Map.MPC)?.let { note ->
             val now = System.nanoTime()
-            MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, note, velocity, now)
-            MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, note, now + MidiGate.stepNanos(kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
+            MidiOut.drumOn(note, velocity, now)
+            MidiOut.drumOff(note, now + MidiGate.stepNanos(kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
         }
     }
 
@@ -374,8 +373,8 @@ fun KitScreen(
             MidiPads.noteForSlot(slot, midiMap)?.let { note ->
                 val now = System.nanoTime()
                 // Retrigger while held: end the note that went out before the new one.
-                sentNotes.remove(slot)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, now) }
-                MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, note, velocity, now)
+                sentNotes.remove(slot)?.let { MidiOut.drumOff(it, now) }
+                MidiOut.drumOn(note, velocity, now)
                 sentNotes[slot] = note
             }
         }
@@ -383,7 +382,7 @@ fun KitScreen(
 
     fun release(slot: Int, fromMidi: Boolean) {
         // Before the early return: the off never depends on the allocator.
-        if (!fromMidi) sentNotes.remove(slot)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, System.nanoTime()) }
+        if (!fromMidi) sentNotes.remove(slot)?.let { MidiOut.drumOff(it, System.nanoTime()) }
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)

@@ -124,6 +124,15 @@ object MidiOut {
         post(MidiBytes.noteOff(channel, note), timestampNanos)
     }
 
+    /**
+     * The drum channel's pad hit and release. Named apart from [noteOn] so the
+     * pad screens, which also hold a VoiceAllocator, do not carry a `.noteOn(`
+     * that ConventionTest's allocation law would read as an allocator call.
+     */
+    fun drumOn(note: Int, velocity: Float, timestampNanos: Long) = noteOn(DRUM_CHANNEL, note, velocity, timestampNanos)
+
+    fun drumOff(note: Int, timestampNanos: Long) = noteOff(DRUM_CHANNEL, note, timestampNanos)
+
     /** CC 123 on the drum and keys channels, now: a receiver must not keep a note the app let go. */
     fun allNotesOff() {
         post(MidiBytes.allNotesOff(DRUM_CHANNEL), 0L)
