@@ -66,6 +66,15 @@ android {
             // keeps its shelf and preferences independent.
             applicationIdSuffix = ".brassgrow"
             versionNameSuffix = "-brass-grow"
+            // EXPERIMENT (not for merge): D8 compiles a debuggable build in
+            // debug mode, keeping every local live for its whole method. The
+            // largest composables (PadSheetScreen 344 registers, SurfaceScreen
+            // 284, SynthScreen 235) sit around ART's 256-register boundary,
+            // where this D8 has already miscompiled SynthScreen. A
+            // non-debuggable debug build switches D8 to release mode with no
+            // other change, to see whether emulator-tests' random
+            // Compose-internal crashes follow the compiler mode.
+            isDebuggable = false
         }
         release {
             isMinifyEnabled = false
