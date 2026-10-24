@@ -2214,7 +2214,7 @@ fun SynthScreen(
 
                 if (engine == Engine.CHAMBER) {
                     ChamberNoteControls(
-                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ChamberPatch,
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as ChamberPatch,
                         fillColor = classColor,
                         scheme = scheme,
                     ) { edited ->
