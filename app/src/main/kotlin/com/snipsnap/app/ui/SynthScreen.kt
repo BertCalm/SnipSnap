@@ -193,6 +193,7 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.MacroSpec
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.MercuryVoice
@@ -2787,37 +2788,14 @@ fun SynthScreen(
                     val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
                     Shoal.supportsHold(patch.model, patch.material)
                 } else true
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    for ((heading, specs) in if (engine == Engine.CONTOUR) {
-                        listOf("TONE", "ENVELOPE", "MOVEMENT", "FILTER", "PLAY").map { heading ->
-                            heading to macroSpecs.filter { contourMacroGroup(it.name) == heading }
-                        }
-                    } else listOf(null to macroSpecs)) {
-                        if (heading != null) TapeText(
-                            heading, TapeType.pixelSmall, scheme.ink2.tape,
-                            Modifier.padding(top = 8.dp),
-                        )
-                        for (spec in specs) {
-                            // HOLD remains a finite 2–6 s control. Held RIBBON uses
-                            // its saved release instead, without changing HOLD's value.
-                            if (flockHeldPreview != null && spec.name == "HOLD") continue
-                            MacroSlider(
-                                label = spec.name,
-                                value = macros.getValue(spec.name),
-                                fillColor = classColor,
-                                scheme = scheme,
-                                // SIREN's HOLD reads LOOP at its top: the render is
-                                // one seamless loop for the SURFACE, not a longer
-                                // hold (Siren.isLoop), the way GLINT's PEAK readout
-                                // would say the harmonic it snapped to.
-                                readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
-                                onValueChange = { v -> updateMacro(spec.name, v) },
-                                valueRange = macroRange(spec.name),
-                                enabled = spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC),
-                            )
-                        }
-                    }
-                }
+                MacroSliders(
+                    engine, voice, macroSpecs, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported,
+                    holdingRibbon = flockHeldPreview != null,
+                    classColor = classColor,
+                    scheme = scheme,
+                    macroRange = ::macroRange,
+                    onMacro = ::updateMacro,
+                )
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
@@ -3138,6 +3116,61 @@ fun SynthScreen(
                 )
             }
             SynthOverlayBackHandler(onBack = ::closeDrone)
+        }
+    }
+}
+
+/**
+ * The MACRO sliders, CONTOUR's under its TONE/ENVELOPE/MOVEMENT/FILTER/PLAY
+ * headings. A composable of its own because `Column` is inline: inside
+ * [SynthScreen] this block compiled into the screen's one method, which ART's
+ * verifier rejected once that method outgrew its registers.
+ */
+@Composable
+private fun MacroSliders(
+    engine: Engine,
+    voice: Enum<*>,
+    macroSpecs: List<MacroSpec>,
+    macros: Map<String, Float>,
+    loadedPatch: Patch?,
+    origamiPatch: OrigamiPatch?,
+    registersRoot: Int?,
+    shoalHoldSupported: Boolean,
+    holdingRibbon: Boolean,
+    classColor: Color,
+    scheme: Scheme,
+    macroRange: (String) -> ClosedFloatingPointRange<Float>,
+    onMacro: (String, Float) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        for ((heading, specs) in if (engine == Engine.CONTOUR) {
+            listOf("TONE", "ENVELOPE", "MOVEMENT", "FILTER", "PLAY").map { heading ->
+                heading to macroSpecs.filter { contourMacroGroup(it.name) == heading }
+            }
+        } else listOf(null to macroSpecs)) {
+            if (heading != null) TapeText(
+                heading, TapeType.pixelSmall, scheme.ink2.tape,
+                Modifier.padding(top = 8.dp),
+            )
+            for (spec in specs) {
+                // HOLD remains a finite 2–6 s control. Held RIBBON uses
+                // its saved release instead, without changing HOLD's value.
+                if (holdingRibbon && spec.name == "HOLD") continue
+                MacroSlider(
+                    label = spec.name,
+                    value = macros.getValue(spec.name),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    // SIREN's HOLD reads LOOP at its top: the render is
+                    // one seamless loop for the SURFACE, not a longer
+                    // hold (Siren.isLoop), the way GLINT's PEAK readout
+                    // would say the harmonic it snapped to.
+                    readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
+                    onValueChange = { v -> onMacro(spec.name, v) },
+                    valueRange = macroRange(spec.name),
+                    enabled = spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC),
+                )
+            }
         }
     }
 }
