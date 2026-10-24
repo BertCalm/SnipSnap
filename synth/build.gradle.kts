@@ -1163,7 +1163,7 @@ tasks.register<JavaExec>("generateTremorAudition") {
 
 tasks.register<JavaExec>("generateTremorComparison") {
     group = "distribution"
-    description = "Render the 16 matched Tremor listening-repair clips and metadata."
+    description = "Render matched Tremor voice, control, touch and held comparisons with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.TremorComparisonGenerator")
     workingDir = projectDir
@@ -1250,12 +1250,33 @@ tasks.register<JavaExec>("generateCisternAudition") {
 
 tasks.register<JavaExec>("generateFlotillaComparison") {
     group = "distribution"
-    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    description = "Render matched FLOTILLA voices, population steps, controls and held clips with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
     workingDir = projectDir
     val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
     args("${rootDir}/testkit/flotilla-comparison/$version")
+}
+
+/** Full BALLAST audition with shared-gain touch and component diagnostics. */
+tasks.register<JavaExec>("generateBallastAudition") {
+    group = "distribution"
+    description = "Render BALLAST presets, control sweeps and correctly calibrated diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-audition")
+}
+
+/** Capture before first; candidate mode requires the frozen baseline calibration. */
+tasks.register<JavaExec>("generateBallastComparison") {
+    group = "distribution"
+    description = "Render BALLAST's matched bass, glass, structure and velocity comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("ballastComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/ballast-comparison/$version")
 }
 
 /** Render MURK's dry voices, causal probes and accessible offline listening page. */

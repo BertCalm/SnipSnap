@@ -177,7 +177,7 @@ instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
 speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
-no picker entry (BORE, ARCO, TREMOR, AEROSTAT) still renders here, as do
+no picker entry (BORE, ARCO) still renders here, as do
 MERCURY's EDDY, VESSEL and SHARD voices, which the picker leaves out until
 their listen.
 VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes

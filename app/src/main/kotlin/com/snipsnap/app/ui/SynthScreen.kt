@@ -133,6 +133,15 @@ import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
 import com.snipsnap.synth.OnsetVoice
+import com.snipsnap.synth.Aerostat
+import com.snipsnap.synth.AerostatPatch
+import com.snipsnap.synth.AerostatVoice
+import com.snipsnap.synth.Tremor
+import com.snipsnap.synth.TremorPatch
+import com.snipsnap.synth.TremorVoice
+import com.snipsnap.synth.Ballast
+import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.ScannedChain
@@ -3366,6 +3375,9 @@ private fun macroReadout(
         "%.2fs".format(Locale.ROOT, OrigamiGestures.durationSeconds(origamiPatch.voice, macros.getValue(name)))
     engine == Engine.SIREN && name == "HOLD" && Siren.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.FLOTILLA && name == "HOLD" && Flotilla.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.AEROSTAT && name == "HOLD" && Aerostat.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.TREMOR && name == "HOLD" && macros.getValue(name) >= Tremor.HOLD_LOOP -> "LOOP"
+    engine == Engine.BALLAST && name == "HOLD" && Ballast.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CISTERN && name == "HOLD" && Cistern.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CIRCUIT && name == "HOLD" && Circuit.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.ALLOY && name == "HOLD" && Alloy.isLoop(macros.getValue(name)) -> "LOOP"
@@ -4128,7 +4140,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT;
 
     val displayName: String get() = name.replace('_', ' ')
 
@@ -4154,6 +4166,9 @@ private enum class Engine {
         SIREN -> SirenVoice.entries
         FORK -> ForkVoice.entries
         FLOTILLA -> FlotillaVoice.entries
+        AEROSTAT -> AerostatVoice.entries
+        TREMOR -> TremorVoice.entries
+        BALLAST -> BallastVoice.entries
         CISTERN -> CisternVoice.entries
         CIRCUIT -> CircuitVoice.entries
         OBBLIGATO -> ObbligatoVoice.entries
@@ -4215,6 +4230,9 @@ private enum class Engine {
         SIREN -> Siren.macrosFor(voice as SirenVoice)
         FORK -> Fork.macrosFor(voice as ForkVoice)
         FLOTILLA -> Flotilla.macrosFor(voice as FlotillaVoice)
+        AEROSTAT -> Aerostat.macrosFor(voice as AerostatVoice)
+        TREMOR -> Tremor.macrosFor(voice as TremorVoice)
+        BALLAST -> Ballast.macrosFor(voice as BallastVoice)
         CISTERN -> Cistern.macrosFor(voice as CisternVoice)
         CIRCUIT -> Circuit.macrosFor(voice as CircuitVoice)
         OBBLIGATO -> Obbligato.macrosFor()
@@ -4274,6 +4292,9 @@ private enum class Engine {
         SIREN -> Siren.defaults(voice as SirenVoice)
         FORK -> Fork.defaults(voice as ForkVoice)
         FLOTILLA -> Flotilla.defaults(voice as FlotillaVoice)
+        AEROSTAT -> Aerostat.defaults(voice as AerostatVoice)
+        TREMOR -> Tremor.defaults(voice as TremorVoice)
+        BALLAST -> Ballast.defaults(voice as BallastVoice)
         CISTERN -> Cistern.defaults(voice as CisternVoice)
         CIRCUIT -> Circuit.defaults(voice as CircuitVoice)
         OBBLIGATO -> Obbligato.defaults()
@@ -4335,6 +4356,9 @@ private enum class Engine {
         SIREN -> Siren.scramble(voice as SirenVoice, random)
         FORK -> Fork.scramble(voice as ForkVoice, random)
         FLOTILLA -> Flotilla.scramble(voice as FlotillaVoice, random)
+        AEROSTAT -> Aerostat.scramble(voice as AerostatVoice, random)
+        TREMOR -> Tremor.macrosFor(voice as TremorVoice).associate { it.name to random.nextFloat() }
+        BALLAST -> Ballast.scramble(voice as BallastVoice, random)
         CISTERN -> Cistern.scramble(voice as CisternVoice, random)
         CIRCUIT -> Circuit.scramble(voice as CircuitVoice, random)
         OBBLIGATO -> Obbligato.macrosFor().associate { it.name to random.nextFloat() }
@@ -4401,6 +4425,9 @@ private enum class Engine {
         SIREN -> Siren.render(voice as SirenVoice, macros)
         FORK -> Fork.render(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.render(voice as FlotillaVoice, macros)
+        AEROSTAT -> Aerostat.render(voice as AerostatVoice, macros)
+        TREMOR -> Tremor.render(voice as TremorVoice, macros)
+        BALLAST -> Ballast.render(voice as BallastVoice, macros)
         CISTERN -> Cistern.render(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.render(voice as CircuitVoice, macros)
         OBBLIGATO -> Obbligato.render(macros)
@@ -4466,6 +4493,9 @@ private enum class Engine {
         // FORK: DECAY alone decides it, the same shape SIREN's HOLD takes.
         FORK -> Fork.drumClassFor(voice as ForkVoice, macros)
         FLOTILLA -> Flotilla.drumClassFor(voice as FlotillaVoice, macros)
+        AEROSTAT -> Aerostat.drumClassFor(voice as AerostatVoice, macros)
+        TREMOR -> Tremor.drumClassFor(voice as TremorVoice, macros)
+        BALLAST -> Ballast.drumClassFor(voice as BallastVoice, macros)
         CISTERN -> Cistern.drumClassFor(voice as CisternVoice, macros)
         CIRCUIT -> Circuit.drumClassFor(voice as CircuitVoice, macros)
         OBBLIGATO -> Obbligato.drumClassFor()
@@ -4526,6 +4556,9 @@ private enum class Engine {
         SIREN -> SirenPatch(name, voice as SirenVoice, macros)
         FORK -> ForkPatch(name, voice as ForkVoice, macros)
         FLOTILLA -> FlotillaPatch(name, voice as FlotillaVoice, macros)
+        AEROSTAT -> AerostatPatch(name, voice as AerostatVoice, macros)
+        TREMOR -> TremorPatch(name, voice as TremorVoice, macros)
+        BALLAST -> BallastPatch(name, voice as BallastVoice, macros)
         CISTERN -> CisternPatch(name, voice as CisternVoice, macros)
         CIRCUIT -> CircuitPatch(name, voice as CircuitVoice, macros)
         OBBLIGATO -> ObbligatoPatch(name, macros)
@@ -4568,7 +4601,8 @@ private enum class Engine {
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
     fun patchDisplayName(voice: Enum<*>): String {
-        val voiceName = voice.name.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
+        val labelledVoice = if (voice is BallastVoice) voice.displayName else voice.name
+        val voiceName = labelledVoice.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
         val engineName = displayName.lowercase().split(' ').joinToString(" ") { it.replaceFirstChar { letter -> letter.uppercase() } }
         return "$voiceName $engineName"
     }
@@ -4704,6 +4738,7 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         OnsetVoice.HAT_OPEN -> "HAT OP"
     }
     Engine.OBBLIGATO -> "AIR + REED"
+    Engine.BALLAST -> (voice as BallastVoice).displayName
     else -> voice.name
 }
 
@@ -4975,7 +5010,8 @@ private fun ReopenPadOverlay(
                         verticalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         TapeText("${padTag(pad.slot)} · ${pad.displayName}", TapeType.pixelSmall, scheme.ink2.tape)
-                        TapeText("${patch?.engine} · ${patch?.voiceName?.replace('_', ' ')}", TapeType.lcdSmall, scheme.amber.tape)
+                        val voiceLabel = (patch as? BallastPatch)?.voice?.displayName ?: patch?.voiceName?.replace('_', ' ')
+                        TapeText("${patch?.engine} · $voiceLabel", TapeType.lcdSmall, scheme.amber.tape)
                     }
                 }
             }
