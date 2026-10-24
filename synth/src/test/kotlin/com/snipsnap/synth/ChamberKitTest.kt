@@ -105,7 +105,7 @@ class ChamberKitTest {
                 assertEquals(44_100, replay.sampleRate)
                 assertTrue(replay.samples.all { it.isFinite() })
                 assertTrue(replay.peak() in .000001f..1f)
-                assertEquals(0f, replay.samples.last(), "${pad.slot}: finite ending lost its fade")
+                assertTrue(replay.samples.last() == 0f, "${pad.slot}: finite ending lost its fade")
                 val encoded = ByteArrayOutputStream().also { WavWriter.write(it, replay) }.toByteArray()
                 val sample = File(data, pad.sampleFile)
                 assertContentEquals(encoded, sample.readBytes(), "${pad.slot}: native pitch, gain or full tail changed")
