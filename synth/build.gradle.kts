@@ -62,6 +62,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** Accepted versus revised upper-TOUCH character with identical seeded scores. */
+tasks.register<JavaExec>("generateTrioTouchAudition") {
+    group = "distribution"
+    description = "Render twelve TRIO model 5/6 upper-TOUCH comparisons and a listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioTouchAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioTouchOutput").orNull ?: "${rootDir}/testkit/trio-touch")
+}
+
 /** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
 tasks.register<JavaExec>("generateTrioMusicalBank") {
     group = "distribution"
