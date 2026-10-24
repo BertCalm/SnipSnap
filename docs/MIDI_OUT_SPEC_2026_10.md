@@ -1,0 +1,242 @@
+# MIDI out and a published port: SnipSnap plays other machines
+
+Engineering spec for an implementing session. Job: WIRE. Steps 4 and 9 of
+[`MIDI_GAPS_2026_10.md`](MIDI_GAPS_2026_10.md)'s table (the review's step 4): nothing in the
+repo can send a byte, and other apps cannot see SnipSnap as a MIDI device. No CLOCK work is
+in scope; the timing rule that applies is that every byte leaves with the stamp its cause
+carried, in the one clock domain. The nanoseconds-to-frames fit, clock out and any follower
+still wait on bench S1 to S3.
+
+Repo read at `61757cfb6` (2026-10-23, the head of `claude/midi-batch-a`, PR #649), which
+this builds on: it needs `MidiFingerprint`, `MidiDeviceId` and `MidiWire.Event.RealTime`
+from that branch. Every name below was found by grep unless marked **(new)**.
+
+## 1. What exists, and what the gap is
+
+- `app/src/main/kotlin/com/snipsnap/app/MidiInput.kt` opens every device `MidiManager`
+  lists, opens each device's **output** ports (what the device sends) and connects a
+  `MidiWire` per port. It never calls `openInputPort`. It is screen-scoped: `KeysScreen.kt:116`
+  and `KitScreen.kt:384` each construct one and open and close it with the lifecycle. Each
+  `Opened` carries a `MidiDeviceId(name, fingerprint)`.
+- `shell/.../MidiPads.kt` maps a note to a pad slot under two maps (`MPC`, the exported kit's
+  own notes from `PadNoteMap.DEFAULT`; `IN_ORDER`, C1 on A01). It has no inverse.
+- `kit/.../MidiGroove.kt` writes Standard MIDI Files with `DRUM_CHANNEL = 9` (channel 10) and
+  raw status bytes `0x90 | channel`. Nothing shares an encoder with it.
+- Notes originate in four places: PLAY's pad grid (`KitScreen.playHeld`/`release`, also fed
+  by MIDI in through `MidiPads.handle` at `KitScreen.kt:382`), the fullscreen grid
+  (`KitScreen.kt:1042`, same two functions), the sequencer (`BeatPlayer.hit`, line 362, no
+  release; one-shots), and KEYS (`InstrumentPlayer.noteOn`/`noteOff`, reached from touch at
+  `KeysScreen.kt:218-219` and from MIDI at `KeysScreen.kt:103-104`).
+- The manifest declares `android.software.midi` optional, two services (`MicSessionService`,
+  `SnipTileService`) and no `MidiDeviceService`. `res/xml/` has no `midi_device_info.xml`.
+- SETUP is `PropertiesScreen.kt`; a setting is a `GroupBox` with ON/OFF bevels (the HAPTICS
+  block at lines 214-247 is the pattern), state lives in `App.kt` beside `PREF_HAPTICS` in the
+  `PREFS = "tapeos"` preferences, and every string the UI says is a `Copy` constant in
+  `shell/.../Personality.kt`.
+- `SnipSnapApplication.onCreate` installs process-wide singletons (`AudioFocus.install(this)`).
+
+The gap is two things: no code holds a `MidiInputPort` (the device-side name for where you
+send), and no `MidiDeviceService` publishes SnipSnap as a device.
+
+## 2. What goes out, and what never does
+
+**Goes out**, as MIDI 1.0 bytes, stamped with the cause's own `System.nanoTime()`:
+
+| Origin | Message | Channel | Note | Velocity | Note-off |
+|---|---|---|---|---|---|
+| PLAY pad, touched (grid or fullscreen) | note on | 10 (`MidiGroove.DRUM_CHANNEL`) | `MidiPads.noteForSlot(slot, map)` under PLAY's current map **(new)** | `PadHit.midiVelocity(v)` | on `release(slot)` |
+| Sequencer hit (`BeatPlayer.hit`) | note on | 10 | same, under `Map.MPC` | same | stamped one step after the on; the system delivers it then |
+| KEYS key, touched | note on | 1 | the key's own note | same | on touch release |
+
+**Never goes out:** anything that arrived over MIDI. A note that `MidiPads.handle` or
+`MidiKeys.handle` delivered is played, not forwarded; there is no thru. A keyboard would
+otherwise hear its own notes back, and a controller's LEDs would light from the notes meant
+for its pads. Clock, program change and controllers are out of scope for this spec.
+
+Why the MPC map: an MPC receiving "SnipSnap Out" or a USB cable plays the same pad SnipSnap
+played, because `PadNoteMap.DEFAULT` is the exported kit's own map. A round trip is
+`noteForSlot(slotForNote(n)) == n` and the test says so.
+
+Proposed, not measured: the sequencer gate of one step. `MidiGroove` writes each groove
+note's own length; a live hit has none, and one sixteenth is what a drum program ignores and
+a synth hears as a short note. A later setting can lengthen it.
+
+## 3. Endpoints
+
+An endpoint is somewhere bytes can go. Two kinds in this spec:
+
+1. **A device's input ports.** For every device `MidiInput` opens, it also opens
+   `device.openInputPort(i)` for each `i in 0 until info.inputPortCount` (the naming trap:
+   you send into the device's *input*; write the comment every time, as `MidiInput.kt:25`
+   already does for the other direction). The ports ride on the same `Opened` record and
+   close with it in `release`.
+2. **The published port "SnipSnap Out".** `SnipSnapMidiService` **(new)** extends
+   `MidiDeviceService`. Its `midi_device_info.xml` **(new)** declares one input port
+   "SnipSnap In" and one output port "SnipSnap Out", manufacturer and product "SnipSnap".
+   The system starts the service when any app opens the device; while it lives, its
+   `outputPortReceivers[0]` is an endpoint, registered on `onCreate` and removed on
+   `onDestroy`.
+
+Identity for a hardware endpoint is the device's `MidiFingerprint` plus the port index; a
+persisted routing table, when one exists, keys on `"${fingerprint.key}/in$index"`. Nothing is
+persisted in this spec.
+
+**SnipSnap must not open itself.** Its own virtual device appears in `MidiManager`'s list
+like any other. `MidiInput.openDevice` skips any `MidiDeviceInfo` whose
+`properties.getParcelable<ServiceInfo>(PROPERTY_SERVICE_INFO)?.packageName` equals the app's
+package; otherwise PLAY would read "SnipSnap Out" and hear its own notes, and KEYS would send
+into "SnipSnap In" and play itself.
+
+## 4. The published port's other half: "SnipSnap In"
+
+What another app sends into "SnipSnap In" arrives at the receiver `SnipSnapMidiService`
+returns from `onGetInputPortReceivers()`, on a binder thread, as a byte stream. It is an
+endpoint of the other direction, and it joins the existing input path rather than growing a
+new one: the receiver feeds a `MidiWire` and posts the stamped events to a process-wide
+`VirtualMidi` **(new)** object's listeners. `MidiInput.open` subscribes to `VirtualMidi` and
+delivers those events to its own `Listener.onEvent` exactly as it delivers a USB device's,
+and `MidiInput.devices` lists it as `MidiDeviceId("SNIPSNAP IN", fingerprint)` with
+`Transport.VIRTUAL`, vendor and product 0, one input port, one output port, and the name
+hash of "SnipSnap"/"SnipSnap In", **only while another app holds the port open**: the
+service's `onCreate`/`onDestroy` are the signal, since the system binds it on the first
+open and unbinds after the last close. `MidiInput.onDeviceRemoved` fires on unbind, so a
+held note from another app is let go the way a pulled cable's is.
+
+## 5. The sender: `MidiOut` (new), process-wide
+
+`app/src/main/kotlin/com/snipsnap/app/MidiOut.kt`, an `object` installed from
+`SnipSnapApplication.onCreate` beside `AudioFocus.install(this)`.
+
+- **One thread.** A `HandlerThread("midi-out")`. `MidiInputPort.send` may block; it never
+  runs on the main thread or the audio thread. Callers post pre-encoded bytes plus a stamp.
+- **The encoder is pure and lives in `:kit`.** `MidiBytes` **(new)**,
+  `kit/src/main/kotlin/com/snipsnap/kit/MidiBytes.kt`: `noteOn(channel, note, velocity127)`,
+  `noteOff(channel, note)`, `control(channel, controller, value)` returning `ByteArray`,
+  arguments clamped to their seven bits and the channel to 0..15. Its tests feed each result
+  through `MidiWire.feed` and expect the matching event back: the two halves of the wire
+  agree by construction.
+- **Destinations** are a `CopyOnWriteArrayList<Destination>` where `Destination(id: String,
+  send: (ByteArray, Long) -> Unit)`. `MidiInput` adds one per opened input port and removes
+  them in `release`; `SnipSnapMidiService` adds "SnipSnap Out" in `onCreate` and removes it
+  in `onDestroy`. A `send` that throws (`IOException` when the port is gone) is caught on the
+  out thread, logged once per destination, and the destination is dropped.
+- **The switch.** `MidiOut.hardwareEnabled: Boolean`, read from `PREFS` key `"midi.out"`,
+  default **false**. When false, hardware destinations are skipped and "SnipSnap Out" still
+  sends. Rationale: the published port is inert until another app asks for it, so always-on
+  costs nothing; a USB keyboard receiving every pad hit by default is a surprise, and some
+  keyboards re-send what they receive. The player turns it on in SETUP.
+- **API**, main thread: `noteOn(channel, note, velocity, timestampNanos)`,
+  `noteOff(channel, note, timestampNanos)`, `allNotesOff()` (CC 123 on both channels, used by
+  PANIC and by `MidiInput.onDeviceRemoved`'s silence path so a receiver is never left holding
+  a note the app has let go).
+
+## 6. Lifecycle
+
+- A hardware input port opens when `MidiInput.openDevice` succeeds, alongside the output
+  ports, and closes in `release` with them. A port that refuses to open (another app holds it;
+  `openInputPort` returns null) is logged with the device name and port index and the device
+  is still used for what did open.
+- "SnipSnap Out" exists while `SnipSnapMidiService` is bound. `MidiOut` holds no reference to
+  the service after `onDestroy`.
+- The out thread starts on first `install` and lives for the process; it has nothing to do
+  when the list is empty.
+- No foreground service, no new permission. `BIND_MIDI_DEVICE_SERVICE` is the system's
+  permission on the service element, not one the app requests.
+
+## 7. Threading, stated once
+
+| Thread | Does | Never |
+|---|---|---|
+| main | encodes (one small `ByteArray`), posts to the out thread, registers destinations | sends |
+| `midi-out` | `MidiInputPort.send`, catching `IOException` | touches Compose state |
+| binder (service receivers) | `MidiWire.feed`, posts events to main | blocks, allocates beyond the event list |
+| audio | unchanged | anything from this spec |
+
+The one clock domain holds: a touch's stamp is `MotionEvent.getEventTimeNanos()` where the
+screen has it, else `System.nanoTime()` at the call; a sequencer hit's stamp is the
+`withFrameNanos` time that fired it; the sequencer's note-off is that plus one step in
+nanoseconds, which the system holds and delivers on time.
+
+## 8. SETUP
+
+One `GroupBox` in `PropertiesScreen` after HAPTICS, legend `Copy.SETUP_MIDI_OUT_HEADING`
+("MIDI OUT"), ON/OFF bevels in the HAPTICS pattern, summary ON or OFF, and a note line
+`Copy.SETUP_MIDI_OUT_NOTE`: "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN
+ALWAYS OPEN SNIPSNAP OUT." State `midiOutOn` lives in `App.kt` beside `hapticsOn`, read from
+and written to `PREFS`, and pushed into `MidiOut.hardwareEnabled`.
+
+Below the switch, one line per destination: the device name and `OUT` or `BUSY`, from
+`MidiOut.destinations` (names) and `MidiInput`'s refused-port log turned into a word. If
+nothing is connected: `Copy.SETUP_MIDI_OUT_NONE` ("NOTHING PLUGGED IN. SNIPSNAP OUT IS
+STILL PUBLISHED."). This is the diagnostics screen's first row; the rest of that screen
+(a live monitor, latency, a copyable report) lands with the Bluetooth spec, which already
+designs its SETUP section.
+
+## 9. Failure in words
+
+| What goes wrong | What the player sees |
+|---|---|
+| A device's input port is held by another app | SETUP lists the device as BUSY; notes still play locally |
+| `send` throws because the cable came out mid-note | the destination is dropped; `MidiInput.onDeviceRemoved` already silences; nothing else |
+| The phone has no `android.software.midi` | `MidiInput.supported` is false; the SETUP block shows the HAPTICS-style note "THIS PHONE HAS NO MIDI" (`Copy.SETUP_MIDI_OUT_UNSUPPORTED`) and no switch |
+| Another app sends garbage into "SnipSnap In" | `MidiWire`'s contract: a status byte resynchronises; nothing allocates per byte beyond one event |
+
+## 10. How we would know it works
+
+JVM, in CI:
+
+- `MidiBytesTest`: every encoder output fed through `MidiWire` returns the matching event;
+  out-of-range note, velocity and channel are clamped, never thrown; velocity 0 encodes as a
+  note-off status, not a note-on with 0 (so a receiver that does not treat 0x90 v0 as off is
+  still right).
+- `MidiPadsTest`: `noteForSlot` is the inverse of `slotForNote` for every slot under both
+  maps; an unfilled or out-of-range slot is null.
+- `:app:compileDebugKotlin` and `:app:processDebugManifest` (the service element and the
+  `meta-data` resource must parse).
+
+On a phone (bench rows this spec adds; none run here):
+
+- **M1** Loopback: a USB cable from the phone to an interface and back, or two apps on one
+  phone. PLAY a pad; the receiving side shows note 36 on channel 10 for A02, velocity from
+  the pad's position.
+- **M2** Another app opens "SnipSnap Out" and plays a kit; a third app plays into "SnipSnap
+  In" and PLAY lights the pad.
+- **M3** With MIDI OUT off in SETUP, a USB keyboard hears nothing; on, it hears the pads.
+- **M4** Pull the cable mid-hold on KEYS: the receiver's note ends (`allNotesOff` on removal).
+
+## 11. Ledger
+
+- **Verified** (grep, `61757cfb6`): everything in section 1; `DRUM_CHANNEL = 9` in
+  `MidiGroove.kt:26`; no `openInputPort`, `MidiDeviceService`, `midi_device_info` anywhere;
+  the four note origins and their line numbers; the HAPTICS pattern and `PREF_HAPTICS`.
+- **Measured on device**: nothing.
+- **Cited**: `MidiInputPort.send(buffer, offset, count, timestamp)` delivers at the stamp
+  (Android reference, via the midiwright `android-midi-api.md` §1, read 2026-10-22);
+  `MidiDeviceService` manifest shape (same, §3); the virtual device lifecycle, bound on first
+  open and unbound after last close (same, §3, from AOSP `MidiService`).
+- **Proposed**: the one-step sequencer gate; channels 10 and 1; default-off hardware output;
+  the destination id shape; every `Copy` line.
+- **Untestable here**: whether a given keyboard re-sends received notes (the reason for the
+  default); `openInputPort` refusing for a busy port; how long the system holds a
+  future-stamped send without drift (M1 measures it).
+- **License**, once: no LICENSE file in the repo; nothing here vendors code.
+
+## 12. Why it is built this way
+
+1. **One sender thread, pre-encoded bytes.** `send` can block. A blocked main thread is a
+   hitch in every animation; a blocked audio thread is a dropout. One thread with a queue is
+   cheap, and the alternative is a bug that shows up only with one brand of interface.
+2. **The encoder is pure and round-trips through the parser.** `MidiBytes` and `MidiWire`
+   are two halves of one wire; testing one through the other means a disagreement about
+   running status, velocity 0 or channel bits cannot exist in the code without a red test.
+3. **The MPC map goes out.** SnipSnap exports kits the MPC plays on `PadNoteMap.DEFAULT`'s
+   notes. Sending those same notes means the phone and the hardware agree about which pad is
+   which with no table to maintain.
+4. **No thru, and SnipSnap never opens itself.** The two feedback loops a MIDI app can build
+   by accident are a controller hearing its own notes and an app reading its own output
+   port. Both are refused by construction, not by a setting.
+5. **The risky decision** is default-off hardware output with always-on "SnipSnap Out". A
+   player who plugs in an MPC and expects it to play will find nothing until SETUP; the note
+   under the switch says where. The other default, on, surprises every keyboard owner on
+   first plug-in. If the first bench round says players expect on, flipping one constant is
+   the whole change.
