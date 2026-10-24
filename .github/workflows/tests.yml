@@ -73,6 +73,19 @@ jobs:
       # later must not be silently untested because nobody updated this line.
       - name: Run JVM test suites
         run: ./gradlew --no-daemon test -x :app:test
+      # A worker/framework failure can leave only a skipped method and a
+      # generic Gradle error in the console. Retain the actual failure.
+      - name: Keep JVM failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-reports-${{ github.sha }}
+          path: |
+            **/build/test-results/test/**
+            **/build/reports/tests/test/**
+            **/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 3
 
   android-build:
     runs-on: ubuntu-latest
