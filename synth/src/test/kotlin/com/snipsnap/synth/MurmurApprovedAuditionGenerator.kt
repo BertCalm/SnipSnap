@@ -34,8 +34,10 @@ object MurmurApprovedAuditionGenerator {
             require(id == "${comparisonId}_candidate")
             val voice = MurmurVoice.valueOf(heard.getValue("voice").str())
             val macros = heard.getValue("macros").obj().mapValues { it.value.num().toFloat() }
-            val patch = MurmurPatch("${voice.name} LISTENING CHOICE", voice, macros,
-                heard.getValue("midi").int(), heard.getValue("velocity").num().toFloat(),
+            val midi = heard.getValue("midi").int()
+            val name = if (voice == MurmurVoice.KEY) "KEY MOTION ${macros.getValue("MOTION")}" else "CHOIR C${midi / 12 - 1} HOLD"
+            val patch = MurmurPatch(name, voice, macros,
+                midi, heard.getValue("velocity").num().toFloat(),
                 Murmur.configurationFor(voice, model = 3))
             val patchText = patch.toJsonText()
             check(MurmurPatch.fromJsonText(patchText) == patch) { "$id lost its saved patch identity" }
