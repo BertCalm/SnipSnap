@@ -330,6 +330,7 @@ testkit/SnipSnap-Chamber-Prototype-Kit.zip
 
 # Provisional OVERLAP musical bank, native/matched audio and replayable studies.
 testkit/overlap-musical-audition/
+testkit/overlap-held-audition/
 
 # OVERLAP native MPC kit and reproducible source-kit export.
 testkit/.overlap-work/

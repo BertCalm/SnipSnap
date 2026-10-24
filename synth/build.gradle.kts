@@ -102,6 +102,23 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
     }
 }
 
+/** Separate steady sustain proof with real loop recurrence and passive note-off. */
+tasks.register<JavaExec>("generateOverlapHeldAudition") {
+    group = "distribution"
+    description = "Render the separate steady OVERLAP held proof, measured loops and note-off examples."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldAuditionGenerator")
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("overlapHeldRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("overlapHeldWav").get(),
+            providers.gradleProperty("overlapHeldMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("overlapHeldOutput").orNull ?: "${rootDir}/testkit/overlap-held-audition")
+    }
+}
+
 /** Twelve approved model-two patches, three dry studies, and the downloadable starter kit. */
 tasks.register<JavaExec>("generateOverlapMusicalAudition") {
     group = "distribution"
