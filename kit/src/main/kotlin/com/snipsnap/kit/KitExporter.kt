@@ -179,6 +179,7 @@ object KitExporter {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                loop = p.loop,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
                 attack = p.attack,

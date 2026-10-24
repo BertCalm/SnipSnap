@@ -76,12 +76,20 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 60 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+The SYNTH source picker has 61 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
 RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
 COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
-VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC and FILAMENT.
+VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT and APSIS.
+
+APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
+(C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
+retain the saved renderer and seed. HOLD's top step auditions a repeating settled
+cycle until STOP; on a pad it repeats while gated. Finite notes remain one-shots.
+The saved full-cycle loop flag travels through both MPC drum-program formats.
+Dedicated keyboard multisampling and physical phone/MPC acceptance remain later
+checks; [APSIS](../docs/APSIS.md) records the integration and device checklist.
 MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
 (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
 round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT

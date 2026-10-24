@@ -299,7 +299,13 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is ObbligatoPatch) {
+            if (preset is com.snipsnap.synth.ApsisPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                val promoted = com.snipsnap.synth.ApsisPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete orbital recipe promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ObbligatoPatch) {
                 assertEquals(preset, obbligatoFromRosterLine(line), "${preset.name}: complete duet recipe promotion")
             } else if (preset is com.snipsnap.synth.OverlapPatch) {
                 val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
@@ -848,6 +854,10 @@ class UserPresetsTest {
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
                 assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == com.snipsnap.synth.ApsisPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.ApsisPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.ApsisPatch::class.java, decoder.returnType,
+                    "APSIS promotion retains its saved pitch velocity model and seed context")
             } else if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")

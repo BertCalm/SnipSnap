@@ -95,6 +95,7 @@ object KitStore {
             "oneShot" to JsonValue.Bool(p.oneShot),
         )
         p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
+        if (p.loop) entries["loop"] = JsonValue.Bool(true)
         // The shape rides only when set - null means "the
         // format's default", and defaults are never written down.
         p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
@@ -213,6 +214,7 @@ object KitStore {
             tuneFine = p["tuneFine"]?.int() ?: 0,
             muteGroup = p["muteGroup"]?.int() ?: 0,
             oneShot = p["oneShot"]?.bool() ?: true,
+            loop = p["loop"]?.bool() ?: false,
             source = (p["source"] as? JsonValue.Obj)?.entries
                 ?.mapValues { (_, v) -> v.str() }
                 ?: emptyMap(),

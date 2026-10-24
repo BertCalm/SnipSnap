@@ -164,6 +164,22 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+APSIS's first listening prototype is a pitched center with independently
+orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
+COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
+and internal exchange; held output uses a recurring reference-compatible
+orbital roster. Six provisional recipes, saved patches, CLI rendering and a
+dry sixteen-pad kit use the Kotlin renderer. It remains outside the phone
+picker pending listening. Run `./gradlew :synth:generateApsisAudition` for the
+dry comparison set, raw/matched WAVs, recipes and orbital traces. See
+[implementation notes](docs/APSIS.md) for prototype scope and validation.
+The [private listening page](https://snipsnap-apsis-audition.bertcalm.chatgpt.site)
+now includes seven dry musical examples, a playable sixteen-pad map, and a
+downloadable MPC 3/MPC 2 kit with forty native samples. Model 3 adds velocity
+color and prepared-motion reuse; saved model-1/model-2 recipes retain their
+audio. Run `./gradlew :synth:generateApsisMusicalAudition` to export the bank and
+replay its actual samples into the musical scores. Device acceptance is pending.
+
 CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
@@ -909,7 +925,7 @@ that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
-60 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+61 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1107,7 +1123,7 @@ THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL
 RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO,
 ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR,
 STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY,
-OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, plus GRAINS, SNAP and DRAW, which sit beside the
+OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
