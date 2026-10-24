@@ -117,7 +117,7 @@ Landed in `f95cd75c9` to `e7cfc0072`, one commit per task plus one fix: steps 1,
   now announces `onDevicesChanged(List<MidiDeviceId>)`; `MidiInput.devices` and `Opened.id`
   carry the same. `KeysScreen` and `KitScreen` print `.name` as before. Nothing reads
   `PROPERTY_BLUETOOTH_DEVICE`, so no Bluetooth address enters a key. Proof:
-  `MidiFingerprintTest`, 6 cases, and `:app:compileDebugKotlin`.
+  `MidiFingerprintTest`, 9 cases after the final-review fixes, and `:app:compileDebugKotlin`.
 - **Step 6, stop-drop guard: `27d059a65`, with the fix `e7cfc0072`.** `jni.cpp` `stopVoice`
   and `allOff` return `jboolean`; `PadEngine.stop` and `allOff` return `Boolean`. A refused
   stop is kept in an `ArrayDeque`; a refused all-off is kept and supersedes the kept stops.
@@ -167,9 +167,10 @@ Heard: nothing; this session had no phone.
   design.
 - **Untestable here**: S1 to S4, the Pixel's burst size and output delay, a Launchpad's port
   counts.
-- **Untestable here, compile checks**: `:app` and native compile warnings were checked only with
-  `-q` and `tail`; the final review's non-quiet `:kit`/`:shell` compile showed three
-  pre-existing warnings in untouched files and none in this branch's files.
+- **Compile checks**: the per-task proofs ran `-q` with `tail`, which hides warnings; the
+  final review's non-quiet `:kit`/`:shell` compile and the fix wave's non-quiet
+  `:app:compileDebugKotlin` showed three pre-existing warnings in untouched files and none in
+  this branch's files. The native build was checked only through `tail`.
 - **Measured, and not this batch's**: the full JVM suite on the author's macOS arm64 machine
   at the end of the batch ran 3127 tests with 5 failures, all golden SHA-256 audio fixtures
   in `OrigamiTest` (2), `OspreyLegacyTest`, `OspreyV3Test` and `TidalTest`. The same five
