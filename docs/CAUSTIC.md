@@ -1,5 +1,50 @@
 # Caustic: finite Alloy instrument
 
+## Character listening study
+
+The owner found the first native positions insufficiently different. The
+main-note audit supports that concern: Fuller Body versus Rim concentration
+has normalized 1/6-octave power L1 .052 and RMS-envelope residual .014 over
+.05–1.5 seconds. Large waveform residuals partly reflect phase changes; they
+do not establish an audible new character. Seven prominent comparison links
+also replayed the same reference. Cards now have explicit primary Play buttons.
+
+The [character study](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/contrast/)
+keeps Fuller Body byte-identical and auditions three new gestures at C2/C4/C6:
+
+| Candidate | Changed mechanism | Status |
+| --- | --- | --- |
+| Hollow Mallet | Softer finite contact, six low/odd modes and faster high-frequency loss. | Python modal reference. |
+| Rubbed Ring | A .34-second pressure rise, rough driven contact and a finite release replace the strike. | One-way rubbing approximation, without feedback friction. |
+| Travelling Catches | Four scheduled contacts illuminate different source paths into the same linear native body. | Sum unconditioned native responses; finish once. |
+
+The references use actual Kotlin geometry exports. Hollow and rubbed bodies use
+the uncoupled `Modes.Bank` rotate-then-kick recurrence through SciPy. Catches use
+native raw responses with an L1 contact-force budget, not independent sample
+leveling or a claim of acoustic energy conservation. Every output passes through
+the existing Kotlin filter, decimator, DC/level stage and PCM24 writer.
+
+**Measured:** all twelve full recordings pass the Kotlin broadband pitch gate
+within 20 cents, confidence at least .3, finite samples and PCM headroom. The
+reference WAVs retain their hashes. Main-window spectral and envelope screens
+are reported separately; flux can count modal beating, so it does not prove
+physical contacts. **Proposed:** all new profile constants and gestures.
+**Heard:** the owner approved the earlier Fuller Body and rejected the native
+bank's degree of variation; these three candidates await listening.
+
+Reproduce with `python3 scripts/generate_caustic_character_study.py` after
+building the native audition. Requires NumPy, SciPy and JDK 17+. The download
+contains the complete study source snapshot and raw-input hashes. These are
+audition recipes, not new native patches or factory presets.
+
+### Why it is built this way
+
+- The unchanged reference isolates the new contact, body and motion choices.
+- The candidates change the audible gesture, beyond subtle pickup coloration.
+- A single output stage keeps repeated contacts from receiving independent gain.
+- Listening comes before another factory-bank expansion; measurements screen
+  numerical failures and weak contrasts without deciding the owner's preference.
+
 Caustic turns an ordinary harmonic tone into a position-dependent singing body
 through reflected paths. The finite native milestone is implemented: one ALLOY
 voice, editable SOURCE/FOCUS/BODY/LENGTH controls, saved MIDI and velocity,

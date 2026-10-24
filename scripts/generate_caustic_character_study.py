@@ -8,6 +8,7 @@ from __future__ import annotations
 import argparse, hashlib, json, os, shutil, subprocess, tempfile, time, wave, zipfile
 from pathlib import Path
 import numpy as np
+import scipy
 from caustic_character_study_dsp import render_hollow, render_rubbed, parameters
 from caustic_character_study_metrics import evaluate_study
 
@@ -17,7 +18,7 @@ FAMILIES = {
     'fuller-body': ('Fuller Body', 'Metallic strike, a fuller tonal body and a long ring.', 'strike → growing body → ringing release'),
     'hollow-mallet': ('Hollow Mallet', 'A softer contact and a short, hollow low/odd-mode body.', 'soft contact → hollow knock → short decay'),
     'rubbed-ring': ('Rubbed Ring', 'A rough driven swell replaces the hard metal strike.', 'rough contact → pressure swell → driven body → release'),
-    'travelling-catches': ('Travelling Catches', 'Four energy-budgeted contacts illuminate different paths through one ringing body.', 'first contact → three spatial catches → shared ring'),
+    'travelling-catches': ('Travelling Catches', 'Four contacts shift the weight and brightness inside one ringing body.', 'first contact → three spatial catches → shared ring'),
 }
 
 def sha(path): return hashlib.sha256(Path(path).read_bytes()).hexdigest()
@@ -31,19 +32,26 @@ def wav(path):
 def revision(repo):
     git=lambda *args:subprocess.check_output(['git','-C',str(repo),*args],text=True).strip()
     roots=['scripts/generate_caustic_character_study.py','scripts/caustic_character_study_dsp.py','scripts/caustic_character_study_metrics.py','scripts/caustic-character','scripts/caustic-character-study-assets']
-    files={str(p.relative_to(repo)):sha(p) for p in sorted((repo/'scripts').rglob('*')) if p.is_file() and (p.name.startswith('caustic_character_') or p.name=='generate_caustic_character_study.py' or 'caustic-character' in p.parts or 'caustic-character-study-assets' in p.parts)}
+    selected=[]
+    for name in roots:
+        path=repo/name
+        selected.extend([path] if path.is_file() else [p for p in path.rglob('*') if p.is_file() and '__pycache__' not in p.parts])
+    files={str(p.relative_to(repo)):sha(p) for p in sorted(selected)}
     return {'commit':git('rev-parse','HEAD'),'dirty':bool(git('status','--porcelain','--',*roots)),'files':files,
             'compiledNativeClassSha256':sha(repo/'synth/build/classes/kotlin/main/com/snipsnap/synth/CausticInstrument.class'),
-            'nativeModel':1,'python':__import__('sys').version.split()[0],'numpy':np.__version__}
+            'nativeModel':1,'python':__import__('sys').version.split()[0],'numpy':np.__version__,'scipy':scipy.__version__}
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--repo',type=Path,default=Path(__file__).resolve().parents[1]);p.add_argument('--output',type=Path);p.add_argument('--reuse-input',type=Path);args=p.parse_args()
+    p=argparse.ArgumentParser();p.add_argument('--repo',type=Path,default=Path(__file__).resolve().parents[1]);p.add_argument('--output',type=Path);args=p.parse_args()
     repo=args.repo.resolve();output=(args.output or repo/'testkit/caustic-character-study').resolve()
     assert output!=repo and output not in repo.parents, 'Output cannot contain the source checkout'
     assert not output.is_file(), 'Output must be a generated study directory'
     if output.exists():
         assert (output/'manifest.json').is_file() and json.loads((output/'manifest.json').read_text()).get('title')=='CAUSTIC / Character study', 'Refusing to replace an unrelated directory'
     old=repo/'testkit/caustic-instrument-audition';assert old.is_dir()
+    for protected in (old,repo/'testkit/caustic-audition'):
+        if output==protected or protected in output.parents:
+            raise ValueError('Study output must be separate from earlier auditions')
     preserved={str(x.relative_to(old)):sha(x) for x in old.rglob('*') if x.is_file()}
     jdk=Path(os.environ.get('JAVA_HOME','/workspace/jdk/current'))
     java=str(jdk/'bin/java') if (jdk/'bin/java').exists() else shutil.which('java')
@@ -53,10 +61,13 @@ def main():
     assert stdlib and (repo/'synth/build/classes/kotlin/main/com/snipsnap/synth/CausticInstrument.class').is_file(), 'Run :synth:classes first'
     output.parent.mkdir(parents=True,exist_ok=True)
     with tempfile.TemporaryDirectory(prefix='.caustic-character-',dir=output.parent) as temp:
-        root=Path(temp);classes=root/'classes';classes.mkdir();inputs=args.reuse_input or root/'inputs';inputs.mkdir(exist_ok=True)
+        root=Path(temp);classes=root/'classes';classes.mkdir();inputs=root/'inputs';inputs.mkdir()
         run([javac,'--release','17','-cp',cp,'-d',classes,repo/'scripts/caustic-character/CausticStudyBridge.java'])
         bridge=lambda *a,**kw:run([java,'-Xmx1g','-cp',str(classes)+os.pathsep+cp,'CausticStudyBridge',*a],**kw)
-        if not args.reuse_input:bridge('export',inputs)
+        bridge('export',inputs)
+        origin=revision(repo)
+        input_manifest={'producer':origin,'method':'Fresh export through compiled Kotlin CausticGeometry.prepare and CausticInstrument.probe; no cached input accepted','files':{x.name:sha(x) for x in sorted(inputs.iterdir())}}
+        (root/'native-inputs.json').write_text(json.dumps(input_manifest,indent=2)+'\n')
         raw=root/'raw';raw.mkdir();audio=root/'audio';audio.mkdir();recipes=root/'recipes';recipes.mkdir()
         geometry=json.loads((inputs/'geometry-0.19.json').read_text());profiles=[];records=[];times={}
         sources=[0.,.25,.6,1.];nominal=[0.,.12,.28,.48];gains=np.array([.75,.65,.55,.45]);gains/=np.sum(np.abs(gains))
@@ -74,7 +85,7 @@ def main():
                 at=round(round(t*hz)/hz*INTERNAL);actual=at/INTERNAL
                 basis=np.fromfile(inputs/f'native-m{midi}-s{source:.2f}-b0.internal.f32',dtype='<f4')
                 result[at:]+=float(gain)*basis[:len(result)-at]
-                events.append({'source':source,'nominalTimeSeconds':t,'timeSeconds':actual,'amplitude':float(gain)})
+                events.append({'source':source,'nominalTimeSeconds':t,'timeSeconds':actual,'amplitude':float(gain),'rawInput':f'native-m{midi}-s{source:.2f}-b0.internal.f32','rawInputSha256':sha(inputs/f'native-m{midi}-s{source:.2f}-b0.internal.f32')})
             result.astype('<f4').tofile(raw/f'travelling-catches-c{octave}.internal.f32')
             for family in FAMILIES:
                 ident=f'{family}-c{octave}';title,description,gesture=FAMILIES[family]
@@ -83,7 +94,9 @@ def main():
                     src=f'default-c{octave}'
                     for mode in ('native','matched'):shutil.copy2(old/f'audio/{src}-{mode}.wav',audio/f'{ident}-{mode}.wav')
                     recipe['nativePatch']=json.loads((old/f'patches/{src}.json').read_text());recipe['nativeSourceRevision']=json.loads((old/'manifest.json').read_text())['sourceRevision']
-                elif family=='travelling-catches':recipe.update({'method':'sum unconditioned responses of one linear native body, then finish once','body':0,'length':1,'contacts':events,'sumAbsoluteContactAmplitudes':float(np.sum(np.abs(gains))),'budget':'L1 contact-force budget. Overlapping contacts get no independent makeup gain; acoustic energy conservation is not claimed.'})
+                elif family=='travelling-catches':
+                    recipe.pop('geometry')
+                    recipe.update({'method':'sum unconditioned responses of one linear native body, then finish once','fixedPickup':{'focus':.19,'rays':256,'aperture':.05},'nativeInputProvenance':'native-inputs.json','body':0,'length':1,'contacts':events,'sumAbsoluteContactAmplitudes':float(np.sum(np.abs(gains))),'budget':'L1 contact-force budget. Overlapping contacts get no independent makeup gain; acoustic energy conservation is not claimed.'})
                 else:recipe['parameters']=study_params['hollow' if family=='hollow-mallet' else 'rubbed']
                 (recipes/f'{ident}.json').write_text(json.dumps(recipe,indent=2)+'\n')
                 records.append({'id':ident,'family':family,'title':title,'description':description,'gesture':gesture,'midi':midi,'velocity':.75,'seconds':8,'prototype':family!='fuller-body','raw':f'audio/{ident}-native.wav','matched':f'audio/{ident}-matched.wav','recipe':f'recipes/{ident}.json','eventTimesSeconds':[e['timeSeconds'] for e in events] if family=='travelling-catches' else [0]})
@@ -102,10 +115,18 @@ def main():
         manifest=json.loads((root/'manifest.json').read_text());(root/'manifest.js').write_text('window.CAUSTIC_CHARACTER_MANIFEST = '+json.dumps(manifest,separators=(',',':'))+';\n')
         shutil.copytree(repo/'scripts/caustic-character-study-assets',root,dirs_exist_ok=True)
         (root/'README.txt').write_text('CAUSTIC character listening study\n\nFuller Body is the unchanged native reference. Other directions are Python listening prototypes, not installed factory voices or native Patch JSON.\n\nEvery primary Play button plays its named sound. Level matched uses the existing loudest-200-ms rule.\n\nReproduce from the source revision with :synth:classes, NumPy/SciPy, then python3 scripts/generate_caustic_character_study.py. The Java bridge uses actual Kotlin geometry, output and pitch APIs.\n\nNo legacy or native audio is overwritten. Native model 1 and its presets remain unchanged pending listening.\n')
+        with (root/'README.txt').open('a') as readme:
+            readme.write('\nWhy it is built this way\n\n1. The unchanged Fuller Body anchor makes the comparison fair.\n2. New contact, loss and motion patterns target the main audible gesture, instead of only changing a quiet tail.\n3. Travelling contacts combine raw responses before one output stage, so weak contacts do not receive independent makeup gain.\n4. The prototype source and input hashes are included for review. Measurements screen the candidates; listening decides which deserves integration.\n')
+        source=root/'reproduce';source.mkdir()
+        for name in ('generate_caustic_character_study.py','caustic_character_study_dsp.py','caustic_character_study_metrics.py'):
+            shutil.copy2(repo/'scripts'/name,source/name)
+        for name in ('caustic-character','caustic-character-study-assets'):
+            shutil.copytree(repo/'scripts'/name,source/name)
+        (source/'README.txt').write_text('Exact audition source snapshot\n\nCopy this directory\'s .py files and both subdirectories into scripts/ in a SnipSnap checkout. Build the pure JVM classes and baseline pack with ./gradlew :synth:generateCausticInstrumentAudition, then run python3 scripts/generate_caustic_character_study.py (NumPy/SciPy and JDK 17+ required).\n\nThe sourceRevision commit records the study workspace; this archive contains its full study source even before the experiment is integrated into the application. Native model 1 and baseline audio provenance are recorded separately in each Fuller Body recipe.\n')
         for f in audio.glob('*.f32'):f.unlink()
         for f in audio.glob('*.finish.json'):f.unlink()
         shutil.rmtree(classes);shutil.rmtree(raw)
-        if not args.reuse_input:shutil.rmtree(inputs)
+        shutil.rmtree(inputs)
         with zipfile.ZipFile(root/'caustic-character-study.zip','w',zipfile.ZIP_DEFLATED,6) as z:
             for f in sorted(root.rglob('*')):
                 if f.is_file() and f.suffix!='.zip':z.write(f,f.relative_to(root))
