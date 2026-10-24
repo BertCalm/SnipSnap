@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
@@ -199,6 +200,13 @@ private const val PREF_LOOK = "look"
 private const val PREF_TEACH = "teach"
 /** HAPTICS (SETUP): the motor under pads, steppers and landings - ON unless the player turned it off. */
 private const val PREF_HAPTICS = "haptics"
+/**
+ * MIDI OUT (SETUP): whether pads and keys also go out to plugged-in hardware.
+ * OFF unless the player turned it on. One key, two readers: this file owns the
+ * switch and writes it; `MidiOut.install` reads the same key once at start so
+ * the engine is right before any screen has composed.
+ */
+private const val PREF_MIDI_OUT = "midi.out"
 /** The WORKSHOP (`docs/WORKSHOP.md`): open once the knock on SETUP's title lands, remembered like the scheme until its own CLOSE. */
 private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
@@ -368,6 +376,15 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     var hapticsOn by remember { mutableStateOf(prefs.getBoolean(PREF_HAPTICS, true)) }
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
+    }
+    // MIDI OUT (SETUP): the hardware switch, remembered like HAPTICS but OFF
+    // by default. `MidiOut.install` reads the same pref; pushing the value
+    // once here makes the two agree even if install ran before it was written.
+    var midiOutOn by remember { mutableStateOf(prefs.getBoolean(PREF_MIDI_OUT, false)) }
+    LaunchedEffect(Unit) { MidiOut.hardwareEnabled = midiOutOn }
+    val midiPorts = MidiOut.ports.collectAsState().value
+    val midiSupported = remember(context) {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)
     }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
@@ -3755,6 +3772,14 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 prefs.edit().putBoolean(PREF_HAPTICS, on).apply()
                                 if (on) haptics.tick()
                             },
+                            midiOutOn = midiOutOn,
+                            onMidiOut = { on ->
+                                midiOutOn = on
+                                prefs.edit().putBoolean(PREF_MIDI_OUT, on).apply()
+                                MidiOut.hardwareEnabled = on
+                            },
+                            midiSupported = midiSupported,
+                            midiPorts = midiPorts,
                             // Finding 23: three facts the app already kept and
                             // never showed. Read straight from the same prefs
                             // EXPORT writes - one owner each, no second copy.
