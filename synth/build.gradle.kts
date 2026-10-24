@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** An opt-in listening comparison; the accepted model-five kit remains unchanged. */
+tasks.register<JavaExec>("generateObbligatoResponsiveAudition") {
+    group = "distribution"
+    description = "Compare accepted OBBLIGATO model 5 with responsive model 6 and causal source interventions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoResponsiveAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoResponsiveOutput").orNull ?: "${rootDir}/testkit/obbligato-responsive-audition")
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"

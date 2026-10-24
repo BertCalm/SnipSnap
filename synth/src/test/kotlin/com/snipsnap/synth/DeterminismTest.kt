@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
