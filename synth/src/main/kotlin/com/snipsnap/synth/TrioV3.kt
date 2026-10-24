@@ -138,6 +138,7 @@ internal object TrioV3 {
         voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: TrioConfig = TrioConfig(model = MODEL_VERSION),
     ): TrioProbe {
+        TrioRenderSupport.checkCancelled()
         if (config.model == 2) return TrioV2.renderProbe(voice, macros, midi, velocity, config)
         if (config.model == LEGACY_MODEL_VERSION || voice != TrioVoice.ENSEMBLE || macros.getOrDefault("DRAMA", 0f) == 0f)
             return TrioV1.renderProbe(voice, macros, midi, velocity, config.copy(model = LEGACY_MODEL_VERSION))
@@ -276,6 +277,7 @@ internal object TrioV3 {
         val pressDuration = .08f + config.press * .06f
         val pressStart = root / 2f.pow(config.press * 2f / 12f)
         for (i in 0 until frames) {
+            if (i % 1024 == 0) TrioRenderSupport.checkCancelled()
             if (i % CONTROL_SAMPLES == 0) {
                 val time = i.toFloat() / rate
                 weights = isolation(m.getValue("SIDES"), m.getValue("MOTION"), time, span)
@@ -305,6 +307,7 @@ internal object TrioV3 {
 
         val taps = linkedMapOf<TrioActor, FloatArray>()
         for ((actor, p) in players) {
+            TrioRenderSupport.checkCancelled()
             val space = m.getValue("SPACE")
             val body = Strings.bodyRing(p.output, p.shape.body, p.shape.bodyAmount * (.75f + .75f * space), rate, SECONDS)
             val colored = Dsp.OnePole(rate)

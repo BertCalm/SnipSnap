@@ -86,10 +86,14 @@ recreates the audio; an optional existing `FxChain` remains a separate treatment
 The renderer uses SnipSnap's shared string tuning and 4× synthesis/decimation
 path, with 44.1 kHz mono output.
 
-New patches save renderer model 5. Earlier models remain in `TrioV1`, `TrioV2`,
-`TrioV3` and `TrioV4`; saved recipes retain their exact earlier audition audio.
+New patches and starting presets save renderer model 6. TOUCH above .8 now
+adds a smooth increase in contact brightness, scaled by DRAMA, after the older
+pick ceiling. TOUCH at or below .8 retains model 5 exactly, including every
+accepted factory sound. The phin scrape retains its original source shape.
+Models 1–4 remain in `TrioV1` through `TrioV4`; model 5 uses the shared renderer
+with its original pick law. Saved recipes retain their earlier audition audio.
 Absent or null model fields decode as model 1, while newly authored
-`TrioConfig()` uses model 5. Edits and velocity variants preserve the saved
+`TrioConfig()` uses model 6. Edits and velocity variants preserve the saved
 model. DRAMA 0 uses the accepted original sound exactly in every newer model.
 Archived float-audio hashes guard that compatibility.
 
@@ -103,10 +107,13 @@ can be introduced.
 
 Choose **TRIO** in SYNTH, then TRES, BERIMBAU, CHARANGO or ENSEMBLE. The six
 macros sit beside explicit root, velocity, phrase tempo and beat controls.
-DRAMA, SIDES and MOTION describe the ensemble interaction; the solo voices
-provide direct performer studies. Macro edits preserve the selected preset's
-complete configuration and renderer version. Phrase controls keep the playing
-gesture within two seconds and leave the rest of the 3.5-second sample for decay.
+DRAMA, SIDES and MOTION describe the ensemble interaction. Those sliders are
+disabled for solo voices, while their saved values remain in the recipe. Macro edits preserve the selected preset's
+complete configuration and renderer version. Phrase controls limit the beat-grid span to two seconds. Answers and course
+staggering can extend beyond that span: a four-beat, 120 BPM, 5 Hz charango
+setting places its final contact around 2.38 seconds. The recording remains
+3.5 seconds, with its existing final 150 ms fade. This corrects the earlier
+length claim without truncating the accepted performance.
 
 The sixteen dry `TrioPresets` also form the **TRIO** starter kit, in C minor
 pentatonic from C3 to C5:
@@ -217,3 +224,42 @@ preview in raw and matched modes at 320, 390 and 1440 pixels, plus the portable
 offline subset. An Android SDK is absent in the local environment; Android
 compilation is delegated to the source PR's CI build. These checks do not
 replace listening on a phone or loading the kit on MPC hardware.
+
+
+## Luthier playability pass
+
+The current ensemble scheduler produces an immutable score before creating any
+waveguides. Its key includes voice, all macro values, root, velocity and the
+complete configuration. A bounded one-entry cache retains only that score;
+mutable audio and resonator state are fresh for each render. Course contact
+intervals use sparse buffers, accumulated in the original order. Ordinary
+previews sum actor contributions as they finish instead of retaining diagnostic
+taps. The body renderer omits causal samples beyond the recording ceiling and
+reuses buffers for the two acoustic arrivals. A fixed-cutoff OnePole reuses its
+exact rounded coefficient, including in legacy renderers.
+
+Cancellation is polled before rendering, through the string loop, and between
+body/output stages. Obsolete previews throw a cancellation exception rather
+than finishing and returning stale audio. A same-machine OpenJDK 21 benchmark (six warmup renders, then six measured
+renders) reduced the model-5 full-ensemble median from 806.3 ms to 354.4 ms and
+thread allocation from 142.0 MiB to 55.6 MiB. An interruption after 20 ms stopped
+in .189 ms in the updated probe; the original finished normally 820.6 ms later.
+These are desktop JVM measurements, not phone results. The render still exceeds
+the tens-of-milliseconds playability target. All sixteen factory float-audio
+hashes and five historical model anchors match the frozen pre-change baseline.
+
+The upper-TOUCH comparison is rebuilt with
+`./gradlew :synth:generateTrioTouchAudition`. It places accepted model 5 and
+revised model 6 at TOUCH .8, .9 and 1, at DRAMA .5 and 1, with identical root,
+velocity, seed and gesture timing. Recipes, raw/matched PCM24 WAVs, source hashes
+and normalized waveform differences accompany the page. The accepted DRAMA
+comparison remains archived separately. Josh has accepted the earlier bank;
+the revised upper-TOUCH character awaits his listening verdict.
+
+## Why it is built this way
+
+- A score describes who plays when, so timing can be checked without running every string.
+- Sparse contacts hold the pick strokes; the waveguides still carry the natural ring.
+- Cancellation makes a new knob position useful promptly by stopping obsolete work.
+- Renderer versions keep old saved sounds reproducible while upper TOUCH changes.
+- The fixed recording and fade remain audible limits, rather than a promise of unlimited decay.

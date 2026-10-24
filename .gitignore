@@ -367,3 +367,6 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 testkit/fade-law-audition/
+
+# Rebuilt by :synth:generateTrioTouchAudition.
+testkit/trio-touch/

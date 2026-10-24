@@ -2551,7 +2551,7 @@ fun SynthScreen(
                     TapeText(
                         if (voice == TrioVoice.ENSEMBLE)
                             "DRAMA BRINGS ANSWERS TOGETHER · SIDES PICKS THE OUTSIDER · MOTION MOVES THE ALLIANCE"
-                        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION SHAPE THE ENSEMBLE",
+                        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION ARE ENSEMBLE CONTROLS",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
                     )
                     MacroSlider(
@@ -2571,8 +2571,8 @@ fun SynthScreen(
                         fillColor = classColor, scheme = scheme,
                         onValueChange = { value -> updateTrioPatch { it.copy(velocity = value.coerceIn(0f, 1f)) } },
                     )
-                    // The gesture stays within its two-second playing window;
-                    // changing tempo retains the selected number of beats.
+                    // The beat grid spans at most two seconds; answers may extend past it.
+                    // Changing tempo retains the selected number of beats.
                     val minimumTempo = maxOf(60, config.beats * 30)
                     MacroSlider(
                         label = "TEMPO",
@@ -2596,6 +2596,11 @@ fun SynthScreen(
                             ) { updateTrioPatch { it.copy(config = it.config.copy(beats = beats)) } }
                         }
                     }
+                }
+
+                if (engine == Engine.TRIO) {
+                    TapeText("BEAT GRID UP TO 2s · ANSWERS AND RING CONTINUE · 3.5s RECORDING",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
                 }
 
                 if (engine == Engine.OBBLIGATO) {
@@ -2710,7 +2715,8 @@ fun SynthScreen(
                             },
                             onValueChange = { v -> updateMacro(spec.name, v) },
                             valueRange = macroRange(spec.name),
-                            enabled = spec.name != "HOLD" || shoalHoldSupported,
+                            enabled = (spec.name != "HOLD" || shoalHoldSupported) &&
+                                (engine != Engine.TRIO || Trio.isMacroActive(voice as TrioVoice, spec.name)),
                         )
                     }
                 }

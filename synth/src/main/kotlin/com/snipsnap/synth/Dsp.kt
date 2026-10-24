@@ -450,9 +450,16 @@ internal object Dsp {
     /** One-pole low-pass; subtract from input for a high-pass. */
     class OnePole(private val rate: Int = RATE) {
         private var state = 0f
+        private var lastCutoff = Float.NaN
+        private var coefficient = 0f
         fun lp(input: Float, cutoffHz: Float): Float {
-            val a = (1.0 - exp(-2.0 * PI * min(cutoffHz, rate * 0.45f) / rate)).toFloat()
-            state += a * (input - state)
+            // Fixed loop/body cutoffs dominate offline string rendering. Reuse
+            // the exact rounded coefficient; changing cutoffs keep the old law.
+            if (cutoffHz != lastCutoff) {
+                coefficient = (1.0 - exp(-2.0 * PI * min(cutoffHz, rate * 0.45f) / rate)).toFloat()
+                lastCutoff = cutoffHz
+            }
+            state += coefficient * (input - state)
             return state
         }
     }
