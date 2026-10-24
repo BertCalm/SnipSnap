@@ -235,8 +235,8 @@ mutable audio and resonator state are fresh for each render. Course contact
 intervals use sparse buffers, accumulated in the original order. Ordinary
 previews sum actor contributions as they finish instead of retaining diagnostic
 taps. The body renderer omits causal samples beyond the recording ceiling and
-reuses buffers for the two acoustic arrivals. A fixed-cutoff OnePole reuses its
-exact rounded coefficient, including in legacy renderers.
+reuses buffers for the two acoustic arrivals. The upstream fixed-cutoff filter helper reuses its exact rounded coefficient,
+including in legacy renderers, without changing the general OnePole path.
 
 Cancellation is polled before rendering, through the string loop, and between
 body/output stages. Obsolete previews throw a cancellation exception rather

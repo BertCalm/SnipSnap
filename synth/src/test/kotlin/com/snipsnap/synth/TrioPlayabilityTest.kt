@@ -7,9 +7,6 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.min
 import kotlin.math.sqrt
 import kotlin.test.*
 
@@ -50,15 +47,14 @@ class TrioPlayabilityTest {
         for (patch in TrioPresets.all()) assertEquals(expected.getValue(patch.name), hash(patch.render().samples), patch.name)
     }
 
-    @Test fun `one pole cache keeps the old arithmetic for fixed and changing cutoffs`() {
-        val pole = Dsp.OnePole(176400)
-        var state = 0f
-        for (i in 0 until 30000) {
-            val cutoff = when { i < 10000 -> 5200f; i < 20000 -> 3800f; else -> 100f + i % 101 }
-            val input = ((i * 37) % 101 - 50) / 50f
-            val a = (1.0 - exp(-2.0 * PI * min(cutoff, 176400 * .45f) / 176400)).toFloat()
-            state += a * (input - state)
-            assertEquals(state.toBits(), pole.lp(input, cutoff).toBits(), "sample $i")
+    @Test fun `fixed filter retains the original coefficient and sample arithmetic`() {
+        for (cutoff in listOf(100f, 3800f, 5200f, 25000f, 100000f)) {
+            val original = Dsp.OnePole(176400)
+            val fixed = Dsp.FixedOnePole(cutoff, 176400)
+            for (i in 0 until 6000) {
+                val input = ((i * 37) % 101 - 50) / 50f
+                assertEquals(original.lp(input, cutoff).toBits(), fixed.lp(input).toBits(), "cutoff $cutoff sample $i")
+            }
         }
     }
 
@@ -136,7 +132,8 @@ class TrioPlayabilityTest {
         for (model in 1..Trio.MODEL_VERSION) for (voice in TrioVoice.entries) {
             try {
                 Thread.currentThread().interrupt()
-                assertFailsWith<CancellationException> { Trio.render(voice, macros, config = config.copy(model = model)) }
+                val cancelled = assertFailsWith<CancellationException> { Trio.render(voice, macros, config = config.copy(model = model)) }
+                assertEquals("TRIO render cancelled", cancelled.message)
             } finally { Thread.interrupted() }
         }
     }

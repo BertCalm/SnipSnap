@@ -143,7 +143,7 @@ object Trio {
         val start = if (actor == TrioActor.BERIMBAU) root / 2f.pow(config.press * 2f / 12f) else root
         val strings = shape.ratios.map { ratio ->
             val tuning = Strings.tune(start * ratio, damping.loopHz, rate, stiffness = shape.stiffness)
-            StringPart(Strings.Loop(tuning.n, tuning.a, damping.fb, damping.loopHz, rate, stiffness = shape.stiffness),
+            StringPart(Strings.Loop(tuning.n, tuning.a, damping.fb, damping.loopHz, rate, stiffness = shape.stiffness, cacheLoopFilter = true),
                 TrioExcitation(frames), ratio)
         }
         return Player(actor, shape, strings.toTypedArray(), FloatArray(frames))
@@ -418,7 +418,7 @@ object Trio {
             val space = m.getValue("SPACE")
             TrioRenderSupport.checkCancelled()
             val body = TrioRenderSupport.body(p.output, p.shape.body, p.shape.bodyAmount * (.75f + .75f * space), rate)
-            val colored = Dsp.OnePole(rate)
+            val colored = Dsp.FixedOnePole(3800f, rate)
             val delayA = ((.043f + actor.ordinal * .003f) * rate).toInt()
             val delayB = ((.087f + actor.ordinal * .005f) * rate).toInt()
             // Only two past body samples are needed. Retain their original
@@ -436,7 +436,7 @@ object Trio {
                 if (++write == history.size) write = 0
                 if (++readA == history.size) readA = 0
                 if (++readB == history.size) readB = 0
-                body[i] = original + space * colored.lp(reflection, 3800f)
+                body[i] = original + space * colored.lp(reflection)
             }
             val mono = Dsp.decimate(body, Dsp.RATE)
             // A finite recording always clears the tail, including very long body modes.
