@@ -80,7 +80,7 @@ object NacrePresenceAuditionGenerator {
             "invariants" to invariantHashes,
             "metricsNotes" to mapOf(
                 "energy" to "Total energy sums squared full-scale samples. E90/E99 mark cumulative energy times, not perceptual thresholds. timeEnergy records fixed time windows.",
-                "difference" to "Difference RMS, correlation and return-to-foreground ratios describe signals. A numerical difference does not establish audibility.",
+                "difference" to "prelevelDifferenceRms and timeEnergy.prelevelDifferenceEnergy use the unscaled Float bus. Main peak/rms/totalEnergy describe listening-gain audio. Relative dB, correlations and fractions are gain invariant. A numerical difference does not establish audibility.",
                 "spectrum" to "above1kFraction uses one-sided squared FFT magnitude over the complete finite signal, zero-padded without a window.",
                 "classifier" to "The generic classifier labels recordings longer than 1.5 seconds LOOP by duration. These six-second files are finite gestures.",
                 "recipe" to "The production patch identifies only the original model-1 source. The audition wrapper also specifies the new path geometry, common return gain and postmix operation; the production patch alone cannot replay these prototype returns.",
@@ -258,7 +258,7 @@ object NacrePresenceAuditionGenerator {
         val re = energy(reference)
         val cross = x.indices.sumOf { x[it].toDouble() * reference[it] }
         return mapOf("energyRatioToOriginal" to xe / re, "energyDeltaDb" to 10 * log10(xe / re),
-            "correlationWithOriginal" to cross / sqrt(xe * re), "differenceRms" to rms(delta),
+            "correlationWithOriginal" to cross / sqrt(xe * re), "prelevelDifferenceRms" to rms(delta),
             "differenceRmsDbFromOriginal" to ratioDb(rms(delta), rms(reference)), "differenceEnergy99Seconds" to energyTime(delta, .99))
     }
 
@@ -281,7 +281,7 @@ object NacrePresenceAuditionGenerator {
             }
             mapOf("fromSeconds" to from, "toSeconds" to to, "mixEnergyFraction" to mixEnergy / total,
                 "returnEnergyFraction" to if (returnTotal > 0.0) returnEnergy / returnTotal else 0.0,
-                "differenceEnergy" to deltaEnergy, "returnToForegroundDb" to ratioDb(sqrt(returnEnergy), sqrt(foregroundEnergy)))
+                "prelevelDifferenceEnergy" to deltaEnergy, "returnToForegroundDb" to ratioDb(sqrt(returnEnergy), sqrt(foregroundEnergy)))
         }
     }
 
