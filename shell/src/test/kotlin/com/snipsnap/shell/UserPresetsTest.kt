@@ -11,6 +11,8 @@ import com.snipsnap.synth.ContourRelation
 import com.snipsnap.synth.ContourTable
 import com.snipsnap.synth.ContourVoice
 import com.snipsnap.synth.EmbouchureVoice
+import com.snipsnap.synth.Embouchure
+import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
 import com.snipsnap.synth.FlotillaPatch
@@ -85,6 +87,27 @@ import kotlin.test.assertTrue
 
 /** SAVE AS PRESET (`docs/WORKSHOP.md`, WS5): the player's own presets beside the kits, and the line that promotes one. */
 class UserPresetsTest {
+    @Test
+    fun `brass grow survives the shelf and can be promoted without a legacy helper`() {
+        val root = shelf()
+        try {
+            val source = EmbouchurePatch("MY GROW", EmbouchureVoice.BRASS,
+                Embouchure.defaults(EmbouchureVoice.BRASS, Embouchure.BRASS_GROW_MODEL) +
+                    mapOf("TUNE" to 0f, "GROW" to .25f),
+                midi = 64, velocity = .37f, model = Embouchure.BRASS_GROW_MODEL)
+            UserPresets.save(root, source, 1L)
+            val saved = UserPresets.read(root).single()
+            assertEquals(source, saved.patch)
+            val line = UserPresets.rosterLine(saved.patch)
+            val literal = line.removePrefix("EmbouchurePatch.fromJsonText(").removeSuffix("),")
+            val promoted = EmbouchurePatch.fromJsonText(Json.parse(literal).str())
+            assertEquals(source, promoted)
+            assertTrue(source.render().samples.contentEquals(promoted.render().samples))
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
 
     private fun shelf(): File = java.nio.file.Files.createTempDirectory("presets").toFile()
 
@@ -300,6 +323,10 @@ class UserPresetsTest {
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is LacquerPatch) {
                 assertEquals(preset, lacquerFromRosterLine(line), "${preset.name}: complete profile promotion")
+            } else if (preset is EmbouchurePatch && preset.model == Embouchure.BRASS_GROW_MODEL) {
+                val literal = line.removePrefix("EmbouchurePatch.fromJsonText(").removeSuffix("),")
+                val promoted = EmbouchurePatch.fromJsonText(Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: GROW model is constructed before macro validation")
             } else if (preset is OrigamiPatch) {
                 val promoted = origamiFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")

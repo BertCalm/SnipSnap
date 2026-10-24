@@ -22,6 +22,7 @@
     sources: ['Inside the quartet', 'Hear the sources separately.'],
     controls: ['The controls', 'Change one parameter at a time.'],
     notes: ['Notes & velocity', 'Hear how the quartet behaves across pitch and strike energy.'],
+    timpani: ['Previous / revised timpani', 'The same room, note and strike. Quartet and dry membrane solos share the revised quartet’s gain.'],
   };
   const storageKey = 'snipsnap-chamber-listening-notes-v1';
   let manifest, clips = [], firstIds = new Set(), mode = 'matched', notes = {}, storageAvailable = true;
@@ -78,7 +79,7 @@
   }
   function saveNote(clip, note, rating) {
     if (!note.trim() && !rating) delete notes[clip.id];
-    else notes[clip.id] = { title: clip.title, note, rating: rating ? Number(rating) : null, updatedAt: new Date().toISOString() };
+    else notes[clip.id] = { title: clip.title, model: clip.model ?? manifest?.model, sourceRevision: clip.sourceRevision ?? manifest?.sourceRevision, note, rating: rating ? Number(rating) : null, updatedAt: new Date().toISOString() };
     try { localStorage.setItem(storageKey, JSON.stringify(notes)); }
     catch { storageAvailable = false; $('storage-notice').hidden = false; }
     updateNoteCount();
@@ -100,7 +101,7 @@
     const card = create('article', 'clip-card' + (featured ? ' featured' : '') + (room === 'AQUARIUM' ? ' aquarium' : ''));
     card.dataset.clipId = clip.id;
     const kicker = create('div', 'clip-kicker');
-    const meta = [noteName(clip.midi), clip.velocity !== undefined ? 'VEL ' + clip.velocity : ''].filter(Boolean).join(' · ');
+    const meta = [noteName(clip.midi), clip.velocity !== undefined ? 'VEL ' + clip.velocity : '', clip.model !== undefined ? 'MODEL ' + clip.model : ''].filter(Boolean).join(' · ');
     kicker.append(create('span', '', meta || clip.variant || 'ENGINE AUDITION'));
     if (room) kicker.append(create('span', 'room-badge', room));
     else if (clip.voice) kicker.append(create('span', 'room-badge', clip.voice));
@@ -195,8 +196,24 @@
   }
   function renderEvidence() {
     if (manifest.summary) $('manifest-summary').textContent = text(manifest.summary);
+    if (manifest.auditionRevision === 'timpani') {
+      $('hero-eyebrow').textContent = 'TIMPANI REVISION';
+      $('hero-note').textContent = 'Listen for the membrane’s rounded body and pitched decay. Compare the previous and revised quartet, then hear the timpani source alone at its actual mix level.';
+      $('first-title').replaceChildren(document.createTextNode('The timpani.'), create('br'), document.createTextNode('In the quartet.'));
+      $('first-intro').textContent = 'Start with the revised C3 quartet in each room. Then compare previous and revised strikes at C3 and C4 below. The room, controls and note stay fixed within each group.';
+      $('comparison-intro').textContent = 'Previous and revised full quartets, followed by their dry timpani sources. Each room and note uses one gain from the revised quartet.';
+    }
+    const previous = manifest.previousAudition;
+    const previousUrl = fileUrl(previous?.url);
+    if (previousUrl) {
+      $('previous-audition').href = previousUrl;
+      $('previous-audition').textContent = previous.title || 'Open the original audition';
+      $('previous-audition').hidden = false;
+    }
     $('normalization-note').textContent = text(manifest.normalizationNote || manifest.normalization?.description || 'Matched listening uses 0.03 loudness; mechanism pairs share the reference gain so room/return differences retain their true levels.');
-    const facts = [['Engine', manifest.model ? 'CHAMBER / model ' + manifest.model : 'CHAMBER prototype'], ['Renders', clips.length], ['Sample rate', manifest.sampleRate ? (Number(manifest.sampleRate) / 1000) + ' kHz' : null], ['Source revision', manifest.sourceRevision], ['Rendered', manifest.createdAt ? text(manifest.createdAt).slice(0, 10) : null]];
+    const models = Array.isArray(manifest.models) ? manifest.models : [];
+    const engineLabel = models.length > 1 ? 'CHAMBER / models ' + models.join(' & ') : manifest.model ? 'CHAMBER / model ' + manifest.model : 'CHAMBER prototype';
+    const facts = [['Engine', engineLabel], ['Renders', clips.length], ['Sample rate', manifest.sampleRate ? (Number(manifest.sampleRate) / 1000) + ' kHz' : null], ['Source revision', manifest.sourceRevision], ['Rendered', manifest.createdAt ? text(manifest.createdAt).slice(0, 10) : null]];
     $('render-facts').replaceChildren();
     facts.forEach(([key, value]) => {
       if (value === null || value === undefined || value === '') return;

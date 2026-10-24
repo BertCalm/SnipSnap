@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.BoardType
 import com.snipsnap.xpm.PadNoteMap
 
 /**
@@ -39,7 +40,9 @@ object RecipeReplay {
         data class Era(val era: String, val amount: Float) : Plan()
         data class Character(val name: String, val amount: Float) : Plan()
         /** Copy the board settings; the destination retains its own source and recipe. */
-        data class Board(val amount: Float) : Plan()
+        data class Board(val amount: Float, val type: BoardType = BoardType.WIDE) : Plan()
+        /** The pedal library's board: every pick with its AMT and side, re-rendered on the destination's own audio. */
+        data class Pedals(val board: com.snipsnap.synth.PedalBoard) : Plan()
         /** [sourceKey] is the key label the recipe was written in — a label, not an input: the destination kit's own key is what plays. */
         data class KeyedPlan(val name: String, val amount: Float, val seed: Long, val dials: Keyed.Dials, val sourceKey: String?) : Plan()
         data class Smear(val amount: Float) : Plan()
@@ -64,12 +67,15 @@ object RecipeReplay {
         if (recipe == null) return Plan.Refused(Copy.REPLAY_NOTHING)
         val e = recipe.entries
         if ("boardPad" in e) {
-            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount) }
+            return BoardSheet.read(recipe)?.let { Plan.Board(it.amount, it.type) }
                 ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         if ("board" in e && "recipe" in e) {
             return runCatching { PadRecipe.fromJsonValue(recipe).board }.getOrNull()
-                ?.let { Plan.Board(it.amount) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+                ?.let { Plan.Board(it.amount, it.type) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
+        }
+        if ("pedals" in e && "recipe" in e) {
+            return PadSheet.readPedals(recipe)?.let { Plan.Pedals(it) } ?: Plan.Refused(Copy.REPLAY_NO_DOOR)
         }
         MutateSheet.read(recipe)?.let { m ->
             return Plan.Refused(Copy.replayNeedsPartner(m.word, m.parents.map { PadSheetBoxes.parentName(it) }))
@@ -150,7 +156,8 @@ object RecipeReplay {
             is Plan.Refused -> throw IllegalArgumentException(p.reason)
             is Plan.Era -> Done(model.eraPad(slot, p.era, p.amount), Copy.replayed(word, padName))
             is Plan.Character -> Done(model.characterPad(slot, p.name, p.amount), Copy.replayed(word, padName))
-            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.amount), Copy.replayedBoard(word, padName))
+            is Plan.Board -> Done(BoardSheet.apply(model, slot, p.amount, p.type), Copy.replayedBoard(word, padName))
+            is Plan.Pedals -> Done(model.pedalPad(slot, p.board), Copy.replayed(word, padName))
             is Plan.KeyedPlan -> {
                 val pad = model.keyedPad(slot, p.name, p.amount, p.seed, p.dials)
                 val key = model.lastKeyLabel

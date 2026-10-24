@@ -1,0 +1,403 @@
+<title>Pedal Board Listens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Big+Shoulders+Display:wght@700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the pedal board family's test sheet (the WAH listen's tokens), one column of panels, each a play row and its answers; a sticky strip keeps Stop and the answer count in reach. */
+:root {
+  --bg: #e8eae3;
+  --panel: #f5f6f0;
+  --ink: #1a2321;
+  --mute: #56645f;
+  --line: #ccd1c8;
+  --edge: #7d8983;
+  --accent: #b95a14;
+  --accent-ink: #ffffff;
+  --on: #1d3b36;
+  --on-ink: #f2f6f1;
+  --field: #fbfbf7;
+  --bad: #a3391a;
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --font-body: 'Barlow', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101413; --panel: #191f1d; --ink: #e6ebe6; --mute: #93a09a; --line: #2c3532; --edge: #63716c;
+    --accent: #f0a04b; --accent-ink: #1a1108; --on: #d8eee5; --on-ink: #0e1916;
+    --field: #141918; --bad: #ff8a66; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101413; --panel: #191f1d; --ink: #e6ebe6; --mute: #93a09a; --line: #2c3532; --edge: #63716c;
+  --accent: #f0a04b; --accent-ink: #1a1108; --on: #d8eee5; --on-ink: #0e1916;
+  --field: #141918; --bad: #ff8a66; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 6.5rem; }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--font-body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 46rem; margin-inline: auto; padding-block: 0 88px; }
+h2 { font-family: var(--font-display); font-weight: 800; letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; font-size: 1.7rem; line-height: 1.05; }
+p { margin: 0; max-width: 65ch; }
+.mute { color: var(--mute); }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.bar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); padding-block: 10px 8px; display: grid; gap: 6px; }
+.bar .l1 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.mark { font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; letter-spacing: .04em; }
+.sub { font-family: var(--font-display); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--mute); margin-left: 8px; font-size: 1rem; }
+.count { font-family: var(--font-mono); font-size: .8rem; color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
+.count.bad { color: var(--bad); font-weight: 500; }
+.bar .l2 { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.now { font-family: var(--font-mono); font-size: .8rem; line-height: 1.3; color: var(--mute); min-width: 0; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.stop { flex: none; font: 600 .85rem var(--font-body); letter-spacing: .06em; text-transform: uppercase; padding: 8px 16px; min-height: 44px; border: 1px solid var(--edge); border-radius: 6px; background: var(--panel); color: var(--ink); cursor: pointer; }
+
+.lede { padding-block: 18px 6px; display: grid; gap: 10px; }
+
+section.sheet { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-block-start: 18px; display: grid; gap: 14px; }
+section.sheet header { display: grid; gap: 4px; }
+
+.set { display: grid; gap: 8px; }
+.set .row { display: grid; grid-template-columns: repeat(auto-fill, minmax(6.2rem, 1fr)); gap: 8px; }
+.pairlabel { font: 600 .8rem var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--mute); }
+.clip { position: relative; min-height: 52px; border: 1px solid var(--edge); border-radius: 8px; background: var(--field); color: var(--ink); cursor: pointer; display: grid; grid-auto-flow: column; justify-content: center; align-items: center; padding: 6px 8px; font: 500 .8rem var(--font-mono); gap: 6px; }
+.clip::before { content: ''; width: 0; height: 0; border-left: 12px solid currentColor; border-block: 7px solid transparent; }
+.clip.on { background: var(--on); color: var(--on-ink); border-color: var(--on); }
+.clip.on::before { width: 11px; height: 11px; border: 0; background: currentColor; border-radius: 2px; }
+.clip::after { content: attr(data-label); font: 600 .72rem var(--font-body); letter-spacing: .04em; text-transform: uppercase; }
+.clip .len { position: absolute; right: 6px; bottom: 3px; font: 400 .62rem var(--font-mono); color: var(--mute); }
+.clip.on .len { color: var(--on-ink); }
+
+.q { display: grid; gap: 6px; }
+.ql { font-weight: 600; max-width: 65ch; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { font: 500 .95rem var(--font-body); min-height: 44px; padding: 8px 16px; border-radius: 22px; border: 1px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+textarea { width: 100%; min-height: 64px; resize: vertical; font: 400 1rem/1.4 var(--font-body); color: var(--ink); background: var(--field); border: 1px solid var(--edge); border-radius: 8px; padding: 10px 12px; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn { font: 600 .85rem var(--font-body); letter-spacing: .05em; text-transform: uppercase; min-height: 44px; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--edge); background: var(--field); color: var(--ink); cursor: pointer; }
+.foot { padding-block: 22px 0; display: grid; gap: 8px; font-size: .9rem; color: var(--mute); }
+#status { font-family: var(--font-mono); font-size: .8rem; display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+#status.bad { color: var(--bad); }
+@media (max-width: 420px) { .chip { padding-inline: 13px; } .set .row { gap: 6px; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="bar">
+    <div class="l1"><div><span class="mark">PEDALS</span><span class="sub">stage 1b listens</span></div><div class="count" id="count" role="status">0 of 0 answered</div></div>
+    <div class="l2"><div class="now" id="now" aria-live="polite">Nothing playing</div><button class="stop" id="stop" type="button">Stop</button></div>
+  </div>
+  <div class="lede">
+    <p>Four short listens that cost no new rack section, from the pedal board brainstorm. They sit beside the WAH gate, not in place of it. First, WAH on the short pads a kit is mostly made of: a closed hat, a rim and a snare cut to 60 ms, each as WAH ships today and with a floor that makes the sweep complete one whole wah before the pad ends. Then three questions the brainstorm could not answer without your ears: whether a SWELL already does what a FADE IN pedal would, whether TAPE's wobble already reads as a VIBRATO, and whether a long ECHO recipe is the DELAY pedal, and whether the rack's one-second tail cap is ever heard on it.</p>
+    <p>Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
+  </div>
+  <div id="sheet"></div>
+  <div class="foot">
+    <div class="q"><label class="ql" for="s1b_note">Anything else</label><textarea id="s1b_note" data-note="s1b_note" placeholder="Anything the questions above missed"></textarea></div>
+    <div id="status">Starting</div>
+    <p>Rendered by generatePedalListens. Claude reads these answers in the next session.</p>
+  </div>
+</div>
+
+<script>
+/* PEDAL_LISTENS_CLIPS */
+
+const FEEL4 = [['right', 'Right'], ['not', 'Not enough'], ['much', 'Too much'], ['no', 'Not usable']];
+const PICK4 = [['plain', 'As shipped'], ['floor', 'The floor'], ['either', 'Either'], ['neither', 'Neither is a wah']];
+const SNARE3 = [['plain', 'As shipped, two a second'], ['floor', 'The floor, three a second'], ['same', 'The same to me']];
+const SWELL4 = [['yes', 'Yes, that is a swell'], ['nearly', 'Nearly'], ['pick', 'No, the pick is still there'], ['other', 'No, it is a different thing']];
+const WANT_FADE = [['yes', 'Yes'], ['swell', 'No, SWELL does it'], ['bloom', 'No, BLOOM does it']];
+const VIB4 = [['vibrato', 'Vibrato: the pitch sings'], ['tape', 'A tape machine'], ['both', 'Something of both'], ['none', 'I hear nothing']];
+const WANT_VIB = [['yes', 'Yes'], ['tape', 'No, TAPE does it'], ['ensemble', 'No, ENSEMBLE does it']];
+const CAP3 = [['chops', 'The trail stops early'], ['fades', 'It fades out on its own'], ['cant', 'Cannot tell']];
+const WHICH4 = [['long', 'The long recipe'], ['closer', 'The closer recipe'], ['slap', 'None: SLAP is enough'], ['neither', 'Neither is right']];
+const SLATE4 = [['row', 'Up to five on the row, swapped in from a larger slate'], ['pad', 'Up to five on one pad at once, swappable'], ['both', 'Both'], ['other', 'Something else: see the note']];
+const YES4 = [['yes', 'Yes'], ['nearly', 'Nearly'], ['no', 'No'], ['no_use', 'Not usable']];
+const FLOOR3 = [['yes', 'Yes'], ['no', 'No'], ['later', 'Decide after the WAH gate']];
+const QIDS = [];
+const state = {};
+const els = {};
+let nowKey = null, nowBtn = null, gen = 0;
+
+function el(tag, attrs, ...kids) {
+  const n = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') n.className = v; else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v); else n.setAttribute(k, v);
+  }
+  for (const c of kids) if (c != null) n.append(c);
+  return n;
+}
+
+/* ---------- audio: one <audio> per clip, one playing at a time ---------- */
+function audioFor(key) {
+  if (!els[key]) {
+    const a = new Audio(CLIPS[key].u);
+    a.preload = 'none';
+    a.addEventListener('ended', () => { if (nowKey === key) clearNow(); });
+    els[key] = a;
+  }
+  return els[key];
+}
+function clearNow() {
+  if (nowBtn) nowBtn.classList.remove('on');
+  nowKey = null; nowBtn = null;
+  document.getElementById('now').textContent = 'Nothing playing';
+}
+function stopAll() {
+  if (nowKey && els[nowKey]) { els[nowKey].pause(); els[nowKey].currentTime = 0; }
+  clearNow();
+}
+function play(key, btn, label) {
+  if (!CLIPS[key]) return;
+  stopAll();
+  const my = ++gen;
+  const a = audioFor(key);
+  a.currentTime = 0;
+  const p = a.play();
+  if (p && p.catch) p.catch((err) => {
+    /* pausing a clip rejects its pending play() with AbortError; only a real refusal by the browser is reported, and only for the clip still current */
+    if (my !== gen || (err && err.name === 'AbortError')) return;
+    clearNow();
+    document.getElementById('now').textContent = 'The browser blocked playback. Tap again.';
+  });
+  nowKey = key; nowBtn = btn; btn.classList.add('on');
+  document.getElementById('now').textContent = label;
+}
+document.getElementById('stop').addEventListener('click', stopAll);
+
+/* ---------- answers: a local copy first, then the page's shared store ---------- */
+const LS_STATE = 'pedal-listens-answers', LS_UNSYNCED = 'pedal-listens-unsynced';
+let db = null, col = null, mode = 'starting', listenerDead = false;
+const chain = {}, inflight = {}, failed = new Set(), unsynced = new Set();
+
+function lsGet(k, fallback) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : fallback; } catch (e) { return fallback; } }
+function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* private window or blocked storage: the page still works */ } }
+function persistLocal() { lsSet(LS_STATE, Object.assign(lsGet(LS_STATE, {}), state)); lsSet(LS_UNSYNCED, Array.from(unsynced)); }
+function loadLocal() {
+  Object.assign(state, lsGet(LS_STATE, {}));
+  lsGet(LS_UNSYNCED, []).forEach((q) => unsynced.add(q));
+}
+function setStatus() {
+  const answered = QIDS.filter((q) => state[q] && state[q].value).length;
+  const count = document.getElementById('count');
+  count.textContent = answered + ' of ' + QIDS.length + ' answered' + (mode === 'local' ? ', local only' : '') + (failed.size ? ', ' + failed.size + ' not saved' : '');
+  count.classList.toggle('bad', failed.size > 0);
+  const s = document.getElementById('status');
+  s.textContent = '';
+  s.classList.toggle('bad', failed.size > 0);
+  if (failed.size) {
+    s.append('Saving failed for ' + failed.size + (failed.size === 1 ? ' answer. ' : ' answers. '));
+    s.append(el('button', { class: 'btn', type: 'button', text: 'Retry', onclick: () => Array.from(failed).forEach(send) }));
+  } else if (listenerDead) s.append('Live updates stopped. Answers still save; reload to resync.');
+  else if (mode === 'synced') s.append(unsynced.size ? 'Saving.' : 'Saved to this page as you tap.');
+  else if (mode === 'local') s.append('The page store is not available here, so answers stay on this device only. Reload the shared link while signed in, or send a screenshot.');
+  else s.append('Connecting to the page store.');
+}
+function paint() {
+  document.querySelectorAll('.chip').forEach((b) => {
+    const st = state[b.dataset.q];
+    b.setAttribute('aria-pressed', st && st.value === b.dataset.v ? 'true' : 'false');
+  });
+  document.querySelectorAll('textarea[data-note]').forEach((t) => {
+    const st = state[t.dataset.note];
+    if (document.activeElement !== t && st && typeof st.text === 'string') t.value = st.text;
+  });
+  setStatus();
+}
+function send(qid) {
+  if (!col || !state[qid]) return;
+  const body = Object.assign({ q: qid }, state[qid]);
+  const doc = db.doc('verdicts/' + qid);
+  failed.delete(qid);
+  inflight[qid] = (inflight[qid] || 0) + 1;
+  const attempt = (retried) => doc.set(body).catch((err) => {
+    if (!retried && err && err.code === 'unavailable') return new Promise((r) => setTimeout(r, 800 + Math.random() * 700)).then(() => attempt(true));
+    throw err;
+  });
+  chain[qid] = (chain[qid] || Promise.resolve())
+    .then(() => attempt(false))
+    .then(() => { inflight[qid]--; if (!inflight[qid] && !failed.has(qid)) { unsynced.delete(qid); persistLocal(); } setStatus(); })
+    .catch(() => { inflight[qid]--; failed.add(qid); setStatus(); });
+  setStatus();
+}
+function save(qid, fields) {
+  state[qid] = Object.assign({}, fields, { at: new Date().toISOString() });
+  unsynced.add(qid);
+  persistLocal();
+  paint();
+  send(qid);
+}
+function subscribe(retried) {
+  col.onSnapshot((snap) => {
+    snap.docs.forEach((d) => { if (d.exists && !unsynced.has(d.id)) state[d.id] = d.data(); });
+    paint();
+  }, (err) => {
+    if (!retried && err && err.code === 'unavailable') { subscribe(true); return; }
+    listenerDead = true; setStatus();
+  });
+}
+async function initStore() {
+  try { db = window.claude && window.claude.use ? await window.claude.use('db') : null; } catch (e) { db = null; }
+  if (!db) { mode = 'local'; paint(); return; }
+  col = db.collection('verdicts');
+  mode = 'synced';
+  subscribe(false);
+  Array.from(unsynced).forEach(send);
+  paint();
+}
+
+/* ---------- building the page ---------- */
+function chipGroup(qid, label, options, ctx) {
+  QIDS.push(qid);
+  const g = el('div', { class: 'chips', role: 'group', 'aria-label': (ctx ? ctx + ': ' : '') + label });
+  options.forEach(([v, text]) => {
+    g.append(el('button', {
+      class: 'chip', type: 'button', 'data-q': qid, 'data-v': v, 'aria-pressed': 'false', text,
+      onclick: () => {
+        const cur = state[qid];
+        if (cur && cur.value === v && !failed.has(qid) && !unsynced.has(qid)) return;
+        save(qid, { value: v });
+      },
+    }));
+  });
+  return el('div', { class: 'q' }, el('div', { class: 'ql', text: label }), g);
+}
+function wireNote(t, qid) {
+  let timer = null;
+  const flush = () => {
+    const cur = state[qid];
+    const curText = cur && typeof cur.text === 'string' ? cur.text : '';
+    if (t.value !== curText) save(qid, { text: t.value });
+  };
+  t.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(flush, 800); });
+  t.addEventListener('blur', () => { clearTimeout(timer); flush(); });
+}
+function clipBtn(key, tag, label) {
+  const c = CLIPS[key];
+  const b = el('button', { class: 'clip', type: 'button', 'aria-label': label + (c ? ', ' + c.s.toFixed(2) + ' seconds' : ''), 'data-label': tag });
+  if (c) b.append(el('span', { class: 'len', text: c.s.toFixed(2) }));
+  b.addEventListener('click', () => play(key, b, label));
+  return b;
+}
+function setRow(title, items) {
+  const w = el('div', { class: 'row' });
+  items.forEach(([key, tag, label]) => w.append(clipBtn(key, tag, label)));
+  return el('div', { class: 'set' }, el('div', { class: 'pairlabel', text: title }), w);
+}
+function setSheet(title, intro, ...parts) {
+  const head = [el('h2', { text: title })];
+  (Array.isArray(intro) ? intro : [intro]).forEach((p) => head.push(el('p', { class: 'mute', text: p })));
+  return el('section', { class: 'sheet' }, el('header', {}, ...head), ...parts);
+}
+
+function wahSheet() {
+  const pads = [['HAT', 'hat', 'the closed hat'], ['RIM', 'rim', 'the rim'], ['SNARE60', 'snare60', 'the snare cut to 60 ms']];
+  const parts = [];
+  pads.forEach(([src, id, name]) => {
+    parts.push(setRow(name, [
+      [src + '/dry', 'Dry', name + ', dry'],
+      [src + '/auto_70', 'Auto 70', name + ', WAH auto at 70 as shipped'],
+      [src + '/auto_100', 'Auto 100', name + ', WAH auto at 100 as shipped'],
+      [src + '/fit_70', 'Floor 70', name + ', WAH auto at 70 with the one-cycle floor'],
+      [src + '/fit_100', 'Floor 100', name + ', WAH auto at 100 with the one-cycle floor'],
+    ]));
+    parts.push(chipGroup('s1b_' + id + '_plain', 'As shipped: is it a wah, on ' + name + '?', FEEL4, name));
+    parts.push(chipGroup('s1b_' + id + '_floor', 'With the one-cycle floor: is it a wah, on ' + name + '?', FEEL4, name + ' with the floor'));
+    parts.push(chipGroup('s1b_' + id + '_pick', 'Which should ship on ' + name + '?', PICK4, name + ' pick'));
+  });
+  parts.push(setRow('the full snare, for the change the floor makes to it', [
+    ['SNARE/dry', 'Dry', 'the snare, dry'],
+    ['SNARE/auto_70', 'Auto 70', 'the snare, WAH auto at 70 as shipped'],
+    ['SNARE/auto_100', 'Auto 100', 'the snare, WAH auto at 100 as shipped'],
+    ['SNARE/fit_70', 'Floor 70', 'the snare, WAH auto at 70 with the one-cycle floor'],
+    ['SNARE/fit_100', 'Floor 100', 'the snare, WAH auto at 100 with the one-cycle floor'],
+  ]));
+  parts.push(chipGroup('s1b_snare_pick', 'The floor moves the full snare\'s sweep from two a second to three, so it would change the snare whose auto sweep you picked in round two. Which snare is right?', SNARE3, 'the full snare'));
+  return setSheet('WAH on short pads', [
+    'Every WAH gate so far used a 333 ms snare as its shortest sound, and a kit is mostly hats, rims and trimmed hits. WAH\'s auto move sweeps about twice a second, so on an 85 ms hat it gets a sixth of the way through one sweep and sounds like a fixed filter. The floor makes the sweep fit the pad: at least one whole wah before the pad ends, faster on a shorter pad. It is a listening door, not a knob; nothing in the app changes until you say so.',
+  ], ...parts);
+}
+
+function fadeInSheet() {
+  return setSheet('FADE IN, for free', [
+    'The brainstorm proposed a FADE IN pedal: the pick hidden, the note arriving like a volume swell. Before building one, two things the rack already does. SWELL puts a stretched copy of the note\'s own head in front of the hit, then plays the hit. BLOOM is SWELL into the amp, then a spring. On the jangle the swell sits in front of its own landing amp, the rig order. On the choir BLOOM uses the DRIVE pedal as its amp, with the chip\'s own end fade. At 100 that amp is at its top (gain 1000), where the swell arrives already saturated and barely rises, so judge the choir\'s BLOOM by the 70 clip and hear 100 only for what the amp does.',
+  ],
+    setRow('jangle', [
+      ['JANGLE/pad', 'Pad', 'the jangle, as the kit has it'],
+      ['JANGLE/swell_70', 'Swell 70', 'the jangle, SWELL at 70'],
+      ['JANGLE/swell_100', 'Swell 100', 'the jangle, SWELL at 100'],
+      ['JANGLE/bloom_70', 'Bloom 70', 'the jangle, BLOOM at 70: the swell in front of the amp, then a spring'],
+      ['JANGLE/bloom_100', 'Bloom 100', 'the jangle, BLOOM at 100'],
+    ]),
+    chipGroup('s1b_jangle_swell', 'Does SWELL hide the pick the way a volume swell does, on the jangle?', SWELL4, 'jangle SWELL'),
+    chipGroup('s1b_jangle_bloom', 'Does BLOOM bloom, on the jangle?', YES4, 'jangle BLOOM'),
+    chipGroup('s1b_jangle_fadein', 'Do you still want a plain FADE IN pedal for the guitar?', WANT_FADE, 'jangle FADE IN'),
+    setRow('choir', [
+      ['CHOIR/dry', 'Dry', 'the choir, dry'],
+      ['CHOIR/swell_70', 'Swell 70', 'the choir, SWELL at 70'],
+      ['CHOIR/swell_100', 'Swell 100', 'the choir, SWELL at 100'],
+      ['CHOIR/bloom_70', 'Bloom 70', 'the choir, BLOOM at 70: the swell into DRIVE, then a spring'],
+      ['CHOIR/bloom_100', 'Bloom 100', 'the choir, BLOOM at 100'],
+    ]),
+    chipGroup('s1b_choir_swell', 'Does SWELL fade the choir in?', SWELL4, 'choir SWELL'),
+    chipGroup('s1b_choir_fadein', 'Do you still want a plain FADE IN pedal for a pad like the choir?', WANT_FADE, 'choir FADE IN'));
+}
+
+function vibratoSheet() {
+  return setSheet('VIBRATO, for free', [
+    'The brainstorm proposed a VIBRATO pedal: the pitch moved by a sine, the way a Magnatone amp does it. The rack has no pitch vibrato, but TAPE\'s wobble is a pitch wobble (a slow wow and a fast flutter) and here it is alone, with the tape\'s saturation and head wear turned off. ENSEMBLE is the chorus, for comparison.',
+  ],
+    setRow('jangle', [
+      ['JANGLE/pad', 'Pad', 'the jangle, as the kit has it'],
+      ['JANGLE/tape_80', 'Tape 80', 'the jangle, TAPE wobble at 80, nothing else'],
+      ['JANGLE/tape_100', 'Tape 100', 'the jangle, TAPE wobble at 100, nothing else'],
+      ['JANGLE/ensemble_100', 'Ensemble', 'the jangle, ENSEMBLE at 100'],
+    ]),
+    chipGroup('s1b_jangle_tape', 'Does the tape wobble read as a vibrato or as a tape machine, on the jangle?', VIB4, 'jangle TAPE'),
+    chipGroup('s1b_jangle_vibrato', 'Do you still want a VIBRATO pedal for the guitar?', WANT_VIB, 'jangle VIBRATO'),
+    setRow('choir', [
+      ['CHOIR/dry', 'Dry', 'the choir, dry'],
+      ['CHOIR/tape_80', 'Tape 80', 'the choir, TAPE wobble at 80, nothing else'],
+      ['CHOIR/tape_100', 'Tape 100', 'the choir, TAPE wobble at 100, nothing else'],
+      ['CHOIR/ensemble_100', 'Ensemble', 'the choir, ENSEMBLE at 100'],
+    ]),
+    chipGroup('s1b_choir_tape', 'Does the tape wobble read as a vibrato or as a tape machine, on the choir?', VIB4, 'choir TAPE'),
+    chipGroup('s1b_choir_vibrato', 'Do you still want a VIBRATO pedal for a pad like the choir?', WANT_VIB, 'choir VIBRATO'));
+}
+
+function delaySheet() {
+  const one = (src, id, name, first, firstLabel) => [
+    setRow(name, [
+      [src + '/' + first, firstLabel, name + ', ' + firstLabel.toLowerCase()],
+      [src + '/slap_70', 'Slap 70', name + ', SLAP at 70'],
+      [src + '/delay_70', 'Delay 70', name + ', DELAY at 70'],
+      [src + '/delay_100', 'Delay 100', name + ', DELAY at 100'],
+      [src + '/delay_short_100', 'Closer 100', name + ', the closer DELAY recipe at 100'],
+    ]),
+    chipGroup('s1b_' + id + '_delay', 'Do the repeats trail off like a delay pedal, on ' + name + '?', YES4, name + ' DELAY'),
+    chipGroup('s1b_' + id + '_cap', 'At 100, does the trail stop early or fade out on its own, on ' + name + '?', CAP3, name + ' cap'),
+    chipGroup('s1b_' + id + '_which', 'Which recipe is the DELAY chip, on ' + name + '?', WHICH4, name + ' which'),
+  ];
+  return setSheet('DELAY', [
+    'SLAP is one repeat. The brainstorm\'s DELAY is ECHO at long, dark values: repeats 225 ms apart that trail off darker, about ten of them before they are gone. The rack lets no pad grow by more than one second past its own end, and fades the last 10 ms. On the snare that cut lands between the fifth and sixth repeats, where the trail is already about 30 dB down; on the choir and the jangle the repeats overlap the note\'s own decay and are 45 to 50 dB down by then. At 70 the repeats are 151 ms apart and have died before it. The closer recipe is a second taste: repeats 158 ms apart that fall faster.',
+  ], ...one('SNARE', 'snare', 'the snare', 'dry', 'Dry'), ...one('CHOIR', 'choir', 'the choir', 'dry', 'Dry'), ...one('JANGLE', 'jangle', 'the jangle', 'pad', 'Pad'));
+}
+
+function verdictSheet() {
+  return setSheet('Your verdict', 'After all of that.',
+    chipGroup('s1b_slate', 'You said a slate of pedals to choose from, five allowed at once, swappable. Which did you mean?', SLATE4, 'slate'),
+    chipGroup('s1b_floor', 'Should the one-cycle floor ship inside WAH, so a short pad always hears one sweep?', FLOOR3, 'floor'));
+}
+
+const sheet = document.getElementById('sheet');
+sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), verdictSheet());
+wireNote(document.getElementById('s1b_note'), 's1b_note');
+loadLocal();
+paint();
+initStore();
+</script>
