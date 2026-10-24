@@ -441,9 +441,20 @@ MPC 3 and MPC 2 programs sharing PCM24 WAVs, editable kit and pad recipes,
 a manifest and a ZIP beside the kit. [OHM.md](OHM.md) records the layout,
 performance measurements and device handoff.
 
-Phone response, phone save/reopen and MPC hardware acceptance remain open.
-Separate rendered notes start fresh; bowed excitation, sustained loops,
-FM elder, grains and freeze remain future sound-development work.
+Optional model 3 now adds friction bowing, embedded captured excitation,
+bounded FM elder, source-audio grains, captured-buffer freeze and HOLD.
+EXTEND opts in without changing the accepted factory bank. HOLD delivers a
+loop-only pad; MAKE INSTRUMENT preserves the arrival and a sustain marker
+through the existing phone/MPC keygroup path. Bowed HOLD uses a disclosed
+captured join, while plucked/captured HOLD measures physical continuation.
+`:synth:generateOhmExpandedAudition` isolates each addition and repeats held
+material; `:shell:generateOhmExpandedHandoff` exports three provisional C3–C5
+instruments. [Extension notes](OHM_EXPANDED.md) record source limits, loop
+evidence, host costs and the listening status.
+
+The model-3 sources and their combination studies remain unheard. Phone
+response, phone save/reopen and MPC hardware acceptance remain open.
+Separate rendered notes continue to start fresh ensembles.
 
 ### FLOCK — finite oscillator flocks
 

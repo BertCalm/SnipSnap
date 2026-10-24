@@ -1160,6 +1160,15 @@ one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
 `testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
 remain open.
 
+OHM's optional **EXTEND** model adds friction bowing, portable captured excitation,
+FM elder, source-audio grains and captured-buffer freeze. HOLD supplies loop-only
+pads or an attack/sustain instrument through MAKE INSTRUMENT; the existing five
+factory recipes keep their accepted model-2 sound. Build the separate listening
+study with `:synth:generateOhmExpandedAudition` and three provisional MPC 3/MPC 2
+keygroups with `:shell:generateOhmExpandedHandoff`. [Extension notes](docs/OHM_EXPANDED.md)
+separate the physical bow, captured-loop treatment, measured host costs and
+remaining listening/device checks.
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones

@@ -83,6 +83,23 @@ tasks.register<JavaExec>("generateOhmAudition") {
     args("${rootDir}/testkit/ohm-audition")
 }
 
+/** Isolated model-3 additions, explicit capture provenance and actual held-region playback. */
+tasks.register<JavaExec>("generateOhmExpandedAudition") {
+    group = "distribution"
+    description = "Render OHM model-3 feature comparisons, phrases, held-loop studies and portable source recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmExpandedAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("ohmExpandedReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("ohmExpandedReplayOutput").get(),
+            providers.gradleProperty("ohmExpandedReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("ohmExpandedOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-audition")
+    }
+}
+
 /** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
 tasks.register<JavaExec>("generateOhmKit") {
     group = "distribution"

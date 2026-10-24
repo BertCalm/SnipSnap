@@ -324,6 +324,8 @@ testkit/brass-grow-prototype/
 
 # Reproducible OHM listening assets; sources and recipes live under synth/.
 testkit/ohm-audition/
+testkit/ohm-expanded-audition/
+testkit/ohm-expanded-handoff/
 testkit/ohm-audition-v1/
 
 # OHM's native MPC starter and regenerable kit artifacts.
