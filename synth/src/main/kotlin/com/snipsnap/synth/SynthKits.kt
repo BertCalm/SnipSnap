@@ -1057,6 +1057,21 @@ object SynthKits {
     }
 
     /**
+     * Eight fuller Alloy notes in C minor pentatonic from C3, then eight starting
+     * positions. Every pad is finite and dry; a duration-based LOOP class is a
+     * filename/category, not a seamless sustain claim. All sixteen save their patch.
+     */
+    fun caustic(): List<ArrangedPad?> {
+        fun arranged(patch: CausticPatch) = pad(patch, CausticInstrument.drumClassFor(patch.voice, patch.macros, patch.model))
+            .copy(displayName = patch.name)
+        val fuller = CausticPresets.all().first { it.name == "Fuller Body" }
+        val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(fuller.copy(name = "Caustic Key ${index + 1}", midi = 48 + semitone))
+        }
+        return scale + CausticPresets.all().map(::arranged)
+    }
+
+    /**
      * Eight Corner Bass keys in C minor pentatonic from C2, the six approved positions,
      * then two held variants. Every dry pad stores its exact root, velocity and model.
      * Finite notes route as TONAL; the last two pads contain settled LOOP material.
@@ -1114,15 +1129,15 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD, BUBBLE and BREATH each speak at C3 and C4. The remaining
-     * eight pads compare one alternate articulation and one held buffer per
-     * voice. Each voice's native-root default is its exact library patch.
-     * This sixteen-pad selection samples the seventeen-recipe library;
+     * PLUCK, WOOD, BUBBLE, BREATH and FLICKER each speak at C3 and C4. The
+     * remaining six pads compare one held buffer per voice and an isolated
+     * FLICKER glint. Each voice's native-root default is its exact library patch.
+     * This sixteen-pad selection samples the twenty-one-recipe library;
      * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1133,8 +1148,7 @@ object SynthKits {
             }
         }
         val recipeNames = listOf(
-            "Soft Wick", "Held Glow", "Small Rebounds", "Held Wood",
-            "Busy Bubbles", "Held Bubbles", "Single Breath", "Held Breath",
+            "Held Glow", "Held Wood", "Held Bubbles", "Held Breath", "Held Flicker", "Single Glint",
         )
         val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
         return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }

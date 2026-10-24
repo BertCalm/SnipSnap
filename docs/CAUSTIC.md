@@ -1,18 +1,34 @@
-# Caustic: circular listening prototype
+# Caustic: finite Alloy instrument
 
-Caustic tests whether an ordinary harmonic tone acquires a position-dependent
-singing body through reflected paths. The listening studies develop its
-material character while preserving earlier recordings for comparison. Alloy is
-the preferred direction; the latest pass explores two strengths of its
-companion bloom. This milestone is a finite Kotlin renderer and portable
-listening study, awaiting the owner's sonic verdict. It is not the complete
-proposed engine. The working name has not been checked for release.
+Caustic turns an ordinary harmonic tone into a position-dependent singing body
+through reflected paths. The finite native milestone is implemented: one ALLOY
+voice, editable SOURCE/FOCUS/BODY/LENGTH controls, saved MIDI and velocity,
+eight starting patches, and a dry sixteen-pad kit for both MPC formats. The
+owner heard and approved the fuller-body direction after finding the Bloom/Deep
+tail variants indistinguishable. Earlier listening studies remain available
+for comparison; the broader moving-geometry design remains later work. The
+working name has not been checked for release.
 
 ## Listen and reproduce
 
-The [private audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site)
-uses ChatGPT Sites. It provides a suggested listening order, a
-depth-and-character comparison, the original position studies, mechanism
+The [native instrument audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/instrument/)
+provides twenty finite recordings, Native and Level matched playback, eight
+starting patches, portable JSON recipes, a compact comparison download and the
+sixteen-pad starter kit. The browser plays exported recordings; it does not
+render control changes in real time. Generate the native artifacts with:
+
+```text
+./gradlew --no-daemon :synth:generateCausticInstrumentAudition
+./gradlew --no-daemon :synth:generateCausticKit
+```
+
+These tasks write `testkit/caustic-instrument-audition/` and
+`testkit/caustic-kit/`. Native playback is the saved patch's complete house
+output; Level matched copies apply `AuditionLevel` once for comparison.
+
+The [archived private audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/)
+retains the earlier circular studies on ChatGPT Sites: a suggested listening
+order, a depth-and-character comparison, the original position studies, mechanism
 controls, register/velocity probes and local notes.
 
 ```text
@@ -29,13 +45,13 @@ compact. Use a local server or published page for decoded Web Audio playback.
 The downloaded pack also supports local media playback. Repeat replays a finite
 recording; it is not a HOLD or seam test.
 
-Use **Level matched** to compare tone and **Shared gain** to hear collection
-strength and velocity. One native export gain applies within each renderer
+In the archived studies, use **Level matched** to compare tone and **Shared gain**
+to hear collection strength and velocity. One native export gain applies within each renderer
 revision; the original pack keeps its original gain, including the source. No
 per-position compensation or rack FX runs inside synthesis. Matched exports use
 the existing `AuditionLevel` loudest-200-ms rule.
 
-## Model and recipe
+## Archived models and recipes
 
 `Caustic.Config` stores SOURCE, FOCUS, MIDI, velocity, duration, aperture,
 musical delay scale, ray count, renderer model and material character. Model 1
@@ -120,6 +136,67 @@ The existing source and pickup controls still determine coherent excitation.
 No output reverb or extra oscillators create this contrast. Model 4 requires
 ALLOY and zero bloom; recipe schema 4 stores that explicit fixed model choice.
 
+## Native finite instrument contract
+
+The characteristic gesture is **metallic strike → tonal body grows beneath it
+→ position-dependent ringing → finite release**. The core uses literal circular
+reflection and coherent delayed excitation; it does not simulate a measured
+metal vessel. Modal frequencies, material gains and musical path-delay scaling
+are sound-design choices. MERCURY changes a body's response through water
+loading and REVEL mixes a circular ensemble through moving microphones;
+Caustic's distinguishing controls move source illumination and coherent pickup
+paths through one shared body.
+
+The first native voice is ALLOY. `CausticInstrument` is the production control
+and rendering API; `CausticPatch` stores the name, voice, complete macro map,
+explicit MIDI root, excitation velocity and native model version. Native model
+1 is a separate format from the archived `CausticRecipe` models 1–4. Archived
+recipes retain their original interpretation and files.
+
+| Control | Default | Model quantity |
+| --- | --- | --- |
+| SOURCE | .50 | Source distance/illumination, including the exact parallel limit. |
+| FOCUS | .19 | Position of the nine finite pickups; paths retain signed phase and delay. |
+| BODY | 1 | Tonal attack, decay and drive between preferred Alloy and Fuller body; the short metal exciter remains fixed. |
+| LENGTH | 1 | Half-second to eight-second finite gesture; tonal and modal decay scale together. |
+| HOLD | 0 | Reserved. Positive values are refused until sustained excitation and an independently checked loop exist. |
+
+The phone's ROOT and VELOCITY controls are saved outside the macro map. The
+first native range is C2–C6 (MIDI 36–84); lower legacy diagnostic notes do not
+establish a native playable range. BODY=0, LENGTH=1 retains the preferred
+Alloy excitation. BODY=1, LENGTH=1 retains the approved Fuller-body excitation:
+35 ms tonal attack, 1.5 s decay and force 210, above the same 6 ms metal edge.
+Intermediate BODY positions are new listening candidates. LENGTH shortens the
+source and modal release rather than cutting an otherwise unchanged recording.
+
+Native output follows the house melodic conditioning and velocity policy.
+Unconditioned/raw probes remain available for transfer, headroom and endpoint
+comparisons. Loudness conditioning is outside the body model. Finite notes
+longer than the classifier's 1.5-second threshold carry LOOP class metadata;
+that class does not claim a held source or a seamless join. The starter uses
+ordinary finite pad playback and has no held instrument export.
+
+The bounded geometry cache is keyed by SOURCE, FOCUS, ray count and
+aperture. Pitch, velocity, BODY and LENGTH do not invalidate static geometry.
+Audio state belongs to each render. The native fast path folds the static
+linear response into forced and free modal coefficients, preserving causal
+arrivals and signed carrier phase. Independent delayed-path modal calculations
+verify the result, including events that arrive between samples.
+The archived renderer remains the reference, not a mutable production preset.
+
+### Why it is built this way
+
+- One voice keeps the heard metallic identity central while the controls are
+  tested; the earlier Body and Reed studies remain available as references.
+- BODY changes energy entering the resonant body during the audible main note.
+  Extending only a quiet tail failed to provide a useful listening choice.
+- Static path preparation is shared, while each note owns its modal state.
+  This avoids repeated geometry work without carrying sound between renders.
+- Exact linear response removes repeated projection work from the audio loop.
+  Independent numerical checks verify causal arrivals and free ringing.
+- HOLD is reserved because a decaying recording has no settled sustained state.
+  Building the finite instrument first keeps that separate DSP task explicit.
+
 ## Comparisons and verification
 
 - Source only: the original finite tone before the vessel.
@@ -152,7 +229,50 @@ phone budgets or a sonic acceptance verdict.
 
 ## Later work
 
-Deformation, SCATTER, exact-stop ORBIT, verified HOLD, the six-voice/36-preset
-bank, phone picker, normal patch/kit registration and attack-plus-loop keygroup
-export follow the static listening decision. No real-time ray-traced engine is
-required for the proposed sample workflow.
+Deformation, SCATTER, exact-stop ORBIT, verified sustained HOLD, additional
+voices, the broader preset bank and held keygroup export remain later work.
+The finite instrument includes native patch/kit registration and the phone
+picker. Phone latency and the new kit's hardware load/play check remain
+device verification, separate from JVM and export-reader checks. No real-time
+ray-traced engine is required for this sample workflow.
+
+## As built and evidence
+
+- **Heard:** the owner preferred Alloy, could not distinguish Bloom/Deep in normal
+  listening, then heard and approved Fuller body's main-note change. Native
+  finishing, intermediate controls and six starter positions still need listening.
+- **Verified:** native model-1 patches preserve MIDI and excitation velocity; four
+  active macros plus reserved HOLD; one ALLOY voice, eight starter positions and
+  sixteen dry finite pads. All 148 original study file hashes remain unchanged;
+  the earlier 48-recording listening study is retained. Native patch and WAV hashes
+  passed the artifact audit, and browser checks played all forty native/matched
+  WAVs, including transport switching, load retry and nested page routing.
+- **Measured:** the twenty-clip native pack has no generator warnings or hard
+  failures. Its maximum native sample peak is 0.9900, worst measured broad pitch
+  error is 13.43 cents, and minimum pitch confidence is 0.9333. The generator
+  checks patch round trips, representative sample-identical replay and classifier
+  safety; these measurements do not replace listening acceptance.
+- **Export checked:** the starter contains sixteen native patches and WAVs,
+  one MPC 3 track and one MPC 2 program. ZIP CRCs, twenty-two checksums and
+  export-reader checks passed. All pads are finite one-shots and the MPC 2 loop
+  flags are disabled. The reader does not check pad colour, one-shot or humanize;
+  the separate artifact audit checks the exported one-shot and loop settings.
+- **Render cost:** before the native rewrite, three eight-second C4 renders took
+  4.36–5.19 s on this Linux/OpenJDK 21 container. The initial analytic renderer
+  reached 0.329 s after warmup, with a full-note raw RMS error of 2.35e-7 against
+  legacy Fuller body. In the native pack generated from `9c05bb8d`, warm
+  eight-second examples took 151–157 ms and the two half-second notes took
+  11–13 ms; other eight-second captures reached 499 ms during generation.
+  These are container timings, not phone latency measurements.
+- **Android:** the debug app, all four native ABIs and the instrumentation
+  test APK assembled. Actual UI tests could not run: the software-only Android emulator's system watchdog killed
+  its boot process, and the targeted timeout-property retry was unsupported.
+  No phone performance or hardware MPC load/play claim follows from these checks.
+- **DSP checks:** all 49 chromatic notes in the native C2–C6 range pass the
+  requested-pitch check. Register/geometry corners, 4× versus 16× aliasing,
+  causal modal evolution, low/middle control authority, deterministic replay
+  and finite decay checks also passed in the recovered regression run.
+- **JVM verification:** the initial 64 focused Caustic tests and authored-note
+  SPREAD check passed. The added chromatic scan and DSP checks above also pass.
+  The broader nine-module suite result is recorded in the change's pull-request
+  validation section, separately from these focused and artifact checks.

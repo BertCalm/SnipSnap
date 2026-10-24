@@ -69,21 +69,32 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (44 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY and VENT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (45 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 54 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
-VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM and FILAMENT.
+The SYNTH source picker has 56 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
+COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
+SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
+VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC and FILAMENT.
+MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
+(2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
+round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT
+path yet (R2b, round 6, awaits the listen).
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
-held LOOP variants; its sample-based keyboard path is shared with the other
-pitched pad makers. Dedicated MAKE INSTRUMENT multisampling remains separate.
+held LOOP variants. Model-3 MAKE INSTRUMENT samples minor-third zones around the
+saved root, preserving one continuous onset and settling history into the held
+loop. RELEASE controls the existing phone/MPC volume fade after key-up; older
+models keep their original finite/HOLD renders. Paper Keys and Ink Ribbon form
+the first held-keyboard listening pair. Generation is serial and cancellable;
+actual phone timing and MPC playback still require the device acceptance pass.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY and VENT also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
@@ -135,7 +146,12 @@ FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
 ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
 2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
 renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
-SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
+SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
+saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
+nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
+retaining the editable held recipe. HOLD stays finite. See the
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). Phone playback
+remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available
 for listening and device review.

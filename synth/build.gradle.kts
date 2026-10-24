@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Native previous/revised EDGE comparisons in complete finite notes and held periods. */
+tasks.register<JavaExec>("generateContourEdgeAudition") {
+    group = "distribution"
+    description = "Render nine Contour recipes at five EDGE positions, finite/held, previous/revised, with exact replay JSON and matched WAVs."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourEdgeAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
+}
+
 /** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
 tasks.register<JavaExec>("generateFilamentAudition") {
     group = "distribution"
@@ -266,7 +277,7 @@ tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
     args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
-/** Four-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
+/** Five-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
     description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
@@ -1694,4 +1705,36 @@ tasks.register<JavaExec>("generateCausticAudition") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
+}
+
+/** Three model-1 clips, preserving the foreground and comparing only venue return. */
+tasks.register<JavaExec>("generateNacreGentleAudition") {
+    group = "distribution"
+    description = "Render the original model-1 gesture and two restrained venue-return comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-gentle-audition")
+}
+
+/** The finite production voice, kept separate from the archived circular studies. */
+tasks.register<JavaExec>("generateCausticInstrumentAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's editable Alloy voice, control sweeps and native patch recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticInstrumentAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
+}
+
+tasks.register<JavaExec>("generateCausticKit") {
+    group = "distribution"
+    description = "Export CAUSTIC's sixteen dry finite pads, editable recipes and both MPC program formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }

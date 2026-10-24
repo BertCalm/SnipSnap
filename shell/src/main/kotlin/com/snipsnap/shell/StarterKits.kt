@@ -240,6 +240,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tangle() },
         Starter(
+            "caustic", "CAUSTIC",
+            "Finite metal-bodied notes in C minor pentatonic. Source and pickup carve a resonant body.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.caustic() },
+        Starter(
             "crease", "CREASE",
             "Pressure-shaped bass, keys and elastic leads in C minor pentatonic, with unfolding held layers.",
             seeded = false,

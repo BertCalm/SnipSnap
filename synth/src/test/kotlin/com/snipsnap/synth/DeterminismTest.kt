@@ -11,6 +11,53 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
 
+    // The attack, slow pressure memory and streaming output filters all survive to the
+    // same loop boundary. No state from the previous key render may enter a fresh note.
+    @Test
+    fun `CREASE speaking keys reproduce the same attack and measured loop boundary`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = Keys.creasePad(patch, midi = 60)
+        val second = Keys.creasePad(patch.copy(macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        assertTrue(first.loopStartFrame > 0)
+        assertTrue(first.loopStartFrame == second.loopStartFrame, "fresh convergence picked another loop boundary")
+        assertContentEquals(first.snip.samples, second.snip.samples, "source state or macro iteration order changed the note")
+    }
+
+    @Test
+    fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
+        for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
+            val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,
+                Origami.defaults(OrigamiVoice.STILL) + ("MOTION" to .65f),
+                midi = 60, velocity = .7f, seed = Long.MIN_VALUE + 20261023L, gesture = gesture)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
+        }
+    }
+
+    @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
+    }
+
+    @Test
+    fun `native Caustic saved finite notes are byte identical across renders`() {
+        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
+            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+            midi = 57, velocity = .63f, model = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
     @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {

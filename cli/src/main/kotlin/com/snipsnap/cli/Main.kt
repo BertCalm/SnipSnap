@@ -78,16 +78,21 @@ object Cli {
         |                        render factory presets to wav, to hear them
         |                        (ORIGAMI/ALLOY/CISTERN/FLOTILLA/TESSERA/PITCHWHEEL/REVEL/PRISM/REGISTERS/CONTOUR/STOOP/LACQUER/SPOOL/SKITTER/TANGLE/CREASE/RELAY/EMBOUCHURE/BELLOWS/MURMUR/OSPREY/OBBLIGATO/SCANNED_CHAIN: --midi N --velocity 0..1)
         |                        (CREASE: ROUND/PINCH/RUBBER; --model 1|2|3;
-        |                        six factory positions with saved root and velocity)
+        |                        six factory positions with saved root and velocity;
+        |                        model 3: --instrument [--release .1..1.5] keeps
+        |                        pressure attack/motion; --midi/--velocity/--patch apply)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N)
-        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE; --midi 24..84 --velocity 0..1)
+        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER; --midi 24..84 --velocity 0..1)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
-        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1)
+        |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
+        |                        --instrument [--release S] [--velocity 0..1] makes
+        |                        17 settled-sustain zones, omitting the finite attack;
+        |                        instrument zones own TUNE/HOLD; --midi is finite only)
         |                        (REGISTERS: PIPE/MUSETTE/TRANSISTOR; --instrument [--release S])
         |                        (SKITTER: BASS/LEAD/HOLLOW/FLUTTER/CHIRP/FRAY;
         |                        --seed N sets noise; --scramble N varies macros)
