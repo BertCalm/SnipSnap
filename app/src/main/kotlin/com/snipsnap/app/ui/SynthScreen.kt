@@ -3006,13 +3006,13 @@ fun SynthScreen(
             )
             // Innermost: same self-guarded cancel as the overlay's own
             // CANCEL — a send in flight (sendBusy) makes both no-ops.
-            BackHandler(onBack = cancelChooser)
+            SynthOverlayBackHandler(onBack = cancelChooser)
         }
 
         if (reopeningPad) {
             val cancelReopen = { reopeningPad = false }
             ReopenPadOverlay(reopenablePads, scheme, onPick = ::reopenPad, onCancel = cancelReopen)
-            BackHandler(onBack = cancelReopen)
+            SynthOverlayBackHandler(onBack = cancelReopen)
         }
 
         spreadSource?.let { src ->
@@ -3028,7 +3028,7 @@ fun SynthScreen(
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
-            BackHandler(onBack = cancelSpread)
+            SynthOverlayBackHandler(onBack = cancelSpread)
         }
 
         if (namingPreset) {
@@ -3041,7 +3041,7 @@ fun SynthScreen(
                 onCancel = cancelNaming,
                 onSave = ::savePreset,
             )
-            BackHandler(onBack = cancelNaming)
+            SynthOverlayBackHandler(onBack = cancelNaming)
         }
 
         forgetTarget?.let { target ->
@@ -3055,7 +3055,7 @@ fun SynthScreen(
                     forgetPreset(target)
                 },
             )
-            BackHandler(onBack = cancelForget)
+            SynthOverlayBackHandler(onBack = cancelForget)
         }
 
         if (binOpen) {
@@ -3069,7 +3069,7 @@ fun SynthScreen(
                 onRestore = ::restorePreset,
                 onClose = closeBin,
             )
-            BackHandler(onBack = closeBin)
+            SynthOverlayBackHandler(onBack = closeBin)
         }
 
         if (makingInstrument && supportsHeldInstrument) {
@@ -3103,7 +3103,7 @@ fun SynthScreen(
                     onCancel = ::closeHeld,
                 )
             }
-            BackHandler(onBack = ::closeHeld)
+            SynthOverlayBackHandler(onBack = ::closeHeld)
         }
 
         if (droneOpen) {
@@ -3137,9 +3137,19 @@ fun SynthScreen(
                     onCancel = ::closeDrone,
                 )
             }
-            BackHandler(onBack = ::closeDrone)
+            SynthOverlayBackHandler(onBack = ::closeDrone)
         }
     }
+}
+
+/**
+ * Every overlay keeps Back registered and guards busy work inside its callback. Supplying the
+ * constant here also keeps Compose's default-Boolean placeholder out of the large screen method:
+ * D8 otherwise merged that unused placeholder with an object register and ART rejected the screen.
+ */
+@Composable
+private fun SynthOverlayBackHandler(onBack: () -> Unit) {
+    BackHandler(true, onBack)
 }
 
 // ---------- FORGET → BIN: the ask, and the bin's door ----------
