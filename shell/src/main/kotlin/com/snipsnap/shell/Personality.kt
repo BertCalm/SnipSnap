@@ -946,6 +946,10 @@ object Copy {
     const val SETUP_MIDI_OUT_NONE = "NOTHING PLUGGED IN. SNIPSNAP OUT IS STILL PUBLISHED."
     /** In place of the whole section on a phone with no MIDI service. */
     const val SETUP_MIDI_OUT_UNSUPPORTED = "THIS PHONE HAS NO MIDI."
+    /** The name SETUP lists, and the LCD prints, for SnipSnap's own published output port. */
+    const val MIDI_PORT_OUT_NAME = "SNIPSNAP OUT"
+    /** The name the LCD prints for SnipSnap's own published input port, while another app holds it. */
+    const val MIDI_PORT_IN_NAME = "SNIPSNAP IN"
     /** Beside a device whose port opened: it is being sent to. */
     const val SETUP_MIDI_OUT_PORT_OK = "OUT"
     /** Beside a device whose port another app already holds. */

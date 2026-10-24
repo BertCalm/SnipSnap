@@ -170,6 +170,8 @@ fun KeysScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen with a key down: its release never comes.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -219,9 +221,10 @@ fun KeysScreen(
                         KeyPad(
                             label = note?.let { KeysLayout.label(it) } ?: "—",
                             enabled = covered,
-                            // Touch only: these go out over MIDI on channel 0. The MidiKeys.Voice above is MIDI in and stays silent.
-                            onPress = { v -> note?.let { player.noteOn(it, v); MidiOut.noteOn(0, it, v, System.nanoTime()) } },
-                            onRelease = { note?.let { player.noteOff(it); MidiOut.noteOff(0, it, System.nanoTime()) } },
+                            // Touch only: these go out over MIDI on the keys channel, and only for a note that sounded locally.
+                            // The MidiKeys.Voice above is MIDI in and stays silent.
+                            onPress = { v -> note?.let { if (player.noteOn(it, v)) MidiOut.keysOn(it, v, System.nanoTime()) } },
+                            onRelease = { note?.let { player.noteOff(it); MidiOut.keysOff(it, System.nanoTime()) } },
                             modifier = Modifier.weight(1f),
                         )
                     }

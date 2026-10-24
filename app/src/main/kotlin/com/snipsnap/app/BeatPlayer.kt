@@ -380,11 +380,9 @@ class BeatPlayer(
         }
         // Out over MIDI. The frame time is not in scope here, so this stamps
         // System.nanoTime() at the call; the clock batch will stamp the frame.
-        // No release exists, so the note-off is one step later, stamped ahead.
+        // No release exists, so MidiOut schedules the note-off one step later.
         val note = MidiPads.noteForSlot(slot, MidiPads.Map.MPC) ?: return
-        val now = System.nanoTime()
-        MidiOut.drumOn(note, velocity, now)
-        MidiOut.drumOff(note, now + MidiGate.stepNanos(entry.kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
+        MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(entry.kit.tempoBpm)))
     }
 
     private fun noteBar() {

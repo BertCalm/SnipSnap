@@ -308,6 +308,9 @@ fun KitScreen(
         scope.launch { anim.snapTo(0f) }
     }
 
+    // Declared above hit/playHeld/release: they send under the current map.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+
     fun hit(slot: Int, velocity: Float = 1f) {
         val pad = kit.pad(slot) ?: return
         if (!host.up || !player.isUp()) return
@@ -321,18 +324,18 @@ fun KitScreen(
         // be built and never heard.
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
-        // Out over MIDI (touch only). No release gesture here, so the note-off
-        // goes out one step later, stamped ahead; the window grid is always MPC.
-        MidiPads.noteForSlot(slot, MidiPads.Map.MPC)?.let { note ->
-            val now = System.nanoTime()
-            MidiOut.drumOn(note, velocity, now)
-            MidiOut.drumOff(note, now + MidiGate.stepNanos(kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
+        val sounded = player.hit(pad, velocity, allocation.started.id)
+        if (!sounded) allocator.voiceEnded(allocation.started.id)
+        // Out over MIDI (touch only), and only for a hit that made local sound.
+        // No release gesture here, so MidiOut schedules the note-off one step
+        // later; the window grid sends under PLAY's current map, like fullscreen.
+        if (sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(kit.tempoBpm)))
+            }
         }
     }
 
-    // Declared above playHeld/release: they send under the current map.
-    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
     // slot -> the note the wire's on named. The wire's off must name the note the wire's on named,
     // and must not wait for an allocator voice that a one-shot pad never has.
     val sentNotes = remember(entry.dir) { HashMap<Int, Int>() }
@@ -458,6 +461,8 @@ fun KitScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen: whatever this screen turned on must end on the wire.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -493,7 +498,13 @@ fun KitScreen(
     // manifest, so flipping `requestedOrientation` at runtime reflows the
     // window instead of recreating the Activity.
     var fullscreen by remember { mutableStateOf(false) }
-    val exitFullscreen = { fullscreen = false }
+    val exitFullscreen = {
+        // A pad held when the popup closes never gets its release gesture: end its note here.
+        val now = System.nanoTime()
+        for (note in sentNotes.values) MidiOut.drumOff(note, now)
+        sentNotes.clear()
+        fullscreen = false
+    }
 
     // The beat lights the pads it plays. The clock's notes are not fingers
     // and not MIDI, so they have no cell gesture to light them: they come

@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiFingerprint
 
@@ -45,7 +46,7 @@ class SnipSnapMidiService : MidiDeviceService() {
     override fun onCreate() {
         super.onCreate()
         MidiOut.add(
-            MidiOut.Destination(OUT_ID, "SNIPSNAP OUT") { bytes, ts ->
+            MidiOut.Destination(OUT_ID, Copy.MIDI_PORT_OUT_NAME) { bytes, ts ->
                 val receivers = outputPortReceivers
                 if (receivers.isNullOrEmpty()) {
                     Log.w(TAG, "SnipSnap Out has no port receiver; note dropped")
@@ -57,7 +58,7 @@ class SnipSnapMidiService : MidiDeviceService() {
         )
         VirtualMidi.bound(
             MidiDeviceId(
-                "SNIPSNAP IN",
+                Copy.MIDI_PORT_IN_NAME,
                 MidiFingerprint.of(
                     MidiFingerprint.Transport.VIRTUAL, 0, 0, 1, 1,
                     MIDI_DEVICE_MANUFACTURER, "SnipSnap In", null,
