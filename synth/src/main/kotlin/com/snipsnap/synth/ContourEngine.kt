@@ -128,7 +128,7 @@ data class ContourConfig(
                 filterDecay = 1.4f, filterAmount = .5f, loopSeconds = 3f)
         }
 
-        /** Fresh voices use a protected root with a wider body-to-edge overtone balance. */
+        /** Widen the affected voices; PLUCK retains its prior projection and detected-root behavior. */
         fun forVoice(voice: ContourVoice): ContourConfig = legacyForVoice(voice).let { c ->
             when (voice) {
                 ContourVoice.BASS -> c.copy(bodyHarmonics = 1.85f, edgeRootLevel = .45f,
@@ -144,7 +144,8 @@ data class ContourConfig(
                     edgeAttack = .02f, edgeDecay = .85f, edgeSustain = .78f)
                 ContourVoice.SWELL -> c.copy(bodyHarmonics = 1.9f, edgeRootLevel = .4f,
                     edgeAttack = .4f, edgeDecay = 1.5f, edgeSustain = .88f)
-            }.copy(edgeResponse = ContourEdgeResponse.CONTRAST)
+            }.copy(edgeResponse = if (voice == ContourVoice.PLUCK) ContourEdgeResponse.FOREGROUND
+                else ContourEdgeResponse.CONTRAST)
         }
     }
 }

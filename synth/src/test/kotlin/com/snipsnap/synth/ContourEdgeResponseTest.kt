@@ -12,9 +12,11 @@ import kotlin.test.assertIs
 /** An EDGE response belongs to the saved recipe; old JSON never opts into a new law. */
 class ContourEdgeResponseTest {
     @Test
-    fun `fresh voices opt into contrast while legacy voice recipes keep their original response`() {
+    fun `fresh affected voices opt into contrast while the pluck and legacy recipes keep their responses`() {
         for (voice in ContourVoice.entries) {
-            assertEquals(ContourEdgeResponse.CONTRAST, ContourConfig.forVoice(voice).edgeResponse)
+            val expected = if (voice == ContourVoice.PLUCK) ContourEdgeResponse.FOREGROUND
+                else ContourEdgeResponse.CONTRAST
+            assertEquals(expected, ContourConfig.forVoice(voice).edgeResponse)
             assertEquals(ContourEdgeResponse.LEGACY, ContourConfig.legacyForVoice(voice).edgeResponse)
         }
     }

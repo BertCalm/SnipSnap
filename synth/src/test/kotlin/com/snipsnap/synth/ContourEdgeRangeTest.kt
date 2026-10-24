@@ -28,6 +28,7 @@ class ContourEdgeRangeTest {
             val oldFull = distance(previous.getValue(0f), previous.getValue(1f))
             val newFull = distance(revised.getValue(0f), revised.getValue(1f))
             val midpointChange = distance(previous.getValue(.5f), revised.getValue(.5f))
+            val middleRange = distance(revised.getValue(.25f), revised.getValue(.75f))
             val steps = positions.zipWithNext { from, to ->
                 distance(revised.getValue(from), revised.getValue(to))
             }
@@ -40,6 +41,7 @@ class ContourEdgeRangeTest {
             assertTrue(steps.all { it > .35 }, "$context: a quarter-range step remains ineffective: $steps")
             // A similar authored midpoint can still belong to a much wider useful sweep.
             // Fixed-setting old/new distance is diagnostic; full span and adjacent steps are the contract.
+            assertTrue(middleRange > 1, "$context: the middle half of the control remains too similar")
         }
     }
 
@@ -60,6 +62,16 @@ class ContourEdgeRangeTest {
     }
 
     @Test
+    fun `fresh voice defaults retain the detected root at maximum EDGE and BODY extremes`() {
+        for (voice in ContourVoice.entries) {
+            val patch = ContourPatch("Fresh $voice", voice, ContourEngine.defaults(voice))
+            for (body in listOf(0f, 1f)) for (hold in listOf(0f, 1f)) {
+                requireRoot(patch, body, .5f, hold)
+            }
+        }
+    }
+
+    @Test
     fun `zero EDGE retains the previous body sound in finite and held recipes`() {
         for (patch in ContourPresets.all()) for (hold in listOf(0f, 1f)) {
             val macros = patch.macros + mapOf("EDGE" to 0f, "HOLD" to hold)
@@ -75,7 +87,7 @@ class ContourEdgeRangeTest {
         val context = "${patch.name} BODY $body TUNE $tune HOLD $hold"
         val tone = ContourEngine.render(patch.voice,
             patch.macros + mapOf("BODY" to body, "TUNE" to tune, "HOLD" to hold, "EDGE" to 1f),
-            patch.velocity, patch.config.copy(edgeResponse = ContourEdgeResponse.CONTRAST))
+            patch.velocity, patch.config)
         val pitch = assertNotNull(Pitch.detect(tone, .08f, .35f), "$context: no detected root")
         val requested = ContourEngine.frequencyFor(patch.voice, tune).toDouble()
         val cents = 1200 * ln(pitch.hz / requested) / ln(2.0)

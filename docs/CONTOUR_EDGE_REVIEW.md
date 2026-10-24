@@ -122,8 +122,9 @@ The constants are selected shape values, not a physical calibration. No new
 oscillator, table family, filter path, nonlinear stage or loop state is added.
 
 Seven factory recipes select this response. Soft Digital and Bright Margin keep
-their complete preceding recipes, including `FOREGROUND`. New voice defaults
-select `CONTRAST`. Missing/null fields still mean `LEGACY`; explicit earlier
+their complete preceding recipes, including `FOREGROUND`. Corresponding voice
+defaults select `CONTRAST`; the fresh PLUCK default retains `FOREGROUND`.
+Missing/null fields still mean `LEGACY`; explicit earlier
 responses keep their arithmetic. The model number and oscillator phase seed stay
 unchanged. The only factory recipe field changed is the saved response identity.
 
@@ -159,6 +160,16 @@ version. The new response has not received listening approval. Stronger partial
 contrast can become too forward at high EDGE; numerical pitch checks do not
 establish perceived pitch or rounded character for every listener. Physical
 Android/MPC playback remains a separate verification step.
+
+An additional fresh-voice probe found a coarse pitch-detector corner in the
+PLUCK default with CONTRAST: it accepted an earlier local autocorrelation peak,
+reporting about 125.6 cents above the root, while the strongest peak remained at
+the requested period. Anchored FineTuning measurements stay within 0.093 cents
+over 21 windows. The oscillator is not detuned. Because no affected factory
+recipe uses PLUCK, its default keeps FOREGROUND; all four BODY/finite/held
+foreground corners detect within 0.108 cents with confidence above 0.963. The
+shared pitch detector is unchanged. A regression guard covers actual fresh-voice
+defaults at maximum EDGE as well as the affected factory recipes.
 
 ### Why the follow-up is built this way
 

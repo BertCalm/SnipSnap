@@ -67,7 +67,8 @@ with the saved `FOREGROUND` response, which blends the envelope projection towar
 one across EDGE. The owner heard a useful range in Soft Digital and Bright Margin,
 but reported the other seven recipes still too subtle from zero to maximum.
 
-Fresh voices and those seven recipes now select `CONTRAST`. Alongside the
+The corresponding fresh voices and those seven recipes now select `CONTRAST`.
+The fresh PLUCK voice keeps `FOREGROUND`. Alongside the
 foreground projection, EDGE reduces the body's non-root contribution toward
 35%, raises edge partial amplitude toward 4×, and adds bounded support to the
 body root. The edge's own fundamental is not boosted. The mix budgets the added
