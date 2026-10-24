@@ -937,6 +937,20 @@ object Copy {
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
 
+    // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
+    /** The heading of the MIDI OUT section of SETUP. */
+    const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"
+    /** Under the MIDI OUT heading: where the notes go, and the port other apps can always open. */
+    const val SETUP_MIDI_OUT_NOTE = "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN ALWAYS OPEN SNIPSNAP OUT."
+    /** In place of the device list when nothing is plugged in. */
+    const val SETUP_MIDI_OUT_NONE = "NOTHING PLUGGED IN. SNIPSNAP OUT IS STILL PUBLISHED."
+    /** In place of the whole section on a phone with no MIDI service. */
+    const val SETUP_MIDI_OUT_UNSUPPORTED = "THIS PHONE HAS NO MIDI."
+    /** Beside a device whose port opened: it is being sent to. */
+    const val SETUP_MIDI_OUT_PORT_OK = "OUT"
+    /** Beside a device whose port another app already holds. */
+    const val SETUP_MIDI_OUT_PORT_BUSY = "BUSY"
+
     // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
     /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
     const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."
