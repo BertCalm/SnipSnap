@@ -367,3 +367,7 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 testkit/fade-law-audition/
+
+# CAIRN reconstruction audio, traces and listening comparisons regenerate.
+testkit/cairn-reconstruction/
+__pycache__/

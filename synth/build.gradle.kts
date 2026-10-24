@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
+tasks.register<JavaExec>("generateCairnAudition") {
+    group = "distribution"
+    description = "Render CAIRN KNOCK/ANSWER, common controls, sweeps, causes, recipes and render cost."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnOutput").orNull ?: "${rootDir}/testkit/cairn-reconstruction")
+    if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"
