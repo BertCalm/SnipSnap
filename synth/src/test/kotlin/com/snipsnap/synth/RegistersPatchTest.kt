@@ -81,7 +81,7 @@ class RegistersPatchTest {
     @Test
     fun `velocity dispatch passes one performance velocity and keeps note and model`() {
         for (voice in RegistersVoice.entries) for (hold in listOf(.35f, 1f)) {
-            val model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3
+            val model = if (voice == RegistersVoice.TRANSISTOR) 6 else 3
             val patch = RegistersPatch("Quiet recipe", voice, Registers.defaults(voice) + ("HOLD" to hold),
                 midi = 69, velocity = .2f, model = model)
             assertNull(Velocity.brightnessSpec(patch))
@@ -111,7 +111,7 @@ class RegistersPatchTest {
             for (preset in group) {
                 assertEquals(60, preset.midi)
                 assertEquals(1f, preset.velocity)
-                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 5 else 3, preset.model)
+                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 6 else 3, preset.model)
                 assertEquals(preset, Patches.fromJsonText(preset.toJsonText()))
                 assertEquals(preset, Presets.byName("REGISTERS", voice.name, preset.name))
                 assertTrue(preset.name.length <= 14)
@@ -138,7 +138,7 @@ class RegistersPatchTest {
 
     @Test
     fun `transistor pad recipes retain current or historic model and reject unsupported legacy models`() {
-        for (version in 4..5) {
+        for (version in 4..6) {
             val original = RegistersPatch("Saved keys", RegistersVoice.TRANSISTOR,
                 Registers.defaults(RegistersVoice.TRANSISTOR) + ("HOLD" to .6f), midi = 69, velocity = .37f, model = version)
             val recipe = PadRecipe.fromJsonText(PadRecipe(original).toJsonText())

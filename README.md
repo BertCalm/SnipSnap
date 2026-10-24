@@ -527,14 +527,15 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
-Its latest body revision adds a rounded same-pitch foundation while retaining
-the opening click and all original model-4 recipes.
+Its fuller body adds a rounded same-pitch foundation while retaining the opening
+click. The sustain revision keeps subtle ensemble movement in short held loops
+and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
 Nine starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
-compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
-baseline and retains the original chiff and airflow comparisons. TRANSISTOR
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=sustain&voice=TRANSISTOR#listen)
+compares accepted R5 / Revised sustain through actual keyboard attacks and loop
+wraps, and retains the body, chiff and airflow comparisons. R6 sustain movement
 awaits listening review;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 

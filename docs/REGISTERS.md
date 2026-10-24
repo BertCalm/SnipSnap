@@ -91,8 +91,8 @@ approximation, not a measured emulation of a particular instrument.
 
 Three new C4 starting points are Compact Keys, Clean Combo and Garage Buzz.
 Original TRANSISTOR recipes use renderer model 4 and reject models 1–3.
-The current three factory settings use model 5; saved model-4 recipes retain
-their original sound.
+The current three factory settings use model 6; saved model-4 and model-5 recipes
+retain their original sound.
 PIPE/MUSETTE still replay all earlier models; their six presets remain pinned
 to model 3. Missing model metadata continues to mean legacy model 1.
 
@@ -121,8 +121,59 @@ Run `./gradlew :synth:generateRegistersTransistorDepthAudition` with
 R5 retains all 116 earlier recordings and recipes and adds 31 model-5 cases.
 Eleven Original R4 / More body R5 pairs cover six identities, three presets and
 two held tones. R1–R4 listening notes keep their original sound identities;
-changed model-5 recordings start with separate reviews. The body revision awaits
-listening feedback and physical phone/MPC checks.
+changed model-5 recordings start with separate reviews. The owner accepted the
+fuller body in the browser audition. Physical phone/MPC listening remains open.
+
+## TRANSISTOR sustain and render cost — R6
+
+Luthier's follow-up found that the short held period rounded the factory SPREAD
+settings to unison. Compact Keys at .12 lost its bank detuning on all nine exported
+roots. Model 6 keeps the R5 foundation and finite-note registration, and replaces
+that rounding with smooth periodic phase movement in held side banks. The peak
+bank frequency swing before common vibrato follows the continuous SPREAD law. This is a looping ensemble
+adaptation, not constant free-running detuning: a constant .075 Hz offset would
+need a roughly 13-second cycle at C3. The existing roughly two-second loop stays.
+
+The side-bank phase and its derivative match the finite bank at clock time 400 ms,
+near the center of the instrument's 350–450 ms handoff. Both use the same
+vibrato-modulated clock. `effectiveSpreadHz` records the nominal peak swing for this mode, and
+`spreadModulationHz` identifies its loop-periodic rate. Legacy probes continue to
+report constant bank offsets with a zero modulation rate.
+
+Model 6 evaluates the foundation's third and fifth harmonics from one cosine per
+bank, using Chebyshev identities. The original bright registration is evaluated
+only while it contributes to the first 80 ms. Held synthesis warms the filters
+for 1024 output frames (23.2 ms), then synthesizes two complete independent cycles.
+At the minimum 500 Hz voice cutoff this exceeds 70 pole time constants. The same
+post-filter recurrence and seam guards still compare separate generated cycles;
+the exported buffer is never used as its own reference. Models 4 and 5 keep their
+original arithmetic and whole-cycle preroll.
+
+A warm Java 21 desktop benchmark with 12 balanced interleaved samples per model
+measured finite renders at 129.95 → 100.56 ms, held renders at 270.52 → 169.41 ms,
+and keyboard previews at 378.76 → 255.42 ms. These are within-run reductions of
+22.6%, 37.4% and 32.6%; the finite timings varied substantially. They do not predict
+phone performance. Twelve finite comparisons (C3/C4/C5/C7, SPREAD 0/.12/.5) retained
+identical conditioned Float samples. Small held SPREAD .05/.12/.18 changed the
+gain-normalized waveform at C3/C4/C5, with relative RMS differences .000919–.015936.
+
+Run `./gradlew :synth:generateRegistersTransistorSustainAudition` with
+`-PregistersR5Baseline=<published R5 archive>`. Seven comparisons exercise the
+actual `Keys.registersPad` attack and loop: Compact Keys and Garage Buzz at C3,
+C4 and C5, plus a zero-SPREAD Clean Combo control. Audition sequences retain the
+instrument head and play three complete wraps, with an audition-only 4 ms terminal
+fade. They do not repeat the attack as if it were a held loop. All 147 earlier
+recordings and their recipes remain unchanged, including R5 review identities.
+
+Why it is built this way:
+
+- Periodic phase movement keeps low SPREAD settings active within bounded memory
+  and render work; static detuning cannot recur exactly in such a short period.
+- Matching the handoff clock avoids resetting the ensemble when the attack ends.
+- The shorter warmup saves repeated synthesis work while retaining independent
+  evidence that the conditioned cycle really repeats.
+- Versioned arithmetic preserves accepted sounds. R6's sustained movement still
+  needs the owner's audition; phone timing and hardware listening are unmeasured.
 
 ## Playing and saving
 
@@ -172,7 +223,9 @@ Finite renders retain their speech/bellows onset and release. HOLD at .975 or
 above exports a settled loop with no initial articulation. Carrier frequency is
 fitted to whole sample frames; reed offsets, motion and the seeded wind components
 are fitted to the same period. The manifest records the effective frequencies.
-Very small requested offsets may round to zero in the held period.
+Very small requested offsets may round to zero in the held period for PIPE,
+MUSETTE and TRANSISTOR models 4–5. TRANSISTOR model 6 uses the periodic ensemble
+adaptation described above instead.
 
 Loop evidence compares separately synthesized adjacent periods after conditioning
 and decimation. The renderer requires relative cycle difference below 1e-5 and

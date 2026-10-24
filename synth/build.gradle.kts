@@ -304,6 +304,18 @@ tasks.register<JavaExec>("generateRegistersTransistorDepthAudition") {
     project.findProperty("registersR4Baseline")?.toString()?.let { args("--baseline=$it") }
 }
 
+/** Actual keyboard attack-to-loop pairs with the complete accepted R5 archive retained. */
+tasks.register<JavaExec>("generateRegistersTransistorSustainAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R5 audio and reviews, then compare model-5/model-6 keyboard sustain."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorSustainAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r6")
+    project.findProperty("registersR5Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"
