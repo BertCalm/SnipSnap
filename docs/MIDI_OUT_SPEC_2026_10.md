@@ -65,11 +65,13 @@ a synth hears as a short note. A later setting can lengthen it.
 
 An endpoint is somewhere bytes can go. Two kinds in this spec:
 
-1. **A device's input ports.** For every device `MidiInput` opens, it also opens
-   `device.openInputPort(i)` for each `i in 0 until info.inputPortCount` (the naming trap:
-   you send into the device's *input*; write the comment every time, as `MidiInput.kt:25`
-   already does for the other direction). The ports ride on the same `Opened` record and
-   close with it in `release`.
+1. **A device's input ports.** `MidiOut.install` registers its own `MidiManager.DeviceCallback`
+   and, for every device but SnipSnap's own, opens `device.openInputPort(i)` for each
+   `i in 0 until info.inputPortCount` (the naming trap: you send into the device's *input*;
+   write the comment every time). `MidiOut` is the opener, for the life of the process, so the
+   ports exist whichever screen is up; `MidiInput` (screen-scoped) opens output ports only.
+   The two hold separate `MidiDevice` handles on one device, which `MidiManager` allows (ports
+   are exclusive, devices are not), and never open the same port.
 2. **The published port "SnipSnap Out".** `SnipSnapMidiService` **(new)** extends
    `MidiDeviceService`. Its `midi_device_info.xml` **(new)** declares one input port
    "SnipSnap In" and one output port "SnipSnap Out", manufacturer and product "SnipSnap".
@@ -78,7 +80,9 @@ An endpoint is somewhere bytes can go. Two kinds in this spec:
    `onDestroy`.
 
 Identity for a hardware endpoint is the device's `MidiFingerprint` plus the port index; a
-persisted routing table, when one exists, keys on `"${fingerprint.key}/in$index"`. Nothing is
+persisted routing table, when one exists, keys on `"${fingerprint.key}/in$index"`. The live
+destination id also carries `MidiDeviceInfo.id` (`"${fingerprint.key}/${info.id}/in$index"`),
+because two identical units share a fingerprint. Nothing is
 persisted in this spec.
 
 **SnipSnap must not open itself.** Its own virtual device appears in `MidiManager`'s list
@@ -116,8 +120,8 @@ held note from another app is let go the way a pulled cable's is.
   through `MidiWire.feed` and expect the matching event back: the two halves of the wire
   agree by construction.
 - **Destinations** are a `CopyOnWriteArrayList<Destination>` where `Destination(id: String,
-  send: (ByteArray, Long) -> Unit)`. `MidiInput` adds one per opened input port and removes
-  them in `release`; `SnipSnapMidiService` adds "SnipSnap Out" in `onCreate` and removes it
+  send: (ByteArray, Long) -> Unit)`. `MidiOut` itself adds one per opened input port and
+  removes them when the device goes; `SnipSnapMidiService` adds "SnipSnap Out" in `onCreate` and removes it
   in `onDestroy`. A `send` that throws (`IOException` when the port is gone) is caught on the
   out thread, logged once per destination, and the destination is dropped.
 - **The switch.** `MidiOut.hardwareEnabled: Boolean`, read from `PREFS` key `"midi.out"`,
@@ -126,14 +130,17 @@ held note from another app is let go the way a pulled cable's is.
   costs nothing; a USB keyboard receiving every pad hit by default is a surprise, and some
   keyboards re-send what they receive. The player turns it on in SETUP.
 - **API**, main thread: `noteOn(channel, note, velocity, timestampNanos)`,
-  `noteOff(channel, note, timestampNanos)`, `allNotesOff()` (CC 123 on both channels, used by
-  PANIC and by `MidiInput.onDeviceRemoved`'s silence path so a receiver is never left holding
-  a note the app has let go).
+  `noteOff(channel, note, timestampNanos)`, `allNotesOff()` (CC 123 only on channels with a
+  note outstanding, used by PANIC, by disposal and by the silence paths so a receiver is never
+  left holding a note the app has let go), `drumOnGated(note, velocity, timestampNanos,
+  gateNanos)` (the off is a cancellable `postDelayed` on the out thread, flushed by
+  `allNotesOff` and by a retrigger of the same note).
 
 ## 6. Lifecycle
 
-- A hardware input port opens when `MidiInput.openDevice` succeeds, alongside the output
-  ports, and closes in `release` with them. A port that refuses to open (another app holds it;
+- A hardware input port opens when `MidiOut`'s own device callback sees a device (at
+  `install`, then as devices arrive), and closes when that device is removed; it does not
+  depend on any screen. A port that refuses to open (another app holds it;
   `openInputPort` returns null) is logged with the device name and port index and the device
   is still used for what did open.
 - "SnipSnap Out" exists while `SnipSnapMidiService` is bound. `MidiOut` holds no reference to
@@ -191,8 +198,9 @@ JVM, in CI:
   still right).
 - `MidiPadsTest`: `noteForSlot` is the inverse of `slotForNote` for every slot under both
   maps; an unfilled or out-of-range slot is null.
-- `:app:compileDebugKotlin` and `:app:processDebugManifest` (the service element and the
-  `meta-data` resource must parse).
+- `:app:compileDebugKotlin` and `:app:processDebugResources` (the service element and the
+  `meta-data` resource must parse and link; `processDebugManifest` alone does not resolve
+  `@xml/midi_device_info`).
 
 On a phone (bench rows this spec adds; none run here):
 
@@ -203,6 +211,10 @@ On a phone (bench rows this spec adds; none run here):
   In" and PLAY lights the pad.
 - **M3** With MIDI OUT off in SETUP, a USB keyboard hears nothing; on, it hears the pads.
 - **M4** Pull the cable mid-hold on KEYS: the receiver's note ends (`allNotesOff` on removal).
+- **M5** A receiver that echoes CC 123, or a router joining "SnipSnap Out" to "SnipSnap In":
+  PANIC, or an incoming All Notes Off, produces exactly one extra CC 123 and then silence.
+- **M6** A synth app on "SnipSnap Out" hears a window-grid tap as a one-step note, not a blip,
+  and a quick retrigger of the same pad is not cut short by the first hit's off.
 
 ## 11. Ledger
 
@@ -234,7 +246,11 @@ On a phone (bench rows this spec adds; none run here):
    which with no table to maintain.
 4. **No thru, and SnipSnap never opens itself.** The two feedback loops a MIDI app can build
    by accident are a controller hearing its own notes and an app reading its own output
-   port. Both are refused by construction, not by a setting.
+   port. Both are refused by construction, not by a setting. A third loop, an All Notes Off
+   answered by another All Notes Off, is refused the same way: `MidiOut` remembers the notes
+   it started (`outstanding`) and sends CC 123 only on channels that have one, so an echo
+   finds nothing and dies after one round. Every note SnipSnap started is still ended by
+   PANIC, a cable pull, a local silence and a screen's disposal.
 5. **The risky decision** is default-off hardware output with always-on "SnipSnap Out". A
    player who plugs in an MPC and expects it to play will find nothing until SETUP; the note
    under the switch says where. The other default, on, surprises every keyboard owner on
@@ -263,6 +279,7 @@ Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test
   from pref `midi.out`) and a `ports` `StateFlow`. `MidiInput` opens each device's input ports as
   well as its output ports, registers a destination per open port and reports a refused port;
   `closeDevice` sends All Notes Off; a device with only an input port is now opened too.
+  (Superseded by the final-review fixes below: `MidiOut` is now the input-port opener.)
   `SnipSnapApplication` calls `MidiOut.install`. Proof: `:app:compileDebugKotlin` and reading.
 - **Self-exclusion: `cf53ea014`.** `MidiInput` skips the app's own device by `TYPE_VIRTUAL` plus
   the manufacturer and product strings, which are the constants `MIDI_DEVICE_MANUFACTURER` and
@@ -277,13 +294,16 @@ Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test
   with an input port "SnipSnap In" and an output port "SnipSnap Out", and the manifest service
   element. The service's destination is added with `hardware = false`, so it sends whatever the
   switch says. `MidiInput.devices` lists the virtual device while another app holds it.
-  Proof: compile and reading. Nobody ran `:app:processDebugManifest` in this task.
+  Proof: compile and reading. (Correction: Task 4's report shows `:app:processDebugManifest`
+  ran and passed; it does not resolve `@xml/midi_device_info`, which `processDebugResources`
+  does.)
 - **Pads and keys leave: `d1376f3b0`.** The PLAY and fullscreen grids send note on at the
   touch and note off at the release on channel 10, under the pad map the player chose
-  (`midiMap`); the window grid and `BeatPlayer.hit` always use the MPC map, and with no release
-  to read they send the note-off one `MidiGate.stepNanos` later, stamped ahead. A KEYS touch
-  sends on channel 1. `KitScreen` takes a
-  `fromMidi` flag, so a note that came in is never sent out. PANIC sends All Notes Off.
+  (`midiMap`); `BeatPlayer.hit` always uses the MPC map, and with no release to read it sends
+  the note-off one `MidiGate.stepNanos` later, stamped ahead (superseded: `drumOnGated`, below).
+  A KEYS touch sends on channel 1. `KitScreen` takes a
+  `fromMidi` flag, so a note that came in is never sent out. PANIC sends All Notes Off (as
+  built then on both channels; since the final-review fixes only where a note is outstanding).
   `MidiInput.open` reports an already-bound virtual device to a screen that opens later. Proof:
   compile and reading.
 - **KEYS silence on the wire: `4a418242c`.** `MidiKeys.Voice.allOff` in `KeysScreen` calls
@@ -298,6 +318,24 @@ Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test
   screens carry no `.noteOn(` of their own and `ConventionTest`'s allocator law passes. Proof:
   compile and reading; the law is the existing test, not run here.
 
+- **Final-review fixes: `ed43e2068`, `57f7f3f87`.** C1: `MidiOut` keeps `outstanding`, a
+  main-thread `HashSet<Int>` of `(channel shl 8) or note`; `allNotesOff` sends CC 123 only on
+  channels with a note in it, so an echoed All Notes Off dies after one round. C2: `MidiOut.install`
+  registers its own device callback and opens hardware input ports for the process lifetime;
+  `MidiInput` opens output ports only, and `MidiInput.isOwnDevice` is the one self-exclusion.
+  Hardware output therefore exists on every screen, and SETUP's list is reachable from any of
+  them. I1: `drumOnGated` schedules a cancellable off on the out thread (`KitScreen` window grid,
+  `BeatPlayer.hit`). I2: `KitScreen` and `KeysScreen` call `allNotesOff` on disposal, and leaving
+  fullscreen ends every held pad's note. I3: `MidiGroove.DRUM_CHANNEL`, `keysOn`/`keysOff`, one
+  `PREF_MIDI_OUT`, `KitPreview.playedBpm` for the gate. I4: the window grid and KEYS touch send
+  only when the local sound happened. M1: the window grid sends under `midiMap`. M2: destination
+  ids carry `info.id`; a failed send removes its own entry, not whatever has its id. M4: the two
+  port names are `Copy.MIDI_PORT_OUT_NAME` and `MIDI_PORT_IN_NAME`. M5: the manifest correction
+  above. M6: `MidiOut.ports` is collected in the SETUP call, not at the top of `App`. Proof:
+  `:kit:test`, `:shell:test`, `:app:compileDebugKotlin`, `:app:processDebugResources`. Left for
+  the ledger: M3 (OUT shown while the switch is off), the gesture loops' `try/finally`, a
+  ConventionTest law.
+
 **Disclosed, not done.**
 
 - There is no JVM test for `:app`. The `:app` half rests on the compiler and on reading; the
@@ -306,9 +344,7 @@ Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test
   time is not in scope in `BeatPlayer.hit`. The clock work is the place to fix it.
 - A hit that makes no local sound sends nothing: the engine refused it, or the stream is down.
   The wire follows the phone's speaker, not the touch.
-- `MidiOut` defines its own `DRUM_CHANNEL = 9` rather than reusing `MidiGroove.DRUM_CHANNEL`.
-  Left in place, and flagged for the final review.
-- Bench rows M1 to M4 are unrun.
+- Bench rows M1 to M6 are unrun.
 - The `tags` attribute in `midi_device_info.xml` is parsed by the system at runtime only; no test
   reads it.
 - The manufacturer and product strings exist twice, as the Kotlin constants and in the XML,
