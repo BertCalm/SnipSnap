@@ -38,6 +38,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -150,6 +151,7 @@ fun KeysScreen(
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     silence()
+                    MidiOut.allNotesOff()
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
@@ -215,8 +217,9 @@ fun KeysScreen(
                         KeyPad(
                             label = note?.let { KeysLayout.label(it) } ?: "—",
                             enabled = covered,
-                            onPress = { v -> note?.let { player.noteOn(it, v) } },
-                            onRelease = { note?.let { player.noteOff(it) } },
+                            // Touch only: these go out over MIDI on channel 0. The MidiKeys.Voice above is MIDI in and stays silent.
+                            onPress = { v -> note?.let { player.noteOn(it, v); MidiOut.noteOn(0, it, v, System.nanoTime()) } },
+                            onRelease = { note?.let { player.noteOff(it); MidiOut.noteOff(0, it, System.nanoTime()) } },
                             modifier = Modifier.weight(1f),
                         )
                     }

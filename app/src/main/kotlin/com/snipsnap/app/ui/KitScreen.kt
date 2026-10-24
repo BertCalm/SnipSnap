@@ -62,6 +62,7 @@ import com.snipsnap.app.BeatPlayer
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
@@ -73,6 +74,8 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitPreview
+import com.snipsnap.kit.MidiGroove
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
@@ -83,6 +86,7 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiDeviceId
+import com.snipsnap.shell.MidiGate
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -319,13 +323,27 @@ fun KitScreen(
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        // Out over MIDI (touch only). No release gesture here, so the note-off
+        // goes out one step later, stamped ahead; the window grid is always MPC.
+        MidiPads.noteForSlot(slot, MidiPads.Map.MPC)?.let { note ->
+            val now = System.nanoTime()
+            MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, note, velocity, now)
+            MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, note, now + MidiGate.stepNanos(kit.tempoBpm ?: KitPreview.DEFAULT_BPM))
+        }
     }
+
+    // Declared above playHeld/release: they send under the current map.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
     // MIDI key and the fullscreen grid both HAVE a release, so a gate pad
     // honours its own metadata here - noteOn reads `pad.oneShot` and
     // `release` calls noteOff - where the window's tap cannot.
-    fun playHeld(slot: Int, velocity: Float) {
+    //
+    // [fromMidi] is true when the note arrived over MIDI (MidiPads.handle):
+    // it plays locally but is never sent back out, so a keyboard that echoes
+    // its input cannot loop. Touch passes false and is sent.
+    fun playHeld(slot: Int, velocity: Float, fromMidi: Boolean) {
         val pad = kit.pad(slot) ?: return
         // No stream, no voice: with no callback running nothing would ever
         // report an ending, and the voice count would climb and stick.
@@ -348,17 +366,20 @@ fun KitScreen(
             allocator.voiceEnded(allocation.started.id)
         }
         flash(slot)
+        if (!fromMidi) MidiPads.noteForSlot(slot, midiMap)?.let { MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, it, velocity, System.nanoTime()) }
     }
 
-    fun release(slot: Int) {
+    fun release(slot: Int, fromMidi: Boolean) {
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
         extinguish(slot)
+        if (!fromMidi) MidiPads.noteForSlot(slot, midiMap)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, System.nanoTime()) }
     }
 
     fun panic() {
         host.allOff()
+        MidiOut.allNotesOff()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
@@ -376,10 +397,9 @@ fun KitScreen(
     // listener. The keyboard itself is opened and closed with the
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
-    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
     var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
-        MidiPads.handle(event, midiMap, onHit = ::playHeld, onRelease = ::release, onPanic = ::panic)
+        MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
     })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
@@ -1039,8 +1059,8 @@ fun KitScreen(
                 kit = kit,
                 glow = glow,
                 status = StreamFacts.playStatus(host.up, host.voiceCount, PadEngine.MAX_VOICES, host.latency),
-                onHit = { s, v, _ -> playHeld(s, v) },
-                onRelease = { s, _ -> release(s) },
+                onHit = { s, v, _ -> playHeld(s, v, fromMidi = false) },
+                onRelease = { s, _ -> release(s, fromMidi = false) },
                 onExit = exitFullscreen,
             )
         }

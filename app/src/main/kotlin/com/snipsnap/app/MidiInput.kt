@@ -128,6 +128,8 @@ class MidiInput(context: Context) {
         if (this.listener != null) return true
         this.listener = listener
         VirtualMidi.subscribe(virtualListener)
+        // A screen opened while another app already holds "SnipSnap In" must print it now, not on the next change.
+        if (VirtualMidi.boundId != null) listener.onDevicesChanged(devices)
         val cb = object : MidiManager.DeviceCallback() {
             override fun onDeviceAdded(info: MidiDeviceInfo) = openDevice(info)
             override fun onDeviceRemoved(info: MidiDeviceInfo) = closeDevice(info.id)
