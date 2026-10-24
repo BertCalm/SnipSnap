@@ -7,8 +7,9 @@ new brightness, reverb and delay layer generators come later.
 
 ## Try it
 
-1. Open a kit with SOFT HITS on at least one pad. To add them, open that
-   pad's PAD SHEET and use SOFT HITS. A plain single-sample pad has no
+1. Open a kit with SOFT HITS on at least one pad; the VELOCITY starter is
+   a ready-made example. To add them, open that pad's PAD SHEET and use
+   SOFT HITS. A plain single-sample pad has no
    alternate tone for the strip to select.
 2. On PADS, turn STRIKE ON. Choose LEFT or RIGHT for your thumb.
 3. Hold or slide the strip while tapping the layered pad with your other
@@ -28,8 +29,10 @@ adjustments and arrow keys also change its value.
 
 ## What this pass changes
 
-- The strip maps 0–100% to the existing touch velocity range, 0.20–1.00.
-  Its floor reaches the softest layer at every supported SOFT HITS depth.
+- The strip maps 0–100% to MIDI 1–127 for layer selection, giving each
+  evenly spaced layer roughly equal thumb travel. Linked volume uses the
+  existing 0.20–1.00 gain range so a soft hit is audible. Keeping that gain
+  floor out of layer selection prevents a tiny, hard-to-reach soft zone.
 - Layer and chain-zone selection use strike velocity. Playback gain can
   use that velocity or a fixed 1.00 multiplier, preserving pad level and
   pan. Fixed gain does not normalize the WAVs.

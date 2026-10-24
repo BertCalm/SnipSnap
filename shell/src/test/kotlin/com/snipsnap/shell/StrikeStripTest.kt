@@ -28,6 +28,10 @@ class StrikeStripTest {
             PadHit.resolve(pad, strike.velocity, 0, strike.gainVelocity) { 100L }!!
         }
         assertEquals(pad.velocityLayers.map { it.sampleFile }.toSet(), hits.map { it.sampleFile }.toSet())
+        for (layer in pad.velocityLayers) {
+            assertTrue(hits.count { it.sampleFile == layer.sampleFile } >= 24,
+                "${layer.sampleFile} needs roughly a quarter of the thumb travel, including the softest layer")
+        }
         assertTrue(hits.all { it.gainLeft == 0.4f && it.gainRight == 0.8f })
     }
 
@@ -42,6 +46,7 @@ class StrikeStripTest {
         assertEquals(hit(false).sampleFile, hit(true).sampleFile)
         assertEquals(1f, hit(false).gainLeft)
         assertEquals(PadHit.SOFTEST, hit(true).gainLeft)
+        assertEquals(1, PadHit.midiVelocity(StrikeStrip.hit(1f, true, 0f, true).velocity))
     }
 
     @Test
@@ -65,7 +70,7 @@ class StrikeStripTest {
         assertEquals(0.5f, StrikeStrip.strengthAt(50f, 100f))
         assertEquals(0.5f, StrikeStrip.strengthAt(0f, 0f))
         assertEquals(0.5f, StrikeStrip.strengthAt(Float.NaN, 100f))
-        assertEquals(PadHit.CENTER, StrikeStrip.hit(1f, true, Float.NaN, false).velocity)
+        assertEquals(64, PadHit.midiVelocity(StrikeStrip.hit(1f, true, Float.NaN, false).velocity))
     }
 
     @Test

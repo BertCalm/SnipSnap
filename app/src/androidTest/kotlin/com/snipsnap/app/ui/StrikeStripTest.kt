@@ -60,7 +60,7 @@ class StrikeStripTest : ComposeScreenTest() {
         show()
         pad().performTouchInput { down(center); up() }
         pump()
-        assertEquals(PadHit.SOFTEST, hits.last().velocity, 0.0001f)
+        assertEquals(1, PadHit.midiVelocity(hits.last().velocity))
         compose.runOnIdle { owner.value = StrikeState(enabled = true, strength = 1f) }
         pump()
         pad().performTouchInput { down(center); up() }
@@ -94,13 +94,13 @@ class StrikeStripTest : ComposeScreenTest() {
         }
         pump()
         assertEquals(1, hits.size)
-        assertEquals(PadHit.SOFTEST, hits[0].velocity, 0.0001f)
+        assertEquals(1, PadHit.midiVelocity(hits[0].velocity))
         compose.onRoot().performTouchInput {
             moveTo(0, Offset(slider.center.x, slider.top + 2f))
         }
         pump()
         assertEquals("moving a thumb is not another pad hit", 1, hits.size)
-        assertEquals("the old note retains its strength", PadHit.SOFTEST, hits[0].velocity, 0.0001f)
+        assertEquals("the old note retains its strength", 1, PadHit.midiVelocity(hits[0].velocity))
         compose.onRoot().performTouchInput { up(1) }
         pump()
         compose.onRoot().performTouchInput { down(1, pad.center); up(1); up(0) }
@@ -138,7 +138,7 @@ class StrikeStripTest : ComposeScreenTest() {
         fader().performSemanticsAction(SemanticsActions.SetProgress) { it(0f) }
         pad().performClick()
         pump()
-        assertEquals(PadHit.SOFTEST, hits.last().velocity, 0.0001f)
+        assertEquals(1, PadHit.midiVelocity(hits.last().velocity))
         assertEquals(1f, hits.last().gainVelocity, 0.0001f)
         button("STRIKE CHANGES VOLUME").performClick()
         pad().performClick()
