@@ -193,6 +193,7 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.MacroSpec
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.MercuryVoice
@@ -253,6 +254,9 @@ import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.Crease
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.CreaseVoice
+import com.snipsnap.synth.CausticInstrument
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.Overlap
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.OverlapTopology
@@ -533,7 +537,7 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
 /**
  * The slider defaults a loaded patch fills its missing macros from: its own
  * model/configuration's defaults where those differ by recipe (ORPHICA, OSPREY,
- * OVERLAP, CREASE), the engine's [base] otherwise. Shared by `loadPreset` and
+ * OVERLAP, CREASE, CAUSTIC), the engine's [base] otherwise. Shared by `loadPreset` and
  * by reopening a pad, so both put a saved recipe on the same sliders.
  */
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
@@ -541,6 +545,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
+    is CausticPatch -> CausticInstrument.defaults(editable.voice, editable.model)
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     else -> base
 }
@@ -655,14 +660,8 @@ fun SynthScreen(
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
-    val seededWork = remember {
-        SynthWork.read(settings).mapNotNull { work ->
-            val patch = work.recipe.patch ?: return@mapNotNull null
-            val sourceEngine = Engine.entries.firstOrNull { it.name == patch.engine } ?: return@mapNotNull null
-            val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return@mapNotNull null
-            (sourceEngine to sourceVoice) to work
-        }.toMap()
-    }
+    val seed = remember { SynthSeed(settings) }
+
     // Seeded from the bag (§3.6) with the factory start as the fallback: a
     // name the bag holds that this build cannot resolve is ignored, and a
     // voice the restored engine does not have falls back to its first.
@@ -676,23 +675,12 @@ fun SynthScreen(
     }
     LaunchedEffect(engine) { settings[SETTINGS_ENGINE] = engine.name }
     LaunchedEffect(voice) { settings[SETTINGS_VOICE] = voice.name }
-    val seededPresets = remember { storedPresetNames(settings) }
     // EMBOUCHURE's restore state, one holder rather than four locals: this composable is already
     // near the limit the Kotlin/D8 toolchain verifies (a few more locals failed device verification).
-    val embouchureRestore = rememberEmbouchureRestore(settings, seededPresets, seededWork.keys)
-    val restoredOhm = remember { restoredOhmPatch(settings) }
+    val embouchureRestore = rememberEmbouchureRestore(settings, seed.seededPresets, seed.seededWork.keys)
     // Custom coordinates and recalled pad effects are part of this voice's work,
     // including a trip to KIT to hear the rendered pad. The navigation bag holds
     // the complete finite recipe; no source WAV or mutable solver state is needed.
-    val restoredScannedRecipes = remember {
-        ScannedChainVoice.entries.mapNotNull { v ->
-            settings[scannedRecipeSettingsKey(v)]?.let { stored ->
-                runCatching { PadRecipe.fromJsonText(stored) }.getOrNull()
-                    ?.takeIf { (it.patch as? ScannedChainPatch)?.voice == v }?.let { v to it }
-            }
-        }.toMap()
-    }
-    val seededOvenPatches = remember { storedOvenPatches(settings) }
     // Per-(engine, voice) macro state, seeded with factory defaults and kept
     // for the life of the screen: switching engine or voice (or coming back
     // to one) restores whatever was last touched on it, same as the
@@ -701,12 +689,11 @@ fun SynthScreen(
     // idiom the THUMP-only screen used for its own eight voices — cheap
     // (one entry per engine and voice) and means no read site
     // ever has to defend against a missing key.
-    val restoredOrigami = remember { restoredOrigamiPatches(settings) }
     val macrosByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, Map<String, Float>>().apply {
             for (e in Engine.entries) {
                 for (v in e.voices()) {
-                    val origami =if (e == Engine.ORIGAMI) restoredOrigami[v as OrigamiVoice] else null
+                    val origami =if (e == Engine.ORIGAMI) seed.restoredOrigami[v as OrigamiVoice] else null
                     val orphica = if (e == Engine.ORPHICA) {
                         storedOrphicaPatch(settings, v as OrphicaMaterial)
                             ?: (Presets.forVoice(e.name, v.name).firstOrNull {
@@ -718,7 +705,7 @@ fun SynthScreen(
                         orphica != null -> Orphica.macrosFrom(orphica.config) + orphica.macros
                         else -> e.defaults(v)
                     }
-                    val recipe = seededOvenPatches[e to v]
+                    val recipe = seed.seededOvenPatches[e to v]
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
@@ -726,18 +713,21 @@ fun SynthScreen(
                     // its macros; a complete OVEN or OHM recipe is next: their legacy
                     // macro keys may predate an edit followed by a voice switch.
                     // SCANNED CHAIN's saved recipe carries its own macros likewise.
-                    val workingPatch = seededWork[e to v]?.recipe?.patch?.let(::editablePreset)
-                    val restoredScanned = if (e == Engine.SCANNED_CHAIN) restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
+                    val workingPatch = seed.seededWork[e to v]?.recipe?.patch?.let(::editablePreset)
+                    val restoredScanned = if (e == Engine.SCANNED_CHAIN) seed.restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
                     put(e to v, when {
                         workingPatch != null -> editableDefaults(e.defaults(v), workingPatch) + editableMacros(workingPatch)
-                        e == Engine.OHM && restoredOhm != null -> defaults + restoredOhm.macros
+                        e == Engine.OHM && seed.restoredOhm != null -> defaults + seed.restoredOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
                         // EMBOUCHURE restores only the selected model's controls; a legacy
                         // BRASS recipe never inherits GROW and GROW never inherits model 2.
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
-                            settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                            // CAUSTIC's reserved HOLD has no adjustment: a stale
+                            // navigation value must not leave the finite voice stuck.
+                            if (e == Engine.CAUSTIC && name == "HOLD") fallback
+                            else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                                 ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                         }
                     })
@@ -748,7 +738,7 @@ fun SynthScreen(
     // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // OBBLIGATO also retains its renderer model and independent-player seed.
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS, OVERLAP and CREASE retain their synthesis model, saved pitch and velocity.
+    // REGISTERS, OVERLAP, CREASE and CAUSTIC retain their synthesis model, saved pitch and velocity.
     // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
@@ -778,21 +768,21 @@ fun SynthScreen(
                 val v = e.voices().firstOrNull { it.name == patch.voiceName } ?: continue
                 put(e to v, editablePreset(patch))
             }
-            for ((pair, name) in seededPresets) {
+            for ((pair, name) in seed.seededPresets) {
                 if (containsKey(pair)) continue
                 val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
             // SCANNED CHAIN's saved recipe holds its whole shape and settings.
-            for ((v, recipe) in restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, requireNotNull(recipe.patch))
+            for ((v, recipe) in seed.restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, requireNotNull(recipe.patch))
             // A reopened pad's working recipe replaces the draft and preset
             // restores above. SHOAL, OVEN and ORPHICA then re-read their own
             // complete snapshots below; those are written from this same loaded
             // patch, so they carry the same recipe.
-            for ((pair, work) in seededWork) put(pair, editablePreset(requireNotNull(work.recipe.patch)))
+            for ((pair, work) in seed.seededWork) put(pair, editablePreset(requireNotNull(work.recipe.patch)))
             // EMBOUCHURE's own newest recipe (its model, gesture, pitch and velocity) beats the
             // draft and preset restores above, but never a reopened pad's working recipe.
-            embouchureRestore.seedInto(this, seededWork.keys)
+            embouchureRestore.seedInto(this, seed.seededWork.keys)
             for (v in ShoalVoice.entries) {
                 val pair = Engine.SHOAL to v
                 val restored = storedShoalPatch(settings, v)
@@ -816,19 +806,19 @@ fun SynthScreen(
                     macrosByVoice[pair] = macrosByVoice.getValue(pair) + ("HOLD" to 0f)
                 }
             }
-            putAll(seededOvenPatches)
+            putAll(seed.seededOvenPatches)
             for (material in OrphicaMaterial.entries) {
                 storedOrphicaPatch(settings, material)?.let { put(Engine.ORPHICA to material, it) }
             }
             // A reopened pad's working recipe (seededWork) is the freshest ORIGAMI
             // statement, so the bag's snapshot never replaces it.
-            for ((origamiVoice, patch) in restoredOrigami) {
+            for ((origamiVoice, patch) in seed.restoredOrigami) {
                 val pair = Engine.ORIGAMI to origamiVoice
-                if (pair !in seededWork) put(pair, patch)
+                if (pair !in seed.seededWork) put(pair, patch)
             }
             // Likewise OHM: the bag's complete recipe never replaces a reopened pad's.
-            if (restoredOhm != null && (Engine.OHM to OhmVoice.STRING) !in seededWork) {
-                put(Engine.OHM to OhmVoice.STRING, restoredOhm)
+            if (seed.restoredOhm != null && (Engine.OHM to OhmVoice.STRING) !in seed.seededWork) {
+                put(Engine.OHM to OhmVoice.STRING, seed.restoredOhm)
             }
         }
     }
@@ -853,12 +843,12 @@ fun SynthScreen(
     // alias flag and named treatment. Loading a preset starts a new recipe.
     val loadedRecipesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, PadRecipe>().apply {
-            for ((pair, work) in seededWork) put(pair, work.recipe)
+            for ((pair, work) in seed.seededWork) put(pair, work.recipe)
         }
     }
     val reopenedPadsByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, SynthWork.Source>().apply {
-            for ((pair, work) in seededWork) work.source?.let { put(pair, it) }
+            for ((pair, work) in seed.seededWork) work.source?.let { put(pair, it) }
         }
     }
     fun persistReopenedWork() {
@@ -873,11 +863,15 @@ fun SynthScreen(
             )
         })
     }
-    val recipesSnapshot = loadedRecipesByVoice.toMap()
-    val patchesSnapshot = loadedPatchesByVoice.toMap()
-    val macroSnapshot = macrosByVoice.toMap()
-    val sourcesSnapshot = reopenedPadsByVoice.toMap()
-    LaunchedEffect(recipesSnapshot, patchesSnapshot, macroSnapshot, sourcesSnapshot) { persistReopenedWork() }
+    // Scoped so the debug dex frees these registers after the effect: SynthScreen's
+    // one method sits at ART's verifier limit (see [macroReadout]).
+    run {
+        val recipesSnapshot = loadedRecipesByVoice.toMap()
+        val patchesSnapshot = loadedPatchesByVoice.toMap()
+        val macroSnapshot = macrosByVoice.toMap()
+        val sourcesSnapshot = reopenedPadsByVoice.toMap()
+        LaunchedEffect(recipesSnapshot, patchesSnapshot, macroSnapshot, sourcesSnapshot) { persistReopenedWork() }
+    }
     // A navigation tap can dispose the bench before the state effect runs.
     // These maps remain the live session maps, so flush the final edit here.
     DisposableEffect(Unit) { onDispose { persistReopenedWork() } }
@@ -887,11 +881,10 @@ fun SynthScreen(
     // a reopen entry and never clears the preset highlight. A reopened recipe wins.
     val recalledRecipesByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, PadRecipe>().apply {
-            for ((v, recipe) in restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, recipe)
+            for ((v, recipe) in seed.restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, recipe)
         }
     }
-    val loadedRecipe = loadedRecipesByVoice[engine to voice]
-    val activeRecipe = loadedRecipe ?: recalledRecipesByVoice[engine to voice]
+    val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch = loadedPatch?.let {
         if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
         else Patches.edited(it, name, macros)
@@ -912,13 +905,15 @@ fun SynthScreen(
     // Keep complete Shoal recipes for every voice, rather than only the currently
     // selected preset name. Material and legacy model survive ordinary edits and
     // tab/voice switches alongside independent root and playing energy.
-    val shoalSettingsPatches = ShoalVoice.entries.associateWith { v ->
-        val values = macrosByVoice.getValue(Engine.SHOAL to v)
-        val saved = loadedPatchesByVoice[Engine.SHOAL to v] as? ShoalPatch
-        saved?.withMacros(values) ?: ShoalPatch(Engine.SHOAL.patchDisplayName(v), v, values)
-    }
-    LaunchedEffect(shoalSettingsPatches) {
-        for ((v, patch) in shoalSettingsPatches) settings[shoalPatchSettingsKey(v)] = patch.toJsonText()
+    run {
+        val shoalSettingsPatches = ShoalVoice.entries.associateWith { v ->
+            val values = macrosByVoice.getValue(Engine.SHOAL to v)
+            val saved = loadedPatchesByVoice[Engine.SHOAL to v] as? ShoalPatch
+            saved?.withMacros(values) ?: ShoalPatch(Engine.SHOAL.patchDisplayName(v), v, values)
+        }
+        LaunchedEffect(shoalSettingsPatches) {
+            for ((v, patch) in shoalSettingsPatches) settings[shoalPatchSettingsKey(v)] = patch.toJsonText()
+        }
     }
     LaunchedEffect(engine, voice, loadedPatch, macros) {
         if (engine == Engine.ORPHICA) {
@@ -956,30 +951,34 @@ fun SynthScreen(
     // is "loaded" until a tap picks one.
     val currentPresetByVoice = remember {
         mutableStateMapOf<Pair<Engine, Enum<*>>, String>().apply {
-            putAll(seededPresets)
-            seededWork.keys.forEach { remove(it) }
+            putAll(seed.seededPresets)
+            seed.seededWork.keys.forEach { remove(it) }
         }
     }
     // A preset can be cleared or set on a voice that is not showing (a FORGET
     // on another voice's chip, a save), so the bag takes the whole map.
-    val presetNames = currentPresetByVoice.toMap()
-    LaunchedEffect(presetNames) {
-        settings.keys.removeAll { it.startsWith(SETTINGS_PRESET_PREFIX) }
-        for ((pair, name) in presetNames) settings[presetSettingsKey(pair.first, pair.second)] = name
+    run {
+        val presetNames = currentPresetByVoice.toMap()
+        LaunchedEffect(presetNames) {
+            settings.keys.removeAll { it.startsWith(SETTINGS_PRESET_PREFIX) }
+            for ((pair, name) in presetNames) settings[presetSettingsKey(pair.first, pair.second)] = name
+        }
     }
     // OVEN's relative TUNE alone cannot recover an edited root or strike.
     // Keep its full recipe in this lab's existing bag, including voices left
     // earlier in the visit. Other engines retain their established bag format.
-    val ovenRecipes = OvenVoice.entries.associate { ovenVoice ->
-        val pair = Engine.OVEN to ovenVoice
-        val controls = macrosByVoice.getValue(pair)
-        val patch = loadedPatchesByVoice[pair] as? OvenPatch
-            ?: OvenPatch(Engine.OVEN.patchDisplayName(ovenVoice), ovenVoice, controls)
-        ovenVoice to Patches.edited(patch, currentPresetByVoice[pair] ?: patch.name, controls).toJsonText()
-    }
-    LaunchedEffect(ovenRecipes) {
-        settings.keys.removeAll { it.startsWith(SETTINGS_OVEN_PATCH_PREFIX) }
-        for ((ovenVoice, recipe) in ovenRecipes) settings["$SETTINGS_OVEN_PATCH_PREFIX${ovenVoice.name}"] = recipe
+    run {
+        val ovenRecipes = OvenVoice.entries.associate { ovenVoice ->
+            val pair = Engine.OVEN to ovenVoice
+            val controls = macrosByVoice.getValue(pair)
+            val patch = loadedPatchesByVoice[pair] as? OvenPatch
+                ?: OvenPatch(Engine.OVEN.patchDisplayName(ovenVoice), ovenVoice, controls)
+            ovenVoice to Patches.edited(patch, currentPresetByVoice[pair] ?: patch.name, controls).toJsonText()
+        }
+        LaunchedEffect(ovenRecipes) {
+            settings.keys.removeAll { it.startsWith(SETTINGS_OVEN_PATCH_PREFIX) }
+            for ((ovenVoice, recipe) in ovenRecipes) settings["$SETTINGS_OVEN_PATCH_PREFIX${ovenVoice.name}"] = recipe
+        }
     }
     // The prototype gates its very first sound behind a "TAP TO POWER ON"
     // veil — a Web Audio autoplay-policy workaround, not part of the actual
@@ -1113,7 +1112,7 @@ fun SynthScreen(
             // been read: re-adopt each whole, or drop the highlight when the
             // preset was forgotten while the lab was away. Live state is
             // re-read here, after the await: a preset tapped meanwhile wins.
-            for ((pair, name) in seededPresets) {
+            for ((pair, name) in seed.seededPresets) {
                 if (currentPresetByVoice[pair] != name) {
                     embouchureRestore.pending.remove(pair)
                     continue
@@ -2098,6 +2097,28 @@ fun SynthScreen(
                     )
                 }
 
+                // CAUSTIC is a finite instrument. Keep its explicit root and
+                // strike velocity in the loaded recipe, beside its macros.
+                if (engine == Engine.CAUSTIC) {
+                    CausticNoteControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onRootChange = { root ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(midi = root)
+                        },
+                        onVelocityChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(velocity = value)
+                        },
+                    )
+                }
+
                 // CREASE's five shape controls and HOLD leave pitch and playing
                 // intensity in the saved recipe. Copy the current patch so a
                 // legacy model keeps its timing through root/velocity edits.
@@ -2746,8 +2767,9 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model) {
                     if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
+                    else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else engine.macrosFor(voice)
                 }
@@ -2757,37 +2779,14 @@ fun SynthScreen(
                     val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch
                     Shoal.supportsHold(patch.model, patch.material)
                 } else true
-                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    for ((heading, specs) in if (engine == Engine.CONTOUR) {
-                        listOf("TONE", "ENVELOPE", "MOVEMENT", "FILTER", "PLAY").map { heading ->
-                            heading to macroSpecs.filter { contourMacroGroup(it.name) == heading }
-                        }
-                    } else listOf(null to macroSpecs)) {
-                        if (heading != null) TapeText(
-                            heading, TapeType.pixelSmall, scheme.ink2.tape,
-                            Modifier.padding(top = 8.dp),
-                        )
-                        for (spec in specs) {
-                            // HOLD remains a finite 2–6 s control. Held RIBBON uses
-                            // its saved release instead, without changing HOLD's value.
-                            if (flockHeldPreview != null && spec.name == "HOLD") continue
-                            MacroSlider(
-                                label = spec.name,
-                                value = macros.getValue(spec.name),
-                                fillColor = classColor,
-                                scheme = scheme,
-                                // SIREN's HOLD reads LOOP at its top: the render is
-                                // one seamless loop for the SURFACE, not a longer
-                                // hold (Siren.isLoop), the way GLINT's PEAK readout
-                                // would say the harmonic it snapped to.
-                                readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
-                                onValueChange = { v -> updateMacro(spec.name, v) },
-                                valueRange = macroRange(spec.name),
-                                enabled = spec.name != "HOLD" || shoalHoldSupported,
-                            )
-                        }
-                    }
-                }
+                MacroSliders(
+                    engine, voice, macroSpecs, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported,
+                    holdingRibbon = flockHeldPreview != null,
+                    classColor = classColor,
+                    scheme = scheme,
+                    macroRange = ::macroRange,
+                    onMacro = ::updateMacro,
+                )
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     LabButton(
@@ -2801,6 +2800,9 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.CAUSTIC ->
+                                CausticInstrument.scramble(voice as CausticVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.CREASE ->
                                 Crease.scramble(voice as CreaseVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.FLOCK ->
@@ -3110,6 +3112,91 @@ fun SynthScreen(
 }
 
 /**
+ * The MACRO sliders, CONTOUR's under its TONE/ENVELOPE/MOVEMENT/FILTER/PLAY
+ * headings. A composable of its own because `Column` is inline: inside
+ * [SynthScreen] this block compiled into the screen's one method, which ART's
+ * verifier rejected once that method outgrew its registers.
+ */
+@Composable
+private fun MacroSliders(
+    engine: Engine,
+    voice: Enum<*>,
+    macroSpecs: List<MacroSpec>,
+    macros: Map<String, Float>,
+    loadedPatch: Patch?,
+    origamiPatch: OrigamiPatch?,
+    registersRoot: Int?,
+    shoalHoldSupported: Boolean,
+    holdingRibbon: Boolean,
+    classColor: Color,
+    scheme: Scheme,
+    macroRange: (String) -> ClosedFloatingPointRange<Float>,
+    onMacro: (String, Float) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        for ((heading, specs) in if (engine == Engine.CONTOUR) {
+            listOf("TONE", "ENVELOPE", "MOVEMENT", "FILTER", "PLAY").map { heading ->
+                heading to macroSpecs.filter { contourMacroGroup(it.name) == heading }
+            }
+        } else listOf(null to macroSpecs)) {
+            if (heading != null) TapeText(
+                heading, TapeType.pixelSmall, scheme.ink2.tape,
+                Modifier.padding(top = 8.dp),
+            )
+            for (spec in specs) {
+                // HOLD remains a finite 2–6 s control. Held RIBBON uses
+                // its saved release instead, without changing HOLD's value.
+                if (holdingRibbon && spec.name == "HOLD") continue
+                MacroSlider(
+                    label = spec.name,
+                    value = macros.getValue(spec.name),
+                    fillColor = classColor,
+                    scheme = scheme,
+                    // SIREN's HOLD reads LOOP at its top: the render is
+                    // one seamless loop for the SURFACE, not a longer
+                    // hold (Siren.isLoop), the way GLINT's PEAK readout
+                    // would say the harmonic it snapped to.
+                    readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
+                    onValueChange = { v -> onMacro(spec.name, v) },
+                    valueRange = macroRange(spec.name),
+                    enabled = spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * What the navigation bag held when SYNTH opened, read once at the first
+ * composition: reopened work, preset names and the OHM, SCANNED CHAIN, OVEN and
+ * ORIGAMI recipes that seed the per-voice maps. One remembered holder rather than
+ * six remembered locals, as with [rememberEmbouchureRestore]: SynthScreen's single
+ * method sits at the register limit ART's verifier accepts from the debug dex.
+ */
+private class SynthSeed(settings: Map<String, String>) {
+    val seededWork = run {
+        SynthWork.read(settings).mapNotNull { work ->
+            val patch = work.recipe.patch ?: return@mapNotNull null
+            val sourceEngine = Engine.entries.firstOrNull { it.name == patch.engine } ?: return@mapNotNull null
+            val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return@mapNotNull null
+            (sourceEngine to sourceVoice) to work
+        }.toMap()
+    }
+    val seededPresets = storedPresetNames(settings)
+    val restoredOhm = restoredOhmPatch(settings)
+    val restoredScannedRecipes = run {
+        ScannedChainVoice.entries.mapNotNull { v ->
+            settings[scannedRecipeSettingsKey(v)]?.let { stored ->
+                runCatching { PadRecipe.fromJsonText(stored) }.getOrNull()
+                    ?.takeIf { (it.patch as? ScannedChainPatch)?.voice == v }?.let { v to it }
+            }
+        }.toMap()
+    }
+    val seededOvenPatches = storedOvenPatches(settings)
+    val restoredOrigami = restoredOrigamiPatches(settings)
+}
+
+/**
  * MACRO slider readouts (SIREN's LOOP, OVERLAP's seconds, ORIGAMI's note...).
  * Kept out of [SynthScreen]'s composable: inline, this `when` grew that method
  * until ART's verifier rejected it on device ("register has type Conflict").
@@ -3124,6 +3211,7 @@ private fun macroReadout(
     registersRoot: Int?,
     shoalHoldSupported: Boolean,
 ): String? = when {
+    engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
     engine == Engine.OVERLAP && name == "HOLD" -> {
         val hold = macros.getValue(name)
@@ -3894,7 +3982,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC;
 
     val displayName: String get() = name.replace('_', ' ')
 
@@ -3950,6 +4038,7 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
+        CAUSTIC -> CausticVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -4009,6 +4098,7 @@ private enum class Engine {
         TANGLE -> Tangle.macrosFor(voice as TangleVoice)
         SHOAL -> Shoal.macrosFor(voice as ShoalVoice)
         CREASE -> Crease.macrosFor(voice as CreaseVoice)
+        CAUSTIC -> CausticInstrument.macrosFor(voice as CausticVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
@@ -4066,6 +4156,7 @@ private enum class Engine {
         TANGLE -> Tangle.defaults(voice as TangleVoice)
         SHOAL -> Shoal.defaults(voice as ShoalVoice)
         CREASE -> Crease.defaults(voice as CreaseVoice)
+        CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
@@ -4125,6 +4216,7 @@ private enum class Engine {
         TANGLE -> Tangle.scramble(voice as TangleVoice, random)
         SHOAL -> Shoal.scramble(voice as ShoalVoice, random)
         CREASE -> Crease.scramble(voice as CreaseVoice, random)
+        CAUSTIC -> CausticInstrument.scramble(voice as CausticVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
@@ -4189,6 +4281,7 @@ private enum class Engine {
         TANGLE -> Tangle.render(voice as TangleVoice, macros)
         SHOAL -> ShoalPatch("Preview", voice as ShoalVoice, macros).render()
         CREASE -> Crease.render(voice as CreaseVoice, macros)
+        CAUSTIC -> CausticInstrument.render(voice as CausticVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -4252,6 +4345,7 @@ private enum class Engine {
         TANGLE -> Tangle.drumClassFor(voice as TangleVoice, macros)
         SHOAL -> Shoal.drumClassFor(voice as ShoalVoice, macros)
         CREASE -> Crease.drumClassFor(voice as CreaseVoice, macros)
+        CAUSTIC -> CausticInstrument.drumClassFor(voice as CausticVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
@@ -4310,6 +4404,7 @@ private enum class Engine {
         TANGLE -> TanglePatch(name, voice as TangleVoice, macros)
         SHOAL -> ShoalPatch(name, voice as ShoalVoice, macros)
         CREASE -> CreasePatch(name, voice as CreaseVoice, macros)
+        CAUSTIC -> CausticPatch(name, voice as CausticVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
@@ -4736,6 +4831,41 @@ private fun ReopenPadOverlay(
 }
 
 // ---------- macro slider ----------
+
+/** Note controls stay outside the large screen body and retain the whole native recipe. */
+@Composable
+private fun CausticNoteControls(
+    patch: CausticPatch,
+    fillColor: Color,
+    scheme: Scheme,
+    onRootChange: (Int) -> Unit,
+    onVelocityChange: (Float) -> Unit,
+) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - CausticInstrument.MIDI_MIN).toFloat() /
+            (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN),
+        fillColor = fillColor,
+        scheme = scheme,
+        readout = Scales.nameOf(patch.midi),
+        onValueChange = { value ->
+            onRootChange((CausticInstrument.MIDI_MIN + value *
+                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN)).roundToInt()
+                .coerceIn(CausticInstrument.MIDI_MIN, CausticInstrument.MIDI_MAX))
+        },
+    )
+    MacroSlider(
+        label = "VELOCITY",
+        value = patch.velocity,
+        fillColor = fillColor,
+        scheme = scheme,
+        onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
+    )
+    TapeText(
+        "FINITE NOTE · LENGTH SETS DECAY · HOLD RESERVED.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+    )
+}
 
 /**
  * The stepper-slider idiom from `PadSheetScreen.kt`'s `StepperSlider` is

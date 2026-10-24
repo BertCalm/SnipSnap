@@ -270,6 +270,7 @@ object Velocity {
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
         is OhmPatch -> Ohm.MACROS
+        is CausticPatch -> CausticInstrument.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -417,6 +418,7 @@ object Velocity {
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
         is OhmPatch -> patch.copy(velocity = v).render()
+        is CausticPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

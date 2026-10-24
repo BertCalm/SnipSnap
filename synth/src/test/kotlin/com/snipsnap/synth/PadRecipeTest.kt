@@ -35,6 +35,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
         TinesPatch("Bell Test", TinesVoice.BELL, mapOf("RATIO" to 0.9f)),
