@@ -7,8 +7,8 @@ excitation; repeated pulses deplete that availability, which recovers over
 time. This is an articulation model, not a claim of physical energy conservation.
 
 The supplied [engineering specification](WICK_SPEC.md) is preserved as the
-proposal. This listening round implements **PLUCK, WOOD, BREATH and BUBBLE**, seventeen
-provisional recipes and a dry sixteen-pad kit. FLICKER, RATTLE
+proposal. This listening round implements **PLUCK, WOOD, BREATH, BUBBLE and FLICKER**, twenty-one
+provisional recipes and a dry sixteen-pad kit. RATTLE
 and the proposed 36-preset library await the owner's listening verdict.
 Numerical checks do not establish that the cascade is musically convincing.
 
@@ -63,12 +63,17 @@ The four recipes are **Open Air**, **Single Breath**, **Layered Air** and
 **Held Breath**. “Breath” describes the opening gesture; it is not a simulated
 wind instrument or a noise source. See the [design notes](WICK_BREATH.md).
 
+FLICKER targets brief bright metallic openings around a pitched body, rooted
+at MIDI 60. Its default is SPARK .55, FEED .45, CASCADE .65, TIMBRE .80,
+RECOVERY .35 and HOLD 0. The four recipes are **Metal Flash**, **Single Glint**,
+**Bright Chain** and **Held Flicker**. See the [design notes](WICK_FLICKER.md).
+
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen
-dry pads with regenerable recipes: each voice at C3/C4 plus eight selected recipes.
-The seventeen-recipe library is larger than the kit; twelve exact library recipes
-and four transposed default variations occupy its sixteen pads.
+dry pads with regenerable recipes: each voice at C3/C4, one held example per voice and Single Glint.
+The twenty-one-recipe library is larger than the kit; eleven exact library recipes
+and five transposed default variations occupy its sixteen pads.
 
 ```sh
 ./gradlew --no-daemon :synth:generateWickAudition
@@ -81,7 +86,7 @@ and four transposed default variations occupy its sixteen pads.
 ## Listening evidence
 
 The audition renders the real Kotlin engine with an empty FX chain. It contains
-native and matched audio, the four starting voices, provisional recipes,
+native and matched audio, the five starting voices, provisional recipes,
 five-step macro sweeps, pitch/velocity probes, interactions and held examples.
 Mechanism comparisons disconnect the cascade, force constant availability, or
 replace correlated brightness/gain with gain-only gating. Diagnostic JSON
@@ -89,8 +94,8 @@ records event parent stages, release and admission times, requested/admitted
 strengths, availability and bounded-state measurements. Ablation recipes retain
 their diagnostic options separately from normal production patch JSON.
 
-Five dry musical phrases use a two-bar score at 100 BPM: the same notes,
-onsets and velocities rendered separately by PLUCK, WOOD, BREATH and BUBBLE,
+Six dry musical phrases use a two-bar score at 100 BPM: the same notes,
+onsets and velocities rendered separately by PLUCK, WOOD, BREATH, BUBBLE and FLICKER,
 plus the retained phrase sharing those events across PLUCK, WOOD and BUBBLE. Each note is a
 fresh pad render; recovery state is internal to that note. One fixed assembly
 gain preserves differences in strike strength. Loudness matching applies to
@@ -123,8 +128,8 @@ No Android device or MPC hardware acceptance is claimed in this round.
 
 Implementation measurements and checks are recorded beside the generated
 manifest and on the audition page. PLUCK, the revised BUBBLE direction, WOOD
-and the three-voice phrases have received positive listening feedback.
-BREATH's listening verdict remains open. The short-window classifier can
+and the three-voice phrases have received positive listening feedback. BREATH is now accepted as a working voice.
+FLICKER's listening verdict remains open. The short-window classifier can
 mislabel a late BREATH swell when the window ends before any real decay;
 its raw label and direct envelope evidence are retained in diagnostics.
 The source names, constants, voice settings and proposed release identity are
