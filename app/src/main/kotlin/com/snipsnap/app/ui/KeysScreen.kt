@@ -103,7 +103,10 @@ fun KeysScreen(
         MidiKeys(object : MidiKeys.Voice {
             override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
             override fun noteOff(note: Int) = player.noteOff(note)
-            override fun allOff() = player.allOff()
+            // Every local silence is mirrored on the wire (the one funnel for
+            // midiKeys.allOff()): a local silence that is not mirrored leaves a
+            // receiver holding a note whose off will name a different key.
+            override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
         })
     }
     fun silence() = midiKeys.allOff()
@@ -151,7 +154,6 @@ fun KeysScreen(
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
                     silence()
-                    MidiOut.allNotesOff()
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
