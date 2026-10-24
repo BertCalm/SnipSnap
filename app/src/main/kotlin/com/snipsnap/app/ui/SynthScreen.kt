@@ -1060,6 +1060,8 @@ fun SynthScreen(
         val bounded = value.coerceIn(macroRange(name))
         val values = macrosByVoice.getValue(engine to voice) + (name to bounded)
         macrosByVoice[engine to voice] = values
+        // Navigation can replace this screen before its state effect runs.
+        settings[macroSettingsKey(engine, voice, name)] = bounded.toString()
         ensureFilamentDraft()
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
