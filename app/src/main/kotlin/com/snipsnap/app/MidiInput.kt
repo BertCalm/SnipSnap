@@ -89,6 +89,7 @@ class MidiInput(context: Context) {
         val device: MidiDevice,
         val ports: List<Pair<MidiOutputPort, Receiver>>,
         val inputPorts: List<Pair<String, MidiInputPort>>,
+        val refusedIds: List<String>,
     )
 
     private val opened = LinkedHashMap<Int, Opened>()
@@ -158,6 +159,7 @@ class MidiInput(context: Context) {
             // is where bytes go IN to it, so it is what this app sends
             // into (MidiOut). The output ports above are what it plays out of.
             val inputPorts = ArrayList<Pair<String, MidiInputPort>>()
+            val refusedIds = ArrayList<String>()
             for (p in 0 until info.inputPortCount) {
                 val destId = "${id.fingerprint.key}/in$p"
                 val destName = if (info.inputPortCount > 1) "${id.name} $p" else id.name
@@ -165,12 +167,13 @@ class MidiInput(context: Context) {
                 if (port == null) {
                     Log.w(TAG, "MIDI device ${id.name} input port $p would not open")
                     MidiOut.reportRefused(destId, destName)
+                    refusedIds += destId
                     continue
                 }
                 MidiOut.add(MidiOut.Destination(destId, destName) { bytes, ts -> port.send(bytes, 0, bytes.size, ts) })
                 inputPorts += destId to port
             }
-            opened[info.id] = Opened(info, id, device, ports, inputPorts)
+            opened[info.id] = Opened(info, id, device, ports, inputPorts, refusedIds)
             listener?.onDevicesChanged(devices)
         }, handler)
     }
@@ -198,6 +201,8 @@ class MidiInput(context: Context) {
             runCatching { port.disconnect(receiver) }
             runCatching { port.close() }
         }
+        // A port that would not open was listed as BUSY; it goes with the device.
+        it.refusedIds.forEach(MidiOut::remove)
         for ((destId, port) in it.inputPorts) {
             MidiOut.remove(destId)
             runCatching { port.close() }

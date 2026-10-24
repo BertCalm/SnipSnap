@@ -9,7 +9,6 @@ import com.snipsnap.shell.PadHit
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
@@ -42,8 +41,10 @@ internal const val MIDI_DEVICE_PRODUCT = "SnipSnap"
  * reads the saved choice once; whoever changes it later writes the pref and
  * assigns [hardwareEnabled] - persistence is not this object's job.
  *
- * A destination whose `send` throws [IOException] (the cable came out) is
- * logged and dropped, once, on the out thread.
+ * A destination whose `send` throws (typically `IOException`: the cable came
+ * out) is logged and dropped, once, on the out thread. Any exception is
+ * caught: that thread has no uncaught-exception handler, so one escaping
+ * would end the process.
  */
 object MidiOut {
 
@@ -64,6 +65,8 @@ object MidiOut {
     private val lock = Any()
     private val _ports = MutableStateFlow<List<Port>>(emptyList())
 
+    private var installed = false // guarded by lock
+
     @Volatile
     private var handler: Handler? = null
 
@@ -74,17 +77,17 @@ object MidiOut {
     /** Every registered destination (open) plus the ones that would not open. */
     val ports: StateFlow<List<Port>> = _ports.asStateFlow()
 
-    /** Reads the saved switch once and starts the out thread. Safe to call twice. */
+    /** Reads the saved switch and starts the out thread, on the first call only; later calls do nothing. */
     fun install(context: Context) {
-        hardwareEnabled = runCatching {
-            context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                .getBoolean("midi.out", false)
-        }.getOrDefault(false)
         synchronized(lock) {
-            if (handler == null) {
-                val thread = HandlerThread("midi-out").also { it.start() }
-                handler = Handler(thread.looper)
-            }
+            if (installed) return
+            installed = true
+            hardwareEnabled = runCatching {
+                context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                    .getBoolean("midi.out", false)
+            }.getOrDefault(false)
+            val thread = HandlerThread("midi-out").also { it.start() }
+            handler = Handler(thread.looper)
         }
     }
 
@@ -139,8 +142,8 @@ object MidiOut {
                 if (e.hardware && !hardwareOn) continue
                 try {
                     e.destination.send(bytes, timestampNanos)
-                } catch (ex: IOException) {
-                    // The port is gone (cable out). Logged once: the
+                } catch (ex: Exception) {
+                    // The port is gone (cable out), or the lambda broke. Logged once: the
                     // destination is removed, so it is never tried again.
                     Log.w(TAG, "MIDI destination ${e.destination.name} failed, dropping it", ex)
                     remove(e.destination.id)
