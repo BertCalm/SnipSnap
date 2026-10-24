@@ -47,6 +47,7 @@ design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
 !design/nacre-gentle-audition/index.html
+!design/nacre-presence-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -414,3 +415,6 @@ testkit/murmur-luthier-audition/
 
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
 testkit/thump-spark-audition/
+
+# Experimental model-1 timed venue returns.
+testkit/nacre-presence-audition/

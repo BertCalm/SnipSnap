@@ -1810,3 +1810,14 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
 }
+
+/** Original harp with two experimental timed venue returns and isolated-space previews. */
+tasks.register<JavaExec>("generateNacrePresenceAudition") {
+    group = "distribution"
+    description = "Render the model-1 reference, coral echoes, moving seaweed and space-only comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePresenceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-presence-audition")
+}
