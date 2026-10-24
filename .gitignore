@@ -41,6 +41,7 @@ app/.cxx/
 design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
+!design/nacre-gentle-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -381,6 +382,9 @@ testkit/skitter-character-r6/
 # Generated R7 Skitter quartet listening proof
 testkit/skitter-quartet/
 testkit/fade-law-audition/
+
+# Three-clip model-1 venue-return experiment, regenerated from testkit sources.
+testkit/nacre-gentle-audition/
 
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
