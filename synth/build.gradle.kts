@@ -1163,7 +1163,7 @@ tasks.register<JavaExec>("generateTremorAudition") {
 
 tasks.register<JavaExec>("generateTremorComparison") {
     group = "distribution"
-    description = "Render the 16 matched Tremor listening-repair clips and metadata."
+    description = "Render matched Tremor voice, control, touch and held comparisons with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.TremorComparisonGenerator")
     workingDir = projectDir
@@ -1250,7 +1250,7 @@ tasks.register<JavaExec>("generateCisternAudition") {
 
 tasks.register<JavaExec>("generateFlotillaComparison") {
     group = "distribution"
-    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    description = "Render matched FLOTILLA voices, population steps, controls and held clips with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
     workingDir = projectDir

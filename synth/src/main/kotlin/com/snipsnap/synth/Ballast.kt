@@ -500,6 +500,8 @@ object Ballast {
         val record: Boolean = false,
         /** false: the glass rings are not read out (the knocks still happen). */
         val glass: Boolean = true,
+        /** false: recompute the bass trace, for checking the cache against an independently rendered source. */
+        val sourceCache: Boolean = true,
     )
 
     /** What a render counted. Energies are in model units (modal mass 1). */
@@ -533,6 +535,120 @@ object Ballast {
     private fun onePoleA(hz: Double, rate: Int) = 1.0 - exp(-2.0 * PI * hz / rate)
 
     private fun midiOf(hz: Double) = Math.round(12.0 * ln(hz / 440.0) / ln(2.0) + 69.0).toInt()
+
+    /** Only quantities used by the bass oscillator, filter and envelope belong in this key. */
+    private data class SourceKey(
+        val voice: BallastVoice, val hz: Double, val ratioB: Double, val wobbleHz: Double,
+        val steady: Boolean, val gateFrames: Int, val drive: Double, val velocity: Double,
+    )
+
+    /**
+     * Structural edits can reuse the bass, which has no return path from the frame or tiles. Retain at most
+     * 24 MiB across four source settings. A trace is private and read-only after publication; every frame,
+     * string, glass and output state is still new for each render. Longer requests replace a shorter prefix.
+     * Compute misses outside the monitor so different notes never wait for another note's oscillator pass.
+     */
+    private val sourceTraces = LinkedHashMap<SourceKey, DoubleArray>(4, 0.75f, true)
+    private const val SOURCE_CACHE_BYTES = 24L * 1024 * 1024
+    private const val SOURCE_CACHE_ENTRIES = 4
+    private var sourceTraceBytes = 0L
+    private var sourceTraceHits = 0L
+    private var sourceTraceBuilds = 0L
+
+    internal data class SourceCacheStats(val entries: Int, val bytes: Long, val hits: Long, val builds: Long)
+
+    internal fun sourceCacheStats(): SourceCacheStats = synchronized(sourceTraces) {
+        SourceCacheStats(sourceTraces.size, sourceTraceBytes, sourceTraceHits, sourceTraceBuilds)
+    }
+
+    /** Diagnostic reset, never part of a patch or the rendered sound. */
+    internal fun clearSourceCache() = synchronized(sourceTraces) {
+        sourceTraces.clear(); sourceTraceBytes = 0; sourceTraceHits = 0; sourceTraceBuilds = 0
+    }
+
+    private fun sourceTrace(voice: BallastVoice, plan: Plan, drive: Double, velocity: Double, cache: Boolean): DoubleArray {
+        val key = SourceKey(voice, plan.hzA, plan.ratioB, plan.wobbleHz, plan.steady, plan.gateFrames, drive, velocity)
+        if (cache) synchronized(sourceTraces) {
+            sourceTraces[key]?.let { if (it.size >= plan.frames) { sourceTraceHits++; return it } }
+        }
+        val trace = buildSource(key, plan.frames)
+        if (cache) synchronized(sourceTraces) {
+            sourceTraceBuilds++
+            val bytes = trace.size * 8L
+            if (bytes <= SOURCE_CACHE_BYTES) {
+                // A simultaneous longer render may already have published the more useful prefix.
+                val previous = sourceTraces[key]
+                if (previous == null || previous.size < trace.size) {
+                    if (previous != null) sourceTraceBytes -= previous.size * 8L
+                    sourceTraces[key] = trace
+                    sourceTraceBytes += bytes
+                    val entries = sourceTraces.entries.iterator()
+                    while (sourceTraces.size > SOURCE_CACHE_ENTRIES || sourceTraceBytes > SOURCE_CACHE_BYTES) {
+                        sourceTraceBytes -= entries.next().value.size * 8L
+                        entries.remove()
+                    }
+                }
+            }
+        }
+        return trace
+    }
+
+    /** Exact former per-sample bass path, separated from the structure so structural knobs need not rerun it. */
+    private fun buildSource(key: SourceKey, frames: Int): DoubleArray {
+        val rate = RATE * Dsp.OVERSAMPLE
+        val dt = 1.0 / rate
+        val shape = shapeOf(key.voice)
+        val hz = key.hz
+        val drive = key.drive
+        val v = key.velocity
+        val noise = Dsp.Noise(Dsp.seedFor("BALLAST", key.voice, midiOf(hz), "phase"))
+        var phaseA = (noise.next() + 1f) / 2.0
+        var phaseB = (noise.next() + 1f) / 2.0
+        val dtA = hz / rate
+        val dtB = hz * key.ratioB / rate
+        val pulseWidth = lerp(drive, 0.5, 0.18)
+        val ladder = Dsp.Ladder(rate)
+        val attackN = max(1, (lerp(1.0 - v, shape.attackMs, VELOCITY_ATTACK_SLOW_MS) * 1e-3 * rate).toInt())
+        val decayTau = shape.decaySeconds / 4.6
+        val releaseTau = RELEASE_SECONDS / T60_LN
+        val cutMultiple = shape.cutoffMultiple * 2.0.pow(2.0 * (drive - 0.45)) * lerp(v, VELOCITY_CUTOFF_SOFT, 1.0)
+        val envOctaves = FILTER_ENV_OCTAVES * lerp(v, VELOCITY_FILTER_ENV_SOFT, 1.0) * lerp(drive, 0.5, 1.0)
+        val wobbleOctaves = FILTER_WOBBLE_OCTAVES * drive
+        val resonance = (shape.resonance + MAX_RESONANCE_FOLLOW * drive).toFloat()
+        val inGain = 1.0 + 2.5 * drive
+        val wobblePhase0 = noise.next() * PI
+        var releaseLevel = 1.0
+        return DoubleArray(frames) { t ->
+            val time = t * dt
+            val amp: Double
+            val fEnv: Double
+            if (key.steady) {
+                amp = if (t < attackN) 0.5 * (1.0 - cos(PI * t / attackN)) else decayTo(t - attackN, decayTau, shape.sustain)
+                fEnv = exp(-time / FILTER_ENV_SECONDS)
+            } else {
+                amp = when {
+                    t < attackN -> 0.5 * (1.0 - cos(PI * t / attackN))
+                    t < key.gateFrames -> decayTo(t - attackN, decayTau, shape.sustain)
+                    else -> {
+                        if (t == key.gateFrames) releaseLevel = decayTo(t - attackN, decayTau, shape.sustain)
+                        releaseLevel * exp(-(t - key.gateFrames) * dt / releaseTau)
+                    }
+                }
+                fEnv = if (t < key.gateFrames) exp(-time / FILTER_ENV_SECONDS) else exp(-key.gateFrames * dt / FILTER_ENV_SECONDS) * exp(-(t - key.gateFrames) * dt / 0.08)
+            }
+            val src = if (amp > 1e-9) {
+                val saw = 2.0 * phaseA - 1.0 - polyBlep(phaseA, dtA)
+                val pulse = (if (phaseB < pulseWidth) 1.0 else -1.0) + polyBlep(phaseB, dtB) - polyBlep((phaseB + 1.0 - pulseWidth) % 1.0, dtB)
+                val wobble = sin(2.0 * PI * key.wobbleHz * time + wobblePhase0)
+                val cutoff = (hz * cutMultiple * 2.0.pow(envOctaves * fEnv + wobbleOctaves * wobble)).coerceIn(30.0, rate * 0.3)
+                val x = (shape.sawLevel * saw + shape.pulseLevel * pulse) * inGain * 0.5
+                ladder.process(x.toFloat(), cutoff.toFloat(), resonance) * amp
+            } else 0.0
+            phaseA += dtA; if (phaseA >= 1.0) phaseA -= 1.0
+            phaseB += dtB; if (phaseB >= 1.0) phaseB -= 1.0
+            src
+        }
+    }
 
     /**
      * The structure driven by the bass, at the oversampled rate: raw and unlevelled, so a test can read the physics.
@@ -630,6 +746,11 @@ object Ballast {
                 modeHarmonic[s].toDouble().pow(-0.6) * radiation
         }
         val bothPick = DoubleArray(size) { framePick[it] + stringPick[it] }
+        val actuatorPath = bank.participation(actuator)
+        val rockPath = bank.participation(rockOnly)
+        val kickPath = bank.participation(kickVec)
+        val mountPath = bank.participation(mountVec)
+        val structurePickup = bank.participation(bothPick)
 
         // ---- the glass: six tiles, three uncoupled modes each ----
         val glassBank = Modes.Bank(TILES * TILE_MODES, rate)
@@ -640,6 +761,7 @@ object Ballast {
             val fade = 1.0 - smoothstep((f - TILE_FADE_FROM_HZ) / (TILE_FADE_TO_HZ - TILE_FADE_FROM_HZ))
             glassPick[i * TILE_MODES + k] = GLASS_PICK * fade * (if ((i + k) % 2 == 0) 1.0 else -0.8) / TILES
         }
+        val glassPickup = glassBank.participation(glassPick)
         val contactHz = contactHz(glass)
         val contactTau = 0.5 / contactHz
         val ringWeight = Array(TILES) { i ->
@@ -671,7 +793,7 @@ object Ballast {
             DoubleArray(TILES) { 1e-4 * tileNoise.next() },
             if (plan.calm >= 1) 0.5 else MOUNT_ZETA,
         )
-        val unit = Array(TILES * TILE_MODES) { i -> DoubleArray(TILES * TILE_MODES).also { it[i] = 1.0 } }
+        val unit = Array(TILES * TILE_MODES) { i -> glassBank.participation(DoubleArray(TILES * TILE_MODES).also { it[i] = 1.0 }) }
         fun ring(tile: Int, energy: Double) {
             for (k in 0 until TILE_MODES) {
                 val idx = tile * TILE_MODES + k
@@ -681,28 +803,19 @@ object Ballast {
                 stats.ringEnergy += share
             }
         }
+        // Contacts retain this callback for the whole render, rather than constructing a captured lambda at
+        // every control step. Its energy split and the modal force update are unchanged.
+        val onKnock: (Int, Int, Double) -> Unit = { tile, other, lost ->
+            if (other < 0) ring(tile, RING_SHARE * lost)
+            else { ring(tile, 0.5 * RING_SHARE * lost); ring(other, 0.5 * RING_SHARE * lost) }
+        }
         val prevVel = DoubleArray(3)
         val bR = DoubleArray(3) { MOUNT_VECTOR[it] }
 
         // ---- the source ----
-        val noiseA = Dsp.Noise(Dsp.seedFor("BALLAST", voice, midi, "phase"))
-        var phaseA = (noiseA.next() + 1f) / 2.0
-        var phaseB = (noiseA.next() + 1f) / 2.0
-        val dtA = hz / rate
-        val dtB = hz * plan.ratioB / rate
-        val pulseWidth = lerp(drive, 0.5, 0.18)
-        val ladder = Dsp.Ladder(rate)
-        val attackN = max(1, (lerp(1.0 - v, shape.attackMs, VELOCITY_ATTACK_SLOW_MS) * 1e-3 * rate).toInt())
-        val decayTau = shape.decaySeconds / 4.6
-        val releaseTau = RELEASE_SECONDS / T60_LN
-        val cutMultiple = shape.cutoffMultiple * 2.0.pow(2.0 * (drive - 0.45)) * lerp(v, VELOCITY_CUTOFF_SOFT, 1.0)
-        val envOctaves = FILTER_ENV_OCTAVES * lerp(v, VELOCITY_FILTER_ENV_SOFT, 1.0) * lerp(drive, 0.5, 1.0)
-        val wobbleOctaves = FILTER_WOBBLE_OCTAVES * drive
-        val resonance = (shape.resonance + MAX_RESONANCE_FOLLOW * drive).toFloat()
-        val inGain = 1.0 + 2.5 * drive
+        val source = sourceTrace(voice, plan, drive, v, probe.sourceCache)
         val forceScale = lerp(drive * drive, FORCE_LOW, FORCE_HIGH) * lerp(v, VELOCITY_FORCE_SOFT, 1.0)
         val slowScale = if (probe.motionDrive) lerp(drive * drive, SLOW_LOW, SLOW_HIGH) * lerp(v, VELOCITY_FORCE_SOFT, 1.0) * rockHz.let { 2.0 * PI * it }.pow(2) * SLOW_GAIN else 0.0
-        val wobblePhase0 = noiseA.next() * PI
         val aHp = onePoleA(ACTUATOR_HP_HZ, rate)
         val aSlowHi = onePoleA(SLOW_HIGH_HZ, rate)
         val aSlowLo = onePoleA(SLOW_LOW_HZ, rate)
@@ -726,42 +839,12 @@ object Ballast {
         val stringOut = if (probe.record) FloatArray(frames) else null
         val glassOut = if (probe.record) FloatArray(frames) else null
         val energyEvery = (0.05 * rate).toInt()
-        var releaseLevel = 1.0
 
         var t = 0
         while (t < frames) {
             val time = t * dt
             // ---- the bass ----
-            var src = 0.0
-            if (t < sourceOffN) {
-                val amp: Double
-                val fEnv: Double
-                if (plan.steady) {
-                    amp = if (t < attackN) 0.5 * (1.0 - cos(PI * t / attackN)) else decayTo(t - attackN, decayTau, shape.sustain)
-                    fEnv = exp(-time / FILTER_ENV_SECONDS)
-                } else {
-                    val tt = t
-                    amp = when {
-                        tt < attackN -> 0.5 * (1.0 - cos(PI * tt / attackN))
-                        tt < plan.gateFrames -> decayTo(tt - attackN, decayTau, shape.sustain)
-                        else -> {
-                            if (tt == plan.gateFrames) releaseLevel = decayTo(tt - attackN, decayTau, shape.sustain)
-                            releaseLevel * exp(-(tt - plan.gateFrames) * dt / releaseTau)
-                        }
-                    }
-                    fEnv = if (tt < plan.gateFrames) exp(-time / FILTER_ENV_SECONDS) else exp(-plan.gateFrames * dt / FILTER_ENV_SECONDS) * exp(-(tt - plan.gateFrames) * dt / 0.08)
-                }
-                if (amp > 1e-9) {
-                    val saw = 2.0 * phaseA - 1.0 - polyBlep(phaseA, dtA)
-                    val pulse = (if (phaseB < pulseWidth) 1.0 else -1.0) + polyBlep(phaseB, dtB) - polyBlep((phaseB + 1.0 - pulseWidth) % 1.0, dtB)
-                    val wobble = sin(2.0 * PI * plan.wobbleHz * time + wobblePhase0)
-                    val cutoff = (hz * cutMultiple * 2.0.pow(envOctaves * fEnv + wobbleOctaves * wobble)).coerceIn(30.0, rate * 0.3)
-                    val x = (shape.sawLevel * saw + shape.pulseLevel * pulse) * inGain * 0.5
-                    src = ladder.process(x.toFloat(), cutoff.toFloat(), resonance) * amp
-                }
-            }
-            phaseA += dtA; if (phaseA >= 1.0) phaseA -= 1.0
-            phaseB += dtB; if (phaseB >= 1.0) phaseB -= 1.0
+            val src = if (t < sourceOffN) source[t] else 0.0
 
             // ---- the actuator: the source itself, high-passed and bounded; and its slow energy ----
             hpState += aHp * (src - hpState)
@@ -778,13 +861,13 @@ object Ballast {
             kSlow += aKickLo * (k2 - kSlow)
             val kick = if (t < sourceOffN) kickScale * rise * (k2 - kSlow) else 0.0
             if (force != 0.0) {
-                val vel = bank.velocityAlong(actuator)
+                val vel = bank.velocityAlong(actuatorPath)
                 stats.work += force * vel * dt
                 if (abs(force) > stats.peakForce) stats.peakForce = abs(force)
-                bank.drive(actuator, force)
+                bank.drive(actuatorPath, force)
             }
-            if (slow != 0.0) bank.drive(rockOnly, slow)
-            if (kick != 0.0) bank.drive(kickVec, kick)
+            if (slow != 0.0) bank.drive(rockPath, slow)
+            if (kick != 0.0) bank.drive(kickPath, kick)
             bank.step()
             glassBank.step()
 
@@ -796,10 +879,8 @@ object Ballast {
                     aBase += bR[k] * (vk - prevVel[k]) / dtc
                     prevVel[k] = vk
                 }
-                val reaction = tiles.step(aBase, dtc, stats, time) { tile, other, lost ->
-                    if (other < 0) ring(tile, RING_SHARE * lost) else { ring(tile, 0.5 * RING_SHARE * lost); ring(other, 0.5 * RING_SHARE * lost) }
-                }
-                if (probe.frameReturn) bank.drive(mountVec, reaction * CTRL)
+                val reaction = tiles.step(aBase, dtc, stats, time, onKnock)
+                if (probe.frameReturn) bank.drive(mountPath, reaction * CTRL)
                 val q0 = abs(bank.displacement(0))
                 if (q0 > stats.peakRock) stats.peakRock = q0
                 var qf = 0.0
@@ -809,14 +890,14 @@ object Ballast {
 
             // ---- the pickup ----
             val d = src * DIRECT_GAIN
-            val linearStructure = bank.velocityAlong(bothPick)
+            val linearStructure = bank.velocityAlong(structurePickup)
             val scaled = linearStructure / STRUCTURE_KNEE
             // A quartic knee leaves ordinary motion almost untouched, and keeps extreme modal coincidences
             // bounded without a hard clip. Use one gain on both recorded stems so their sum stays exact.
             val square = scaled * scaled
             val pickupGain = 1.0 / sqrt(sqrt(1.0 + square * square))
             val fs = linearStructure * pickupGain
-            val g = if (probe.glass) glassLevel * GLASS_KNEE * tanh(glassBank.velocityAlong(glassPick) / GLASS_KNEE) else 0.0
+            val g = if (probe.glass) glassLevel * GLASS_KNEE * tanh(glassBank.velocityAlong(glassPickup) / GLASS_KNEE) else 0.0
             out[t] = (d + fs + g).toFloat()
             if (probe.record) {
                 direct!![t] = d.toFloat()

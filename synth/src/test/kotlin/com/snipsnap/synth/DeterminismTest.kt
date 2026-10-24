@@ -343,8 +343,8 @@ class DeterminismTest {
         }
     }
 
-    // FLOTILLA seeds geometry from the voice, the note and the hull knobs, and the
-    // aquatic noise from a second seed. A saved recipe has to come back bit for bit.
+    // FLOTILLA keeps vessel identities stable across its hull controls and uses
+    // a separate aquatic noise stream. Saved recipes still return bit for bit.
     @Test
     fun `FLOTILLA is byte-identical across renders, every voice`() {
         for (voice in FlotillaVoice.entries) {
@@ -362,6 +362,23 @@ class DeterminismTest {
             val a = TremorPatch("Canary", voice, Tremor.defaults(voice))
             val b = TremorPatch("Canary", voice, Tremor.defaults(voice))
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `AEROSTAT is byte-identical across renders in both lifecycles`() {
+        for (hold in listOf(0f, 1f)) {
+            val macros = Aerostat.defaults(AerostatVoice.FLOAT) + ("HOLD" to hold)
+            val patch = AerostatPatch("Canary", AerostatVoice.FLOAT, macros)
+            assertContentEquals(patch.render().samples, patch.render().samples, "HOLD $hold")
+        }
+    }
+
+    @Test
+    fun `BALLAST is byte-identical across renders, every voice`() {
+        for (voice in BallastVoice.entries) {
+            val patch = BallastPatch("Canary", voice, Ballast.defaults(voice))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
 }

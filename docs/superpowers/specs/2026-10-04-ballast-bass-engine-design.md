@@ -15,9 +15,58 @@ Capture `generateBallastComparison -PballastComparisonVersion=before` on the
 baseline source first; candidate renders refuse missing calibration. The full
 audition now also uses conditioned raw touches before applying shared gain.
 
+## Current performance work, 24 October 2026
 
-**Status:** R1 built, awaiting the audition gate (2026-10-04). Nothing in it has been heard.
-**Roadmap:** S24.
+The Luthier follow-up retains the existing 4× simulation, bass, contacts and
+output stage. `Modes.Bank` can compile a participation vector once and visit
+only its nonzero entries during drives and pickups. It retains ascending
+accumulation order, so skipping zero weights changes cost without changing the
+equations. Ballast also retains one contact callback for the render.
+
+The oscillator, filter and envelope now produce a reusable bass trace. Its key
+contains the voice, actual frequency, oscillator ratio, wobble frequency,
+lifecycle, gate, DRIVE and velocity. SYMPATHY, SPAN, GLASS and FRAME reuse that
+trace because the structure has no return path into the bass source. Every
+render still creates fresh frame, string, tile and output state. The cache
+retains at most four keys and 24 MiB, publishes private read-only arrays under
+a monitor, computes misses outside that monitor, and can reuse a longer
+trace's exact prefix. This accelerates structural edits rather than merely
+memoizing an unchanged finished sample.
+
+**Measured with actual Kotlin through a Java scratch harness on a JDK 21 Linux
+server, without JFR:** ROOT's default one-shot median moved from **230 ms to
+165 ms**, and its held median from **491 ms to 283 ms**. These are five-sample
+medians after warmup; the candidate mostly reuses its source trace. Seven
+successive GLASS edits measured **161 ms** for a one-shot and **279 ms** held.
+Clearing the cache before each edit measured **228 ms** and **517 ms**: a held
+source miss was slightly slower than the original default held render.
+
+The tens-of-milliseconds target therefore remains open. The expensive modal
+simulation is still present on every render; no lower-rate or altered physical
+model is being presented as a sound-preserving optimization. These timings are
+diagnostics from this server, not phone measurements or a latency guarantee.
+
+All **30** compared output buffers were byte-identical to baseline `b17c3bd`:
+the six voices in both lifecycles, plus three extreme/soft cases per voice.
+Hashes cover big-endian float32 samples and equal frame counts. New
+`ModesSparseTest` and `BallastPerformanceTest` exercise dense/sparse equivalence,
+copied weights, cache keys, prefix reuse, memory limits, concurrent requests and
+independent output buffers. The report is retained with the scratch harness as
+`ballast-perf/fair-performance-report.json`. Nothing in this performance pass is
+a new listening verdict; the revised glass and structural balance still await
+the owner's audition.
+
+
+## Original as-built record, 4 October 2026
+
+The following measurements and initial listening questions are retained from R1.
+They predate the graduated glass, stronger structural pickups and later app
+integration. The owner subsequently liked the bass and asked for more gradual
+glass, clearer FRAME/SPAN and stronger touch differences. Acceptance of those
+revisions remains pending.
+
+**R1 status:** built, awaiting its first audition when this record was written.
+**Roadmap:** the Ballast integration status near S24–S26 in `docs/SYNTH_ROADMAP.md`.
 **Handoff:** the supplied *Ballast — Engineering Specification* v1.0 (3 October 2026). This document is what was built against it, and the numbers the suite measured. The constants marked "listening" in `Ballast.kt` are first values for that gate, not sourced ones.
 
 ## What it is
@@ -45,7 +94,9 @@ The handoff's actuator has two parts. The built one has three, because the first
 
 The handoff allows a wrap crossfade where tile contacts will not settle to a repeating orbit. The built loop tries three things before it would need one, and on the 72 corners the suite renders none of them was needed, so no crossfade is applied. The fallback is still there and is named below.
 
-`Keys.ballastPad` and the phone's picker are not in this round. HOLD's top step is the held loop inside `Ballast.render`; a keys instrument is the same shape as MERCURY's, which waited for its own gate.
+`Keys.ballastPad` and the phone's picker were outside R1. The phone path was added
+later; a keys instrument remains deferred. HOLD's top step is the held loop inside
+`Ballast.render`.
 
 ## The bass and the actuator
 
@@ -106,6 +157,9 @@ Printed by `BallastTest` and `BallastPresetsTest` on the built engine:
 
 `SynthKits.ballast()` is sixteen dry pads: ROOT up the minor pentatonic from C2, then LONG STRING, UPPER HALO, LOWER REPLY, LOOSE MOUNT, GLASS WAKE, DENSE TILES, DELAYED OPEN, SLOW CLIMB, DENSE RATTLE, TILE STORM, LOW WELL and WARM LIFT. `./gradlew :synth:generateBallastKit` writes the MPC program under `testkit/`; `./gradlew :synth:generateBallastAudition` writes 232 clips, `manifest.json` and the listening page under `testkit/ballast-audition/` (gitignored). The page's STRUCTURE section is the same note with the bass alone, the wires and frame alone, both, everything, and the bass stopped dead at one second.
 
-## Not in this round
+## Deferred work
 
-The phone: the engine picker, the README's engine count, and a keys instrument. A held pad is `Ballast.render` with HOLD at 1; wiring it through `Keys` waits until someone has heard the loop. The audition's own verdicts, and any constant a listen moves, are the next edit.
+The phone picker and roster count have since been integrated. A keys instrument
+remains deferred. A held pad is `Ballast.render` with HOLD at 1; a multisampled
+instrument still needs its own export and listening gate. The revised audition's
+verdict, and any constant that verdict moves, remain open.
