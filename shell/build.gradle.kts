@@ -36,6 +36,11 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // The full suite retains renderer/reference caches before reading the
+    // existing 180-second import fixture. Its aggregate working set can
+    // exhaust Gradle's default 512 MiB even though the fixture passes alone.
+    // Keep the CI run and local full-suite run on the same explicit budget.
+    maxHeapSize = "1g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
