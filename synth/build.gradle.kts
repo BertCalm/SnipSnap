@@ -1463,6 +1463,19 @@ tasks.register<JavaExec>("generateAlloyAudition") {
     if (project.hasProperty("alloyRefreshPage")) args("--refresh-page")
 }
 
+/** Current selected voices, separate from the frozen original and contrast references. */
+tasks.register<JavaExec>("generateAlloySelectedAudition") {
+    group = "distribution"
+    description = "Render the selected ALLOY voice matrix, 36 factory patches and 16-pad MPC kit under testkit/alloy-selected/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("alloySelectedOutput").orNull ?: "${rootDir}/testkit/alloy-selected", "--selected")
+    if (project.hasProperty("alloySelectedFull")) args("--full")
+    if (project.hasProperty("alloySelectedRefreshPage")) args("--refresh-page")
+}
+
 /** Separate candidate recipes; the released Alloy audition remains unchanged. */
 tasks.register<JavaExec>("generateAlloyContrastAudition") {
     group = "distribution"

@@ -615,16 +615,18 @@ PM articulation independently. BODY preserves root support and shapes carrier
 balance; LENGTH and HOLD control finite gestures and settled periodic excitation.
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
-The owner heard the initial twelve-preset audition and authorized expansion on
-the same engine tuning. Thirty-six factory presets now provide six per voice,
-the agreed allocation replacing the specification's uneven split. The original
-twelve retain their settings, and the new presets await listening review. Run
-`./gradlew :synth:generateAlloyAudition` for the reproducible listening pack.
-The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
-includes voice/register/velocity coverage, five-point macro sweeps, interactions,
-attack-port removal pairs and held seams. [ALLOY](ALLOY.md) records implementation
-and remaining listening/device acceptance. This is original synthesis, with no
-factory PCM imports or hardware-compatibility claim.
+The listening selection retains original BASS/SOFT and revised KEY/PLUCK/BRASS/
+STRING. Thirty-six factory presets provide six per voice, replacing the spec's
+uneven allocation. The [selected release audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/selected/)
+uses those configurations for presets, register/velocity coverage, five-point
+sweeps, interactions, attack-port removals and held seams. Its matching sixteen-pad
+MPC kit carries complete native recipes. Generate it with
+`./gradlew :synth:generateAlloySelectedAudition`; the original gallery and contrast
+audition remain frozen references. The selected control matrix extends the legacy
+tests without reinterpreting saved configurations. The voice choice has been heard;
+the expanded preset bank, phone performance, physical MPC playback and release
+naming remain separate acceptance work. [ALLOY](ALLOY.md) records the contracts.
+This is original synthesis, with no factory PCM imports or compatibility claim.
 
 ### CONTOUR — a stable body with a moving digital edge
 

@@ -345,6 +345,9 @@ testkit/SnipSnap-Overlap-Kit.zip
 # Focused Alloy voice/preset comparison audio is regenerated from source.
 testkit/alloy-contrast/
 
+# Selected Alloy voices, full factory roster and replayable release diagnostics.
+testkit/alloy-selected/
+
 # Relay musical bank and starter-pad performance renders.
 testkit/relay-performance-audition/
 
