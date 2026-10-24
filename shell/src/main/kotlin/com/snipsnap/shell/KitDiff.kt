@@ -103,6 +103,7 @@ object KitDiff {
      * "RECIPE" — a change is still reported, just not named.
      */
     fun recipeName(recipe: JsonValue.Obj): String {
+        AquariumPadSheet.read(recipe)?.let { return "AQUARIUM" }
         BoardSheet.read(recipe)?.let { return "${it.type.name} ${(it.amount * 100).roundToInt()}%" }
         // Typed source recipes can also end in a board. Name that last
         // treatment just as replay does, rather than calling it RECIPE or

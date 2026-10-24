@@ -10,13 +10,17 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.OrphicaPadMaker
+import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
 import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiGesture
+import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Chamber
@@ -126,8 +130,12 @@ import kotlin.random.Random
  * shape, and neither is a one-shot pad.
  *
  * `--instrument [--attack S] [--release S]` renders the preset as keys that
- * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS and
- * OPENSKY HALO keep their authored attack and accept release only.
+ * sound while held. RESIN accepts attack and release; ORPHICA, REGISTERS,
+ * ORIGAMI model-4 FAN/STILL and OPENSKY HALO keep their authored attack and accept release only.
+ * ORIGAMI also accepts --patch JSON replay, retaining the saved note, velocity,
+ * seed and finite render model. Its held zones span C3-C5 and override TUNE.
+ * Its model-4 voices accept --gesture STEADY|BLOOM|UNFOLD and all six controls
+ * through --macros; MOTION sets gesture duration in BLOOM/UNFOLD.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
@@ -156,7 +164,7 @@ import kotlin.random.Random
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
  * for their finite performances.
- * WICK offers thirteen provisional PLUCK/WOOD/BUBBLE recipes without adding a phone engine.
+ * WICK offers twenty-one provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
@@ -176,7 +184,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--tempo", "--beats"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--tempo", "--beats"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -185,12 +193,17 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
+        val gestureOverride = opts["--gesture"]?.let { raw ->
+            if (engine != OrigamiPatch.ENGINE) throw CliError("--gesture is only supported by ORIGAMI, got $engine")
+            OrigamiGesture.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
+                ?: throw CliError("--gesture wants ${OrigamiGesture.entries.joinToString("|") { it.name }}, got '$raw'")
+        }
         val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER and TIDAL, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrigamiPatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER, TIDAL and ORIGAMI, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -230,15 +243,18 @@ object SynthCommand {
             ShoalMaterial.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
                 ?: throw CliError("--material wants ${ShoalMaterial.entries.joinToString("|") { it.name }}, got '$raw'")
         }
-        val contourMacros = opts["--macros"]?.let { raw ->
-            if (engine != ContourPatch.ENGINE) throw CliError("--macros is only supported by CONTOUR, got $engine")
-            val names = ContourEngine.macrosFor(ContourVoice.valueOf(voice)).map { it.name }.toSet()
+        val macroOverrides = opts["--macros"]?.let { raw ->
+            val names = when (engine) {
+                ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
+                OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
+                else -> throw CliError("--macros is only supported by CONTOUR and ORIGAMI, got $engine")
+            }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
                 val fields = entry.split('=')
                 if (fields.size != 2) throw CliError("--macros wants NAME=VALUE pairs separated by commas, got '$entry'")
                 val name = fields[0].trim().uppercase(Locale.ROOT)
-                if (name !in names) throw CliError("--macros unknown CONTOUR control '$name'; choose ${names.joinToString()}")
+                if (name !in names) throw CliError("--macros unknown $engine control '$name'; choose ${names.joinToString()}")
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
@@ -252,9 +268,12 @@ object SynthCommand {
 
         val instrument = opts.has("--instrument")
         val drone = opts.has("--drone")
+        if (engine == OrigamiPatch.ENGINE && drone) {
+            throw CliError("--drone is not supported by ORIGAMI; use --instrument for model-4 FAN or STILL")
+        }
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, OrigamiPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
@@ -352,9 +371,10 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO and ORPHICA export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, OrigamiPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA and ORIGAMI FAN/STILL export a keys instrument here - try snipsnap synth REGISTERS PIPE --instrument")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its authored attack - use --release to shape the held instrument")
             if (engine == OrphicaPatch.ENGINE && opts["--attack"] != null) throw CliError("ORPHICA keeps the pluck attack; --instrument accepts --release")
+            if (engine == OrigamiPatch.ENGINE && opts["--attack"] != null) throw CliError("ORIGAMI keeps its authored attack; --attack is unavailable, use --release with --instrument")
             if (opts.has("--all")) throw CliError("--instrument makes one instrument per call - pick a --preset, not --all")
             if (engine == OpenSkyPatch.ENGINE) {
                 if (!OpenSkyPadMaker.supports(OpenSkyVoice.valueOf(voice))) throw CliError("--instrument supports OPENSKY HALO; $voice is a finite sound")
@@ -365,6 +385,10 @@ object SynthCommand {
         val skyInstrumentRelease = if (instrument && engine == OpenSkyPatch.ENGINE) opts["--release"]?.let { raw ->
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OpenSkyPadMaker.RELEASE_MIN_SECONDS..OpenSkyPadMaker.RELEASE_MAX_SECONDS }
                 ?: throw CliError("--release wants finite seconds in ${OpenSkyPadMaker.RELEASE_MIN_SECONDS}..${OpenSkyPadMaker.RELEASE_MAX_SECONDS}, got '$raw'")
+        } else null
+        val origamiInstrumentRelease = if (instrument && engine == OrigamiPatch.ENGINE) opts["--release"]?.let { raw ->
+            raw.toFloatOrNull()?.takeIf { it.isFinite() && it in OrigamiPadMaker.RELEASE_MIN_SECONDS..OrigamiPadMaker.RELEASE_MAX_SECONDS }
+                ?: throw CliError("--release wants finite seconds in ${OrigamiPadMaker.RELEASE_MIN_SECONDS}..${OrigamiPadMaker.RELEASE_MAX_SECONDS}, got '$raw'")
         } else null
         val droneFlags = listOf("--root", "--motion", "--rate", "--bpm", "--bars", "--loop").filter { opts[it] != null }
         if (!drone && droneFlags.isNotEmpty()) {
@@ -463,7 +487,18 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is OpenSkyPatch) {
+            if (withNote is OrigamiPatch) {
+                val gesture = gestureOverride ?: withNote.gesture
+                if (gesture != OrigamiGesture.STEADY && withNote.model != OrigamiGestures.GEOMETRY_MODEL) {
+                    throw CliError("--gesture $gesture requires ORIGAMI model 4; saved model ${withNote.model} keeps its original motion")
+                }
+                withNote.copy(
+                    macros = withNote.macros + macroOverrides,
+                    // Deliberately editing TUNE also edits an authored note, as in the native editor.
+                    midi = macroOverrides["TUNE"]?.let { Origami.midiFor(withNote.voice, it) } ?: withNote.midi,
+                    gesture = gesture,
+                )
+            } else if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
             } else if (withNote is ShoalPatch && materialOverride != null) {
                 if (!Shoal.supportsHold(Shoal.MODEL_VERSION, materialOverride) &&
@@ -471,8 +506,8 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
-            } else if (withNote is ContourPatch && contourMacros.isNotEmpty()) {
-                withNote.copy(macros = withNote.macros + contourMacros)
+            } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(
@@ -510,10 +545,17 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid OPENSKY instrument"}")
         } else null
+        val origamiInstrumentSpec = if (instrument && engine == OrigamiPatch.ENGINE) try {
+            OrigamiPadMaker.Spec(chosen.single() as OrigamiPatch,
+                releaseSeconds = origamiInstrumentRelease ?: OrigamiPadMaker.RELEASE.default)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("--instrument: ${e.message ?: "ORIGAMI supports model-4 FAN and STILL only"}")
+        } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
+        if (origamiInstrumentSpec != null) return makeOrigamiInstrument(origamiInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -537,6 +579,19 @@ object SynthCommand {
             out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s$mode")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
+        return 0
+    }
+
+    private fun makeOrigamiInstrument(spec: OrigamiPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = OrigamiPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            OrigamiPadMaker.renderZone(spec, midi)
+        }
+        OrigamiPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, each holds - authored attack retained, RELEASE ${OrigamiPadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
     }
 

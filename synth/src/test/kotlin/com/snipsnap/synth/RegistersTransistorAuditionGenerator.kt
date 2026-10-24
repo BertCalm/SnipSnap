@@ -101,7 +101,7 @@ object RegistersTransistorAuditionGenerator {
         val manifest = LinkedHashMap(plain(baseline.manifest) as Map<String, Any?>)
         manifest.putAll(linkedMapOf(
             "title" to "REGISTERS · Pipe + Musette + Transistor",
-            "revision" to REVISION, "model" to Registers.MODEL_VERSION,
+            "revision" to REVISION, "model" to 4,
             "status" to "PIPE and MUSETTE working audition baseline; TRANSISTOR listening pending; physical phone and MPC listening pending",
             "voiceStatus" to mapOf("PIPE" to "working-audition-baseline", "MUSETTE" to "working-audition-baseline",
                 "TRANSISTOR" to "listening-pending"),
@@ -136,7 +136,7 @@ object RegistersTransistorAuditionGenerator {
         // evidence are published together; the historical site's frontend is never authoritative.
         for (asset in listOf("index.html", "styles.css", "app.js")) {
             val resource = RegistersTransistorAuditionGenerator::class.java
-                .getResourceAsStream("/audition/registers-audition/$asset")
+                .getResourceAsStream("/audition/registers-audition-r4/$asset")
                 ?: error("Missing REGISTERS listening page resource $asset")
             File(root, asset).outputStream().use { output -> resource.use { it.copyTo(output) } }
         }
@@ -178,7 +178,7 @@ object RegistersTransistorAuditionGenerator {
     }
 
     private fun cases(): List<Case> = buildList {
-        val presets = RegistersPresets.forVoice(voice)
+        val presets = RegistersPresets.forVoice(voice).map { it.copy(model = 4) }
         check(presets.map { it.name } == listOf("Compact Keys", "Clean Combo", "Garage Buzz"))
         check(presets.all { it.model == 4 && it.midi == 60 && it.velocity == 1f })
         for (note in listOf(48, 60, 69)) for (gesture in listOf("restrained", "expressive")) {
