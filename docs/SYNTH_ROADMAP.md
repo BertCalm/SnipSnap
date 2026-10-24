@@ -260,9 +260,24 @@ verdict; source variety and numerical checks are not sonic approval.
 Finite notes route TONAL, held notes LOOP. The phone picker, CLI, saved
 recipes and dry sixteen-pad starter kit share the renderer.
 
+The October 23 Luthier polish introduces model 2: finite CLAV retains a
+selected low-harmonic body behind its pick, and held CLAV precomputes its
+fixed registration. Narrow corrections keep CHORD filtering referenced to
+the marked root, HOLD's oscillator clock stable when SHADOW is raised from
+zero, and LENGTH active in bright settled spectra. Saved model 1 recipes
+retain their renderer; missing/null JSON model fields also load as model 1.
+New constructors use model 2. Round Corner, Dust Tines, Soft Clav, Amber
+Organ, Nose Talk and Velvet Stack stay on model 1; the other 42 factory
+recipes retain their settings and use model 2. Final compatibility hashes,
+measurements and full test results for this polish remain pending.
+
 Run `./gradlew :synth:generateStoopAudition` for the listening matrix,
-or add `-Pquick` for its smaller smoke pack. [STOOP](STOOP.md) documents
-saving, dry auditions, HOLD and the exported shadow's playback-rate limit.
+or add `-PstoopQuick` for its smaller smoke pack. Supplying
+`-PstoopBaselineDir` and `-PstoopOriginalBaselineDir` preserves both published
+banks in the 558-clip comparison: October 15 is the default previous-bank
+comparison, with October 10 available as the first bank. [STOOP](STOOP.md)
+documents model compatibility, reproduction commands, the as-built polish,
+HOLD and the exported shadow's playback-rate limit.
 Release naming and device/hardware validation remain separate gates.
 
 ### PITCHWHEEL — wooden teeth catching through stretching resin
