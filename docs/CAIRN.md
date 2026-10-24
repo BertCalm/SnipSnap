@@ -16,6 +16,12 @@ Repository truth: implemented against SnipSnap
 `Velocity.atVelocity`, and the patch/prototype registry. No `siblingPatches`
 API is assumed.
 
+Before handoff, upstream `7659ed77d5448f140b1a01c2d35cc358600b24b6` was
+merged into the reconstruction branch. Its added fixed-filter helper does not
+alter Cairn's output path. Rendering against the combined production classes
+reproduced all 92 native 24-bit WAVs byte for byte. The final source backup
+applies against that integrated upstream revision.
+
 [Private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
 compares the reconstruction with four preserved recordings. The existing
 [six-voice sample bank](https://cairn-voice-comparison.bertcalm.chatgpt.site)
@@ -197,7 +203,11 @@ low-register autocorrelation estimate.
 
 The generator writes 92 cases with cued and full 24-bit WAVs, actual-rate raw
 WAVs, complete JSON recipes, per-contact work CSVs, motion traces, hashes and a
-manifest. Sections include defaults at C3/C4/C5, common controls, all control
+manifest. For the two uncoupled diagnostic cases, the patch JSON remains the
+ordinary instrument recipe; the separate `uncoupled: true` manifest field
+selects `Cairn.Options(disableCoupling = true)`. Loading that patch alone does
+not disable coupling. The generator records and replays that diagnostic choice.
+Sections include defaults at C3/C4/C5, common controls, all control
 sweeps, BODY × FRICTION corners, velocity and isolated coupling. No loop is
 repeated and called a natural seam. The top HOLD step remains refused.
 

@@ -345,7 +345,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 42 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 43 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -384,14 +384,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Thirteen provisional recipes stay outside
+PLUCK, WOOD, BREATH, BUBBLE and FLICKER share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Twenty-one provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, three-voice
-musical phrases, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, five solo
+musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/WICK.md) describe this first round; the remaining
-three proposed voices and full preset library follow the listening verdict.
+remaining proposed voice and full preset library follow the listening verdict.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -547,12 +547,15 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
+Its latest body revision adds a rounded same-pitch foundation while retaining
+the opening click and all original model-4 recipes.
 Nine starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?voice=TRANSISTOR#listen)
-introduces TRANSISTOR alongside the working PIPE/MUSETTE baseline and retains
-the original chiff and airflow comparisons. TRANSISTOR awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
+compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
+baseline and retains the original chiff and airflow comparisons. TRANSISTOR
+awaits listening review;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
@@ -792,22 +795,29 @@ includes the full matrix and before/after comparisons for the revised voices.
 
 CIRCUIT is an invented moving ensemble: three rooted breath resonators,
 stone rattle, paired wood, clay vessel and synthesized coordination voice.
-The current listening candidate gives them one authored four-pulse figure,
-with shared breath, a slow rise and settle across the phrase, stable player
-identity and quiet overlapping support. ROOT adds a firmer pitched foundation
-only at faster playing rates.
-DIAMETER, ORBIT and PACE independently set formation, movement and playing;
-CANYON supplies asymmetric mono paths and bounded replies at authored answer
-opportunities. A common energy scale keeps accepted replies in the phrase.
-Six voices, twelve dry presets, a sixteen-pad kit and raw/matched listening
-clips. HOLD at .99 returns its settled procession without an opening gesture.
-The owner heard R4 (stone, wood and breath overpowered the sound) and R5
-(“I think it's still a bit too abrupt”); the current candidate, R6, eases
-force onset and release. The completed-pack evidence in docs/CIRCUIT.md is
-R4's, which it marks historical: it does not verify R6. R6 calibration and
-verification are in progress, and the owner's listening verdict remains pending.
-Contract and audition commands:
-[`docs/CIRCUIT.md`](docs/CIRCUIT.md).
+The owner approved the C4 starting note and the continuous one-minute ROOT
+ceremony (“Sounds good”). The minute remains a fixed offline audition.
+The current candidate brings call → listening → causal answer → settle into
+regular ROOT finite phrases and held material, using shared pressure and
+deliberate gaps in supporting gestures. Seven unchanged comparison cases,
+including all five other voice defaults and the approved minute, remain
+bit-identical to their baselines.
+
+Six voices, seven macros, fifteen dry presets and the existing sixteen-pad
+kit use the current patch, recipe and app workflows. New C4 ROOT presets
+FIRE CIRCLE, NIGHT REPLY and EMBER PULSE explore close soft pressure, wider
+finite returns and a settled recurring pulse. Existing presets and kit notes
+are retained. HOLD at .99 returns settled loop material. V2 passed 90 native
+render guards, 209/209 artifact checks and 36/36 transition checks; held listening
+cells 1/3/5 receive causal replies. Desktop EXPANSE held median render time
+fell from 12.336657 s to 11.185123 s (9.334%), with unchanged thread allocation.
+Android debug assembly, Android test-source compilation and APK verification
+passed against runtime `1cd56a1bc759dfcdd825c242ed1ad1d80d042b50`. The full nine-module
+JVM suite passed all 5,922 tests with zero failures, errors or skips.
+The new ROOT score and presets await listening;
+physical-phone and Circuit-specific MPC validation remain pending. Earlier
+R4/R5/R6 measurements remain historical.
+Design, limits and audition commands: [`docs/CIRCUIT.md`](docs/CIRCUIT.md).
 
 MURK is a pitched grove: one bat-to-axe strike excites tuned wood, pressure
 travels between four trees, and synthesized owls answer the disturbances
@@ -865,8 +875,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM and GRAINS round out the lineup —
-fifty-three engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
+54 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1027,8 +1037,10 @@ pitch drift, vibrato, onset, tone and level, which is the difference between
 one instrument swirled and several playing), PHASE (four allpasses
 swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
-one filter, repeats darkening as they fade), SPRING (a Schroeder network,
-1962), REVERSE, SMEAR (the attack taken out, the wash kept: the STN
+one filter, repeats darkening as they fade; its HEAD macro, turned up,
+feeds the repeats only the note's first 120 ms, so a held note's attack
+comes back as a repeat), SPRING (a Schroeder network, 1962), REVERSE,
+SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
@@ -1058,11 +1070,17 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SCANNED CHAIN, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, VENT, OVERLAP, TRIO, plus GRAINS, SNAP and DRAW, which sit beside the
+THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
+COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
+SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
+VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+MERCURY's picker entry carries PING, SING and BLADE, the three voices kept at
+R1's gate (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI
+until round 7's listen. A law in `shell`'s `ConventionTest` reads these two
+lists, the count above and `app/README.md`'s against the enum and the roster.
 ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, TRIO, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
@@ -1097,6 +1115,13 @@ audition includes direct original/revised middle-range comparisons. See
 [`docs/OHM.md`](docs/OHM.md) and the
 [private audition](https://ohm-snipsnap-audition.bertcalm.chatgpt.site).
 
+NEW KIT → STARTERS → OHM places eight Solo notes in C minor pentatonic
+from C3 to F4 beside the four companion relationships and lower/upper
+contrasts. `./gradlew :synth:generateOhmKit` exports sixteen dry finite
+one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
+`testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
+remain open.
+
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,
 contrasting push/pull colors, asymmetric folk reeds, and tracking drones
@@ -1116,7 +1141,16 @@ phone/MPC checks.
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
 CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
-SEND saves a replayable recipe and authored pitch for kit tuning. See the
+SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
+and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
+on the desk, use
+`snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
+`--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
+renderer has its own model 1, separate from finite model 4; the six controls
+remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
+once between the source and folded color; MOTION sets their duration. STEADY
+retains existing audio and JSON. The new gesture is saved with its own version,
+and held keys finish it before the sustain loop. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`

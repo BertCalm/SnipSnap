@@ -12,7 +12,7 @@ from scipy.signal import lfilter
 
 REPO=Path(__file__).resolve().parents[1]
 RATE=44100
-BASE_REVISION='91384fa189a68c4993c8e359af6b748412bf95c3'
+BASE_REVISION='7659ed77d5448f140b1a01c2d35cc358600b24b6'
 
 def sha(data): return hashlib.sha256(data).hexdigest()
 def pcm(path):

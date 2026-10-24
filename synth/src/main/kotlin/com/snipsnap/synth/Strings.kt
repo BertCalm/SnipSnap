@@ -523,6 +523,8 @@ internal object Strings {
      * A blown bore drives the loop in two steps instead of one - see
      * [reflected] and [inject] - because its new sample is a nonlinear
      * function of the wave coming back, not that wave plus an input.
+     * [cacheLoopFilter] opts into a precomputed fixed-cutoff low-pass coefficient;
+     * its state arithmetic is identical, and the default retains the original path.
      */
     class Loop(
         private var n: Int,
@@ -537,6 +539,7 @@ internal object Strings {
         private val dcBlock: Boolean = jawari > 0f,
         private val dcHz: Float = DC_BLOCK_HZ,
         private val roundTrip: Double = 1.0,
+        cacheLoopFilter: Boolean = false,
     ) {
         private val baseFb = fb
         private var fb = fb
@@ -555,6 +558,7 @@ internal object Strings {
         private var stX1 = 0f
         private var stY1 = 0f
         private val loopLp = Dsp.OnePole(rate)
+        private val fixedLoopLp = if (cacheLoopFilter) Dsp.FixedOnePole(loopHz, rate) else null
         private val dcA = if (dcBlock) dcBlockerA(rate, dcHz).toFloat() else 0f
         private var dc = 0f
 
@@ -597,7 +601,7 @@ internal object Strings {
                     stY1 = s
                     s
                 } else tuned
-                var yy = loopLp.lp(stiff, loopHz)
+                var yy = if (fixedLoopLp != null) fixedLoopLp.lp(stiff) else loopLp.lp(stiff, loopHz)
                 // GUZHENG's STIFF (SILK Phase 1b), after the loop low-pass -
                 // the spec's own architecture diagram order ("loop LP ->
                 // [dispersion] -> [collision]"), not SITAR's stiffness

@@ -70,7 +70,7 @@ class WickTest {
 
     @Test
     fun `transmitted excitations follow observed parent releases on a later update`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD)) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) {
             val probe = Wick.inspect(voice, active + mapOf("FEED" to .25f, "CASCADE" to 1f))
             val events = probe.diagnostics.events
             val releases = events.filter { it.kind == "RELEASE" }
@@ -127,7 +127,7 @@ class WickTest {
 
     @Test
     fun `each timbral control moves a finite gesture and its held recurrent gesture`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
             fun at(value: Float): FloatArray {
                 val probe = Wick.inspect(voice, active + mapOf("HOLD" to hold, macro to value))
                 assertReplayProvenance(probe)
@@ -211,19 +211,113 @@ class WickTest {
     }
 
     @Test
-    fun `wood velocity changes the finite and recurrent articulation while retaining the requested note`() {
-        for (hold in listOf(0f, 1f)) {
-            val controls = Wick.defaults(WickVoice.WOOD) + ("HOLD" to hold)
-            val soft = Wick.inspect(WickVoice.WOOD, controls, midi = 60, velocity = .25f)
-            val hard = Wick.inspect(WickVoice.WOOD, controls, midi = 60, velocity = 1f)
+    fun `wood breath and flicker velocity change finite and recurrent articulation while retaining the requested note`() {
+        for (voice in listOf(WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) {
+            val controls = Wick.defaults(voice) + ("HOLD" to hold)
+            val soft = Wick.inspect(voice, controls, midi = 60, velocity = .25f)
+            val hard = Wick.inspect(voice, controls, midi = 60, velocity = 1f)
             val distance = TangleMeasure.distance(soft.samples, hard.samples)
-            assertTrue(distance > .02, "WOOD HOLD$hold velocity only changes gain: $distance")
+            assertTrue(distance > .02, "$voice HOLD$hold velocity only changes gain: $distance")
             for ((velocity, probe) in listOf(.25f to soft, 1f to hard)) {
                 assertTrue(probe.raw.all { it.isFinite() } && probe.samples.all { it.isFinite() })
                 val wanted = Keys.midiHz(60)
                 val measured = FineTuning.measuredHz(Snip(probe.samples, 1, Dsp.RATE), wanted, .08f, .25f)
                 val cents = FineTuning.cents(measured, wanted.toDouble())
-                assertTrue(abs(cents) < 25.0, "WOOD HOLD$hold velocity$velocity lost its requested root: $cents cents")
+                assertTrue(abs(cents) < 25.0, "$voice HOLD$hold velocity$velocity lost its requested root: $cents cents")
+            }
+        }
+    }
+
+    @Test
+    fun `breath swells more gently than struck voices and keeps a pitched body between openings`() {
+        fun window(samples: FloatArray, from: Double, to: Double) =
+            samples.copyOfRange((from * Dsp.RATE).toInt(), (to * Dsp.RATE).toInt())
+        fun onsetRatio(samples: FloatArray): Double =
+            TangleMeasure.rms(window(samples, .005, .025)) /
+                TangleMeasure.rms(window(samples, .10, .20)).coerceAtLeast(1e-12)
+        // Removing recurrent excitations isolates the opening law. Within-render RMS ratios
+        // cannot be improved merely by making BREATH quieter than the struck voices.
+        val isolated = Wick.defaults(WickVoice.BREATH) + mapOf("FEED" to 0f, "CASCADE" to 0f)
+        val breath = Wick.inspect(WickVoice.BREATH, isolated, midi = 60)
+        val softOnset = onsetRatio(breath.raw)
+        for (other in listOf(WickVoice.WOOD, WickVoice.BUBBLE)) {
+            val struck = Wick.inspect(other, isolated, midi = 60)
+            val struckOnset = onsetRatio(struck.raw)
+            println("WICK BREATH vs $other matched controls: onset/body RMS $softOnset / $struckOnset")
+            // Opening time alone does not determine the acoustic rise: BREATH's shallower
+            // VCA curve also carries its closing tails. Require at least 20% less relative
+            // early energy than the already softened BUBBLE, as well as the dry WOOD voice.
+            assertTrue(softOnset < struckOnset * .80,
+                "BREATH lacks a gentler acoustic swell relative to $other: $softOnset / $struckOnset")
+        }
+        for (midi in listOf(48, 60, 72)) {
+            val probe = Wick.inspect(WickVoice.BREATH, midi = midi)
+            val windows = (5 until 35).map { index ->
+                TangleMeasure.rms(window(probe.raw, index * .05, (index + 1) * .05))
+            }
+            val continuity = windows.min() / windows.max().coerceAtLeast(1e-12)
+            println("WICK BREATH MIDI$midi 50ms envelope floor/peak $continuity")
+            // The scored body must not fall into separated near-silent pops. The final finite
+            // tail is deliberately excluded: an ordinary note must still be allowed to end.
+            assertTrue(continuity > .04, "BREATH MIDI$midi has a gap between openings: $continuity")
+            val body = window(probe.raw, .60, .90)
+            val wanted = Keys.midiHz(midi)
+            val measured = FineTuning.measuredHz(Snip(body, 1, Dsp.RATE), wanted, 0f, .3f)
+            val cents = FineTuning.cents(measured, wanted.toDouble())
+            val rootShare = TangleMeasure.toneShare(body, wanted.toDouble())
+            println("WICK BREATH MIDI$midi sustained root $cents cents, share $rootShare")
+            assertTrue(abs(cents) < 25.0, "BREATH MIDI$midi sustained body lost the requested note: $cents cents")
+            assertTrue(rootShare > .10, "BREATH MIDI$midi root is only a trace in the sustained body: $rootShare")
+            assertTrue(probe.diagnostics.events.any { it.kind == "CASCADE" },
+                "BREATH MIDI$midi sustained tone bypasses the answering gate network")
+        }
+    }
+
+    @Test
+    fun `flicker retains its bright requested note while exposing quiet half-order metal partials`() {
+        val controls = Wick.defaults(WickVoice.FLICKER) + mapOf("FEED" to 0f, "CASCADE" to 0f)
+        fun body(samples: FloatArray) = samples.copyOfRange((.05 * Dsp.RATE).toInt(), (.30 * Dsp.RATE).toInt())
+        // These projections divide by each render's own energy, so a louder or quieter copy
+        // cannot pass for metallic color. Isolating the first gate also prevents BUBBLE's
+        // optional later 3:2 component from masquerading as this voice's primary source.
+        fun coherentShare(samples: FloatArray, hz: Double): Double {
+            var real = 0.0
+            var imaginary = 0.0
+            var energy = 0.0
+            for (i in samples.indices) {
+                val sample = samples[i].toDouble()
+                val phase = 2 * PI * hz * i / Dsp.RATE
+                real += sample * cos(phase)
+                imaginary += sample * sin(phase)
+                energy += sample * sample
+            }
+            return 2 * (real * real + imaginary * imaginary) / (samples.size * energy).coerceAtLeast(1e-30)
+        }
+        fun halfOrderShare(samples: FloatArray, hz: Double) = listOf(.5, 1.5, 2.5, 3.5, 5.5)
+            .sumOf { ratio -> coherentShare(samples, hz * ratio) }
+        for (midi in listOf(48, 60, 72)) {
+            val probe = Wick.inspect(WickVoice.FLICKER, controls, midi)
+            val excerpt = body(probe.raw)
+            val wanted = Keys.midiHz(midi)
+            val rootShare = coherentShare(excerpt, wanted.toDouble())
+            val metalShare = halfOrderShare(excerpt, wanted.toDouble())
+            val snip = Snip(excerpt, 1, Dsp.RATE)
+            val measured = FineTuning.measuredHz(snip, wanted, 0f, .25f)
+            val cents = FineTuning.cents(measured, wanted.toDouble())
+            val detected = assertNotNull(Pitch.detect(snip, 0f, .25f), "FLICKER MIDI$midi bright body is unpitched")
+            val detectedCents = FineTuning.cents(detected.hz.toDouble(), wanted.toDouble())
+            println("WICK FLICKER MIDI$midi root share $rootShare, half-order share $metalShare, root $cents cents, detector $detectedCents cents/confidence ${detected.confidence}")
+            assertTrue(rootShare > .10, "FLICKER MIDI$midi requested root is only a trace: $rootShare")
+            assertTrue(abs(cents) < 25.0, "FLICKER MIDI$midi bright body loses the requested root: $cents cents")
+            assertTrue(detected.confidence > .3f && abs(detectedCents) < 35.0,
+                "FLICKER MIDI$midi metallic color obscures the playing pitch: ${detected.hz} Hz, confidence ${detected.confidence}")
+            assertTrue(metalShare > .002, "FLICKER MIDI$midi has negligible half-order color: $metalShare")
+            for (other in listOf(WickVoice.PLUCK, WickVoice.BUBBLE)) {
+                val reference = body(Wick.inspect(other, controls, midi).raw)
+                val referenceShare = halfOrderShare(reference, wanted.toDouble())
+                println("WICK FLICKER vs $other MIDI$midi matched-controls half-order share $metalShare / $referenceShare")
+                assertTrue(metalShare > referenceShare * 2.0 + .001,
+                    "FLICKER MIDI$midi half-order color is not distinct from $other: $metalShare / $referenceShare")
             }
         }
     }
@@ -261,7 +355,7 @@ class WickTest {
     }
 
     @Test
-    fun `actual onset timbre avoids drum choke classes without the long-file loop override`() {
+    fun `onset evidence avoids drum choke classes or proves sustained breath through the cropped boundary`() {
         val failures = mutableListOf<String>()
         // C1 exposes the extreme low-register limit; C2/C4/C6 exercise the ordinary pitched range.
         for (voice in WickVoice.entries) for (midi in listOf(24, 36, 60, 84)) for (moderate in listOf(false, true)) {
@@ -274,7 +368,40 @@ class WickTest {
             val evidence = "$voice MIDI$midi moderate$moderate onset=${classification.drumClass} " +
                 "decayMs=${f.decayMs} centroidHz=${f.centroidHz} lowRatio=${f.lowRatio} flatness=${f.flatness}"
             println("WICK $evidence")
-            if (classification.drumClass in TangleMeasure.drumClasses) failures.add(evidence)
+            if (classification.drumClass in TangleMeasure.drumClasses) {
+                if (voice == WickVoice.BREATH) {
+                    // Features.decayMs measures from the first 99%-peak window. If no
+                    // -20 dB crossing occurs, it returns the remaining buffer duration.
+                    // A later overlapping BREATH answer can place that peak near the end
+                    // of this 1.2-second crop, making sustained audio read as a short decay.
+                    // Reproduce its peak windows and require direct envelope
+                    // evidence; neither a label override nor a longer-file LOOP shortcut
+                    // is accepted as proof that the underlying note remains sustained.
+                    val hop = 256
+                    val window = 1024
+                    val envelope = FloatArray(maxOf(1, onset.samples.size / hop)) { index ->
+                        val from = index * hop
+                        (from until minOf(onset.samples.size, from + window)).maxOf { abs(onset.samples[it]) }
+                    }
+                    val peak = envelope.max()
+                    val peakIndex = envelope.indexOfFirst { it >= peak * .99f }
+                    val peakSeconds = peakIndex * hop.toDouble() / Dsp.RATE
+                    val postPeakFloor = envelope.drop(peakIndex).min() / peak.coerceAtLeast(1e-12f)
+                    val censoredMs = (envelope.size - peakIndex) * hop * 1000f / Dsp.RATE
+                    println("WICK $evidence late peak ${peakSeconds}s, post-peak floor $postPeakFloor")
+                    assertTrue(peakSeconds > .65, "$evidence has an early struck peak, not a late overlapping answer")
+                    assertTrue(postPeakFloor > .20f, "$evidence actually decays after its peak: floor $postPeakFloor")
+                    assertTrue(abs(f.decayMs - censoredMs) < .001f,
+                        "$evidence reports an observed decay rather than the cropped remaining duration $censoredMs")
+                    val wanted = Keys.midiHz(midi)
+                    val body = Snip(onset.samples.copyOfRange((.65 * Dsp.RATE).toInt(), (1.05 * Dsp.RATE).toInt()), 1, Dsp.RATE)
+                    val measured = FineTuning.measuredHz(body, wanted, 0f, .4f)
+                    val cents = FineTuning.cents(measured, wanted.toDouble())
+                    assertTrue(abs(cents) < 25.0, "$evidence late sustained body lost its root: $cents cents")
+                    assertTrue(TangleMeasure.toneShare(body.samples, wanted.toDouble()) > .10,
+                        "$evidence late sustained root is only a trace")
+                } else failures.add(evidence)
+            }
         }
         assertTrue(failures.isEmpty(), "Onsets entered drum choke classes:\n${failures.joinToString("\n")}")
     }

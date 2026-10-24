@@ -100,6 +100,10 @@ object Treatments {
         "touchwahed" to FxChain(wah = mapOf("TOUCH" to 1.0f)),
         // One heel-to-toe-to-heel gesture, then it waits. CLI and saved kits only.
         "rockwahed" to FxChain(wah = mapOf("ROCK" to 1.0f)),
+        // A delay pedal: ECHO's long, dark repeats (225 ms apart, feedback 0.66, darkening) fed only the note's
+        // first 120 ms, so a held note's attack comes back as a repeat. MIX 0.75 is the owner's pick
+        // (docs/superpowers/specs/2026-10-22-delay-head-design.md). The DELAY chip is this character once its gate passes.
+        "delayed" to FxChain(echo = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

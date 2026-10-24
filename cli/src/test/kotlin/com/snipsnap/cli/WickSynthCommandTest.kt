@@ -20,7 +20,7 @@ class WickSynthCommandTest {
     fun `WICK all auditions use the provisional roster and native note and velocity`() {
         val dir = kotlin.io.path.createTempDirectory("wick-cli-all").toFile()
         try {
-            for (voice in listOf(WickVoice.PLUCK, WickVoice.WOOD)) {
+            for (voice in listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) {
                 assertTrue(Presets.forVoice("WICK", voice.name).isEmpty(), "CLI must find the provisional table directly")
                 val output = ByteArrayOutputStream()
                 val voiceDir = File(dir, voice.name)

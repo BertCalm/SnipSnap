@@ -30,7 +30,7 @@ $('#volume').addEventListener('input',()=>{if(active)active.level.gain.setTarget
 function button(label,id,secondary=false){const b=document.createElement('button');b.type='button';b.textContent=label;b.dataset.play=id;b.setAttribute('aria-pressed','false');if(secondary)b.className='secondary';return b;}
 for(const voice of ['knock','answer']){
  const notes=document.querySelector(`[data-voice="${voice}"]`);for(const [note,midi] of [['C3',48],['C4',60],['C5',72]])notes.append(button(note,`${voice}-default-${midi}`));
- const c=clips.get(`${voice}-default-60`);$(`#${voice}-stat`).textContent=`${c.primaryContacts} direct · ${c.higherContacts} higher contacts · ${c.seconds.toFixed(2)} seconds`;
+ const c=clips.get(`${voice}-default-60`);$(`#${voice}-stat`).textContent=`Defaults: ${c.primaryContacts} direct · ${c.higherContacts} higher contacts · ${c.seconds.toFixed(2)} seconds`;
  const map=$(`#${voice}-map`);for(let stone=0;stone<4;stone++){const row=document.createElement('div');row.className=`contact-row ${stone?'upper':''}`;for(const event of c.contactEvents || [])if(event.stone===stone){const bar=document.createElement('span');bar.style.left=`${Math.min(99,event.seconds/c.fullSeconds*100)}%`;bar.title=`Stone ${stone+1} at ${event.seconds.toFixed(3)} s`;row.append(bar);}map.append(row);}
 }
 for(const voice of ['KNOCK','ANSWER'])for(const middle of [false,true]){
