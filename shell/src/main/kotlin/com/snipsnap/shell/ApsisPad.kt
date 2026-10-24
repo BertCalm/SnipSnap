@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.kit.KitPad
+import com.snipsnap.audio.AutoPlace
 import com.snipsnap.synth.Apsis
 import com.snipsnap.synth.ApsisPatch
 

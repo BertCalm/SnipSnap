@@ -36,6 +36,9 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Starter renders retain bounded engine caches; the three-minute import
+    // fixture also needs room for both source and decoded PCM in the full run.
+    maxHeapSize = "1g"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
