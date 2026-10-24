@@ -7,8 +7,9 @@ feedforward sympathetic trace. WEAVE, HOLLOW, WIRE, TANGLE and TRACE share the
 same structure and equal excitation budgets. Every bank has its own root mode;
 there is no fourth anchor. Output is dry mono, 4x internal / 44.1 kHz delivery.
 
-Owner listening, HOLD, a validated PAIR departure family, production presets and
-phone integration remain later work. COMPLETE means only that a finite simulation
+HOLD, a validated PAIR departure family, bank/hardware listening and on-device
+performance remain later work. Model-two presets and phone registration are
+implemented in the playable-bank round below. COMPLETE means only that a finite simulation
 horizon was reached. No trajectory is claimed to escape forever.
 
 ## Physics and deterministic recall
@@ -73,7 +74,8 @@ eight seconds with a delivery tail fade. HOLD must be zero and other values refu
 `TrefoilPatch` saves explicit MIDI 36–84, velocity, exact signed 64-bit seed as
 decimal text, duration, active duration and model within shared patch version 1.
 `Patches`, `PadRecipe` and physical `Velocity` replay support it. Prototype recipes
-stay outside the factory roster and phone picker until heard. Edits preserve
+originally stayed outside the factory roster and phone picker. The model-two
+playable bank is now registered separately. Edits preserve
 non-macro state. No hidden solver or DSP state is serialized.
 
 ## Reproduce the audition
@@ -197,12 +199,65 @@ storage key; earlier notes remain with the original page.
 - Longer upper-partial memory leaves a different tail. Disabling it removes only
   that contribution, so a compensating dry-volume change cannot mimic its effect.
 - The original model stays replayable. This is a new acoustic candidate awaiting
-  Josh's verdict, with finite gestures and phone integration still deferred.
+  Josh's verdict, with finite gestures and on-device performance still to be judged.
 
 **Verified/measured ledger:** numerical invariants, exact replay, pitch and audio
 measurements are recorded in the generated diagnostics and verification report.
 Browser QA checks switching, playback and signal/silence routing. Spectral residuals
-are not perceptual thresholds. This model has not yet received listening acceptance.
+are not perceptual thresholds. Josh subsequently described the revised audition as
+"Sounds pretty good" and authorized the playable-bank round. That supports model 2
+as the sound-direction baseline; the new preset bank and hardware still need listening.
 The trajectory cache avoids repeat solver work; audio rendering remains an offline
 prototype, and measured render times are disclosed per recording rather than a
 claimed phone latency budget.
+
+## Playable bank and SnipSnap registration
+
+`TrefoilPresets` authors twelve model-two C4 recipes: four plucks, four keys, two
+moving wire gestures and two memory gestures. Each keeps an explicit finite contact
+time, duration, seed, note and native strike. The acoustic model itself is unchanged.
+The original model-one renderer, model-two listening recordings and their recipes
+remain replayable.
+
+`Presets` exposes all five Trefoil voices. `SynthKits.trefoil` and the `trefoil`
+starter expose sixteen finite pads. A01–A12 transpose the twelve colors onto
+repeating C4/Eb4/F4/G4 columns; A13–A16 place First Weave on C3/Eb3/F3/G3. Native
+strike velocities .3, .6 and .8 become MIDI zones 1–41, 42–84 and 85–127. Softer
+layers re-render the exact same recipe and peak-match the main layer; host velocity
+then owns playback level. This preserves source-response changes without adding
+an equalizer to manufacture contrast. Short, nearly linear contacts can have
+subtle timbral velocity differences.
+
+The phone engine adapter exposes ROOT, VELOCITY, CONTACT and the five timbral
+macros. Unsupported HOLD is hidden and SCRAMBLE keeps it at zero. Generic patch
+editing and drafts retain full recipes; UserPresets promotion emits a complete
+JSON constructor into a separate promoted list. SPREAD uses the authored MIDI
+root instead of guessing an octave from strong upper harmonics.
+
+`generateTrefoilPlayableBank` writes the twelve-preset, three-touch browser bank,
+sixteen-pad MPC 3 track and MPC 2 twin, forty-eight mono PCM24 kit samples, complete
+kit recipes, portable pad map, source patch, asset hashes and two musical scores
+under ignored `testkit/trefoil-playable-bank/`. Weave Study is sparse at 96 BPM;
+Crossings overlaps chords and a three-touch pluck pattern at 104 BPM. Both patterns
+are embedded in the MPC 3 track and retained in `groove.json`; set project tempo
+for the selected pattern. Musical previews read the actual exported velocity
+WAVs, preserve full finite endings and disclose their fixed monitor gain and
+SnipSnap preview velocity law. Matched demo WAVs add only a saved scalar gain.
+
+```sh
+./gradlew --no-daemon :synth:generateTrefoilPlayableBank
+./gradlew --no-daemon :synth:test --tests com.snipsnap.synth.TrefoilBankTest
+./gradlew --no-daemon :shell:test --tests com.snipsnap.shell.TrefoilIntegrationTest
+```
+
+### Why the bank is built this way
+
+- Presets change contact and musical role while retaining the revised sound model.
+  An acoustic-model change would require another original/revised listening gate.
+- Every velocity zone comes from native excitation. Peak matching leaves playing
+  level to the host while retaining the source's own contact response.
+- The two demos use exported samples, so overlapping tails and zone selection can
+  be judged before hardware. A valid program file does not establish a hardware
+  listening result or on-device render performance.
+- The earlier studies and their browser notes keep their own locations and storage
+  keys. The playable bank is a new listening round, not a replacement verdict.

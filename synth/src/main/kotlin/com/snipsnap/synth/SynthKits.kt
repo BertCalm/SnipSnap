@@ -11,6 +11,8 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Finite model-two colors with three native velocity zones per pad. */
+    fun trefoil(): List<ArrangedPad?> = TrefoilKits.build()
 
     /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
     fun scannedChain(): List<ArrangedPad?> {

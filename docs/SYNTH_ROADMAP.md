@@ -1,11 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
-**Trefoil finite listening prototype (2026-10-20).** Five provisional studies
-use unsoftened three-body trajectories, three pitched banks with passive internal
-exchange, and feedforward sympathetic memory. Complete recipes, numerical probes
-and `generateTrefoilAudition` provide moving/frozen comparisons, isolated threads,
-one-body transfer proof and control/register sweeps. HOLD is rejected; PAIR,
-factory/phone integration and owner listening acceptance remain later work.
+**Trefoil model-two playable bank (2026-10-24).** The revised sound direction has
+positive owner feedback. Twelve finite presets, three native velocity layers,
+a sixteen-pad MPC starter and two exported-sample musical studies extend that
+baseline without changing its DSP. Preset, phone-adapter, starter and complete
+saved-recipe registration are implemented. `generateTrefoilPlayableBank` rebuilds
+the kit, MPC 3/MPC 2 programs, browser bank and replay artifacts. The original and
+revised physics/causal auditions remain available. HOLD, PAIR, on-device performance
+and listening acceptance of the new bank remain later work.
 See [TREFOIL.md](TREFOIL.md) for the model and reproduction.
 
 Capture is the headline; synthesis is the second leg. The goal: dial in drum

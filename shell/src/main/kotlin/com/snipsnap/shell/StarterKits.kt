@@ -276,6 +276,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scannedChain() },
         Starter(
+            "trefoil", "TREFOIL",
+            "Three-body plucks, keys, moving wires and long memory, with three touch layers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.trefoil() },
+        Starter(
             "trio", "TRIO",
             "Plucked performers and single-strike replies in C minor pentatonic. Low, middle and high drama.",
             seeded = false,

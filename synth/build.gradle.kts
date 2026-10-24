@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateTrefoilPlayableBank") {
+    group = "distribution"
+    description = "Render twelve Trefoil presets, three native velocity layers, sixteen MPC pads and two musical performances."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilPlayableBankGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("trefoilBankOutput").orNull ?: "${rootDir}/testkit/trefoil-playable-bank")
+}
+
 /** The retained DRAMA development comparisons. */
 tasks.register<JavaExec>("generateTrioAudition") {
     group = "distribution"

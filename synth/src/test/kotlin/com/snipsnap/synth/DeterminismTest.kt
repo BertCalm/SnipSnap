@@ -10,6 +10,11 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `TREFOIL factory gestures retain seeded model two replay`() {
+        val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
+        assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)
+    }
 
     @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
