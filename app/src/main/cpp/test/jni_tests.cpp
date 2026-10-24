@@ -41,6 +41,8 @@ void Java_com_snipsnap_app_NativePads_commitBank(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, jint, jlong, jlong, jlong, jfloat, jfloat, jdouble, jboolean);
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong, jint, jfloat);
 jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
 jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong);
@@ -347,6 +349,30 @@ TEST(jni_refuses_a_sample_it_cannot_copy) {
     CHECK_EQ(static_cast<int>(pads->drainEnded(buf, 8)), 1);
     CHECK_EQ(buf[0], 5);
 
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_pads_reports_the_frames_rendered) {
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    pull(reinterpret_cast<PadEngine*>(h), 24);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_framesRendered(e, nullptr, h), jlong{24});
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_pads_stop_voice_reports_a_full_ring_and_recovers) {
+    // The ring is 256 slots with one sentinel, so 255 commands fit (see
+    // ring_keeps_order_and_drops_when_full in engine_tests.cpp). The Kotlin
+    // side keeps and retries a refused stop on this boolean; if the bridge
+    // swallowed the refusal a stop would be dropped silently.
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    for (int i = 0; i < 255; ++i) {
+        CHECK(Java_com_snipsnap_app_NativePads_stopVoice(e, nullptr, h, i, 5.0f) == JNI_TRUE);
+    }
+    CHECK(Java_com_snipsnap_app_NativePads_stopVoice(e, nullptr, h, 255, 5.0f) == JNI_FALSE);
+    pull(reinterpret_cast<PadEngine*>(h), 8);  // one callback drains the ring
+    CHECK(Java_com_snipsnap_app_NativePads_stopVoice(e, nullptr, h, 255, 5.0f) == JNI_TRUE);
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 

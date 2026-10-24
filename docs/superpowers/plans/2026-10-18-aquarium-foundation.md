@@ -3,7 +3,7 @@
 **Date:** 2026-10-18  
 **Design:** [Aquarium integration — pads and a shared environment](../specs/2026-10-18-aquarium-integration-design.md)  
 **Base:** `45ba33832950530bb0148435378b4556045c6cf6`  
-**Current implementation scope:** shared native core, canonical recipe contract, provenance and host validation. Later stages below are planned work, not shipped app behavior.
+**Current implementation scope:** the foundation and offline bridge are complete. The PAD-only control panel now connects the bridge to the pad sheet, ahead of the continuous bus. Stage 2 and the PERFORMANCE portion of Stage 3 remain planned work.
 
 ## Accepted direction
 
@@ -11,7 +11,7 @@ The owner heard the [private audition](https://snipsnap-aquarium-pedals-audition
 
 The source audition used XO_OX-XOmnibus commit `a9bdc7803d899f0b1688fe0c0abc4ce481a76c3e` and SnipSnap source material from `8266ae915ecef98967c4d1d1b16ffa1ac92b1d81`. Import the corrected extraction rather than reverting its filter, Fathom, random-clock or Biolume state repairs. Keep license/provenance, the reproducible extraction and the admitted Biolume pitch-ring seams.
 
-## Stage 0 — foundation in this change
+## Stage 0 — foundation (complete)
 
 ### 0A. Import the audited DSP
 
@@ -53,9 +53,9 @@ Run the existing native engine/JNI target and the affected JVM suites after foun
 
 **Exit:** the corrected core and settings are reviewable, reproducible and tested in SnipSnap; existing playback/output remain unchanged. No visible feature door is added. Record actual commands/results in the change report rather than marking Android/device checks passed from host success.
 
-## Stage 1 — offline bridge and whole-pad semantics
+## Stage 1 — offline bridge and whole-pad semantics (complete)
 
-This is a subsequent change. It supplies a real native bridge to the same DSP and a host operation with preserved inputs.
+The [offline bridge](https://github.com/BertCalm/SnipSnap/pull/622) supplies a real native bridge to the same DSP and a host operation with preserved inputs. See [the current contract](../../AQUARIUM.md).
 
 1. Implement offline `Snip` rendering: duplicate mono into L/R, retain stereo, use actual source sample rate, saved tempo/seed, fresh state and arbitrary bounded block partitioning.
 2. Define a versioned complete pad-render envelope naming the exact baked input/hash and actual BPM, and preserving its prior recipe/metadata. Do not replace the source with its raw synth patch or assume existing last-operation recipes describe a full history.
@@ -83,7 +83,9 @@ This is separate from per-pad rendering. Reuse Stage 0's processor/settings, wit
 
 ## Stage 3 — connected TapeOS panel and end-to-end checks
 
-- Add a qualified AQUARIUM panel with presets, BEFORE/dry comparison and explicit PAD/PERFORMANCE scope.
+The PAD portion is implemented ahead of Stage 2: TREATMENT → AQUARIUM opens a qualified AQUARIUM · PAD panel with all accepted presets, all 52 controls, main-sample BEFORE/PREVIEW and whole-pad KEEP/REMOVE/UNDO. Render context survives sound edits; pending preview delivery is invalidated by edits, closing and navigation. No PERFORMANCE scope is offered until its routes work. See [the PAD workflow](../../AQUARIUM.md#pad-controls) and the change's validation results for checks actually run.
+
+- Complete the PERFORMANCE portion after Stage 2, with explicit scope and matching print routes.
 - Use Depth/Motion/Color tabs with the two original effect headings, independent bypass, plain primary controls and folded details. Do not change PEDALS placement or add an inactive treatment chip.
 - Derive control values and closed summaries from the canonical recipe. Save resolved values; presets and pair controls write that same settings value.
 - Use existing TapeOS tokens/type, dark sound displays and >=44 dp targets. Verify phone-width labels and accessibility semantics, visible busy state, source/undo feedback and persistent settings.

@@ -15,16 +15,19 @@ package com.snipsnap.kit
  *    only data for every note on the same channel, so the last channel
  *    status has to be remembered across deliveries too.
  *  - **real-time bytes land anywhere**, even between a status byte and
- *    its data. Clock (0xF8), start, stop and active sensing (0xFE) are
- *    single bytes that must be stepped over without disturbing the
- *    message they interrupted - or the running status, which they do
- *    not cancel. System common messages (song position, a SysEx) *do*
- *    cancel it, as the spec says.
+ *    its data. Clock (0xF8), start, continue and stop are single bytes
+ *    that come out as their own events at the place they arrived,
+ *    without disturbing the message they interrupted - or the running
+ *    status, which they do not cancel. Active sensing (0xFE), reset and
+ *    the two undefined bytes are stepped over and dropped. System
+ *    common messages (song position, a SysEx) *do* cancel running
+ *    status, as the spec says.
  *
- * What comes out is only what a player needs: notes and controllers.
- * Pitch bend, aftertouch and program changes are read correctly - their
- * lengths are honoured, so the bytes after them stay in step - and
- * dropped. A note-on at velocity 0 is a note-off, the convention every
+ * What comes out is what a player and a transport need: notes,
+ * controllers, and the clock's own four bytes. Pitch bend,
+ * aftertouch and program changes are read correctly - their lengths
+ * are honoured, so the bytes after them stay in step - and dropped.
+ * A note-on at velocity 0 is a note-off, the convention every
  * keyboard built since 1983 relies on.
  *
  * Velocity is MIDI's 1..127 as 0..1, the inverse of what [MidiGroove]
@@ -46,17 +49,17 @@ package com.snipsnap.kit
  * Hostile input is a stream, not a file: a parser is never more than
  * one message behind, holds at most two pending data bytes, and skips a
  * SysEx byte by byte until its 0xF7 or the next status byte that is not
- * real-time, so no input can make it allocate or stall. MIDI 1.0 asks a
- * receiver to take that status byte as the end, and it is what keeps a
- * SysEx that lost its 0xF7 from swallowing every note after it: a
- * keyboard that sends only channel messages from then on never sends
- * another byte that would end it.
+ * real-time. Output is bounded by input length (one event per byte at
+ * most, the real-time branch being the one that emits per byte), and
+ * the parser never stalls or holds more than one message. MIDI 1.0
+ * asks a receiver to take that status byte as the end, and it is what
+ * keeps a SysEx that lost its 0xF7 from swallowing every note after
+ * it: a keyboard that sends only channel messages from then on never
+ * sends another byte that would end it.
  */
 class MidiWire {
 
     sealed interface Event {
-        val channel: Int
-
         /**
          * When the delivery that completed this event arrived, in the
          * nanoseconds of the clock the caller gave [feed]; 0 when it gave
@@ -66,16 +69,21 @@ class MidiWire {
          */
         val timestampNanos: Long
 
+        /** A channel message: a note or a controller on one of sixteen channels. */
+        sealed interface Channel : Event {
+            val channel: Int
+        }
+
         /** A key down, [velocity] in (0, 1]. */
         data class NoteOn(
             override val channel: Int,
             val note: Int,
             val velocity: Float,
             override val timestampNanos: Long = 0L,
-        ) : Event
+        ) : Channel
 
         /** A key up. The release velocity, when a keyboard sends one, is not kept: nothing here plays it. */
-        data class NoteOff(override val channel: Int, val note: Int, override val timestampNanos: Long = 0L) : Event
+        data class NoteOff(override val channel: Int, val note: Int, override val timestampNanos: Long = 0L) : Channel
 
         /** A continuous controller: [controller] 0..127 at [value] 0..127. */
         data class Control(
@@ -83,7 +91,22 @@ class MidiWire {
             val controller: Int,
             val value: Int,
             override val timestampNanos: Long = 0L,
-        ) : Event
+        ) : Channel
+
+        /** A system real-time message: one byte, no channel, the transport's clock and its buttons. */
+        sealed interface RealTime : Event
+
+        /** One tick of the timing clock (0xF8), twenty-four to a quarter note. */
+        data class Clock(override val timestampNanos: Long = 0L) : RealTime
+
+        /** The transport starts from the top (0xFA). */
+        data class Start(override val timestampNanos: Long = 0L) : RealTime
+
+        /** The transport resumes from where it stopped (0xFB). */
+        data class Continue(override val timestampNanos: Long = 0L) : RealTime
+
+        /** The transport stops (0xFC). */
+        data class Stop(override val timestampNanos: Long = 0L) : RealTime
     }
 
     /** The status byte the last channel message carried, for running status; 0 before any. */
@@ -116,7 +139,13 @@ class MidiWire {
             val b = bytes[i].toInt() and 0xFF
             when {
                 // Real-time: one byte, anywhere - inside a SysEx too - changes nothing around it.
-                b >= 0xF8 -> {}
+                // The four the transport uses become events; the other four are dropped.
+                b >= 0xF8 -> when (b) {
+                    TIMING_CLOCK -> out += Event.Clock(stamp)
+                    START -> out += Event.Start(stamp)
+                    CONTINUE -> out += Event.Continue(stamp)
+                    STOP -> out += Event.Stop(stamp)
+                }
                 b >= 0xF0 -> {
                     // System common cancels running status and whatever was
                     // half-built; a SysEx swallows its data to its end, and
@@ -181,6 +210,12 @@ class MidiWire {
         private const val PROGRAM_CHANGE = 0xC0
         private const val CHANNEL_PRESSURE = 0xD0
         private const val SYSEX_START = 0xF0
+
+        /** System real-time: the timing clock, 24 to a quarter note. */
+        const val TIMING_CLOCK = 0xF8
+        const val START = 0xFA
+        const val CONTINUE = 0xFB
+        const val STOP = 0xFC
 
         /** The sustain pedal: at or above [CC_SWITCH_ON] the pedal is down. */
         const val CC_SUSTAIN = 64

@@ -1,6 +1,6 @@
 # The pedal board: guitar-pedal effects for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built with its listening gate pending (`2026-10-17-wah-section-design.md`). A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
+**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built and passed its gate on 2026-10-23 with a chip for each of its three moves (`2026-10-17-wah-section-design.md`); COMP did not, and Stage 2 is next. A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
 **Builds on:** VALVE (the rack's amp section, `2026-09-29-magnet-valve-design.md`) and the MAGNET guitar engine (merged, PR #438).
 **Roadmap row:** S30 in `docs/SYNTH_ROADMAP.md` (the table is numbered by arrival; SUTURE already claims S29).
 
@@ -85,6 +85,8 @@ A compressor built for sustain, **before the amp, after the wah** (the guitar co
 - a **release of 300 ms or more** (adds 2.6 to 3.5 dB alone); ratio 4:1 is enough (8:1 adds only 1.5 to 1.8 dB); attack about 5 ms keeps a pluck's crest near dry;
 - **make-up gain of 12 to 23 dB**, best made on the body with a limiter at the peak; the cost is that it lifts the noise floor, and the amp after it, by the same amount.
 Macros, the section's name (a permanent saved key; `squash` is taken) and its neutrals are settled at its own brainstorm. The COMP chip's recipe moves from SQUASH to this section when it passes its gate.
+
+**Heard, 2026-10-23 (the WAH gate's page):** COMP at AMT 70 lifts the tail too little on the snare and the choir (measured 6.7 and 8.1 dB over the dry pad; 11.5 and 10.8 at 100), and on the guitars, where it lifts 1.1 to 1.9 dB (JANGLE) and 0.2 to 0.4 (CHUG) after the amp, the owner wants the fix now rather than at Stage 3. So this stage is next. COMP keeps its chip until then. **The design is `2026-10-23-compressor-section-design.md`** (prototyped in Python, gate pending): its prototype found that on a one-shot a short release, not a long one, is what sustains, so the release line above does not hold for ring time.
 
 ## Stage 3: the board in front of the amp, for guitar pads
 

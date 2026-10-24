@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Thirty-six dry instruments. The original eight remain first, with their saved recipes intact. */
+/** Forty dry instruments. The original thirty-six remain first, with their saved recipes intact. */
 object PrismPresets {
     private fun p(voice: PrismVoice, name: String, vararg macros: Pair<String, Float>) =
         PrismPatch(name, voice, Prism.defaults(voice) + macros.toMap())
@@ -278,7 +278,9 @@ object PrismPresets {
             p(PrismVoice.GLASS, "Slow Crystal", "GRAIN" to .78f, "DRIFT" to .82f, "SHAPE" to .62f, "STRIKE" to .26f, "BODY" to .60f, "HOLD" to 1f)
                 .copy(template = glass(attack = .05f, decay = 3.5f, groups = crystalMotion, loop = 3.6f,
                     scale = { n -> when (n) { 1 -> 1f; 2 -> .18f; 3 -> .92f; 4 -> .20f; 5 -> .48f; 6 -> .38f; else -> .25f } }))),
-    )
+    ) + PrismOpeningPresets.all().map { patch ->
+        e(requireNotNull(PrismOpeningPresets.descriptionFor(patch.name)), patch)
+    }
 
     fun forVoice(voice: PrismVoice): List<PrismPatch> = presets.filter { it.voice == voice }
     fun all(): List<PrismPatch> = presets
