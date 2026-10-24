@@ -1,7 +1,12 @@
 package com.snipsnap.app.ui
 
+import android.os.Handler
 import android.os.Looper
 import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
+import kotlin.coroutines.intrinsics.intercepted
+import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
+import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -23,6 +28,12 @@ import kotlinx.coroutines.withContext
  * activity destroy that `AquariumPanelTest`'s held-preview cases hit about
  * one round in thirty. Hopping back here keeps every state write after the
  * block on the main thread, in tests as in the app.
+ *
+ * The hop is a posted resume, not `withContext(Dispatchers.Main)`: when
+ * that block finishes before this worker has suspended, `withContext`
+ * returns straight back here, still on the worker. A 60-round run with
+ * `withContext` as the hop caught exactly that in 7 rounds. Here the
+ * coroutine always suspends first, and only the main thread resumes it.
  */
 internal suspend fun <T> offMain(
     context: CoroutineContext = Dispatchers.IO,
@@ -30,5 +41,10 @@ internal suspend fun <T> offMain(
 ): T {
     val result = withContext(context, block)
     if (Looper.myLooper() == Looper.getMainLooper()) return result
-    return withContext(Dispatchers.Main.immediate) { result }
+    return suspendCoroutineUninterceptedOrReturn { continuation ->
+        mainThread.post { continuation.intercepted().resume(result) }
+        COROUTINE_SUSPENDED
+    }
 }
+
+private val mainThread = Handler(Looper.getMainLooper())
