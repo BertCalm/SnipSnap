@@ -83,3 +83,90 @@ sonic approval or physical Android/MPC playback.
   distortion mechanism to solve a layer-balance problem.
 - Saving the response keeps earlier recipes replayable and makes the comparison
   recipes explicit about which behavior they use.
+
+## Full-range follow-up, 2026-10-24
+
+The owner clarified that turning EDGE from zero to maximum remained too subtle
+on the other seven recipes. Soft Digital and Bright Margin were heard as
+responsive. The preceding review's two-preset acceptance guard was too narrow
+for that feedback.
+
+### Fix now
+
+- **[A, D] The body masks the changing partials.** The source gain still tops out
+  at 0.8 while the body stays present. Raising the saved edge level alone cannot
+  change that upper endpoint. Native complete held renders measured only 1.058 dB
+  of normalized band movement for Moving Corner and 1.601 dB for Copper Scan.
+  These are numerical contrasts, not hearing thresholds.
+- **[A, C] More edge power needs a pitch argument.** Reducing only the saved body
+  level widened the range, but one Twin Outline trial moved the pitch detector
+  up an octave. A partial boost with no additional root support also produced
+  octave detections in Rounded Edge and Twin Outline. Those trials were rejected.
+
+### Selected revision
+
+`CONTRAST` is a third saved response, leaving both earlier laws available. With
+EDGE `e` and the existing BODY root weight `r`, its shape laws are:
+
+```text
+body non-root multiplier = 1 - 0.65e
+edge non-root multiplier = 1 + 3e
+added body-root weight   = e × (0.5 + 0.4 × max(0, 1 - r))
+```
+
+The body retains at least 35% of its overtones. Only the edge's non-root detail
+gets the boost; its saved fundamental or interval keeps the prior weighting.
+Root support increases when BODY has already reduced the requested root. The
+mix budget includes both added contributions before the existing DRIVE stage.
+The constants are selected shape values, not a physical calibration. No new
+oscillator, table family, filter path, nonlinear stage or loop state is added.
+
+Seven factory recipes select this response. Soft Digital and Bright Margin keep
+their complete preceding recipes, including `FOREGROUND`. New voice defaults
+select `CONTRAST`. Missing/null fields still mean `LEGACY`; explicit earlier
+responses keep their arithmetic. The model number and oscillator phase seed stay
+unchanged. The only factory recipe field changed is the saved response identity.
+
+### What was measured, what was heard
+
+The selected native Kotlin prototype rendered 70 complete control cases and
+168 additional BODY/register/finite/held corners. The latter pitch detections
+stay within 2.594 cents with confidence at least 0.922. All 14 EDGE-zero prototype
+WAVs match the previous native recordings byte-for-byte. The final regression
+tests cover all seven full curves, each adjacent step, both note shapes and the
+pitch failures found during prototyping.
+
+| Held recipe | Previous full range | Selected full range | Selected 25–50% step |
+|---|---:|---:|---:|
+| Rounded Edge | 2.534 dB | 5.362 dB | 1.396 dB |
+| Moving Corner | 1.058 dB | 3.915 dB | 0.902 dB |
+| Dark Table | 4.784 dB | 6.132 dB | 0.712 dB |
+| Copper Scan | 1.601 dB | 3.663 dB | 0.806 dB |
+| Twin Outline | 3.624 dB | 10.491 dB | 2.534 dB |
+| Hollow Step | 1.694 dB | 5.609 dB | 1.384 dB |
+| Long Contour | 3.672 dB | 14.193 dB | 2.496 dB |
+
+These use the same 40 normalized logarithmic power bands as the earlier study.
+The preceding audition's complete FOREGROUND recipes are pinned as test resources
+from `47809ba2de9cf042bd77dc7feebffdffefc987b1`. The generator compares those with
+current recipes, rather than changing a response field on today's configuration
+and calling that the previous version. Both page cards can play 0%, 50% and 100%
+in sequence. The output still contains 180 complete cases with raw/matched WAVs,
+replay recipes and measured held closures.
+
+The owner's reported weak full range is heard evidence about the preceding
+version. The new response has not received listening approval. Stronger partial
+contrast can become too forward at high EDGE; numerical pitch checks do not
+establish perceived pitch or rounded character for every listener. Physical
+Android/MPC playback remains a separate verification step.
+
+### Why the follow-up is built this way
+
+- Trading overtone balance addresses masking while keeping each recipe's table
+  pair, scan paths and articulation.
+- Additional root support prevents the tested octave failure without removing
+  the BODY control's continuous influence.
+- Including added contributions in the source budget avoids using extra drive
+  as the explanation for greater contrast.
+- Keeping the two responsive recipes unchanged makes this round answer the
+  remaining seven, while saved response identities preserve earlier sounds.

@@ -27,7 +27,7 @@ oscillator, envelope and filter state and produces mono 44.1 kHz audio.
 | DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
 | HOLD | Finite sustain length; the top step supplies settled loop-only material |
 | BODY | Root-to-overtone balance: rounded root emphasis through a fuller partial spectrum |
-| EDGE | Edge-layer level and, in fresh recipes, projection from its saved envelope toward a sustained layer |
+| EDGE | Edge-layer level and sustained projection; the contrast response also trades body overtones for edge detail with root support |
 | ATTACK | Amplitude, edge and filter attack times, approximately ⅛–8× the saved recipe |
 | DECAY | Amplitude decay/release and edge/filter decay times, approximately ¼–4× the saved recipe |
 | RATE | Independent scan clock, approximately ⅛–8×; MOTION still sets travel and must be nonzero |
@@ -62,17 +62,31 @@ cycles per loop. RESO varies SVF damping from 2.5 to .4 around the authored valu
 ENV adds up to two filter octaves beyond the authored amount, bounded by the
 18 kHz cutoff ceiling. Settled HOLD has no attack or filter-contour gesture.
 
-The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) found that a low edge sustain
-could hide the layer even at maximum EDGE. Fresh recipes now save
-`edgeResponse: FOREGROUND`: EDGE also blends the saved projection toward one
-across the knob range. Its midpoint intentionally differs from the legacy law.
-Missing/null response fields decode to `LEGACY`, so saved recipes keep their
-original audio, including when macros are edited. No filter bypass or new drive
-stage is added. Load a fresh preset in the updated app to select the new response.
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) first addressed low edge sustain
+with the saved `FOREGROUND` response, which blends the envelope projection toward
+one across EDGE. The owner heard a useful range in Soft Digital and Bright Margin,
+but reported the other seven recipes still too subtle from zero to maximum.
+
+Fresh voices and those seven recipes now select `CONTRAST`. Alongside the
+foreground projection, EDGE reduces the body's non-root contribution toward
+35%, raises edge partial amplitude toward 4×, and adds bounded support to the
+body root. The edge's own fundamental is not boosted. The mix budgets the added
+contributions before DRIVE. Tables, tuning, motion and the shared filter retain
+their mechanisms. Soft Digital and Bright Margin keep their previous complete
+recipes. These shape laws broaden the control range; listening still decides
+whether the result is rounded enough.
+
+Missing/null response fields decode to `LEGACY`; explicit `FOREGROUND` recipes
+retain their previous arithmetic. Saved recipes keep that choice when macros are
+edited. Model 1 and its phase seed remain unchanged. Load a fresh preset in the
+updated app to use the revised response.
 
 `./gradlew :synth:generateContourEdgeAudition` writes a focused 180-clip comparison
 under `testkit/contour-edge-audition/`, with finite and held forms of all nine
-recipes at five EDGE settings, matched WAVs and complete replay JSON.
+recipes at five EDGE settings, matched WAVs and complete replay JSON. Its previous
+side loads nine pinned complete recipes from `47809ba2d`, the preceding audition.
+Each page card can play 0%, 50% and 100% in sequence; finite notes retain their
+whole attack and held steps repeat for two seconds each.
 
 Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long

@@ -683,9 +683,14 @@ keeps its implementation and effect recipe format.
 five-point sweeps, required interactions, isolated layers and repeated held loops.
 [CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
 The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) addresses a resting envelope
-that could hide the edge layer. Fresh recipes save the foreground response;
+that could hide the edge layer. The first revision saved the foreground response;
 earlier JSON retains the legacy response. `generateContourEdgeAudition` exports
 180 complete finite/held comparisons over five EDGE positions for owner listening.
+After the owner clarified weak zero-to-maximum movement on seven recipes, those
+recipes and fresh voices select a contrast response that trades body overtones
+for edge detail with added root support. Soft Digital and Bright Margin retain
+their preceding recipes. Both earlier saved response laws remain available. The
+focused page compares pinned preceding recipes and adds 0 → 50 → 100% sequences.
 The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;
