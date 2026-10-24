@@ -69,19 +69,19 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (44 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (45 starters including CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT and CAUSTIC,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 55 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+The SYNTH source picker has 56 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
 VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
 RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
 COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
-VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY and CAUSTIC.
+VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC and FILAMENT.
 MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
 (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
 round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT
@@ -124,6 +124,13 @@ reactive shared resonance are later work. On a phone, compare Felt Ledger with
 Quiet Room, change ROOT and VELOCITY, leave and reopen SYNTH, save/reload a
 preset, then SEND TO PAD and reopen its recipe; each step should retain the
 chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
+
+FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
+VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
+THREAD also offers MAKE INSTRUMENT: C3/C4/C5 source roots, one velocity layer,
+the real attack before its settled loop and note-off release. Other voices
+and older saved models retain their existing pad workflow. Physical phone/MPC
+acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
 MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR

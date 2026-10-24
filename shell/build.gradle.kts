@@ -172,6 +172,16 @@ tasks.register<JavaExec>("generateOspreyCuratedAudition") {
     args("${rootDir}/testkit/osprey-curated-audition")
 }
 
+/** Render and package the three native THREAD attack/sustain keys plus an exported-file playback demo. */
+tasks.register<JavaExec>("generateFilamentKeysAudition") {
+    group = "distribution"
+    description = "Package the FILAMENT THREAD three-root held instrument and native/reference-player listening files."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FilamentKeysAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-thread-keys").get())
+}
+
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     group = "distribution"

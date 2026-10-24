@@ -13,6 +13,32 @@ tasks.register<JavaExec>("generateContourEdgeAudition") {
     args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
 }
 
+/** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
+tasks.register<JavaExec>("generateFilamentAudition") {
+    group = "distribution"
+    description = "Render FILAMENT native/matched WAVs, exact recipes, diagnostics and the first-listen page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FilamentAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("filamentOutput").orNull ?: "${rootDir}/testkit/filament-audition")
+}
+
+/** Explicit render-only measurements; timing never determines whether the test suite passes. */
+tasks.register<JavaExec>("benchmarkFilament") {
+    group = "verification"
+    description = "Measure approved FILAMENT finite and held renders, with per-case warmup and JSON timings."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FilamentPerformanceProbe")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args("--path=${providers.gradleProperty("filamentBenchmarkPath").orNull ?: "production"}")
+    args("--warmups=${providers.gradleProperty("filamentBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("filamentBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("filamentBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("filamentBenchmarkLabel").orNull?.let { args("--label=$it") }
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"

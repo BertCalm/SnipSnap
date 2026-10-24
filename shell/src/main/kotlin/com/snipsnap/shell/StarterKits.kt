@@ -192,6 +192,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.origami() },
         Starter(
+            "filament", "FILAMENT",
+            "Glass threads, pulsing routes and blooming curls in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.filament() },
+        Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
             seeded = false,

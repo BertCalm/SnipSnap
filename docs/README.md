@@ -41,6 +41,12 @@ recipe contracts, musical phrases, held-loop strategy and private audition. The 
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
 
+**Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
+approved strand-routing instrument, factory and phone integration, saved
+recipes, branch allocation, dry listening comparisons and held-loop evidence.
+The supplied engineering specification is preserved as a proposal; its larger
+voice roster and attack-plus-loop keygroup adapter remain later work.
+
 **Brass GROW.** [`engineering/brass-grow-prototype.md`](engineering/brass-grow-prototype.md)
 records the experimental single-source EMBOUCHURE BRASS mode, its saved-model
 boundary, pad workflow and reproducible register/velocity checks. The published
