@@ -1,3 +1,7 @@
+# CAIRN reconstruction audio, traces and listening comparisons regenerate.
+testkit/cairn-reconstruction/
+__pycache__/
+
 build/
 testkit/crease-audition/
 testkit/crease-audition-r2/

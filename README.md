@@ -164,6 +164,14 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
+and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
+contact-aligned playback, a 243-point middle-control check and a 92-clip audition
+are available outside the factory roster and phone picker. The earlier six-voice
+recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
+new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
+provides the next listening gate. HOLD loops and the other four voices are deferred.
+
 CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
