@@ -260,6 +260,10 @@ logcat tag to grab when something is wrong.
   swapping kits mid-roll should go silent rather than crash. "NO STREAM"
   in the header means the device refused every open; check logcat's
   `PadEngine` line.
+- **STRIKE thumb strip**: the [first-pass guide](../docs/STRIKE_STRIP.md)
+  covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
+  optional volume link in PADS and FULL. Check the interaction on a phone;
+  this pass selects existing layers, without generating new FX layers.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
   grid — same engine PLAY uses, so it should feel just as tight. A closed hat should still cut a
   ringing open one (the mute group chokes here too); tapping the same

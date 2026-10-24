@@ -2609,11 +2609,14 @@ class ConventionTest {
     fun `law - KIT hits a pad at the velocity the touch asked for`() {
         val src = kitScreen.readText(Charsets.UTF_8)
         assertTrue(
-            Regex("""onTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+            Regex("""val currentOnTap by rememberUpdatedState\(onTap\)""").containsMatchIn(src),
+            "KIT's pointer coroutine must use the current callback after a kit or strip owner changes.",
+        )
+        assertTrue(
+            Regex("""currentOnTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
                 .containsMatchIn(src),
-            "the pad grid is not reading velocity from where the finger landed. A tap on glass carries no " +
-                "force, so position is the only thing it does carry - without it the grid has nothing to pass " +
-                "and SOFT HITS goes back to being audible nowhere.",
+            "the pad grid is not passing touch-position velocity to its current callback. With STRIKE off, " +
+                "position must still reach SOFT HITS; a fixed value would make the other layers unreachable.",
         )
         assertTrue(
             !Regex("""player\.hit\(pad,\s*1f""").containsMatchIn(src) &&

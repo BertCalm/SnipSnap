@@ -277,7 +277,13 @@ class PadEngine(preferredSampleRate: Int) {
      * takes a lock of its own belongs on the caller's side of this call.
      */
     @Synchronized
-    fun hit(pad: KitPad, velocity: Float, voiceId: Int, swap: ((PadHit.Hit) -> PadHit.Hit?)? = null): Boolean {
+    fun hit(
+        pad: KitPad,
+        velocity: Float,
+        voiceId: Int,
+        gainVelocity: Float = velocity,
+        swap: ((PadHit.Hit) -> PadHit.Hit?)? = null,
+    ): Boolean {
         if (!isUp()) return false
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
@@ -288,7 +294,7 @@ class PadEngine(preferredSampleRate: Int) {
         // auditioning for instead of a default. A swap that declines (its
         // audio never loaded) leaves the pad's own hit untouched, which is
         // the right fallback: the kit still plays.
-        val resolved = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
+        val resolved = PadHit.resolve(pad, velocity, n, gainVelocity) { framesOf[it] } ?: return false
         val hit = swap?.invoke(resolved) ?: resolved
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
