@@ -1681,3 +1681,14 @@ tasks.register<JavaExec>("generateCausticAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
+
+/** Three model-1 clips, preserving the foreground and comparing only venue return. */
+tasks.register<JavaExec>("generateNacreGentleAudition") {
+    group = "distribution"
+    description = "Render the original model-1 gesture and two restrained venue-return comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-gentle-audition")
+}

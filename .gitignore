@@ -1,3 +1,7 @@
+# CAIRN reconstruction audio, traces and listening comparisons regenerate.
+testkit/cairn-reconstruction/
+__pycache__/
+
 build/
 testkit/crease-audition/
 testkit/crease-audition-r2/
@@ -41,6 +45,7 @@ app/.cxx/
 design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
+!design/nacre-gentle-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -382,8 +387,11 @@ testkit/skitter-character-r6/
 testkit/skitter-quartet/
 testkit/fade-law-audition/
 
-# CAIRN reconstruction audio, traces and listening comparisons regenerate.
-testkit/cairn-reconstruction/
-__pycache__/
+# Three-clip model-1 venue-return experiment, regenerated from testkit sources.
+testkit/nacre-gentle-audition/
+
+# BELLOWS sample-player comparisons and exported proof programs regenerate from source.
+testkit/bellows-playback-audition/
+
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
