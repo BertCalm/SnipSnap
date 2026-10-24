@@ -6,9 +6,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * [Keys.contourPadMidis] has no caller yet: docs/CONTOUR.md says SYNTH MAKE
- * INSTRUMENT and `--instrument` do not call [Keys.contourPad]. Its KDoc names a
- * zone count and a range, so they are held here, ready for the route that uses them.
+ * The roots used by SYNTH MAKE INSTRUMENT and CLI `--instrument` must remain
+ * inside the engine's supported range and include the voice's center note.
  */
 class ContourPadZonesTest {
     @Test
