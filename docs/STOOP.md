@@ -144,6 +144,11 @@ so raising the knob does not select a new oscillator clock; zero still
 omits companion synthesis. Bright held LENGTH settings change the settled
 harmonic balance even when filter or FM brightness has reached its bound.
 In TINE, the safe FM limit is applied before the LENGTH-dependent loss.
+For BASS, LEAD and CHORD, the band-limited saw/pulse mixture's fundamental
+is separated before changing the upper-partial balance. Scaling the whole
+mixture could otherwise cancel the separate sine anchor at a bright held
+setting. The fundamental projection uses the quadratic BLEP kernel's
+sinc-squared response, computed once per tone.
 
 Round Corner, Dust Tines, Soft Clav, Amber Organ, Nose Talk and Velvet Stack
 remain explicitly on model 1 as the six published reference sounds. The
@@ -163,6 +168,8 @@ selects the polished renderer for those existing palette settings.
 - LENGTH acts on held harmonic balance because a loop-only export contains
   no release tail to lengthen. Precomputing fixed held CLAV weights avoids
   repeating work that cannot change during that gesture.
+- Keeping the saw/pulse fundamental fixed prevents LENGTH from nearly
+  cancelling the root as its upper harmonics become stronger.
 
 ### Verification and listening status
 
@@ -180,14 +187,25 @@ error below 0.99 cents and pitch confidence above .88. These measurements
 establish retained pitched body, not a perceptual approval of the presets.
 
 A paired cloud-JVM benchmark of Grain String, with five warmups and fifteen
-measured renders per variant, puts the median at 923 ms before and 368 ms
-for optimized model 1, a 2.50× improvement with identical audio. Model 2
-measures 362 ms in the same test. These are desktop measurements, not
+measured renders per variant, puts the median at 900 ms before and 362 ms
+for optimized model 1, a 2.49× improvement with identical audio. Model 2
+measures 370 ms, a 2.43× improvement, in the same test. These are desktop measurements, not
 Android slider-to-preview timings.
 
-Full-suite results and the final audition pack checks remain pending. The
-October 15 and October 10 reference audio remain the comparison evidence;
-no new listening verdict is recorded here.
+The nine-module JVM suite passed 5,969 tests on the CLAV/HOLD polish
+baseline. After the final root-projection correction, 62 focused Stoop,
+shared-preset, CLI and saved-preset checks passed again, including a
+12-case clean-source root-energy regression. That regression also fails
+against the earlier whole-wave scaling, demonstrating that it detects the
+near-cancellation rather than passing on gain or phase alone.
+
+The October 15 and October 10 reference audio remain the comparison
+evidence. The corrected 558-clip pack passed 27,666 independent integrity checks;
+all 234 copied reference WAVs remain exact. Browser QA passed all 234 A/B
+comparison actions, playback, loop controls, saved-note identity, downloads
+and desktop/mobile layout checks without errors. The artifact records the
+source and compiled-class hashes used for rendering. No new listening
+verdict is recorded here.
 
 Automated checks establish reproducibility, bounds, routing, serialization
 and loop continuity. They do not replace listening approval. Android UI

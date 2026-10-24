@@ -268,8 +268,11 @@ zero, and LENGTH active in bright settled spectra. Saved model 1 recipes
 retain their renderer; missing/null JSON model fields also load as model 1.
 New constructors use model 2. Round Corner, Dust Tines, Soft Clav, Amber
 Organ, Nose Talk and Velvet Stack stay on model 1; the other 42 factory
-recipes retain their settings and use model 2. Final compatibility hashes,
-measurements and full test results for this polish remain pending.
+recipes retain their settings and use model 2. All eighteen legacy audio
+fixtures remain bit-identical. The full JVM baseline passed 5,969 tests;
+62 focused checks passed after the final root-preservation correction.
+Held saw/pulse LENGTH now moves only upper partials, preventing a root
+component null between otherwise valid control settings.
 
 Run `./gradlew :synth:generateStoopAudition` for the listening matrix,
 or add `-PstoopQuick` for its smaller smoke pack. Supplying

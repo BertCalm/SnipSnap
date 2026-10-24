@@ -298,9 +298,33 @@ object Stoop {
         return ClavRegistration(picks, divisors, level, amplitudes, bodyAtJoin, .24 + .18 * length)
     }
 
+    private data class HarmonicProjection(val sine: Double, val cosine: Double)
+
+    /** The quadratic BLEP is a triangular smoothing kernel with sinc-squared partial gain. */
+    private fun harmonicProjection(t: Tone, voice: StoopVoice, source: StoopSource): HarmonicProjection {
+        val dt = (t.hz / INTERNAL_RATE).coerceAtMost(.25)
+        val sinc = sin(PI * dt) / (PI * dt)
+        val gain = 2.0 * sinc * sinc / PI
+        val shape = source.shape.toDouble()
+        val duty = if (voice == StoopVoice.BASS) .23 + .32 * shape else .20 + .35 * shape
+        return HarmonicProjection(
+            gain * (-(1.0 - shape) + shape * (1.0 - cos(TAU * duty))),
+            gain * shape * sin(TAU * duty),
+        )
+    }
+
+    private fun heldUpperSpectrum(harmonic: Double, fundamental: Double, phase: Double,
+        scale: Double, projection: HarmonicProjection?): Double {
+        if (projection == null) return harmonic
+        // The saw's fundamental can oppose the separate sine anchor. Scale
+        // only the remaining partials, so LENGTH cannot cross a root null.
+        val upper = harmonic - projection.sine * fundamental - projection.cosine * cos(phase)
+        return harmonic + (scale - 1.0) * upper
+    }
+
     private fun oscillator(voice: StoopVoice, t: Tone, age: Double, warpedAge: Double,
         touch: Double, color: Double, source: StoopSource, length: Double, held: Boolean, velocity: Double,
-        model: Int, organ: DoubleArray?, clav: ClavRegistration?): Double {
+        model: Int, organ: DoubleArray?, clav: ClavRegistration?, projection: HarmonicProjection?): Double {
         if (t.hz >= SOURCE_CEILING) return 0.0
         val p = (warpedAge * t.hz + t.phase) % 1.0
         val phase = TAU * p
@@ -322,7 +346,8 @@ object Stoop {
         val body = when (voice) {
             StoopVoice.BASS -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .23 + .32 * shape)
-                .64 * fundamental + ((.26 + .40 * bright + .14 * tilt + .16 * touch * (transient + .75 * heldContact)) * heldLengthSpectrum) * harmonic
+                .64 * fundamental + (.26 + .40 * bright + .14 * tilt + .16 * touch * (transient + .75 * heldContact)) *
+                    heldUpperSpectrum(harmonic, fundamental, phase, heldLengthSpectrum, projection)
             }
             StoopVoice.TINE -> {
                 // Carson-style sideband bound; high-note index retreats before the decimator.
@@ -372,7 +397,8 @@ object Stoop {
             }
             StoopVoice.LEAD, StoopVoice.CHORD -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .20 + .35 * shape)
-                .53 * fundamental + ((.34 + .35 * bright + .13 * touch * (transient + .90 * heldContact)) * heldLengthSpectrum) * harmonic
+                .53 * fundamental + (.34 + .35 * bright + .13 * touch * (transient + .90 * heldContact)) *
+                    heldUpperSpectrum(harmonic, fundamental, phase, heldLengthSpectrum, projection)
             }
         }
         return body + sub + twin
@@ -465,6 +491,8 @@ object Stoop {
             val clav = if (p.voice == StoopVoice.CLAV) Array(g.tones.size) { n ->
                 clavRegistration(g.tones[n], g.touch, g.color, p.source, length, held, p.velocity.toDouble())
             } else null
+            val projection = if (held && p.model >= 2 && p.voice in listOf(StoopVoice.BASS, StoopVoice.LEAD, StoopVoice.CHORD))
+                Array(g.tones.size) { n -> harmonicProjection(g.tones[n], p.voice, p.source) } else null
             for (i in startFrame until end) {
                 if ((i - startFrame) % 8192 == 0) stopIfUnwanted()
                 val seconds = i.toDouble() / INTERNAL_RATE
@@ -483,7 +511,7 @@ object Stoop {
                     val tone = g.tones[n]
                     value += (if (g.tones.size > 1 && !tone.root) .76 else 1.0) *
                         oscillator(p.voice, tone, age, warped, g.touch, g.color,
-                            p.source, length, held, p.velocity.toDouble(), p.model, organ?.get(n), clav?.get(n))
+                            p.source, length, held, p.velocity.toDouble(), p.model, organ?.get(n), clav?.get(n), projection?.get(n))
                 }
                 // Root keeps more weight in a chord, and each note retains its own source state.
                 value /= sqrt(g.tones.size.toDouble())
