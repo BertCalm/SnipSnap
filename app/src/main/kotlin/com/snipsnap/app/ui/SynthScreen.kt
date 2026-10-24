@@ -1608,16 +1608,10 @@ fun SynthScreen(
     // the package is written once every zone
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
-    var holdAttack by remember { mutableStateOf(ResinPadMaker.ATTACK.defaultFraction) }
-    var holdRelease by remember { mutableStateOf(ResinPadMaker.RELEASE.defaultFraction) }
+    val heldSheet = remember { HeldSheetState() }
     // Zones landed during MAKE, of [holdTotal]; -1 when no MAKE is running.
-    var holdDone by remember { mutableStateOf(-1) }
-    var holdTotal by remember { mutableStateOf(0) }
-    var holdPreviewing by remember { mutableStateOf(false) }
-    var holdJob by remember { mutableStateOf<Job?>(null) }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    var holdName by remember { mutableStateOf("") }
     val supportsHeldInstrument = engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
@@ -1634,12 +1628,12 @@ fun SynthScreen(
     val instrumentsDir = File(shelfRoot, KitShelf.INSTRUMENTS_DIR)
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
-        holdName = try {
+        heldSheet.holdName = try {
             withContext(Dispatchers.IO) { OneNote.freshName(instrumentsDir, holdBase) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.e("SynthScreen", "holdName: shelf unreadable", e)
+            Log.e("SynthScreen", "heldSheet.holdName: shelf unreadable", e)
             holdBase
         }
     }
@@ -1653,51 +1647,51 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
-        Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, holdAttack, holdRelease))
-        Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, holdRelease))
-        Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, holdRelease))
+        Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, heldSheet.holdAttack, heldSheet.holdRelease))
+        Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
+        Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, heldSheet.holdRelease))
         Engine.ORPHICA -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrphicaPatch
-            HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, holdRelease))
+            HeldSpec.Orphica(OrphicaPadMaker.spec(patch.config, patch.macros, heldSheet.holdRelease))
         }
         Engine.OPENSKY -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
-            if (OpenSkyPadMaker.supports(patch)) HeldSpec.OpenSky(OpenSkyPadMaker.spec(patch, holdRelease)) else null
+            if (OpenSkyPadMaker.supports(patch)) HeldSpec.OpenSky(OpenSkyPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
         Engine.CREASE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
-            if (CreasePadMaker.supports(patch)) HeldSpec.Crease(CreasePadMaker.spec(patch, holdRelease)) else null
+            if (CreasePadMaker.supports(patch)) HeldSpec.Crease(CreasePadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
-            buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, holdRelease,
+            buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, heldSheet.holdRelease,
         ))
         Engine.BELLOWS -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
-            if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, holdRelease)) else null
+            if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
         Engine.FLOCK -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
             if (FlockPadMaker.supports(patch)) HeldSpec.Flock(FlockPadMaker.Spec(patch)) else null
         }
         Engine.CONTOUR -> HeldSpec.Contour(ContourPadMaker.spec(
-            buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, holdRelease,
+            buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, heldSheet.holdRelease,
         ))
         Engine.ORIGAMI -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
-            if (OrigamiPadMaker.supports(patch)) HeldSpec.Origami(OrigamiPadMaker.spec(patch, holdRelease)) else null
+            if (OrigamiPadMaker.supports(patch)) HeldSpec.Origami(OrigamiPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
         Engine.FILAMENT -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
-            if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(patch, holdRelease)) else null
+            if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
         else -> null
     }
 
     fun previewHeld() {
-        if (holdDone >= 0 || holdPreviewing) return
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         val spec = heldSpec() ?: return
-        holdPreviewing = true
-        holdJob = appScope.launch {
+        heldSheet.holdPreviewing = true
+        heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
                 val heard = withContext(Dispatchers.Default) { spec.preview { !isActive } }
@@ -1708,22 +1702,22 @@ fun SynthScreen(
                 Log.e("SynthScreen", "previewHeld: failed", e)
                 onToast(Copy.RENDER_FAILED)
             } finally {
-                holdPreviewing = false
-                holdJob = null
+                heldSheet.holdPreviewing = false
+                heldSheet.holdJob = null
             }
         }
     }
 
     fun makeHeld() {
-        if (holdDone >= 0 || holdPreviewing) return
+        if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         // Captured now: the sheet's own sound, before anything can move it.
         val spec = heldSpec() ?: return
         flockHeldPreview?.silence()
         val base = holdBase
         val midis = spec.zoneMidis
-        holdTotal = midis.size
-        holdDone = 0
-        holdJob = appScope.launch {
+        heldSheet.holdTotal = midis.size
+        heldSheet.holdDone = 0
+        heldSheet.holdJob = appScope.launch {
             try {
                 // coroutineScope, not bare asyncs on appScope: a zone that
                 // throws must surface here as an exception this catch sees,
@@ -1743,7 +1737,7 @@ fun SynthScreen(
                             val note = withContext(Dispatchers.Default) {
                                 spec.renderZone(midi) { !isActive }
                             }
-                            withContext(Dispatchers.Main) { holdDone += 1 }
+                            withContext(Dispatchers.Main) { heldSheet.holdDone += 1 }
                             note
                         }
                     } else {
@@ -1752,7 +1746,7 @@ fun SynthScreen(
                                 // CANCEL cancels the scope; each zone asks and stops,
                                 // rather than all nine running on for seconds.
                                 val note = spec.renderZone(midi) { !isActive }
-                                withContext(Dispatchers.Main) { holdDone += 1 }
+                                withContext(Dispatchers.Main) { heldSheet.holdDone += 1 }
                                 note
                             }
                         }.awaitAll()
@@ -1774,29 +1768,29 @@ fun SynthScreen(
                 Log.e("SynthScreen", "makeHeld: failed", e)
                 onToast(Copy.actionFailed("INSTRUMENT"))
             } finally {
-                holdDone = -1
-                holdJob = null
+                heldSheet.holdDone = -1
+                heldSheet.holdJob = null
             }
         }
     }
 
     fun closeHeld() {
         // Every zone rendered means the write is under way; let it land.
-        if (holdDone >= 0 && holdDone >= holdTotal) return
+        if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal) return
         flockHeldPreview?.silence()
-        val job = holdJob
+        val job = heldSheet.holdJob
         if (job == null) {
-            holdDone = -1
-            holdPreviewing = false
+            heldSheet.holdDone = -1
+            heldSheet.holdPreviewing = false
         } else {
             job.invokeOnCompletion {
                 appScope.launch(Dispatchers.Main.immediate) {
                     // Cancellation before the body starts skips its finally.
                     // A later job must never be cleared by this one's handler.
-                    if (holdJob === job) {
-                        holdJob = null
-                        holdDone = -1
-                        holdPreviewing = false
+                    if (heldSheet.holdJob === job) {
+                        heldSheet.holdJob = null
+                        heldSheet.holdDone = -1
+                        heldSheet.holdPreviewing = false
                     }
                 }
             }
@@ -1816,15 +1810,9 @@ fun SynthScreen(
     // it the way LOOP will (the grid's tempo, bars and the device's rate)
     // and plays it twice, so the wrap is heard.
     val context = LocalContext.current
-    var droneOpen by remember { mutableStateOf(false) }
-    var droneRoot by remember { mutableStateOf<Int?>(null) }
-    var droneMotion by remember { mutableStateOf(DroneMaker.DEFAULT_MOTION) }
-    var droneRate by remember { mutableStateOf(DroneMaker.DEFAULT_RATE) }
-    var dronePreviewing by remember { mutableStateOf(false) }
-    var droneJob by remember { mutableStateOf<Job?>(null) }
+    val droneSheet = remember { DroneSheetState() }
     // The grid the drone will land on, read when the sheet opens: its tempo
     // and bars decide the span the readout names and PREVIEW renders.
-    var droneSession by remember { mutableStateOf<Session?>(null) }
 
     // RESIN and SIREN behind one shape, the same division [HeldSpec] draws:
     // RESIN's own MOTION and BREATHS are knobs invented for the drone, since
@@ -1832,7 +1820,7 @@ fun SynthScreen(
     // movement (RATE and DEPTH, dialed on the panel above), so its own
     // DroneSpec has no extra knob and [hasMotion] is false.
     fun droneSpec(): DroneSpec? = when (engine) {
-        Engine.RESIN -> DroneSpec.Resin(voice as ResinVoice, macros, droneMotion, droneRate)
+        Engine.RESIN -> DroneSpec.Resin(voice as ResinVoice, macros, droneSheet.droneMotion, droneSheet.droneRate)
         Engine.SIREN -> DroneSpec.Siren(voice as SirenVoice, macros)
         else -> null
     }
@@ -1846,18 +1834,17 @@ fun SynthScreen(
     // even at the grid's slowest, longest setting"), so it runs off the
     // main thread rather than inline in the composable body, the same
     // reason droneSession itself does.
-    var droneLabel by remember { mutableStateOf("…") }
-    LaunchedEffect(droneOpen, droneRoot, droneSession, engine, voice, macros) {
+    LaunchedEffect(droneSheet.droneOpen, droneSheet.droneRoot, droneSheet.droneSession, engine, voice, macros) {
         // Reset before recomputing, not after: root or macros just moved,
         // and the stale string is for a spec PREVIEW/SEND no longer read
         // off the moment either changed — showing it a beat longer would
         // name a note that is no longer the one either button plays.
-        droneLabel = "…"
-        val root = droneRoot
-        val session = droneSession
+        droneSheet.droneLabel = "…"
+        val root = droneSheet.droneRoot
+        val session = droneSheet.droneSession
         val spec = droneSpec()
-        if (droneOpen && root != null && session != null && spec != null) {
-            droneLabel = withContext(Dispatchers.Default) {
+        if (droneSheet.droneOpen && root != null && session != null && spec != null) {
+            droneSheet.droneLabel = withContext(Dispatchers.Default) {
                 // cancelled reaches SirenDrone.fitCarrier's own check: a
                 // rapid run of ROOT taps must stop one computation before
                 // starting the next, not pile them up on the pool that
@@ -1879,11 +1866,11 @@ fun SynthScreen(
         }
     }
 
-    LaunchedEffect(droneOpen, voice) {
-        if (!droneOpen) return@LaunchedEffect
+    LaunchedEffect(droneSheet.droneOpen, voice) {
+        if (!droneSheet.droneOpen) return@LaunchedEffect
         val spec = droneSpec() ?: return@LaunchedEffect
-        if (droneRoot?.let { it in spec.roots } != true) droneRoot = spec.defaultRoot(kit?.key)
-        droneSession = withContext(Dispatchers.IO) {
+        if (droneSheet.droneRoot?.let { it in spec.roots } != true) droneSheet.droneRoot = spec.defaultRoot(kit?.key)
+        droneSheet.droneSession = withContext(Dispatchers.IO) {
             val rate = deviceSampleRate(context)
             val dir = LoopWrites.dir(context)
             runCatching { SessionStore.load(dir) }.getOrNull()?.copy(sampleRate = rate)
@@ -1892,12 +1879,12 @@ fun SynthScreen(
     }
 
     fun previewDrone() {
-        val root = droneRoot ?: return
-        val session = droneSession ?: return
+        val root = droneSheet.droneRoot ?: return
+        val session = droneSheet.droneSession ?: return
         val spec = droneSpec() ?: return
-        if (dronePreviewing) return
-        dronePreviewing = true
-        droneJob = appScope.launch {
+        if (droneSheet.dronePreviewing) return
+        droneSheet.dronePreviewing = true
+        droneSheet.droneJob = appScope.launch {
             try {
                 val heard = withContext(Dispatchers.Default) {
                     // CANCEL (or closing the sheet) cancels this job; the
@@ -1912,28 +1899,28 @@ fun SynthScreen(
                 Log.e("SynthScreen", "previewDrone: failed", e)
                 onToast(Copy.RENDER_FAILED)
             } finally {
-                dronePreviewing = false
-                droneJob = null
+                droneSheet.dronePreviewing = false
+                droneSheet.droneJob = null
             }
         }
     }
 
     fun sendDrone() {
-        val root = droneRoot ?: return
+        val root = droneSheet.droneRoot ?: return
         val spec = droneSpec() ?: return
         val name = "${currentPresetByVoice[engine to voice] ?: "${engine.name} ${voice.name}"} DRONE"
         onDroneToLoop(name, spec.toJson(), root)
-        droneJob?.cancel()
-        droneJob = null
-        dronePreviewing = false
-        droneOpen = false
+        droneSheet.droneJob?.cancel()
+        droneSheet.droneJob = null
+        droneSheet.dronePreviewing = false
+        droneSheet.droneOpen = false
     }
 
     fun closeDrone() {
-        droneJob?.cancel()
-        droneJob = null
-        dronePreviewing = false
-        droneOpen = false
+        droneSheet.droneJob?.cancel()
+        droneSheet.droneJob = null
+        droneSheet.dronePreviewing = false
+        droneSheet.droneOpen = false
     }
 
     // ---- SPREAD ----
@@ -3049,7 +3036,7 @@ fun SynthScreen(
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "DRONE TO LOOP",
                     ) {
-                        droneOpen = true
+                        droneSheet.droneOpen = true
                     }
                 }
             }
@@ -3156,24 +3143,24 @@ fun SynthScreen(
             heldSpec()?.let { spec ->
                 HeldInstrumentSheet(
                     heading = "${engine.name} · ${chipLabel(engine, voice)}",
-                    name = holdName,
+                    name = heldSheet.holdName,
                     hasAttack = spec.hasAttack,
-                    attack = holdAttack,
-                    release = spec.releaseFraction ?: holdRelease,
+                    attack = heldSheet.holdAttack,
+                    release = spec.releaseFraction ?: heldSheet.holdRelease,
                     knobLabel = spec.knobLabel,
                     instrumentNote = spec.instrumentNote,
-                    done = holdDone,
-                    total = holdTotal,
-                    previewing = holdPreviewing,
+                    done = heldSheet.holdDone,
+                    total = heldSheet.holdTotal,
+                    previewing = heldSheet.holdPreviewing,
                     heldPreview = flockHeldPreview,
                     fillColor = classColor,
                     scheme = scheme,
-                    onAttack = { holdAttack = it },
+                    onAttack = { heldSheet.holdAttack = it },
                     onRelease = { fraction ->
                         if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
-                        } else holdRelease = fraction
+                        } else heldSheet.holdRelease = fraction
                     },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
@@ -3183,7 +3170,7 @@ fun SynthScreen(
             SynthOverlayBackHandler(onBack = ::closeHeld)
         }
 
-        if (droneOpen) {
+        if (droneSheet.droneOpen) {
             // The spec itself is recomputed here rather than cached, the
             // same call [heldSpec] makes and for the same reason: cheap
             // (it is only a voice and a macro map, no rendering), and it
@@ -3191,8 +3178,8 @@ fun SynthScreen(
             // readout is not recomputed here — [droneLabel] is, off the
             // main thread, since SIREN's own is not free.
             droneSpec()?.let { spec ->
-                val root = droneRoot
-                val session = droneSession
+                val root = droneSheet.droneRoot
+                val session = droneSheet.droneSession
                 val ready = root != null && session != null
                 DroneSheet(
                     heading = "${engine.name} · ${chipLabel(engine, voice)}",
@@ -3200,15 +3187,15 @@ fun SynthScreen(
                     hasMotion = spec.hasMotion,
                     root = root,
                     ready = ready,
-                    label = droneLabel,
-                    motion = droneMotion,
-                    rate = droneRate,
-                    previewing = dronePreviewing,
+                    label = droneSheet.droneLabel,
+                    motion = droneSheet.droneMotion,
+                    rate = droneSheet.droneRate,
+                    previewing = droneSheet.dronePreviewing,
                     fillColor = classColor,
                     scheme = scheme,
-                    onRoot = { droneRoot = it },
-                    onMotion = { droneMotion = it },
-                    onRate = { droneRate = it },
+                    onRoot = { droneSheet.droneRoot = it },
+                    onMotion = { droneSheet.droneMotion = it },
+                    onRate = { droneSheet.droneRate = it },
                     onPreview = ::previewDrone,
                     onSend = ::sendDrone,
                     onCancel = ::closeDrone,
@@ -3280,6 +3267,37 @@ private fun MacroSliders(
             }
         }
     }
+}
+
+/**
+ * MAKE INSTRUMENT ▸'s sheet: its ATTACK/RELEASE knobs, zone progress, preview and render job, and the name it lands under.
+ * One remembered holder rather than 7 remembered locals, like [SynthSeed]:
+ * SynthScreen's single method sits at the register limit ART's verifier accepts.
+ */
+private class HeldSheetState {
+    var holdAttack by mutableStateOf(ResinPadMaker.ATTACK.defaultFraction)
+    var holdRelease by mutableStateOf(ResinPadMaker.RELEASE.defaultFraction)
+    var holdDone by mutableStateOf(-1)
+    var holdTotal by mutableStateOf(0)
+    var holdPreviewing by mutableStateOf(false)
+    var holdJob by mutableStateOf<Job?>(null)
+    var holdName by mutableStateOf("")
+}
+
+/**
+ * MAKE DRONE ▸'s sheet: open state, ROOT/MOTION/RATE, preview, render job, the session it plays through and its label.
+ * One remembered holder rather than 8 remembered locals, like [SynthSeed]:
+ * SynthScreen's single method sits at the register limit ART's verifier accepts.
+ */
+private class DroneSheetState {
+    var droneOpen by mutableStateOf(false)
+    var droneRoot by mutableStateOf<Int?>(null)
+    var droneMotion by mutableStateOf(DroneMaker.DEFAULT_MOTION)
+    var droneRate by mutableStateOf(DroneMaker.DEFAULT_RATE)
+    var dronePreviewing by mutableStateOf(false)
+    var droneJob by mutableStateOf<Job?>(null)
+    var droneSession by mutableStateOf<Session?>(null)
+    var droneLabel by mutableStateOf("…")
 }
 
 /**
