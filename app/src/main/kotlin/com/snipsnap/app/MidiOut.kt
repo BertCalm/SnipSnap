@@ -13,6 +13,16 @@ import java.io.IOException
 import java.util.concurrent.CopyOnWriteArrayList
 
 /**
+ * The manufacturer and product strings of SnipSnap's own published MIDI
+ * device. `res/xml/midi_device_info.xml` (Task 4) must carry exactly these
+ * values: the XML cannot reference Kotlin, so this is one quantity in two
+ * places by necessity, and Task 4's reviewer checks they match.
+ * [MidiInput] uses them (with `TYPE_VIRTUAL`) to skip the app's own device.
+ */
+internal const val MIDI_DEVICE_MANUFACTURER = "SnipSnap"
+internal const val MIDI_DEVICE_PRODUCT = "SnipSnap"
+
+/**
  * Where the app's own notes go out: the input ports of every connected MIDI
  * device, and (Task 4) the published "SnipSnap Out" port.
  *

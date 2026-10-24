@@ -2,7 +2,6 @@ package com.snipsnap.app
 
 import android.content.Context
 import android.content.pm.PackageManager
-import android.content.pm.ServiceInfo
 import android.hardware.usb.UsbDevice
 import android.media.midi.MidiDevice
 import android.media.midi.MidiDeviceInfo
@@ -79,7 +78,6 @@ class MidiInput(context: Context) {
         } else {
             null
         }
-    private val ownPackage: String = context.packageName
     private val handler = Handler(Looper.getMainLooper())
     private var listener: Listener? = null
     private var callback: MidiManager.DeviceCallback? = null
@@ -208,14 +206,12 @@ class MidiInput(context: Context) {
     }
 
     private fun isOwnDevice(info: MidiDeviceInfo): Boolean {
+        // Public properties only. A third-party virtual device that calls
+        // itself SnipSnap/SnipSnap would be skipped too; that is acceptable.
         val p = info.properties
-        val service: ServiceInfo? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            p.getParcelable(PROPERTY_SERVICE_INFO, ServiceInfo::class.java)
-        } else {
-            @Suppress("DEPRECATION")
-            p.getParcelable(PROPERTY_SERVICE_INFO)
-        }
-        return service?.packageName == ownPackage
+        return info.type == MidiDeviceInfo.TYPE_VIRTUAL &&
+            p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER) == MIDI_DEVICE_MANUFACTURER &&
+            p.getString(MidiDeviceInfo.PROPERTY_PRODUCT) == MIDI_DEVICE_PRODUCT
     }
 
     /** Stop listening and let every device go. Safe to call twice. */
@@ -262,13 +258,6 @@ class MidiInput(context: Context) {
 
     companion object {
         private const val TAG = "MidiInput"
-
-        /**
-         * `MidiDeviceInfo.PROPERTY_SERVICE_INFO`: the SDK stubs hide the
-         * constant (the framework files a service-backed device's own
-         * `ServiceInfo` under this key), so the literal is spelled here.
-         */
-        private const val PROPERTY_SERVICE_INFO = "service_info"
 
         /**
          * What the device says it is: transport, USB vendor and product ids
