@@ -611,6 +611,30 @@ internal object Modes {
             for (i in 0 until size) im[i] -= b[i] * f
         }
 
+        /**
+         * A participation vector compiled once for repeated sparse drives and pickups. The weights are copied:
+         * later edits to the caller's array cannot change a contact halfway through a render. Keeping active
+         * indices in ascending order preserves the dense pickup's accumulation order.
+         */
+        class Participation internal constructor(
+            internal val indices: IntArray,
+            internal val weights: DoubleArray,
+            internal val size: Int,
+        )
+
+        fun participation(weights: DoubleArray): Participation {
+            require(weights.size == size) { "participation has ${weights.size} weights for $size modes" }
+            val indices = weights.indices.filter { weights[it] != 0.0 }.toIntArray()
+            return Participation(indices, DoubleArray(indices.size) { weights[indices[it]] }, size)
+        }
+
+        /** The same force update as [drive], visiting only a compiled vector's nonzero entries. */
+        fun drive(b: Participation, force: Double) {
+            require(b.size == size) { "participation is for ${b.size} modes, bank has $size" }
+            val f = force * dt
+            for (n in b.indices.indices) im[b.indices[n]] -= b.weights[n] * f
+        }
+
         fun velocity(i: Int): Double = -im[i]
 
         fun displacement(i: Int): Double = re[i] / omega[i]
@@ -619,6 +643,14 @@ internal object Modes {
         fun velocityAlong(w: DoubleArray): Double {
             var s = 0.0
             for (i in 0 until size) s -= w[i] * im[i]
+            return s
+        }
+
+        /** The same pickup sum as [velocityAlong], with zero-weight modes omitted. */
+        fun velocityAlong(w: Participation): Double {
+            require(w.size == size) { "participation is for ${w.size} modes, bank has $size" }
+            var s = 0.0
+            for (n in w.indices.indices) s -= w.weights[n] * im[w.indices[n]]
             return s
         }
 

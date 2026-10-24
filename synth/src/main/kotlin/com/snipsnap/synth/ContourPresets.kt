@@ -17,7 +17,7 @@ object ContourPresets {
             "TUNE" to .5f, "SCAN" to scan, "OFFSET" to offset, "MOTION" to motion,
             "FILTER" to filter, "DRIVE" to drive, "HOLD" to hold, "BODY" to body,
             "EDGE" to edge, "ATTACK" to attack, "DECAY" to decay, "RATE" to rate,
-            "RESO" to reso, "ENV" to env), config)
+            "RESO" to reso, "ENV" to env), config.copy(edgeResponse = ContourEdgeResponse.FOREGROUND))
 
     private val presets = listOf(
         recipe(ContourVoice.BASS, "Rounded Edge", ContourConfig(

@@ -2,6 +2,43 @@ plugins {
     kotlin("jvm")
 }
 
+/** Native previous/revised EDGE comparisons in complete finite notes and held periods. */
+tasks.register<JavaExec>("generateContourEdgeAudition") {
+    group = "distribution"
+    description = "Render nine Contour recipes at five EDGE positions, finite/held, previous/revised, with exact replay JSON and matched WAVs."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourEdgeAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
+}
+
+/** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
+tasks.register<JavaExec>("generateFilamentAudition") {
+    group = "distribution"
+    description = "Render FILAMENT native/matched WAVs, exact recipes, diagnostics and the first-listen page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FilamentAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("filamentOutput").orNull ?: "${rootDir}/testkit/filament-audition")
+}
+
+/** Explicit render-only measurements; timing never determines whether the test suite passes. */
+tasks.register<JavaExec>("benchmarkFilament") {
+    group = "verification"
+    description = "Measure approved FILAMENT finite and held renders, with per-case warmup and JSON timings."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FilamentPerformanceProbe")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args("--path=${providers.gradleProperty("filamentBenchmarkPath").orNull ?: "production"}")
+    args("--warmups=${providers.gradleProperty("filamentBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("filamentBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("filamentBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("filamentBenchmarkLabel").orNull?.let { args("--label=$it") }
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"
@@ -1126,7 +1163,7 @@ tasks.register<JavaExec>("generateTremorAudition") {
 
 tasks.register<JavaExec>("generateTremorComparison") {
     group = "distribution"
-    description = "Render the 16 matched Tremor listening-repair clips and metadata."
+    description = "Render matched Tremor voice, control, touch and held comparisons with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.TremorComparisonGenerator")
     workingDir = projectDir
@@ -1213,12 +1250,33 @@ tasks.register<JavaExec>("generateCisternAudition") {
 
 tasks.register<JavaExec>("generateFlotillaComparison") {
     group = "distribution"
-    description = "Render the sixteen matched FLOTILLA listening-fix clips and metadata."
+    description = "Render matched FLOTILLA voices, population steps, controls and held clips with metadata."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.FlotillaComparisonGenerator")
     workingDir = projectDir
     val version = project.findProperty("flotillaComparisonVersion") as String? ?: "candidate"
     args("${rootDir}/testkit/flotilla-comparison/$version")
+}
+
+/** Full BALLAST audition with shared-gain touch and component diagnostics. */
+tasks.register<JavaExec>("generateBallastAudition") {
+    group = "distribution"
+    description = "Render BALLAST presets, control sweeps and correctly calibrated diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-audition")
+}
+
+/** Capture before first; candidate mode requires the frozen baseline calibration. */
+tasks.register<JavaExec>("generateBallastComparison") {
+    group = "distribution"
+    description = "Render BALLAST's matched bass, glass, structure and velocity comparison."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.BallastComparisonGenerator")
+    workingDir = projectDir
+    val version = project.findProperty("ballastComparisonVersion") as String? ?: "candidate"
+    args("${rootDir}/testkit/ballast-comparison/$version")
 }
 
 /** Render MURK's dry voices, causal probes and accessible offline listening page. */
@@ -1668,4 +1726,36 @@ tasks.register<JavaExec>("generateCausticAudition") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
+}
+
+/** Three model-1 clips, preserving the foreground and comparing only venue return. */
+tasks.register<JavaExec>("generateNacreGentleAudition") {
+    group = "distribution"
+    description = "Render the original model-1 gesture and two restrained venue-return comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreGentleAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-gentle-audition")
+}
+
+/** The finite production voice, kept separate from the archived circular studies. */
+tasks.register<JavaExec>("generateCausticInstrumentAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's editable Alloy voice, control sweeps and native patch recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticInstrumentAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
+}
+
+tasks.register<JavaExec>("generateCausticKit") {
+    group = "distribution"
+    description = "Export CAUSTIC's sixteen dry finite pads, editable recipes and both MPC program formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
