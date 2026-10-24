@@ -141,6 +141,27 @@ tasks.register<JavaExec>("generateFlockHeldInstrument") {
     args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
 }
 
+/** Package and play the approved CREASE sounds as continuous-onset held keys. */
+tasks.register<JavaExec>("generateCreaseKeysAudition") {
+    group = "distribution"
+    description = "Render CREASE held-key performances and dual-MPC/phone instrument packages under testkit/crease-keys-audition/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CreaseKeysAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("creaseKeysOutput").orNull ?: "${rootDir}/testkit/crease-keys-audition")
+}
+
+/** Package Contour's accepted nine recipes as held instruments with verified native and compatibility programs. */
+tasks.register<JavaExec>("generateContourStarter") {
+    group = "distribution"
+    description = "Render nine CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ContourStarterGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/contour-starter")
+}
+
 /** Audition and package the new musical presets on the unchanged model-3 OSPREY engine. */
 tasks.register<JavaExec>("generateOspreyCuratedAudition") {
     group = "distribution"

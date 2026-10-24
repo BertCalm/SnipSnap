@@ -108,8 +108,12 @@ had insufficient variation; the owner preferred model 2's wider analytic phase
 maps. Model 3 retains those shapes and refines lag/recovery, with six named
 listening presets and constant-level gesture comparisons. Models 1 and 2 remain
 exactly replayable. The approved three voices and six presets are registered in native patches,
-velocity routing, the SYNTH picker, FRESH TAPE and CLI. Voice expansion and a
-dedicated multisampled instrument builder remain separate work. [CREASE](CREASE.md) records the prototype scope and
+velocity routing, the SYNTH picker, FRESH TAPE and CLI. Model-3 MAKE INSTRUMENT and
+CLI `--instrument` retain one continuous attack/settling/held history, sample
+bounded minor-third zones around the saved root, and export through the existing
+phone/dual-MPC package path with a player-controlled release. Paper Keys and Ink
+Ribbon are the first held-instrument listening pair. Voice expansion remains
+separate work. [CREASE](CREASE.md) records the scope and
 reproduction commands.
 
 ### THUMP — analog-style drum voices (the drum synth engine)
@@ -625,6 +629,10 @@ keeps its implementation and effect recipe format.
 `testkit/contour-audition/`, including matched/raw controls, note/velocity checks,
 five-point sweeps, required interactions, isolated layers and repeated held loops.
 [CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) addresses a resting envelope
+that could hide the edge layer. Fresh recipes save the foreground response;
+earlier JSON retains the legacy response. `generateContourEdgeAudition` exports
+180 complete finite/held comparisons over five EDGE positions for owner listening.
 The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;
