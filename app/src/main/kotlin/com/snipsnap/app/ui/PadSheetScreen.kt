@@ -1321,6 +1321,7 @@ fun PadSheetScreen(
                         aquariumAuditionPcm(audio, fresh.kit.pad(targetSlot)!!)
                     }
                 }
+                logResumeThread("aquarium preview")
                 if (scope.isActive && request == aquariumGeneration && model === sourceModel &&
                     liveSlot == targetSlot && liveKitDir == kitDir &&
                     lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)

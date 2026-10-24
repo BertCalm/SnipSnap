@@ -9,3 +9,8 @@ internal fun composedOffMainThread(where: String) {
         Log.e("SnipSnapThreadCheck", "$where composed on ${Thread.currentThread().name}", Throwable("composition thread"))
     }
 }
+
+/** EXPERIMENT (not for merge): one line naming the thread a coroutine resumed on. */
+internal fun logResumeThread(where: String) {
+    Log.w("SnipSnapResume", "$where resumed on ${Thread.currentThread().name} main=${Looper.myLooper() == Looper.getMainLooper()}")
+}

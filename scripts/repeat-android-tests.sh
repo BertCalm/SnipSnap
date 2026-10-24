@@ -18,7 +18,7 @@ while [ "$i" -le "$ROUNDS" ]; do
   adb shell am instrument -w -r -e class "$TESTS" \
     com.snipsnap.app.brassgrow.test/androidx.test.runner.AndroidJUnitRunner > "$OUT/round-$i.txt" 2>&1
   adb logcat -d > "$OUT/round-$i-logcat.txt" 2>&1
-  grep -A12 'SnipSnapThreadCheck' "$OUT/round-$i-logcat.txt" | head -40
+  grep -A12 'SnipSnapThreadCheck' "$OUT/round-$i-logcat.txt" | head -40; grep -o 'SnipSnapResume.*' "$OUT/round-$i-logcat.txt" | sort | uniq -c
   if grep -q -E 'Process crashed|FAILURES!!!|INSTRUMENTATION_FAILED|shortMsg' "$OUT/round-$i.txt"; then
     bad=$((bad + 1)); echo "round $i: FAILED"; grep -m3 -E 'shortMsg|Exception|Error' "$OUT/round-$i.txt"
   else
