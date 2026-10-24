@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -20,9 +21,11 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.UserPresets
+import com.snipsnap.shell.FilamentPadMaker
 import com.snipsnap.synth.Eq
 import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentConfig
@@ -275,6 +278,37 @@ class FilamentScreenTest : ComposeScreenTest() {
         assertEquals(0, pad.tuneCoarse)
         assertEquals(0, pad.tuneFine)
         assertTrue(File(dir, pad.sampleFile).length() > 44)
+    }
+
+    @Test
+    fun current_thread_makes_a_three_root_instrument_with_its_attack_and_saved_source() {
+        val root = shelfRoot()
+        val source = FilamentPresets.forVoice(FilamentVoice.THREAD).first().copy(
+            midi = 57, velocity = .7f,
+            config = FilamentConfig(seed = 73, profile = FilamentProfile.LATE),
+        )
+        settings["voice"] = source.voiceName
+        settings["recipe.FILAMENT.${source.voiceName}"] = source.toJsonText()
+        show(root)
+        activate("MAKE INSTRUMENT")
+        slider("RELEASE").assertExists()
+        slider("ATTACK").assertDoesNotExist()
+        compose.onNodeWithText("C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
+        dial("RELEASE", 1f)
+        compose.onNodeWithText("RELEASE 1.50 s").assertExists()
+        activate("MAKE")
+        val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
+        waitFor("the three THREAD roots and their source recipe", timeoutMillis = 180_000) {
+            instruments.isDirectory && instruments.walkTopDown().any { it.name == FilamentPadMaker.PATCH_FILE }
+        }
+        val (_, instrument) = InstrumentStore.list(instruments).single()
+        assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+        assertEquals(1.5f, instrument.release, 0f)
+        assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
+        val recipe = instruments.walkTopDown().single { it.name == FilamentPadMaker.PATCH_FILE }
+        val kept = FilamentPatch.fromJsonText(recipe.readText())
+        assertEquals(source.copy(name = kept.name), kept)
+        assertEquals(0f, kept.macros.getValue("HOLD"), 0f)
     }
 
     @Test

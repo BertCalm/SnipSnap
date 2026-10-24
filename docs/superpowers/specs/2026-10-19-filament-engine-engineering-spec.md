@@ -210,3 +210,21 @@ Build in four stages: useful source and guided paths; ordered bend splitting and
 Standard pitched auditions must avoid KICK, SNARE, CLAP, HAT, and TOM. Fix excessively sharp pulses or weak pitched sustain in synthesis rather than only relabeling classifier output. Confirm and run the current repository gate, expected from supplied conventions to be `./gradlew --no-daemon test`. No source implementation, DSP tests, or listening auditions were executed in creating this specification.
 
 The owner's listening verdict completes acceptance: straight paths carry a clear note; length unfolds distinct arrivals; bending depletes THROUGH while feeding SPILL; bundles create related route interference rather than only chorus; COLLECT reveals where sound went; and held output preserves the glass-thread identity without audible seams.
+
+## As built — 2026-10-23 follow-through
+
+The owner approved model 3 of THREAD, PULSE and CURL after the third listening
+revision. Twelve dry recipes, factory/phone selection and a sixteen-pad
+starter implement this accepted subset. Models 1–3 retain their saved recipes;
+the four-path, four-section and eight-halo-mode bounds remain within the
+proposal. Native output uses fixed gain 1.20 to preserve branch depletion and
+velocity behavior, as documented in [FILAMENT.md](../../FILAMENT.md).
+
+Playback and diagnostics share one DSP core, with optional diagnostic capture,
+cooperative cancellation and bounded phone preview caching. The model-3 THREAD
+keygroup pilot retains actual zero-state startup before an independently
+verified recurring cycle, using existing MPC 2/MPC 3 export support. It covers
+C3–C5 with native C3/C4/C5 roots and one velocity layer; the host owns gain and
+note-off release. Physical phone/MPC acceptance, independent halo release,
+the remaining voices and the larger preset target remain later work. Current
+validation, render measurements and reproduction commands live in FILAMENT.md.

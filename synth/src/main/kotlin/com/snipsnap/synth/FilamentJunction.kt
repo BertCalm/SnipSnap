@@ -30,6 +30,7 @@ internal class FilamentJunction(
     hz: Double,
     private val options: Filament.Options,
     private val rate: Int,
+    private val captureDiagnostics: Boolean = true,
 ) {
     private class Ring(size: Int) {
         private val data = DoubleArray(size)
@@ -50,11 +51,11 @@ internal class FilamentJunction(
         val size get() = data.size
     }
 
-    private class RouteFilter(spec: Filament.TapSpec, rate: Int) {
+    private class RouteFilter(spec: Filament.TapSpec, rate: Int, private val captureDiagnostics: Boolean) {
         private val lowAlpha = if (spec.lowHz.isInfinite()) 1.0 else 1.0 - exp(-2.0 * PI * spec.lowHz / rate)
         private val highAlpha = if (spec.highHz > 0.0) 1.0 - exp(-2.0 * PI * spec.highHz / rate) else 0.0
         private val highMix = spec.highMix
-        private val dispersion = if (spec.dispersionHz > 0.0) Filament.Allpass(spec.dispersionHz, rate) else null
+        private val dispersion = if (spec.dispersionHz > 0.0) Filament.Allpass(spec.dispersionHz, rate, captureDiagnostics) else null
         private val dispersionMix = spec.dispersionMix
         private var low = 0.0
         private var high = 0.0
@@ -62,11 +63,11 @@ internal class FilamentJunction(
         fun next(x: Double): Double {
             low += lowAlpha * (x - low)
             high += highAlpha * (low - high)
-            maxState = max(maxState, max(abs(low), abs(high)))
+            if (captureDiagnostics) maxState = max(maxState, max(abs(low), abs(high)))
             val filtered = low - highMix * high
             val allpass = dispersion ?: return filtered
             val result = (1.0 - dispersionMix) * filtered + dispersionMix * allpass.next(filtered)
-            maxState = max(maxState, allpass.maxState)
+            if (captureDiagnostics) maxState = max(maxState, allpass.maxState)
             return result
         }
         fun state(destination: MutableList<Double>) {
@@ -84,8 +85,8 @@ internal class FilamentJunction(
         val midpoint = branch.endpointSeconds * .5 * rate
         val delays = DoubleArray(4) { branch.endpointSeconds * (it + 1.0) / 4.0 * rate }
         val ring = Ring(ceil(plan.maxDelay * rate).toInt() + 4)
-        val spillFilters = Array(4) { j -> RouteFilter(plan.leakage[branch.strandId * 16 + branch.pathId * 4 + j], rate) }
-        val endpointFilter = RouteFilter(plan.endpoints[branch.strandId * 4 + branch.pathId], rate)
+        val spillFilters = Array(4) { j -> RouteFilter(plan.leakage[branch.strandId * 16 + branch.pathId * 4 + j], rate, captureDiagnostics) }
+        val endpointFilter = RouteFilter(plan.endpoints[branch.strandId * 4 + branch.pathId], rate, captureDiagnostics)
         var throughWeight = if (voice == FilamentVoice.PULSE) sqrt(branch.launch) else
             if (plan.retained > 0.0) sqrt(branch.retained / plan.retained) else 0.0
         val spillWeights = DoubleArray(4) { j ->
@@ -99,8 +100,9 @@ internal class FilamentJunction(
     }
 
     private val source = Ring(ceil(plan.maxDelay * rate).toInt() + 4)
-    private val routes = plan.branches.map { Route(it) }
-    private val active = routes.filter { it.active }
+    private val routes = plan.branches.map { Route(it) }.toTypedArray()
+    // These arrays keep the fixed route order without allocating sample-rate iterators.
+    private val active = routes.filter { it.active }.toTypedArray()
     init {
         if (voice == FilamentVoice.PULSE) {
             // Apertures follow admitted lanes, not their no-exchange retained-power estimates:
@@ -152,6 +154,7 @@ internal class FilamentJunction(
 
     /** Integrals for HOLD describe its actual returned cycle, not the discarded preroll. */
     fun beginWindow(scope: String) {
+        if (!captureDiagnostics) return
         energyScope = scope
         frameCount = 0L
         sourceEnergy = 0.0; retainedEnergy = 0.0; escapedEnergy = 0.0; absorbedEnergy = 0.0
@@ -163,10 +166,12 @@ internal class FilamentJunction(
 
     private fun split(route: Route, section: Int, input: Double): Double {
         val r = input * route.retained[section]
-        val t = input * route.escape[section]
-        val a = input * route.absorb[section]
-        maxSplitError = max(maxSplitError, abs(input * input - r * r - t * t - a * a))
-        absorbedEnergy += a * a
+        if (captureDiagnostics) {
+            val t = input * route.escape[section]
+            val a = input * route.absorb[section]
+            maxSplitError = max(maxSplitError, abs(input * input - r * r - t * t - a * a))
+            absorbedEnergy += a * a
+        }
         return r
     }
 
@@ -180,24 +185,28 @@ internal class FilamentJunction(
         val y = junction[b]
         val u = cosine * x + sine * y
         val v = -sine * x + cosine * y
-        maxJunctionError = max(maxJunctionError, abs(x * x + y * y - u * u - v * v))
+        if (captureDiagnostics) maxJunctionError = max(maxJunctionError, abs(x * x + y * y - u * u - v * v))
         junction[a] = u; junction[b] = v
-        maxT = max(maxT, abs(t))
+        if (captureDiagnostics) maxT = max(maxT, abs(t))
     }
 
     fun next(input: Double) {
-        frameCount++
-        sourceEnergy += input * input
+        if (captureDiagnostics) {
+            frameCount++
+            sourceEnergy += input * input
+        }
         source.write(input)
         through = 0.0; escaped = 0.0
         for (route in active) {
             val id = route.branch.strandId * 4 + route.branch.pathId
-            val first = source.read(route.delays[0]) * route.launch
-            split(route, 0, first)
+            if (captureDiagnostics) {
+                val first = source.read(route.delays[0]) * route.launch
+                split(route, 0, first)
+            }
             val second = source.read(route.delays[1]) * route.launch * route.retained[0]
             val middle = split(route, 1, second)
             junction[id] = middle
-            before[id] = middle
+            if (captureDiagnostics) before[id] = middle
             if (route.branch.pathId != 0) {
                 route.activityLow += activityAlpha * (middle - route.activityLow)
                 val upper = middle - route.activityLow
@@ -207,17 +216,19 @@ internal class FilamentJunction(
                     val alpha = if (target > route.memory) attackAlpha else releaseAlpha
                     route.memory += alpha * (target - route.memory)
                 }
-                minimumMemory = min(minimumMemory, route.memory)
-                maximumMemory = max(maximumMemory, route.memory)
-                sumMemory += route.memory
-                memoryCount++
+                if (captureDiagnostics) {
+                    minimumMemory = min(minimumMemory, route.memory)
+                    maximumMemory = max(maximumMemory, route.memory)
+                    sumMemory += route.memory
+                    memoryCount++
+                }
             }
             for (j in 0..1) {
                 val delay = if (options.genericSpill) plan.maxDelay * rate else route.delays[j]
                 val prefix = if (j == 0) route.launch else route.launch * route.retained[0]
                 val escapedInput = source.read(delay) * prefix * route.escape[j]
                 val leaf = route.spillFilters[j].next(escapedInput)
-                escapedEnergy += leaf * leaf
+                if (captureDiagnostics) escapedEnergy += leaf * leaf
                 escaped += route.spillWeights[j] * leaf
             }
         }
@@ -253,32 +264,37 @@ internal class FilamentJunction(
         var outgoing = 0.0
         for (route in active) {
             val id = route.branch.strandId * 4 + route.branch.pathId
-            val x = before[id]
             val y = junction[id]
-            incoming += x * x; outgoing += y * y
-            routeChanges[id] += y * y - x * x
+            if (captureDiagnostics) {
+                val x = before[id]
+                incoming += x * x; outgoing += y * y
+                routeChanges[id] += y * y - x * x
+            }
             route.ring.write(y)
         }
-        junctionInputEnergy += incoming
-        junctionOutputEnergy += outgoing
-        maxJunctionError = max(maxJunctionError, abs(incoming - outgoing))
+        if (captureDiagnostics) {
+            junctionInputEnergy += incoming
+            junctionOutputEnergy += outgoing
+            maxJunctionError = max(maxJunctionError, abs(incoming - outgoing))
+        }
         for (route in active) {
             val third = route.ring.read(route.delays[2] - route.midpoint)
-            split(route, 2, third)
+            if (captureDiagnostics) split(route, 2, third)
             val fourth = route.ring.read(route.delays[3] - route.midpoint) * route.retained[2]
             val endpoint = split(route, 3, fourth)
             val retainedLeaf = route.endpointFilter.next(endpoint)
-            retainedEnergy += retainedLeaf * retainedLeaf
+            if (captureDiagnostics) retainedEnergy += retainedLeaf * retainedLeaf
             through += route.throughWeight * retainedLeaf
             for (j in 2..3) {
                 val delay = (if (options.genericSpill) plan.maxDelay * rate else route.delays[j]) - route.midpoint
                 val prefix = if (j == 2) 1.0 else route.retained[2]
                 val escapedInput = route.ring.read(delay) * prefix * route.escape[j]
                 val leaf = route.spillFilters[j].next(escapedInput)
-                escapedEnergy += leaf * leaf
+                if (captureDiagnostics) escapedEnergy += leaf * leaf
                 escaped += route.spillWeights[j] * leaf
             }
-            maxState = max(maxState, max(abs(junction[route.branch.strandId * 4 + route.branch.pathId]), max(abs(route.activityLow), route.memory)))
+            if (captureDiagnostics) maxState = max(maxState,
+                max(abs(junction[route.branch.strandId * 4 + route.branch.pathId]), max(abs(route.activityLow), route.memory)))
             route.ring.advance()
         }
         source.advance()

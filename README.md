@@ -237,7 +237,8 @@ opens and relaxes related routes, and CURL lets its upper colour bloom.
 Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
 share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
 BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
-held exports contain sustain cycles. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
+held pads contain sustain cycles. Model-3 THREAD also makes a three-root
+C3–C5 instrument that keeps its attack and sustains until note-off. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](docs/FILAMENT.md) document the sound and its limits.
 
 FATHOM is the bass engine, and it exists for the three things VELVET
