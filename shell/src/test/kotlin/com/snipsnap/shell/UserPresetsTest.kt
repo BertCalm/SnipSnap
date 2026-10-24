@@ -623,8 +623,8 @@ class UserPresetsTest {
                 ),
                 model = 1,
             )
-            assertEquals(2, held.config.model, "the promotion helper starts from the new model")
-            for (model in 1..2) {
+            assertEquals(2, held.config.model, "the factory reference retains its pinned sound")
+            for (model in 1..3) {
                 val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config.copy(model = model))
                 UserPresets.save(root, source, 1L)
                 val saved = UserPresets.read(root).single()
@@ -644,7 +644,8 @@ class UserPresetsTest {
 
     /**
      * [line] as MurmurPresets.kt would build it: `p(voice, name, macros...)` is
-     * `MurmurPatch(name, voice, Murmur.defaults(voice) + macros)`, then `.copy(...)`.
+     * a MurmurPatch with voice defaults plus macros and an explicit model-2 configuration,
+     * then `.copy(...)` restores the complete saved instrument.
      * Every literal must have the type its parameter takes, and every constructor
      * must name exactly the fields of its class, so a field the line drops (or one
      * added to the class later) fails here rather than in the owner's paste.
