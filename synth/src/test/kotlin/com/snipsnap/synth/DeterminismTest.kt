@@ -68,6 +68,15 @@ class DeterminismTest {
         assertContentEquals(patch.render().samples, patch.render().samples)
     }
 
+    @Test
+    fun `VENT saved clean recipes keep note touch and trajectory history across replay`() {
+        for (entry in VentKitPresets.entries.filter { it.role == "Percussive hit" }) {
+            val patch = entry.patch
+            val restored = VentPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, restored.render().samples, "${entry.id} recipe replay changed its sound")
+        }
+    }
+
     // TIDE seeds WANDER from the recipe itself (Tide.seedFor), so this is
     // the canary for the regenerate-from-kit.json promise at full WANDER.
     @Test
