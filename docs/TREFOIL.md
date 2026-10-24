@@ -46,7 +46,7 @@ encounter. On exclusion or work-cap termination, the last accepted snapshot is
 retained for release, flagged, and continuing excitation ends smoothly. That
 snapshot is not presented as continued motion.
 
-## Audio model
+## Original audio model 1, frozen for replay
 
 Each bank has six modes at ratios 1,1,2,3,4,6. A local root mode keeps its tuning
 while the second root degree of freedom can exchange strongly. THREAD changes excitation, pickup
@@ -87,9 +87,9 @@ non-macro state. No hidden solver or DSP state is serialized.
   -PtrefoilReplayWav=/tmp/receiver.wav
 ```
 
-The generator writes 62 cases / 124 actual PCM16 WAVs, complete diagnostic recipes,
+The model-two generator writes 67 cases / 134 actual PCM16 WAVs, complete diagnostic recipes,
 trajectory/energy traces, raw/matched metrics, source hashes and a starter ZIP under
-ignored `testkit/trefoil-audition/`. Retained frontend source lives under
+ignored `testkit/trefoil-model-two-audition/`. Retained frontend source lives under
 `synth/src/test/resources/trefoil-audition/`. Five-step controls, three registers and
 three velocities join moving/frozen, exchange-off, memory-off and additive stems.
 The single-body impulse disables B/C exciters and memory. Off receivers are silent.
@@ -150,3 +150,59 @@ No acoustic constants were changed in this interface revision.
 receiver output in browser QA, and the focused Kotlin Trefoil checks. The earlier
 whole-repository run ended with the execution session before a final build result;
 it is not recorded as a full-suite pass.
+
+## Acoustic model 2, following the listening rejection
+
+The characteristic gesture is colored contact → shifting upper-partial ownership
+between three bodies → excitation ends → the upper-partial memory remains.
+Josh heard no useful change in ordered exchange or default memory in model 1.
+Its silent disconnected receiver proved isolation, rather than musical contrast.
+
+The Newtonian solver, choreography reference, time map, exclusions and eight-entry
+trajectory cache are unchanged. Both acoustic models reuse the same cached trace.
+Model 1 retains its arithmetic and noise stream. The model field dispatches both
+diagnostic and normal Patch rendering, including JSON and PadRecipe replay.
+
+Model 2 uses eight modes at ratios 1,2,3,4,5,6,8,10. A normalized colored exciter
+receives a finite band-limited harmonic contact drive plus seeded filtered noise.
+THREAD changes excitation, pickup brightness and bounded upper-mode offsets.
+The three fixed pickup colors make redistributed partial energy observable.
+Exciter phases differ between bodies; the former duplicate protected root is gone.
+
+EXCHANGE rotates both (omega*q,v) coordinates between all three banks separately
+for each partial. The simultaneous real orthogonal rotations preserve the summed
+core energy even with moving geometry. Root exchange is weaker than upper-partial
+exchange, and exchange rate scales down with fundamental frequency in the bass.
+Positive source work retains the equal per-body budget. Damping contracts the core.
+
+MEMORY receives corresponding upper-mode velocities, rather than reinforcing the
+same dominant root. Its T60 is (2 + 4.5*MEMORY)/(1 + .10*modeIndex) seconds, so
+the default .25 outlasts the dry modes. Send and return each scale with sqrt(MEMORY),
+giving a linear combined amount before decay changes. No memory signal returns to
+the core. The dry pickup gain is constant for every memory value and ablation.
+
+The revised audition lives beside the complete original page. Its first A/B pair
+compares original and revised ordered sounds at the same full-clip loudness target;
+the next pairs test revised exchange and default memory at common reference gain.
+The isolated silent-receiver test is labeled technical. Original-model WAV hashes
+are checked against the first published files. New browser notes use a separate
+storage key; earlier notes remain with the original page.
+
+### Why it is built this way
+
+- Richer contact puts energy into the partials that the three bodies radiate
+  differently. A nearly pure shared sine hid their different states.
+- Per-partial exchange moves actual internal energy. Its audible claim can be
+  judged with exchange disabled while the same exciters keep running.
+- Longer upper-partial memory leaves a different tail. Disabling it removes only
+  that contribution, so a compensating dry-volume change cannot mimic its effect.
+- The original model stays replayable. This is a new acoustic candidate awaiting
+  Josh's verdict, with finite gestures and phone integration still deferred.
+
+**Verified/measured ledger:** numerical invariants, exact replay, pitch and audio
+measurements are recorded in the generated diagnostics and verification report.
+Browser QA checks switching, playback and signal/silence routing. Spectral residuals
+are not perceptual thresholds. This model has not yet received listening acceptance.
+The trajectory cache avoids repeat solver work; audio rendering remains an offline
+prototype, and measured render times are disclosed per recording rather than a
+claimed phone latency budget.

@@ -4,8 +4,11 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.FeatureExtractor
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import java.nio.file.Files
+import java.security.MessageDigest
 import kotlin.math.*
 import kotlin.test.*
 
@@ -159,5 +162,43 @@ class TrefoilTest {
         macros["HOLD"]=JsonValue.Num(1e-10); obj["macros"]=JsonValue.Obj(macros)
         assertFailsWith<JsonException> { Patches.fromJsonValue(JsonValue.Obj(obj)) }
         assertFailsWith<IllegalArgumentException> { patch().copy(activeSeconds=2f) }
+    }
+    @Test fun `published model one recipes retain their original PCM bytes`() {
+        val cases=listOf(
+            Triple(TrefoilVoice.WEAVE,43L,"946a7be26eb4b4558af32aed370cf92749ec8335515384182811a3c140b5a8af"),
+            Triple(TrefoilVoice.TANGLE,27L,"e02de995d353340472291b8b522d6a47cd9d30d207f3fca31daf1e2cc10b049b"))
+        for((voice,seed,expected) in cases) {
+            val p=TrefoilPatch("Original",voice,seed=seed,model=1)
+            val replay=TrefoilPatch.fromJsonText(p.toJsonText())
+            val probe=Trefoil.probe(replay)
+            val f=Files.createTempFile("trefoil-v1-",".wav").toFile()
+            try {
+                WavWriter.write(f,Snip(probe.raw,1,Dsp.RATE),WavWriter.BitDepth.PCM_16)
+                val actual=MessageDigest.getInstance("SHA-256").digest(f.readBytes()).joinToString("") { "%02x".format(it) }
+                assertEquals(expected,actual,"published $voice raw PCM changed")
+            } finally { f.delete() }
+            assertContentEquals(Trefoil.probe(p).samples,replay.render().samples)
+            assertSame(probe.trace,TrefoilTrajectory.forPatch(p.copy(model=2)))
+        }
+    }
+    @Test fun `model two memory adds a longer tail without changing the dry bodies`() {
+        val p=TrefoilPatch("Memory",TrefoilVoice.WEAVE)
+        val on=Trefoil.probe(p,Trefoil.Options(stems=true))
+        val off=Trefoil.probe(p,Trefoil.Options(memoryEnabled=false,stems=true))
+        for(b in 0..2) assertContentEquals(on.stems[b],off.stems[b])
+        val tail=(3.5*Dsp.RATE).toInt()
+        fun power(x: FloatArray)=(tail until x.size).sumOf { x[it].toDouble().pow(2) }
+        val ratio=power(on.raw)/power(off.raw)
+        println("TREFOIL model two default memory tail power ratio=$ratio")
+        assertTrue(ratio>2,"default memory must produce a measurable afterimage")
+        assertContentEquals(off.raw,Trefoil.probe(p.copy(macros=p.macros+("MEMORY" to 0f))).raw)
+    }
+    @Test fun `model two default exchange changes shape after removing a scalar gain`() {
+        val p=TrefoilPatch("Exchange",TrefoilVoice.WEAVE)
+        val a=Trefoil.probe(p).raw; val b=Trefoil.probe(p.copy(macros=p.macros+("EXCHANGE" to 0f))).raw
+        val gain=a.indices.sumOf { a[it].toDouble()*b[it] }/b.sumOf { it.toDouble().pow(2) }
+        val residual=sqrt(a.indices.sumOf { (a[it]-gain*b[it]).pow(2) }/a.sumOf { it.toDouble().pow(2) })
+        println("TREFOIL model two level-aligned default exchange residual=$residual")
+        assertTrue(residual>.15,"exchange must change more than overall level; listening acceptance remains separate")
     }
 }

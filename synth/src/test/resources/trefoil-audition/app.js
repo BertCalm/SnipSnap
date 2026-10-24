@@ -6,25 +6,27 @@ const state = { manifest: null, id: 'ordered', mode: 'matched', section: 'First 
 const colors = ['#b16d50', '#4f8097', '#a19139'];
 const playIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2v12l10-6z"/></svg>';
 const pauseIcon = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2h3v12H3zm7 0h3v12h-3z"/></svg>';
-const storageKey = 'snipsnap-trefoil-first-listen-notes-v1';
+const storageKey = 'snipsnap-trefoil-model-2-notes-v1';
 const pairs = {
+  revision: { ids: ['original-ordered', 'ordered'], labels: ['Original sound model', 'Revised sound model'], range: [.4, 3.5], prompt: 'Start here. The same note, touch, trajectory and controls feed the original and revised acoustic models. Compare the body of the note, then try exchange and default memory below.', level: 'Both complete clips use the same loudest-200-ms RMS target. This is a comparison between acoustic models.' },
   motion: { ids: ['unsettled-live', 'unsettled-frozen'], labels: ['Moving geometry', 'Frozen starting geometry'], range: [.4, 3.5], prompt: 'Compare the swell and changing contact through the middle of the note. The perturbed patch is identical; B holds its geometry at the starting snapshot.', level: 'Both branches keep the moving mix’s gain. A level or envelope change is part of this comparison.' },
   transfer: { ids: ['transfer-on-1', 'transfer-off-1'], labels: ['Receiver B · connected', 'Receiver B · disconnected'], range: [0, 1], prompt: 'Only body A was struck. Hear the quiet, unstruck body B with exchange connected, then disconnected. The disconnected receiver is silent. This isolates transfer; it does not establish how prominent exchange is in the whole mix.', level: 'Both receiver recordings keep the complete transfer mix’s gain. This is a quiet isolated stem.' },
   memory: { ids: ['memory-0', 'memory-100'], labels: ['Memory · 0%', 'Memory · 100%'], range: [3.5, 6], prompt: 'Listen after the excitation ends at 3.5 seconds. Compare how long the note hangs on. These endpoints make a wider comparison than the default memory on/off test.', level: 'Each complete clip uses the same loudest-200-ms RMS target. The focus passage receives no extra gain.' },
-  'ordered-exchange': { ids: ['ordered-live', 'ordered-independent'], labels: ['Ordered · exchange on', 'Ordered · exchange off'], range: [.4, 3.5], prompt: 'A subtle whole-mix test. Both clips retain moving excitation and a dominant shared fundamental. If switching adds little musical character, record that result.', level: 'Both branches keep the full mix’s gain. No difference signal or enhancement is added.' },
-  'ordered-memory': { ids: ['ordered-live', 'ordered-no-memory'], labels: ['Default · memory on', 'Default · memory off'], range: [3.5, 6], prompt: 'A very subtle test. Measurement shows that the default memory branch changes mostly level, with very little change in tone. “No clear difference” is a valid verdict.', level: 'Both branches keep the full mix’s gain. The original recordings are preserved.' }
+  'ordered-exchange': { ids: ['ordered-live', 'ordered-independent'], labels: ['Ordered · exchange on', 'Ordered · exchange off'], range: [.4, 3.5], prompt: 'The revised whole mix with exchange on and off. Listen for changes in the upper harmonics and their movement. Both sides continue to receive trajectory-driven excitation.', level: 'Both branches keep the full mix’s gain. No difference signal or enhancement is added.' },
+  'ordered-memory': { ids: ['ordered-live', 'ordered-no-memory'], labels: ['Default · memory on', 'Default · memory off'], range: [3.5, 6], prompt: 'Listen after excitation ends at 3.5 seconds. The revised default memory keeps upper harmonics ringing beyond the dry bodies. B removes only that memory contribution.', level: 'Both branches keep the full mix’s gain. The three dry pickups are identical in this pair.' }
 };
-const deck = { active: false, playing: false, loading: false, side: 0, key: 'motion', context: null, cache: new Map(), buffers: [], sources: [], gains: [], offset: 0, started: 0, runBounds: [0, 6], looping: false, request: 0, generation: 0 };
+const deck = { active: false, playing: false, loading: false, side: 0, key: 'revision', context: null, cache: new Map(), buffers: [], sources: [], gains: [], offset: 0, started: 0, runBounds: [0, 6], looping: false, request: 0, generation: 0 };
 let notes = {};
 try { notes = JSON.parse(localStorage.getItem(storageKey) || '{}'); } catch { notes = {}; }
 let statusTimer;
 const sections = {
-  'First listen': ['Five starting points', 'These are neighboring settings of one prototype. Their shared fundamental dominates; distinct sound character remains a design question.'],
-  'Comparisons': ['Change one relationship', 'The original full-mix comparisons, including subtle pairs. Use the guided A/B panel above to switch at the same point in time. Each branch keeps its full mix’s gain.'],
+  'First listen': ['Five starting points', 'Five starting points in the revised acoustic model. Judge the body, moving harmonics and lingering tail; the original model remains available below.'],
+  'Comparisons': ['Change one relationship', 'Revised whole-mix comparisons at fixed reference gain. Use the guided A/B panel above to switch without restarting.'],
   'Stems': ['Listen inside the whole', 'Three additive participant pickups and one shared memory contribution, all at the complete mix’s gain.'],
   'Transfer proof': ['Strike one. Hear the others.', 'Only A is struck. With exchange enabled, B and C can receive energy from the network. Their disconnected clips are intentionally silent.'],
   'Control sweeps': ['One control, five positions', 'The complete gesture at 0, 25, 50, 75, and 100 percent. Each clip uses the same audition level target.'],
   'Notes & touch': ['Keep the movement. Change the note.', 'Low, middle, and high notes at three playing strengths. The underlying trajectory stays the same.'],
+  'Original model': ['The first published sounds', 'Preserved model-one recipes, replayed through the versioned renderer. Your earlier verdict still applies to these originals.'],
   'Extremes': ['At the edges', 'Fast contact and maximum controls test how far the pitched body holds together.']
 };
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

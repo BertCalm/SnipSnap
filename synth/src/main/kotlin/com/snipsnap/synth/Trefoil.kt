@@ -8,9 +8,9 @@ import kotlin.random.Random
 
 enum class TrefoilVoice { WEAVE, HOLLOW, WIRE, TANGLE, TRACE }
 
-/** Finite first-listen model: three equal pitched banks and a feedforward sympathetic trace. */
+/** Versioned finite studies. Model 1 is frozen; model 2 revises the acoustic mapping only. */
 object Trefoil {
-    const val MODEL_VERSION=1
+    const val MODEL_VERSION=2
     const val MIN_MIDI=36
     const val MAX_MIDI=84
     const val DEFAULT_MIDI=60
@@ -89,7 +89,13 @@ object Trefoil {
         Dsp.fadeTail(out,ms=60f)
         return out
     }
-    internal fun probe(p: TrefoilPatch,options: Options=Options()): Probe {
+    internal fun probe(p: TrefoilPatch,options: Options=Options()): Probe = when(p.model) {
+        1 -> probeV1(p,options)
+        2 -> TrefoilModelTwo.probe(p,options)
+        else -> error("unsupported TREFOIL model ${p.model}")
+    }
+    // Preserve the first published model's arithmetic and noise stream for exact recipe replay.
+    private fun probeV1(p: TrefoilPatch,options: Options): Probe {
         val start=System.nanoTime(); val m=settled(p.voice,p.macros)
         val trace=TrefoilTrajectory.forPatch(p)
         val desc=trace.states.map(::descriptor)
@@ -208,6 +214,6 @@ object Trefoil {
                 work.sum(),budget*3,unforcedRise,finite,peakEnergy.toList(),energy,(System.nanoTime()-start)/1e6,trace.diagnostics),trace)
     }
     fun render(v: TrefoilVoice,macros: Map<String,Float> = emptyMap(),midi: Int=DEFAULT_MIDI,
-        velocity: Float=.8f,seed: Long=43L,seconds: Float=6f,activeSeconds: Float=3.5f): Snip =
-        Snip(probe(TrefoilPatch("Render",v,macros,midi,velocity,seed,seconds,activeSeconds)).samples,1,Dsp.RATE)
+        velocity: Float=.8f,seed: Long=43L,seconds: Float=6f,activeSeconds: Float=3.5f,model: Int=MODEL_VERSION): Snip =
+        Snip(probe(TrefoilPatch("Render",v,macros,midi,velocity,seed,seconds,activeSeconds,model)).samples,1,Dsp.RATE)
 }

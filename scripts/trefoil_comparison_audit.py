@@ -12,7 +12,7 @@ import wave
 
 import numpy as np
 
-root = Path(sys.argv[1] if len(sys.argv) > 1 else 'testkit/trefoil-audition')
+root = Path(sys.argv[1] if len(sys.argv) > 1 else 'testkit/trefoil-model-two-audition')
 manifest = json.loads((root / 'manifest.json').read_text())
 clips = {clip['id']: clip for clip in manifest['clips']}
 fingerprints = {}

@@ -395,7 +395,7 @@ tasks.register<JavaExec>("generateTrefoilAudition") {
         args("--replay", replay, providers.gradleProperty("trefoilReplayWav").get(),
             providers.gradleProperty("trefoilReplayMode").orNull ?: "matched")
     } else {
-        args(providers.gradleProperty("trefoilOutput").orNull ?: "${rootDir}/testkit/trefoil-audition")
+        args(providers.gradleProperty("trefoilOutput").orNull ?: "${rootDir}/testkit/trefoil-model-two-audition")
     }
 }
 

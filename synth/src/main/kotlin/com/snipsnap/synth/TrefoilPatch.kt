@@ -4,7 +4,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
-/** Complete finite recipe. Model 1 fixes solver/reference/time-map and excitation laws. */
+/** Complete finite recipe. Both acoustic models share the fixed model-one trajectory laws. */
 data class TrefoilPatch(
     override val name: String,
     val voice: TrefoilVoice,
@@ -22,12 +22,12 @@ data class TrefoilPatch(
         require(velocity.isFinite() && velocity in 0f..1f)
         require(seconds.isFinite() && seconds in .25f..8f)
         require(activeSeconds.isFinite() && activeSeconds in .05f..seconds-.1f)
-        require((macros["HOLD"] ?: 0f)==0f) { "TREFOIL model 1 supports finite gestures only; HOLD must be 0" }
-        require(model==Trefoil.MODEL_VERSION) { "unsupported TREFOIL model $model" }
+        require((macros["HOLD"] ?: 0f)==0f) { "TREFOIL supports finite gestures only; HOLD must be 0" }
+        require(model in 1..Trefoil.MODEL_VERSION) { "unsupported TREFOIL model $model" }
     }
     override val engine get()=ENGINE
     override val voiceName get()=voice.name
-    override fun render()=Trefoil.render(voice,macros,midi,velocity,seed,seconds,activeSeconds)
+    override fun render()=Trefoil.render(voice,macros,midi,velocity,seed,seconds,activeSeconds,model)
     override fun withMacros(macros: Map<String,Float>)=copy(macros=macros)
     override fun toJsonValue()=JsonValue.Obj(LinkedHashMap(Patches.toJsonValue(this).entries).also {
         it["model"]=JsonValue.Num(model.toDouble()); it["midi"]=JsonValue.Num(midi.toDouble())

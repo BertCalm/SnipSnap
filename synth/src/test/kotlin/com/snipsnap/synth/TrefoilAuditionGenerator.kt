@@ -29,6 +29,9 @@ object TrefoilAuditionGenerator {
             "Sparse contact leaves a longer sympathetic trace.")
         for((i,t) in main.withIndex()) out+=Case(t.second,t.third,"First listen",descriptions[i],
             "Can you hear three changing contributions within one stable note?",t.first.copy(name=t.third))
+        for(t in main) out+=Case("original-${t.second}","Original · ${t.third}","Original model",
+            "The first published acoustic model, replayed from the same note, touch, controls and seed.",
+            "Compare this original with the revised starting sound. What changed in the body and tail?",t.first.copy(model=1))
         for((label,patch) in listOf("ordered" to ordered,"unsettled" to tangled)) {
             val title=if(label=="ordered") "Ordered" else "Perturbed"
             val base="$label-live"
@@ -95,7 +98,7 @@ object TrefoilAuditionGenerator {
         (lo until hi).maxOfOrNull { abs(s[it]) } ?: 0f }
     @JvmStatic fun main(args: Array<String>) {
         if(args.firstOrNull()=="--replay") { replay(args.drop(1)); return }
-        val root=File(args.firstOrNull() ?: "../testkit/trefoil-audition").canonicalFile; root.mkdirs()
+        val root=File(args.firstOrNull() ?: "../testkit/trefoil-model-two-audition").canonicalFile; root.mkdirs()
         val repo=generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }.first { File(it,".git").exists() }
         val quick=System.getProperty("trefoil.quick")=="true"
         val cases=cases().let { if(quick) it.filter { c -> c.section in setOf("First listen","Transfer proof") } else it }
@@ -135,7 +138,7 @@ object TrefoilAuditionGenerator {
             if(c.id in cases.mapNotNull { it.reference }.toSet()) records[c.id]=selected
             val note=Scales.nameOf(c.patch.midi)
             val recipe=mapOf("patch" to c.patch.toJsonValue(),"options" to options(c.options,c.stem),"matchedGain" to gain,
-                "modelDescription" to "Finite TREFOIL model 1; no HOLD or escape classification")
+                "modelDescription" to "Finite TREFOIL acoustic model ${c.patch.model}; shared model-one trajectory; no HOLD or escape classification")
             write(File(root,"recipes/${c.id}.json"),recipe)
             val trajectoryName="traces/${c.id}.json"
             val traceFrames=p.trace.states.indices.filter { it%10==0 || it==p.trace.states.lastIndex }.map { i ->
@@ -144,7 +147,7 @@ object TrefoilAuditionGenerator {
                 "energy" to d.energy.map { listOf(it.seconds,it.core,it.memory,it.positiveWork) }))
             write(File(root,"diagnostics/${c.id}.json"),measures)
             clips+=linkedMapOf("id" to c.id,"title" to c.title,"section" to c.section,"description" to c.description,
-                "question" to c.question,"voice" to c.patch.voice.name,"note" to note,"midi" to c.patch.midi,
+                "question" to c.question,"voice" to c.patch.voice.name,"model" to c.patch.model,"note" to note,"midi" to c.patch.midi,
                 "velocity" to c.patch.velocity,"seconds" to c.patch.seconds,"activeSeconds" to c.patch.activeSeconds,
                 "seed" to c.patch.seed.toString(),"macros" to c.patch.macros,"group" to c.group,"reference" to c.reference,
                 "sweep" to c.sweep,"step" to c.step,"raw" to "audio/${c.id}-raw.wav","matched" to "audio/${c.id}-matched.wav",
@@ -156,28 +159,28 @@ object TrefoilAuditionGenerator {
             val input=TrefoilAuditionGenerator::class.java.getResourceAsStream("/trefoil-audition/$name") ?: error("missing page resource $name")
             input.use { stream -> File(root,name).outputStream().use { stream.copyTo(it) } }
         }
-        val sources=listOf("synth/src/main/kotlin/com/snipsnap/synth/Trefoil.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilPatch.kt",
+        val sources=listOf("synth/src/main/kotlin/com/snipsnap/synth/Trefoil.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilModelTwo.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilPatch.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/TrefoilTrajectory.kt","synth/src/test/kotlin/com/snipsnap/synth/TrefoilTest.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/TrefoilAuditionGenerator.kt","synth/build.gradle.kts","docs/TREFOIL.md",
             "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt","synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt","synth/src/main/kotlin/com/snipsnap/synth/Keys.kt",
-            "scripts/trefoil_refine_reference.py","scripts/trefoil_browser_check.py")+
+            "scripts/trefoil_refine_reference.py","scripts/trefoil_browser_check.py","scripts/trefoil_comparison_audit.py")+
             listOf("index.html","app.js","styles.css","favicon.svg").map { "synth/src/test/resources/trefoil-audition/$it" }
         val sourceHashes=sources.filter { File(repo,it).exists() }.associateWith { path ->
             val f=File(repo,path); val to=File(root,"source/$path"); to.parentFile.mkdirs(); f.copyTo(to,true); hash(f) }
         val baseRevision=git(repo,"merge-base","HEAD","origin/HEAD")
         val patchFile=File(root,"source/trefoil-engine.patch")
         patchFile.writeText(git(repo,"diff",baseRevision,"--","synth","scripts/trefoil_refine_reference.py",
-            "scripts/trefoil_browser_check.py","docs/TREFOIL.md","docs/README.md","docs/SYNTH_ROADMAP.md",".gitignore")+"\n")
+            "scripts/trefoil_browser_check.py","scripts/trefoil_comparison_audit.py","docs/TREFOIL.md","docs/README.md","docs/SYNTH_ROADMAP.md",".gitignore")+"\n")
         val provenance=mapOf("revision" to revision,"baseRevision" to baseRevision,"dirtyAtRender" to dirty,"sourceSha256" to sourceHashes,
             "generatedAt" to Instant.now().toString(),"renderer" to "SnipSnap Kotlin/JVM, mono 44100Hz, 4x internal",
             "dependency" to "org.apache.commons:commons-math3:3.6.1 (Apache-2.0)")
         write(File(root,"source-provenance.json"),provenance)
-        write(File(root,"manifest.json"),mapOf("title" to "Trefoil","revision" to 1,"status" to "Finite first-listen prototype · owner listening pending",
+        write(File(root,"manifest.json"),mapOf("title" to "Trefoil","revision" to 2,"status" to "Acoustic model 2 · original model preserved · owner listening pending",
             "generatedAt" to Instant.now().toString(),"provenance" to provenance,"clips" to clips))
-        File(root,"REPLAY.txt").writeText("TREFOIL finite first-listen prototype\n\nPublic SnipSnap base: $baseRevision\nRendering source commit: $revision\nThe source/trefoil-engine.patch applies to that public base with git apply.\n\nFrom the matching source:\n./gradlew --no-daemon :synth:generateTrefoilAudition\n\nReplay one complete diagnostic recipe:\n./gradlew --no-daemon :synth:generateTrefoilAudition -PtrefoilReplay=/absolute/path/to/recipes/ordered.json -PtrefoilReplayWav=/tmp/ordered.wav\n\nWAVs are 44.1kHz mono PCM16. Comparison branches and stems retain their reference's matching gain. Off receiver stems are intentionally silent. HOLD, provisional escape classification, phone integration and listening acceptance remain later work.\n")
+        File(root,"REPLAY.txt").writeText("TREFOIL finite acoustic model 2; original model 1 retained\n\nPublic SnipSnap base: $baseRevision\nRendering source commit: $revision\nThe source/trefoil-engine.patch applies to that public base with git apply.\n\nFrom the matching source:\n./gradlew --no-daemon :synth:generateTrefoilAudition\n\nReplay one complete diagnostic recipe:\n./gradlew --no-daemon :synth:generateTrefoilAudition -PtrefoilReplay=/absolute/path/to/recipes/ordered.json -PtrefoilReplayWav=/tmp/ordered.wav\n\nWAVs are 44.1kHz mono PCM16. Comparison branches and stems retain their reference's matching gain. Off receiver stems are intentionally silent. HOLD, provisional escape classification, phone integration and listening acceptance remain later work.\n")
         val zip=File(root,"trefoil-listening-starter.zip")
-        val selectedIds=cases.filter { it.section in setOf("First listen","Comparisons","Stems","Transfer proof") }.map { it.id }.toSet()
+        val selectedIds=cases.filter { it.section in setOf("First listen","Comparisons","Stems","Transfer proof","Original model") }.map { it.id }.toSet()
         ZipOutputStream(zip.outputStream().buffered()).use { z ->
             root.walkTopDown().filter { f -> f.isFile && f!=zip && (
                 f.relativeTo(root).path.startsWith("source/") || f.name in setOf("manifest.json","source-provenance.json","REPLAY.txt") ||
