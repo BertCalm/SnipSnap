@@ -143,7 +143,7 @@ object TrefoilPlayableBankGenerator {
             stream.use { input -> File(root,name).outputStream().use { input.copyTo(it) } }
         }
         val base=git(repo,"merge-base","HEAD","origin/HEAD")
-        val patch=ProcessBuilder("git","diff",base,"--","synth","shell","app","docs/TREFOIL.md","docs/SYNTH_ROADMAP.md","scripts/trefoil_bank_browser_check.py",".gitignore")
+        val patch=ProcessBuilder("git","diff",base,"--","synth","shell","app","README.md","docs/TREFOIL.md","docs/SYNTH_ROADMAP.md","scripts/trefoil_bank_browser_check.py",".gitignore")
             .directory(repo).start().let { process -> val value=process.inputStream.bufferedReader().readText();check(process.waitFor()==0);value }
         File(root,"source").mkdirs();File(root,"source/trefoil-playable.patch").writeText(patch)
         File(root,"REPLAY.txt").writeText("Public SnipSnap base: $base\nSource revision: $revision\nApply source/trefoil-playable.patch at that base.\nRun ./gradlew --no-daemon :synth:generateTrefoilPlayableBank\nThe engine remains acoustic model 2. Full recipes include note, duration, contact time, seed and velocity.\n")
