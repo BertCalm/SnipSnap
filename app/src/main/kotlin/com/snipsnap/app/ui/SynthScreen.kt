@@ -256,6 +256,9 @@ import com.snipsnap.synth.StoopVoice
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
 import com.snipsnap.synth.LacquerVoice
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.LatticeVoice
 import com.snipsnap.synth.Skitter
 import com.snipsnap.synth.SkitterPatch
 import com.snipsnap.synth.SkitterVoice
@@ -759,10 +762,10 @@ fun SynthScreen(
             }
         }
     }
-    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
+    // FLOTILLA, CISTERN, PITCHWHEEL, STOOP, LACQUER, SKITTER, TANGLE, SHOAL, CREASE, LATTICE, EMBOUCHURE, BELLOWS, MURMUR and OSPREY carry note and velocity outside the macro map;
     // OBBLIGATO also retains its renderer model and independent-player seed.
     // REVEL also retains its microphones, phrase and seed configuration.
-    // REGISTERS, OVERLAP, CREASE and CAUSTIC retain their synthesis model, saved pitch and velocity.
+    // REGISTERS, OVERLAP, CREASE, CAUSTIC and LATTICE retain their synthesis model, saved pitch and velocity.
     // OVEN likewise retains its saved root, strike velocity and material model.
     // PRISM also preserves its spectral/envelope template and strike velocity,
     // ALLOY its synthesis configuration, CONTOUR its authored table pair and
@@ -1630,7 +1633,6 @@ fun SynthScreen(
     // has landed, so a CANCEL mid-render leaves nothing on the shelf.
     var makingInstrument by remember { mutableStateOf(false) }
     val heldSheet = remember { HeldSheetState() }
-    // Zones landed during MAKE, of [holdTotal]; -1 when no MAKE is running.
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
     val supportsHeldInstrument = engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
@@ -1681,7 +1683,8 @@ fun SynthScreen(
         }
         Engine.CREASE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
-            if (CreasePadMaker.supports(patch)) HeldSpec.Crease(CreasePadMaker.spec(patch, heldSheet.holdRelease)) else null
+            if (CreasePadMaker.supports(patch))
+                HeldSpec.Crease(CreasePadMaker.spec(patch, heldSheet.holdRelease, heldSheet.holdTouchLayers)) else null
         }
         Engine.REGISTERS -> HeldSpec.Registers(RegistersPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as RegistersPatch, heldSheet.holdRelease,
@@ -1736,7 +1739,7 @@ fun SynthScreen(
         flockHeldPreview?.silence()
         val base = holdBase
         val midis = spec.zoneMidis
-        heldSheet.holdTotal = midis.size
+        heldSheet.holdTotal = midis.size * spec.progressPerZone
         heldSheet.holdDone = 0
         heldSheet.holdJob = appScope.launch {
             try {
@@ -1752,13 +1755,13 @@ fun SynthScreen(
                         // work to one zone at a time.
                         // FILAMENT similarly bounds its network history to one root.
                         // Render serially so phones never hold nine
-                        // independent oversampled states at once; CANCEL and
-                        // the same zone counter remain live between them.
+                        // independent oversampled states at once. CANCEL stays live;
+                        // the counter advances after each note's samples finish.
                         midis.map { midi ->
                             val note = withContext(Dispatchers.Default) {
                                 spec.renderZone(midi) { !isActive }
                             }
-                            withContext(Dispatchers.Main) { heldSheet.holdDone += 1 }
+                            withContext(Dispatchers.Main) { heldSheet.holdDone += spec.progressPerZone }
                             note
                         }
                     } else {
@@ -1767,7 +1770,7 @@ fun SynthScreen(
                                 // CANCEL cancels the scope; each zone asks and stops,
                                 // rather than all nine running on for seconds.
                                 val note = spec.renderZone(midi) { !isActive }
-                                withContext(Dispatchers.Main) { heldSheet.holdDone += 1 }
+                                withContext(Dispatchers.Main) { heldSheet.holdDone += spec.progressPerZone }
                                 note
                             }
                         }.awaitAll()
@@ -2921,6 +2924,8 @@ fun SynthScreen(
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.CREASE ->
                                 Crease.scramble(voice as CreaseVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.LATTICE ->
+                                Lattice.scramble(voice as LatticeVoice, random, near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.FLOCK ->
                                 Flock.scramble(voice as FlockVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3174,6 +3179,7 @@ fun SynthScreen(
                     release = spec.releaseFraction ?: heldSheet.holdRelease,
                     knobLabel = spec.knobLabel,
                     instrumentNote = spec.instrumentNote,
+                    touchLayers = if (engine == Engine.CREASE) heldSheet.holdTouchLayers else null,
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
@@ -3187,6 +3193,7 @@ fun SynthScreen(
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
                         } else heldSheet.holdRelease = fraction
                     },
+                    onTouchLayers = { heldSheet.holdTouchLayers = it },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
                     onCancel = ::closeHeld,
@@ -3302,6 +3309,9 @@ private fun MacroSliders(
 private class HeldSheetState {
     var holdAttack by mutableStateOf(ResinPadMaker.ATTACK.defaultFraction)
     var holdRelease by mutableStateOf(ResinPadMaker.RELEASE.defaultFraction)
+    // An instrument-building choice, separate from the saved synthesis recipe.
+    var holdTouchLayers by mutableStateOf(false)
+    // Completed zones (or CREASE touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
     var holdTotal by mutableStateOf(0)
     var holdPreviewing by mutableStateOf(false)
@@ -3416,6 +3426,7 @@ private fun macroReadout(
     engine == Engine.TANGLE && name == "HOLD" && Tangle.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.SHOAL && name == "HOLD" && Shoal.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CREASE && name == "HOLD" && Crease.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.LATTICE && name == "HOLD" && Lattice.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "HOLD" && Relay.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.RELAY && name == "TUNE" ->
         Scales.nameOf(Relay.midiFor(voice as RelayVoice, macros.getValue(name)))
@@ -3721,6 +3732,8 @@ private sealed interface HeldSpec {
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
     val releaseFraction: Float? get() = null
+    /** CREASE counts its touch samples; other makers retain their existing zone count. */
+    val progressPerZone: Int get() = 1
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
     val knobLabel: String
@@ -3790,12 +3803,14 @@ private sealed interface HeldSpec {
     class Crease(private val spec: CreasePadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = CreasePadMaker.zoneMidis(spec)
         override val hasAttack get() = false
+        override val progressPerZone get() = spec.layerCount
         override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() =
-            "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CreasePadMaker.renderZone(spec, midi, cancelled))
+        override val instrumentNote get() = if (spec.touchLayers)
+            "KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE."
+        else "KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = CreasePadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = CreasePadMaker.preview(spec, cancelled)
-        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = CreasePadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Contour(private val spec: ContourPadMaker.Spec) : HeldSpec {
@@ -3862,7 +3877,8 @@ private sealed interface HeldSpec {
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
- * and [knobLabel] spells out whichever of the two apply in seconds. While
+ * and [knobLabel] spells out whichever of the two apply in seconds. CREASE's
+ * optional touch-layer button leaves the saved recipe alone. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
  * RENDERING… the way the scope does. CANCEL stays live until the last
@@ -3877,6 +3893,7 @@ private fun HeldInstrumentSheet(
     release: Float,
     knobLabel: String,
     instrumentNote: String?,
+    touchLayers: Boolean?,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -3885,6 +3902,7 @@ private fun HeldInstrumentSheet(
     scheme: Scheme,
     onAttack: (Float) -> Unit,
     onRelease: (Float) -> Unit,
+    onTouchLayers: (Boolean) -> Unit,
     onPreview: () -> Unit,
     onMake: () -> Unit,
     onCancel: () -> Unit,
@@ -3926,6 +3944,19 @@ private fun HeldInstrumentSheet(
                 if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
+                if (touchLayers != null) {
+                    ActionButton(
+                        "TOUCH LAYERS ${if (touchLayers) "ON" else "OFF"}", scheme,
+                        enabled = !busy,
+                        lit = touchLayers,
+                        accessibilityLabel = "TOUCH LAYERS",
+                        modifier = Modifier.fillMaxWidth().semantics { selected = touchLayers },
+                    ) { onTouchLayers(!touchLayers) }
+                    TapeText(
+                        "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
+                    )
+                }
                 if (previewing) TapeText("RENDERING…", TapeType.lcdSmall, scheme.amber.tape)
                 if (heldPreview != null) FlockHeldAudition(heldPreview, fillColor, scheme,
                     accessibilityLabel = "INSTRUMENT AUDITION")
@@ -4104,7 +4135,7 @@ private fun DroneSheet(
     }
 }
 
-/** MAKE's progress: a bar filling zone by zone, and [Copy.instrumentRendering] counting them. */
+/** MAKE advances per completed zone; CREASE's count includes each touch sample in that zone. */
 @Composable
 private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme) {
     val fraction = if (total <= 0) 0f else (done.toFloat() / total).coerceIn(0f, 1f)
@@ -4157,6 +4188,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
+    LATTICE,
     THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT;
 
     val displayName: String get() = name.replace('_', ' ')
@@ -4217,6 +4249,7 @@ private enum class Engine {
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
         CAUSTIC -> CausticVoice.entries
+        LATTICE -> LatticeVoice.entries
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -4281,6 +4314,7 @@ private enum class Engine {
         SHOAL -> Shoal.macrosFor(voice as ShoalVoice)
         CREASE -> Crease.macrosFor(voice as CreaseVoice)
         CAUSTIC -> CausticInstrument.macrosFor(voice as CausticVoice)
+        LATTICE -> Lattice.macrosFor(voice as LatticeVoice)
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
@@ -4343,6 +4377,7 @@ private enum class Engine {
         SHOAL -> Shoal.defaults(voice as ShoalVoice)
         CREASE -> Crease.defaults(voice as CreaseVoice)
         CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice)
+        LATTICE -> Lattice.defaults(voice as LatticeVoice)
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
@@ -4407,6 +4442,7 @@ private enum class Engine {
         SHOAL -> Shoal.scramble(voice as ShoalVoice, random)
         CREASE -> Crease.scramble(voice as CreaseVoice, random)
         CAUSTIC -> CausticInstrument.scramble(voice as CausticVoice, random)
+        LATTICE -> Lattice.scramble(voice as LatticeVoice, random)
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
@@ -4476,6 +4512,7 @@ private enum class Engine {
         SHOAL -> ShoalPatch("Preview", voice as ShoalVoice, macros).render()
         CREASE -> Crease.render(voice as CreaseVoice, macros)
         CAUSTIC -> CausticInstrument.render(voice as CausticVoice, macros)
+        LATTICE -> Lattice.render(voice as LatticeVoice, macros)
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
@@ -4544,6 +4581,7 @@ private enum class Engine {
         SHOAL -> Shoal.drumClassFor(voice as ShoalVoice, macros)
         CREASE -> Crease.drumClassFor(voice as CreaseVoice, macros)
         CAUSTIC -> CausticInstrument.drumClassFor(voice as CausticVoice, macros)
+        LATTICE -> Lattice.drumClassFor(voice as LatticeVoice, macros)
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
@@ -4607,6 +4645,7 @@ private enum class Engine {
         SHOAL -> ShoalPatch(name, voice as ShoalVoice, macros)
         CREASE -> CreasePatch(name, voice as CreaseVoice, macros)
         CAUSTIC -> CausticPatch(name, voice as CausticVoice, macros)
+        LATTICE -> LatticePatch(name, voice as LatticeVoice, macros)
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)

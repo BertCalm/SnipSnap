@@ -2,6 +2,22 @@ plugins {
     kotlin("jvm")
 }
 
+/** LATTICE source proof, native instrument phrases, periodic HOLD and MPC starter. */
+tasks.register<JavaExec>("generateLatticeAudition") {
+    group = "distribution"
+    description = "Render LATTICE voices, HOLD loops, native patches, MPC kit and replayable evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LatticeAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("latticeRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("latticeReplayOutput").get())
+    } else {
+        args(providers.gradleProperty("latticeOutput").orNull ?: "${rootDir}/testkit/lattice-audition")
+    }
+}
+
 /** Native previous/revised EDGE comparisons in complete finite notes and held periods. */
 tasks.register<JavaExec>("generateContourEdgeAudition") {
     group = "distribution"

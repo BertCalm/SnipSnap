@@ -348,7 +348,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 48 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 49 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -429,6 +429,9 @@ MAKE INSTRUMENT and CLI `--instrument` turn the same patch into minor-third
 keyboard zones with a continuous onset and measured sustain loop. The sampler
 owns the key-release fade; Paper Keys and Ink Ribbon are the first listening pair.
 [Implementation notes](docs/CREASE.md) cover controls and model compatibility.
+Optional TOUCH LAYERS adds three independent pressure/timbre responses to held
+instruments. The default one-layer path stays unchanged; the touch study pairs
+player output with matched-level comparisons and retains each layer's own loop.
 
 OVERLAP is a finite six-delay resonator: a strike rings
 through selectable self, three-cycle, reflected-pair or six-cycle routing.
@@ -886,6 +889,17 @@ picker now provides material, mode, root and HOLD controls; MAKE INSTRUMENT
 exports attack-preserving stereo captured-sustain keygroups. Original finite
 recipes retain their sound. See [ORPHICA](docs/ORPHICA.md).
 
+LATTICE sends three accepted harmonic sources through ordered directional gates.
+WARM, PLUCK and HOLLOW share TURN, STAGES, TWIST, COLOR and REJECT, with saved
+TUNE, note and velocity. HOLD extends finite notes and exports a settled periodic
+source at its top step; fixed source gain preserves the disappearance and return
+of the original projection proof. Twelve native patches and a dry sixteen-pad
+starter are included. Run `./gradlew :synth:generateLatticeAudition` for the
+listening pack, native patch downloads and MPC 3/XPM starter export. The
+[private audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site) and
+[LATTICE notes](docs/LATTICE.md) separate the accepted source direction from new
+HOLD/preset listening and phone/MPC verification still to come.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -894,8 +908,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
-59 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
+60 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1093,7 +1107,7 @@ THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL
 RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO,
 ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR,
 STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY,
-OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, plus GRAINS, SNAP and DRAW, which sit beside the
+OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
@@ -1105,7 +1119,7 @@ MERCURY's picker entry carries PING, SING and BLADE, the three voices kept at
 R1's gate (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI
 until round 7's listen. A law in `shell`'s `ConventionTest` reads these two
 lists, the count above and `app/README.md`'s against the enum and the roster.
-ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, TRIO, OSPREY and OPENSKY
+ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, TRIO, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
 (each one's `--midi` range is in [`docs/CLI.md`](docs/CLI.md)'s `synth` section).

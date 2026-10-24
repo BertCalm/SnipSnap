@@ -11,6 +11,18 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
 
+    @Test
+    fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = CreaseTouchKeys.render(patch, midi = 60)
+        val second = CreaseTouchKeys.render(patch.copy(
+            macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        for ((a, b) in first.zip(second)) {
+            assertTrue(a.loopStartFrame > 0 && a.loopStartFrame == b.loopStartFrame)
+            assertContentEquals(a.snip.samples, b.snip.samples)
+        }
+    }
+
     // The attack, slow pressure memory and streaming output filters all survive to the
     // same loop boundary. No state from the previous key render may enter a fresh note.
     @Test
@@ -33,6 +45,20 @@ class DeterminismTest {
             }
             val saved = RelayPatch.fromJsonText(patch.toJsonText())
             assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold")
+        }
+    }
+
+    @Test
+    fun `LATTICE native finite and held patches regenerate the saved note and excitation exactly`() {
+        val finite = LatticePresets.patchesForVoice(LatticeVoice.WARM)
+            .first { !Lattice.isLoop(it.macros.getValue("HOLD")) }
+        val held = LatticePresets.patchesForVoice(LatticeVoice.HOLLOW)
+            .first { Lattice.isLoop(it.macros.getValue("HOLD")) }
+        for (preset in listOf(finite, held)) {
+            val patch = preset.copy(midi = 55, velocity = .63f, model = 2)
+            val reopened = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, reopened.render().samples,
+                "${patch.voice} must retain native model, note, velocity and HOLD through its saved patch")
         }
     }
 

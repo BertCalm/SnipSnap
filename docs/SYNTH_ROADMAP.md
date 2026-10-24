@@ -129,7 +129,10 @@ velocity routing, the SYNTH picker, FRESH TAPE and CLI. Model-3 MAKE INSTRUMENT 
 CLI `--instrument` retain one continuous attack/settling/held history, sample
 bounded minor-third zones around the saved root, and export through the existing
 phone/dual-MPC package path with a player-controlled release. Paper Keys and Ink
-Ribbon are the first held-instrument listening pair. Voice expansion remains
+Ribbon are the first held-instrument listening pair. Optional TOUCH LAYERS retains three independent velocity-driven
+pressure histories, level-matched by their sustained loops before live key
+gain; default single-layer rendering stays unchanged. The touch study adds a
+PINCH root comparison without a new factory voice. Voice expansion remains
 separate work. [CREASE](CREASE.md) records the scope and
 reproduction commands.
 
@@ -565,6 +568,27 @@ Add `-Pquick` for the compact first listening set. The
 awaits the owner's listening verdict. [REVEL](REVEL.md) documents current
 contracts and measured validation; phone/MPC verification and release naming
 remain separate gates.
+
+### LATTICE — directional passage and a rejected outline
+
+LATTICE adapts the supplied projection-gate concept to the offline melodic
+renderer. One deterministic harmonic source feeds four directional groups;
+ordered gates transmit surviving components and send actual rejection into a
+bounded resonant outline. TURN, STAGES, TWIST, COLOR and REJECT expose the
+mechanism; the audition retains common source gain while crossed transmission
+disappears and intermediate orientations restore it.
+
+The owner accepted R2's source and contrast direction on 2026-10-23: “New sounds
+are better”, then “Clearer, we can proceed to the next steps”. The native
+milestone implements WARM/PLUCK/HOLLOW voices, model-2 patches with explicit MIDI
+and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
+top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
+CLI routing and the Android picker. New presets and HOLD still await hearing.
+Native validation and physical phone/MPC checks remain separately recorded in
+[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
+engineering specification remain later work. `generateLatticeAudition` retains
+the accepted comparisons and adds R3 native/held examples plus patch and MPC
+starter downloads. The original R1 and accepted R2 evidence stays preserved.
 
 ### PRISM — harmonics with different lifetimes
 

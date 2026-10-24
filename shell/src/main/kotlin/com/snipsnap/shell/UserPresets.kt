@@ -19,6 +19,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockHeld
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OnsetPatch
@@ -390,9 +391,9 @@ object UserPresets {
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
      * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE,
-     * WICK, SHOAL and CREASE also copy the saved
+     * WICK, SHOAL, CREASE and LATTICE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL, SHOAL and CREASE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
+     * PITCHWHEEL, SHOAL, CREASE and LATTICE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
      * retain their MIDI base, velocity, model and selected player gesture; OHM also
      * retains its exact excitation seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
@@ -543,6 +544,7 @@ object UserPresets {
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is LatticePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is CausticPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {

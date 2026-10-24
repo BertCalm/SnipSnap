@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.Snip
@@ -50,6 +51,9 @@ import com.snipsnap.synth.Filament
 import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.LatticeVoice
 import com.snipsnap.synth.Orphica
 import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
@@ -158,7 +162,7 @@ import kotlin.random.Random
  * whole loop, as long as the grid would make it at that tempo, written
  * [--loop] times end to end so the wrap can be heard.
  *
- * `--midi N` and `--velocity 0..1` (ORIGAMI, FILAMENT, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
+ * `--midi N` and `--velocity 0..1` (ORIGAMI, FILAMENT, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, ORPHICA, TRIO and the VENT/WICK prototypes) override
  * the preset's note and strike energy for a pad audition. EMBOUCHURE and BELLOWS --midi
  * chooses the played note directly by resetting the relative TUNE offset to zero.
  * SKITTER also accepts `--seed N` for its noise and `--scramble N` for a
@@ -172,6 +176,8 @@ import kotlin.random.Random
  * instrument with `--instrument [--release S]`; the saved root and velocity
  * choose its sample bank and excitation. Earlier models need an explicit
  * `--model 3` override rather than being silently upgraded.
+ * `--touch` adds soft/mid/hard excitation layers up to that saved velocity;
+ * the usual player gain still follows the live key touch.
  * SHOAL accepts `--material HARMONIC|BOWL|WOOD|WIRE`. Material bodies are finite;
  * a finite-material override on a held preset is refused before any files are written.
  * CONTOUR accepts a saved `--patch <json>` and `--macros BODY=.2,EDGE=.8`.
@@ -186,6 +192,9 @@ import kotlin.random.Random
  * CAUSTIC ALLOY accepts `--model 1`, saved `--patch <json>` and `--macros` overrides,
  * retaining the patch's explicit note, velocity and native renderer model. It renders a
  * finite note; HOLD is reserved and must stay at zero.
+ * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.
+ * Its `--midi 36..84` resets relative TUNE to .5; velocity-only edits keep saved tuning.
+ * Every LATTICE WAV has a complete `.patch` beside it, including held-loop settings.
  * VENT accepts `--seed N` for its initial trajectory. PULSE, COIL and PLUME
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
@@ -214,7 +223,7 @@ object SynthCommand {
         val opts = Options.parse(
             args,
             valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--tempo", "--beats"),
-            boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
+            boolean = setOf("--all", "--instrument", "--touch", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
             ?: throw CliError("synth wants an engine and a voice: snipsnap synth TINES BELL --all --out <dir>")
@@ -231,8 +240,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE)) {
-            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI and FLOCK, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE)) {
+            throw CliError("--patch is only supported by OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK and LATTICE, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -275,9 +284,10 @@ object SynthCommand {
         val macroOverrides = opts["--macros"]?.let { raw ->
             val names = when (engine) {
                 ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
+                LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
-                else -> throw CliError("--macros is only supported by CONTOUR, ORIGAMI and CAUSTIC, got $engine")
+                else -> throw CliError("--macros is only supported by CONTOUR, ORIGAMI, CAUSTIC and LATTICE, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -304,6 +314,9 @@ object SynthCommand {
         if (engine == OrigamiPatch.ENGINE && drone) {
             throw CliError("--drone is not supported by ORIGAMI; use --instrument for model-4 FAN or STILL")
         }
+        if (opts.has("--touch") && (!instrument || engine != CreasePatch.ENGINE)) {
+            throw CliError("--touch requires CREASE --instrument")
+        }
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         if (instrument && engine == ContourPatch.ENGINE) {
             if (opts["--midi"] != null) throw CliError("CONTOUR --instrument samples the full four-octave keyboard; --midi shapes a finite audition")
@@ -328,6 +341,7 @@ object SynthCommand {
                 CreasePatch.ENGINE -> Crease.MIDI_MIN..Crease.MIDI_MAX
                 ShoalPatch.ENGINE -> Shoal.MIN_MIDI..Shoal.MAX_MIDI
                 LacquerPatch.ENGINE -> Lacquer.MIDI_MIN..Lacquer.MIDI_MAX
+                LatticePatch.ENGINE -> Lattice.MIDI_MIN..Lattice.MIDI_MAX
                 StoopPatch.ENGINE -> Stoop.MIDI_MIN..Stoop.MIDI_MAX
                 SpoolPatch.ENGINE -> Spool.rootMidi(SpoolVoice.valueOf(voice)).let { root -> root..(root + Spool.TUNE_SEMITONES) }
                 EmbouchurePatch.ENGINE -> Embouchure.midiRange(EmbouchureVoice.valueOf(voice))
@@ -357,7 +371,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM and FILAMENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM and FILAMENT, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -477,6 +491,10 @@ object SynthCommand {
                 is RegistersPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is StoopPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is LacquerPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is LatticePatch -> patch.copy(
+                    midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity,
+                    macros = if (midiOverride == null) patch.macros else patch.macros + ("TUNE" to .5f),
+                )
                 is SpoolPatch -> patch.copy(
                     macros = midiOverride?.let { midi ->
                         patch.macros + ("TUNE" to (midi - Spool.rootMidi(patch.voice)) / Spool.TUNE_SEMITONES.toFloat())
@@ -564,6 +582,8 @@ object SynthCommand {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is CausticPatch) {
                 withNote.copy(macros = withNote.macros + macroOverrides, model = modelOverride ?: withNote.model)
+            } else if (withNote is LatticePatch && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is SkitterPatch) {
                 val withSeed = if (seedOverride == null) withNote else withNote.copy(seed = seedOverride)
                 if (scrambleRandom == null) withSeed else withSeed.copy(
@@ -613,7 +633,7 @@ object SynthCommand {
                 raw.toFloatOrNull()?.takeIf { it.isFinite() }
                     ?: throw CliError("--release wants finite seconds, got '$raw'")
             } ?: CreasePadMaker.RELEASE.default
-            CreasePadMaker.Spec(chosen.single() as CreasePatch, releaseSeconds = release)
+            CreasePadMaker.Spec(chosen.single() as CreasePatch, releaseSeconds = release, touchLayers = opts.has("--touch"))
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument: ${e.message ?: "invalid CREASE instrument"}")
         } else null
@@ -656,11 +676,14 @@ object SynthCommand {
             val sampler = heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                 SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is ObbligatoPatch || patch is TidalPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
+            if (patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch) {
+                File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
+            }
             if (patch is FlockPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
                 heldRibbon != null -> "  (captured RIBBON sustain, loop-enabled WAV)"
+                patch is LatticePatch && Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.LOOP -> "  (held loop, mono)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"
                 else -> ""
             }
@@ -717,13 +740,16 @@ object SynthCommand {
         val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
         val midis = CreasePadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { index, midi ->
-            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            CreasePadMaker.renderZone(spec, midi)
+            val progress = if (spec.touchLayers)
+                " (layers ${index * spec.layerCount + 1}..${(index + 1) * spec.layerCount}/${midis.size * spec.layerCount})" else ""
+            out.println("zone ${index + 1}/${midis.size} ${Scales.nameOf(midi)}$progress")
+            CreasePadMaker.renderLayers(spec, midi)
         }
-        CreasePadMaker.export(name, spec, notes, dir)
+        CreasePadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, pressure attack and moving sustain - RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}")
         out.println("CREASE model ${patch.model}, saved root ${Scales.nameOf(patch.midi)}, saved velocity ${patch.velocity}")
+        if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         return 0
     }
 

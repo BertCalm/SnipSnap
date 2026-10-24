@@ -30,7 +30,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
-/** The authoring door must preserve a saved excitation/model and offer only the meaningful release control. */
+/** Authoring retains the saved sound and keeps pressure-touch layers an explicit choice. */
 @RunWith(AndroidJUnit4::class)
 class CreaseInstrumentScreenTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
@@ -81,19 +81,48 @@ class CreaseInstrumentScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun current_saved_patch_opens_release_only_keys_without_creating_files() {
+    fun current_saved_patch_opens_release_keys_with_touch_layers_off_without_creating_files() {
         val patch = CreasePatch("MY INK", CreaseVoice.RUBBER,
             Crease.defaults(CreaseVoice.RUBBER) + ("PRESSURE" to .61f), midi = 67, velocity = .35f, model = 3)
         val shelf = show(patch)
         compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertIsEnabled()
         click("MAKE INSTRUMENT")
         compose.onNodeWithContentDescription("RELEASE").assertIsEnabled()
+        assertEquals(false, compose.onNodeWithContentDescription("TOUCH LAYERS")
+            .fetchSemanticsNode().config[SemanticsProperties.Selected])
+        assertReadsInFull("TOUCH LAYERS OFF")
         compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
         compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
         compose.onNodeWithText("KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME.")
             .fetchSemanticsNode()
         val instruments = File(shelf, KitShelf.INSTRUMENTS_DIR)
         assertTrue("opening authoring must not write a package", !instruments.exists() || instruments.listFiles().isNullOrEmpty())
+    }
+
+    @Test
+    fun touch_layers_are_optional_explain_the_cost_and_preserve_the_saved_sound() {
+        val patch = CreasePatch("MY TOUCH", CreaseVoice.PINCH,
+            Crease.defaults(CreaseVoice.PINCH) + ("PRESSURE" to .61f), midi = 67, velocity = .35f, model = 3)
+        val shelf = show(patch)
+        click("MAKE INSTRUMENT")
+        compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.")
+            .fetchSemanticsNode()
+        click("TOUCH LAYERS")
+        assertEquals(true, compose.onNodeWithContentDescription("TOUCH LAYERS")
+            .fetchSemanticsNode().config[SemanticsProperties.Selected])
+        assertReadsInFull("TOUCH LAYERS ON")
+        compose.onNodeWithText("KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE.")
+            .fetchSemanticsNode()
+        compose.onNodeWithContentDescription("MAKE").assertIsEnabled()
+        assertEquals((patch.midi - Crease.MIDI_MIN).toFloat() / (Crease.MIDI_MAX - Crease.MIDI_MIN), progress("ROOT"), .0001f)
+        assertEquals(patch.velocity, progress("VELOCITY"), .0001f)
+        click("TOUCH LAYERS")
+        assertEquals(false, compose.onNodeWithContentDescription("TOUCH LAYERS")
+            .fetchSemanticsNode().config[SemanticsProperties.Selected])
+        compose.onNodeWithText("KEEPS THE PRESSURE ATTACK, THEN REPEATS ITS MOVING SUSTAIN WHILE HELD. KEY TOUCH CHANGES VOLUME.")
+            .fetchSemanticsNode()
+        val instruments = File(shelf, KitShelf.INSTRUMENTS_DIR)
+        assertTrue("choosing touch layers must not create a package", !instruments.exists() || instruments.listFiles().isNullOrEmpty())
     }
 
     @Test

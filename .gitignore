@@ -5,6 +5,7 @@ testkit/filament-thread-keys/
 testkit/crease-audition/
 testkit/crease-audition-r2/
 testkit/crease-keys-audition/
+testkit/crease-touch-audition/
 testkit/nacre-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
@@ -381,6 +382,8 @@ testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
 
+# LATTICE's generated finite listening proof and downloadable archives.
+testkit/lattice-audition/
 # TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
 testkit/tidal-audition/
 

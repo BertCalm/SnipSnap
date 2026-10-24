@@ -172,6 +172,17 @@ tasks.register<JavaExec>("generateOspreyCuratedAudition") {
     args("${rootDir}/testkit/osprey-curated-audition")
 }
 
+/** Render expressive touch banks without replacing the historical single-layer audition. */
+tasks.register<JavaExec>("generateCreaseTouchAudition") {
+    group = "distribution"
+    description = "Render CREASE touch-layer instruments, JVM performances and measurements under testkit/crease-touch-audition/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.CreaseTouchAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("creaseTouchOutput").orNull ?: "${rootDir}/testkit/crease-touch-audition")
+}
+
 /** Render and package the three native THREAD attack/sustain keys plus an exported-file playback demo. */
 tasks.register<JavaExec>("generateFilamentKeysAudition") {
     group = "distribution"
