@@ -231,6 +231,7 @@ fun PadSheetScreen(
     aquariumRenderer: AquariumOfflineRenderer = AquariumPadRenderer,
     onOpenBox: (String?) -> Unit = {},
 ) {
+    composedOffMainThread("PadSheetScreen")
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -1612,7 +1613,7 @@ fun PadSheetScreen(
     // `AT` to 400 ms, tap MORPH to hear the difference, tap back: 40 ms.
     // A map keyed on the move's own name gives each one its own memory, and
     // a move never touched still opens on its own default.
-    val mutateKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val mutateKnobs = remember(slot) { composedOffMainThread("mutateKnobs"); mutableStateMapOf<String, Float>() }
     val pendingMutateKnob =
         mutateKnobs[mutateMode] ?: (mutateKnob?.let { MutateSheet.fraction(it, it.default) } ?: 0f)
     // MORPH's second knob, BECOME: how long the hit takes to turn from the
@@ -2089,7 +2090,7 @@ fun PadSheetScreen(
     val outsideKnob = OutsideSheet.knobFor(OutsideSheet.moveFor(outsideMove))
     // One dialled value per move (J24), for the same reason as MUTATE's
     // knob above: REAMP and ROOM are compared by switching between them.
-    val outsideKnobs = remember(slot) { mutableStateMapOf<String, Float>() }
+    val outsideKnobs = remember(slot) { composedOffMainThread("outsideKnobs"); mutableStateMapOf<String, Float>() }
     val pendingOutsideKnob = outsideKnobs[outsideMove] ?: outsideKnob.defaultFraction
     // What the trip is doing right now — LISTENING…, SENDING… — for the
     // SEND button's own label; null when nothing is out.
