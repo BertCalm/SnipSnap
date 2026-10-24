@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
     fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
         for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
             val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,

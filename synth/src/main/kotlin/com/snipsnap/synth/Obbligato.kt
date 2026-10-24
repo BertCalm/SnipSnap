@@ -19,17 +19,20 @@ enum class ObbligatoRelationship {
 }
 
 /**
- * First OBBLIGATO listening candidate: an air jet and a reed on independent tuned pipes.
+ * An air jet and a reed on independent tuned pipes.
  * A synthetic player controller coordinates effort, entry, and pitch, and lets each player
  * respond to the other pipe's measured activity. This is an invented duet, not a model of
  * two people sharing one lung or a claim of acoustic accuracy for their mutual influence.
  *
  * Dry mono, explicit C4–C5 notes, independently seeded players and one final loudness target.
  * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
- * The controller and calibration are provisional until the owner hears the audition pack.
+ * Model 5 is accepted. Model 6 is an explicit, unheard activity-driven Fight experiment.
  */
 object Obbligato {
+    /** The accepted sound stays the default until the responsive experiment is heard. */
     const val MODEL = 5
+    const val EXPERIMENTAL_MODEL = 6
+    const val MAX_MODEL = EXPERIMENTAL_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
@@ -85,7 +88,30 @@ object Obbligato {
         val diagnostics: Map<String, Double>,
         val airEffort: FloatArray,
         val reedEffort: FloatArray,
+        val interactionEvents: List<ObbligatoInteraction.Event> = emptyList(),
     )
+
+    /** A physical pressure intervention used only for causal listening and tests. */
+    internal data class SourceWeakening(
+        val air: Boolean,
+        val startSeconds: Double,
+        val endSeconds: Double,
+        val strength: Float = .1f,
+    ) {
+        init {
+            require(startSeconds.isFinite() && startSeconds >= 0.0)
+            require(endSeconds.isFinite() && endSeconds > startSeconds)
+            require(strength.isFinite() && strength in 0f..1f)
+        }
+
+        fun scaleAt(seconds: Double): Float {
+            if (seconds <= startSeconds || seconds >= endSeconds) return 1f
+            val ramp = minOf(.01, (endSeconds - startSeconds) * .25)
+            val edge = minOf((seconds - startSeconds) / ramp, (endSeconds - seconds) / ramp).coerceIn(0.0, 1.0)
+            val amount = .5 - .5 * cos(PI * edge)
+            return (1.0 - (1.0 - strength) * amount).toFloat()
+        }
+    }
 
     private data class Relationship(
         val trade: Double,
@@ -135,8 +161,9 @@ object Obbligato {
     }
 
     /**
-     * Physical source removal is a causal probe. With responses=false the saved gesture and
-     * player seeds remain identical, but neither player's measured activity alters the other.
+     * Physical source removal is a causal probe. For models 1–5, responses=false keeps the
+     * saved timed gesture and player seeds but removes reciprocal pressure response. In
+     * model 6 it also disables activity-driven entries, preserving the opening air assertion.
      * This is not a live relationship across pads: each call starts two new source states.
      */
     fun probe(
@@ -148,8 +175,31 @@ object Obbligato {
         sourceA: Boolean = true,
         sourceB: Boolean = true,
         model: Int = MODEL,
-    ): Report {
-        require(model in 1..MODEL) { "unsupported OBBLIGATO model: $model" }
+    ): Report = requireNotNull(synthesize(macros, midi, velocity, seed, responses, sourceA, sourceB, model,
+        capture = true).report)
+
+    /** The surviving source must not change under this intervention when responses are disabled. */
+    internal fun probeWithWeakening(
+        macros: Map<String, Float>,
+        midi: Int = DEFAULT_MIDI,
+        velocity: Float = DEFAULT_VELOCITY,
+        seed: Int = 0,
+        responses: Boolean = true,
+        model: Int = EXPERIMENTAL_MODEL,
+        weakening: SourceWeakening,
+    ): Report = requireNotNull(synthesize(macros, midi, velocity, seed, responses, true, true, model,
+        capture = true, weakening = weakening).report)
+
+    /** Production rendering keeps the same synthesis arithmetic without retaining an audition report. */
+    private data class Synthesis(val samples: FloatArray, val report: Report? = null)
+    private val EMPTY_TRACE = FloatArray(0)
+
+    private fun synthesize(
+        macros: Map<String, Float>, midi: Int, velocity: Float, seed: Int,
+        responses: Boolean, sourceA: Boolean, sourceB: Boolean, model: Int, capture: Boolean,
+        weakening: SourceWeakening? = null,
+    ): Synthesis {
+        require(model in 1..MAX_MODEL) { "unsupported OBBLIGATO model: $model" }
         validateNote(midi, velocity)
         val m = settled(macros)
         val breath = m.getValue("BREATH")
@@ -158,15 +208,15 @@ object Obbligato {
         val seconds = heldSeconds + RELEASE_SECONDS
         val frames = (seconds * RATE).toInt()
         val traces = (frames + CONTROL_BLOCK - 1) / CONTROL_BLOCK
-        val effortAir = FloatArray(traces)
-        val effortReed = FloatArray(traces)
+        val effortAir = if (capture) FloatArray(traces) else EMPTY_TRACE
+        val effortReed = if (capture) FloatArray(traces) else EMPTY_TRACE
         if (breath == 0f || velocity == 0f || (!sourceA && !sourceB)) {
             val out = FloatArray(frames / Dsp.OVERSAMPLE)
-            return Report(Snip(out, 1, Dsp.RATE), out.copyOf(), out.copyOf(),
+            return Synthesis(out, if (capture) Report(Snip(out, 1, Dsp.RATE), out.copyOf(), out.copyOf(),
                 linkedMapOf("rawPeak" to 0.0, "airRms" to 0.0, "reedRms" to 0.0,
                     "maxResponseAir" to 0.0, "maxResponseReed" to 0.0,
                     "maxPitchCents" to 0.0, "effortTraceRate" to RATE.toDouble() / CONTROL_BLOCK),
-                effortAir, effortReed)
+                effortAir, effortReed) else null)
         }
 
         val current = relationship(m.getValue("BOND"))
@@ -177,6 +227,8 @@ object Obbligato {
             4 -> current.copy(irregularity = 0.0)
             else -> current
         }
+        val interaction = if (model == EXPERIMENTAL_MODEL && r.rivalry > 0.0)
+            ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.
         // Protect now exposes that tone before the reed joins. Subtracting the same
         // entry delay from its held length keeps the absolute ending unchanged.
@@ -214,11 +266,19 @@ object Obbligato {
         var maxResponseReed = 0.0
         var maxPitch = 0.0
         var rawPeak = 0.0
+        var pressureAir = 1f
+        var pressureReed = 1f
+        val meterPressureAir = airPlayer.basePressure.coerceAtLeast(1e-6f)
+        val meterPressureReed = reedPlayer.basePressure.coerceAtLeast(1e-6f)
+        val presence = Presence()
 
         for (frame in 0 until frames) {
             if (frame % CONTROL_BLOCK == 0) {
                 if (Thread.currentThread().isInterrupted) throw InterruptedException("OBBLIGATO render cancelled")
                 val t = frame.toDouble() / RATE
+                // Every decision reads the previous complete source-activity snapshot.
+                // The two bores retain stable mouth pressure throughout a prominence trade.
+                if (frame > 0) interaction?.step(CONTROL_BLOCK.toDouble() / RATE, heardAir, heardReed, responses)
                 val phase = (t / heldSeconds).coerceIn(0.0, 1.0)
                 val exchange = sin(2.0 * PI * (1.1 * t / heldSeconds))
                 val arch = 1.0 - r.swell + r.swell * sin(PI * phase) * sin(PI * phase)
@@ -226,8 +286,12 @@ object Obbligato {
                 val targetReed = if (responses) r.answerReed * responseDepth * heardAir else 0.0
                 answerAir += (targetAir - answerAir) * responseCoeff
                 answerReed += (targetReed - answerReed) * responseCoeff
-                maxResponseAir = maxOf(maxResponseAir, abs(answerAir))
-                maxResponseReed = maxOf(maxResponseReed, abs(answerReed))
+                pressureAir = (1.0 + answerAir).toFloat()
+                pressureReed = (1.0 + answerReed).toFloat()
+                if (capture) {
+                    maxResponseAir = maxOf(maxResponseAir, abs(answerAir))
+                    maxResponseReed = maxOf(maxResponseReed, abs(answerReed))
+                }
                 val airGate = gate(t, heldSeconds - r.yieldTail, .13)
                 val reedGate = gate(t - reedLag, heldSeconds - reedLag, .17)
                 envAir = (airGate * arch * (1.0 - pressureTrade * .5 + pressureTrade * .5 * exchange) * r.airWeight).toFloat()
@@ -238,48 +302,62 @@ object Obbligato {
                 pitchAir = (r.detune + mischief * (8.0 + 3.0 * wanderAir)).toFloat()
                 pitchReed = (-r.detune - mischief * (8.0 + 3.0 * wanderReed)).toFloat()
                 if (r.irregularity > 0.0) {
-                    pitchAir += (r.irregularity * rivalPitchPush(t, heldSeconds, air = true)).toFloat()
-                    pitchReed += (r.irregularity * rivalPitchPush(t, heldSeconds, air = false)).toFloat()
+                    pitchAir += (r.irregularity * (interaction?.airPitchPush
+                        ?: rivalPitchPush(t, heldSeconds, air = true))).toFloat()
+                    pitchReed += (r.irregularity * (interaction?.reedPitchPush
+                        ?: rivalPitchPush(t, heldSeconds, air = false))).toFloat()
                 }
-                maxPitch = maxOf(maxPitch, abs(pitchAir.toDouble()), abs(pitchReed.toDouble()))
-                val index = frame / CONTROL_BLOCK
-                effortAir[index] = if (sourceA) envAir * (1.0 + answerAir).toFloat() else 0f
-                effortReed[index] = if (sourceB) envReed * (1.0 + answerReed).toFloat() else 0f
+                if (capture) {
+                    maxPitch = maxOf(maxPitch, abs(pitchAir.toDouble()), abs(pitchReed.toDouble()))
+                    val index = frame / CONTROL_BLOCK
+                    effortAir[index] = if (sourceA) envAir * pressureAir *
+                        (if (weakening?.air == true) weakening.scaleAt(t) else 1f) else 0f
+                    effortReed[index] = if (sourceB) envReed * pressureReed *
+                        (if (weakening?.air == false) weakening.scaleAt(t) else 1f) else 0f
+                }
             }
             val t = frame.toDouble() / RATE
-            val a = if (sourceA) airPlayer.tick(envAir, t, pressureScale = (1.0 + answerAir).toFloat(),
+            val airPressure = if (weakening?.air == true) pressureAir * weakening.scaleAt(t) else pressureAir
+            val reedPressure = if (weakening?.air == false) pressureReed * weakening.scaleAt(t) else pressureReed
+            val a = if (sourceA) airPlayer.tick(envAir, t, pressureScale = airPressure,
                 pitchCents = pitchAir) else 0f
-            val b = if (sourceB && t >= reedLag) reedPlayer.tick(envReed, t - reedLag, pressureScale = (1.0 + answerReed).toFloat(),
+            val b = if (sourceB && t >= reedLag) reedPlayer.tick(envReed, t - reedLag, pressureScale = reedPressure,
                 pitchCents = pitchReed) else 0f
             rawAir[frame] = a
             rawReed[frame] = b
-            rawPeak = maxOf(rawPeak, abs(a.toDouble()), abs(b.toDouble()))
+            if (capture) rawPeak = maxOf(rawPeak, abs(a.toDouble()), abs(b.toDouble()))
             // Meter the actual outgoing pipe pressure, rather than the requested envelope.
             // Both meters read the previous frame before either new response is evaluated.
             // Play's audible phrase envelope leaves mouth pressure in its calibrated
             // speaking range. The other player hears that emphasis after normalization;
             // applying it inside tanh would hide quiet turns behind meter saturation.
-            val levelAir = tanh(4.0 * abs(a) / airPlayer.basePressure.coerceAtLeast(1e-6f)) *
-                callPresence(t, heldSeconds, r.callDepth, air = true) *
-                rivalPresence(t, heldSeconds, r.rivalry, r.irregularity, air = true)
-            val levelReed = tanh(4.0 * abs(b) / reedPlayer.basePressure.coerceAtLeast(1e-6f)) *
-                callPresence(t, heldSeconds, r.callDepth, air = false) *
-                rivalPresence(t, heldSeconds, r.rivalry, r.irregularity, air = false)
-            heardAir += (levelAir - heardAir) * meterCoeff
-            heardReed += (levelReed - heardReed) * meterCoeff
+            if (responses) {
+                presence.update(t, heldSeconds, r.callDepth,
+                    if (interaction == null) r.rivalry else 0.0, r.irregularity)
+                val rivalAir = if (interaction == null) presence.rivalAir else mix(1.0, interaction.airPresence, r.rivalry)
+                val rivalReed = if (interaction == null) presence.rivalReed else mix(1.0, interaction.reedPresence, r.rivalry)
+                val levelAir = tanh(4.0 * abs(a) / meterPressureAir) * presence.callAir * rivalAir
+                val levelReed = tanh(4.0 * abs(b) / meterPressureReed) * presence.callReed * rivalReed
+                heardAir += (levelAir - heardAir) * meterCoeff
+                heardReed += (levelReed - heardReed) * meterCoeff
+            }
         }
 
         val air = Bore.condition(rawAir, RATE, 0f, 0f, Bore.Voicing.NONE)
         val reed = Bore.condition(rawReed, RATE, Bore.biteBoostDb(BoreVoice.SAX, .60f),
             Bore.raspAmount(BoreVoice.SAX, .60f, contactBreath), Bore.voicingFor(BoreVoice.SAX))
         val inputEnergy = sqrt(breath) * velocity
+        val reactiveRadiation = interaction?.radiationReader()
         for (i in air.indices) {
             air[i] *= AIR_GAIN * inputEnergy
             reed[i] *= REED_GAIN * inputEnergy
+            if (r.callDepth > 0.0 || r.rivalry > 0.0) {
+                presence.update(i.toDouble() / Dsp.RATE, heldSeconds, r.callDepth,
+                    if (interaction == null) r.rivalry else 0.0, r.irregularity)
+            }
             if (r.callDepth > 0.0) {
-                val t = i.toDouble() / Dsp.RATE
-                air[i] *= callPresence(t, heldSeconds, r.callDepth, air = true).toFloat()
-                reed[i] *= callPresence(t, heldSeconds, r.callDepth, air = false).toFloat()
+                air[i] *= presence.callAir.toFloat()
+                reed[i] *= presence.callReed.toFloat()
             }
             if (r.fluteLead > 0.0) {
                 // Conditioning can put a small DC-removal transient before a late
@@ -291,13 +369,26 @@ object Obbligato {
                 reed[i] *= (1.0 - r.fluteLead / .65 * (1.0 - entry)).toFloat()
             }
             if (r.rivalry > 0.0) {
-                val t = i.toDouble() / Dsp.RATE
-                air[i] *= rivalPresence(t, heldSeconds, r.rivalry, r.irregularity, air = true).toFloat()
-                reed[i] *= rivalPresence(t, heldSeconds, r.rivalry, r.irregularity, air = false).toFloat()
+                if (reactiveRadiation == null) {
+                    air[i] *= presence.rivalAir.toFloat()
+                    reed[i] *= presence.rivalReed.toFloat()
+                } else {
+                    // Reconstruct each actual entry's smooth curve at audio rate. This
+                    // avoids a control-rate staircase after the anti-aliasing filters.
+                    reactiveRadiation.at(i.toDouble() / Dsp.RATE)
+                    air[i] *= mix(1.0, reactiveRadiation.air, r.rivalry).toFloat()
+                    reed[i] *= mix(1.0, reactiveRadiation.reed, r.rivalry).toFloat()
+                }
             }
         }
         Dsp.fadeTail(air)
         Dsp.fadeTail(reed)
+        // Report taps must remain additive. Production owns both private conditioned stems,
+        // so its sum can reuse the air buffer without changing a sample or copying the mix.
+        if (!capture) {
+            for (i in air.indices) air[i] += reed[i]
+            return Synthesis(air)
+        }
         val out = FloatArray(air.size) { air[it] + reed[it] }
         val diagnostics = linkedMapOf(
             "rawPeak" to rawPeak,
@@ -306,53 +397,74 @@ object Obbligato {
             "maxPitchCents" to maxPitch,
             "effortTraceRate" to RATE.toDouble() / CONTROL_BLOCK,
         )
-        return Report(Snip(out, 1, Dsp.RATE), air, reed, diagnostics, effortAir, effortReed)
+        return Synthesis(out, Report(Snip(out, 1, Dsp.RATE), air, reed, diagnostics, effortAir, effortReed,
+            interaction?.events?.toList() ?: emptyList()))
     }
 
     fun render(macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
                velocity: Float = DEFAULT_VELOCITY, seed: Int = 0, model: Int = MODEL): Snip {
-        val report = probe(macros, midi, velocity, seed, model = model)
-        val output = report.snip.samples.copyOf()
+        val output = synthesize(macros, midi, velocity, seed, responses = true, sourceA = true,
+            sourceB = true, model = model, capture = false).samples
         Dsp.levelTo(output, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         return Snip(output, 1, Dsp.RATE)
     }
 
-    /** Two raised-cosine handoffs: air calls, reed answers, air returns. */
-    private fun callPresence(t: Double, hold: Double, depth: Double, air: Boolean): Double {
-        if (depth == 0.0) return 1.0
-        fun handoff(center: Double): Double {
-            val phase = ((t - center + .11) / .22).coerceIn(0.0, 1.0)
-            return .5 - .5 * cos(PI * phase)
-        }
-        val airTurn = 1.0 - handoff(hold * .35) + handoff(hold * .70)
-        return 1.0 - .82 * depth * if (air) 1.0 - airTurn else airTurn
-    }
+    /**
+     * Evaluate each phrase once for both players. Their final operation order is kept:
+     * complementary Double shares are not reconstructed from an already rounded gain,
+     * and the model-four/model-five mix still performs its original cancellation.
+     */
+    private class Presence {
+        var callAir = 1.0
+        var callReed = 1.0
+        var rivalAir = 1.0
+        var rivalReed = 1.0
 
-    /** Keep legacy sine rivalry; model 5 spends less time in a fused, balanced duet. */
-    private fun rivalPresence(t: Double, hold: Double, depth: Double, irregularity: Double, air: Boolean): Double {
-        if (depth == 0.0) return 1.0
-        val contest = sin(2.0 * PI * 3.0 * t / hold)
-        val share = .5 + .5 * if (air) contest else -contest
-        val floorPower = .35 * .35
-        var target = sqrt(floorPower + (1.0 - floorPower) * share)
-        if (irregularity > 0.0) {
-            var airShare = 1.0
-            for (i in FIGHT_ENTRIES.indices) {
-                val width = minOf(FIGHT_CROSSOVERS[i], hold * .055)
-                val phase = (t - FIGHT_ENTRIES[i] * hold + width * .5) / width
-                val change = when {
-                    phase <= 0.0 -> 0.0
-                    phase >= 1.0 -> 1.0
-                    else -> .5 - .5 * cos(PI * phase)
+        fun update(t: Double, hold: Double, callDepth: Double, rivalry: Double, irregularity: Double) {
+            if (callDepth == 0.0) {
+                callAir = 1.0
+                callReed = 1.0
+            } else {
+                fun handoff(center: Double): Double {
+                    val phase = ((t - center + .11) / .22).coerceIn(0.0, 1.0)
+                    return .5 - .5 * cos(PI * phase)
                 }
-                airShare += if (i % 2 == 0) -change else change
+                val airTurn = 1.0 - handoff(hold * .35) + handoff(hold * .70)
+                callAir = 1.0 - .82 * callDepth * (1.0 - airTurn)
+                callReed = 1.0 - .82 * callDepth * airTurn
             }
-            val challengedShare = (if (air) airShare else 1.0 - airShare).coerceIn(0.0, 1.0)
-            val quietPower = .18 * .18
-            val challenged = sqrt(quietPower + (1.0 - quietPower) * challengedShare)
-            target = mix(target, challenged, irregularity)
+            if (rivalry == 0.0) {
+                rivalAir = 1.0
+                rivalReed = 1.0
+                return
+            }
+            val contest = sin(2.0 * PI * 3.0 * t / hold)
+            val airShare = .5 + .5 * contest
+            val reedShare = .5 + .5 * -contest
+            val floorPower = .35 * .35
+            var targetAir = sqrt(floorPower + (1.0 - floorPower) * airShare)
+            var targetReed = sqrt(floorPower + (1.0 - floorPower) * reedShare)
+            if (irregularity > 0.0) {
+                var challengedAirShare = 1.0
+                for (i in FIGHT_ENTRIES.indices) {
+                    val width = minOf(FIGHT_CROSSOVERS[i], hold * .055)
+                    val phase = (t - FIGHT_ENTRIES[i] * hold + width * .5) / width
+                    val change = when {
+                        phase <= 0.0 -> 0.0
+                        phase >= 1.0 -> 1.0
+                        else -> .5 - .5 * cos(PI * phase)
+                    }
+                    challengedAirShare += if (i % 2 == 0) -change else change
+                }
+                val quietPower = .18 * .18
+                val challengedAir = sqrt(quietPower + (1.0 - quietPower) * challengedAirShare.coerceIn(0.0, 1.0))
+                val challengedReed = sqrt(quietPower + (1.0 - quietPower) * (1.0 - challengedAirShare).coerceIn(0.0, 1.0))
+                targetAir = mix(targetAir, challengedAir, irregularity)
+                targetReed = mix(targetReed, challengedReed, irregularity)
+            }
+            rivalAir = mix(1.0, targetAir, rivalry)
+            rivalReed = mix(1.0, targetReed, rivalry)
         }
-        return mix(1.0, target, depth)
     }
 
     /** A player's own brief pitch push follows its entry, rather than a common pitch LFO. */
