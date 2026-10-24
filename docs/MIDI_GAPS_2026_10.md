@@ -42,12 +42,12 @@ it is done. The gate column names what has to be true first; S1 to S4 are
 | ~~1~~ | ~~**Real-time events.** `MidiWire` emits `Clock`, `Start`, `Stop`, `Continue` with stamps instead of dropping `0xF8` to `0xFC`. Hostile fixture first: a flood of `0xF8` interleaved mid-message must not allocate per byte or stall~~ Done in `f95cd75c9` | `MidiWire.kt`, `MidiWireTest` | `:kit:test` | none |
 | 2 | **Absolute frame counter** in `PadEngine`, incremented per callback, read atomically off the audio thread. The `getTimestamp` fit that maps nanoseconds to frames is designed now and held | `PadEngine.{h,cpp}` | engine test with a synthetic clock | counter: none; fit: **S1**. Counter done in `aa2583bf9`; the fit is held |
 | 3 | **Join the halves.** `NativePads.noteOn` and `jni.cpp` take a `frameOffset`; `MidiPads` and `MidiKeys` carry `timestampNanos` to the screen's `hit`. Two placements: a fixed one-buffer delay (the default, steady latency) or frame 0 (lowest latency) | `NativePads.kt`, `jni.cpp`, `PadEngine.kt`, `:shell` | JVM tests on the offset arithmetic; engine test end to end | step 2's fit, so **S1** |
-| 4 | **MIDI output.** Open each device's input ports, one MIDI-out thread fed by a ring, `send` with timestamps, never from the audio callback | a `MidiOutput.kt` beside `MidiInput` | a loopback cable; the monitor shows what left | none |
+| ~~4~~ | ~~**MIDI output.** Open each device's input ports, one MIDI-out thread fed by a ring, `send` with timestamps, never from the audio callback~~ Done in `6967038ec` to `9c4a7cda4` (`MidiOut`; the loopback row is not run) | a `MidiOutput.kt` beside `MidiInput` | a loopback cable; the monitor shows what left | none |
 | ~~5~~ | ~~**Device fingerprint** `(transport, vendorId, productId, port counts, name hash)` on `Opened` and in `onDevicesChanged`; never the display name alone, never a Bluetooth address | `MidiInput.kt`, a pure class in `:shell` | the same key before and after USB permission~~ Done in `bd95b1baa` | none |
 | ~~6~~ | ~~**Stop-drop guard.** `SpscRing` drops on full and a dropped `Stop` is a stuck pad. A refused stop is kept and retried from the screen-rate drain | `PadEngine.kt`, `NativePads.kt`, `jni.cpp` | a 64-pad roll bench row~~ Done in `27d059a65` and `e7cfc0072`; the bench row is not run | none |
 | 7 | **Diagnostics screen.** Endpoints with transport and protocol, a live monitor with arrival deltas, `latencyMillis`, burst size, a copyable report | `:app`, a model in `:shell` | the report pastes into an issue | step 5 |
 | 8 | **Bluetooth keyboard** per the existing spec: `BleMidiLink`, a `connectedDevice` foreground service, the scanner sheet, reconnection with backoff | per `MIDI_BLE_SPEC_2026_10.md` | its D1 to D9 rows on the Pixel | none |
-| 9 | **Virtual port** "SnipSnap In" and "SnipSnap Out" through `MidiDeviceService` | a new service, manifest, `res/xml` | another app opens it and plays a kit | step 4 |
+| ~~9~~ | ~~**Virtual port** "SnipSnap In" and "SnipSnap Out" through `MidiDeviceService`~~ Done in `3cbc0f4ce`; another app opening it is not run | a new service, manifest, `res/xml` | another app opens it and plays a kit | step 4 |
 | 10 | **Launchpad profile** as JSON, Programmer-mode SysEx, an LED mirror of the screen grid | `:shell` profile model, `assets/controllers/` | the device lights as the screen does | steps 4, 5, 6 |
 | 11 | **Pointer audit** of `SurfaceScreen` (two `pointerInput`s, no `awaitFirstDown`) and gesture-exclusion rects on every pad surface. `KitScreen`, `PadSheetScreen` and `KeysScreen` already trigger on first down | `app/.../ui/` | Compose suites | none |
 | 12 | **Clock out, master.** Ticks computed from the frame counter, sent with future timestamps through step 4 | `:kit` scheduling, `:app` send | an MPC follows for eight bars | steps 2, 4, **S1, S2** |
@@ -179,3 +179,10 @@ Heard: nothing; this session had no phone.
   `synth`, `audio`, `json`, `xpm` or `mpc3`, and those engines import nothing it touched.
   31 of the 35 golden-hash synth tests pass on arm64; these three engines' float paths do
   not. Disclosed, not fixed: the fixtures are platform-fragile, and CI is their authority.
+
+## As built: batch B (2026-10-23)
+
+Landed in `6967038ec` to `9c4a7cda4`: steps 4 and 9 of the table above (MIDI output and the
+published virtual port). The per-commit record, the proof for each and what was left undone
+are in [`MIDI_OUT_SPEC_2026_10.md`](MIDI_OUT_SPEC_2026_10.md) section 13. Nothing was heard on
+a phone.

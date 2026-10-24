@@ -240,3 +240,78 @@ On a phone (bench rows this spec adds; none run here):
    under the switch says where. The other default, on, surprises every keyboard owner on
    first plug-in. If the first bench round says players expect on, flipping one constant is
    the whole change.
+
+## 13. As built (2026-10-23)
+
+Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test counts are
+`grep -c @Test` on the files named; this recording task ran no Gradle.
+
+- **The encoder: `6967038ec`.** `kit/.../MidiBytes.kt` writes note on, note off, control change
+  and All Notes Off as small `ByteArray`s; out-of-range channel, note and velocity are clamped.
+  Velocity 0 encodes as a note-off status. Proof: `MidiBytesTest`, 7 cases, each output fed back
+  through `MidiWire`.
+- **The outgoing pad map, the step length and the words: `02ac5beba`.** `MidiPads.noteForSlot(slot,
+  map)` is the inverse of `slotForNote`; it is null outside slots 1 to 128, and null for the
+  `IN_ORDER` slots 93 to 128, whose notes would pass 127. `MidiGate.stepNanos(bpm)` is one step
+  in nanoseconds. Six `Copy.SETUP_MIDI_OUT_*` lines: heading, note, none, unsupported, `OUT`,
+  `BUSY`; the heading and the two port words are listed as labels in `PersonalityTest`. Proof:
+  `MidiPadsTest` (9 cases, 3 of them new: the inverse for every pad under both maps, A02 as note
+  36 under the MPC map, a slot outside the pads), `MidiGateTest` (2 cases, both new: 125 ms at
+  120 bpm, 250 ms at 60 bpm), `PersonalityTest` (26 cases).
+- **The sender and the input ports: `25ff062fe`.** `MidiOut` is an object with one
+  `HandlerThread("midi-out")`, a destination list, `hardwareEnabled` (default false, read once
+  from pref `midi.out`) and a `ports` `StateFlow`. `MidiInput` opens each device's input ports as
+  well as its output ports, registers a destination per open port and reports a refused port;
+  `closeDevice` sends All Notes Off; a device with only an input port is now opened too.
+  `SnipSnapApplication` calls `MidiOut.install`. Proof: `:app:compileDebugKotlin` and reading.
+- **Self-exclusion: `cf53ea014`.** `MidiInput` skips the app's own device by `TYPE_VIRTUAL` plus
+  the manufacturer and product strings, which are the constants `MIDI_DEVICE_MANUFACTURER` and
+  `MIDI_DEVICE_PRODUCT` in `MidiOut.kt`. It replaces a check on a hidden key. Proof: compile and
+  reading.
+- **BUSY rows, failure, one install: `e82b0468a`.** A BUSY row is cleared when its device is
+  released. A failed `send` is caught as `Exception` per destination (not only `IOException`),
+  logged once and the destination dropped. `install` does nothing on its second call. Proof:
+  compile and reading.
+- **The published device: `3cbc0f4ce`.** `SnipSnapMidiService` (a `MidiDeviceService`),
+  `VirtualMidi` (the seam between the service and `MidiInput`), `res/xml/midi_device_info.xml`
+  with an input port "SnipSnap In" and an output port "SnipSnap Out", and the manifest service
+  element. The service's destination is added with `hardware = false`, so it sends whatever the
+  switch says. `MidiInput.devices` lists the virtual device while another app holds it.
+  Proof: compile and reading. Nobody ran `:app:processDebugManifest` in this task.
+- **Pads and keys leave: `d1376f3b0`.** The PLAY and fullscreen grids send note on at the
+  touch and note off at the release on channel 10, under the pad map the player chose
+  (`midiMap`); the window grid and `BeatPlayer.hit` always use the MPC map, and with no release
+  to read they send the note-off one `MidiGate.stepNanos` later, stamped ahead. A KEYS touch
+  sends on channel 1. `KitScreen` takes a
+  `fromMidi` flag, so a note that came in is never sent out. PANIC sends All Notes Off.
+  `MidiInput.open` reports an already-bound virtual device to a screen that opens later. Proof:
+  compile and reading.
+- **KEYS silence on the wire: `4a418242c`.** `MidiKeys.Voice.allOff` in `KeysScreen` calls
+  `MidiOut.allNotesOff()` as well as silencing the local voices. Proof: compile and reading.
+- **PLAY's note-off pairs with its note-on: `3fd81b58a`.** `KitScreen` keeps `sentNotes`, slot to
+  the note that went out; the off is sent from that record, before the allocator's early return,
+  and PANIC clears it. Proof: compile and reading.
+- **SETUP: `c48bc2fb4`.** `App.kt` holds `midiOutOn`, reads and writes pref `midi.out` and
+  pushes it into `MidiOut.hardwareEnabled`; `PropertiesScreen` gains the MIDI OUT `GroupBox` in
+  the HAPTICS pattern, with the destination list from `MidiOut.ports`. Proof: compile and reading.
+- **Naming: `9c4a7cda4`.** `MidiOut.drumOn` and `drumOff` wrap the channel-10 sends so the pad
+  screens carry no `.noteOn(` of their own and `ConventionTest`'s allocator law passes. Proof:
+  compile and reading; the law is the existing test, not run here.
+
+**Disclosed, not done.**
+
+- There is no JVM test for `:app`. The `:app` half rests on the compiler and on reading; the
+  `:kit` and `:shell` halves above have tests.
+- The sequencer stamps `System.nanoTime()` at the hit, not the frame time, because the frame
+  time is not in scope in `BeatPlayer.hit`. The clock work is the place to fix it.
+- A hit that makes no local sound sends nothing: the engine refused it, or the stream is down.
+  The wire follows the phone's speaker, not the touch.
+- `MidiOut` defines its own `DRUM_CHANNEL = 9` rather than reusing `MidiGroove.DRUM_CHANNEL`.
+  Left in place, and flagged for the final review.
+- Bench rows M1 to M4 are unrun.
+- The `tags` attribute in `midi_device_info.xml` is parsed by the system at runtime only; no test
+  reads it.
+- The manufacturer and product strings exist twice, as the Kotlin constants and in the XML,
+  because the XML cannot read Kotlin. Nothing checks they agree except a reviewer.
+
+**Heard: nothing; this session had no phone.**
