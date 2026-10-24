@@ -1,8 +1,20 @@
 # Aquarium
 
-Aquarium's six accepted effects now have a native offline renderer and an internal whole-pad operation. The render uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). This stage connects finite pad printing, saved sources, replay and exports. The dedicated Aquarium controls and continuous performance bus remain later work.
+Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). Continuous performance routing remains later work.
 
-The implementation was developed against SnipSnap `b429ec2c4bc89d225ac476af234c1a88a46fb07d`. The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md) and [staged plan](superpowers/plans/2026-10-18-aquarium-foundation.md) explain the larger feature. The owner's positive October 18 listening verdict covers the underlying audition. No new listening verdict is claimed for these host policies.
+The offline bridge was developed against SnipSnap `b429ec2c4bc89d225ac476af234c1a88a46fb07d`; the PAD panel builds on `fd76ffa382c1bf94d6a82e5a9484e6cd4140e91c`. The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md) and [staged plan](superpowers/plans/2026-10-18-aquarium-foundation.md) explain the larger feature. The owner's positive October 18 listening verdict covers the underlying audition. No new listening verdict is claimed for these host policies.
+
+## PAD controls
+
+Open an existing pad's TREATMENT box, then AQUARIUM. The panel occupies that box; PEDALS keeps its existing placement. Fresh drafts start dry. Opening the panel, selecting a preset and moving controls do not play or save audio.
+
+The eleven presets come directly from the accepted native preset resource: DRY, the six individual effects, DEPTH, MOTION, COLOR and FULL. Depth contains Fathom and Surface, Motion contains Drift and Tide, and Color contains Reef and Biolume. Each effect has an independent bypass, primary controls and folded details. The tabs group controls without changing the native six-stage processing order. Readouts use physical units, frequency sliders use logarithmic travel, and selectors offer exact native states. Bypass restores the last nonzero mix in the current draft, or the accepted single-effect preset mix for a fresh dry stage.
+
+PREVIEW renders the main sample only; BEFORE plays its preserved input. Both include the current pad shape and level for audition. KEEP renders every unique referenced WAV and updates all velocity zones. A successful main-sample preview does not guarantee that another layer will pass the peak or source checks. Fresh dry drafts cannot be kept; KEEP DRY on an existing Aquarium print restores its source. REMOVE and one-step UNDO use the same source-backed operation.
+
+PRINT SETTINGS exposes output gain (-40..0 dB travel), tail (0..30 seconds), tempo (0..1000 BPM; zero is free time) and end fade (0..100 ms). Tempo also has ±1 BPM buttons for precise adjustments. A saved gain below the slider's useful travel remains unchanged until that control is edited. The seed and sample-peak ceiling are displayed. Presets and effect controls preserve the complete saved render context, including seed, tempo, gain, tail, fade and ceiling. New drafts take tempo from the kit, or zero when unavailable.
+
+Preview, shaping and mono-to-stereo preparation run on a worker. Preview and kit writes share the kit-write mutex so blocking native calls cannot overlap. Closing the panel, changing its sound, switching pads or boxes, or backgrounding stops audition and invalidates pending delivery. Native work already in progress finishes under the lock; cancellation discards its result. A kit write can therefore wait behind a preview. Closing discards unkept edits; KEEP reloads the saved recipe into the open panel.
 
 ## Finite render contract
 
@@ -35,7 +47,7 @@ Every unique referenced WAV renders before any pad reference changes. New audio 
 
 REMOVE restores the pre-Aquarium files, zones and recipe while keeping current pad controls. One-step UNDO restores the previous kept or removed state. Source/current hashes and the expected pad are checked before adoption; stale or damaged state refuses. Rendering or saving can leave unreferenced immutable files. This is not a crash-atomic transaction spanning audio, undo and `kit.json`; the caller still saves the model through the normal kit-writing protocol.
 
-Existing treatment replay copies the render settings onto the destination pad's own baseline. It does not paste the donor's source hashes or replace the destination with the donor's audio. Replay requires an actual `AquariumOfflineRenderer`; the JVM shell does not substitute another DSP implementation. The app's existing PASTE and NONE paths can replay or remove an internally created Aquarium print. No new treatment chip is added in this stage.
+Existing treatment replay copies the render settings onto the destination pad's own baseline. It does not paste the donor's source hashes or replace the destination with the donor's audio. Replay requires an actual `AquariumOfflineRenderer`; the JVM shell does not substitute another DSP implementation. The app's existing PASTE and NONE paths can replay or remove an Aquarium print. The new Aquarium entry stays inside TREATMENT rather than adding another treatment row.
 
 ## Copying and exporting
 
@@ -46,11 +58,12 @@ MPC 2 and MPC 3 exports carry the printed stereo WAVs and normal pad/layer metad
 ## Evidence and remaining work
 
 - **Verified:** the shared core's DSP, presets and parameter registry are unchanged by this bridge. Native host CTest passes all three targets, including 23 new offline/JNI cases. The JVM main modules compile. Native tests compare the adapter against the direct accepted processor, including different block partitions, seeds, rates and tempo.
-- **Measured on the Linux host:** five fresh full-preset renders of a 3-second mono sine plus 2-second tail at 44.1 kHz took a median 92.1 ms, range 91.6..101.3 ms (`g++ -O2`, 256-frame blocks, BPM 123, gain 0.05). This includes native preparation and output allocation, and excludes JNI and WAV I/O. It is not a phone latency measurement. Four independent velocity files require four renders; future controls must schedule that work off the main thread.
+- **Measured on the Linux host:** five fresh full-preset renders of a 3-second mono sine plus 2-second tail at 44.1 kHz took a median 92.1 ms, range 91.6..101.3 ms (`g++ -O2`, 256-frame blocks, BPM 123, gain 0.05). This includes native preparation and output allocation, and excludes JNI and WAV I/O. It is not a phone latency measurement. Four independent velocity files require four renders; the PAD panel schedules this work off the main thread.
 - **Sanitizers:** the accepted-core and new offline/JNI host targets both pass AddressSanitizer and UndefinedBehaviorSanitizer with leak detection enabled.
 - **Tests supplied:** render-context serialization and numeric guards; original-source edits, layers, undo and failure paths; stereo MPC exports; strict sampler metadata; and real Android JNI transfers through `AquariumPadRendererTest`. Execution results belong in the change's validation report and CI checks.
 - **Heard:** the earlier six-effect audition was accepted. This code does not establish a new listening result.
-- **Later:** dedicated controls, continuous bus routing and printing, phone CPU/latency/power measurements, and hardware MPC acceptance.
+- **Panel tests supplied:** all presets and controls, physical-unit accessibility, narrow layout and action states, real JNI preview/KEEP across different-rate velocity layers, saved context, remove/undo, stale-preview cancellation and failure refusal. JVM and emulator execution results belong in the change's validation report and CI checks.
+- **Later:** continuous bus routing and printing, the PERFORMANCE panel, phone CPU/latency/power measurements, and hardware MPC acceptance.
 
 Biolume retains its feedforward harmonic path and pitch-ring seams; Reef retains its 5000-sample delay ceiling; Fathom retains its complementary one-pole crossovers. The native [README](../app/src/main/cpp/aquarium/README.md) records the accepted model and its limits.
 
@@ -67,6 +80,6 @@ g++ -std=c++17 -O2 app/src/main/cpp/test/offline_render_benchmark.cpp \
 
 - One native core keeps pad printing and the future bus from drifting into different effects.
 - One source store protects both boards and Aquarium without duplicating their snapshot and undo rules.
-- Preserved baked sources make edits repeatable even when the old recipe describes only the last treatment.
+- Preserved baked sources make edits repeatable even when the old recipe describes only the last treatment. Staged previews stay silent until requested and cannot play an obsolete draft.
 - Fixed gain keeps the relationship between soft and hard hits. Peak rejection makes excessive output visible instead of changing that relationship silently.
 - Finite prints avoid claiming a seamless sustain loop without measuring one.

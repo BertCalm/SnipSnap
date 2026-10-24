@@ -497,7 +497,7 @@ dependencies {
 // The native processor and the JVM recipe reader share one canonical registry.
 // This is data copying only: the JVM module still builds without an Android SDK.
 tasks.processResources {
-    from(rootProject.file("app/src/main/cpp/aquarium/parameters.json")) {
+    from(rootProject.files("app/src/main/cpp/aquarium/parameters.json", "app/src/main/cpp/aquarium/presets.json")) {
         into("com/snipsnap/synth/aquarium")
     }
 }
