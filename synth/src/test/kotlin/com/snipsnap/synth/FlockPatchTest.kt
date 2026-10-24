@@ -83,4 +83,48 @@ class FlockPatchTest {
             assertTrue(FlockPresets.forVoice(voice).all { it.macros.keys == Flock.defaults(voice).keys })
         }
     }
+
+    @Test
+    fun `held state is explicit versioned and preserved through editing without changing old HOLD`() {
+        val finite = patch().copy(macros = patch().macros + ("HOLD" to 1f))
+        assertTrue("playback" !in finite.toJsonValue().entries)
+        assertTrue("heldVersion" !in finite.toJsonValue().entries)
+        assertTrue("releaseSeconds" !in finite.toJsonValue().entries)
+        assertEquals(FlockPlayback.FINITE, FlockPatch.fromJsonText(finite.toJsonText()).playback)
+        for (model in listOf(1, 2)) {
+            val p = patch(Long.MIN_VALUE).copy(model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.1f)
+            assertEquals(p, FlockPatch.fromJsonText(p.toJsonText()))
+            assertEquals(p, Patches.fromJsonText(p.toJsonText()))
+            val macros = p.macros + ("EDGE" to .21f)
+            assertEquals(p.copy(name = "Held edit", macros = macros), Patches.edited(p, "Held edit", macros))
+            assertEquals(p.copy(macros = macros), p.withMacros(macros))
+            val toggled = p.copy(playback = FlockPlayback.FINITE)
+            assertEquals(toggled, FlockPatch.fromJsonText(toggled.toJsonText()), "finite toggle discarded release/model/seed")
+            assertEquals(JsonValue.Num(1.0), p.toJsonValue().entries["heldVersion"])
+        }
+        assertFailsWith<IllegalArgumentException> { finite.copy(voice = FlockVoice.GATHER, playback = FlockPlayback.HELD) }
+        assertFailsWith<IllegalArgumentException> { finite.copy(voice = FlockVoice.SPLIT, playback = FlockPlayback.HELD) }
+    }
+
+    @Test
+    fun `new held fields decode strictly before rounding and require a supported capture version`() {
+        val p = patch().copy(playback = FlockPlayback.HELD)
+        fun changed(key: String, value: JsonValue) = JsonValue.Obj(p.toJsonValue().entries + (key to value))
+        for (bad in listOf(JsonValue.Null, JsonValue.Num(1.0), JsonValue.Str("held"), JsonValue.Str("FOREVER")))
+            assertFails { FlockPatch.fromJsonValue(changed("playback", bad)) }
+        for (bad in listOf(JsonValue.Null, JsonValue.Str("1"), JsonValue.Num(0.0), JsonValue.Num(1.5), JsonValue.Num(2.0)))
+            assertFails { FlockPatch.fromJsonValue(changed("heldVersion", bad)) }
+        assertFails { FlockPatch.fromJsonValue(JsonValue.Obj(p.toJsonValue().entries - "heldVersion")) }
+        for (bad in listOf(.1 - 1e-10, 1.5 + 1e-10, Double.NaN, Double.POSITIVE_INFINITY))
+            assertFails { FlockPatch.fromJsonValue(changed("releaseSeconds", JsonValue.Num(bad))) }
+        for (bad in listOf(JsonValue.Null, JsonValue.Str(".6")))
+            assertFails { FlockPatch.fromJsonValue(changed("releaseSeconds", bad)) }
+        for (release in listOf(.1, .6, 1.5)) {
+            val restored = FlockPatch.fromJsonValue(changed("releaseSeconds", JsonValue.Num(release))) as FlockPatch
+            assertEquals(release.toFloat(), restored.releaseSeconds)
+        }
+        for (release in listOf(Float.NaN, .099f, 1.501f))
+            assertFailsWith<IllegalArgumentException> { p.copy(releaseSeconds = release) }
+        assertFailsWith<IllegalArgumentException> { p.copy(heldVersion = 2) }
+    }
 }

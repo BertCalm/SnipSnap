@@ -400,6 +400,28 @@ object Keys {
         return KeyNote(Snip(samples, channels = 1, sampleRate = RATE), loopStartFrame = loop.size.toLong())
     }
 
+    /** Minor-third CREASE roots over two octaves around the saved note.
+     * Clip the sampled span to the engine's actual register instead of exporting
+     * outer keygroups that transpose an untested high-register phase map. */
+    fun creasePadMidis(rootMidi: Int = Crease.DEFAULT_MIDI): List<Int> {
+        require(rootMidi in Crease.MIDI_MIN..Crease.MIDI_MAX) {
+            "CREASE instrument root must be MIDI ${Crease.MIDI_MIN}..${Crease.MIDI_MAX}, got $rootMidi"
+        }
+        val low = (rootMidi - 12).coerceAtLeast(Crease.MIDI_MIN)
+        val high = (rootMidi + 12).coerceAtMost(Crease.MIDI_MAX)
+        return ((-12..12 step 3).map { rootMidi + it }.filter { it in low..high } +
+            listOf(low, rootMidi, high)).distinct().sorted()
+    }
+
+    /** A continuous speaking onset followed by a measured, state-converged
+     * pressure gesture. The program's release envelope acts when a key lifts;
+     * it does not restart or re-simulate the deformation circuit. */
+    fun creasePad(
+        patch: CreasePatch,
+        midi: Int = patch.midi,
+        cancelled: () -> Boolean = { false },
+    ): KeyNote = CreaseKeys.render(patch, midi, cancelled)
+
     /** Nine minor-third zones across REGISTERS' C3–C5 macro register. */
     fun registersPadMidis(): List<Int> =
         (0..Registers.TUNE_SEMITONES step 3).map { Registers.ROOT_MIDI + it }

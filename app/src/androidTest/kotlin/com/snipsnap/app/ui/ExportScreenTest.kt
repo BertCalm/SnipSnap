@@ -318,6 +318,9 @@ class ExportScreenTest : ComposeScreenTest() {
         }
         button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
 
+        // COMPLETE/SHARE precede the export's remaining async bookkeeping.
+        // Start the simulated card operation only after its busy latch clears.
+        waitFor("the phone export to finish") { session?.busy == false }
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
         session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
         pump()

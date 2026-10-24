@@ -24,7 +24,7 @@ internal object WickPatternGenerator {
     private const val RAW_EXPORT_GAIN = .5f
     // Keep the accepted three-voice arrangement exactly as rendered in the prior round.
     private val ensembleVoices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE)
-    private val soloVoices = ensembleVoices + WickVoice.BREATH
+    private val soloVoices = ensembleVoices + listOf(WickVoice.BREATH, WickVoice.FLICKER)
     private val options = linkedMapOf<String, Any?>(
         "disableCascade" to false, "constantAvailability" to false, "gainOnly" to false,
         "oversample" to 4, "legacyBubbleEnvelope" to false,
@@ -51,7 +51,7 @@ internal object WickPatternGenerator {
             val title = if (voice == null) "Three voices · interlocking phrase" else "${voice.name} · short musical phrase"
             val metadata = linkedMapOf<String, Any?>(
                 "id" to id, "title" to title, "kind" to "pattern", "groupId" to GROUP_ID,
-                "group" to "Four voices · short musical phrases", "voice" to (voice?.name ?: "ENSEMBLE"),
+                "group" to "Five voices · short musical phrases", "voice" to (voice?.name ?: "ENSEMBLE"),
                 "voices" to (voice?.let { listOf(it.name) } ?: ensembleVoices.map { it.name }),
                 "midi" to null, "velocity" to null, "noteRange" to linkedMapOf("minMidi" to 48, "maxMidi" to 60),
                 "velocityRange" to linkedMapOf("min" to .4f, "max" to 1f), "macros" to emptyMap<String, Float>(),
@@ -59,7 +59,7 @@ internal object WickPatternGenerator {
                 "description" to if (voice == null) {
                     "The same two-bar C minor pentatonic score, shared in turn between PLUCK, WOOD and BUBBLE. Dry independently rendered notes, with full finite tails."
                 } else {
-                    "Eight notes at 100 BPM, C3–C4, with the same timing, pitches and playing velocities as the other three solo voices. Voice defaults and their internal cascades remain active; no effects."
+                    "Eight notes at 100 BPM, C3–C4, with the same timing, pitches and playing velocities as the other four solo voices. Voice defaults and their internal cascades remain active; no effects."
                 },
             )
             try {
@@ -155,8 +155,8 @@ internal object WickPatternGenerator {
             }
         }
         return Result(entries, failures, linkedMapOf(
-            "id" to GROUP_ID, "title" to "Four voices · short musical phrases",
-            "description" to "The same eight-note, two-bar C minor pentatonic phrase at 100 BPM in PLUCK, WOOD, BUBBLE and BREATH, plus the accepted phrase shared between PLUCK, WOOD and BUBBLE. Soft and strong notes use their actual playing velocity. Native playback uses one common 0.25 gain on the sum of unlevelled note renders; only the completed phrases are loudness matched. Full one-shot tails follow the score.",
+            "id" to GROUP_ID, "title" to "Five voices · short musical phrases",
+            "description" to "The same eight-note, two-bar C minor pentatonic phrase at 100 BPM in PLUCK, WOOD, BUBBLE, BREATH and FLICKER, plus the accepted phrase shared between PLUCK, WOOD and BUBBLE. Soft and strong notes use their actual playing velocity. Native playback uses one common 0.25 gain on the sum of unlevelled note renders; only the completed phrases are loudness matched. Full one-shot tails follow the score.",
             "clipIds" to entries.map { it.getValue("id") },
         ))
     }

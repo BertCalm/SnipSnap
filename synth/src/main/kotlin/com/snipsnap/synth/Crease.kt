@@ -228,6 +228,137 @@ object Crease {
         ), traces.finish(), previous, startState, endState)
     }
 
+    /** Dedicated keyboard trajectory. The ordinary finite/HOLD render paths above retain
+     * their original stepping and normalization; only this entry supplies a key envelope
+     * and a smoothly changing pressure source to the same model-3 circuit. */
+    internal fun keyProbe(patch: CreasePatch, midi: Int, oversample: Int, normalize: Boolean,
+        cancelled: () -> Boolean): CreaseKeyProbe {
+        val started = System.nanoTime()
+        fun checkCancelled() {
+            if (cancelled() || Thread.currentThread().isInterrupted)
+                throw java.util.concurrent.CancellationException("CREASE key render no longer wanted")
+        }
+        checkCancelled()
+        val velocity = patch.velocity.toDouble()
+        val m = settled(patch.voice, patch.macros, patch.model) + ("HOLD" to 1f)
+        val shape = Shape(patch.voice, m, velocity, patch.model)
+        val requestedHz = Keys.midiHz(midi).toDouble()
+        val rootCycles = (shape.loopSeconds * requestedHz).roundToInt().coerceAtLeast(8)
+        val frames = (rootCycles * RATE / requestedHz).roundToInt()
+        val renderedHz = rootCycles * RATE.toDouble() / frames
+        val rate = RATE * oversample
+        val internalFrames = frames * oversample
+        val circuit = Model(shape, rate, renderedHz, CreaseHistory.STATEFUL, true)
+        val output = OutputPath(rate, oversample)
+        val stats = Stats()
+        val traces = TraceBuilder()
+        val cycles = ArrayList<FloatArray>()
+        val traceStride = max(oversample, rate / TRACE_HZ)
+        val transitionStart = when (patch.voice) {
+            CreaseVoice.ROUND -> .18; CreaseVoice.PINCH -> .24; CreaseVoice.RUBBER -> .45
+        }
+        val transitionEnd = when (patch.voice) {
+            CreaseVoice.ROUND -> .50; CreaseVoice.PINCH -> .65; CreaseVoice.RUBBER -> 1.15
+        }
+        val amplitudeSettle = when (patch.voice) {
+            CreaseVoice.ROUND -> .18; CreaseVoice.PINCH -> .24; CreaseVoice.RUBBER -> .50
+        }
+
+        // Integer output-frame periods contain an integer number of root cycles. Both
+        // clocks therefore continue through each boundary at exactly phase zero. There
+        // is no accumulated oscillator or gesture phase omitted from the state proof.
+        fun state() = circuit.state() + output.state() + doubleArrayOf(0.0, 0.0)
+        fun cycle(): FloatArray {
+            checkCancelled()
+            check((cycles.size + 1L) * frames <= (CreaseKeys.MAX_SAMPLE_SECONDS * RATE).toLong()) {
+                "CREASE key note exceeded ${CreaseKeys.MAX_SAMPLE_SECONDS} seconds"
+            }
+            val out = FloatArray(frames)
+            val cycleStart = cycles.size.toDouble() * frames / RATE
+            var at = 0
+            for (i in 0 until internalFrames) {
+                if (i % 8192 == 0) checkCancelled()
+                val time = cycleStart + i.toDouble() / rate
+                val fraction = i.toDouble() / internalFrames
+                val phase = TAU * ((i.toDouble() * rootCycles / internalFrames) % 1.0)
+                val periodic = shape.forcing(time, fraction)
+                // These are control blends within one causal circuit. No audio or state
+                // is exchanged with a separately rendered finite note or held orbit.
+                val source = if (time >= transitionEnd) periodic else mix(
+                    shape.forcing(time, null), periodic,
+                    smooth((time - transitionStart) / (transitionEnd - transitionStart)),
+                )
+                val amplitude = velocity * smooth(time / shape.attack) *
+                    (.68 + .32 * (1.0 - smooth(time / amplitudeSettle)))
+                val raw = circuit.keyStep(phase, amplitude, source)
+                val value = output.step(raw)
+                if (value != null) out[at++] = value.toFloat()
+                stats.add(raw, circuit)
+                if (i % traceStride == 0) traces.add(time, circuit)
+            }
+            check(at == frames) { "CREASE key decimator did not complete a period" }
+            cycles.add(out)
+            return out
+        }
+
+        var before = state()
+        var converged = false
+        var preroll = 0
+        var stateError = Double.POSITIVE_INFINITY
+        var previous = FloatArray(0)
+        for (period in 1..CreaseKeys.MAX_SETTLE_CYCLES) {
+            previous = cycle()
+            val after = state()
+            stateError = distance(before, after)
+            before = after
+            preroll = period
+            // The first period contains the source morph. Require three further real
+            // periods before accepting recurrence, even for silence or a fast recovery.
+            if (period >= 4 && stateError < LOOP_STATE_TOLERANCE) {
+                converged = true
+                break
+            }
+        }
+        check(converged) {
+            "CREASE ${patch.voice} key sustain did not converge after $preroll periods: $stateError"
+        }
+        val startState = state()
+        val finalCycle = cycle()
+        val endState = state()
+        stateError = distance(startState, endState)
+        check(stateError < LOOP_STATE_TOLERANCE) { "CREASE key full-state recurrence regressed: $stateError" }
+        checkCancelled()
+        val prelevel = FloatArray(cycles.size * frames)
+        for ((period, audio) in cycles.withIndex()) audio.copyInto(prelevel, period * frames)
+        val samples = prelevel.copyOf()
+        if (normalize && velocity > 0.0) {
+            // Sustain chooses the perceived level; one uniform scalar reaches the whole
+            // onset and every actual settling cycle. The common peak stage then protects
+            // a potentially louder attack without changing any relative envelope shape.
+            val leveled = finalCycle.copyOf()
+            Dsp.levelTo(leveled, RATE, Dsp.MELODIC_LOUDNESS_TARGET * patch.velocity.pow(.4f))
+            val index = finalCycle.indices.maxByOrNull { abs(finalCycle[it]) } ?: 0
+            val gain = if (finalCycle[index] == 0f) 1f else leveled[index] / finalCycle[index]
+            for (i in samples.indices) samples[i] *= gain
+            Dsp.limitPeak(samples, .99f)
+            val absoluteIndex = (cycles.size - 1) * frames + index
+            val finalGain = if (finalCycle[index] == 0f) 1f else samples[absoluteIndex] / finalCycle[index]
+            previous = FloatArray(previous.size) { previous[it] * finalGain }
+        } else previous = previous.copyOf()
+        val loopStart = (cycles.size - 1) * frames
+        val seam = if (velocity > 0.0) Keys.seamError(samples, loopStart) else 0.0
+        check(seam < 1e-3) { "CREASE ${patch.voice} key audio did not recur: $seam" }
+        checkCancelled()
+        val diagnostics = CreaseDiagnostics(
+            stats.peak, sqrt(stats.square / stats.count.coerceAtLeast(1)), stats.sum / stats.count.coerceAtLeast(1),
+            null, stats.derivative, max(stats.state, output.maxAbsState),
+            requestedHz, renderedHz, true, frames, rootCycles, seam, stateError, true,
+            preroll, System.nanoTime() - started, stats.maxDerivative, stats.curvature, patch.model,
+        )
+        return CreaseKeyProbe(KeyNote(Snip(samples, 1, RATE), loopStart.toLong()), prelevel,
+            diagnostics, traces.finish(), previous, startState, endState, transitionEnd)
+    }
+
     private fun distance(a: DoubleArray, b: DoubleArray): Double = a.indices.maxOf { abs(a[it] - b[it]) }
     private fun mix(a: Double, b: Double, t: Double) = a + (b - a) * t
     private fun smooth(t: Double): Double = t.coerceIn(0.0, 1.0).let { it * it * (3.0 - 2.0 * it) }
@@ -418,6 +549,13 @@ object Crease {
         fun step(phase: Double, t: Double, loop: Double?): Double {
             val amplitude = shape.amplitude(t)
             val force = shape.forcing(t, loop) * 1.25 * shape.velocity.pow(1.25)
+            return advance(phase, amplitude, force)
+        }
+
+        fun keyStep(phase: Double, amplitude: Double, source: Double): Double =
+            advance(phase, amplitude, source * 1.25 * shape.velocity.pow(1.25))
+
+        private fun advance(phase: Double, amplitude: Double, force: Double): Double {
             val excitation = if (shape.velocity == 0.0) 0.0 else (amplitude / shape.velocity).pow(2.0)
             val pTarget = (force * (.90 + .10 * excitation)).coerceIn(0.0, 1.0)
             val pp = if (pTarget > pressure) pressureRise else pressureFall

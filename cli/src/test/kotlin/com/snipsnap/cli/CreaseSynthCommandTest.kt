@@ -88,7 +88,7 @@ class CreaseSynthCommandTest {
     }
 
     @Test
-    fun `invalid note velocity model and unsupported instrument flags fail before output creation`() {
+    fun `invalid note velocity model and unsupported flags fail before output creation`() {
         val root = createTempDirectory("crease-cli-invalid").toFile()
         val destination = File(root, "not-created")
         try {
@@ -96,7 +96,7 @@ class CreaseSynthCommandTest {
                 arrayOf("--midi", "23"), arrayOf("--midi", "85"), arrayOf("--midi", "60.5"),
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "Infinity"), arrayOf("--velocity", "1.01"),
                 arrayOf("--model", "0"), arrayOf("--model", "4"), arrayOf("--model", "1.5"),
-                arrayOf("--instrument"), arrayOf("--drone"), arrayOf("--seconds", "1"), arrayOf("--seed", "1"),
+                arrayOf("--drone"), arrayOf("--seconds", "1"), arrayOf("--seed", "1"),
             )) {
                 val errors = ByteArrayOutputStream()
                 assertEquals(2, Cli.run(
