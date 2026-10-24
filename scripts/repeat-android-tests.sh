@@ -15,7 +15,7 @@ bad=0
 i=1
 while [ "$i" -le "$ROUNDS" ]; do
   adb logcat -c
-  adb shell am instrument -w -r -e class "$TESTS" \
+  timeout 120 adb shell am instrument -w -r -e class "$TESTS" \
     com.snipsnap.app.brassgrow.test/androidx.test.runner.AndroidJUnitRunner > "$OUT/round-$i.txt" 2>&1
   adb logcat -d > "$OUT/round-$i-logcat.txt" 2>&1
   grep -A12 'SnipSnapThreadCheck' "$OUT/round-$i-logcat.txt" | head -40; grep -o 'SnipSnapResume.*' "$OUT/round-$i-logcat.txt" | sort | uniq -c

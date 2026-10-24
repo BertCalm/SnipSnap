@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -21,6 +22,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
+import kotlinx.coroutines.test.StandardTestDispatcher
 
 /**
  * Shared plumbing for `:app`'s on-device Compose suites — extracted once
@@ -58,8 +60,11 @@ import org.junit.Rule
  */
 abstract class ComposeScreenTest {
 
+    // EXPERIMENT (not for merge): the default unconfined test dispatcher lets
+    // code after withContext(Dispatchers.IO) recompose on the IO thread.
+    @OptIn(ExperimentalTestApi::class)
     @get:Rule
-    val compose = createComposeRule()
+    val compose = createComposeRule(StandardTestDispatcher())
 
     /**
      * [content], wrapped at [PHONE_WIDTH_DP] with the clock frozen. Every
