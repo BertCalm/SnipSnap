@@ -200,13 +200,6 @@ private const val PREF_LOOK = "look"
 private const val PREF_TEACH = "teach"
 /** HAPTICS (SETUP): the motor under pads, steppers and landings - ON unless the player turned it off. */
 private const val PREF_HAPTICS = "haptics"
-/**
- * MIDI OUT (SETUP): whether pads and keys also go out to plugged-in hardware.
- * OFF unless the player turned it on. One key, two readers: this file owns the
- * switch and writes it; `MidiOut.install` reads the same key once at start so
- * the engine is right before any screen has composed.
- */
-private const val PREF_MIDI_OUT = "midi.out"
 /** The WORKSHOP (`docs/WORKSHOP.md`): open once the knock on SETUP's title lands, remembered like the scheme until its own CLOSE. */
 private const val PREF_WORKSHOP = "workshop"
 /** The shelf's sort toggle (name-and-find followups) — [KitShelf.ShelfSort], remembered like the scheme. */
@@ -382,7 +375,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     // once here makes the two agree even if install ran before it was written.
     var midiOutOn by remember { mutableStateOf(prefs.getBoolean(PREF_MIDI_OUT, false)) }
     LaunchedEffect(Unit) { MidiOut.hardwareEnabled = midiOutOn }
-    val midiPorts = MidiOut.ports.collectAsState().value
     val midiSupported = remember(context) {
         context.packageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)
     }
@@ -3779,7 +3771,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 MidiOut.hardwareEnabled = on
                             },
                             midiSupported = midiSupported,
-                            midiPorts = midiPorts,
+                            midiPorts = MidiOut.ports.collectAsState().value,
                             // Finding 23: three facts the app already kept and
                             // never showed. Read straight from the same prefs
                             // EXPORT writes - one owner each, no second copy.

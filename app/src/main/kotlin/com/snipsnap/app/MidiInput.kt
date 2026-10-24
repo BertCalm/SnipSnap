@@ -5,7 +5,6 @@ import android.content.pm.PackageManager
 import android.hardware.usb.UsbDevice
 import android.media.midi.MidiDevice
 import android.media.midi.MidiDeviceInfo
-import android.media.midi.MidiInputPort
 import android.media.midi.MidiManager
 import android.media.midi.MidiOutputPort
 import android.media.midi.MidiReceiver
@@ -100,14 +99,11 @@ class MidiInput(context: Context) {
         }
     }
 
-    /** [inputPorts] pairs each [MidiOut] destination id with the port behind it. */
     private class Opened(
         val info: MidiDeviceInfo,
         val id: MidiDeviceId,
         val device: MidiDevice,
         val ports: List<Pair<MidiOutputPort, Receiver>>,
-        val inputPorts: List<Pair<String, MidiInputPort>>,
-        val refusedIds: List<String>,
     )
 
     private val opened = LinkedHashMap<Int, Opened>()
@@ -153,7 +149,7 @@ class MidiInput(context: Context) {
         // SnipSnap's own published device is listed like any other; opening
         // it would hear our own notes and send into ourselves.
         if (isOwnDevice(info)) return
-        if (info.outputPortCount == 0 && info.inputPortCount == 0) return
+        if (info.outputPortCount == 0) return
         manager.openDevice(info, { device ->
             if (device == null) {
                 Log.w(TAG, "MIDI device ${nameOf(info)} would not open")
@@ -176,25 +172,11 @@ class MidiInput(context: Context) {
                 ports += port to receiver
             }
             val id = MidiDeviceId(nameOf(info), fingerprintOf(info))
-            // The naming trap, the other way round: a device's *input* port
-            // is where bytes go IN to it, so it is what this app sends
-            // into (MidiOut). The output ports above are what it plays out of.
-            val inputPorts = ArrayList<Pair<String, MidiInputPort>>()
-            val refusedIds = ArrayList<String>()
-            for (p in 0 until info.inputPortCount) {
-                val destId = "${id.fingerprint.key}/in$p"
-                val destName = if (info.inputPortCount > 1) "${id.name} $p" else id.name
-                val port = runCatching { device.openInputPort(p) }.getOrNull()
-                if (port == null) {
-                    Log.w(TAG, "MIDI device ${id.name} input port $p would not open")
-                    MidiOut.reportRefused(destId, destName)
-                    refusedIds += destId
-                    continue
-                }
-                MidiOut.add(MidiOut.Destination(destId, destName) { bytes, ts -> port.send(bytes, 0, bytes.size, ts) })
-                inputPorts += destId to port
-            }
-            opened[info.id] = Opened(info, id, device, ports, inputPorts, refusedIds)
+            // Output ports only. The device's input ports (where this app
+            // sends) are opened for the whole process by MidiOut, through a
+            // second MidiDevice handle: ports are exclusive, devices are not,
+            // and the two openers never open the same port.
+            opened[info.id] = Opened(info, id, device, ports)
             listener?.onDevicesChanged(devices)
         }, handler)
     }
@@ -222,22 +204,7 @@ class MidiInput(context: Context) {
             runCatching { port.disconnect(receiver) }
             runCatching { port.close() }
         }
-        // A port that would not open was listed as BUSY; it goes with the device.
-        it.refusedIds.forEach(MidiOut::remove)
-        for ((destId, port) in it.inputPorts) {
-            MidiOut.remove(destId)
-            runCatching { port.close() }
-        }
         runCatching { it.device.close() }
-    }
-
-    private fun isOwnDevice(info: MidiDeviceInfo): Boolean {
-        // Public properties only. A third-party virtual device that calls
-        // itself SnipSnap/SnipSnap would be skipped too; that is acceptable.
-        val p = info.properties
-        return info.type == MidiDeviceInfo.TYPE_VIRTUAL &&
-            p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER) == MIDI_DEVICE_MANUFACTURER &&
-            p.getString(MidiDeviceInfo.PROPERTY_PRODUCT) == MIDI_DEVICE_PRODUCT
     }
 
     /** Stop listening and let every device go. Safe to call twice. */
@@ -285,6 +252,20 @@ class MidiInput(context: Context) {
 
     companion object {
         private const val TAG = "MidiInput"
+
+        /**
+         * SnipSnap's own published device, which neither this class nor
+         * [MidiOut]'s input-port opener may open (it would hear or send into
+         * ourselves). The one definition. Public properties only; a
+         * third-party virtual device that calls itself SnipSnap/SnipSnap
+         * would be skipped too, which is acceptable.
+         */
+        internal fun isOwnDevice(info: MidiDeviceInfo): Boolean {
+            val p = info.properties
+            return info.type == MidiDeviceInfo.TYPE_VIRTUAL &&
+                p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER) == MIDI_DEVICE_MANUFACTURER &&
+                p.getString(MidiDeviceInfo.PROPERTY_PRODUCT) == MIDI_DEVICE_PRODUCT
+        }
 
         /**
          * What the device says it is: transport, USB vendor and product ids
