@@ -72,16 +72,16 @@ jobs:
           # audio stream when the screen appears, and a device with no audio
           # would make every one of these a test of the fallback toast.
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
-          script: >-
-            ./gradlew --no-daemon :app:connectedDebugAndroidTest
-            ${{ github.event_name == 'workflow_dispatch' && inputs.filament_only && '-Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.FilamentScreenTest' || '' }}
+          # EXPERIMENT (not for merge): repeat the Aquarium held-preview tests.
+          script: REPEAT_ROUNDS=12 REPEAT_TESTS=com.snipsnap.app.ui.AquariumPanelTest#closing_a_delayed_preview_discards_its_result_and_unsaved_draft,com.snipsnap.app.ui.AquariumPanelTest#changing_controls_during_a_delayed_preview_does_not_adopt_the_old_result,com.snipsnap.app.ui.AquariumPanelTest#header_before_replaces_a_held_preview_without_delivering_the_old_wet_result,com.snipsnap.app.ui.AquariumPanelTest#an_external_bench_change_cancels_a_hidden_preview_and_discards_its_draft sh scripts/repeat-android-tests.sh
       - name: Keep the reports
-        if: failure()
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: emulator-test-reports-${{ github.sha }}
           path: |
             app/build/reports/androidTests/connected/**
             app/build/outputs/androidTest-results/**
+            app/build/repeat/**
           if-no-files-found: ignore
           retention-days: 7
