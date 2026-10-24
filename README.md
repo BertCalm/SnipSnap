@@ -1133,7 +1133,10 @@ on the desk, use
 `snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
 `--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
 renderer has its own model 1, separate from finite model 4; the six controls
-and patch JSON stay unchanged, with no HOLD macro. See the
+remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
+once between the source and folded color; MOTION sets their duration. STEADY
+retains existing audio and JSON. The new gesture is saved with its own version,
+and held keys finish it before the sustain loop. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`
