@@ -392,6 +392,9 @@ testkit/caustic-instrument-audition/
 testkit/.caustic-instrument-building-*/
 testkit/.caustic-audition-kit-*/
 testkit/caustic-kit/
+testkit/caustic-character-study/
+testkit/.caustic-character-*/
+scripts/__pycache__/
 
 # RUSH's listening audio and measurements regenerate from the shared board DSP.
 testkit/rush-audition/
