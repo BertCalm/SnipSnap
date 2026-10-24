@@ -173,7 +173,7 @@ comparisons require the stage-sensitive collector.
   58.94–104.13 ms in the review pack and 65.92–146.81 ms in the final regeneration.
   These measurements describe those three exported loops on this
   host, not every supported note or a phone render-time guarantee.
-- **JVM status, 2026-10-24:** the full Gradle JVM gate and final audition generator
+- **JVM status before the latest base integration, 2026-10-24:** the full Gradle JVM gate and final audition generator
   completed with exit code 0. All 6,130 tests across nine modules passed, including
   3,228 synth and 1,275 shell tests, with no failures, errors or skips. The test
   runtime was OpenJDK 21.0.12.1; Java fixtures used the installed Temurin 21.0.13
@@ -182,6 +182,10 @@ comparisons require the stage-sensitive collector.
   byte. Android compilation remains separate because this host has no Android SDK.
   Physical phone editing/playback and MPC import/playback
   have not been run; the new factory bank and HOLD voicings await hearing.
+- **Latest integration:** the branch now includes upstream `7659ed77d`, retaining
+  MERCURY's picker entry, ORIGAMI's fold gestures and WICK FLICKER. The full gate
+  for this combined state remains pending; the 6,130-test result above describes
+  revision `585538d41` before that integration.
 
 The accepted finite prototype and first native implementation were developed
 against `c5112c507ccb75a8b95313c4ebbe26f8823700aa`. The branch then integrated

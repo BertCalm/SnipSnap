@@ -79,7 +79,7 @@ establish the perceived pitch or musical quality of an inharmonic sound.
 | FOLD | Unchanged source to the geometrically transformed upper spectrum |
 | TURN | Upper-partial translation; .5 is neutral |
 | WARP | Upper-partial spacing; .5 is neutral |
-| MOTION | Smooth movement of the geometry during the note |
+| MOTION | Axis movement in STEADY; fast-to-slow gesture duration in BLOOM/UNFOLD |
 
 FOLD zero bypasses the geometry exactly, including TURN, WARP and MOTION.
 At intermediate FOLD values, the original upper spectrum and the transformed
@@ -99,7 +99,45 @@ their generated source without an external recording.
 
 New patches use model 4. Explicit models 1, 2 and 3 replay their frozen
 renderers; older patches without a model field select model 1. Saved sounds keep
-their original audio. CRANE delegates to the first renderer in every model.
+their original audio. In STEADY, CRANE delegates to the first renderer in every
+model; explicit model-4 gestures use the new renderer with the same source.
+
+## Fold gestures
+
+Model-4 patches offer STEADY, BLOOM and UNFOLD above the six controls.
+STEADY keeps the accepted sound and the original MOTION axis movement. BLOOM
+starts with the open source and folds into the selected color; UNFOLD starts
+folded and opens back into the source. FOLD sets the maximum reflected share.
+In the two new modes, MOTION sets gesture time from fast to slow, with the
+duration shown in seconds. The gesture plays once; it does not also run the
+axis LFO. Switching modes keeps all numeric controls.
+
+The change is a complementary amplitude contour between the source and its
+actual relocated partials, before audio filtering. Their frequencies stay fixed
+at the selected geometry, and the separate root keeps the played pitch. The
+accepted amplitude attack and finite note length remain independent of this
+color change. STILL starts its gesture later so its soft attack can expose it.
+
+The new gesture has its own version 1, stored only when BLOOM or UNFOLD is
+selected. An omitted gesture means STEADY, preserving existing JSON and audio.
+Models 1–3 keep their original motion and do not accept the new modes. Loading
+a current factory preset makes gestures available without changing an old saved
+recipe. All six factory presets remain STEADY until deliberately edited.
+
+FAN/STILL MAKE INSTRUMENT keeps the complete gesture before the sustain loop.
+The settled body then repeats without restarting the gesture. RELEASE still
+controls the fade after key-up. CRANE uses the new gestures in finite notes.
+
+```sh
+snipsnap synth ORIGAMI FAN --gesture BLOOM --macros FOLD=.75,MOTION=.65 --out /path/to/notes
+snipsnap synth ORIGAMI STILL --gesture UNFOLD --macros MOTION=.65 --instrument --release .6 --out /path/to/instruments
+./gradlew --no-daemon :shell:generateOrigamiGestureAudition
+```
+
+The audition writes a self-contained nine-clip `start-here.html` and a fuller
+listening pack under `testkit/origami-gestures`. New sound acceptance is a
+listening decision. The design and its verification ledger are in the
+[fold-gesture brief](superpowers/specs/2026-10-23-origami-fold-gestures.md).
 
 ## Fourth listening round: folded color (model 4)
 
@@ -219,7 +257,7 @@ MPC keygroup formats share the same loop and note-off release.
 
 Held renderer model 1 is versioned separately from finite model 4. It fits
 oscillator cycles and geometry motion to one repeat period, integrating moving
-frequencies before closing phase. FAN's motion period is about 2.86 seconds;
+frequencies before closing phase. In STEADY, FAN's motion period is about 2.86 seconds;
 STILL uses about ten seconds, with its slower motion at roughly 0.10/0.20 Hz.
 These held motion rates are fitted rather than preserving finite STILL's
 0.10/0.17 Hz pair. The original finite attack leads into that periodic field;

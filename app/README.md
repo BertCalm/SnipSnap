@@ -76,9 +76,16 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 54 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
-VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI and OHM.
+The SYNTH source picker has 55 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
+VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
+COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
+SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
+VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM and MERCURY.
+MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
+(2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
+round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT
+path yet (R2b, round 6, awaits the listen).
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit

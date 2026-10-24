@@ -26,6 +26,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
+        for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
+            val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,
+                Origami.defaults(OrigamiVoice.STILL) + ("MOTION" to .65f),
+                midi = 60, velocity = .7f, seed = Long.MIN_VALUE + 20261023L, gesture = gesture)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
+        }
+    }
+
+    @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }

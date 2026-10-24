@@ -376,14 +376,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD, BREATH and BUBBLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Seventeen provisional recipes stay outside
+PLUCK, WOOD, BREATH, BUBBLE and FLICKER share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Twenty-one provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, four solo
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, five solo
 musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
 [implementation notes](docs/WICK.md) describe this first round; the remaining
-two proposed voices and full preset library follow the listening verdict.
+remaining proposed voice and full preset library follow the listening verdict.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -878,8 +878,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM and GRAINS round out the lineup —
-fifty-four engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
+55 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1073,11 +1073,17 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SCANNED CHAIN, SKIN, TINES, VELVET, VOX, PLUCK, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE,
-GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW,
-SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVEN, VENT, OVERLAP, TRIO, plus GRAINS, SNAP and DRAW, which sit beside the
+THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
+COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
+SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
+VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-MERCURY, TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+MERCURY's picker entry carries PING, SING and BLADE, the three voices kept at
+R1's gate (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI
+until round 7's listen. A law in `shell`'s `ConventionTest` reads these two
+lists, the count above and `app/README.md`'s against the enum and the roster.
 ALLOY, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, TRIO, OSPREY and OPENSKY
 are in the picker and the preset roster, and each but FLOTILLA and REGISTERS has a starter kit;
 the CLI's `--midi` and `--velocity` options set their note and strike energy directly
@@ -1144,7 +1150,10 @@ on the desk, use
 `snipsnap synth ORIGAMI FAN --instrument --out <dir>` (or STILL), with optional
 `--release S` from 0.1–1.5 seconds, default 0.6. CRANE remains finite. The held
 renderer has its own model 1, separate from finite model 4; the six controls
-and patch JSON stay unchanged, with no HOLD macro. See the
+remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
+once between the source and folded color; MOTION sets their duration. STEADY
+retains existing audio and JSON. The new gesture is saved with its own version,
+and held keys finish it before the sustain loop. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 
 ### `:mpc3`

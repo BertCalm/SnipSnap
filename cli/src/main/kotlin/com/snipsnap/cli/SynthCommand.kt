@@ -18,7 +18,10 @@ import com.snipsnap.shell.RegistersPadMaker
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiGesture
+import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.Chamber
@@ -135,6 +138,8 @@ import kotlin.random.Random
  * ORIGAMI model-4 FAN/STILL and OPENSKY HALO keep their authored attack and accept release only.
  * ORIGAMI also accepts --patch JSON replay, retaining the saved note, velocity,
  * seed and finite render model. Its held zones span C3-C5 and override TUNE.
+ * Its model-4 voices accept --gesture STEADY|BLOOM|UNFOLD and all six controls
+ * through --macros; MOTION sets gesture duration in BLOOM/UNFOLD.
  *
  * `--drone [--root A1] [--motion 0..1] [--rate 1|2|4] [--bpm N] [--bars N]
  * [--loop N]` (RESIN only) renders the preset as a loop-grid drone: the
@@ -166,7 +171,7 @@ import kotlin.random.Random
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
  * for their finite performances.
- * WICK offers seventeen provisional PLUCK/WOOD/BREATH/BUBBLE recipes without adding a phone engine.
+ * WICK offers twenty-one provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
@@ -186,7 +191,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--tempo", "--beats"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--tempo", "--beats"),
             boolean = setOf("--all", "--instrument", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -195,6 +200,11 @@ object SynthCommand {
             ?: throw CliError("which voice? e.g. snipsnap synth TINES BELL --all --out <dir>")
         if (opts.positional.size > 2) throw CliError("synth takes an engine and a voice, nothing more")
 
+        val gestureOverride = opts["--gesture"]?.let { raw ->
+            if (engine != OrigamiPatch.ENGINE) throw CliError("--gesture is only supported by ORIGAMI, got $engine")
+            OrigamiGesture.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
+                ?: throw CliError("--gesture wants ${OrigamiGesture.entries.joinToString("|") { it.name }}, got '$raw'")
+        }
         val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
@@ -244,7 +254,8 @@ object SynthCommand {
             val names = when (engine) {
                 ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
-                else -> throw CliError("--macros is only supported by CONTOUR and LATTICE, got $engine")
+                OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
+                else -> throw CliError("--macros is only supported by CONTOUR, ORIGAMI and LATTICE, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -489,7 +500,18 @@ object SynthCommand {
                 )
                 else -> patch
             }
-            if (withNote is OpenSkyPatch) {
+            if (withNote is OrigamiPatch) {
+                val gesture = gestureOverride ?: withNote.gesture
+                if (gesture != OrigamiGesture.STEADY && withNote.model != OrigamiGestures.GEOMETRY_MODEL) {
+                    throw CliError("--gesture $gesture requires ORIGAMI model 4; saved model ${withNote.model} keeps its original motion")
+                }
+                withNote.copy(
+                    macros = withNote.macros + macroOverrides,
+                    // Deliberately editing TUNE also edits an authored note, as in the native editor.
+                    midi = macroOverrides["TUNE"]?.let { Origami.midiFor(withNote.voice, it) } ?: withNote.midi,
+                    gesture = gesture,
+                )
+            } else if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
             } else if (withNote is ShoalPatch && materialOverride != null) {
                 if (!Shoal.supportsHold(Shoal.MODEL_VERSION, materialOverride) &&

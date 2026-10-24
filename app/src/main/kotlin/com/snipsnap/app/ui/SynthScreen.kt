@@ -189,6 +189,9 @@ import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.Cistern
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
+import com.snipsnap.synth.Mercury
+import com.snipsnap.synth.MercuryPatch
+import com.snipsnap.synth.MercuryVoice
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
 import com.snipsnap.synth.MurkVoice
@@ -292,6 +295,8 @@ import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiGesture
+import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OrigamiVoice
 import com.snipsnap.synth.Vent
@@ -1014,6 +1019,19 @@ fun SynthScreen(
         val source = loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] as? OhmPatch
             ?: OhmPatch(engine.patchDisplayName(voice), Ohm.defaults())
         keepOhmPatch(edit(Patches.edited(source, source.name, macrosByVoice.getValue(engine to voice)) as OhmPatch))
+    }
+    fun updateOrigamiGesture(gesture: OrigamiGesture) {
+        if (engine != Engine.ORIGAMI) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
+        if (patch.model != Origami.MODEL_VERSION || patch.gesture == gesture) return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val next = patch.copy(gesture = gesture)
+        loadedPatchesByVoice[engine to voice] = next
+        // A gesture tap can be followed immediately by navigation, before the
+        // state effect runs. Keep the complete recipe with the edit itself.
+        settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] = next.toJsonText()
     }
     fun updateStoopRoot(midi: Int) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
@@ -2671,6 +2689,47 @@ fun SynthScreen(
                     TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
+                val origamiPatch = if (engine == Engine.ORIGAMI)
+                    buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch else null
+                if (origamiPatch != null) {
+                    if (origamiPatch.model == Origami.MODEL_VERSION) {
+                        TapeText("GESTURE", TapeType.pixelSmall, scheme.ink2.tape)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            for (gesture in OrigamiGesture.entries) {
+                                ActionButton(
+                                    gesture.name,
+                                    scheme,
+                                    enabled = true,
+                                    lit = origamiPatch.gesture == gesture,
+                                    modifier = Modifier.weight(1f).semantics { selected = origamiPatch.gesture == gesture },
+                                    accessibilityLabel = "ORIGAMI ${gesture.name}",
+                                ) {
+                                    updateOrigamiGesture(gesture)
+                                }
+                            }
+                        }
+                        TapeText(
+                            when (origamiPatch.gesture) {
+                                OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
+                                OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
+                                OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
+                            },
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        )
+                        if (origamiPatch.gesture != OrigamiGesture.STEADY) {
+                            TapeText(
+                                "MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE",
+                                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                            )
+                        }
+                    } else {
+                        TapeText(
+                            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES.",
+                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                        )
+                    }
+                }
+
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
                 val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model) {
@@ -2712,6 +2771,8 @@ fun SynthScreen(
                                     (loadedPatch as? OrigamiPatch)?.midi
                                         ?: Origami.midiFor(voice as OrigamiVoice, macros.getValue(spec.name)),
                                 )
+                                origamiPatch != null && spec.name == "MOTION" && origamiPatch.gesture != OrigamiGesture.STEADY ->
+                                    "%.2fs".format(Locale.ROOT, OrigamiGestures.durationSeconds(origamiPatch.voice, macros.getValue(spec.name)))
                                 engine == Engine.SIREN && spec.name == "HOLD" && Siren.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.FLOTILLA && spec.name == "HOLD" && Flotilla.isLoop(macros.getValue(spec.name)) -> "LOOP"
                                 engine == Engine.CISTERN && spec.name == "HOLD" && Cistern.isLoop(macros.getValue(spec.name)) -> "LOOP"
@@ -3714,7 +3775,8 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM;
+    LATTICE,
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY;
 
     val displayName: String get() = name.replace('_', ' ')
 
@@ -3776,6 +3838,9 @@ private enum class Engine {
         BELLOWS -> BellowsVoice.entries
         OVEN -> OvenVoice.entries
         ORIGAMI -> OrigamiVoice.entries
+        // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
+        // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
+        MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -3833,6 +3898,7 @@ private enum class Engine {
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
+        MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -3890,6 +3956,7 @@ private enum class Engine {
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
+        MERCURY -> Mercury.defaults(voice as MercuryVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -3951,6 +4018,7 @@ private enum class Engine {
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
+        MERCURY -> Mercury.scramble(voice as MercuryVoice, random)
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -4013,6 +4081,7 @@ private enum class Engine {
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
+        MERCURY -> Mercury.render(voice as MercuryVoice, macros)
     }
 
     /**
@@ -4077,6 +4146,7 @@ private enum class Engine {
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
+        MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -4134,6 +4204,7 @@ private enum class Engine {
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
+        MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
