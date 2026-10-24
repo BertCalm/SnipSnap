@@ -17,20 +17,22 @@ The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 contains 58 raw/matched cases and a ten-clip starter download. The owner's
 listening verdict remains pending.
 
-**Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
+**Chamber finite instrument (2026-10-24).** HYBRID and AQUARIUM place a
 simultaneously struck membrane, bar, cowbell and triangle in a rectangular room
 with ten independent material regions. Physical early paths, surface excitation,
 return coupling and a shared passive late field test whether instrument placement
-changes the answer. Complete model/seed/note/velocity/room recipes, six provisional
-presets, CLI replay and a sixteen-pad prototype kit are available outside the
-factory roster and phone picker. This stage is finite only: positive HOLD is
-rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
+changes the answer. Complete model/seed/note/velocity/room recipes, six factory
+recipes, CLI replay, phone controls and a sixteen-pad dry MPC 3/MPC 2 kit are
+available. Completed-render caching and cancellation support offline preview;
+fresh settings still run the coupled simulation. This stage is finite only:
+positive HOLD is rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
 for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-opens a 16-clip model-2 timpani revision after the owner found the membrane
-inaudible. Model 1 and its original 114-clip matrix remain reproducible and archived.
-The owner approved model 2's timbre; model 3 adds a 3 dB membrane mix lift
-while preserving that voicing and replay of both previous models.
+includes a refreshed current-model control/preset study and kit-sample phrases,
+with earlier timpani comparisons archived. The owner approved model 2's timbre
+and preferred model 3's 3 dB membrane mix lift. That voicing and saved earlier
+models remain replayable. The wider library, true HOLD, advanced room editor
+and physical phone/MPC acceptance remain later work.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
 renderer, dedicated source-backed recipe, licensed VocalSet fixtures and dry

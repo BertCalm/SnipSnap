@@ -164,17 +164,21 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
-CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
+CHAMBER's finite instrument strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
-returns into the instruments. Six provisional recipes and complete saved rooms
-work through the CLI and kit renderer, outside the phone picker pending listening.
+returns into the instruments. Six factory recipes and complete saved rooms work
+through the CLI, phone SYNTH controls and FRESH TAPE starter. Preview supports
+cancellation and bounded reuse of completed recordings.
 Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
-replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
-finite prototype from the proposed HOLD, room editor and larger library. The
+replayable diagnostics, or `./gradlew :synth:generateChamberKit` for the dry
+sixteen-pad MPC 3 track, MPC 2 twin and editable recipes.
+[Implementation notes](docs/CHAMBER.md) record the finite controls, performance
+limits and proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-opens 16 previous/revised timpani comparisons with raw/matched playback and
-downloadable recipes; the original 114-clip study remains archived there.
+provides the current-model control study, kit-sample phrases and downloadable
+recipes; earlier timpani comparisons remain archived there. Physical phone/MPC
+acceptance and the broader listening verdict remain open.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
