@@ -208,7 +208,10 @@ class ThumpTest {
         // The Dsp.scrambleNear boundary contract, proven end-to-end through
         // Thump's own wiring: see DspTest for the central proof.
         for (voice in ThumpVoice.entries) {
-            val preset = ThumpPresets.forVoice(voice).first()
+            // A provisional voice still has a valid editable seed before its
+            // factory sounds have passed the owner's listening verdict.
+            val preset = ThumpPresets.forVoice(voice).firstOrNull()
+                ?: ThumpPatch("Test seed", voice, Thump.defaults(voice))
             assertEquals(
                 // A preset doesn't have to name every macro Thump knows about
                 // (PUNCH, added after these presets were written, is exactly

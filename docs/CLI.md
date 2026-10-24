@@ -177,13 +177,15 @@ instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
 speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
-no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+no picker entry (BORE, ARCO) still renders here, as do
+MERCURY's EDDY, VESSEL and SHARD voices, which the picker leaves out until
+their listen.
 VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes
 each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
 CLI-only model-1 comparison each from `VentPresets`. The voice selects its
 saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH and five BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH, four FLICKER and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
@@ -217,6 +219,7 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
 | CREASE | 24–84 |
+| LATTICE | 36–84 |
 | SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
@@ -248,6 +251,30 @@ Other engines refuse these options. CREASE stores the selected model, MIDI
 note and velocity in its native Patch JSON; `--patch recipe.json` replays
 a saved patch, with explicit note, velocity or model flags overriding only
 those fields. See [CREASE](CREASE.md) for examples.
+
+LATTICE renders WARM, PLUCK and HOLLOW with saved MIDI, velocity and model 2.
+An explicit `--midi` replaces the saved root and resets TUNE to 0.5 (neutral),
+so that note is the one rendered. `--patch recipe.json` replays a native patch;
+note, velocity and macro overrides preserve the other saved fields. HOLD's top
+step returns periodic sustain for looping playback. See [LATTICE](LATTICE.md).
+
+CREASE model 3 also accepts `--instrument [--touch] [--release S]` for an onset followed by
+a continuously evolved, measured sustain loop. Release is 0.1–1.5 seconds,
+default 0.6, and belongs to the sampler volume envelope after key-up. The saved
+patch supplies the voice, macros, root and excitation velocity; `--midi`,
+`--velocity` and `--model` explicitly override their respective fields.
+Instrument mode samples minor-third roots around the saved note within MIDI
+24–84, accepts `--patch`, and refuses `--all` and `--attack`. Older models remain
+replayable as finite/HOLD sounds and are refused by this builder without an
+explicit model-3 override.
+
+`--touch` adds three independently rendered pressure/timbre layers, selected at
+MIDI velocities 1–42, 43–84 and 85–127. Firm touch retains the saved excitation
+anchor; soft and medium use 0.35/0.65 times it. Sustain level is matched before
+live key gain, and each layer retains its own onset and loop. Generation and
+audio storage are approximately three times the default one-layer instrument.
+The flag is valid only for CREASE `--instrument`; key-up still uses the program
+volume fade.
 
 ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
 accepts the full signed 64-bit range. `--instrument [--release S]` packages
