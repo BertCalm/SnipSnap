@@ -217,6 +217,7 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
 | CREASE | 24–84 |
+| LATTICE | 36–84 |
 | SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
@@ -248,6 +249,12 @@ Other engines refuse these options. CREASE stores the selected model, MIDI
 note and velocity in its native Patch JSON; `--patch recipe.json` replays
 a saved patch, with explicit note, velocity or model flags overriding only
 those fields. See [CREASE](CREASE.md) for examples.
+
+LATTICE renders WARM, PLUCK and HOLLOW with saved MIDI, velocity and model 2.
+An explicit `--midi` replaces the saved root and resets TUNE to 0.5 (neutral),
+so that note is the one rendered. `--patch recipe.json` replays a native patch;
+note, velocity and macro overrides preserve the other saved fields. HOLD's top
+step returns periodic sustain for looping playback. See [LATTICE](LATTICE.md).
 
 ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
 accepts the full signed 64-bit range. `--instrument [--release S]` packages

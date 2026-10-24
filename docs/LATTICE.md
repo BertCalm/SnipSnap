@@ -160,9 +160,24 @@ comparisons require the stage-sensitive collector.
   short-phrase COLOR spectral residuals after gain removal were .451 WARM and
   .499 HOLLOW; matched repeated conditions were sample-identical. These are
   numerical findings, not an assessment of the new factory sounds.
-- **Pending this pass:** native JVM/CLI/shell checks, R3 recipe replay, retained
-  R2 WAV identity, loop pitch/seam measurements, pack validation and browser
-  playback. Physical phone and MPC tests have not been run.
+- **Verified R3 review pack, 2026-10-24:** eighteen primary clips and three
+  matched copies replayed from twenty-one saved audition recipes. All fifteen
+  accepted R2 WAVs remain byte-identical. The twelve native patches, sixteen-pad
+  starter, MPC 3 container and MPC 2 XPM twin passed pack checks; source hashes
+  matched the bundled files. All twenty-one listening WAVs contained non-silent,
+  non-clipping PCM. Desktop and mobile viewport browser checks decoded all of them,
+  exercised cue seeking and downloads, and reported no page errors or overflow.
+- **Measured R3 HOLD examples:** the three C3 listening examples each contain
+  four exact PCM repeats of their native loop segment. Float seam and PCM preceding-cycle errors were
+  zero, with fitted pitch offset 0.00462477 cents. Host held-render times were
+  58.94–104.13 ms. These measurements describe those three exported loops on this
+  host, not every supported note or a phone render-time guarantee.
+- **JVM status:** seventy-six focused native tests passed before the upstream
+  merge. The broad gate remains in progress: eight completed modules contain
+  2,902 passing tests, including 1,275 shell tests, with no failures or skips in
+  those completed results. The unfinished synth suite has not established a
+  complete JVM result. Physical phone editing/playback and MPC import/playback
+  have not been run; the new factory bank and HOLD voicings await hearing.
 
 The accepted finite prototype and first native implementation were developed
 against `c5112c507ccb75a8b95313c4ebbe26f8823700aa`. The branch then integrated
@@ -171,6 +186,10 @@ retaining the newer engine registrations alongside Lattice. These commits
 identify source history, not a completed validation result. Each generated
 audition records its actual render commit and exact working-tree source hashes;
 its source download must match that recorded state.
+The published R3 review pack was rendered from
+`86a8ffbd6c1f639061f257151d4dd9916b3d49db` and successfully deployed to the existing
+audition URL on 2026-10-24. Its review-pack checks do not imply that the broader
+JVM gate has completed.
 The broad JVM gate remains `./gradlew --no-daemon test`; a passing targeted suite
 does not establish that this entire repository gate passed.
 
