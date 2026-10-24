@@ -7,7 +7,7 @@ clips (./gradlew :synth:generatePedalAudition writes testkit/pedal-audition/):
 
 Law A (the design): a level detector (5 ms mean square, linked over channels, in dB under the pad's
 loudest level), a static curve (threshold T under that level, ratio R), the gain smoothed in dB with
-ATTACK (falling) and RELEASE (rising), applied 2 ms early (SQUASH's lookahead), a lookahead limiter
+ATTACK (falling) and RECOVER (rising; the third macro, still `release` in the code below), applied 2 ms early (SQUASH's lookahead), a lookahead limiter
 whose ceiling is the compressor's own static output at the loudest level plus ATTACK's headroom, then
 the house peak-match, which is where the make-up comes from. A FLOOR 50 dB under the loudest level
 takes the make-up back out over 12 dB, so silence, noise and the pad's own end fade are not raised.
@@ -40,7 +40,7 @@ def params(amount, attack, release):
     depth = 10.0 + 30.0 * amount           # threshold under the pad's loudest level: 10 dB at 0+, 40 dB at 1 (chosen by the sweep)
     ratio = 2.0 + 8.0 * amount             # 2:1 to 10:1 (chosen by the sweep)
     atk = exp_map(attack, 0.0005, 0.040)   # 0.5 ms to 40 ms, 5 ms at 0.5
-    rel = exp_map(release, 0.020, 1.0)     # 20 ms to 1 s; 64 ms at the default 0.3 (the sweep: short release is sustain)
+    rel = exp_map(release, 4.0, 0.008)     # RECOVER: 4 s (the note's own fade) up to 8 ms (the most sustain; faster lost it on the snare); 66 ms at 0.66
     return depth, ratio, atk, rel
 
 FLOOR_DB, TAPER_DB = 50.0, 12.0
@@ -54,8 +54,8 @@ def one_pole(v, tau):
         e += k * (s - e); out[i] = e
     return out
 
-def level_db(x):
-    ms = one_pole((x ** 2).max(axis=1), LEVEL_S)
+def level_db(x, window=LEVEL_S):
+    ms = one_pole((x ** 2).max(axis=1), window)
     lvl = 10 * np.log10(np.maximum(ms, 1e-18))
     return lvl - lvl.max()                     # dB under the pad's loudest level
 
@@ -83,12 +83,12 @@ def limit(y, ceiling):
         e = t if t < e else e + kr * (t - e); g[i] = e
     return y * g[:, None]
 
-def process(x, law, amount, attack=0.5, release=0.5):
+def process(x, law, amount, attack=0.5, release=0.66):
     if amount <= 0.001:
         return x.copy()
     peak = np.abs(x).max()
     depth, ratio, atk, rel = params(amount, attack, release)
-    lvl = level_db(x)
+    lvl = level_db(x)   # fixed: a detector that followed RECOVER's fast end added grit but shortened the choir (592 ms against 726)
     T = -depth
     if law == "A":
         target = np.where(lvl > T, (T - lvl) * (1 - 1 / ratio), 0.0)
@@ -117,10 +117,12 @@ def metrics(x, ref):
     def contour(s):
         lvl = level_db(s); lp = int(np.argmax(lvl)); return lvl, lp
     def t20(s):
-        lvl, lp = contour(s); under = np.nonzero(lvl[lp:] < -20)[0]
-        return round(under[0] / RATE * 1000) if len(under) else None
+        # the last time the level is within 20 dB of its loudest: gain ripple at RECOVER's fast end cannot end it early
+        lvl, lp = contour(s); above = np.nonzero(lvl[lp:] >= -20)[0]
+        return round(above[-1] / RATE * 1000) if len(above) else None
     def late(s):
-        lvl, lp = contour(s); i = lp + int(1.5 * RATE)
+        # anchored on the untreated pad's loudest point, so a squashed pick cannot move the anchor
+        rl = level_db(ref); lp = int(np.argmax(rl)); lvl = level_db(s); i = lp + int(1.5 * RATE)
         return round(float(lvl[i] - lvl[lp + int(.05 * RATE)]), 1) if i < len(lvl) else None
     def crest(s):
         m = np.abs(s).max(axis=1); lvl, lp = contour(s)
@@ -136,10 +138,10 @@ def metrics(x, ref):
 if __name__ == "__main__":
     src_root, out_root = Path(sys.argv[1]), Path(sys.argv[2])
     sources = {"SNARE": "dry", "CHOIR": "dry", "JANGLE": "baked", "CHUG": "baked"}
-    plan = [  # (clip id, law, AMOUNT, ATTACK, RELEASE); AMOUNT 0.7 is the chip at the sheet's default AMT
-        ("new_70", "A", .7, .5, .3), ("new_100", "A", 1., .5, .3),
-        ("attack_0", "A", .7, 0., .3), ("attack_100", "A", .7, 1., .3),
-        ("release_0", "A", .7, .5, 0.), ("release_100", "A", .7, .5, 1.),
+    plan = [  # (clip id, law, AMOUNT, ATTACK, RECOVER); AMOUNT 0.7 is the chip at the sheet's default AMT
+        ("new_70", "A", .7, .5, .66), ("new_100", "A", 1., .5, .66),
+        ("attack_0", "A", .7, 0., .66), ("attack_100", "A", .7, 1., .66),
+        ("recover_0", "A", .7, .5, 0.), ("recover_100", "A", .7, .5, 1.),
     ]
     report = {"harness": "Python, not Kotlin", "params": {}, "clips": {}}
     for cid, law, a, at, rl in plan:
