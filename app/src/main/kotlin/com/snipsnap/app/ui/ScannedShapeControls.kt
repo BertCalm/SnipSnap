@@ -121,6 +121,16 @@ internal fun ScannedShapeControls(
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (patch.model == ScannedChain.LEGACY_MODEL) {
+            TapeText("ORIGINAL CONTROL RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
+            LabButton("USE UPDATED CONTROLS", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                changePatch(currentPatch.copy(model = ScannedChain.MODEL_VERSION))
+            }
+            TapeText(
+                "Keeps this source and settings with a stronger BEND and source-aware BLOOM.",
+                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+            )
+        }
         TapeText("INITIAL SHAPE · ${patch.shape.source.name}", TapeType.pixel, scheme.amber.tape)
         TapeText(patch.shape.label, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         patch.shape.sample?.let { sample ->
