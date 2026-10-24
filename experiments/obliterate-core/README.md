@@ -63,12 +63,26 @@ python3 experiments/obliterate-core/validate_audition.py --require-current-head
 - The 6 kHz **fuzz-stage** probe measured residual RMS 0.0003903 at 8× versus 0.0298226 at 1× against a 32× reference, a 37.66 dB improvement. This does not measure alias rejection of the complete effect. Pitched grains still use linear interpolation without a ratio-specific antialias filter.
 - The first proof contains 30 unique clips / 120 PCM24 WAVs, 114,675,864 bytes, with two complete hits per clip. Durations are 2.78–5.95 seconds. All source/reference PCM retention, WAV/source hashes, repeated hits, common timing and silent gaps passed the independent validator. Mono rounding error was at most 0.5 PCM24 LSB.
 - First-proof full-core renders took approximately 49–131 ms on an unisolated AMD EPYC Python host; concurrent load was uncontrolled. This is not Kotlin or Android performance. Independent worst-budget testing of a 12-second stereo input measured 1.24 seconds and at most 764 scheduled grains across the tested clock extremes.
+- Broader repository validation is incomplete: the full offline JVM run was canceled after a client disconnection on 2026-10-24, before the synth module produced its final report. Eight completed modules recorded 2,896 tests with zero failures, errors or skips. There is no full-suite exit 0; the SnipSnap branch/PR handoff remains pending. This does not replace the focused Python and artifact checks above.
 
 Production performance remains a gate: target tens of milliseconds for a representative two-second input on a named phone, with cached schedules keyed by clock, duration, amount and seed. Measure a Kotlin implementation before exposing it in the app. This prototype precomputes its event inventory once per render and caps input at 12 seconds / 1,024 events.
 
 ### Sonic risks and next landing
 
-Owner listening must decide whether the bass keeps a useful identity, whether reversed fragments add more than the existing tools, and where stereo cuts become distracting. The legacy baseline's normalization and DC are preserved; do not infer that every raw reference meets the core's DC behavior. Fixed nonzero high/low-pass stages mean this proof does not establish a continuously transparent control arbitrarily close to zero. The tested listening choices are 35%, 70% and 100%, with a separate exact bypass.
+Owner listening on 2026-10-24 returned **keep for all four sources**, with these preferred amounts:
+
+| Source | Verdict | Preferred amount |
+| --- | --- | --- |
+| Snare hit | Keep | 70% |
+| One-bar percussion phrase | Keep | 35% |
+| Stereo chopped nylon phrase | Keep | 35% |
+| Decaying bass note | Keep | 35% |
+
+The exact report and heard source revision are retained in `listening-003-2026-10-24.json`. No written comments or listening-mode selections were supplied. These results accept the core proof on these four examples; they do not establish an A/B win over the stock chain, a particular stereo/mono result, or acceptance of a future shimmer stage or Kotlin port.
+
+**Proposed production starting amount: 35%**, with 70% retained as the preferred snare treatment. This follows three of the four source choices. It is a recommendation for the next implementation, not a change to the heard WAVs, current prototype API default of 70%, or automatic source detection. The approved core should remain the comparison reference while it is ported and while shimmer is auditioned separately.
+
+The legacy baseline's normalization and DC are preserved; do not infer that every raw reference meets the core's DC behavior. Fixed nonzero high/low-pass stages mean this proof does not establish a continuously transparent control arbitrarily close to zero. The tested listening choices are 35%, 70% and 100%, with a separate exact bypass.
 
 If the core is worth keeping: implement and benchmark the dedicated stereo Kotlin processor, add shimmer as a separately auditioned stage, then wire saved clock/seed/versioned recipes into `BoardRecipe.kt` and the Android board selection flow. Existing WIDE/RUSH remain the implementation pattern, not evidence that these OBLITERATE surfaces are done. A freely assignable three-chain rack and OBSCURITY remain later work.
 
@@ -77,7 +91,7 @@ If the core is worth keeping: implement and benchmark the dedicated stereo Kotli
 | Verified by source inspection | Current Kotlin GRAINS/GATE APIs, stereo/normalization limitations, existing board ordering |
 | Measured in Python / generated PCM | 18 signal tests, full hit/tail/framing integrity, source/WAV hashes, fuzz-only alias reference, clock and bounded scheduling, host render cost |
 | Proposed | Kotlin extraction, shimmer, production macro tuning and Android integration |
-| Heard | Owner listening pending; no listening judgment inferred from numerical checks |
+| Heard | Josh's 2026-10-24 report: keep all four; snare 70%, percussion/pluck/bass 35%; no written comments or listening modes supplied |
 
 ## Why it is built this way
 
