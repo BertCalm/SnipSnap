@@ -884,13 +884,15 @@ a FRESH TAPE starter. The performance bank now contains 36 dry recipes: eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW. The six earlier seeds
 remain unchanged. The SYNTH panel adds a VELOCITY control and note names; explicit
 kit selections supply sixteen distinct pads without growing with the bank.
-`generateRelayPerformanceAudition` builds a 76-clip raw/matched listening page
+`generateRelayPerformanceAudition` builds a 100-clip raw/matched listening page
 with all presets, six musical performances, three velocities per voice and the
-sixteen starter pads. The earlier `generateRelayAudition` engineering matrix
-remains available. HOLD exports repeating material without a separate attack
-region. [RELAY.md](RELAY.md) records the integration and listening packs.
-**The expanded bank remains a listening and playability candidate.** The owner's
-listening verdict and hands-on device verification remain open.
+sixteen starter pads, plus 24 optional PULSE response comparisons. The PULSE
+candidate remaps nominal positions only for listening; the engine response,
+factory macros and saved model stay unchanged. The earlier `generateRelayAudition`
+engineering matrix remains available. HOLD exports repeating material without a
+separate attack region. [RELAY.md](RELAY.md) records the integration and listening packs.
+**The owner approved the 36-preset bank's sound on 2026-10-21.** Hands-on device
+verification remains open, and the candidate PULSE mapping needs its own listen.
 
 S1 and S2 are pre-app-buildable in this repo with CI coverage, same as
 everything else. S4 is the one that needs hardware again.
