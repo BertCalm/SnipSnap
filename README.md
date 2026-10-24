@@ -1052,7 +1052,10 @@ swept between a heel and a toe by three moves held as weights, TOUCH from the
 hit's own envelope, AUTO a sine with a flat top (it rests at the toe for 39
 percent of each cycle at AMT 100 and 14 percent at AMT 70) and ROCK one
 heel-toe-heel gesture, with SPEED and Q beside them; the first pedal on the board, in front of
-the compressor and the amp), SQUASH
+the compressor and the amp), COMPRESSOR (the sustain pedal behind the SUSTAIN chip: the body
+pressed down under a threshold 10 to 40 dB beneath the pad's loudest level, a lookahead limiter
+so the hit cannot cancel the make-up, and the peak-match bringing the decay up; AMOUNT, ATTACK,
+and RECOVER, where up means the sound comes back sooner and rings longer), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
 giving way under it on loud passages, TONE after the tube, CAB from no
