@@ -170,13 +170,17 @@ comparisons require the stage-sensitive collector.
 - **Measured R3 HOLD examples:** the three C3 listening examples each contain
   four exact PCM repeats of their native loop segment. Float seam and PCM preceding-cycle errors were
   zero, with fitted pitch offset 0.00462477 cents. Host held-render times were
-  58.94–104.13 ms. These measurements describe those three exported loops on this
+  58.94–104.13 ms in the review pack and 65.92–146.81 ms in the final regeneration.
+  These measurements describe those three exported loops on this
   host, not every supported note or a phone render-time guarantee.
-- **JVM status:** seventy-six focused native tests passed before the upstream
-  merge. The broad gate remains in progress: eight completed modules contain
-  2,902 passing tests, including 1,275 shell tests, with no failures or skips in
-  those completed results. The unfinished synth suite has not established a
-  complete JVM result. Physical phone editing/playback and MPC import/playback
+- **JVM status, 2026-10-24:** the full Gradle JVM gate and final audition generator
+  completed with exit code 0. All 6,130 tests across nine modules passed, including
+  3,228 synth and 1,275 shell tests, with no failures, errors or skips. The test
+  runtime was OpenJDK 21.0.12.1; Java fixtures used the installed Temurin 21.0.13
+  compiler. Seventy-six focused native checks had also passed before the upstream
+  merge. Final regeneration retained all twenty-one published R3 WAVs byte for
+  byte. Android compilation remains separate because this host has no Android SDK.
+  Physical phone editing/playback and MPC import/playback
   have not been run; the new factory bank and HOLD voicings await hearing.
 
 The accepted finite prototype and first native implementation were developed
