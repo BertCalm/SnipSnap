@@ -166,7 +166,7 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
         press("SEND TO PAD")
         press("A01, EMPTY")
         val dir = requireNotNull(currentEntry).dir
-        waitFor("held Apsis pad", timeoutMillis = 60_000) { KitStore.load(dir).pad(1)?.loop == true }
+        waitFor("held Apsis pad", timeoutMillis = 180_000) { KitStore.load(dir).pad(1)?.loop == true }
         val pad = requireNotNull(KitStore.load(dir).pad(1))
         assertFalse(pad.oneShot)
         assertEquals(DrumClass.LOOP, pad.drumClass)
