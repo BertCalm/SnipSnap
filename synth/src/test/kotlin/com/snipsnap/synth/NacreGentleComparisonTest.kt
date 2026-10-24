@@ -48,8 +48,8 @@ class NacreGentleComparisonTest {
     fun `lift is solely postmix evidence and never becomes a saved patch control`() {
         val original = clips.first()
         for (clip in clips.drop(1)) {
-            val underlying = Nacre.inspect(clip.patch.voice, clip.patch.macros,
-                clip.patch.midi, clip.patch.velocity, clip.patch.seed)
+            val underlying = NacreModels.inspect(clip.patch.voice, clip.patch.macros,
+                clip.patch.midi, clip.patch.velocity, clip.patch.seed, clip.patch.model)
             assertContentEquals(underlying.snip.samples, clip.native.samples,
                 "native evidence must remain the ordinary unlifted recipe")
             val sourceVenue = underlying.stems.getValue("venue")
