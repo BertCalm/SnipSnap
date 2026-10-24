@@ -65,7 +65,6 @@ internal fun AquariumPanel(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    composedOffMainThread("AquariumPanel")
     var groupId by remember { mutableStateOf(AquariumControls.groups.first().id) }
     var expandedEffects by remember { mutableStateOf(emptySet<String>()) }
     var printSettingsOpen by remember { mutableStateOf(false) }
