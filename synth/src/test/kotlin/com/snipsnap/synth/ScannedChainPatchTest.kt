@@ -37,7 +37,7 @@ class ScannedChainPatchTest {
             assertEquals(patch, restored)
             assertEquals(patch, ScannedChainPatch.fromJsonText(text))
             assertEquals(text, restored.toJsonText())
-            assertEquals(1.0, patch.toJsonValue().entries.getValue("model").num())
+            assertEquals(ScannedChain.MODEL_VERSION.toDouble(), patch.toJsonValue().entries.getValue("model").num())
             assertEquals(Patches.VERSION.toDouble(), patch.toJsonValue().entries.getValue("version").num())
             assertContentEquals(patch.shape.points, restored.shape.points)
             assertContentEquals(patch.render().samples, restored.render().samples, voice.name)
@@ -129,7 +129,7 @@ class ScannedChainPatchTest {
         }
         for (midi in listOf(35, 97)) assertFailsWith<IllegalArgumentException> { patch.copy(midi = midi) }
         assertFailsWith<IllegalArgumentException> { patch.copy(name = " ") }
-        assertFailsWith<IllegalArgumentException> { patch.copy(model = 2) }
+        assertFailsWith<IllegalArgumentException> { patch.copy(model = ScannedChain.MODEL_VERSION + 1) }
         assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("UNREGISTERED" to .5f)) }
         assertFailsWith<IllegalArgumentException> { patch.copy(config = patch.config.copy(mechanicalHz = 4f)) }
         assertFailsWith<IllegalArgumentException> { patch.copy(config = patch.config.copy(driveHz = 8f)) }
@@ -147,7 +147,7 @@ class ScannedChainPatchTest {
         val config = ScannedChainConfig.forVoice(voice).copy(restFraction = .125f, seconds = .25f,
             attackSeconds = .015625f, releaseSeconds = .125f, seed = 137)
         val macros = mapOf("MOTION" to .5f, "DAMP" to .25f, "BEND" to .5f, "BLOOM" to .5f)
-        val actual = ScannedChain.probe(voice, macros, midi = 65, velocity = .5f, shape = shape, config = config)
+        val actual = ScannedChain.probe(voice, macros, midi = 65, velocity = .5f, shape = shape, config = config, model = 1)
         val audited = ScannedChainPrototype.render(ScannedChainPrototype.Config(
             name = "Port proof", voice = ScannedChainPrototype.Voice.BLOOM, midi = 65, velocity = .5f,
             seconds = config.seconds, motion = .5f, mechanicalHz = config.mechanicalHz,
