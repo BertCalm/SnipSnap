@@ -125,6 +125,53 @@ released audition. The page marks the selected original/revised voice for each
 comparison. The two-role candidates, expanded preset sweep and naming still need
 listening review; the voice choice does not approve every proposed preset.
 
+## Selected release pack
+
+The [selected audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/selected/)
+combines the agreed original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING voices.
+It contains the current 36 factory presets, a matching sixteen-pad MPC kit,
+and voice, macro, interaction, source-ablation and held-loop studies.
+
+```sh
+./gradlew --no-daemon :synth:generateAlloySelectedAudition
+```
+
+Output goes to `testkit/alloy-selected/`. Add `-PalloySelectedFull` for all-voice
+timbral sweeps and interaction grids, or use `-PalloySelectedRefreshPage` to refresh
+only the player. The selected pack resolves each case's complete configuration
+once and uses it for both synthesis and recipe export. Explicit patch recipes
+take precedence over the selected voice default. Every ordinary clip has an
+importable patch at its actual base note and velocity; diagnostic source ablations
+also record the separate attack-modulation flag needed to reproduce them.
+
+The starter kit ZIP contains PCM24 samples, an XPM program and native `kit.json`
+recipes. Pads A15/A16 are settled STRING/SOFT loops; enable whole-sample looping
+on the MPC for indefinite HOLD. The full 36-preset MPC bank supplies three
+twelve-pad programs, each with native recipes and exported sample fingerprints.
+Its included READMEs identify the held pads. The 36-patch ZIP matches the same bank. The old
+gallery and contrast pack remain frozen references with their existing notes;
+the selected page uses its own review storage and note export.
+
+Selected control validation found four recipe-response gaps. KEY's wood modes
+now persist through the FUSE comparison window, and its held drive is .21 rather
+than .17. PLUCK's breath modes also persist longer; its finite-duration coefficient
+is 1.0 rather than .65, so LENGTH .25 to .75 extends the phrase by .3 seconds.
+The finite pure-tine references at MATERIAL .5 and LENGTH .25/.45 are bit-identical
+to their previous configurations. KEY HOLD has stronger material excitation;
+that held change is intentional. Existing saved configurations keep their values.
+
+One extreme is disclosed rather than disguised: PLUCK at MIDI 36 with all five
+timbral controls at zero has an accurately pitched but short, tom-like body. The
+generic waveform classifier calls it TOM; engine metadata remains TONAL. The
+`pluck_all_low_c2` diagnostic makes that corner available for listening. The
+pitched-classifier guards still cover every factory preset and ordinary wood,
+tine and breath cases; all extreme cases retain pitch and numerical bounds.
+
+The voice choice has been heard and approved. This release pack is the preset
+listening gate; it does not assert physical phone or MPC acceptance. Rendering
+performance still needs phone profiling. Host timing measurements are not phone
+latency measurements, and attack-plus-loop export remains a separate host feature.
+
 ## Validation and remaining acceptance
 
 The numerical gates cover deterministic renders, bounded raw state, velocity,

@@ -45,10 +45,12 @@ object AlloyContrastPresets {
             listOf(1f, 3.98f, 2f, 7.11f), listOf(.20f, .55f, .15f, .20f),
             listOf(1f, 1.3f, .50f, .28f), listOf(1f, .85f, .55f, .60f),
             listOf(route(2, 0, .22f), route(1, 0, .33f), route(3, 1, .25f)),
-            mode(listOf(1f, 3.31f, 6.81f), listOf(.055f, .025f, .012f), listOf(.45f, .35f, .20f)),
+            // Keep wood excitation alive long enough for FUSE to color the body.
+            // MATERIAL .5 uses only tines, so its finite reference is unchanged.
+            mode(listOf(1f, 3.31f, 6.81f), listOf(.11f, .05f, .025f), listOf(.45f, .35f, .20f)),
             mode(listOf(1f, 2.76f, 5.43f, 8.95f), listOf(.68f, .48f, .30f, .13f), listOf(.26f, .32f, .27f, .15f)),
             mode(listOf(1f, 3f, 6f), listOf(.18f, .10f, .05f), listOf(.30f, .45f, .25f)),
-            AlloyConfig.Envelope(.0015f, 2.2f, .30f, .18f), AlloyConfig.Held(.67f, .17f, .10f), 2.0f, 22f),
+            AlloyConfig.Envelope(.0015f, 2.2f, .30f, .18f), AlloyConfig.Held(.67f, .21f, .10f), 2.0f, 22f),
             .50f, .58f, .68f, .25f, .58f),
         patch(AlloyVoice.KEY, "Felt Hammer", recipe(
             listOf(1f, 2f, 3f, 5f), listOf(.30f, .57f, .18f, .05f),
@@ -68,8 +70,12 @@ object AlloyContrastPresets {
             listOf(route(1, 0, .48f), route(2, 0, .22f), route(3, 2, .45f)),
             mode(listOf(1f, 3.32f, 6.81f), listOf(.095f, .055f, .025f), listOf(.42f, .45f, .25f)),
             mode(listOf(1f, 2.14f, 5.45f), listOf(.12f, .065f, .025f), listOf(.34f, .40f, .26f)),
-            mode(listOf(1f, 3f, 7f), listOf(.045f, .025f, .010f), listOf(.35f, .40f, .25f)),
-            AlloyConfig.Envelope(.0005f, .65f, .65f, .05f), AlloyConfig.Held(.36f, .24f, .38f), 3.0f, 20f),
+            // Breath needs a longer modal projection to reach the PM body rather
+            // than ending as a detached opening. The neutral tine path is unchanged.
+            mode(listOf(1f, 3f, 7f), listOf(.16f, .10f, .05f), listOf(.35f, .40f, .25f)),
+            // Default and neutral LENGTH still meet the one-second minimum;
+            // higher LENGTH values now extend the phrase beyond that minimum.
+            AlloyConfig.Envelope(.0005f, 1.0f, .65f, .05f), AlloyConfig.Held(.36f, .24f, .38f), 3.0f, 20f),
             .04f, .62f, .66f, .28f, .02f),
         patch(AlloyVoice.PLUCK, "Wire Chime", recipe(
             listOf(1f, 5.02f, 2f, 8.23f), listOf(.17f, .58f, .12f, .23f),
