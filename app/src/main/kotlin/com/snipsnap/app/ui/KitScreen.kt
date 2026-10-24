@@ -334,6 +334,9 @@ fun KitScreen(
 
     // Declared above playHeld/release: they send under the current map.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    // slot -> the note the wire's on named. The wire's off must name the note the wire's on named,
+    // and must not wait for an allocator voice that a one-shot pad never has.
+    val sentNotes = remember(entry.dir) { HashMap<Int, Int>() }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
     // MIDI key and the fullscreen grid both HAVE a release, so a gate pad
@@ -360,26 +363,37 @@ fun KitScreen(
             // decide the pad's opening glow value.
             if (voice.padSlot != slot) extinguish(voice.padSlot)
         }
-        if (!player.hit(pad, velocity, allocation.started.id)) {
+        val sounded = player.hit(pad, velocity, allocation.started.id)
+        if (!sounded) {
             // Nothing loaded for this pad (or nothing yet): the allocator
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
         }
         flash(slot)
-        if (!fromMidi) MidiPads.noteForSlot(slot, midiMap)?.let { MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, it, velocity, System.nanoTime()) }
+        if (!fromMidi && sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                val now = System.nanoTime()
+                // Retrigger while held: end the note that went out before the new one.
+                sentNotes.remove(slot)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, now) }
+                MidiOut.noteOn(MidiGroove.DRUM_CHANNEL, note, velocity, now)
+                sentNotes[slot] = note
+            }
+        }
     }
 
     fun release(slot: Int, fromMidi: Boolean) {
+        // Before the early return: the off never depends on the allocator.
+        if (!fromMidi) sentNotes.remove(slot)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, System.nanoTime()) }
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
         extinguish(slot)
-        if (!fromMidi) MidiPads.noteForSlot(slot, midiMap)?.let { MidiOut.noteOff(MidiGroove.DRUM_CHANNEL, it, System.nanoTime()) }
     }
 
     fun panic() {
         host.allOff()
         MidiOut.allNotesOff()
+        sentNotes.clear()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
