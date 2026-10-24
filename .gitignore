@@ -384,3 +384,6 @@ testkit/fade-law-audition/
 
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
+
+# SPARK's regenerated audio, expression recipes and MPC audition kit.
+testkit/thump-spark-audition/

@@ -78,7 +78,10 @@ class ThumpPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in ThumpVoice.entries) {
             val names = ThumpPresets.forVoice(voice).map { it.name }
-            assertEquals(20, names.size, "$voice should ship 20 presets, has ${names.size}")
+            val provisional = voice.name in PatchTypes.PROTOTYPE_VOICES[ThumpPatch.ENGINE].orEmpty()
+            val expectedCount = if (provisional) 0 else 20
+            assertEquals(expectedCount, names.size,
+                "$voice should have $expectedCount factory presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")
@@ -105,10 +108,12 @@ class ThumpPresetsTest {
         // suffix concatenation (no separator at all) and the classic
         // "acid" family name the roadmap's own examples call out.
         // The last two are MAGNET's: an amplifier line's near-miss and a speaker maker (the spec's "The name").
-        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT", "BENIDUB WAIL", "BeniDub", "RHODES 73", "rhodes-ish", "WURLITZER", "FENDER KEYS", "RECTIFIER 2", "OXFORD 2X12")) {
+        for (nearMiss in listOf("808ISH", "909CORE", "TB303", "ACID 303", "808-ADJACENT", "BENIDUB WAIL", "BeniDub", "RHODES 73", "rhodes-ish", "WURLITZER", "FENDER KEYS", "RECTIFIER 2", "OXFORD 2X12",
+            "RY30", "RY-30CORE", "RY 30ISH", "ELECTRIBE STYLE", "ER-1", "ER1CORE", "ER 1ISH")) {
             assertTrue(PresetTestSupport.trademarkBlocklist.containsMatchIn(nearMiss), "blocklist let '$nearMiss' through")
         }
-        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB", "DUB SIREN", "AIR RAID", "DINNER JAZZ", "GLASS TINE", "JANGLE", "CHUG", "PALM MUTE", "WIRE PICK")) {
+        for (clean in listOf("CONCRETE", "DUSTY BOOM", "PEAK TIME", "DEEP DUB", "DUB SIREN", "AIR RAID", "DINNER JAZZ", "GLASS TINE", "JANGLE", "CHUG", "PALM MUTE", "WIRE PICK",
+            "OTHER123", "LASER1", "CARRY30", "MYSTERY30")) {
             assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(clean), "blocklist wrongly flagged '$clean'")
         }
     }

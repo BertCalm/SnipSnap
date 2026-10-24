@@ -1669,3 +1669,14 @@ tasks.register<JavaExec>("generateCausticAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
+
+/** First dry SPARK voice and ordered expression-family listening gate. */
+tasks.register<JavaExec>("generateThumpSparkAudition") {
+    group = "distribution"
+    description = "Render SPARK native/matched hits, expression families, replayable recipes, measurements and a sixteen-pad XPM kit."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThumpSparkAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
+}

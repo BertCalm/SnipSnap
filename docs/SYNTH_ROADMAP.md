@@ -125,6 +125,7 @@ range. First-generation voices:
 | Clap | burst train + noise tail | SPREAD · DECAY · TONE |
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
+| SPARK (prototype; awaiting audition) | sine body + phase/ring-modulated edge, separate low-pass responses; related hit snapshots, with MOVE deferred ([design and validation](THUMP_SPARK.md)) | TUNE · DECAY · PUNCH · METAL · COLOR |
 
 Every voice has since grown PUNCH (U3), and SNARE a membrane body with
 STRIKE and WIDTH (Phase 1B). **Sound-design round (shipped):** each voice

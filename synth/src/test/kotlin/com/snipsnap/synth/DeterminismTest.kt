@@ -12,6 +12,15 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `THUMP SPARK regenerates its metallic hit from the saved recipe exactly`() {
+        val patch = ThumpPatch("Spark canary", ThumpVoice.SPARK,
+            Thump.defaults(ThumpVoice.SPARK) + mapOf("METAL" to .8f, "COLOR" to .65f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        assertContentEquals(saved.render().samples, saved.render().samples)
+    }
+
+    @Test
     fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
         for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
             val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
