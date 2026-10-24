@@ -45,7 +45,7 @@ reflection prototype, portable recipes and dry position/mechanism audition.
 Its singing-body identity awaits listening; moving geometry, HOLD and phone
 integration remain later work.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BUBBLE listening prototype,
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE listening prototype,
 recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
@@ -95,12 +95,10 @@ remains the unchanged proposal; sustained HOLD and the wider library are later w
 finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.
 
-**Aquarium.** The accepted [six-effect audition](https://snipsnap-aquarium-pedals-audition.bertcalm.chatgpt.site)
-is preserved by the shared native processor and standalone settings contract.
-The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md)
-and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
-separate that foundation from the planned pad rendering, performance routing
-and controls. The foundation does not yet process app playback.
+**Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
+finite native pad-printing bridge, saved sources, replay and export contracts.
+Dedicated controls and continuous performance routing remain later stages of
+the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
 records the whole-app review of 2026-10-17: the six guards that landed with

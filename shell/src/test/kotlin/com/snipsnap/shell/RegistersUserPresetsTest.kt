@@ -15,7 +15,8 @@ class RegistersUserPresetsTest {
     fun `saved restored and promoted registers keep explicit pitch velocity and model`() {
         val shelf = createTempDirectory("registers-presets").toFile()
         try {
-            for ((voice, model) in listOf(RegistersVoice.PIPE to 2, RegistersVoice.TRANSISTOR to 4)) {
+            for ((voice, model) in listOf(RegistersVoice.PIPE to 2, RegistersVoice.TRANSISTOR to 4,
+                RegistersVoice.TRANSISTOR to 5)) {
                 val patch = RegistersPatch("MY ${voice.name}", voice,
                     Registers.defaults(voice) + ("AIR" to .6f), midi = 69, velocity = .4f, model = model)
                 val saved = UserPresets.save(shelf, patch, nowMillis = 12L)

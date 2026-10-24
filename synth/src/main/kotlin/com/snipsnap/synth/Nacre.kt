@@ -17,16 +17,22 @@ import kotlin.math.sqrt
 enum class NacreVoice { PEARL }
 
 /**
- * NACRE model 1: two finite, separately excited octave harp gestures in moving water.
+ * NACRE model 2: two finite, separately excited octave harp gestures in moving water.
  *
  * The eight active waveguides have fixed tuning/filter coefficients. CURRENT only reduces their
- * loop gains; it never moves delay lengths or raises a gain above its built value. Each harp
+ * loop gains; it never moves active-string delay lengths or raises a gain above its built value. Each harp
  * drives a separate, fixed three-mode body. A one-sample-delayed mixture of the two bodies enters
  * each harp's four sympathetic resonators, with bounded current-dependent transmission. This is
  * an acyclic body-to-sympathetic path: neither the bodies, sympathetic strings, nor venues feed
  * back into an active string. Each active string's round trip is contractive (feedback < 1 and
  * fixed allpass/averaging/low-pass stages); every other resonator has fixed poles inside the unit
  * circle. Bounded modulation on this feed-forward graph cannot create a new feedback loop.
+ *
+ * Unlike model 1's mostly sinusoidal plucks, a finite harmonic pick displacement carries the
+ * different touches. Longer strings leave time for the common field to change internal losses,
+ * body-mode excitation, sympathetic transmission and the balance of upper-string pickups.
+ * All those weights are bounded and outside the closed active waveguides. Seaweed alone has
+ * wavering feed-forward taps: interpolation weights are nonnegative and sum to one.
  *
  * This intentionally reduces the proposed Nacre spec for an audition: VENUE is a convex output
  * blend from short coral reflections/cavities at 0 to soft open seaweed transmission paths at 1.
@@ -35,7 +41,7 @@ enum class NacreVoice { PEARL }
  * All sound is synthesized at 4x, then antialiased, decimated and DC-blocked before leveling.
  */
 object Nacre {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
     const val DEFAULT_MIDI = 48
     const val MIN_MIDI = 28
     const val MAX_MIDI = 72
@@ -69,7 +75,7 @@ object Nacre {
             }
         }
         require(m.getValue("HOLD") == 0f) {
-            "NACRE model 1 is a finite paired-strum prototype; HOLD must be 0. Seamless held gestures are not implemented."
+            "NACRE model 2 is a finite paired-strum prototype; HOLD must be 0. Seamless held gestures are not implemented."
         }
         return m
     }
@@ -83,6 +89,8 @@ object Nacre {
         val disableCrossHarp: Boolean = false,
         val postCurrentOnly: Boolean = false,
         val bypassVenue: Boolean = false,
+        /** Audition a change of touch against the same .30-TOUCH event spacing. */
+        val lockStrumTiming: Boolean = false,
     )
 
     internal data class Event(
@@ -140,8 +148,8 @@ object Nacre {
     }
 
     private fun field(current: Double, seed: Long): Field = Field(
-        depth = 1.0 - exp(-3.2 * current),
-        hz = if (current == 0.0) 0.0 else .28 + 2.1 * current.pow(1.3),
+        depth = 1.0 - exp(-2.8 * current),
+        hz = if (current == 0.0) 0.0 else .70 + 1.9 * current.pow(.85),
         phase = .4 + .5 * variation(seed, "water", 0, "phase"),
     )
 
@@ -154,7 +162,8 @@ object Nacre {
         val offset = .006 + .22 * duet.pow(1.45) - .42 * smooth((duet - .72) / .28)
         val bassOrigin = .018 + if (offset < 0.0) -offset else 0.0
         val upperOrigin = .018 + if (offset > 0.0) offset else 0.0
-        val spacing = (.008 + .052 * duet) * (1.0 - .14 * touch)
+        val timingTouch = if (options.lockStrumTiming) .30 else touch
+        val spacing = (.008 + .052 * duet) * (1.0 - .14 * timingTouch)
         val events = ArrayList<Event>(8)
         for (harp in 0..1) {
             val performer = if (harp == 0) "bass" else "upper"
@@ -165,7 +174,7 @@ object Nacre {
                     (if (harp == 0) 1.04 else .94) +
                     .0008 * variation(seed, performer, id, "timing")
                 val participation = if (id == 0) 1.0 else
-                    (.12 + .88 * touch.pow(.65)) * (if (harp == 0) .48 else .58).pow(id)
+                    (.20 + .80 * touch.pow(.60)) * (if (harp == 0) .62 else .72).pow(id)
                 val effort = (.22 + .78 * touch.pow(.65)) * velocity *
                     (.95 + .05 * variation(seed, performer, id, "effort"))
                 val water = 1.0 - .14 * field.depth * (.5 + .5 * field.at(time, harp * 1.7))
@@ -213,14 +222,43 @@ object Nacre {
         }
     }
 
-    private class Venue(rate: Int) {
-        private val coralDelays = arrayOf(.011, .023, .037, .061).map { Delay(it, rate) }
-        private val coralAbsorption = arrayOf(4200.0, 3400.0, 2700.0, 2100.0).map { LowPass(it, rate) }
-        private val cavities = arrayOf(510.0, 910.0, 1510.0).mapIndexed { i, hz -> Mode(hz, 5.0 + i, rate) }
-        private val weedDelays = arrayOf(.007, .031, .079, .143).map { Delay(it, rate) }
-        private val weedAbsorption = arrayOf(2400.0, 3200.0, 1300.0, 1900.0).map { LowPass(it, rate) }
-        private val bassWeights = doubleArrayOf(.72, .30, .58, .22)
-        private val upperWeights = doubleArrayOf(.25, .66, .26, .58)
+    /** A causal, interpolated feed-forward tap; its stored samples never include its own output. */
+    private class WaveringTap(seconds: Double, private val rate: Int) {
+        private val base = seconds * rate
+        private val line = DoubleArray((base + .002 * rate).roundToInt() + 4)
+        private var head = 0
+        private var delay = base
+        fun next(x: Double, motion: Double): Double {
+            line[head] = x
+            // Smooth sub-millisecond propagation changes; none enter a tuned string's loop.
+            delay += .004 * (base + .00065 * rate * motion.coerceIn(-1.0, 1.0) - delay)
+            var position = head - delay
+            if (position < 0.0) position += line.size
+            // A tiny negative position plus the ring length can round to exactly its length.
+            if (position >= line.size) position -= line.size
+            val a = position.toInt()
+            val fraction = position - a
+            val y = line[a] * (1.0 - fraction) + line[(a + 1) % line.size] * fraction
+            head++; if (head == line.size) head = 0
+            return y
+        }
+    }
+
+    private class Venue(f0: Double, rate: Int) {
+        private val coralDelays = arrayOf(.009, .018, .033, .052).map { Delay(it, rate) }
+        private val coralAbsorption = arrayOf(5800.0, 4300.0, 3500.0, 2700.0).map { LowPass(it, rate) }
+        // Harmonics outside the active octave grid give coral a local cavity answer. These are
+        // fixed, root-related resonances, not extra plucked chord tones. T60s are .65/.48/.35 s.
+        private val cavities = arrayOf(3.0, 5.0, 7.0).mapIndexed { i, ratio ->
+            val hz = f0 * ratio
+            Mode(hz, PI * hz * doubleArrayOf(.65, .48, .35)[i] / ln(1000.0), rate)
+        }
+        private val cavityWeights = doubleArrayOf(.40, .34, .26)
+        private val weedDelays = arrayOf(.012, .041, .087, .143).map { WaveringTap(it, rate) }
+        private val weedAbsorption = arrayOf(780.0, 1600.0, 3500.0, 6500.0).map { LowPass(it, rate) }
+        private val weedLowCuts = arrayOf(0.0, 240.0, 800.0, 1700.0).map { LowPass(maxOf(it, 1.0), rate) }
+        private val bassWeights = doubleArrayOf(.72, .50, .34, .20)
+        private val upperWeights = doubleArrayOf(.22, .42, .58, .72)
         var coral = 0.0; private set
         var seaweed = 0.0; private set
 
@@ -228,28 +266,34 @@ object Nacre {
             var close = 0.0
             var open = 0.0
             for (i in 0..3) {
-                // Nonnegative injection weights sum to at most one, and the final path weights
-                // sum to one. No delay writes contain any returning venue output.
-                val injection = bassWeights[i] * bass + upperWeights[i] * upper + .03 * sympathetic
+                // Injection/path weights are bounded. No delay writes contain a returning venue
+                // output. The optional low subtraction has gain <= 2 and is feed-forward only.
+                val injection = bassWeights[i] * bass + upperWeights[i] * upper + .06 * sympathetic
                 close += .25 * coralAbsorption[i].next(coralDelays[i].next(injection)) *
-                    (1.0 - .20 * depth * (.5 + .5 * flow[i]))
-                val aperture = 1.0 - depth * (.18 + .72 * (.5 + .5 * flow[(i + 1) % 4]))
-                open += .25 * weedAbsorption[i].next(weedDelays[i].next(injection)) * aperture
+                    (1.0 - .28 * depth * (.5 + .5 * flow[i]))
+                val aperture = (1.0 - depth) * .72 + depth *
+                    (.10 + .90 * smooth(.5 + .5 * flow[(i + 1) % 4]))
+                val transmitted = weedAbsorption[i].next(weedDelays[i].next(injection, depth * flow[i]))
+                val band = if (i == 0) transmitted else transmitted - weedLowCuts[i].next(transmitted)
+                open += .25 * band * aperture
             }
             var cavity = 0.0
-            for (mode in cavities) cavity += mode.next(close) / cavities.size
-            coral = .70 * close + .30 * cavity
+            for (i in cavities.indices) cavity += cavityWeights[i] * cavities[i].next(close)
+            // Audible radiation gain is outside every loop. It can reveal a cavity without
+            // increasing its pole radius or creating a circulating venue return.
+            coral = .42 * close + 2.1 * cavity
             // There is intentionally no diffuse late tail in the open field.
-            seaweed = open
+            seaweed = 1.8 * open
         }
     }
 
     private data class StringState(val event: Event, val start: Int, val burst: FloatArray,
-                                   val loop: Strings.Loop, val baseFeedback: Double, val t60: Double)
+                                   val loop: Strings.Loop, val baseFeedback: Double, val t60: Double,
+                                   var pickupWeight: Double = 1.0)
 
     private fun play(voice: NacreVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
                      seed: Long, options: Options, record: Boolean): Probe {
-        require(midi in MIN_MIDI..MAX_MIDI) { "NACRE model 1 supports MIDI $MIN_MIDI..$MAX_MIDI, got $midi" }
+        require(midi in MIN_MIDI..MAX_MIDI) { "NACRE model 2 supports MIDI $MIN_MIDI..$MAX_MIDI, got $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "NACRE velocity must be finite and in 0..1, got $velocity" }
         val m = settled(voice, macros)
         stopIfInterrupted()
@@ -257,6 +301,9 @@ object Nacre {
         val frames = (DURATION_SECONDS * rate).roundToInt()
         val f0 = Keys.midiHz(midi).toDouble()
         val touch = m.getValue("TOUCH").toDouble()
+        // Material becomes audible in the first half of TOUCH as well as its extremes. This
+        // curve changes the pick spectrum, not event timing or the hard-touch maximum.
+        val harmonicTouch = touch.pow(.55)
         val bloom = m.getValue("BLOOM").toDouble()
         val venueBlend = m.getValue("VENUE").toDouble()
         val requestedField = field(m.getValue("CURRENT").toDouble(), seed)
@@ -265,52 +312,70 @@ object Nacre {
         val states = events.map { event ->
             val bass = event.performer == "bass"
             val hz = event.frequencyHz
-            val brightness = if (bass) 6.0 + 7.0 * touch else 10.0 + 11.0 * touch
-            val loopHz = (hz * brightness).coerceAtMost(if (bass) 7000.0 else 10500.0).toFloat()
-            val t60 = (if (bass) 3.1 + 1.1 * bloom else 2.2 + .9 * bloom) * .76.pow(event.stringId)
-            val feedback = 10.0.pow(-3.0 / (t60 * hz)).coerceAtMost(.9995)
+            // The old low loop corner consumed more energy than its stated decay budget. A
+            // flatter fundamental response leaves the finite harmonic exciter to set the touch,
+            // while the loop's fixed low-pass still removes upper harmonics as the note rings.
+            val brightness = if (bass) 24.0 + 34.0 * touch else 34.0 + 46.0 * touch
+            val loopHz = (hz * brightness).coerceAtMost(if (bass) 12500.0 else 15500.0).toFloat()
+            val t60 = (if (bass) 6.5 + 2.4 * bloom else 5.8 + 2.0 * bloom) * .90.pow(event.stringId)
+            val feedback = 10.0.pow(-3.0 / (t60 * hz)).coerceAtMost(.9998)
             val tuning = Strings.tune(hz.toFloat(), loopHz, rate)
             val loop = Strings.Loop(tuning.n, tuning.a, feedback.toFloat(), loopHz, rate)
-            val pickHz = (if (bass) 2200.0 + 5700.0 * touch else 4300.0 + 8200.0 * touch) * (.7 + .3 * velocity)
-            val pickPosition = (if (bass) .18 else .115) + .025 * event.stringId +
-                .012 * variation(seed, event.performer, event.stringId, "pick")
+            val pickHz = (if (bass) 1800.0 + 6200.0 * touch else 3600.0 + 8500.0 * touch) * (.7 + .3 * velocity)
+            val pickPosition = (if (bass) .31 - .23 * harmonicTouch else .23 - .18 * harmonicTouch) + .009 * event.stringId +
+                .006 * variation(seed, event.performer, event.stringId, "pick")
             val burst = Strings.pluckExciter(tuning.n, hz.toFloat(), pickHz.toFloat(), pickPosition.toFloat(),
                 Dsp.seedFor("NACRE", MODEL_VERSION, seed, event.performer, event.stringId, "pluck"), rate, frames)
             var peak = 0f
             for (sample in burst) peak = maxOf(peak, abs(sample))
-            // A finite displacement component protects f0 through the intentionally overlapping
-            // octave voicings. It is part of each exciter, never a sustained oscillator layer.
-            // Upper high strings can lead a descending gesture before either root speaks. Give
-            // those strings a clear pitched onset rather than an isolated broadband noise click;
-            // the brighter loop/pick spectra still distinguish their touch from the bass harp.
-            val foundation = when {
-                event.stringId == 0 -> .72
-                !bass -> .80 - .12 * touch
-                else -> .48
+            // A band-limited pick displacement, not a single sine. TOUCH changes harmonic slope
+            // and pick-position notches; each performer has its own spectrum. Every harmonic is
+            // part of this finite burst and later lives only in the contractive waveguide.
+            val slope = if (bass) 2.65 - 1.35 * harmonicTouch else 2.30 - 1.20 * harmonicTouch
+            val partials = minOf(12, (16500.0 / hz).toInt()).coerceAtLeast(1)
+            val amplitudes = DoubleArray(partials) { index ->
+                val harmonic = index + 1
+                if (harmonic == 1) 1.0 else {
+                    val position = sin(PI * harmonic * pickPosition) / sin(PI * pickPosition)
+                    val performer = if (bass) .80 else .94
+                    (performer * position / harmonic.toDouble().pow(slope)).coerceIn(
+                        -.95 / sqrt(harmonic.toDouble()), .95 / sqrt(harmonic.toDouble()))
+                }
             }
+            val energyScale = sqrt(amplitudes.sumOf { it * it })
+            val noiseShare = .012 + .028 * touch
             val pickNoise = LowPass(if (bass) pickHz else minOf(pickHz, 2.6 * hz), rate)
             val edgeFrames = minOf((.00035 * rate).roundToInt(), (burst.size - 1) / 3).coerceAtLeast(1)
             for (i in burst.indices) {
                 val noise = if (peak > 1e-9f) burst[i] / peak else 0f
-                val displacement = sin(TWO_PI * hz * i / rate)
+                var displacement = 0.0
+                for (h in amplitudes.indices) displacement += amplitudes[h] * sin(TWO_PI * (h + 1) * hz * i / rate)
+                displacement /= energyScale
                 // Both endpoints and their first derivatives reach zero. Window the finite
                 // exciter itself, not the later string output, so the pitched waveguide tail is
                 // retained and an excitation edge cannot become a false percussive transient.
                 val envelope = smooth(i.toDouble() / edgeFrames) *
                     smooth((burst.lastIndex - i).toDouble() / edgeFrames)
                 burst[i] = (.28 * event.strength * envelope *
-                    ((1.0 - foundation) * pickNoise.next(noise.toDouble()) + foundation * displacement)).toFloat()
+                    (noiseShare * pickNoise.next(noise.toDouble()) + (1.0 - noiseShare) * displacement)).toFloat()
             }
             StringState(event, (event.timeSeconds * rate).roundToInt(), burst, loop, feedback, t60)
         }
-        val bassBody = arrayOf(138.0, 261.0, 427.0).mapIndexed { i, hz -> Mode(hz, 3.0 + i, rate) }
-        val upperBody = arrayOf(397.0, 743.0, 1261.0).mapIndexed { i, hz -> Mode(hz, 2.8 + i, rate) }
+        val bassBody = arrayOf(1.0, 2.6, 5.2).mapIndexed { i, ratio -> Mode(f0 * ratio, 3.0 + i * 1.5, rate) }
+        val upperBody = arrayOf(2.0, 4.2, 7.1).mapIndexed { i, ratio -> Mode(f0 * ratio, 3.5 + i * 1.7, rate) }
+        val bassBodyWeights = doubleArrayOf(.58, .27, .15)
+        val upperBodyWeights = doubleArrayOf(.26, .44, .30)
+        val bodyMotion = Array(2) { DoubleArray(3) { 1.0 } }
+        val symMotion = Array(2) { DoubleArray(4) { 1.0 } }
+        val symRatios = arrayOf(doubleArrayOf(1.0, 3.0, 5.0, 7.0), doubleArrayOf(2.0, 3.0, 5.0, 8.0))
         val sympathetic = Array(2) { harp -> Array(4) { id ->
-            val hz = f0 * (if (harp == 0) 1.0 else 2.0) * RATIOS[id]
-            val t60 = (.85 + 2.25 * bloom) * .85.pow(id)
+            val hz = f0 * symRatios[harp][id]
+            val t60 = (1.6 + 4.2 * bloom) * .92.pow(id)
             Mode(hz, PI * hz * t60 / ln(1000.0), rate)
         } }
-        val venue = Venue(rate)
+        val venue = Venue(f0, rate)
+        val bassPickup = LowPass(850.0 + 4200.0 * touch.pow(1.4), rate)
+        val upperPickup = LowPass(700.0 + 2500.0 * touch, rate)
         val out = FloatArray(frames)
         val stems = if (record) Array(4) { FloatArray(frames) } else null
         val flows = DoubleArray(4)
@@ -323,8 +388,9 @@ object Nacre {
         var internalPeak = 0.0
         var symmetricPeak = 0.0
         var venuePeak = 0.0
-        val sympatheticGain = .10 + 2.0 * bloom.pow(.72)
-        val venueGain = .10 + .76 * bloom.pow(.70)
+        val sympatheticGain = .12 + 6.0 * bloom.pow(.70)
+        val sympatheticWeights = doubleArrayOf(.24, .31, .25, .20)
+        val venueGain = .22 + 2.4 * bloom.pow(.70)
         // The post-only ablation adds moving pickup sound after all generation. It cannot alter
         // any string/sympathetic state, and is deliberately distinct from the production model.
         val postDelay = if (options.postCurrentOnly) Delay(.009, rate) else null
@@ -337,14 +403,25 @@ object Nacre {
                 for (k in flows.indices) flows[k] = water.at(time, .7 + 1.25 * k)
                 crossBass = 1.0 - .72 * water.depth * (.5 + .5 * bassFlow)
                 crossUpper = 1.0 - .72 * water.depth * (.5 + .5 * upperFlow)
+                for (harp in 0..1) {
+                    for (id in 0..2) bodyMotion[harp][id] = 1.0 + .65 * water.depth *
+                        water.at(time, .9 + harp * 1.7 + id * 1.6)
+                    for (id in 0..3) symMotion[harp][id] = 1.0 + .82 * water.depth *
+                        water.at(time, 1.4 + harp * 2.1 + id * 1.45)
+                }
                 for (state in states) {
-                    val flow = if (state.event.performer == "bass") bassFlow else upperFlow
-                    val loading = .35 + .65 * (.5 + .5 * flow)
-                    val amount = water.depth * (if (state.event.stringId == 0) .28 else .90)
+                    val position = if (state.event.performer == "bass") .2 else 1.9
+                    val flow = water.at(time, position + state.event.stringId * 1.25)
+                    val loading = .18 + .82 * (.5 + .5 * flow)
+                    val amount = water.depth * (if (state.event.stringId == 0) .16 else 1.5 + .6 * state.event.stringId)
                     // The extra per-period loss is always nonnegative. Keeping all phase-bearing
                     // coefficients fixed avoids detuning the existing waveguide tuning budget.
                     val scale = exp(-amount * loading * ln(1000.0) / (state.t60 * state.event.frequencyHz))
                     state.loop.gain(scale.toFloat().coerceIn(0f, 1f))
+                    // The protected roots keep their pickup level. Other octave strings expose
+                    // their different encounter with the field, changing the spectrum reaching
+                    // each body as well as the direct sound. This never closes another loop.
+                    state.pickupWeight = if (state.event.stringId == 0) 1.0 else 1.0 + .72 * water.depth * flow
                 }
             }
             var bass = 0.0
@@ -354,26 +431,29 @@ object Nacre {
                 val excitation = if (age in state.burst.indices) state.burst[age] else 0f
                 val sample = state.loop.next(excitation).toDouble()
                 internalPeak = maxOf(internalPeak, abs(sample))
-                if (state.event.performer == "bass") bass += sample else upper += sample
+                if (state.event.performer == "bass") bass += state.pickupWeight * sample else upper += state.pickupWeight * sample
             }
             var bBody = 0.0
             var uBody = 0.0
-            for (mode in bassBody) bBody += mode.next(bass) / bassBody.size
-            for (mode in upperBody) uBody += mode.next(upper) / upperBody.size
-            val cross = if (options.disableCrossHarp) 0.0 else .20 + .48 * bloom
-            val bDrive = .62 * previousBassBody + cross * crossBass * previousUpperBody
-            val uDrive = .62 * previousUpperBody + cross * crossUpper * previousBassBody
+            for (id in bassBody.indices) bBody += bassBody[id].next(bass * bassBodyWeights[id] * bodyMotion[0][id])
+            for (id in upperBody.indices) uBody += upperBody[id].next(upper * upperBodyWeights[id] * bodyMotion[1][id])
+            val cross = if (options.disableCrossHarp) 0.0 else .25 + .55 * bloom
+            val bDrive = .68 * previousBassBody + cross * crossBass * previousUpperBody
+            val uDrive = .68 * previousUpperBody + cross * crossUpper * previousBassBody
             var sym = 0.0
             for (id in 0 until 4) {
-                val weight = .65.pow(id) / 2.35
-                sym += weight * sympathetic[0][id].next(bDrive)
-                sym += .82 * weight * sympathetic[1][id].next(uDrive)
+                val weight = sympatheticWeights[id]
+                // Otherwise the body-root input makes BLOOM another copy of the two loudest
+                // strings. Reveal the unplucked harmonic modes without moving any pole.
+                val excitationWeight = if (id == 0) .80 else 1.75
+                sym += weight * sympathetic[0][id].next(bDrive * symMotion[0][id] * excitationWeight)
+                sym += .90 * weight * sympathetic[1][id].next(uDrive * symMotion[1][id] * excitationWeight)
             }
             previousBassBody = bBody
             previousUpperBody = uBody
             symmetricPeak = maxOf(symmetricPeak, abs(sym))
-            bass = .92 * bass + .26 * bBody
-            upper = .92 * upper + .22 * uBody
+            bass = .72 * bass + .28 * bassPickup.next(bass) + .50 * bBody
+            upper = .88 * upper + .48 * (upper - upperPickup.next(upper)) + .65 * uBody
             sym *= sympatheticGain
             venue.next(bass, upper, sym, flows, water.depth)
             var wet = if (options.bypassVenue) 0.0 else
@@ -396,20 +476,31 @@ object Nacre {
         Dsp.levelTo(leveled, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         val names = listOf("bass", "upper", "sympathetic", "venue")
         val conditionedStems = if (stems == null) emptyMap() else names.indices.associate { names[it] to condition(stems[it]) }
+        val totalEnergy = raw.sumOf { it.toDouble() * it }
+        var accumulatedEnergy = 0.0
+        var energy99Frame = 0
+        for (i in raw.indices) {
+            accumulatedEnergy += raw[i].toDouble() * raw[i]
+            if (accumulatedEnergy < .99 * totalEnergy) energy99Frame = i
+        }
         var tailEnergy = 0.0
         val tailFrames = Dsp.RATE / 2
         for (i in raw.size - tailFrames until raw.size) tailEnergy += raw[i].toDouble() * raw[i]
         val diagnostics = linkedMapOf(
             "modelVersion" to MODEL_VERSION.toDouble(),
             "durationSeconds" to DURATION_SECONDS.toDouble(),
+            "energy99Seconds" to (if (totalEnergy == 0.0) 0.0 else energy99Frame.toDouble() / Dsp.RATE),
             "rootHz" to f0,
             "maxBaseLoopFeedback" to states.maxOf { it.baseFeedback },
             "maxCurrentLoopGainScale" to 1.0,
-            "maxCrossHarpSend" to (if (options.disableCrossHarp) 0.0 else .20 + .48 * bloom),
+            "maxCrossHarpSend" to (if (options.disableCrossHarp) 0.0 else .25 + .55 * bloom),
             "venueFeedbackGain" to 0.0,
             "venueBlendWeightSum" to 1.0,
             "currentDepth" to water.depth,
             "currentRateHz" to water.hz,
+            "maxBodyExcitationWeightScale" to 1.0 + .65 * water.depth,
+            "maxSympatheticExcitationWeightScale" to 1.75 * (1.0 + .82 * water.depth),
+            "seaweedMaximumWaverSeconds" to .00065 * water.depth,
             "internalStringPeak" to internalPeak,
             "statePeak" to maxOf(internalPeak, symmetricPeak, venuePeak),
             "loopGainMax" to states.maxOf { it.baseFeedback },

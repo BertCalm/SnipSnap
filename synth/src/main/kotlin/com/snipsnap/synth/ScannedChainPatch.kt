@@ -22,13 +22,13 @@ class ScannedChainPatch(
         Patches.validateMacros(this, ScannedChain.macrosFor(voice))
         require(midi in ScannedChain.MIDI_MIN..ScannedChain.MIDI_MAX) { "SCANNED CHAIN MIDI must be 36..96" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SCANNED CHAIN velocity must be 0..1" }
-        require(model == ScannedChain.MODEL_VERSION) { "unsupported scanned-chain model $model" }
+        require(ScannedChain.supportsModel(model)) { "unsupported scanned-chain model $model" }
         config.validateForVoice(voice)
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = ScannedChain.render(voice, macros, midi, velocity, shape, config)
+    override fun render() = ScannedChain.render(voice, macros, midi, velocity, shape, config, model)
     override fun withMacros(macros: Map<String, Float>): ScannedChainPatch = copy(macros = macros)
 
     fun copy(
@@ -68,7 +68,7 @@ class ScannedChainPatch(
                 val obj = value.obj()
                 fun r(key: String) = obj[key] ?: throw JsonException("scanned-chain patch has no $key")
                 val model = r("model").int()
-                if (model != ScannedChain.MODEL_VERSION) throw JsonException("unsupported scanned-chain model $model")
+                if (!ScannedChain.supportsModel(model)) throw JsonException("unsupported scanned-chain model $model")
                 return Patches.decode(value, ENGINE, { n -> ScannedChainVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
                     val c = r("config").obj()
                     fun f(key: String) = c[key]?.num()?.toFloat() ?: throw JsonException("scanned-chain config has no $key")
