@@ -89,8 +89,12 @@ path yet (R2b, round 6, awaits the listen).
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
-held LOOP variants; its sample-based keyboard path is shared with the other
-pitched pad makers. Dedicated MAKE INSTRUMENT multisampling remains separate.
+held LOOP variants. Model-3 MAKE INSTRUMENT samples minor-third zones around the
+saved root, preserving one continuous onset and settling history into the held
+loop. RELEASE controls the existing phone/MPC volume fade after key-up; older
+models keep their original finite/HOLD renders. Paper Keys and Ink Ribbon form
+the first held-keyboard listening pair. Generation is serial and cancellable;
+actual phone timing and MPC playback still require the device acceptance pass.
 CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY and VENT also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
@@ -135,7 +139,12 @@ FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
 ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
 2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
 renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
-SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
+SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
+saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
+nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
+retaining the editable held recipe. HOLD stays finite. See the
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). Phone playback
+remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available
 for listening and device review.

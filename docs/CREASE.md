@@ -14,8 +14,9 @@ shapes and refines their pressure/recovery timing. Six listening presets explore
 fast, delayed and slowly unfolding gestures across ROUND, PINCH and RUBBER;
 the owner approved this listening direction. The three voices and six presets
 are now registered in the native patch/preset, kit, CLI and phone paths. The
-remaining voice expansion and dedicated multisampled instrument builder remain
-later work.
+remaining voice expansion is later work. Model-3 patches also have a dedicated
+held-keyboard builder, with Paper Keys and Ink Ribbon as the first listening
+instruments.
 
 ## Controls and performance
 
@@ -139,14 +140,65 @@ The sixteen-pad dry starter has eight C-minor-pentatonic Corner Bass notes, the
 six approved presets, and Paper Keys/Ink Ribbon HOLD loops. Its fourteen finite
 pads are TONAL regardless of duration; the two held pads are LOOP. The phone
 uses the saved MIDI root for SPREAD and offers ROOT/VELOCITY beside the six
-controls. A dedicated MAKE INSTRUMENT/`Keys.creasePad` builder is separate work;
-the generic sampled-instrument player is unchanged.
+controls. MAKE INSTRUMENT/`Keys.creasePad` renders model-3 patches as held keyboard
+instruments through the existing sampled-instrument player.
+
+## Held keyboard instruments
+
+`CreaseKeys` starts one model and one output-conditioning path from rest. A
+speaking pressure onset smoothly becomes the existing periodic pressure gesture;
+all actual settling audio is retained before the final loop. The loop is accepted
+only after successive full circuit states recur and an independently evolved
+audio period closes. There is no finite-note/held-note audio splice.
+
+`CreasePadMaker` samples minor-third roots over two octaves around the saved MIDI
+note, clipped to MIDI 24–84. Keygroup boundaries stop at the outer sampled roots.
+The full saved patch supplies the voice, model, macros and excitation velocity;
+making an instrument leaves that source patch unchanged. HOLD is forced internally
+for this transport: the key controls duration. Existing finite and HOLD exports
+retain their original model behavior.
+
+The waveform owns its attack. RELEASE is a separate 0.1–1.5 second phone/MPC
+volume-envelope control, defaulting to 0.6 seconds. Note-off fades the currently
+playing sample; it does not simulate a new deformation-release trajectory.
+RELAX still controls recovery inside the held pressure gesture. There is one
+authored velocity layer; live key velocity applies the existing player gain.
+
+The builder exports the native `.xty`, compatibility `.xpm`, WAV loop metadata
+and phone instrument sidecar through `OneNote`. The sidecar retains playback
+metadata, while the listening download supplies the editable native Patch JSON
+separately. Model-1/model-2 patches are rejected by instrument authoring rather
+than silently upgraded; their ordinary renders still replay normally.
+
+Generation is an explicit cancellable bulk operation. It retains at most 28
+settling periods and a 64-second sample; failure to reach a measured periodic
+orbit fails the render. Zones render serially in the phone authoring flow.
+Desktop generation timings are reported by the audition and do not establish
+phone latency. The design and its alternatives are recorded in
+[the held-keyboard design](superpowers/specs/2026-10-23-crease-held-keys-design.md).
 
 CLI example:
 
 ```sh
 ./gradlew :cli:run --args='synth crease round --preset 2 --midi 60 --velocity .8 --model 3 --out /tmp/crease-native'
+./gradlew :cli:run --args='synth crease round --preset 2 --instrument --release .6 --out /tmp/crease-keys'
+./gradlew :cli:run --args='synth crease rubber --preset 2 --instrument --release .6 --out /tmp/crease-keys'
 ```
+
+Saved native recipes can replace `--preset` using `--patch recipe.json`.
+Instrument mode accepts explicit MIDI/velocity/model overrides, rejects `--all`
+and `--attack`, and validates the complete request before creating output.
+
+Reproduce the two-instrument audition and real sampler performances with:
+
+```sh
+./gradlew --no-daemon :shell:generateCreaseKeysAudition
+```
+
+The separate `testkit/crease-keys-audition/` output contains measured zone renders,
+dual-format instrument packages, native source recipes and actual
+`InstrumentEngine` hold/release, velocity-gain and phrase performances. It does
+not replace the original 87-clip model-3 listening set.
 
 The audition offers six native patch JSON files and a shelf backup with a
 playable starter kit and editable saved presets. The official shelf import

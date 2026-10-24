@@ -63,7 +63,9 @@ The owner confirmed revised FLOW is audible; saved model-1 recipes remain
 replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
 neighbor interaction with fixed detuning and independent motion. HOLD always
-sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
+sets a finite duration. [The held RIBBON instrument](FLOCK_RIBBON_INSTRUMENT.md)
+adds explicit saved playback and release through the existing phone/MPC instrument
+path. Phone/MPC hardware checks remain open.
 The separate RIBBON sustain study compares long continuous renders with captured
 roughly six-second loops at three FLOW settings, without changing the finite presets.
 

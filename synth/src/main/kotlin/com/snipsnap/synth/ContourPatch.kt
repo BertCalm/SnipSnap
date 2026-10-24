@@ -74,6 +74,7 @@ data class ContourPatch(
                 "filterAttack" to n(c.filterAttack), "filterDecay" to n(c.filterDecay), "filterAmount" to n(c.filterAmount),
                 "motionShape" to JsonValue.Str(c.motionShape.name), "motionSeconds" to n(c.motionSeconds),
                 "filterType" to JsonValue.Str(c.filterType.name), "loopSeconds" to n(c.loopSeconds),
+                "edgeResponse" to JsonValue.Str(c.edgeResponse.name),
             ))
         }
 
@@ -103,6 +104,8 @@ data class ContourPatch(
                 motionShape = e("motionShape", ContourMotionShape.entries, d.motionShape),
                 motionSeconds = f("motionSeconds", d.motionSeconds),
                 filterType = e("filterType", ContourFilterType.entries, d.filterType), loopSeconds = f("loopSeconds", d.loopSeconds),
+                // Missing or null means the saved recipe predates the foreground response.
+                edgeResponse = e("edgeResponse", ContourEdgeResponse.entries, ContourEdgeResponse.LEGACY),
             )
         }
     }

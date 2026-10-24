@@ -108,8 +108,12 @@ had insufficient variation; the owner preferred model 2's wider analytic phase
 maps. Model 3 retains those shapes and refines lag/recovery, with six named
 listening presets and constant-level gesture comparisons. Models 1 and 2 remain
 exactly replayable. The approved three voices and six presets are registered in native patches,
-velocity routing, the SYNTH picker, FRESH TAPE and CLI. Voice expansion and a
-dedicated multisampled instrument builder remain separate work. [CREASE](CREASE.md) records the prototype scope and
+velocity routing, the SYNTH picker, FRESH TAPE and CLI. Model-3 MAKE INSTRUMENT and
+CLI `--instrument` retain one continuous attack/settling/held history, sample
+bounded minor-third zones around the saved root, and export through the existing
+phone/dual-MPC package path with a player-controlled release. Paper Keys and Ink
+Ribbon are the first held-instrument listening pair. Voice expansion remains
+separate work. [CREASE](CREASE.md) records the scope and
 reproduction commands.
 
 ### THUMP — analog-style drum voices (the drum synth engine)
@@ -440,9 +444,13 @@ recipes, all dry TONAL pads without choking.
 a native MPC 3 `.xtd`, an MPC 2 `.xpm` twin and shared PCM24 WAVs in its
 `_[TrackData]` folder, complete editable recipes, a manifest and a ZIP beside
 the kit. [FLOCK.md](FLOCK.md) records the exact layout and listening evidence.
-Phone playback, render latency and MPC hardware checks remain open. Sustained
-loops, held instruments and live interaction between separately rendered notes
-remain outside this finite integration.
+RIBBON now also offers explicit saved HELD playback, separate from finite HOLD.
+It captures a two-second opening and roughly six-second body, supplies native
+press/release audition, and makes a nine-root phone/MPC keygroup instrument with
+saved release and source recipe. See
+[FLOCK_RIBBON_INSTRUMENT.md](FLOCK_RIBBON_INSTRUMENT.md). Live interaction between
+separately rendered notes remains outside this sample-based path. Phone playback,
+target render latency and MPC hardware checks remain open.
 
 ### EMBOUCHURE — effort changes how the note speaks
 
@@ -621,6 +629,10 @@ keeps its implementation and effect recipe format.
 `testkit/contour-audition/`, including matched/raw controls, note/velocity checks,
 five-point sweeps, required interactions, isolated layers and repeated held loops.
 [CONTOUR](CONTOUR.md) records integration contracts and numerical verification.
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) addresses a resting envelope
+that could hide the edge layer. Fresh recipes save the foreground response;
+earlier JSON retains the legacy response. `generateContourEdgeAudition` exports
+180 complete finite/held comparisons over five EDGE positions for owner listening.
 The [first-round audition](https://snipsnap-contour-audition.bertcalm.chatgpt.site)
 is published with owner-private access and all 477 cases.
 The owner's sonic verdict precedes expansion to the proposed 36 presets;

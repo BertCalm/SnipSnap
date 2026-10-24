@@ -11,6 +11,18 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
 
+    // The attack, slow pressure memory and streaming output filters all survive to the
+    // same loop boundary. No state from the previous key render may enter a fresh note.
+    @Test
+    fun `CREASE speaking keys reproduce the same attack and measured loop boundary`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = Keys.creasePad(patch, midi = 60)
+        val second = Keys.creasePad(patch.copy(macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        assertTrue(first.loopStartFrame > 0)
+        assertTrue(first.loopStartFrame == second.loopStartFrame, "fresh convergence picked another loop boundary")
+        assertContentEquals(first.snip.samples, second.snip.samples, "source state or macro iteration order changed the note")
+    }
+
     @Test
     fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
         for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
@@ -20,6 +32,22 @@ class DeterminismTest {
             val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
         }
+    }
+
+    @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
     }
 
     @Test

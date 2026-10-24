@@ -451,7 +451,9 @@ object ContourAuditionGenerator {
     private fun writePage(root: File) {
         val page = checkNotNull(javaClass.getResourceAsStream("/contour-audition/index.html")) { "Missing audition page resource" }.bufferedReader().use { it.readText() }
         require(page.contains("manifest.json") && page.contains("exportVerdicts")) { "Incomplete audition page" }
-        File(root, "index.html").writeText(page)
+        val starterLink = if (File(root, "instruments/manifest.json").isFile)
+            "<a class=\"download\" href=\"instruments/\">Hear the held instruments ↗</a>" else ""
+        File(root, "index.html").writeText(page.replace("<!--STARTER_INSTRUMENTS-->", starterLink))
     }
     private fun json(value: Any?): JsonValue = when (value) {
         null -> JsonValue.Null
