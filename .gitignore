@@ -41,6 +41,7 @@ app/.cxx/
 design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
+!design/nacre-gentle-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -366,6 +367,7 @@ testkit/trio-audition-model2/
 testkit/trio-audition-model3/
 testkit/trio-audition-model4/
 testkit/trio-musical-bank/
+testkit/trio-touch/
 
 # TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
 testkit/tidal-audition/
@@ -382,7 +384,11 @@ testkit/skitter-character-r6/
 testkit/skitter-quartet/
 testkit/fade-law-audition/
 
-# Rebuilt by :synth:generateTrioTouchAudition.
-testkit/trio-touch/
+# Three-clip model-1 venue-return experiment, regenerated from testkit sources.
+testkit/nacre-gentle-audition/
+
+# BELLOWS sample-player comparisons and exported proof programs regenerate from source.
+testkit/bellows-playback-audition/
+
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/

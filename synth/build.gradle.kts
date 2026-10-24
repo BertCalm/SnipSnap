@@ -62,6 +62,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** Accepted versus revised upper-TOUCH character with identical seeded scores. */
+tasks.register<JavaExec>("generateTrioTouchAudition") {
+    group = "distribution"
+    description = "Render twelve TRIO model 5/6 upper-TOUCH comparisons and a listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioTouchAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioTouchOutput").orNull ?: "${rootDir}/testkit/trio-touch")
+}
+
 /** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
 tasks.register<JavaExec>("generateTrioMusicalBank") {
     group = "distribution"
@@ -1670,13 +1681,13 @@ tasks.register<JavaExec>("generateCausticAudition") {
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
 
-/** Accepted versus revised upper-TOUCH character with identical seeded scores. */
-tasks.register<JavaExec>("generateTrioTouchAudition") {
+/** Three model-1 clips, preserving the foreground and comparing only venue return. */
+tasks.register<JavaExec>("generateNacreGentleAudition") {
     group = "distribution"
-    description = "Render twelve TRIO model 5/6 upper-TOUCH comparisons and a listening page."
-    classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.snipsnap.synth.TrioTouchAuditionGenerator")
+    description = "Render the original model-1 gesture and two restrained venue-return comparisons."
     maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreGentleAuditionGenerator")
     workingDir = projectDir
-    args(providers.gradleProperty("trioTouchOutput").orNull ?: "${rootDir}/testkit/trio-touch")
+    args("${rootDir}/testkit/nacre-gentle-audition")
 }
