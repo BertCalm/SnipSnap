@@ -386,5 +386,8 @@ testkit/fade-law-audition/
 # Three-clip model-1 venue-return experiment, regenerated from testkit sources.
 testkit/nacre-gentle-audition/
 
+# BELLOWS sample-player comparisons and exported proof programs regenerate from source.
+testkit/bellows-playback-audition/
+
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
