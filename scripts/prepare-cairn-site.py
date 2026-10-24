@@ -12,6 +12,7 @@ from scipy.signal import lfilter
 
 REPO=Path(__file__).resolve().parents[1]
 RATE=44100
+BASE_REVISION='91384fa189a68c4993c8e359af6b748412bf95c3'
 
 def sha(data): return hashlib.sha256(data).hexdigest()
 def pcm(path):
@@ -42,6 +43,8 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--audition',type=Path,default=REPO/'testkit/cairn-reconstruction')
     parser.add_argument('--site',type=Path,required=True)
+    parser.add_argument('--base-revision',default=BASE_REVISION,
+                        help='Revision against which the downloadable source patch applies')
     args=parser.parse_args()
     source=args.audition.resolve();site=args.site.resolve()
     m=json.loads((source/'manifest.json').read_text())
@@ -90,14 +93,14 @@ def main():
     (dest/'manifest.json').write_text(json.dumps(m,indent=2)+'\n')
     # The backup is a reviewable source delta against a named repository revision.
     # Include new files in the diff without committing or staging their contents.
-    changed=subprocess.check_output(['git','status','--porcelain','--untracked-files=all'],cwd=REPO,text=True)
-    assert changed.strip(),'No source delta to back up'
     subprocess.run(['git','add','-N','.'],cwd=REPO,check=True)
-    patch=subprocess.check_output(['git','diff','--binary','HEAD'],cwd=REPO)
+    patch=subprocess.check_output(['git','diff','--binary',args.base_revision],cwd=REPO)
+    assert patch.strip(),'No source delta to back up'
     files={'cairn.patch':patch,
            'README.txt':('CAIRN model 1 reconstruction\n\n'
              'New source, not a recovery of the six-voice renderer.\n'
-             f"Base repository: https://github.com/BertCalm/SnipSnap\nBase revision: {m['sourceRevision']}\n"
+             f"Base repository: https://github.com/BertCalm/SnipSnap\nBase revision: {args.base_revision}\n"
+             f"Render revision: {m['sourceRevision']} (exact DSP file hashes are in the manifest)\n"
              'Checkout that revision, then run: git apply cairn.patch\n'
              'JDK 21: ./gradlew --no-daemon :synth:generateCairnAudition\n'
              'Verification: ./gradlew --no-daemon test\n'
