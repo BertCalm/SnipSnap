@@ -409,6 +409,7 @@ oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audio
     }
     // What is still waiting is due in a later block: count this one off.
     for (int32_t i = 0; i < heldCount_; ++i) held_[i].frameOffset -= numFrames;
+    framesRendered_.fetch_add(numFrames, std::memory_order_release);
     // The print tap takes the bus after the mix, so what it captures is
     // what the speaker got: the clamp, the stolen voices and the fades
     // are already in these frames. It is a no-op unless a print is armed.

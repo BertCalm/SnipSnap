@@ -1,5 +1,9 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.CausticInstrument
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
+
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
@@ -103,6 +107,9 @@ class StarterKitsTest {
      * drumClassFor, and the sixteen reach every voice.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {
+            (it as CausticPatch).let { p -> CausticInstrument.drumClassFor(p.voice, p.macros, p.model) }
+        },
         "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
             (it as CircuitPatch).let { p -> Circuit.drumClassFor(p.voice, p.macros) }
         },
@@ -484,7 +491,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!

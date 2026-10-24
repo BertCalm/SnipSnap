@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -22,7 +23,7 @@ import kotlin.random.Random
  * U2); a flat uniform roll of the whole space is still reachable at
  * `temperature = 1` (see [scramble]).
  */
-enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM }
+enum class ThumpVoice { KICK, SNARE, HAT_CLOSED, HAT_OPEN, CLAP, TOM, COWBELL, RIM, SPARK }
 
 /**
  * One macro: its name, where it starts, and where it *does nothing*.
@@ -99,6 +100,12 @@ object Thump {
             MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.3f), MacroSpec("PUNCH", 0.5f),
             MacroSpec("RING", 0.5f, neutral = 0.5f), MacroSpec("BODY", 0f),
         )
+        // A finite, provisional percussion voice. Its listening family carries
+        // complete recipes; factory presets wait for the first human audition.
+        ThumpVoice.SPARK -> listOf(
+            MacroSpec("TUNE", 0.5f), MacroSpec("DECAY", 0.35f), MacroSpec("PUNCH", 0.5f),
+            MacroSpec("METAL", 0.25f), MacroSpec("COLOR", 0.5f),
+        )
     }
 
     /** The factory macro settings for [voice]. */
@@ -124,7 +131,13 @@ object Thump {
         val seed = when {
             near != null -> base + near.macros.filterKeys { it in base }
             temperature >= 1f -> base
-            else -> base + ThumpPresets.forVoice(voice).random(random).macros.filterKeys { it in base }
+            else -> {
+                val presets = ThumpPresets.forVoice(voice)
+                // An unauditioned voice has no factory library yet. Do not
+                // invent one merely to make SCRAMBLE's seed selection work.
+                if (presets.isEmpty()) base
+                else base + presets.random(random).macros.filterKeys { it in base }
+            }
         }
         return Dsp.scrambleNear(seed, temperature, random)
     }
@@ -132,7 +145,11 @@ object Thump {
     /** Render [voice] with [macros]; missing macros fall back to defaults. */
     fun render(voice: ThumpVoice, macros: Map<String, Float> = emptyMap()): Snip {
         val m = defaults(voice).toMutableMap()
-        for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
+        for ((k, v) in macros) if (m.containsKey(k)) {
+            // Keep legacy mappings byte-identical; the new voice rejects a
+            // non-finite control before it can reach a phase or filter state.
+            if (voice != ThumpVoice.SPARK || v.isFinite()) m[k] = v.coerceIn(0f, 1f)
+        }
         // U6 (docs/SYNTH_UPGRADE.md): every voice synthesizes at 4x RATE, so
         // its own oscillators' aliasing folds down above 22.05kHz instead of
         // into the audible band, then Dsp.decimate brings it back to RATE.
@@ -146,6 +163,18 @@ object Thump {
             ThumpVoice.TOM -> tom(m, renderRate)
             ThumpVoice.COWBELL -> cowbell(m, renderRate)
             ThumpVoice.RIM -> rim(m, renderRate)
+            ThumpVoice.SPARK -> spark(m, renderRate).also { source ->
+                // This branch alone adopts explicit pre-decimation bandwidth
+                // and DC conditioning. Changing the common finish would also
+                // re-voice every already-auditioned THUMP sound.
+                Tide.bandLimit(source, renderRate)
+                val mean = source.sumOf { it.toDouble() } / source.size
+                val dc = Dsp.FixedOnePole(20f, renderRate)
+                for (i in source.indices) {
+                    val centered = (source[i] - mean).toFloat()
+                    source[i] = centered - dc.lp(centered)
+                }
+            }
         }
         val punch = m.getValue("PUNCH")
         // Only SNARE carries a WIDTH macro (m["WIDTH"] is absent, hence 0f,
@@ -194,6 +223,86 @@ object Thump {
     // ---------- voices ----------
 
     private fun frames(seconds: Float, rate: Int) = (seconds * rate).toInt().coerceAtLeast(64)
+
+    /**
+     * SPARK: strike -> metallic flare -> falling pitch -> rounded body.
+     *
+     * This is a bounded, one-way oscillator model, not analog circuit
+     * emulation. A dry sine keeps the root while an independently filtered
+     * edge combines sine phase modulation and multiplication by a finite
+     * triangle. Both branches have their own loss; no signal feeds back.
+     * All ranges and envelope ratios here are shape hypotheses awaiting a
+     * human listen. [ThumpFamilies] turns one patch into ordered positions
+     * along a repeatable expression path without adding a motion sequencer.
+     *
+     * Internal so the numerical probes can compare the same unfinished core
+     * at 4x and 8x. [m] is a complete, finite macro map, as supplied by render.
+     */
+    internal fun spark(m: Map<String, Float>, rate: Int): FloatArray {
+        require(rate >= RATE && rate % RATE == 0) { "SPARK rate must be a positive multiple of $RATE" }
+        val root = Dsp.expMap(m.getValue("TUNE"), 110f, 440f).toDouble()
+        val t60 = Dsp.expMap(m.getValue("DECAY"), 0.16f, 1f).toDouble()
+        val metal = m.getValue("METAL").toDouble()
+        val color = m.getValue("COLOR")
+        // COLOR coordinates layer balance with its filters. Even the brightest
+        // setting keeps a separate, fixed dry-root path beneath the moving edge.
+        val edgeGain = 0.45 * sqrt(metal) * (0.65 + 0.70 * color)
+        val edgeT60 = t60 * (0.80 - 0.15 * metal)
+        val bendDepth = 0.08 + 0.92 * metal
+        val bendTime = 0.012 + 0.012 * color
+        val bodyCutoff = Dsp.expMap(color, (root * 1.5).toFloat(), (root * 8.0).toFloat())
+        val edgeCutoff = Dsp.expMap(color, 200f, 5000f)
+        val body = FloatArray(frames((t60 * 1.4).toFloat(), RATE) * (rate / RATE))
+        val edge = FloatArray(body.size)
+        val edgeFilter = Dsp.TptSvf(rate)
+        val ratio = sqrt(2.0)
+        val triangleScale = (1..13 step 2).sumOf { 1.0 / (it * it) }
+
+        for (i in body.indices) {
+            val t = i.toDouble() / rate
+            val bend = exp(-t / bendTime)
+            // Exact integral of root*(1+depth*exp(-t/tau)): the same
+            // continuous trajectory is sampled at either probe rate.
+            val phase = 2.0 * PI * root * (t + bendDepth * bendTime * (1.0 - bend))
+            val modPhase = 2.0 * PI * root * ratio * t
+            val modulator = sin(modPhase)
+            val dry = sin(phase)
+            val edgeEnvelope = exp(-6.9078 * t / edgeT60)
+            val modEnvelope = exp(-6.9078 * t / (t60 * 0.90))
+            val pm = sin(phase + (0.8 + 3.2 * metal) * modEnvelope * modulator)
+
+            // Seven odd harmonics, all below output Nyquist at the highest
+            // TUNE. The odd-sine recurrence saves six sin() calls per frame
+            // without introducing the corners of a naive triangle wave.
+            val twiceCos2 = 2.0 - 4.0 * modulator * modulator
+            var previous = -modulator
+            var current = modulator
+            var triangle = 0.0
+            var sign = 1.0
+            for (harmonic in 1..13 step 2) {
+                triangle += sign * current / (harmonic * harmonic)
+                val next = twiceCos2 * current - previous
+                previous = current
+                current = next
+                sign = -sign
+            }
+            triangle /= triangleScale
+            val attack = 0.5 - 0.5 * cos(PI * (t / 0.0008).coerceAtMost(1.0))
+            body[i] = (0.55 * dry * attack * exp(-6.9078 * t / t60)).toFloat()
+            val interaction = 0.65 * pm + 0.35 * dry * triangle
+            // The square-root blend gives low and middle METAL room to speak.
+            // A linear, quieter edge with two very fast loss envelopes passed
+            // safety probes but left ordinary settings spectrally inert.
+            val edgeInput = (edgeGain * interaction * attack * edgeEnvelope).toFloat()
+            // Independent spectral decay on the edge, with fixed positive
+            // damping. The root branch never inherits this moving cutoff.
+            edgeFilter.process(edgeInput, edgeCutoff * (0.35f + 0.65f * modEnvelope.toFloat()), 1.4142135f)
+            edge[i] = edgeFilter.low
+        }
+        Dsp.TptSvf(rate).lowPassInPlace(body, bodyCutoff, 1.4142135f)
+        for (i in body.indices) body[i] += edge[i]
+        return body
+    }
 
     /** Unfinished source for ONSET; the stock render path keeps its original mappings. */
     internal fun onsetKick(rootHz: Float, t60Seconds: Float, snap: Float, edge: Float, rate: Int): FloatArray =

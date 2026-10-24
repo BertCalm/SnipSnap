@@ -524,6 +524,26 @@ object SynthKits {
         }
     }
 
+    /** The reviewed dry BALLAST kit, retaining each pad's saved voice and macro recipe. */
+    fun ballast(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = BallastPatch(
+            "Root $n", BallastVoice.ROOT,
+            Ballast.defaults(BallastVoice.ROOT) + ("TUNE" to (12 + semitone) / Ballast.TUNE_SEMITONES.toFloat()),
+        ).let { pad(it, Ballast.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: BallastVoice, name: String) = BallastPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Ballast.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
+            preset(BallastVoice.WIRE, "LONG STRING"), preset(BallastVoice.WIRE, "UPPER HALO"),                // A05 A06
+            preset(BallastVoice.DEEP, "LOWER REPLY"), preset(BallastVoice.DEEP, "LOOSE MOUNT"),                // A07 A08
+            preset(BallastVoice.GLINT, "GLASS WAKE"), preset(BallastVoice.GLINT, "DENSE TILES"),              // A09 A10
+            preset(BallastVoice.BLOOM, "DELAYED OPEN"), preset(BallastVoice.BLOOM, "SLOW CLIMB"),             // A11 A12
+            preset(BallastVoice.SWARM, "DENSE RATTLE"), preset(BallastVoice.SWARM, "TILE STORM"),             // A13 A14
+            preset(BallastVoice.DEEP, "LOW WELL"), preset(BallastVoice.BLOOM, "WARM LIFT"),                  // A15 A16
+        )
+    }
+
     /**
      * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
      * every other knob at its default, so the row is the instrument before anyone
@@ -1085,6 +1105,21 @@ object SynthKits {
     }
 
     /**
+     * Eight fuller Alloy notes in C minor pentatonic from C3, then eight starting
+     * positions. Every pad is finite and dry; a duration-based LOOP class is a
+     * filename/category, not a seamless sustain claim. All sixteen save their patch.
+     */
+    fun caustic(): List<ArrangedPad?> {
+        fun arranged(patch: CausticPatch) = pad(patch, CausticInstrument.drumClassFor(patch.voice, patch.macros, patch.model))
+            .copy(displayName = patch.name)
+        val fuller = CausticPresets.all().first { it.name == "Fuller Body" }
+        val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
+            arranged(fuller.copy(name = "Caustic Key ${index + 1}", midi = 48 + semitone))
+        }
+        return scale + CausticPresets.all().map(::arranged)
+    }
+
+    /**
      * Eight Corner Bass keys in C minor pentatonic from C2, the six approved positions,
      * then two held variants. Every dry pad stores its exact root, velocity and model.
      * Finite notes route as TONAL; the last two pads contain settled LOOP material.
@@ -1345,6 +1380,22 @@ object SynthKits {
         ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
             ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+    }
+
+    /** Four notes from the approved THREAD recipe followed by all twelve dry factory recipes. */
+    fun filament(): List<ArrangedPad?> {
+        fun arranged(patch: FilamentPatch) = pad(patch, Filament.drumClassFor(patch.voice, patch.macros)).copy(
+            displayName = patch.name,
+            source = mapOf("rootMidi" to patch.midi.toString(), "rootNote" to Scales.nameOf(patch.midi), "rootOrigin" to "authored"),
+        )
+        val thread = FilamentPresets.forVoice(FilamentVoice.THREAD).first()
+        val notes = PENTATONIC.take(4).mapIndexed { index, semitone ->
+            thread.copy(
+                name = "Filament ${index + 1}",
+                midi = thread.midi + semitone,
+            ).let(::arranged)
+        }
+        return notes + FilamentPresets.all().map(::arranged)
     }
 
     /**

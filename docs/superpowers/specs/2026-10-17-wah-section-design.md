@@ -1,6 +1,6 @@
 # The WAH section: a wah pedal for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-16 and 2026-10-17; built; listening gate pending. This is Stage 1 of `2026-10-04-pedal-board-design.md`.
+**Status:** design, reviewed section by section with the owner on 2026-10-16 and 2026-10-17; built; **the owner's gate passed on 2026-10-23** (see "Heard" at the end), and WAH, TOUCH and ROCK each draw a chip. This is Stage 1 of `2026-10-04-pedal-board-design.md`.
 **Builds on:** the pedal board's Stage 0 (the PEDALS row and the DRIVE and COMP chips, merged as PR #514), VALVE, and the two round-two listens whose picks and prototype numbers it carries.
 **Roadmap row:** the pedal board's row, S30 in `docs/SYNTH_ROADMAP.md`; this stage extends it.
 
@@ -23,7 +23,7 @@ The touch move with the first brief's numbers (5 ms attack, 150 ms release, a 30
 
 1. **A section of its own, `wah`**, replacing the CONTOUR recipe (the `quacked` character was removed at Stage 0). Its name is a permanent saved key. No test blocks it: the preset-name tests that forbid section names cover AEROSTAT, ARCO, FLOTILLA, GLINT, MERCURY and TREMOR, none of which use "wah"; RESIN has two presets named WAH STAB and MELLOW WAH that no test scans (the same overlap the house rule exists to avoid, noted and left).
 2. **The "switch" is three weights, not a stepped MODE macro.** The app exposes no per-section dials (a user taps chips and moves AMT), and AMT fades every macro of a recipe toward its neutral, which would flip a stepped MODE part-way (no existing section documents a rule for that; MAGNET's TUNE snaps to semitones and ENSEMBLE's SECTION is a crossfade, so neither is a precedent). So TOUCH, AUTO and ROCK are each a weight from 0 to 1 with neutral 0; "which move" is which weight a recipe sets to 1, and AMT shrinks the sweep smoothly.
-3. **One chip.** The PEDALS row gets WAH (the AUTO recipe). Touch and one rock exist as recipe characters, reachable from the CLI's `treat` and from saved kits, with no chip of their own: the row holds six and DRIVE, COMP, WAH, TREM and FLANGE are planned. A TOUCH chip can be added later if the owner asks.
+3. **One chip** (superseded at the gate on 2026-10-23: the owner asked for TOUCH and ROCK chips too, so the row now holds DRIVE, COMP, WAH, TOUCH and ROCK). The PEDALS row gets WAH (the AUTO recipe). Touch and one rock exist as recipe characters, reachable from the CLI's `treat` and from saved kits, with no chip of their own: the row holds six and DRIVE, COMP, WAH, TREM and FLANGE are planned. A TOUCH chip can be added later if the owner asks.
 4. **No oversampling.** The filter is linear (a time-varying `TptSvf`, stable under modulation), so none of VALVE's aliasing machinery applies.
 
 ## The section
@@ -76,7 +76,7 @@ Section tests (in `WahTest`, in the style of `ValveTest`, bars pinned at the mea
 
 ## Out of scope
 
-A noise gate in the wah; an expression-pedal or MIDI control (the app has no per-section dials); a tempo-synced rate (the rack has no tempo); a stepped MODE macro; a TOUCH chip (later, if asked); the in-front-of-the-amp rendering (Stage 3); presets for any engine.
+A noise gate in the wah; an expression-pedal or MIDI control (the app has no per-section dials); a tempo-synced rate (the rack has no tempo); a stepped MODE macro; the in-front-of-the-amp rendering (Stage 3); presets for any engine.
 
 ## Effort, from footprints
 
@@ -85,3 +85,14 @@ About PHASE's size (an LFO, a shared modulator, per-channel state) plus an envel
 ## Verification
 
 `./gradlew :shell:cleanTest :cli:cleanTest`, then `./gradlew :synth:test :shell:test :cli:test` (the `:shell` source laws run only when forced), and the owner's gate. A section that fails its gate ships without a chip.
+
+## Heard (the owner's gate, 2026-10-23)
+
+Played on the gate's listening page (the clips in `testkit/wah-audition/` and the COMP clips in `testkit/pedal-audition/`, both gitignored, rendered by the audition generators). The page had to be opened in Chrome: inside the Claude app's Android viewer the page decoded and started every clip and a plain test tone, but nothing reached the earbuds, so a page played there proves nothing.
+
+- **Does it sweep like a wah?** Yes, on the snare and the choir ("sounds good"). Measured on the same clips (short-time spectral centroid swing over the first 600 ms, 23 ms window, 5 ms hop): choir AUTO about 1.6 to 1.7 octaves against 0.61 dry, snare about 0.95 against 0.24; AUTO at 70 is about AUTO at 100, by the 1.5 reach stretch.
+- **SPEED and Q ends:** both fine ("good across the board"). CHUG with Q 0 in front of its amp measures 0.93 octaves, the same as the baked pad, so the gentle end may vanish through that amp; the owner did not flag it.
+- **Guitars, in front of the amp or after it:** either is fine, in front "a bit better". Measured: after the amp about 1.85 octaves on both guitars; in front, JANGLE about 2.2 and CHUG about 1.2. The library keeps WAH movable with PRE as its own side.
+- **A chip each for TOUCH and ROCK:** yes, both. They join the row as `touchwahed` and `rockwahed`, in front of the amp and movable like WAH; the row is five of its six places.
+- **Still open:** Stage 1b's second page (the short pads and the one-cycle floor on AUTO's rate) was not part of this listen.
+

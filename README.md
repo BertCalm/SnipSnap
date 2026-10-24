@@ -231,6 +231,16 @@ roadmap's free bonus is cashed: `SynthKits.chip()` renders VELVET squares
 and THUMP/TINES drums through one CRUNCH converter — the chip kit, maximum
 kitsch, zero new DSP.
 
+FILAMENT guides one pitched excitation through bent paths, dividing it into
+endpoint sound and a shared escaped halo. THREAD sheds bright glints, PULSE
+opens and relaxes related routes, and CURL lets its upper colour bloom.
+Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
+share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
+BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
+held pads contain sustain cycles. Model-3 THREAD also makes a three-root
+C3–C5 instrument that keeps its attack and sustains until note-off. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
+and [implementation notes](docs/FILAMENT.md) document the sound and its limits.
+
 FATHOM is the bass engine, and it exists for the three things VELVET
 structurally can't do: GLIDE, a pitch envelope travelling between notes and
 available on every voice because a slide is a gesture rather than a timbre;
@@ -301,13 +311,14 @@ eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
 The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
 sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
 explicit kit selections keep the starter at sixteen pads as the bank grows.
-Run `./gradlew :synth:generateRelayPerformanceAudition` for the 76-clip page:
+Run `./gradlew :synth:generateRelayPerformanceAudition` for the 100-clip page:
 the full bank, six musical performances, three velocities per voice and every
-starter pad, with raw/matched WAVs under `testkit/relay-performance-audition/`.
+starter pad, plus a separate PULSE response comparison, with raw/matched WAVs
+under `testkit/relay-performance-audition/`.
 The earlier `generateRelayAudition` engineering matrix remains available.
 [Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
-The expanded bank is a listening and playability candidate; hands-on device
-verification and the owner's listening verdict remain open.
+The owner approved the 36-preset bank's sound on 2026-10-21. Hands-on device
+verification remains open; the optional PULSE mapping has its own listening gate.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
@@ -337,7 +348,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 44 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 49 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -396,13 +407,27 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
+CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
+through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
+bounded static-geometry cache and exact linear modal response support editable
+finite notes. Native patches retain model, note and velocity through presets,
+pads and CLI edits. Eight presets and a dry sixteen-pad kit accompany
+the instrument; six positions are new listening candidates. HOLD is reserved.
+Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
+for the control study and dual-generation MPC starter. The archived listening
+studies remain unchanged. [Implementation notes](docs/CAUSTIC.md) distinguish
+finite duration classification from sustained-loop support.
+
 CREASE's ROUND, PINCH and RUBBER voices bend and recover through positive
 phase maps. The six approved model-3 presets are registered in the SYNTH picker,
 native patch/preset pipeline, CLI and a dry sixteen-pad FRESH TAPE starter.
 Saved patches retain model, MIDI root and playing velocity; finite notes file as
 TONAL and only the top HOLD step files as LOOP. The
 [private audition](https://snipsnap-crease-audition.bertcalm.chatgpt.site) provides
-listening references, native patch downloads and reproducible source.
+listening references, native patch downloads and reproducible source. Model-3
+MAKE INSTRUMENT and CLI `--instrument` turn the same patch into minor-third
+keyboard zones with a continuous onset and measured sustain loop. The sampler
+owns the key-release fade; Paper Keys and Ink Ribbon are the first listening pair.
 [Implementation notes](docs/CREASE.md) cover controls and model compatibility.
 
 OVERLAP is a finite six-delay resonator: a strike rings
@@ -553,12 +578,14 @@ awaits listening review;
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
 different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
-exports settled periodic loops. Thirty-six factory presets, a dry sixteen-pad kit,
-patch recipes, CLI and the phone picker share the Kotlin renderer. Run
+exports settled periodic loops for static recipes. Forty factory presets include
+four finite body openings. A dry sixteen-pad kit, patch recipes, CLI and the
+phone picker share the Kotlin renderer. Run
 `./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
 interaction grids, velocity and loop probes. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-includes the complete factory bank and the original/revised GLASS comparisons.
+preserves the earlier factory bank, body-opening studies and original/revised
+GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
@@ -877,9 +904,9 @@ moment in the app), and `Shuffle` is slot-machine kit design: dice-rolled
 kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
-ONSET, SCANNED CHAIN, VOX, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
+ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
-55 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+60 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1074,12 +1101,17 @@ KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
-RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS,
-COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
-SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK,
-VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-TREMOR and AEROSTAT have preset rosters, so `snipsnap synth` renders them.
+RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO,
+ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR,
+STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY,
+OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, plus GRAINS, SNAP and DRAW, which sit beside the
+picker. `:synth` also holds engines that picker does not show. BORE and
+ARCO have preset rosters, so `snipsnap synth` renders them.
+AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
+and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and
+refined factory recipes. BALLAST keeps its bass and saved GLINT identity; its
+glass voice displays as TILES, with GLINT and PRISM names accepted when
+loading old recipes.
 MERCURY's picker entry carries PING, SING and BLADE, the three voices kept at
 R1's gate (2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI
 until round 7's listen. A law in `shell`'s `ConventionTest` reads these two
