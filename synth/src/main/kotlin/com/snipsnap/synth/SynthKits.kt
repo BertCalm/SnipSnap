@@ -40,14 +40,19 @@ object SynthKits {
         return melody + (sourceChoices + alternatives + held).map { arranged(it) }
     }
 
-    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    /** Sixteen dry, finite encounters; long samples play once despite LOOP classification. */
     fun tidal(): List<ArrangedPad?> {
+        fun arranged(patch: TidalPatch) = pad(patch, Tidal.drumClassFor(patch.voice, patch.macros)).copy(
+            oneShot = true,
+            displayName = patch.name,
+            source = mapOf("engine" to patch.engine, "voice" to patch.voiceName,
+                "preset" to patch.name, "authoredMidi" to patch.midi.toString()),
+        )
         val notes = intArrayOf(48, 51, 53, 55, 58)
         return TidalVoice.entries.flatMap { voice ->
             notes.map { midi ->
-                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
-                pad(patch, Tidal.drumClassFor(voice, patch.macros))
-            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+                arranged(TidalPatch("${voice.name} ${Scales.nameOf(midi)}", voice, Tidal.defaults(voice), midi = midi))
+            } + TidalPresets.forVoice(voice).map(::arranged)
         }
     }
 

@@ -12,6 +12,18 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {
+        for (voice in TidalVoice.entries) {
+            val patch = TidalPresets.forVoice(voice).first().copy(
+                midi = 57, velocity = .41f, seed = 9_007_199_254_740_993L,
+            )
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recalled.render().samples,
+                "$voice must retain the finite encounter through its complete recipe")
+        }
+    }
+
+    @Test
     fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
         val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
         val first = CreaseTouchKeys.render(patch, midi = 60)

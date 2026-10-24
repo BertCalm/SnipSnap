@@ -43,6 +43,7 @@ object Tidal {
     private const val TAIL_SECONDS = 1.8
     private const val TWO_PI = 2.0 * PI
     private const val TABLE_SIZE = 16_384
+    private const val AUDIO_CACHE_BYTES = 8L * 1024 * 1024
     private val sine = DoubleArray(TABLE_SIZE + 1) { sin(TWO_PI * it / TABLE_SIZE) }
     // Both source models use the same solver. Keys contain every preparation input;
     // note, velocity, source model and pickup do not affect restricted trajectories.
@@ -57,6 +58,25 @@ object Tidal {
         synchronized(preparationCache) { preparationCache[settings] = prepared }
         return prepared
     }
+
+    private data class RenderKey(val voice: TidalVoice, val model: Int, val midi: Int,
+        val velocity: Float, val seed: Long, val controls: List<Float>)
+    private val audioCache = TidalAudioCache<RenderKey>(AUDIO_CACHE_BYTES)
+
+    internal data class AudioCacheSnapshot(val entries: Int, val bytes: Long, val maxBytes: Long)
+    internal fun audioCacheSnapshot(): AudioCacheSnapshot = audioCache.snapshot()
+    internal fun clearAudioCache() = audioCache.clear()
+    internal fun clearCaches() {
+        audioCache.clear()
+        synchronized(preparationCache) { preparationCache.clear() }
+    }
+
+    /** Render-only timings; they never select the source or change sample arithmetic. */
+    internal data class RenderProfile(val preparationMillis: Double, val controlsMillis: Double,
+        val synthesisMillis: Double, val conditioningMillis: Double, val finishingMillis: Double,
+        val totalMillis: Double, val oversampledWorkBytes: Long)
+    internal data class ProfiledRender(val snip: Snip, val profile: RenderProfile)
+    private data class Rendered(val samples: FloatArray, val probe: Probe?, val profile: RenderProfile)
 
     fun supportsModel(model: Int): Boolean = model == 1 || model == 2
     fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: TidalVoice): Int = DEFAULT_MIDI
@@ -130,16 +150,117 @@ object Tidal {
         val extension: DoubleArray, val coreAllocation: Double, val tailAllocation: Double,
         val contactPhase: DoubleArray = DoubleArray(0))
 
+    /** Last control node that can supply this independent channel. */
+    private fun lastActiveNode(nodes: List<Node>, channel: Int, modesPerPopulation: Int): Int {
+        val core = channel < 2
+        val first = if (core) channel * 16 else (channel - 2) * modesPerPopulation
+        val last = first + if (core) 16 else modesPerPopulation
+        for (k in nodes.lastIndex downTo 0) {
+            val node = nodes[k]
+            if (core && node.rootAmplitude != 0.0) return k
+            val amplitudes = if (core) node.cohortAmplitude else node.modalAmplitude
+            for (i in first until last) if (amplitudes[i] != 0.0) return k
+        }
+        return -1
+    }
+
+    /**
+     * Keep each hot source loop small enough to optimize independently of preparation.
+     * Zero-amplitude carriers still advance phase while future excitation is possible.
+     * After the last supplied node those phases are unobserved, so the raw suffix is zero.
+     */
+    private fun synthesizeCoreChannel(nodes: List<Node>, raw: FloatArray, phases: DoubleArray,
+        channel: Int, sourceFrames: Int, rate: Int, hz: Double, rootPhase: Double,
+        textured: Boolean, cancelled: () -> Boolean) {
+        val first = channel * 16
+        val last = first + 16
+        for (sample in 0 until sourceFrames) {
+            if (sample % 8192 == 0) checkCancelled(cancelled)
+            val position = sample.toDouble() / rate * CONTROL_RATE
+            val k = position.toInt().coerceAtMost(nodes.lastIndex - 1)
+            val frac = (position - k).coerceIn(0.0, 1.0)
+            val inverse = 1 - frac
+            val a = nodes[k]; val b = nodes[k + 1]
+            val ampA = a.cohortAmplitude; val ampB = b.cohortAmplitude
+            val hzA = a.cohortHz; val hzB = b.cohortHz
+            val contactA = a.contactPhase; val contactB = b.contactPhase
+            var sum = 0.0
+            for (i in first until last) {
+                val amp = ampA[i] * inverse + ampB[i] * frac
+                val f = hzA[i] * inverse + hzB[i] * frac
+                if (amp != 0.0) {
+                    val contact = if (textured) contactA[i] * inverse + contactB[i] * frac else 0.0
+                    sum += amp * osc(phases[i] + contact)
+                }
+                phases[i] += f / rate
+            }
+            val rootAmp = a.rootAmplitude * inverse + b.rootAmplitude * frac
+            if (rootAmp != 0.0) {
+                val root = rootAmp * osc(rootPhase + hz * sample / rate)
+                sum += (if (channel == 0) .54 else .46) * root
+            }
+            raw[sample] = sum.toFloat()
+        }
+        raw.fill(0f, sourceFrames)
+    }
+
+    private fun synthesizeTailChannel(nodes: List<Node>, raw: FloatArray, phases: DoubleArray,
+        channel: Int, sourceFrames: Int, rate: Int, count: Int, modesPerPopulation: Int,
+        textured: Boolean, cancelled: () -> Boolean) {
+        val first = (channel - 2) * modesPerPopulation
+        val last = first + modesPerPopulation
+        for (sample in 0 until sourceFrames) {
+            if (sample % 8192 == 0) checkCancelled(cancelled)
+            val position = sample.toDouble() / rate * CONTROL_RATE
+            val k = position.toInt().coerceAtMost(nodes.lastIndex - 1)
+            val frac = (position - k).coerceIn(0.0, 1.0)
+            val inverse = 1 - frac
+            val a = nodes[k]; val b = nodes[k + 1]
+            val ampA = a.modalAmplitude; val ampB = b.modalAmplitude
+            val hzA = a.modalHz; val hzB = b.modalHz
+            val contactA = a.contactPhase; val contactB = b.contactPhase
+            var sum = 0.0
+            for (j in first until last) {
+                val amp = ampA[j] * inverse + ampB[j] * frac
+                val f = hzA[j] * inverse + hzB[j] * frac
+                val p = count + j
+                if (amp != 0.0) {
+                    val contact = if (textured) .60 * (contactA[j] * inverse + contactB[j] * frac) else 0.0
+                    sum += amp * osc(phases[p] + contact)
+                }
+                phases[p] += f / rate
+            }
+            raw[sample] = sum.toFloat()
+        }
+        raw.fill(0f, sourceFrames)
+    }
+
     internal fun probe(
         voice: TidalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION,
         options: Options = Options(), cancelled: () -> Boolean = { false },
-    ): Probe {
+    ): Probe = generate(voice, macros, midi, velocity, seed, model, options, cancelled, true).probe!!
+
+    private fun generate(
+        voice: TidalVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Long, model: Int,
+        options: Options, cancelled: () -> Boolean, diagnostics: Boolean,
+    ): Rendered {
+        val renderStart = System.nanoTime()
         require(supportsModel(model)) { "unsupported TIDAL model $model" }
         require(midi in MIN_MIDI..MAX_MIDI) { "TIDAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be finite and in 0..1" }
         require(options.oversample in listOf(1, 4, 8)) { "TIDAL oversample must be 1, 4 or 8" }
         val m = settled(voice, macros, model)
+        checkCancelled(cancelled)
+        if (!diagnostics && velocity == 0f) {
+            // A validated zero-effort recipe has no source or modal drive. Its
+            // exact accepted output is silence; no geometry or carrier is needed.
+            val samples = FloatArray(((TidalDynamics.AUDIO_DURATION + TAIL_SECONDS) * Dsp.RATE).toInt())
+            checkCancelled(cancelled)
+            val elapsed = (System.nanoTime() - renderStart) / 1e6
+            return Rendered(samples, null, RenderProfile(0.0, 0.0, 0.0, 0.0, elapsed, elapsed, 0L))
+        }
         val textured = model == 2
         val modesPerPopulation = if (textured) 16 else 8
         val modes = modesPerPopulation * 2
@@ -303,88 +424,113 @@ object Tidal {
                 coreAllocation, tailAllocation, if (textured) contactPhase.copyOf() else DoubleArray(0))
         }
 
+        val controlsEnd = System.nanoTime()
         val frames = (totalSeconds * Dsp.RATE).toInt()
         val rate = Dsp.RATE * options.oversample
-        val raw = Array(4) { FloatArray(frames * options.oversample) } // core A/B, tail A/B
+        // The four channels never feed one another. Reuse one oversampled work
+        // buffer, conditioning each channel before the next is synthesized. Per-
+        // carrier phase updates, sum order and Float conversion stay unchanged.
+        var workBuffer: FloatArray? = null
         val phases = Dsp.phases(count + modes + 2, Dsp.seedFor("TIDAL", model, seed.toString(), midi))
         val coherentPhases = phases.copyOfRange(0, 16)
-        // Initial same-harmonic cohorts fuse. Their phase integrates independently thereafter.
         if (!textured) for (i in 0 until count) phases[i] = coherentPhases[(i / 16) * 8 + harmonics[i] - 1]
         for (i in 0 until count) phases[i] *= .20
         val rootPhase = phases.last()
-        for (sample in raw[0].indices) {
-            if (sample % 8192 == 0) checkCancelled(cancelled)
-            val position = sample.toDouble() / rate * CONTROL_RATE
-            val k = position.toInt().coerceAtMost(nodes.lastIndex - 1)
-            val frac = (position - k).coerceIn(0.0, 1.0)
-            val a = nodes[k]; val b = nodes[k + 1]
-            var coreA = 0.0; var coreB = 0.0; var tailA = 0.0; var tailB = 0.0
-            for (i in 0 until count) {
-                val amp = a.cohortAmplitude[i] * (1 - frac) + b.cohortAmplitude[i] * frac
-                val f = a.cohortHz[i] * (1 - frac) + b.cohortHz[i] * frac
-                val contact = if (textured) a.contactPhase[i] * (1 - frac) + b.contactPhase[i] * frac else 0.0
-                val x = amp * osc(phases[i] + contact)
-                phases[i] += f / rate
-                if (i < 16) coreA += x else coreB += x
-            }
-            val root = (a.rootAmplitude * (1 - frac) + b.rootAmplitude * frac) * osc(rootPhase + hz * sample / rate)
-            coreA += .54 * root; coreB += .46 * root
-            for (j in 0 until modes) {
-                val amp = a.modalAmplitude[j] * (1 - frac) + b.modalAmplitude[j] * frac
-                val f = a.modalHz[j] * (1 - frac) + b.modalHz[j] * frac
-                val p = count + j
-                // Contact belongs to the displaced material too. Once supply ends the
-                // stored contact phase freezes, leaving an unforced decaying carrier.
-                val contact = if (textured) .60 * (a.contactPhase[j] * (1 - frac) + b.contactPhase[j] * frac) else 0.0
-                val x = amp * osc(phases[p] + contact)
-                phases[p] += f / rate
-                if (j < modesPerPopulation) tailA += x else tailB += x
-            }
-            raw[0][sample] = coreA.toFloat(); raw[1][sample] = coreB.toFloat()
-            raw[2][sample] = tailA.toFloat(); raw[3][sample] = tailB.toFloat()
-        }
-        val down = raw.map { buffer ->
-            checkCancelled(cancelled)
-            Tide.bandLimit(buffer, rate)
-            checkCancelled(cancelled)
-            val output = when (options.oversample) {
-                1 -> buffer
-                4 -> Dsp.decimate(buffer, Dsp.RATE)
-                else -> {
-                    // Dsp.decimate assumes exactly 4x. Preserve the actual 8x source rate.
-                    val four = Resampler.resample(Snip(buffer, 1, rate), Dsp.RATE * 4)
-                    Dsp.decimate(four.samples, Dsp.RATE)
+        var sourceNanos = 0L
+        var conditioningNanos = 0L
+        val down = Array(4) { channel ->
+            val sourceStart = System.nanoTime()
+            val lastActive = lastActiveNode(nodes, channel, modesPerPopulation)
+            if (lastActive < 0) {
+                // Conditioning silence from zero state remains exact positive zero.
+                sourceNanos += System.nanoTime() - sourceStart
+                FloatArray(frames)
+            } else {
+                val raw = workBuffer ?: FloatArray(frames * options.oversample).also { workBuffer = it }
+                // One extra sample protects the original floating control-index boundary.
+                val sourceFrames = (ceil((lastActive + 1).toDouble() * rate / CONTROL_RATE).toInt() + 1).coerceAtMost(raw.size)
+                if (channel < 2) synthesizeCoreChannel(nodes, raw, phases, channel, sourceFrames, rate, hz, rootPhase, textured, cancelled)
+                else synthesizeTailChannel(nodes, raw, phases, channel, sourceFrames, rate, count, modesPerPopulation, textured, cancelled)
+                sourceNanos += System.nanoTime() - sourceStart
+                val conditionStart = System.nanoTime()
+                checkCancelled(cancelled)
+                Tide.bandLimit(raw, rate)
+                checkCancelled(cancelled)
+                val output = when (options.oversample) {
+                    1 -> raw.copyOf() // The next channel overwrites the shared work buffer.
+                    4 -> Dsp.decimate(raw, Dsp.RATE)
+                    else -> {
+                        val four = Resampler.resample(Snip(raw, 1, rate), Dsp.RATE * 4)
+                        Dsp.decimate(four.samples, Dsp.RATE)
+                    }
                 }
+                // Its coefficient is fixed throughout a render. FixedOnePole has
+                // exactly the original OnePole state arithmetic without per-sample exp.
+                val dc = Dsp.FixedOnePole(8f, Dsp.RATE)
+                for (i in output.indices) output[i] -= dc.lp(output[i])
+                Dsp.fadeTail(output)
+                conditioningNanos += System.nanoTime() - conditionStart
+                output
             }
-            val dc = Dsp.OnePole(Dsp.RATE)
-            for (i in output.indices) output[i] -= dc.lp(output[i], 8f)
-            // A short final guard follows a genuine 1.8-second passive decay.
-            Dsp.fadeTail(output)
-            output
         }
-        val core = FloatArray(frames) { down[0][it] + down[1][it] }
-        val tail = FloatArray(frames) { down[2][it] + down[3][it] }
-        val popA = FloatArray(frames) { down[0][it] + down[2][it] }
-        val popB = FloatArray(frames) { down[1][it] + down[3][it] }
-        val mix = FloatArray(frames) { core[it] + tail[it] }
+        val finishStart = System.nanoTime()
+        val core = if (diagnostics) FloatArray(frames) { down[0][it] + down[1][it] } else null
+        val tail = if (diagnostics) FloatArray(frames) { down[2][it] + down[3][it] } else null
+        val popA = if (diagnostics) FloatArray(frames) { down[0][it] + down[2][it] } else null
+        val popB = if (diagnostics) FloatArray(frames) { down[1][it] + down[3][it] } else null
+        // Retain the two original intermediate Float additions before the mix.
+        val mix = if (diagnostics) FloatArray(frames) { core!![it] + tail!![it] }
+            else FloatArray(frames) { (down[0][it] + down[1][it]) + (down[2][it] + down[3][it]) }
         check(mix.all { it.isFinite() }) { "TIDAL non-finite audio" }
         val peak = mix.maxOf { abs(it.toDouble()) }
         check(peak < .96) { "TIDAL raw coherent-sum budget exceeded: $peak" }
-        val out = mix.copyOf()
+        val out = if (diagnostics) mix.copyOf() else mix
         checkCancelled(cancelled)
         if (options.normalize && v > 0) Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity.pow(.65f))
-        val trace = nodes.indices.filter { it % 8 == 0 || it == nodes.lastIndex }.map { k ->
+        val trace = if (diagnostics) nodes.indices.filter { it % 8 == 0 || it == nodes.lastIndex }.map { k ->
             TraceFrame(k * dt, nodes[k].extension.toList(), nodes[k].coreAllocation,
                 nodes[k].tailAllocation, nodes[k].modalAmplitude.toList())
-        }
-        val diagnostics = Diagnostics(peak, rms(mix), mix.sumOf { it.toDouble() } / mix.size,
-            rms(tail), rms(core), hz, frames.toDouble() / Dsp.RATE, maxCents, prepMillis,
-            (System.nanoTime() - synthStart) / 1e6, supplyEnd, maxAllocation, maxModal, maxFrequency)
-        return Probe(out, mix, core, tail, popA, popB, prepared, trace, diagnostics)
+        } else emptyList()
+        val details = if (diagnostics) Diagnostics(peak, rms(mix), mix.sumOf { it.toDouble() } / mix.size,
+            rms(tail!!), rms(core!!), hz, frames.toDouble() / Dsp.RATE, maxCents, prepMillis,
+            (System.nanoTime() - synthStart) / 1e6, supplyEnd, maxAllocation, maxModal, maxFrequency) else null
+        val end = System.nanoTime()
+        val profile = RenderProfile(prepMillis, (controlsEnd - synthStart) / 1e6,
+            sourceNanos / 1e6, conditioningNanos / 1e6, (end - finishStart) / 1e6,
+            (end - renderStart) / 1e6, (workBuffer?.size?.toLong() ?: 0L) * Float.SIZE_BYTES)
+        return Rendered(out, if (diagnostics) Probe(out, mix, core!!, tail!!, popA!!, popB!!, prepared, trace, details!!) else null,
+            profile)
+    }
+
+    /** Fresh production rendering, without finished-audio lookup or diagnostic taps. */
+    internal fun renderUncached(voice: TidalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION,
+        cancelled: () -> Boolean = { false }): Snip =
+        renderProfiled(voice, macros, midi, velocity, seed, model, cancelled).snip
+
+    internal fun renderProfiled(voice: TidalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION,
+        cancelled: () -> Boolean = { false }): ProfiledRender {
+        val rendered = generate(voice, macros, midi, velocity, seed, model, Options(normalize = true), cancelled, false)
+        return ProfiledRender(Snip(rendered.samples, channels = 1, sampleRate = Dsp.RATE), rendered.profile)
     }
 
     fun render(voice: TidalVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION): Snip =
-        Snip(probe(voice, macros, midi, velocity, seed, model, Options(normalize = true)).samples,
-            channels = 1, sampleRate = Dsp.RATE)
+        velocity: Float = .75f, seed: Long = DEFAULT_SEED, model: Int = MODEL_VERSION,
+        cancelled: () -> Boolean = { false }): Snip {
+        require(supportsModel(model)) { "unsupported TIDAL model $model" }
+        require(midi in MIN_MIDI..MAX_MIDI) { "TIDAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
+        require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be finite and in 0..1" }
+        val settled = settled(voice, macros, model)
+        checkCancelled(cancelled)
+        val key = RenderKey(voice, model, midi, velocity, seed, macrosFor(voice, model).map { settled.getValue(it.name) })
+        audioCache.get(key)?.let { samples ->
+            checkCancelled(cancelled)
+            return Snip(samples, channels = 1, sampleRate = Dsp.RATE)
+        }
+        val snip = renderUncached(voice, settled, midi, velocity, seed, model, cancelled)
+        checkCancelled(cancelled)
+        audioCache.put(key, snip.samples) { checkCancelled(cancelled) }
+        return snip
+    }
 }

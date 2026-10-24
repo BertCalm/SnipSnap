@@ -6,16 +6,18 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
-**Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
+**Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
-cohorts, surviving cores, and extended ringing strands. The finite prototype has
-replayable recipes, a dry listening matrix with mechanism comparisons, and a
-prototype kit outside the factory roster and phone picker. HOLD remains zero;
-reconstruction, the other voices, and factory expansion follow listening review.
+cohorts, surviving cores, and extended ringing strands. The owner approved the
+second source pass. Six model-2 presets, the phone SYNTH editor and a dry
+sixteen-pad FRESH TAPE starter preserve complete note/velocity/seed/model recipes.
+Production rendering shares its source stages with diagnostic evidence and adds
+a bounded completed-audio cache. Pads play once despite long-sample LOOP filing.
+HOLD remains zero; reconstruction, the other voices, and factory expansion remain later work.
 See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
-contains 58 raw/matched cases and a ten-clip starter download. The owner's
-listening verdict remains pending.
+opens with eighteen model-2 comparisons and retains the original 58-case matrix.
+Full preset curation, physical phone performance and MPC listening remain open.
 
 **Chamber first-listen prototype (2026-10-18).** HYBRID and AQUARIUM place a
 simultaneously struck membrane, bar, cowbell and triangle in a rectangular room

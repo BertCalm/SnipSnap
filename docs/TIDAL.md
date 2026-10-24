@@ -1,4 +1,4 @@
-# TIDAL — finite listening prototype, second source pass
+# TIDAL — finite encounter instrument
 
 TIDAL turns a restricted two-center encounter into a pitched sound. Two original
 populations retain different harmonic fingerprints as their disks deform into
@@ -6,10 +6,12 @@ surviving cores and extended streams. The defining gesture is gather, encounter,
 and unravel; the late sound should contain evolving ringing strands.
 
 This milestone implements PAIR and STREAM, complete replayable recipes, dry
-listening comparisons, and a prototype kit. It is a musical adaptation of a
+listening comparisons, six factory presets, and a sixteen-pad starter. It is a musical adaptation of a
 softened restricted gravitational model, not a calibrated galaxy prediction.
-The remaining proposed voices, 36-preset bank, phone picker, and HOLD
-reconstruction remain later work. Listening acceptance is still open.
+The owner approved the model-2 source direction after the second audition.
+The remaining proposed voices, 36-preset bank, and HOLD reconstruction remain
+later work. The complete preset bank and physical phone/MPC playback still need
+their own listening pass.
 
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 opens with 18 focused comparisons for the second source pass. The original
@@ -54,8 +56,20 @@ New recipes use model 2; saved model-1 recipes keep their original defaults and
 rendering. Published model-1 baseline sample hashes are checked during generation.
 Derived particles, descriptor curves, oscillator phases, and resonator states
 are rebuilt. Macro and name edits retain the saved note, velocity, seed, and
-model. Provisional recipes remain outside the shared factory roster and phone
+model. The six finite model-2 recipes are in the shared factory roster and phone
 picker. Native playback continues to use rendered samples.
+
+In SYNTH, select TIDAL and PAIR or STREAM. The five timbral sliders are joined
+by ROOT, VELOCITY, SOURCE (ORIGINAL or MATERIAL), and VARIATION SEED. SOURCE
+selects the saved rendering model; changing it keeps the current encounter
+controls. An invalid or overflowing seed keeps the previous valid variation.
+Drafts, saved presets, SCRAMBLE, SEND TO PAD, and reopening a pad retain the
+complete typed recipe. SPREAD uses the authored MIDI root rather than asking a
+pitch detector to infer it from upper-rich material.
+
+TIDAL on FRESH TAPE supplies sixteen dry, editable encounters. Every delivered
+pad plays once. Their long buffers are filed as LOOP by the generic duration
+classifier, but that does not enable sample looping or a held instrument.
 
 ## Model and sound
 
@@ -92,11 +106,33 @@ with standard 4× internal rendering, band limiting, decimation, DC control, and
 shared melodic leveling. Preparation is independent of the requested pitch and
 can be reused within a bounded process-local cache.
 
-PAIR and STREAM share the encounter model. Their defaults and source spectra
-differ; STREAM eases root support slightly and exposes a brighter population
-profile. These are two starting characters for one instrument, not distinct
-gravitational laws. The cache retains at most eight prepared settings and does
-not retain rendered audio.
+PAIR and STREAM share the encounter model. In model 2 they use the same two
+material profiles, with different encounter defaults and slightly less root
+support in STREAM. They are two starting gestures for one instrument. Model 1
+retains its original voice-specific harmonic profiles.
+
+## Rendering and edit cost
+
+The geometry cache retains at most eight prepared settings. Its key contains
+every dynamics input; note, velocity, source model, and TAIL do not change the
+trajectory. A separate completed-audio cache retains at most 8 MiB of sample
+data, keyed by voice, rendering model, note, velocity, exact seed, and all
+resolved controls. Names and macro insertion order do not create different
+sounds. Returned samples are caller-owned copies, so later pad processing
+cannot damage a cached performance.
+
+Production output and diagnostic taps share the same synthesis stages. The
+source channels are independent and use one reusable oversampled work buffer;
+their Float summation and separate conditioning order remain pinned by frozen
+model-1 and model-2 references. Ordinary playback omits diagnostic traces and
+derived taps. The diagnostic path remains available to the audition generator.
+
+Completed cache hits avoid synthesis; changing an audible recipe input requires
+a fresh render. Preview jobs are debounced and cooperatively cancellable, so
+obsolete edits can stop instead of publishing an old result over the latest
+controls. Desktop measurements and phone acceptance are separate evidence.
+See [the rendering report](TIDAL_PERFORMANCE.md) for the benchmark method,
+before/after timings, memory definitions, and remaining limits.
 
 ## Listening evidence
 
@@ -127,6 +163,8 @@ From the repository root:
 ```sh
 ./gradlew --no-daemon test
 ./gradlew --no-daemon :synth:generateTidalAudition
+./gradlew --no-daemon :synth:benchmarkTidal -PtidalBenchmarkOutput=/tmp/tidal-performance.json
+./gradlew --no-daemon :synth:generateTidalKit -PtidalKitOutput=/tmp/tidal-kit
 ./gradlew --no-daemon :cli:run --args='synth TIDAL PAIR --all --midi 60 --velocity .75 --seed 0 --out /tmp/tidal-pair'
 ./gradlew --no-daemon :cli:run --args='synth TIDAL STREAM --all --midi 48 --velocity .75 --seed 0 --out /tmp/tidal-stream'
 ./gradlew --no-daemon :cli:run --args='synth TIDAL PAIR --patch /absolute/path/to/tidal.patch.json --out /tmp/tidal-replay'
@@ -136,4 +174,7 @@ The listening generator writes `testkit/tidal-audition/`. Its manifest records
 the source revision, source-file hashes, clip hashes, gain policy, and diagnostics.
 The retained frontend lives in `synth/src/test/resources/tidal-audition/`.
 Android compilation, target-phone latency/playback, and MPC hardware acceptance
-are separate checks; the JVM environment does not include an Android SDK.
+are separate checks. The kit generator requires a fresh destination directory
+and writes both MPC generations, the editable kit, complete per-pad recipes,
+verification files, and `tidal-kit.zip`. A successful export/read-back check is
+separate from loading and listening on MPC hardware.
