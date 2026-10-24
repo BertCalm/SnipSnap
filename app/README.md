@@ -208,9 +208,10 @@ RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
 seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds a 76-clip page covering the
-bank, musical performances, velocity response and starter pads. The expanded bank
-awaits listening review and hands-on device verification.
+pads. `:synth:generateRelayPerformanceAudition` builds a 100-clip page covering the
+bank, musical performances, velocity response, starter pads and a separate PULSE
+mapping comparison. The owner approved the 36-preset bank's sound on 2026-10-21;
+hands-on device verification and the candidate PULSE mapping's listen remain open.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds
