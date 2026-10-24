@@ -224,12 +224,15 @@ object Tremor {
     fun frequencyFor(voice: TremorVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
     /**
-     * What a pad is filed as, matched to the classifier on the built engine.
+     * Authored pad filing, normally aligned with generic file-import classification.
      *
      * A short HIDE files KICK through A#2 (the centroid sits under the kick stretch) and TOM from
      * C3 through F3. C4 leaves the bass band and files PERC. A dense fault on a low note lifts the
      * centroid out of that kick rule and files TOM. HOLD at [HOLD_LOOP] or above is past 1.5 s and
-     * files LOOP by the length rule. The kit and preset tests compare this to the classifier.
+     * files LOOP by the length rule. Factory roles can intentionally override the generic
+     * classifier: SETTLING BED stays TOM despite its audible bead texture, and CHARGED TAIL
+     * stays PERC after its feedback tone was removed. Kit and preset tests pin those roles
+     * explicitly and compare the other factory sounds with generic classification.
      */
     fun drumClassFor(voice: TremorVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
@@ -312,6 +315,11 @@ object Tremor {
         val strikeStart = IntArray(4)
         val width = pulseSamples(strike, rate)
         val impulse = 0.55 * (0.28 + 0.72 * vel) * (0.62 + 0.38 * strike)
+        // A light blow spreads over more hide and stays in contact longer. Its impulse already
+        // falls with velocity, but levelling removes that gain change from the exported sample.
+        // Contact shape leaves the softer articulation in the spectrum. Full touch keeps the
+        // established STRIKE shape exactly; it does not retune or damp the head itself.
+        val contactStrike = if (vel == 1.0) strike else strike * (0.35 + 0.65 * vel)
         for (s in 0 until 4) {
             if (weights[s] <= 1e-4) {
                 strikeStart[s] = Int.MAX_VALUE
@@ -321,11 +329,11 @@ object Tremor {
             val jitter = 0.92 + 0.08 * drummers.unit()
             val imp = impulse * weights[s] * jitter
             strikeStart[s] = delay
-            strikeForce[s] = pulse(width, imp, rate, strike, drummers)
-            strikeB[s] = participation(s, strike)
+            strikeForce[s] = broadenContact(pulse(width, imp, rate, strike, drummers), vel, hz, rate)
+            strikeB[s] = participation(s, contactStrike)
             strikeTraces.add(TremorStrike(s, delay, imp))
         }
-        val micro = if (hold) pulse(pulseSamples(strike, rate).coerceAtMost(loopInternal / 8), impulse * 0.22, rate, strike, drummers) else DoubleArray(0)
+        val micro = if (hold) broadenContact(pulse(pulseSamples(strike, rate).coerceAtMost(loopInternal / 8), impulse * 0.22, rate, strike, drummers), vel, hz, rate) else DoubleArray(0)
 
         val cageMix = CAGE_FLOOR + (1.0 - CAGE_FLOOR) * cage
         val loops = Array(STRINGS) { i ->
@@ -820,6 +828,37 @@ object Tremor {
             w[i] = impulse * (w[i] / sum) * rate * (1.0 + noise)
         }
         return w
+    }
+
+    /**
+     * A broader contact filters the short force pulse without adding a separate soft-hit layer.
+     * Stretch the existing pulse, then preserve its sum (momentum). Drawing the grit before
+     * stretching also keeps every later striker's delay and jitter independent of velocity.
+     * The 1.5 width range is a sound-design shape, not a measured hide/contact law.
+     */
+    private fun broadenContact(point: DoubleArray, velocity: Double, hz: Double, rate: Int): DoubleArray {
+        if (velocity == 1.0) return point
+        // Do not stretch a kernel across a complete note period: the resulting force-spectrum
+        // notch would remove the requested root and leave the lower body modes in charge.
+        // An already broad STRIKE setting keeps its existing duration at high pitches.
+        val widthRange = min(1.5, (0.90 * rate / hz / point.size - 1.0).coerceAtLeast(0.0))
+        val count = (point.size * (1.0 + widthRange * (1.0 - velocity))).roundToInt().coerceAtLeast(point.size)
+        if (count == point.size) return point
+        val broad = DoubleArray(count)
+        var originalSum = 0.0
+        for (v in point) originalSum += v
+        var broadSum = 0.0
+        for (i in broad.indices) {
+            val phase = i * (point.size - 1).toDouble() / (count - 1)
+            val at = phase.toInt().coerceAtMost(point.lastIndex)
+            val next = (at + 1).coerceAtMost(point.lastIndex)
+            val fraction = phase - at
+            broad[i] = point[at] + fraction * (point[next] - point[at])
+            broadSum += broad[i]
+        }
+        val gain = if (abs(broadSum) > 1e-20) originalSum / broadSum else 1.0
+        for (i in broad.indices) broad[i] *= gain
+        return broad
     }
 
     /**

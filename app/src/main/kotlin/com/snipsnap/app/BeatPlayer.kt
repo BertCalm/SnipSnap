@@ -372,7 +372,7 @@ class BeatPlayer(
         // never inside it: `hit`'s own KDoc is explicit that the lambda runs
         // while its monitor is held and must not call back into the engine.
         val swap = if (auditionPos != null) tap?.swapFor(slot, auditionPos, auditionBarSteps) else null
-        if (!host.engine.hit(pad, velocity, allocation.started.id, swap)) allocator.voiceEnded(allocation.started.id)
+        if (!host.engine.hit(pad, velocity, allocation.started.id, swap = swap)) allocator.voiceEnded(allocation.started.id)
     }
 
     private fun noteBar() {

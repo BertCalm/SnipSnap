@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import java.io.File
+import java.io.OutputStream
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
@@ -19,26 +20,34 @@ object AtomicFile {
 
     fun writeText(file: File, text: String) = writeBytes(file, text.toByteArray(Charsets.UTF_8))
 
-    fun writeBytes(file: File, bytes: ByteArray) {
+    fun writeBytes(file: File, bytes: ByteArray) = write(file) { it.write(bytes) }
+
+    /**
+     * Stream a complete file without retaining its encoded bytes in memory.
+     * [content] leaves the stream open; this helper flushes, syncs and closes it.
+     */
+    fun write(file: File, content: (OutputStream) -> Unit) {
         val dir = file.parentFile ?: File(".")
         dir.mkdirs()
         val tmp = File(dir, "${file.name}.tmp")
-        java.io.FileOutputStream(tmp).use { out ->
-            out.write(bytes)
-            out.flush()
-            // Force the bytes to the platter before the rename, so the rename
-            // can't win a race the data hasn't finished losing.
-            out.fd.sync()
-        }
         try {
-            Files.move(
-                tmp.toPath(), file.toPath(),
-                StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
-            )
-        } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
-            // Some filesystems can't do atomic moves; a plain replace is the
-            // best available and still far safer than an in-place truncate.
-            Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            java.io.FileOutputStream(tmp).use { out ->
+                content(out)
+                out.flush()
+                // Force the bytes to the platter before the rename, so the rename
+                // can't win a race the data hasn't finished losing.
+                out.fd.sync()
+            }
+            try {
+                Files.move(
+                    tmp.toPath(), file.toPath(),
+                    StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING,
+                )
+            } catch (e: java.nio.file.AtomicMoveNotSupportedException) {
+                // Some filesystems can't do atomic moves; a plain replace is the
+                // best available and still far safer than an in-place truncate.
+                Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.REPLACE_EXISTING)
+            }
         } finally {
             tmp.delete()
         }

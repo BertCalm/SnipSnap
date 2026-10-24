@@ -104,3 +104,22 @@ Acceptance: useful dry presets; MATERIAL-specific fused timbre; FUSE interaction
 ## 11. Deferred scope
 
 Defer SY77 data compatibility, factory PCM imports, unrestricted audio-rate modulation routing, live polyphony, stereo, and automatic chords. Confirm ranges, duration, velocity, HOLD format, APIs, and name. Alloy succeeds when attack and body become one playable hybrid gesture.
+
+## 12. As built: selected-voice release preparation
+
+The listening selection retains original BASS and SOFT, and adopts revised KEY,
+PLUCK, BRASS and STRING configurations. The current factory bank has six presets
+per voice. Complete saved configurations and the original missing-config model-1
+fallback keep their existing sound.
+
+The selected release generator uses one resolved configuration for each render,
+its manifest and its saved recipe. Selected-recipe control tests extend the legacy
+regressions rather than replacing them. The selected audition and MPC kit are
+generated separately from the frozen original and contrast packs. Diagnostic
+source ablations retain their extra attack-modulation flag outside the importable
+patch schema.
+
+Verified and measured results belong to the corresponding test reports and pack
+manifest. The owner has heard and approved the voice choice; final preset review,
+phone render profiling, physical MPC playback and release naming remain distinct
+acceptance work. This preparation adds no synthesis mechanism or model revision.

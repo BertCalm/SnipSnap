@@ -129,8 +129,13 @@ object PadHit {
      * frames, or null when the engine never loaded it — then the hit is
      * null too, and the caller plays nothing rather than guessing.
      */
-    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, framesOf: (String) -> Long?): Hit? {
+    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, framesOf: (String) -> Long?): Hit? =
+        resolve(pad, velocity, hitIndex, velocity, framesOf)
+
+    /** Separate sample/chain selection from level, for a strip that changes tone at steady gain. */
+    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, gainVelocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
+        require(gainVelocity in 0f..1f) { "gain velocity 0..1, got $gainVelocity" }
         require(hitIndex >= 0) { "hitIndex is a count, got $hitIndex" }
         val midi = midiVelocity(velocity)
         val file = if (pad.velocityLayers.isEmpty()) {
@@ -139,7 +144,7 @@ object PadHit {
             (pad.velocityLayers.firstOrNull { midi in it.velStart..it.velEnd } ?: pad.velocityLayers.last()).sampleFile
         }
         val frames = framesOf(file)?.takeIf { it > 0 } ?: return null
-        val (left, right) = gains(pad.level, pad.pan, velocity)
+        val (left, right) = gains(pad.level, pad.pan, gainVelocity)
         val ratio = pitchRatio(pad.tuneCoarse, pad.tuneFine)
         val chain = pad.chain
         val window = if (chain == null) {

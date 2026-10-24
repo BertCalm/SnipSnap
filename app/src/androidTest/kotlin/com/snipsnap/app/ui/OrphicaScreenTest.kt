@@ -214,6 +214,13 @@ class OrphicaScreenTest : ComposeScreenTest() {
         val first = KitStore.load(dir).pads.single { it.slot == 1 }
         assertEquals(firstPadTune, first.tuneCoarse)
         assertEquals(0, first.tuneFine)
+        // The WAV/kit write precedes the main-thread completion callback.
+        // Also verify that assignment closes its panel before tearing down.
+        waitFor("SPREAD to close after assigning the authored ORPHICA pads") {
+            compose.onAllNodesWithText("SPREAD — ONE SOUND, ONE SCALE", useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+        pump()
     }
 
     @Test
