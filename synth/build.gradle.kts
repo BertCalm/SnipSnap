@@ -1669,3 +1669,14 @@ tasks.register<JavaExec>("generateCausticAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
+
+/** One saved VENT orbit with an optional amplitude envelope for listening comparison. */
+tasks.register<JavaExec>("generateVentKnuckleAudition") {
+    group = "distribution"
+    description = "Render the original and optional decay Pulse Knuckle hits, identical rhythms, recipes and measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentKnuckleAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ventKnuckleOutput").orNull ?: "${rootDir}/testkit/vent-knuckle-audition")
+}
