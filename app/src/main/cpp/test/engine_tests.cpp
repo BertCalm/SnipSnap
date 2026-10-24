@@ -261,6 +261,25 @@ TEST(print_buffer_arm_throws_rather_than_silently_truncating_an_impossible_reser
 
 // ---- PadEngine -----------------------------------------------------------------
 
+TEST(pad_engine_counts_the_frames_it_has_rendered) {
+    PadEngine e(kRate);
+    CHECK_EQ(e.framesRendered(), int64_t{0});
+    callback(e, 128);
+    callback(e, 64);
+    CHECK_EQ(e.framesRendered(), int64_t{192});
+}
+
+TEST(pad_engine_frames_rendered_never_goes_backwards_across_stop_and_start) {
+    PadEngine e(kRate);
+    callback(e, 128);
+    e.stop();
+    const int64_t before = e.framesRendered();
+    // start() has no stream here (the Oboe stub refuses to open one); the count must survive it either way.
+    e.start();
+    callback(e, 32);
+    CHECK_EQ(e.framesRendered(), before + 32);
+}
+
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
     PadEngine& e = seeded();
     CHECK(e.pushCommand(noteOn(7, 0, 100, 104, 0.5f, 0.25f)));

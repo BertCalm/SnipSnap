@@ -18,6 +18,15 @@ to write each answer on. [`../DEVICE_TEST_GUIDE.md`](../DEVICE_TEST_GUIDE.md)
 is a shorter first session. [`../app/README.md`](../app/README.md) is the
 per-feature detail and the build steps.
 
+**MIDI and timing.** [`MIDI_SYNC.md`](MIDI_SYNC.md) is the design record for the
+clock; read its "How far to trust this document" section before relying on any
+line of it. [`MIDI_REVIEW_2026_10.md`](MIDI_REVIEW_2026_10.md) read the MIDI
+path at one commit and ordered the first steps; its status section says what has
+landed since. [`MIDI_BLE_SPEC_2026_10.md`](MIDI_BLE_SPEC_2026_10.md) specifies a
+Bluetooth keyboard that is not implemented. [`MIDI_GAPS_2026_10.md`](MIDI_GAPS_2026_10.md)
+is the current survey of the open work and holds the "As built" record of batch A,
+so trust it first for what the tree has now.
+
 **Formats.** [`MPC3_FORMAT.md`](MPC3_FORMAT.md) is the native container,
 and it keeps corpus facts separate from inferences. [`MPC_EXPORT.md`](MPC_EXPORT.md)
 is the folder layouts. [`XPM_STRUCTURE.md`](XPM_STRUCTURE.md) is the MPC 2
