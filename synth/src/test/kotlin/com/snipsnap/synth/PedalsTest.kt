@@ -62,9 +62,9 @@ class PedalsTest {
     }
 
     @Test
-    fun `day one - DRIVE and COMP draw chips, WAH and RIG wait for their gates`() {
-        assertEquals(listOf("DRIVE", "COMP"), Pedals.gated().map { it.word })
-        assertEquals(listOf("DRIVE", "COMP", "WAH", "RIG"), Pedals.entries.map { it.word })
+    fun `DRIVE, COMP and the wah's three moves draw chips, RIG and DELAY wait for their gates`() {
+        assertEquals(listOf("DRIVE", "COMP", "WAH", "TOUCH", "ROCK"), Pedals.gated().map { it.word })
+        assertEquals(listOf("DRIVE", "COMP", "WAH", "TOUCH", "ROCK", "RIG", "DELAY"), Pedals.entries.map { it.word })
         assertTrue(Pedals.byKey("rig").isBoard)
         assertEquals(listOf("squash", "valve", "echo"), Pedals.byKey("rig").sections, "RIG is a compressor into the amp into a slapback, in rack order")
     }

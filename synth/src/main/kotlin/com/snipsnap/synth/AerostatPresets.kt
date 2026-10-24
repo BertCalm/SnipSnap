@@ -19,12 +19,18 @@ object AerostatPresets {
 
     fun all(): List<AerostatPatch> = AerostatVoice.entries.flatMap { forVoice(it) }
 
-    // Root is C3. Comments name the note TUNE lands on.
+    // Root is C3. Names and factory notes are retained; the common-C3
+    // audition checks that these roles survive removing pitch differences.
+    // SOFT CATCH: gentle paddle/tube, below the airflow catch.
+    // TWIN PIPES: both banks catch, with a modest powered bloom.
+    // HEAVY ROTOR: preserve the high-inertia hit, darken its later air.
+    // DRIFTING STEAM: long powered air and pronounced vessel rise.
+    // HIGH ENVELOPE: fast, hard contact followed by a brief bright burst.
     private val floatPresets = listOf(
-        p(AerostatVoice.FLOAT, "SOFT CATCH", "TUNE" to 12 / 24f, "STRIKE" to 0.35f, "PRESSURE" to 0.40f, "INERTIA" to 0.28f, "RELEASE" to 0.42f, "LIFT" to 0.22f, "HOLD" to 0f), // C4
-        p(AerostatVoice.FLOAT, "TWIN PIPES", "TUNE" to 12 / 24f, "STRIKE" to 0.72f, "PRESSURE" to 0.68f, "INERTIA" to 0.40f, "RELEASE" to 0.58f, "LIFT" to 0.48f, "HOLD" to 0f), // C4
-        p(AerostatVoice.FLOAT, "HEAVY ROTOR", "TUNE" to 7 / 24f, "STRIKE" to 0.88f, "PRESSURE" to 0.50f, "INERTIA" to 0.92f, "RELEASE" to 0.32f, "LIFT" to 0.28f, "HOLD" to 0f), // G3
-        p(AerostatVoice.FLOAT, "DRIFTING STEAM", "TUNE" to 16 / 24f, "STRIKE" to 0.58f, "PRESSURE" to 0.78f, "INERTIA" to 0.52f, "RELEASE" to 0.84f, "LIFT" to 0.90f, "HOLD" to 0.22f), // E4
-        p(AerostatVoice.FLOAT, "HIGH ENVELOPE", "TUNE" to 19 / 24f, "STRIKE" to 0.80f, "PRESSURE" to 0.92f, "INERTIA" to 0.22f, "RELEASE" to 0.74f, "LIFT" to 0.60f, "HOLD" to 0.16f), // G4
+        p(AerostatVoice.FLOAT, "SOFT CATCH", "TUNE" to 12 / 24f, "STRIKE" to 0.10f, "PRESSURE" to 0.18f, "INERTIA" to 0.65f, "RELEASE" to 0.18f, "LIFT" to 0f, "HOLD" to 0f), // C4
+        p(AerostatVoice.FLOAT, "TWIN PIPES", "TUNE" to 12 / 24f, "STRIKE" to 0.70f, "PRESSURE" to 0.60f, "INERTIA" to 0.24f, "RELEASE" to 0.48f, "LIFT" to 0.30f, "HOLD" to 0.14f), // C4
+        p(AerostatVoice.FLOAT, "HEAVY ROTOR", "TUNE" to 7 / 24f, "STRIKE" to 0.88f, "PRESSURE" to 0.28f, "INERTIA" to 0.92f, "RELEASE" to 0.42f, "LIFT" to 0.08f, "HOLD" to 0f), // G3
+        p(AerostatVoice.FLOAT, "DRIFTING STEAM", "TUNE" to 16 / 24f, "STRIKE" to 0.66f, "PRESSURE" to 0.92f, "INERTIA" to 0.64f, "RELEASE" to 1f, "LIFT" to 1f, "HOLD" to 0.72f), // E4
+        p(AerostatVoice.FLOAT, "HIGH ENVELOPE", "TUNE" to 19 / 24f, "STRIKE" to 0.98f, "PRESSURE" to 0.82f, "INERTIA" to 0.02f, "RELEASE" to 0.10f, "LIFT" to 0.72f, "HOLD" to 0f), // G4
     )
 }

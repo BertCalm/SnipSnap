@@ -36,6 +36,87 @@ class DeterminismTest {
     }
 
     @Test
+    fun `RELAY saved phrases stay byte identical through finite and held cache reuse`() {
+        for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = RelayPresets.forVoice(voice).first().let { source ->
+                source.copy(macros = source.macros + mapOf(
+                    "TUNE" to .25f, "ORDER" to .4f, "PULSE" to .3f, "HOLD" to hold,
+                ), velocity = .55f)
+            }
+            val saved = RelayPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold")
+        }
+    }
+
+    @Test
+    fun `LATTICE native finite and held patches regenerate the saved note and excitation exactly`() {
+        val finite = LatticePresets.patchesForVoice(LatticeVoice.WARM)
+            .first { !Lattice.isLoop(it.macros.getValue("HOLD")) }
+        val held = LatticePresets.patchesForVoice(LatticeVoice.HOLLOW)
+            .first { Lattice.isLoop(it.macros.getValue("HOLD")) }
+        for (preset in listOf(finite, held)) {
+            val patch = preset.copy(midi = 55, velocity = .63f, model = 2)
+            val reopened = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, reopened.render().samples,
+                "${patch.voice} must retain native model, note, velocity and HOLD through its saved patch")
+        }
+    }
+
+    @Test
+    fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
+        for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
+            val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,
+                Origami.defaults(OrigamiVoice.STILL) + ("MOTION" to .65f),
+                midi = 60, velocity = .7f, seed = Long.MIN_VALUE + 20261023L, gesture = gesture)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
+        }
+    }
+
+    @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
+    }
+
+    @Test
+    fun `native Caustic saved finite notes are byte identical across renders`() {
+        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
+            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+            midi = 57, velocity = .63f, model = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `THUMP SPARK regenerates its metallic hit from the saved recipe exactly`() {
+        val patch = ThumpPatch("Spark canary", ThumpVoice.SPARK,
+            Thump.defaults(ThumpVoice.SPARK) + mapOf("METAL" to .8f, "COLOR" to .65f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        assertContentEquals(saved.render().samples, saved.render().samples)
+    }
+
+    @Test
+    fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
+        for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
+            val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
+            val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recipe.render().samples,
+                "$name must recover the same gestures and settled acoustic state from its saved recipe")
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
@@ -310,8 +391,8 @@ class DeterminismTest {
         }
     }
 
-    // FLOTILLA seeds geometry from the voice, the note and the hull knobs, and the
-    // aquatic noise from a second seed. A saved recipe has to come back bit for bit.
+    // FLOTILLA keeps vessel identities stable across its hull controls and uses
+    // a separate aquatic noise stream. Saved recipes still return bit for bit.
     @Test
     fun `FLOTILLA is byte-identical across renders, every voice`() {
         for (voice in FlotillaVoice.entries) {
@@ -329,6 +410,23 @@ class DeterminismTest {
             val a = TremorPatch("Canary", voice, Tremor.defaults(voice))
             val b = TremorPatch("Canary", voice, Tremor.defaults(voice))
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `AEROSTAT is byte-identical across renders in both lifecycles`() {
+        for (hold in listOf(0f, 1f)) {
+            val macros = Aerostat.defaults(AerostatVoice.FLOAT) + ("HOLD" to hold)
+            val patch = AerostatPatch("Canary", AerostatVoice.FLOAT, macros)
+            assertContentEquals(patch.render().samples, patch.render().samples, "HOLD $hold")
+        }
+    }
+
+    @Test
+    fun `BALLAST is byte-identical across renders, every voice`() {
+        for (voice in BallastVoice.entries) {
+            val patch = BallastPatch("Canary", voice, Ballast.defaults(voice))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
 }

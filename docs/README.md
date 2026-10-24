@@ -18,6 +18,15 @@ to write each answer on. [`../DEVICE_TEST_GUIDE.md`](../DEVICE_TEST_GUIDE.md)
 is a shorter first session. [`../app/README.md`](../app/README.md) is the
 per-feature detail and the build steps.
 
+**MIDI and timing.** [`MIDI_SYNC.md`](MIDI_SYNC.md) is the design record for the
+clock; read its "How far to trust this document" section before relying on any
+line of it. [`MIDI_REVIEW_2026_10.md`](MIDI_REVIEW_2026_10.md) read the MIDI
+path at one commit and ordered the first steps; its status section says what has
+landed since. [`MIDI_BLE_SPEC_2026_10.md`](MIDI_BLE_SPEC_2026_10.md) specifies a
+Bluetooth keyboard that is not implemented. [`MIDI_GAPS_2026_10.md`](MIDI_GAPS_2026_10.md)
+is the current survey of the open work and holds the "As built" record of batch A,
+so trust it first for what the tree has now.
+
 **Formats.** [`MPC3_FORMAT.md`](MPC3_FORMAT.md) is the native container,
 and it keeps corpus facts separate from inferences. [`MPC_EXPORT.md`](MPC_EXPORT.md)
 is the folder layouts. [`XPM_STRUCTURE.md`](XPM_STRUCTURE.md) is the MPC 2
@@ -36,10 +45,16 @@ reflection prototype, portable recipes and dry position/mechanism audition.
 Its singing-body identity awaits listening; moving geometry, HOLD and phone
 integration remain later work.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BUBBLE listening prototype,
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE/FLICKER listening prototype,
 recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
 the remaining voices and full preset library await listening.
+
+**Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
+approved strand-routing instrument, factory and phone integration, saved
+recipes, branch allocation, dry listening comparisons and held-loop evidence.
+The supplied engineering specification is preserved as a proposal; its larger
+voice roster and attack-plus-loop keygroup adapter remain later work.
 
 **Brass GROW.** [`engineering/brass-grow-prototype.md`](engineering/brass-grow-prototype.md)
 records the experimental single-source EMBOUCHURE BRASS mode, its saved-model
@@ -63,7 +78,9 @@ The owner confirmed revised FLOW is audible; saved model-1 recipes remain
 replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
 neighbor interaction with fixed detuning and independent motion. HOLD always
-sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
+sets a finite duration. [The held RIBBON instrument](FLOCK_RIBBON_INSTRUMENT.md)
+adds explicit saved playback and release through the existing phone/MPC instrument
+path. Phone/MPC hardware checks remain open.
 The separate RIBBON sustain study compares long continuous renders with captured
 roughly six-second loops at three FLOW settings, without changing the finite presets.
 
@@ -86,12 +103,10 @@ remains the unchanged proposal; sustained HOLD and the wider library are later w
 finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.
 
-**Aquarium.** The accepted [six-effect audition](https://snipsnap-aquarium-pedals-audition.bertcalm.chatgpt.site)
-is preserved by the shared native processor and standalone settings contract.
-The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md)
-and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
-separate that foundation from the planned pad rendering, performance routing
-and controls. The foundation does not yet process app playback.
+**Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
+the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved sources,
+replay and export contracts. Continuous performance routing remains a later stage of
+the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
 records the whole-app review of 2026-10-17: the six guards that landed with

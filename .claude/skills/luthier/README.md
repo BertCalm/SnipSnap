@@ -22,8 +22,7 @@ just describe the job; the description is written so it triggers on the vocabula
 The repository includes `.agents/skills/luthier`, a relative symlink to the complete
 `.claude/skills/luthier` folder. Codex discovers the skill there; Claude Code uses the
 canonical folder. There is one copy of the references and scripts to maintain.
-If discovery is unavailable, read `.claude/skills/luthier/SKILL.md` directly and
-resolve its resources from that folder.
+The repository's `AGENTS.md` also provides an explicit entry point and fallback path.
 
 Both [Codex](https://learn.chatgpt.com/docs/build-skills#where-codex-loads-local-skills)
 and [Claude Code](https://code.claude.com/docs/en/skills#choose-where-skills-load)
@@ -45,8 +44,9 @@ resolves to the canonical bundle. It works from any working directory when given
 the script's absolute path. A standalone copy of the folder can run the same
 checker without a repository discovery link.
 
-Run this check after changing the bundle or its discovery link. It does not
-execute DSP examples or install NumPy/SciPy.
+The `luthier-resources` GitHub workflow runs this check when the bundle, its
+discovery link, or its access instructions change. It does not execute DSP
+examples or install NumPy/SciPy.
 
 ## Cloud copies and complete exports
 

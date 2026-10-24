@@ -6,7 +6,11 @@ events a correct parser emits. The rules mirror MidiWire's documented contract:
 
   - a message may be split across deliveries
   - running status carries across deliveries
-  - real-time bytes (F8..FF) land anywhere, are stepped over, and do not cancel running status
+  - real-time bytes (F8..FF) land anywhere and do not cancel running status or disturb the
+    message around them; F8, FA, FB, FC come out as ("Clock"|"Start"|"Continue"|"Stop", stamp)
+    at the position they arrive (inside a SysEx too), F9, FD, FE, FF are dropped
+  - the stamp is the delivery's own clock reading; only the real-time tuples carry it (it is
+    the last element), the note tuples are still unstamped
   - system common (F1..F7) cancels running status
   - SysEx is skipped byte by byte until F7 or the next non-real-time status byte
   - note-on with velocity 0 is a note-off
@@ -33,6 +37,7 @@ class Fixture:
     why: str
     deliveries: list[list[int]]
     expected: list[tuple] = field(default_factory=list)
+    stamps: list[int] | None = None   # one clock reading per delivery; 0 each when omitted
 
 
 # ---------------------------------------------------------------------------
@@ -51,10 +56,14 @@ class RefWire:
             return 1
         return 2
 
-    def feed(self, chunk: list[int]) -> list[tuple]:
+    REALTIME = {0xF8: "Clock", 0xFA: "Start", 0xFB: "Continue", 0xFC: "Stop"}
+
+    def feed(self, chunk: list[int], stamp: int = 0) -> list[tuple]:
         out: list[tuple] = []
         for b in chunk:
-            if b >= 0xF8:              # real-time: step over, keep everything else
+            if b >= 0xF8:              # real-time: report the four, touch nothing else
+                if b in self.REALTIME:
+                    out.append((self.REALTIME[b], stamp))
                 continue
             if self.in_sysex:
                 if b == 0xF7:
@@ -116,8 +125,19 @@ FIXTURES: list[Fixture] = [
             [[0x90, 60, 100], [64, 90]], [("NoteOn", 0, 60, 100), ("NoteOn", 0, 64, 90)]),
     Fixture("velocity_zero_is_off", "note-on at velocity 0 is a note-off",
             [[0x90, 60, 0]], [("NoteOff", 0, 60)]),
-    Fixture("clock_between_status_and_data", "F8 lands between status and data and is stepped over",
-            [[0x90, 0xF8, 60, 0xF8, 100]], [("NoteOn", 0, 60, 100)]),
+    Fixture("clock_inside_message_is_heard", "F8 between status and data and between data bytes is heard, the note still assembles",
+            [[0x90, 0xF8, 60, 0xF8, 100]], [("Clock", 0), ("Clock", 0), ("NoteOn", 0, 60, 100)]),
+    Fixture("clock_between_status_and_data", "a clock in its own delivery between a status byte and its data",
+            [[0x90], [0xF8], [60, 100]], [("Clock", 2), ("NoteOn", 0, 60, 100)], stamps=[1, 2, 3]),
+    Fixture("clock_flood", "1000 clocks inside running status: one event each, both notes survive",
+            [[0x91, 60, 100] + [0xF8] * 1000 + [62, 100]],
+            [("NoteOn", 1, 60, 100)] + [("Clock", 0)] * 1000 + [("NoteOn", 1, 62, 100)]),
+    Fixture("transport_bytes_in_order", "start, clock, continue, stop come out in order with the delivery's stamp",
+            [[0xFA, 0xF8, 0xFB, 0xFC]], [("Start", 7), ("Clock", 7), ("Continue", 7), ("Stop", 7)], stamps=[7]),
+    Fixture("dropped_realtime_bytes", "F9, FD, FE and FF produce nothing",
+            [[0xF9, 0xFD, 0xFE, 0xFF]], []),
+    Fixture("clock_inside_sysex", "a clock inside a SysEx is heard; the SysEx data stays skipped",
+            [[0xF0, 0x7E, 0xF8, 0x01, 0xF7]], [("Clock", 0)]),
     Fixture("active_sensing_in_running_status", "FE does not cancel running status",
             [[0x90, 60, 100, 0xFE, 64, 90]], [("NoteOn", 0, 60, 100), ("NoteOn", 0, 64, 90)]),
     Fixture("song_position_cancels_running_status", "F2 cancels running status; data after it is orphaned",
@@ -166,8 +186,8 @@ def validate() -> list[str]:
     for f in FIXTURES:
         wire = RefWire()
         got: list[tuple] = []
-        for chunk in f.deliveries:
-            got.extend(wire.feed(chunk))
+        for i, chunk in enumerate(f.deliveries):
+            got.extend(wire.feed(chunk, f.stamps[i] if f.stamps else 0))
         if got != f.expected:
             errors.append(f"{f.name}: expected {f.expected} got {got}")
     return errors
