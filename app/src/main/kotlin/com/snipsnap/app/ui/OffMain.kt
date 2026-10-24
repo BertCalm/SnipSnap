@@ -1,0 +1,34 @@
+package com.snipsnap.app.ui
+
+import android.os.Looper
+import kotlin.coroutines.CoroutineContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/**
+ * [block] off the main thread (on [context], IO unless told otherwise), and
+ * the caller back on the main thread before it carries on.
+ *
+ * In the app the second half costs nothing: a screen's coroutines run on
+ * Compose's main-thread dispatcher, so `withContext(Dispatchers.IO)` already
+ * returns there, the looper check finds the main thread, and nothing more
+ * happens. The on-device tests are different. `createComposeRule()` runs
+ * every `LaunchedEffect` and `rememberCoroutineScope` coroutine on an
+ * unconfined test dispatcher, so the code after a plain
+ * `withContext(Dispatchers.IO)` carries on on the IO worker that finished
+ * the block. Its state writes wake the recomposer on that worker, and the
+ * screen recomposes off the main thread while the main thread may be
+ * tearing it down: the `ArrayIndexOutOfBoundsException` in `SlotTable` on
+ * activity destroy that `AquariumPanelTest`'s held-preview cases hit about
+ * one round in thirty. Hopping back here keeps every state write after the
+ * block on the main thread, in tests as in the app.
+ */
+internal suspend fun <T> offMain(
+    context: CoroutineContext = Dispatchers.IO,
+    block: suspend CoroutineScope.() -> T,
+): T {
+    val result = withContext(context, block)
+    if (Looper.myLooper() == Looper.getMainLooper()) return result
+    return withContext(Dispatchers.Main.immediate) { result }
+}
