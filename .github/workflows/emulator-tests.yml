@@ -39,7 +39,7 @@ permissions:
 jobs:
   emulator-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -50,14 +50,16 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
-      # DIAGNOSTIC (not for merge): run :shell:test the way jvm-tests does,
+      # DIAGNOSTIC (not for merge): run jvm-tests' own command,
       # with suite-level failures printed, the GC log and any JVM crash file
       # kept, and the runner's memory sampled every 15 s.
       - name: Run the shell tests with diagnostics
         run: |
           mkdir -p diag
           (while true; do date -u +%T; free -m | sed -n 2p; ps -eo rss,args --sort=-rss | head -4 | cut -c1-160; sleep 15; done) > diag/memory.txt 2>&1 &
-          ./gradlew --no-daemon --init-script scripts/diagnose-shell-tests.gradle :shell:test
+          ./gradlew --no-daemon --init-script scripts/diagnose-shell-tests.gradle \
+            "-Dorg.gradle.jvmargs=-Xmx2g -Xlog:gc:file=$PWD/diag/gc-gradle-build.log:time,uptime -XX:ErrorFile=$PWD/diag/hs_err_gradle_%p.log" \
+            test -x :app:test
       - name: Kernel messages
         if: always()
         run: sudo dmesg | tail -60 > diag/dmesg.txt || true
@@ -68,8 +70,7 @@ jobs:
           name: shell-test-diagnostics
           path: |
             diag/**
-            shell/build/reports/tests/test/**
-            shell/build/test-results/test/**
-            shell/hs_err_*.log
+            */build/test-results/test/**
+            */hs_err_*.log
           if-no-files-found: ignore
           retention-days: 7
