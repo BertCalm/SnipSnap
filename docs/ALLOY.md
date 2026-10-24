@@ -131,6 +131,8 @@ The [selected audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/se
 combines the agreed original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING voices.
 It contains the current 36 factory presets, a matching sixteen-pad MPC kit,
 and voice, macro, interaction, source-ablation and held-loop studies.
+The default publication matrix has 310 clips and 395 listening WAVs; the starter
+and three-program factory bank add 52 MPC sample files.
 
 ```sh
 ./gradlew --no-daemon :synth:generateAlloySelectedAudition
@@ -162,7 +164,8 @@ that held change is intentional. Existing saved configurations keep their values
 
 One extreme is disclosed rather than disguised: PLUCK at MIDI 36 with all five
 timbral controls at zero has an accurately pitched but short, tom-like body. The
-generic waveform classifier calls it TOM; engine metadata remains TONAL. The
+generic waveform classifier calls both its raw and decoded matched export TOM;
+engine metadata remains TONAL. The
 `pluck_all_low_c2` diagnostic makes that corner available for listening. The
 pitched-classifier guards still cover every factory preset and ordinary wood,
 tine and breath cases; all extreme cases retain pitch and numerical bounds.

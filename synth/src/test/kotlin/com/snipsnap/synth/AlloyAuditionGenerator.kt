@@ -440,6 +440,7 @@ object AlloyAuditionGenerator {
             "String Soft" to listOf(AlloyVoice.STRING, AlloyVoice.SOFT),
         )
         try {
+            val heldProgramSummaries = mutableListOf<String>()
             val programs = groups.map { (title, voices) ->
                 val patches = voices.flatMap(AlloyPresets::forVoice)
                 require(patches.size == 12)
@@ -458,18 +459,27 @@ object AlloyAuditionGenerator {
                 require(exported.pads.map { it.recipe } == kit.pads.map { it.recipe }) {
                     "$title changed complete recipes during export"
                 }
+                val exportedPads = exported.pads.zip(patches)
+                val heldLabels = exportedPads.filter { (_, patch) ->
+                    Alloy.isLoop(patch.macros.getValue("HOLD"))
+                }.joinToString("; ") { (pad, patch) ->
+                    "A${pad.slot.toString().padStart(2, '0')} ${patch.name}"
+                }
+                heldProgramSummaries += "$title: ${heldLabels.ifEmpty { "no held pads" }}"
+                val heldInstructions = if (heldLabels.isEmpty()) "This program has no held pads."
+                    else "For indefinite HOLD, enable whole-sample looping on: $heldLabels."
                 File(result.directory, "README.txt").writeText(
                     "ALLOY selected factory bank — $title\n" +
                         "A01–A06: ${voices[0]}; A07–A12: ${voices[1]}. All patches are dry at their saved root and velocity.\n" +
                         "Load the XPM with its PCM24 WAVs and native kit.json beside it.\n" +
-                        "These drum programs play each file once. For indefinite HOLD, enable whole-sample looping only on the held patches listed in bank.json.\n" +
+                        "These drum programs play each file once. $heldInstructions\n" +
                         "Held material omits its opening full attack. Full-bank listening and hardware MPC acceptance remain open.\n",
                 )
                 linkedMapOf<String, Any?>(
                     "name" to kit.name, "voices" to voices.map { it.name }, "presetCount" to 12,
                     "programFile" to result.program.relativeTo(destination).invariantSeparatorsPath,
                     "kitFile" to sidecar.relativeTo(destination).invariantSeparatorsPath,
-                    "pads" to exported.pads.zip(patches).map { (pad, patch) ->
+                    "pads" to exportedPads.map { (pad, patch) ->
                         val sample = File(result.directory, pad.sampleFile)
                         val digest = sha256(sample.readBytes())
                         require(pad.source["rawSha256"] == digest) { "$title lost the exported WAV fingerprint" }
@@ -490,6 +500,8 @@ object AlloyAuditionGenerator {
                 "ALLOY selected factory bank\n" +
                     "All 36 factory patches in three twelve-pad programs: Bass Key, Pluck Brass, String Soft.\n" +
                     "Original BASS/SOFT; revised KEY/PLUCK/BRASS/STRING. Every program carries its XPM, PCM24 WAVs and exporter-owned native kit.json with actual sample fingerprints.\n" +
+                    "For indefinite HOLD, enable whole-sample looping on these pads:\n" +
+                    heldProgramSummaries.joinToString("\n", postfix = "\n") +
                     "See bank.json for complete per-pad patches, program paths and held-pad flags.\n" +
                     "The voice choice was heard; full-bank listening, final naming and hardware MPC acceptance remain open.\n",
             )
