@@ -102,8 +102,10 @@ internal object NacreGentleComparison {
         )
     }
 
-    private fun probe(patch: NacrePatch): Nacre.Probe = Nacre.inspect(
-        patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed,
+    // NacreModels dispatches on the saved model: Nacre.inspect is the current
+    // (model 2) renderer, and this audition is about model 1.
+    private fun probe(patch: NacrePatch): Nacre.Probe = NacreModels.inspect(
+        patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model,
     )
 
     private fun energy(samples: FloatArray): Double = samples.sumOf { it.toDouble() * it }
