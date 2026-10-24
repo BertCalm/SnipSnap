@@ -15,6 +15,7 @@ import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.EmbouchurePatch
 import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.FathomVoice
+import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlotillaVoice
 import com.snipsnap.synth.FlockVoice
@@ -330,6 +331,11 @@ class UserPresetsTest {
             } else if (preset is OrigamiPatch) {
                 val promoted = origamiFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, seed, velocity and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is FilamentPatch) {
+                val promoted = filamentFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete note, velocity, geometry and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is TrioPatch) {
@@ -819,6 +825,15 @@ class UserPresetsTest {
         return VentPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
     }
 
+    private fun filamentFromRosterLine(line: String): FilamentPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("FilamentPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty() && call.named.isEmpty())
+        return FilamentPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
     @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
@@ -845,6 +860,10 @@ class UserPresetsTest {
             } else if (engine == OpenSkyPatch.ENGINE) {
                 val decoder = OpenSkyPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(OpenSkyPatch::class.java, decoder.returnType, "OPENSKY promotion names its public complete-JSON constructor")
+            } else if (engine == FilamentPatch.ENGINE) {
+                val decoder = FilamentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(FilamentPatch::class.java, decoder.returnType,
+                    "FILAMENT promotion names its public complete-JSON constructor")
             } else if (engine == ScannedChainPatch.ENGINE) {
                 val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ScannedChainPatch::class.java, decoder.returnType,

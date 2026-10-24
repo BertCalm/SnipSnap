@@ -20,9 +20,9 @@ import kotlin.math.roundToInt
  * full scale, so a chord that sums past 0.9 is shaped differently on the
  * phone, and one past full scale flat-tops there. Before the sum, the
  * native voice also caps its read speed at 64x (PadEngine's `kMaxSpeed`),
- * which [InstrumentEngine] does not. Nothing in the shop
- * plays through [InstrumentEngine]: it is the JVM reference that
- * `InstrumentEngineTest` and the pad makers' tests render.
+ * which [InstrumentEngine] does not. [InstrumentEngine] is the JVM reference
+ * rendered by its tests and [BellowsPadMaker]'s finite MAKE INSTRUMENT preview.
+ * The phone's live keyboard still plays through its native voice.
  */
 object KeyHit {
 

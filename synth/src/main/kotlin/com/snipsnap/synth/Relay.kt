@@ -29,6 +29,30 @@ object Relay {
     private const val TABLE_SIZE = 4096
     private const val OUTPUT_GAIN = .42
 
+    private data class TableKey(val role: RelayRole, val color: Double, val hz: Double, val seed: Int)
+
+    /** Shared immutable tables, bounded to about 4 MiB. A miss builds outside the monitor so
+     * independent previews do not hold up one another; only a complete table is published. */
+    internal class WaveTableCache<K>(private val capacity: Int) {
+        init { require(capacity > 0) }
+        private val entries = object : LinkedHashMap<K, FloatArray>(capacity + 1, .75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, FloatArray>?): Boolean =
+                size > capacity
+        }
+
+        val size: Int get() = synchronized(entries) { entries.size }
+
+        fun getOrBuild(key: K, build: () -> FloatArray): FloatArray {
+            synchronized(entries) { entries[key]?.let { return it } }
+            val built = build()
+            return synchronized(entries) {
+                entries[key] ?: built.also { entries[key] = it }
+            }
+        }
+    }
+
+    private val tableCache = WaveTableCache<TableKey>(256)
+
     private val starting = arrayOf(
         floatArrayOf(0f, .20f, .55f, .60f, .55f),
         floatArrayOf(0f, .42f, .50f, .45f, .40f),
@@ -73,7 +97,7 @@ object Relay {
             }
         }
 
-    /** Six dry identities are proposals for listening; preset expansion follows sonic approval. */
+    /** Stable seed scores; factory and saved patches may retain their own complete phrase. */
     fun phraseFor(voice: RelayVoice): RelayPhrase {
         val gains = when (voice) {
             RelayVoice.KEY -> floatArrayOf(1f, .90f, .72f, .60f)
@@ -217,6 +241,9 @@ object Relay {
         private val scale = seconds / phrase.phraseBeats
         private val width = 1.0 + 4.0 * blend.toDouble().pow(1.35)
         private val dwellOverlap = .18 + .90 * smooth(blend.toDouble())
+        private val dwells = DoubleArray(starts.size) { phrase.slots[it].beats * scale }
+        private val transitions = DoubleArray(starts.size) { transitionFor(it) }
+        private val contributions = DoubleArray(starts.size)
         private val position = order.toDouble() * (phrase.orderRoster.size - 1)
         private val lo = position.toInt().coerceAtMost(phrase.orderRoster.lastIndex)
         private val hi = (lo + 1).coerceAtMost(phrase.orderRoster.lastIndex)
@@ -225,22 +252,22 @@ object Relay {
         // overlapping copy, so both gains and source envelope histories close at the modulo
         // boundary. The serialized dwell/transition budgets bound this radius to 12 cycles.
         private val cycleRadius = if (periodic) ceil(phrase.slots.indices.maxOf {
-            (phrase.slots[it].beats * scale + transitionFor(it)) / seconds
+            (dwells[it] + transitions[it]) / seconds
         }).toInt() + 1 else 0
 
         init {
             var time = 0.0
             for (i in starts.indices) {
                 starts[i] = time
-                time += phrase.slots[i].beats * scale
+                time += dwells[i]
             }
         }
 
         private fun transitionFor(slot: Int): Double {
             val slots = phrase.slots
-            val dwell = slots[slot].beats * scale
-            val before = slots[(slot + slots.size - 1) % slots.size].beats * scale
-            val after = slots[(slot + 1) % slots.size].beats * scale
+            val dwell = dwells[slot]
+            val before = dwells[(slot + slots.size - 1) % slots.size]
+            val after = dwells[(slot + 1) % slots.size]
             // The serialized transition still sets the character, but normal clocks cannot
             // turn a new role on in a few milliseconds. BLEND widens both authored and
             // dwell-relative overlap; several distinct colors can remain in the same note.
@@ -254,8 +281,9 @@ object Relay {
             weights.fill(0.0); envelopes.fill(0.0)
             val t = if (periodic) ((timeSeconds % seconds) + seconds) % seconds
                 else timeSeconds.coerceIn(0.0, seconds - 1e-9)
-            addOrder(t, lo, 1.0 - morph, weights)
-            if (hi != lo && morph > 0.0) addOrder(t, hi, morph, weights)
+            val total = contributionsAt(t)
+            addOrder(lo, 1.0 - morph, total, weights)
+            if (hi != lo && morph > 0.0) addOrder(hi, morph, total, weights)
             // Source changes reveal continuously running contours; a slot is never a new
             // excitation. The finite gesture ages from note-on through its terminal release.
             // A held gesture opens and closes smoothly once per phrase, with zero slope at
@@ -268,6 +296,8 @@ object Relay {
                 val envelope = when (definition.role) {
                     RelayRole.PLUCK -> .30 + .70 * transient
                     RelayRole.BELL -> .38 + .62 * transient
+                    // ORGAN deliberately sustains after a fixed 35 ms opening. Its saved
+                    // decaySeconds is retained for recipe compatibility and is inactive.
                     RelayRole.ORGAN -> .86 + .14 * smooth(age / .035)
                     RelayRole.SOFT -> .16 + .84 * smooth(age / (.12 + .32 * definition.decaySeconds))
                 }
@@ -275,12 +305,12 @@ object Relay {
             }
         }
 
-        private fun addOrder(t: Double, roster: Int, mix: Double, weights: DoubleArray) {
-            val contributions = DoubleArray(starts.size)
+        private fun contributionsAt(t: Double): Double {
+            contributions.fill(0.0)
             for (slot in starts.indices) {
                 val start = starts[slot]
-                val dwell = phrase.slots[slot].beats * scale
-                val transition = transitionFor(slot)
+                val dwell = dwells[slot]
+                val transition = transitions[slot]
                 // Broad windows may overlap three or four roles. Unity-sum normalization below
                 // also handles correlated roots; equal-power weights would make those swell.
                 for (cycle in -cycleRadius..cycleRadius) {
@@ -291,7 +321,10 @@ object Relay {
                     contributions[slot] += contribution
                 }
             }
-            val total = contributions.sum().coerceAtLeast(1e-12)
+            return contributions.sum().coerceAtLeast(1e-12)
+        }
+
+        private fun addOrder(roster: Int, mix: Double, total: Double, weights: DoubleArray) {
             for (slot in starts.indices) {
                 val source = phrase.orderRoster[roster][slot]
                 val w = mix * contributions[slot] / total
@@ -327,7 +360,14 @@ object Relay {
      */
     private fun table(source: RelaySource, color: Double, hz: Double, seed: Int): FloatArray {
         val c = (color + .42 * (source.brightness - .5)).coerceIn(0.0, 1.0)
-        val amplitudes = when (source.role) {
+        stopIfUnwanted()
+        return tableCache.getOrBuild(TableKey(source.role, c, hz, seed)) {
+            buildTable(source.role, c, hz, seed).also { stopIfUnwanted() }
+        }
+    }
+
+    private fun buildTable(role: RelayRole, c: Double, hz: Double, seed: Int): FloatArray {
+        val amplitudes = when (role) {
             // Muted string: a picked, dense harmonic burst that can lose its upper register
             // without losing the root. The high and low banks have the same continuous phase.
             RelayRole.PLUCK -> DoubleArray(25) { harmonic ->
@@ -365,27 +405,31 @@ object Relay {
             // The densely populated string spectrum darkens toward the top of the keyboard.
             // Keep its pitched low overtones instead of letting dozens of high harmonics
             // dominate a short high note. Sparse drawbars and bell registers keep their shape.
-            if (source.role == RelayRole.PLUCK) {
+            if (role == RelayRole.PLUCK) {
                 amplitudes[harmonic] *= (1.0 - smooth((frequency - 2_000.0) / 5_000.0))
             }
         }
         val rms = sqrt(amplitudes.sumOf { it * it } / 2.0).coerceAtLeast(.001)
         val phases = Dsp.phases(amplitudes.size, seed)
+        // Phase offsets belong to the bank, so calculate them once rather than for
+        // every table sample. The partials still sum in the same order and precision.
+        val offsets = DoubleArray(amplitudes.size) { harmonic ->
+            if (harmonic == 1) 0.0 else when (role) {
+                RelayRole.PLUCK -> .35 * sin(phases[harmonic])
+                RelayRole.ORGAN -> .08 * sin(phases[harmonic])
+                RelayRole.BELL -> PI / 3.0 + .30 * sin(phases[harmonic])
+                RelayRole.SOFT -> 0.0
+            }
+        }
         val output = FloatArray(TABLE_SIZE + 1) { sample ->
             val angle = 2.0 * PI * (sample % TABLE_SIZE) / TABLE_SIZE
             var value = 0.0
             for (harmonic in 1 until amplitudes.size) {
                 // Shared root phase prevents silent cancellation in broad blends. Upper partial
                 // phases are seeded per generated source, stable across all macro settings.
-                val offset = if (harmonic == 1) 0.0 else when (source.role) {
-                    // A balanced string waveform has crests on both half-cycles, avoiding
-                    // a narrow, one-sided harmonic spike at the lowest supported notes.
-                    RelayRole.PLUCK -> .35 * sin(phases[harmonic])
-                    RelayRole.ORGAN -> .08 * sin(phases[harmonic])
-                    RelayRole.BELL -> PI / 3.0 + .30 * sin(phases[harmonic])
-                    RelayRole.SOFT -> 0.0
-                }
-                value += amplitudes[harmonic] * sin(harmonic * angle + offset)
+                // A balanced string has crests on both half-cycles; all roots retain
+                // zero phase so broad source blends cannot cancel the requested note.
+                value += amplitudes[harmonic] * sin(harmonic * angle + offsets[harmonic])
             }
             (.45 * value / rms).toFloat()
         }
@@ -396,17 +440,15 @@ object Relay {
         return output
     }
 
-    private fun sourceExcitation(role: RelayRole, envelope: Double): Double = when (role) {
+    @Suppress("NOTHING_TO_INLINE")
+    private inline fun sourceExcitation(role: RelayRole, envelope: Double): Double = when (role) {
         RelayRole.PLUCK -> ((envelope - .30) / .70).coerceIn(0.0, 1.0)
         RelayRole.BELL -> ((envelope - .38) / .62).coerceIn(0.0, 1.0)
         RelayRole.ORGAN -> .88
         RelayRole.SOFT -> ((envelope - .16) / .84).coerceIn(0.0, 1.0) * .55
     }
 
-    private fun read(table: FloatArray, phase: Double): Double {
-        val position = phase * TABLE_SIZE
-        val index = position.toInt()
-        val fraction = position - index
+    private fun read(table: FloatArray, index: Int, fraction: Double): Double {
         return table[index] + fraction * (table[index + 1] - table[index])
     }
 
@@ -469,8 +511,13 @@ object Relay {
         var filterA = 0.0
         var nextFilterA = 0.0
         var rawPeak = 0.0
+        val contour = DoubleArray(3)
+        val softness = (1.0 - pulse).pow(2.0)
+        val accentAttack = .008 + .008 * (1.0 - velocity) + .055 * softness
+        val accentDecay = .045 + .070 * length + .180 * softness
+        val previousAccent = if (p.held) exp(-p.phraseSeconds / accentDecay) else 0.0
 
-        fun contours(frame: Int, weights: DoubleArray, envelopes: DoubleArray): Triple<Double, Double, Double> {
+        fun contours(frame: Int, weights: DoubleArray, envelopes: DoubleArray) {
             val seconds = frame.toDouble() / INTERNAL_RATE
             val local = if (p.held) seconds % p.phraseSeconds else seconds
             // Once the finite note is released, the current source mixture rings out. Its
@@ -484,14 +531,10 @@ object Relay {
                 var elapsed = local - event.timeSeconds
                 if (p.held && elapsed < 0) elapsed += p.phraseSeconds
                 if (elapsed >= 0) {
-                    val softness = (1.0 - pulse).pow(2.0)
-                    val attack = .008 + .008 * (1.0 - velocity) + .055 * softness
-                    val decay = .045 + .070 * length + .180 * softness
-                    val energy = smooth(elapsed / attack) * exp(-elapsed / decay) + if (p.held) {
+                    val energy = smooth(elapsed / accentAttack) * exp(-elapsed / accentDecay) + if (p.held) {
                         // Include the decaying history of earlier cycles. A finite attack kernel
                         // reset by modulo alone would lose its quiet residue at the phrase seam.
-                        val previous = exp(-p.phraseSeconds / decay)
-                        exp(-elapsed / decay) * previous / (1.0 - previous)
+                        exp(-elapsed / accentDecay) * previousAccent / (1.0 - previousAccent)
                     } else 0.0
                     emphasis += energy * event.strength
                 }
@@ -529,11 +572,13 @@ object Relay {
             val frequency = (cutoff * (.65 + .70 * opening + .45 * pulseContrast * emphasis))
                 .coerceIn(2.4 * p.actualHz, 16_000.0)
             val coefficient = 1.0 - exp(-2.0 * PI * frequency / INTERNAL_RATE)
-            return Triple(OUTPUT_GAIN * excitation * rhythmic * envelope, emphasis, coefficient)
+            contour[0] = OUTPUT_GAIN * excitation * rhythmic * envelope
+            contour[1] = emphasis
+            contour[2] = coefficient
         }
 
-        val first = contours(0, currentWeights, currentEnvelopes)
-        global = first.first; accent = first.second; filterA = first.third
+        contours(0, currentWeights, currentEnvelopes)
+        global = contour[0]; accent = contour[1]; filterA = contour[2]
         for (frame in 0 until warm + frames) {
             if (frame % 8192 == 0) stopIfUnwanted()
             if (frame % CONTROL_BLOCK == 0) {
@@ -541,19 +586,22 @@ object Relay {
                     nextWeights.copyInto(currentWeights); nextEnvelopes.copyInto(currentEnvelopes)
                     global = nextGlobal; accent = nextAccent; filterA = nextFilterA
                 }
-                val next = contours(frame + CONTROL_BLOCK, nextWeights, nextEnvelopes)
-                nextGlobal = next.first; nextAccent = next.second; nextFilterA = next.third
+                contours(frame + CONTROL_BLOCK, nextWeights, nextEnvelopes)
+                nextGlobal = contour[0]; nextAccent = contour[1]; nextFilterA = contour[2]
             }
             val fraction = (frame % CONTROL_BLOCK).toDouble() / CONTROL_BLOCK
             val accentNow = accent + fraction * (nextAccent - accent)
+            val tablePosition = phase * TABLE_SIZE
+            val tableIndex = tablePosition.toInt()
+            val tableFraction = tablePosition - tableIndex
             var mix = 0.0
             for (source in recipe.sources.indices) {
                 val w = currentWeights[source] + fraction * (nextWeights[source] - currentWeights[source])
                 val e = currentEnvelopes[source] + fraction * (nextEnvelopes[source] - currentEnvelopes[source])
                 val excitation = if (w > 1e-8) sourceExcitation(recipe.sources[source].role, e / w) else 0.0
                 val brightness = (.05 + .95 * excitation + .65 * pulseContrast * accentNow).coerceIn(0.0, 1.0)
-                val low = read(lowTables[source], phase)
-                val high = read(highTables[source], phase)
+                val low = read(lowTables[source], tableIndex, tableFraction)
+                val high = read(highTables[source], tableIndex, tableFraction)
                 mix += recipe.sources[source].gain * e * (low + brightness * (high - low))
             }
             mix *= global + fraction * (nextGlobal - global)

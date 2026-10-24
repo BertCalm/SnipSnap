@@ -1,26 +1,32 @@
 # FLOTILLA — pitched emitters on a pool: as built
 
-**Status:** R1 built, not yet listened to. **Date:** 2026-10-04.
+**Status:** R1 heard; revised voice awaits the owner's acceptance. Updated 2026-10-23.
 **Name:** provisional. Naming availability was not checked.
+
+The owner reported a static-like layer across the first audition and weak control
+separation. The water/hull revision and the subsequent Luthier control fixes are
+listening candidates. The original R1 architecture and measurements are retained
+below as history; they do not describe the current seeded geometry or freeze
+current contact counts. See the dated current record at the end.
 
 Six voices (RIPPLE, KNOCK, HOLLOW, CROSSWAVE, DRIFT, GATHER) and seven
 macros (PULSE, CROSSING, FLOTILLA, VESSEL, SURFACE, SKIN, HOLD). Pitch is
 MIDI 36–84, default 60, stored on the patch beside velocity and
 `model: 1`. It is not an eighth knob.
 
-## Round 0
+## Round 0, historical integration
 
 The screen's macro list is `for (spec in macroSpecs)`. There is no cap of
 five or six. MERCURY already ships seven knobs, and TIDE does on some
 voices. SKIN stays a macro. FLOTILLA is a new value on the screen's private
 engine enum, after FORK, with the same slider column. The Android picker
-is compiled by `android-build`; this session has no SDK.
+was deferred to `android-build` at R1. The current phone picker is wired.
 
 Standard voices are not drum names. The classifier's length rule files a
 pad LOOP past 1.5 s, which is the honest class for a note that rings. The
 tests refuse KICK, SNARE, CLAP, HAT_CLOSED, HAT_OPEN and TOM.
 
-## What is actually simulated
+## R1 simulation and audio architecture
 
 Two clocks. The pool is eight damped spatial modes, four diametric pairs
 at 0°, 45°, 90° and 135°, stepped at 210 Hz so a step is 210 audio
@@ -37,10 +43,10 @@ it, KNOCK, DRIFT and HOLLOW at C4 stay inside 15 cents, and RIPPLE at
 C2, C4 and C6 stays inside 12.
 
 Vessel count is `6 + FLOTILLA * 12`, rounded up, six to eighteen, with the
-last hull only partly engaged. Placement is a golden-angle spiral relaxed
-for twenty iterations. Geometry is seeded from the voice, the note, VESSEL
-and FLOTILLA. HOLD and velocity are not in that seed, so moving them does
-not rearrange the pool.
+last hull only partly engaged. The R1 placement used a golden-angle spiral
+relaxed for twenty iterations. Its seed included the voice, note, VESSEL and
+FLOTILLA. HOLD and velocity did not rearrange it, but a tiny size or population
+change did; the dated current record describes the correction.
 
 PULSE tilts the source harmonics and steepens the onset. CROSSING fades
 route pairs in with a smoothstep; pair 0 is always on. SURFACE sets modal
@@ -78,7 +84,7 @@ next, is about 1e-9. Copying the tail into the preroll would make that
 metric tautological, so the comparison stays on two real successive
 periods.
 
-## Measured on the built engine
+## Measured on the R1 engine, historical
 
 RIPPLE at the defaults, MIDI 60, after the wall-contact refractory (18
 steps; without it the wall chattered and a default ripple reported 102
@@ -134,3 +140,60 @@ MIDI 60 (through MIDI 77, inside 36–84), then those eight named presets.
 JSON keeps `model`, `midi` and `velocity`. Missing or null reads as the
 default. An unknown field is ignored. A model other than 1 is refused
 before decode, the same way a bad patch version is.
+
+## Current as built, 23 October 2026
+
+The first listening revision darkens and bounds the water texture and gives the
+hull response an explicit share of the pitched source's level in both finite
+and held renders. This addresses the owner's reported static layer without
+making splash count an uncontrolled gain source. Its listening acceptance is
+still pending.
+
+The Luthier follow-up fixes what a nearby population or size adjustment means.
+The previous geometry seed included the exact FLOTILLA and VESSEL values, so a
+small movement could replace every vessel. Placement now builds a maximum layout
+of eighteen indexed hulls at their largest radii, from the voice and note alone.
+Each index retains its position, size variation and detune. Increasing FLOTILLA
+exposes a longer prefix of that layout; VESSEL changes radii, mass and cavity
+properties continuously, without moving those initial positions.
+
+The final hull enters with engagement from zero to one. The former 0.15 floor
+made each integer count boundary an immediate mechanical obstacle. Pair forces
+and overlap correction now follow the lower of the two hulls' engagements, while
+a wall contact's recorded impulse follows its hull's engagement. This fades the
+new participant's mechanical and dome contribution with its audible response.
+Collision thresholds remain nonlinear; stable object identity is not a promise
+that every contact event varies linearly with a knob.
+
+A 24 October check of two further tiny knob steps retained the same contact
+counts but moved late contacts by one to three 210 Hz ticks, about 4.8 to 14 ms.
+HOLLOW's population step and DRIFT's size step had 8.58% and 8.24% gain-aligned
+waveform differences, but 1.72% and 1.31% differences in their 50 ms RMS
+envelopes. These are measured discrete contact-timing limits, not renewed
+geometry randomization. The much smaller nearby-step result for RIPPLE does
+not establish the same waveform bound for every voice.
+
+A physical pair collision now excites both vessels' wood and cavity banks. The
+two excitation weights are `engA / norm` and `engB / norm`, where
+`norm = max(1, sqrt(engA² + engB²))`. Two fully engaged hulls each receive
+`1 / sqrt(2)` of the reference force amplitude. The weights' squared sum is at
+most one, so a second endpoint does not double this excitation budget. This is
+an amplitude-based budget, not a claim of measured acoustic joules. Swapping the
+endpoint labels no longer decides which material can be heard. A wall contact
+still excites its one vessel. Held route-field events retain their separate
+stationary forcing construction.
+
+Water texture uses a separate stream per hull. Adding a hull no longer reseeds
+all existing splash texture through a global splash count. These fixes preserve
+the patch's model-1 JSON shape and its MIDI/velocity fields; they intentionally
+revise the rendered sound. Existing exported audio remains its earlier render,
+while a regenerated recipe uses the revised deterministic model.
+
+**Verification and listening limits.** The regression checks cover indexed
+identity across local size/population changes, engagement at count boundaries,
+pair-endpoint symmetry and the common excitation ceiling. The historical R1
+numbers above were not remeasured for this documentation correction. The owner
+heard R1; the water revision and this control follow-up remain listening
+candidates. The assistant did not listen. HOLD continues to mean stationary
+repeated forcing with a measured continuation of resonator/filter state, not
+free hulls physically returning home.

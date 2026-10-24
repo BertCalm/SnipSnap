@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111613">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 40%27%3E%3Cpath d=%27M4 20h10c9 0 7-11 16-11s6 22 15 22h15%27 fill=%27none%27 stroke=%27%23d0efb8%27 stroke-width=%274%27/%3E%3C/svg%3E">
+  <meta name="description" content="Filament iteration 03: guided paths answer one another before the next bend. Compare the current routing with the character pass and original SnipSnap voices.">
+  <title>FILAMENT — SnipSnap listening bench</title>
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#bench">Skip to listening bench</a>
+  <header class="masthead wrap">
+    <a class="wordmark" href="#"><span class="brand-symbol" aria-hidden="true">↝</span> SNIPSNAP <span class="brand-divider">/</span> <span class="brand-context">SOUND STUDIES</span></a>
+    <a class="pack-link" data-pack-download href="./filament-listening-pack.zip" download><span class="download-icon" aria-hidden="true">↓</span> Listening pack <span class="file-tag">ZIP</span></a>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="status-dot"></span> ENGINE PROTOTYPE <span class="small-divider">/</span> ITERATION 03</p>
+        <h1 id="hero-title">FILAMENT<span class="title-dot">.</span></h1>
+        <p class="hero-line">Contain <span>→</span> bend <span>→</span> spill.</p>
+        <p class="hero-description">The paths answer one another. Recent activity changes how guided sound crosses between them before the next bend.</p>
+        <a class="jump-link" href="#bench">Open the listening bench <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="m3 3 10 10M4 13h9V4"/></svg></span></a>
+      </div>
+      <div class="filament-art" aria-hidden="true">
+        <svg viewBox="0 0 680 380" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="thread" x1="30" y1="180" x2="660" y2="235" gradientUnits="userSpaceOnUse"><stop stop-color="#d8f9cd"/><stop offset=".65" stop-color="#b7e9ac"/><stop offset="1" stop-color="#f0c3a1"/></linearGradient>
+            <linearGradient id="escape" x1="340" y1="170" x2="550" y2="350" gradientUnits="userSpaceOnUse"><stop stop-color="#dca583" stop-opacity=".8"/><stop offset="1" stop-color="#dca583" stop-opacity="0"/></linearGradient>
+            <radialGradient id="wash"><stop stop-color="#a2d49b" stop-opacity=".1"/><stop offset="1" stop-color="#a2d49b" stop-opacity="0"/></radialGradient>
+            <filter id="glow"><feGaussianBlur stdDeviation="4"/></filter>
+          </defs>
+          <ellipse cx="355" cy="180" rx="300" ry="165" fill="url(#wash)"/>
+          <g stroke="#c7d9c2" stroke-opacity=".055"><path d="M0 80H680M0 140H680M0 200H680M0 260H680M0 320H680"/><path d="M100 20V360M220 20V360M340 20V360M460 20V360M580 20V360"/></g>
+          <g stroke="url(#escape)" stroke-width="1"><path d="M284 145C340 168 343 340 539 343"/><path d="M299 129C347 160 388 299 633 284"/><path d="M409 178C450 219 456 335 621 325"/><path d="M414 195C438 252 443 355 568 373"/><path d="M294 157C320 210 333 284 481 301"/><path d="M401 164C445 175 487 247 662 229"/><path d="M307 122C346 122 355 93 512 88" stroke-opacity=".55"/></g>
+          <g stroke="url(#thread)" stroke-width="1.4" opacity=".2" filter="url(#glow)"><path d="M31 191H153C210 191 217 79 277 79C340 79 333 238 400 238C458 238 459 137 519 137H649"/></g>
+          <g stroke="url(#thread)" stroke-linecap="round"><path d="M31 181H153C210 181 217 69 277 69C340 69 333 228 400 228C458 228 459 127 519 127H649" stroke-width="1.25" opacity=".4"/><path d="M31 187H153C210 187 217 75 277 75C340 75 333 234 400 234C458 234 459 133 519 133H649" stroke-width="1" opacity=".7"/><path d="M31 193H153C210 193 217 81 277 81C340 81 333 240 400 240C458 240 459 139 519 139H649" stroke-width="1.7"/><path d="M31 199H153C210 199 217 87 277 87C340 87 333 246 400 246C458 246 459 145 519 145H649" stroke-width="1" opacity=".55"/><path d="M31 205H153C210 205 217 93 277 93C340 93 333 252 400 252C458 252 459 151 519 151H649" stroke-width="1" opacity=".28"/></g>
+          <circle cx="31" cy="193" r="4" fill="#d5efcb"/><circle cx="649" cy="139" r="3" fill="#d5efcb"/><circle cx="303" cy="137" r="4" fill="#181e19" stroke="#d5b194"/>
+          <g font-family="monospace" font-size="10" letter-spacing="2"><text x="31" y="235" fill="#899889">INJECT</text><text x="271" y="45" fill="#899889">BEND</text><text x="579" y="114" fill="#b6c7ad">THROUGH</text><text x="474" y="332" fill="#bb947a">SPILL</text></g>
+          <path d="M307 149L329 171" stroke="#a88b74" stroke-width=".7"/><text x="333" y="181" fill="#a88b74" font-family="monospace" font-size="9" letter-spacing="1">ENERGY ESCAPES</text>
+        </svg>
+        <span class="art-caption">THE PATHS ANSWER.</span>
+      </div>
+    </section>
+
+    <div class="spec-strip wrap"><span>DETERMINISTIC KOTLIN AUDIO</span><span>THREE VOICES</span><span>DRY SIGNAL · NO EXTERNAL FX</span><span id="render-count">LOADING RENDERS</span></div>
+
+    <section id="bench" class="bench wrap" aria-labelledby="bench-title">
+      <div class="bench-heading"><div><p class="eyebrow section-index">01 / HEAR WHAT THE ROUTES ADD</p><h2 id="bench-title">Listening bench</h2></div><p>Earlier voices stay within reach.</p></div>
+      <p class="revision-guide"><span class="revision-key current">CURRENT / MODEL 3</span> Path interaction. <span class="revision-key character">CHARACTER PASS / MODEL 2</span> The voice revision. <span class="revision-key original">ORIGINAL / MODEL 1</span> The first prototype.</p>
+      <div id="load-error" class="notice error" role="alert" hidden></div>
+      <div class="mode-bar">
+        <div class="segmented" role="group" aria-label="Mix loudness mode">
+          <button type="button" data-mode="native" aria-pressed="true">Native</button><button type="button" data-mode="raw" aria-pressed="false">Raw</button><button type="button" data-mode="matched" aria-pressed="false">Matched</button>
+        </div>
+        <p id="mode-description">Direct engine output. Hear the fixed gain and intended instrument balance.</p>
+      </div>
+
+      <div class="workstation" id="workstation" aria-busy="true">
+        <aside class="library" aria-label="Render library">
+          <div class="library-heading"><span class="eyebrow">COLLECTION</span><span id="visible-count" class="muted">—</span></div>
+          <nav id="group-nav" class="group-nav" aria-label="Audio collections"></nav>
+          <div class="library-tools"><label class="search-box"><svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="8.5" cy="8.5" r="5.5"/><path d="m13 13 4 4"/></svg><input type="search" id="search" placeholder="Find a sound…" aria-label="Search renders"></label><label class="voice-label"><span class="sr-only">Filter by voice</span><select id="voice-filter"><option value="">All voices</option></select></label></div>
+          <div id="clip-list" class="clip-list" aria-label="Audio clips"><p class="loading">Preparing the listening bench…</p></div>
+        </aside>
+
+        <article class="audition" aria-label="Selected render">
+          <div id="clip-empty" class="empty-state"><span class="empty-orbit" aria-hidden="true">∿</span><p>Loading the strands.</p></div>
+          <div id="clip-detail" hidden>
+            <div class="clip-topline"><span id="clip-group" class="eyebrow"></span><span id="clip-index" class="mono muted"></span></div>
+            <h3 id="clip-title"></h3><p id="clip-description" class="clip-description"></p>
+            <div id="clip-tags" class="clip-tags"></div>
+            <p id="voice-intent" class="voice-intent" hidden></p>
+            <div id="revision-comparison" class="revision-comparison" hidden><div><span id="comparison-heading" class="eyebrow">PREVIOUS / CURRENT</span><p id="comparison-explanation">Compare the saved versions. Your loudness mode stays selected.</p></div><button type="button" id="compare-version">Hear previous <svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 5h11m-3-3 3 3-3 3M14 11H3m3-3-3 3 3 3"/></svg></button></div>
+            <div id="clip-warning" class="notice" hidden></div>
+
+            <div class="transport">
+              <button type="button" id="play" class="play-main" aria-label="Play selected clip" disabled><svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 11 7-11 7Z" fill="currentColor"/></svg></button>
+              <div class="transport-body"><div class="transport-line"><span id="track-label" class="eyebrow">NATIVE MIX</span><span id="audio-time" class="mono">0:00 / 0:00</span></div><label class="sr-only" for="seek">Playback position</label><input id="seek" class="seek" type="range" min="0" max="1000" step="1" value="0" disabled aria-valuetext="0 seconds"></div>
+              <div class="clip-steppers"><button type="button" id="previous" aria-label="Previous visible clip">↑</button><button type="button" id="next" aria-label="Next visible clip">↓</button></div>
+            </div>
+            <div class="playback-options"><span id="audio-status" role="status">Ready when you are.</span><label class="loop-control"><input type="checkbox" id="loop"> Loop</label><label class="volume-control"><span>Volume</span><input type="range" id="volume" min="0" max="1" step="0.01" value="0.8" aria-label="Playback volume"></label></div>
+
+            <div class="routing-heading"><span class="eyebrow">FOLLOW THE SIGNAL</span><a id="wav-download" href="#" download>Download WAV <span aria-hidden="true">↓</span></a></div>
+            <div id="track-buttons" class="track-buttons" role="group" aria-label="Listen to signal stems"></div>
+            <p id="track-help" class="track-help">The collected output combines retained sound and its escaping halo.</p>
+
+            <div class="macro-heading"><span class="eyebrow">RENDERED MACRO POSITIONS</span><span class="muted">Read-only · saved in recipe</span></div>
+            <div id="macros" class="macro-grid"></div>
+            <div id="metrics" class="metrics-strip"></div>
+
+            <div class="detail-disclosures"><details id="diagnostics-details"><summary>Render diagnostics <span aria-hidden="true">+</span></summary><div class="disclosure-body"><a id="diagnostics-download" href="#" download>Download diagnostics JSON ↓</a><a id="reference-diagnostics-download" class="reference-download" href="#" download hidden>Higher-rate reference diagnostics JSON ↓</a><pre id="diagnostics-content">Open to load diagnostics.</pre></div></details><details id="recipe-details"><summary>Patch recipe <span aria-hidden="true">+</span></summary><div class="disclosure-body"><a id="recipe-download" href="#" download>Download patch recipe ↓</a><pre id="recipe-content">Open to load recipe.</pre></div></details></div>
+
+            <div class="notes-heading"><label for="notes" class="eyebrow">YOUR LISTENING NOTES</label><span id="notes-status" class="muted">Saved in this browser</span></div><textarea id="notes" rows="3" placeholder="What changes as the note bends? What should we try next?"></textarea><div class="notes-footer"><span>Private to this browser. No account or upload.</span><button type="button" id="export-notes">Export notes <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 13 13 3M4 3h9v9"/></svg></span></button></div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="method wrap" aria-labelledby="method-title">
+      <div class="method-intro"><p class="eyebrow">02 / A USEFUL WAY TO LISTEN</p><h2 id="method-title">Trace the change.<br>Keep the note.</h2><p>Filament is a musical model of guided sound. Ordered delays and bend losses divide the excitation between a retained endpoint and a damped halo.</p></div>
+      <div class="method-body"><div class="method-row"><span class="method-number">01</span><div><h3>Hear the paths answer</h3><p>Begin with the current / previous comparisons. Pairs marked “Same excitation” isolate what the routes add. Earlier original / character pairs compare the whole model change, including excitation.</p></div></div><div class="voice-prompts"><p class="eyebrow">LISTENING INTENTS</p><p><strong>THREAD</strong> A focused root, with upper glass glints that shed quickly.</p><p><strong>PULSE</strong> Articulated harmonic groups, with shifting accents.</p><p><strong>CURL</strong> Upper harmonics bloom after the root, then release slowly.</p></div><div class="method-row"><span class="method-number">02</span><div><h3>Choose your loudness reference</h3><p><strong>Native</strong> keeps the engine’s fixed output gain. <strong>Raw</strong> keeps a fixed export gain for energy comparisons. <strong>Matched</strong> adjusts listening level so you can compare tone. Stem exports keep their supplied gain.</p></div></div><div class="method-row"><span class="method-number">03</span><div><h3>Follow the sound and inspect the evidence</h3><p>At the junction, recent activity changes how the remaining guided paths exchange sound before later bends. Use BEND, COLLECT and the mechanism comparisons to trace the result. Every clip has a saved recipe and render diagnostics. Held clips can repeat with the loop switch; seam context is available when supplied.</p></div></div><div class="prototype-note"><span class="eyebrow">PROTOTYPE SCOPE</span><p>THREAD, PULSE, and CURL · three saved model generations. Audio is rendered by SnipSnap’s Kotlin engine without external effects. This page plays those files; its macro displays describe each saved render. Listening prompts describe the current routing’s intent; musical acceptance remains open. All earlier clips remain available.</p><p id="pack-description">The listening pack contains selected audio and the saved render evidence. Individual files are available throughout the bench.</p></div></div>
+    </section>
+  </main>
+  <footer class="footer wrap"><a class="footer-brand" href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap <span aria-hidden="true"><svg class="inline-arrow" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 13 13 3M4 3h9v9"/></svg></span></a><span>FILAMENT / AN ENGINE IN PROGRESS</span><div><a href="./manifest.json" download>Render manifest ↓</a><a data-pack-download href="./filament-listening-pack.zip" download>Listening pack ↓</a></div></footer>
+</body>
+</html>

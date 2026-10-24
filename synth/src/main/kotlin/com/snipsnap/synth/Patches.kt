@@ -66,6 +66,7 @@ object Patches {
             GyrePatch.ENGINE -> GyrePatch.fromJsonValue(value)
             MagnetPatch.ENGINE -> MagnetPatch.fromJsonValue(value)
             AerostatPatch.ENGINE -> AerostatPatch.fromJsonValue(value)
+            BallastPatch.ENGINE -> BallastPatch.fromJsonValue(value)
             FlotillaPatch.ENGINE -> FlotillaPatch.fromJsonValue(value)
             CisternPatch.ENGINE -> CisternPatch.fromJsonValue(value)
             TremorPatch.ENGINE -> TremorPatch.fromJsonValue(value)
@@ -101,6 +102,7 @@ object Patches {
             RegistersPatch.ENGINE -> RegistersPatch.fromJsonValue(value)
             VentPatch.ENGINE -> VentPatch.fromJsonValue(value)
             WickPatch.ENGINE -> WickPatch.fromJsonValue(value)
+            FilamentPatch.ENGINE -> FilamentPatch.fromJsonValue(value)
             ScannedChainPatch.ENGINE -> ScannedChainPatch.fromJsonValue(value)
             OrigamiPatch.ENGINE -> OrigamiPatch.fromJsonValue(value)
             ChamberPatch.ENGINE -> ChamberPatch.fromJsonValue(value)
@@ -110,6 +112,7 @@ object Patches {
             CreasePatch.ENGINE -> CreasePatch.fromJsonValue(value)
             TrioPatch.ENGINE -> TrioPatch.fromJsonValue(value)
             OhmPatch.ENGINE -> OhmPatch.fromJsonValue(value)
+            CausticPatch.ENGINE -> CausticPatch.fromJsonValue(value)
             else -> throw JsonException("unknown engine $engine")
         }
     }
