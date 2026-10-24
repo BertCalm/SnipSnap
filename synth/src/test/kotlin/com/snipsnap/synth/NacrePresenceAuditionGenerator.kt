@@ -82,7 +82,7 @@ object NacrePresenceAuditionGenerator {
                 "energy" to "Total energy sums squared full-scale samples. E90/E99 mark cumulative energy times, not perceptual thresholds. timeEnergy records fixed time windows.",
                 "difference" to "prelevelDifferenceRms and timeEnergy.prelevelDifferenceEnergy use the unscaled Float bus. Main peak/rms/totalEnergy describe listening-gain audio. Relative dB, correlations and fractions are gain invariant. A numerical difference does not establish audibility.",
                 "spectrum" to "above1kFraction uses one-sided squared FFT magnitude over the complete finite signal, zero-padded without a window.",
-                "classifier" to "The generic classifier labels recordings longer than 1.5 seconds LOOP by duration. These six-second files are finite gestures.",
+                "classifier" to "Full mixes classify LOOP by duration. Delayed space-only previews may classify UNKNOWN because the classifier inspects a silent head before checking duration. All six-second files are finite gestures.",
                 "recipe" to "The production patch identifies only the original model-1 source. The audition wrapper also specifies the new path geometry, common return gain and postmix operation; the production patch alone cannot replay these prototype returns.",
             ),
             "performance" to mapOf("threeClipRenderMilliseconds" to renderMilliseconds,
