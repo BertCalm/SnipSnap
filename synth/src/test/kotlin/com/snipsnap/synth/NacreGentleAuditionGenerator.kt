@@ -281,6 +281,8 @@ object NacreGentleAuditionGenerator {
             "synth/NACRE_GENTLE_AUDITION.md",
             "synth/src/test/kotlin/com/snipsnap/synth/NacreGentleAuditionGenerator.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Nacre.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/NacreModels.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/NacreModel1.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/NacrePatch.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Strings.kt",
