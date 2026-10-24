@@ -3,8 +3,9 @@ package com.snipsnap.synth
 /**
  * PLUCK's factory presets — U1 of [docs/SYNTH_UPGRADE.md](../../../../../../../docs/SYNTH_UPGRADE.md).
  *
- * Twelve presets per voice (five voices, sixty total), spread across
- * TUNE/DAMP/PICK/STRIKE/BODY/DOUBLE — the same six macros every voice shares, since
+ * Twelve presets per original voice, plus UPRIGHT's two approved starting
+ * articulations. The original sixty presets remain unchanged, spread across
+ * TUNE/DAMP/PICK/STRIKE/BODY/DOUBLE — the six macros those original voices share, since
  * PLUCK's character lives in each voice's fixed body constants
  * (`loopHz`/`pickLo`/`pickHi`/`ring` in `Pluck.kt`), not in a different
  * macro shape per voice. Authored from that DSP, not by ear (no audio
@@ -22,9 +23,21 @@ object PluckPresets {
         PluckVoice.KOTO -> kotoPresets
         PluckVoice.BANJO -> banjoPresets
         PluckVoice.SITAR -> sitarPresets
+        PluckVoice.UPRIGHT -> uprightPresets
     }
 
     fun all(): List<PluckPatch> = PluckVoice.entries.flatMap { forVoice(it) }
+
+    // The owner accepted the Python study's round and muted endpoints. These
+    // settings preserve that scope; native Kotlin playback still gets its own listen.
+    private val uprightPresets = listOf(
+        PluckPatch("ROUND", PluckVoice.UPRIGHT, linkedMapOf(
+            "TUNE" to UprightBass.DEFAULT_TUNE, "TOUCH" to .5f, "DAMP" to .18f, "WOOD" to .55f,
+        ), velocity = .65f),
+        PluckPatch("MUTED", PluckVoice.UPRIGHT, linkedMapOf(
+            "TUNE" to UprightBass.DEFAULT_TUNE, "TOUCH" to .5f, "DAMP" to 1f, "WOOD" to .55f,
+        ), velocity = .65f),
+    )
 
     private val nylonPresets = listOf(
         p(PluckVoice.NYLON, "CLASSICAL", "TUNE" to 0.3f, "DAMP" to 0.3f, "PICK" to 0.3f, "DOUBLE" to 0.1f),

@@ -732,7 +732,10 @@ fun SynthScreen(
                         else -> e.defaults(v) + filamentFactory?.macros.orEmpty()
                     }
                     val recipe = seed.seededOvenPatches[e to v]
-                        ?: if (e == Engine.FILAMENT) seededFilamentPatches[v as FilamentVoice] else null
+                        ?: if (e == Engine.FILAMENT) seededFilamentPatches[v as FilamentVoice]
+                        else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
+                            seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
+                        else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
@@ -866,7 +869,8 @@ fun SynthScreen(
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // FILAMENT keeps a complete recipe in the existing draft format, so
         // even a last-frame macro edit restores with its note and strand roster.
-        if (patch is FilamentPatch) patch.withMacros(macrosByVoice.getValue(pair)) else patch
+        if (patch is FilamentPatch || patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
+            patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
     val loadedRecipes = currentDrafts()
     LaunchedEffect(loadedRecipes) {
@@ -1039,7 +1043,7 @@ fun SynthScreen(
             else -> 0f..1f
         }
     }
-    fun ensureFilamentDraft() {
+    fun ensureEditableDraft() {
         val pair = engine to voice
         // A first macro edit or SCRAMBLE may start from defaults. Materialize
         // that edited recipe so onDispose can flush it before navigation.
@@ -1048,6 +1052,23 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
             )
         }
+        if (engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && pair !in loadedPatchesByVoice) {
+            loadedPatchesByVoice[pair] = PluckPatch(
+                engine.patchDisplayName(voice), PluckVoice.UPRIGHT, macrosByVoice.getValue(pair),
+                velocity = .65f,
+            )
+        }
+    }
+    fun updateUprightVelocity(value: Float) {
+        if (engine != Engine.PLUCK || voice != PluckVoice.UPRIGHT) return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val patch = (buildCurrentPatch(engine.patchDisplayName(voice)) as PluckPatch)
+            .copy(velocity = value.coerceIn(0f, 1f))
+        loadedPatchesByVoice[engine to voice] = patch
+        // Flush with the gesture: a navigation tap can precede the draft effect.
+        settings["recipe.PLUCK.UPRIGHT"] = patch.toJsonText()
     }
     fun updateMacro(name: String, value: Float) {
         touched = true
@@ -1056,7 +1077,7 @@ fun SynthScreen(
         val bounded = value.coerceIn(macroRange(name))
         val values = macrosByVoice.getValue(engine to voice) + (name to bounded)
         macrosByVoice[engine to voice] = values
-        ensureFilamentDraft()
+        ensureEditableDraft()
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
         val origami = loadedPatch as? OrigamiPatch
@@ -1485,6 +1506,9 @@ fun SynthScreen(
                 val authoredMidi = when (patch) {
                     is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
                     is FilamentPatch -> patch.midi
+                    is PluckPatch -> if (patch.voice == PluckVoice.UPRIGHT)
+                        28 + ((Pluck.defaults(patch.voice) + patch.macros).getValue("TUNE") * Pluck.TUNE_SEMITONES).roundToInt()
+                        else null
                     else -> null
                 }
                 val authoredSource = authoredMidi?.let {
@@ -2120,6 +2144,12 @@ fun SynthScreen(
                     }
                 }
 
+                if (engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT) {
+                    UprightVelocityControl(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as PluckPatch,
+                        fillColor = classColor, scheme = scheme, onValueChange = ::updateUprightVelocity,
+                    )
+                }
                 if (engine == Engine.STOOP) {
                     val root = (loadedPatch as? StoopPatch)?.midi ?: Stoop.DEFAULT_MIDI
                     Row(
@@ -2949,7 +2979,7 @@ fun SynthScreen(
                         } else next
                         macrosByVoice[engine to voice] = values
                         keepOhmMacros(values)
-                        ensureFilamentDraft()
+                        ensureEditableDraft()
                     }
                     // Between SCRAMBLE and SEND TO PAD: the sound is kept
                     // before it is placed. No kit is needed — a preset is
@@ -3380,6 +3410,8 @@ private fun macroReadout(
     registersRoot: Int?,
     shoalHoldSupported: Boolean,
 ): String? = when {
+    engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && name == "TUNE" ->
+        Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
     engine == Engine.PRISM && name == "HOLD" && loadedPatch is PrismPatch && loadedPatch.motion != null -> "NOTE"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
@@ -4467,7 +4499,7 @@ private enum class Engine {
         TINES -> Tines.render(voice as TinesVoice, macros)
         VELVET -> Velvet.render(voice as VelvetVoice, macros)
         VOX -> Vox.render(voice as VoxVoice, macros)
-        PLUCK -> Pluck.render(voice as PluckVoice, macros)
+        PLUCK -> Pluck.render(voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
@@ -4600,7 +4632,7 @@ private enum class Engine {
         TINES -> TinesPatch(name, voice as TinesVoice, macros)
         VELVET -> VelvetPatch(name, voice as VelvetVoice, macros)
         VOX -> VoxPatch(name, voice as VoxVoice, macros)
-        PLUCK -> PluckPatch(name, voice as PluckVoice, macros)
+        PLUCK -> PluckPatch(name, voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
@@ -5079,6 +5111,18 @@ private fun ReopenPadOverlay(
 }
 
 // ---------- macro slider ----------
+
+/** A saved excitation strength, separate from the four UPRIGHT timbre controls. */
+@Composable
+private fun UprightVelocityControl(
+    patch: PluckPatch,
+    fillColor: Color,
+    scheme: Scheme,
+    onValueChange: (Float) -> Unit,
+) {
+    MacroSlider(label = "VELOCITY", value = patch.velocity, fillColor = fillColor,
+        scheme = scheme, onValueChange = onValueChange)
+}
 
 /** Note controls stay outside the large screen body and retain the whole native recipe. */
 @Composable

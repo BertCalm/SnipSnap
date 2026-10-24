@@ -12,6 +12,16 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `UPRIGHT preserves the saved excitation and both damping endpoints`() {
+        for (damp in listOf(.18f, 1f)) {
+            val patch = PluckPatch("Upright canary", PluckVoice.UPRIGHT,
+                Pluck.defaults(PluckVoice.UPRIGHT) + ("DAMP" to damp), velocity = .65f)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples)
+        }
+    }
+
+    @Test
     fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
         val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
         val first = CreaseTouchKeys.render(patch, midi = 60)

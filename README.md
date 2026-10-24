@@ -222,6 +222,11 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
 
+UPRIGHT adds a finger-plucked bass voice inside PLUCK, spanning E1–E3.
+ROUND and MUTED are two DAMP settings of the same string, with TOUCH, WOOD
+and saved excitation strength. Its sixteen-pad starter and native audition
+use complete replayable recipes. See [UPRIGHT](docs/UPRIGHT.md).
+
 VELVET is subtractive, the playability king — a naive
 saw/pulse unison pair over a sub, into a resonant SVF swept by its own
 envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance

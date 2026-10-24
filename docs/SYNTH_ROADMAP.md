@@ -6,6 +6,17 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**UPRIGHT, PLUCK's finite bass voice (2026-10-24).** The approved Python
+listening study becomes one low-register string voice with ROUND and MUTED
+as DAMP endpoints. TUNE covers E1–E3; TOUCH and saved playing strength shape
+the released displacement, while WOOD colors a one-way body readout. Native
+patch/velocity/phone/CLI paths, a sixteen-pad E minor pentatonic starter and
+production-rendered audition develop that direction. The five older PLUCK
+voices retain their DSP and pinned audio expectations. There is no powered
+HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
+control contract, reproduction and separation of Python approval from Kotlin
+and hardware listening.
+
 **Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
 cohorts, surviving cores, and extended ringing strands. The finite prototype has

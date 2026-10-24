@@ -1,5 +1,9 @@
 # Which document to trust
 
+**Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
+voice, its approved Python direction, native port and remaining listening
+checks. It distinguishes saved excitation strength from MPC playback gain.
+
 **OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
 instrument, versioned recipes and the control-authority revision. Its audition
 compares the original and revised renderers directly. The revised sound is the

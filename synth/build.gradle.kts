@@ -2,6 +2,34 @@ plugins {
     kotlin("jvm")
 }
 
+/** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
+tasks.register<JavaExec>("generateUprightAudition") {
+    group = "distribution"
+    description = "Render UPRIGHT native/matched WAVs, exact recipes, measurements and a listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("uprightReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("uprightReplayOutput").get(),
+            providers.gradleProperty("uprightReplayMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("uprightOutput").orNull ?: "${rootDir}/testkit/upright-audition")
+    }
+}
+
+/** The same finite bass voice on sixteen editable pads in both MPC formats. */
+tasks.register<JavaExec>("generateUprightKit") {
+    group = "distribution"
+    description = "Export sixteen UPRIGHT pads, complete recipes, MPC 3 track and MPC 2 program."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** LATTICE source proof, native instrument phrases, periodic HOLD and MPC starter. */
 tasks.register<JavaExec>("generateLatticeAudition") {
     group = "distribution"

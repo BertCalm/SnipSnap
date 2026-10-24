@@ -59,6 +59,9 @@ import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.Pluck
+import com.snipsnap.synth.PluckPatch
+import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -287,7 +290,9 @@ object SynthCommand {
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
-                else -> throw CliError("--macros is only supported by CONTOUR, ORIGAMI, CAUSTIC and LATTICE, got $engine")
+                "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
+                    else throw CliError("--macros for PLUCK requires UPRIGHT")
+                else -> throw CliError("--macros is only supported by CONTOUR, ORIGAMI, CAUSTIC, LATTICE and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -327,6 +332,8 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                "PLUCK" -> if (voice == "UPRIGHT") 28..52
+                    else throw CliError("${noteFlags.joinToString()} for PLUCK requires UPRIGHT")
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
                 AlloyPatch.ENGINE -> Alloy.MIDI_MIN..Alloy.MIDI_MAX
@@ -480,6 +487,11 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is PluckPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - 28) / Pluck.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
                 is OrigamiPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TrioPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is AlloyPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -578,6 +590,8 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
+            } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is CausticPatch) {
@@ -676,7 +690,8 @@ object SynthCommand {
             val sampler = heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                 SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch) {
+            if (patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+                patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
             if (patch is FlockPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())

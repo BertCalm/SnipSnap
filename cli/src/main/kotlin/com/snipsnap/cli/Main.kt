@@ -92,6 +92,7 @@ object Cli {
         |                        (OHM STRING: five finite family encounters; --midi 48..72
         |                        --velocity 0..1 --seed N)
         |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER; --midi 24..84 --velocity 0..1)
+        |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
         |                        --instrument [--release S] [--velocity 0..1] makes

@@ -10,6 +10,7 @@ import com.snipsnap.synth.ConfluenceVoiceBank
 import com.snipsnap.synth.SkinKits
 import com.snipsnap.synth.SynthKits
 import com.snipsnap.synth.ThumpKits
+import com.snipsnap.synth.UprightKits
 import com.snipsnap.synth.Velocity
 import java.io.File
 
@@ -339,6 +340,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.cistern() },
+        Starter(
+            "upright", "UPRIGHT BASS",
+            "Round and muted finger plucks on the same E minor pentatonic notes.",
+            seeded = false,
+            key = KeySpec.parse("Eminpent"),
+        ) { UprightKits.classic() },
         Starter(
             "aerostat", "AEROSTAT",
             "Paddle-struck PVC, catching pipes and drifting steam. Five distinct factory gestures.",
