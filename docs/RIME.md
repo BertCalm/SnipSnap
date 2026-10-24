@@ -1,5 +1,57 @@
 # Rime — revised finite listening prototype
 
+## Revision 3 — ANGLE has a finite pickup aperture
+
+The owner still could not hear a useful ANGLE change. Rotating a point projection
+of the symmetric Koch contour largely changes phase. The weak fixed pickup made
+some FFT magnitudes change, but those measurements did not establish an effective
+musical control.
+
+Model 3 combines pickup direction with the arc spacing of two opposed contacts.
+For fine contour bands, its readout is `gain * (z(u) - z(u - span))`, with
+`span = .10 * .5 * (1 + cos(angle)) * (1 + .65 * sin(angle))` root periods.
+Contact gain is .65 in broad lower registers, easing to .5 as safe bandwidth
+falls from 36 to 18 harmonics so a few strong modes do not mask the upper root.
+The same readout applies to position and derivative pressure at both modal ports.
+The fundamental bypasses the contact difference. At 180°, the fine contacts
+coincide and cancel; at 0°, their spacing admits more contour edge. This gives
+ANGLE an actual change in overtone power while retaining the played root.
+The contact-spacing law is a design adaptation, not a literal rotating microphone.
+The underlying Koch reference and geometric study remain unchanged.
+
+The finite aperture is baked into the existing band tables. Its cache key includes
+ANGLE; unmodified and aperture banks share one twelve-entry LRU, still about 14 MiB
+at the maximum band count. No extra reads or filters run per audio sample. GLINT's
+new default ANGLE is .15 to keep its starter in an open region of this new mapping;
+model 2 retains .65. Other starting controls retain their previous values.
+
+Saved model-1 and model-2 recipes keep their original render paths and noise seeds.
+Published-WAV SHA fixtures cover three model-1 starters and six model-2 starter and
+ANGLE cases. The new audition contains 140 clips, including the four original
+model-1 comparisons and six model-2 ANGLE clips. Its first comparison alternates
+180° and 0°; the previous pair is available beside it. Both playback gain modes,
+ordinary recipes, diagnostic recipes and phrases retain explicit provenance.
+
+Kotlin regression measurements distinguish the open/rounded positions by averaged,
+level-independent square-root power-spectrum distance: .288 for LOOP, .924 for
+GLINT and 1.017 for VESSEL. In the .43–.63-second window, open-position energy
+above 1.5 times the root is 8.1%, 67.6% and 9.2% respectively; the rounded
+positions remain below .001%. The root/pitch, BODY, LOOP UNFOLD, finite extremes,
+legacy PCM, 4x/8x reference, determinism and CLI checks pass. These measurements
+establish a larger spectral contrast; they do not establish owner acceptance.
+At the closed aperture, EDGE and UNFOLD have no fine contour to act upon, just as
+at DETAIL zero. Normal starter positions keep that aperture open.
+
+Why it is built this way:
+
+- Two spaced contacts change overtone weights on the symmetric source.
+- The root bypass keeps a cancellation position from erasing the note's pitch.
+- Cached readouts keep the stronger pickup from adding work inside the sample loop.
+- Versioned replay preserves earlier listening evidence while the control changes.
+
+Owner listening of model 3 remains pending. Earlier revision measurements below
+refer to model 2 unless explicitly labeled model 1.
+
 ## Revision 2 — BODY and LOOP development
 
 The owner reported that BODY's endpoints were hard to distinguish and LOOP's

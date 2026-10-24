@@ -12,6 +12,31 @@ import kotlin.math.*
 import kotlin.test.*
 
 class RimeTest {
+    @Test fun `model two published starters and angle comparisons keep their exact PCM`() {
+        fun resource(name: String) = requireNotNull(javaClass.getResourceAsStream("/rime-model2/$name")).bufferedReader().use { it.readText() }
+        val hashes = Json.parse(resource("matched-pcm-sha256.json")).obj()
+        for ((id, expected) in hashes) {
+            val original = RimePatch.fromJsonText(resource("${id.substringBefore('-')}-patch.json"))
+            assertEquals(2, original.model)
+            val patch = if (id.endsWith("angle-25")) original.copy(macros = original.macros + ("ANGLE" to .25f)) else original
+            val native = patch.render().samples
+            Dsp.levelTo(native, Dsp.RATE, .10f, ceiling = .9f)
+            val wav = ByteArrayOutputStream().also { WavWriter.write(it, Snip(native, 1, Dsp.RATE)) }.toByteArray()
+            val hash = MessageDigest.getInstance("SHA-256").digest(wav).joinToString("") { "%02x".format(it) }
+            assertEquals(expected.str(), hash, "$id model 2 must retain its point pickup")
+        }
+    }
+
+    @Test fun `finite pickup aperture closes fine structure without cancelling the root`() {
+        val ordinary = RimeContour.prepare(130.8128, .9, .8)
+        val closed = RimeContour.prepare(130.8128, .9, .8, PI)
+        val open = RimeContour.prepare(130.8128, .9, .8, 0.0)
+        assertSame(ordinary.bands.first(), closed.bands.first())
+        assertTrue(closed.bands.drop(1).all { band -> listOf(band.x, band.y, band.dx, band.dy).all { table -> table.all { it == 0f } } })
+        assertTrue(open.bands.drop(1).any { band -> band.dx.any { abs(it) > .01f } })
+        assertEquals(ordinary.coefficients.filter { abs(it.n) == 1 }, closed.coefficients.filter { abs(it.n) == 1 })
+    }
+
     @Test fun `model one published recipes reproduce their original matched PCM exactly`() {
         fun resource(name: String) = requireNotNull(javaClass.getResourceAsStream("/rime-model1/$name")).bufferedReader().use { it.readText() }
         val hashes = Json.parse(resource("matched-pcm-sha256.json")).obj()
@@ -59,6 +84,22 @@ class RimeTest {
             println("RIME $voice largest ANGLE quarter-turn distance $distance")
             assertTrue(distance > .06, "$voice intermediate ANGLE positions need useful spectral activity: $distance")
             assertContentEquals(zero, p.copy(macros = p.macros + ("ANGLE" to 1f)).render().samples)
+        }
+    }
+
+    @Test fun `angle open and rounded positions change overtone power on every normal voice`() {
+        for (voice in RimeVoice.entries) {
+            val p = RimePresets.forVoice(voice).single()
+            val open = p.copy(macros = p.macros + ("ANGLE" to 0f)).render().samples
+            val rounded = p.copy(macros = p.macros + ("ANGLE" to .5f)).render().samples
+            val distance = RimeControlMeasure.distance(open, rounded, p.gateSeconds.toDouble())
+            val hz = Keys.midiHz(p.midi).toDouble()
+            val openFine = RimeControlMeasure.fineShare(open, hz, .43)
+            val roundedFine = RimeControlMeasure.fineShare(rounded, hz, .43)
+            println("RIME $voice ANGLE open/round spectral distance $distance; fine power $openFine / $roundedFine")
+            assertTrue(distance > .25, "$voice ANGLE needs a substantial level-independent contrast: $distance")
+            assertTrue(openFine > .02 && openFine > 10 * roundedFine,
+                "$voice ANGLE must move overtone power, not just phase: $openFine / $roundedFine")
         }
     }
 

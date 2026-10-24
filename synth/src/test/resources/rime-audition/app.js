@@ -1,13 +1,13 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 const player = $('player');
-let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null, buildId = '', model = 2;
+let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null, buildId = '', model = 3;
 const assetURL = (url) => url + (url.includes('?')?'&':'?') + 'r=' + encodeURIComponent(buildId);
 const voiceTitles = {LOOP:'Round Seed',GLINT:'Fine Frost',VESSEL:'Open Vessel'};
 const controlText = {
   DETAIL:'Maximum resolved scale, limited to the note’s safe bandwidth.',
   EDGE:'Fine-feature sharpness and bounded contour pressure.',
-  ANGLE:'A complete pickup rotation. 0° and 360° return to the same position.',
+  ANGLE:'Pickup direction and contact spacing: rounded at 180°, open at 0°. A full turn returns to the start.',
   UNFOLD:'When fine bands emerge and recede within the note.',
   BODY:'Modal spacing, decay and the balance of direct sound and resonance.'
 };
@@ -41,12 +41,12 @@ function renderRevision(voice='LOOP') {
   const prefix=voice.toLowerCase();
   const steps=(name,values,labels,stem=prefix)=>values.map((v,i)=>button(byId.get(`${stem}-${name}-${v}`),labels[i],'play-button revision-play')).join('');
   $('revision-comparisons').innerHTML=`
+    <article class="revision-row angle-comparison"><div><strong>ANGLE / ${voice}</strong><p>Rounded contour → more fine edge.</p></div><div class="revision-buttons angle-pair">${steps('angle',[50,0],['180° · Rounded','0° · Open'])}<button type="button" class="play-button" data-sequence="${prefix}-angle-50,${prefix}-angle-0,${prefix}-angle-50,${prefix}-angle-0">Alternate pair ↗</button></div><div class="previous-clip"><button type="button" class="play-button previous-play" data-sequence="previous-${prefix}-angle-50,previous-${prefix}-angle-0,previous-${prefix}-angle-50,previous-${prefix}-angle-0">Previous pair ↗</button></div></article>
     <article class="revision-row"><div><strong>BODY / ${voice}</strong><p>Direct contour → a larger resonating body.</p></div><div class="revision-buttons">${steps('body',[0,50,100],['0%','50%','100%'])}</div><div class="previous-clip">${button(byId.get(`legacy-${prefix}-body-100`),'Previous 100%','play-button previous-play')}</div></article>
-    <article class="revision-row"><div><strong>UNFOLD / LOOP</strong><p>Detail at onset → detail arriving within the note.</p></div><div class="revision-buttons">${steps('unfold',[0,50,100],['0%','50%','100%'],'loop')}</div><div class="previous-clip">${button(byId.get('legacy-loop-unfold-100'),'Previous 100%','play-button previous-play')}</div></article>
-    <article class="revision-row"><div><strong>ANGLE / ${voice}</strong><p>Hear four different pickup orientations.</p></div><div class="revision-buttons angle-turns">${steps('angle',[0,25,50,75],['0°','90°','180°','270°'])}</div><div class="previous-clip angle-return">360° returns to 0°</div></article>`;
+    <article class="revision-row"><div><strong>UNFOLD / LOOP</strong><p>Detail at onset → detail arriving within the note.</p></div><div class="revision-buttons">${steps('unfold',[0,50,100],['0%','50%','100%'],'loop')}</div><div class="previous-clip">${button(byId.get('legacy-loop-unfold-100'),'Previous 100%','play-button previous-play')}</div></article>`;
   updateButtons();
 }
-$('revision-voice').addEventListener('change',event=>renderRevision(event.target.value));
+$('revision-voice').addEventListener('change',event=>{clearQueue();renderRevision(event.target.value);});
 function renderCausal() {
   const descriptions={LOOP:'Listen for changes in the hollow bass and the attack.',GLINT:'Listen for fine pressure and how the upper edge rings.',VESSEL:'Listen for the reveal, then the body after excitation ends.'};
   $('causal').innerHTML=Object.keys(voiceTitles).map(voice=>`<article class="causal-column"><span class="voice-name">${voice}</span><h3>${voiceTitles[voice]}</h3>${library.filter(c=>c.voice===voice&&c.section==='causal').map(c=>button(c)).join('')}<p>${descriptions[voice]}</p></article>`).join('');

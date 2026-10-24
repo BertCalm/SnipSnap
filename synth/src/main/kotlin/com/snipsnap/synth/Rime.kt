@@ -8,9 +8,9 @@ import kotlin.math.*
 
 enum class RimeVoice { LOOP, GLINT, VESSEL }
 
-/** Finite contour instrument. Model 2 gives BODY upper-mode pressure and LOOP audible scale development. */
+/** Finite contour instrument. Model 3 gives ANGLE a finite contour pickup aperture. */
 object Rime {
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
@@ -21,7 +21,7 @@ object Rime {
         if (model == 1) return RimeV1.defaults(voice)
         val values = when (voice) {
             RimeVoice.LOOP -> listOf(.46f, .22f, .20f, .10f, .25f)
-            RimeVoice.GLINT -> listOf(.82f, .72f, .65f, .35f, .55f)
+            RimeVoice.GLINT -> listOf(.82f, .72f, if (model >= 3) .15f else .65f, .35f, .55f)
             RimeVoice.VESSEL -> listOf(.85f, .48f, .25f, .85f, .85f)
         }
         return (TIMBRAL.zip(values) + ("HOLD" to 0f)).toMap()
@@ -86,13 +86,14 @@ object Rime {
         val angle = (m.getValue("ANGLE").toDouble() % 1) * 2 * PI
         val ca = cos(angle); val sa = sin(angle)
         val cr = cos(PI / 6); val sr = sin(PI / 6)
-        val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge)
+        val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge,
+            apertureAngle = if (model >= 3) angle else null)
         val resonator = RimeBody(voice, hz, body, rate)
         val release = .06 + .12 * body
         val duration = min(8.0, gateSeconds + release + max(.25, resonator.t60 * 1.25))
         val frames = (duration * Dsp.RATE).roundToInt()
         val raw = FloatArray(frames * options.oversample)
-        val noise = Dsp.Noise(Dsp.seedFor("RIME", MODEL_VERSION, seed, midi, "friction"))
+        val noise = Dsp.Noise(Dsp.seedFor("RIME", model, seed, midi, "friction"))
         var rough = 0.0
         val noiseAlpha = 1 - exp(-2 * PI * 12000 / rate)
         val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity)
@@ -115,7 +116,7 @@ object Rime {
             var x = 0.0; var y = 0.0; var dx = 0.0; var dy = 0.0
             var rx = 0.0; var ry = 0.0; var rdx = 0.0; var rdy = 0.0
             // A versioned second-port path length, expressed in root periods.
-            // ANGLE itself remains a geometric pickup projection, never a filter.
+            // ANGLE rotates the projection and, in model 3, its finite contact aperture.
             val referencePhase = phase - (.035 + .075 * body)
             for (b in source.bands.indices) {
                 val band = source.bands[b]; val gain = gains[b]

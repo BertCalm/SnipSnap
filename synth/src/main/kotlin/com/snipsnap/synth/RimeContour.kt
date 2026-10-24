@@ -85,15 +85,50 @@ internal object RimeContour {
     const val TABLE_SIZE = 8192
     const val BANDWIDTH = 18000.0
 
-    private data class TableKey(val hz: Double, val detail: Double, val edge: Double)
+    private data class TableKey(val hz: Double, val detail: Double, val edge: Double, val apertureAngle: Double?)
     private val preparedCache = object : LinkedHashMap<TableKey, Prepared>(12, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<TableKey, Prepared>?): Boolean = size > 12
     }
 
     /** At most twelve immutable banks, about 14 MiB at the maximum band count. */
-    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double): Prepared {
-        val key = TableKey(hz, detail, edge)
-        return preparedCache.getOrPut(key) { build(hz, detail, edge) }
+    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null): Prepared {
+        val key = TableKey(hz, detail, edge, apertureAngle)
+        return preparedCache.getOrPut(key) {
+            if (apertureAngle == null) build(hz, detail, edge)
+            else aperture(prepare(hz, detail, edge), apertureAngle)
+        }
+    }
+
+    /**
+     * Two opposed contacts read fine contour motion over an orientation-dependent
+     * arc span. Their difference changes harmonic magnitudes even on a symmetric
+     * contour, where a point projection mostly changes phase. The root bypasses
+     * this aperture so its cancellation cannot remove the played pitch.
+     *
+     * Bake the extra contact into the cached tables, with no extra per-sample reads.
+     * Unmodified and aperture banks share the same twelve-entry memory bound.
+     */
+    private fun aperture(source: Prepared, angle: Double): Prepared {
+        val span = .10 * .5 * (1 + cos(angle)) * (1 + .65 * sin(angle))
+        // Broad, low-register contours need more contact sensitivity. Ease it back
+        // over the upper octave so a few bright modes cannot mask the root.
+        val readout = .5 + .15 * smooth((source.safeMaximum - 18) / 18.0)
+        val bands = source.bands.mapIndexed { index, band ->
+            if (index == 0) band else {
+                fun difference(table: FloatArray) = FloatArray(table.size) { i ->
+                    (readout * (table[i] - band.read(table, i.toDouble() / table.size - span))).toFloat()
+                }
+                Band(difference(band.x), difference(band.y), difference(band.dx), difference(band.dy))
+            }
+        }
+        val coefficients = source.coefficients.map { c ->
+            if (abs(c.n) <= 1) c else {
+                val phase = 2 * PI * c.n * span
+                val re = readout * (1 - cos(phase)); val im = readout * sin(phase)
+                Coefficient(c.n, c.re * re - c.im * im, c.re * im + c.im * re)
+            }
+        }
+        return Prepared(bands, source.cutoff, source.safeMaximum, coefficients)
     }
 
     private fun build(hz: Double, detail: Double, edge: Double): Prepared {
