@@ -180,9 +180,10 @@ TOUCH, BODY, LENGTH, MEDDLING and COMMUNE. Its complete recipe survives navigati
 editing, saving and pad placement, including legacy model-1 recipes. These are
 finite notes; SPREAD references the saved native note. The existing audition
 preserves the original renderer and the accepted control-range comparisons.
-PRISM adds six additive voices, thirty-six factory presets and a dry pitched
-starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-includes the full bank and the original/revised GLASS comparisons.
+PRISM adds six additive voices, forty factory presets including four finite
+body openings, and a dry pitched starter. The
+[audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site) preserves the
+earlier bank, body-opening studies and original/revised GLASS comparisons.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.

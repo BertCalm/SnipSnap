@@ -94,6 +94,7 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
@@ -1023,6 +1024,11 @@ fun SynthScreen(
     // landing on SYNTH never plays a kick unasked.
     var touched by remember { mutableStateOf(false) }
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
+        // Motion recipes contain a finite opening. Keep HOLD below the loop
+        // threshold so a slider or accessibility edit cannot discard that gesture.
+        if (name == "HOLD" && (loadedPatch as? PrismPatch)?.motion != null) {
+            return 0f..Math.nextDown(Prism.LOOP_THRESHOLD)
+        }
         if (name != "TUNE") return 0f..1f
         return when (val patch = loadedPatch) {
             is EmbouchurePatch -> 0f..((Embouchure.midiRange(patch.voice).last - patch.midi) / Embouchure.TUNE_SEMITONES.toFloat())
@@ -1502,6 +1508,12 @@ fun SynthScreen(
                             ?: PadRecipe(patch = patch, fx = fx, terminalFadeMs = terminalFade)
                         val recipe = padRecipe.toJsonValue()
                         val rendered = padRecipe.render()
+                        // SPARK spans low drum and brighter percussion roles.
+                        // Its picker color is nominal; the saved pad follows
+                        // the actual delivered audio, like its expression kit.
+                        val deliveredClass = if (patch is ThumpPatch && patch.voice == ThumpVoice.SPARK) {
+                            Classifier.classify(rendered).drumClass
+                        } else cls
                         val alreadyThere = model.pad(slot) != null
                         if (alreadyThere) {
                             val previousFilament = model.pad(slot)?.let { Breed.recipeOf(it)?.patch as? FilamentPatch }
@@ -1527,9 +1539,9 @@ fun SynthScreen(
                                 model.update(slot) { p ->
                                     val identified = if (reopenedHere) p else p.copy(
                                         displayName = name,
-                                        drumClass = cls,
-                                        colorHex = AutoPlace.colorFor(cls),
-                                        muteGroup = AutoPlace.muteGroupFor(cls),
+                                        drumClass = deliveredClass,
+                                        colorHex = AutoPlace.colorFor(deliveredClass),
+                                        muteGroup = AutoPlace.muteGroupFor(deliveredClass),
                                     )
                                     identified.copy(
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
@@ -1550,7 +1562,7 @@ fun SynthScreen(
                             // rides a follow-up `update` (its guards permit a
                             // recipe-only edit; slot/sampleFile stay put).
                             model.assign(
-                                slot, rendered, cls, name,
+                                slot, rendered, deliveredClass, name,
                                 source = authoredSource ?: emptyMap(),
                                 knownRootMidi = tonalRoot,
                             )
@@ -2824,6 +2836,10 @@ fun SynthScreen(
                     TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
+                if ((loadedPatch as? PrismPatch)?.motion != null) {
+                    TapeText("FINITE NOTE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape)
+                }
+
                 val origamiPatch = if (engine == Engine.ORIGAMI)
                     buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch else null
                 if (origamiPatch != null) {
@@ -3355,6 +3371,7 @@ private fun macroReadout(
     shoalHoldSupported: Boolean,
 ): String? = when {
     engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
+    engine == Engine.PRISM && name == "HOLD" && loadedPatch is PrismPatch && loadedPatch.motion != null -> "NOTE"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
     engine == Engine.OVERLAP && name == "HOLD" -> {
         val hold = macros.getValue(name)
@@ -4611,8 +4628,9 @@ private enum class Engine {
 // ---------- voice ↔ drum class ----------
 //
 // One mapping per engine, all named in this one place, per the brief.
-// THUMP's is unchanged (COWBELL/RIM have no dedicated class — they read as
-// PERC, same as the KIT screen's own AutoPlace mapping). TINES splits by how
+// THUMP's COWBELL/RIM and provisional SPARK have a nominal PERC label here.
+// Exported SPARK families classify each render through ThumpFamilies.
+// TINES splits by how
 // ThumpKits.classic() itself already classifies these same voices when it
 // borrows TINES for its own top row (BELL/CHIME -> TONAL, BLOCK/ZAP ->
 // PERC) plus the brief's own explicit call for TOY -> PERC (the cheap-
@@ -4655,6 +4673,7 @@ private val ThumpVoice.drumClass: DrumClass
         ThumpVoice.TOM -> DrumClass.TOM
         ThumpVoice.COWBELL -> DrumClass.PERC
         ThumpVoice.RIM -> DrumClass.PERC
+        ThumpVoice.SPARK -> DrumClass.PERC
     }
 
 // SKIN's voices are built to hit the same classifier gates THUMP's do
@@ -4760,6 +4779,7 @@ private fun thumpChipLabel(voice: ThumpVoice): String = when (voice) {
     ThumpVoice.TOM -> "TOM"
     ThumpVoice.COWBELL -> "COWBELL"
     ThumpVoice.RIM -> "RIM"
+    ThumpVoice.SPARK -> "SPARK"
 }
 
 private fun skinChipLabel(voice: SkinVoice): String = when (voice) {

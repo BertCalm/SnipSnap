@@ -578,12 +578,14 @@ awaits listening review;
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
 plucks, organs, basses, glass and sustained veils whose harmonics develop at
 different rates. GRAIN, DRIFT, SHAPE, STRIKE and BODY shape the dry note; HOLD
-exports settled periodic loops. Thirty-six factory presets, a dry sixteen-pad kit,
-patch recipes, CLI and the phone picker share the Kotlin renderer. Run
+exports settled periodic loops for static recipes. Forty factory presets include
+four finite body openings. A dry sixteen-pad kit, patch recipes, CLI and the
+phone picker share the Kotlin renderer. Run
 `./gradlew :synth:generatePrismAudition` for raw/matched voices, macro sweeps,
 interaction grids, velocity and loop probes. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-includes the complete factory bank and the original/revised GLASS comparisons.
+preserves the earlier factory bank, body-opening studies and original/revised
+GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are

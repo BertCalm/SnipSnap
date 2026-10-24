@@ -1,0 +1,35 @@
+{
+  "sourceRevision": "a1c23e726201dbcae1e621e95e287a7227f95f4d",
+  "generatedAt": "2026-10-18T23:24:35.593873833Z",
+  "description": "Accepted round-three body recipes and unquantized Float sample hashes. Only factory names may differ. Fixtures are copied from the audition, never regenerated from donor engines.",
+  "clips": [
+    {
+      "id": "fork-soft-keys-body",
+      "factoryName": "Soft Arrival",
+      "recipe": "fork-soft-keys-body.json",
+      "recipeSha256": "cdaa2788981bf53f57cbaa1d02a47ef3da5ae19ee86a05c7ca1059b9a8a2b28e",
+      "rawSamplesSha256": "b64973bb2df19814f179be8e8c3a6b4758dda001946c8352e017b18e0ee64d00"
+    },
+    {
+      "id": "tessera-paired-wire-body",
+      "factoryName": "Wire Bloom",
+      "recipe": "tessera-paired-wire-body.json",
+      "recipeSha256": "6f21ef3d7136c44cfb8ca35911baef98e2a5c7182fc705c9a922cec704e76fce",
+      "rawSamplesSha256": "31437a332f517cd1c1136ba098a6af712ed0b3b73faeeb5b108e4d3f0876f6cb"
+    },
+    {
+      "id": "embouchure-relaxed-bow-body",
+      "factoryName": "Bowed Bloom",
+      "recipe": "embouchure-relaxed-bow-body.json",
+      "recipeSha256": "fa814c4002c0f74e746a66a80b073bf85112729dbb674b71b4fec1fbc3d85847",
+      "rawSamplesSha256": "046b05d53ff2b6764ea78e736641ee48190ae3ebae41f239f2464855392a1694"
+    },
+    {
+      "id": "fathom-hollow-growl-body",
+      "factoryName": "Hollow Rise",
+      "recipe": "fathom-hollow-growl-body.json",
+      "recipeSha256": "5900305c097da217c26e969b4ee65c0d853b4b08cbc9b835f1a46c3def9537f6",
+      "rawSamplesSha256": "cbfa600bd2a000d593124cf04177aab90cad9ed822464c071ad059790ee6b7a3"
+    }
+  ]
+}

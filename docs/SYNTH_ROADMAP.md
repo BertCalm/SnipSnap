@@ -146,6 +146,7 @@ range. First-generation voices:
 | Clap | burst train + noise tail | SPREAD · DECAY · TONE |
 | Tom / Conga | swept tone, tunable family | TUNE · SWEEP · DECAY |
 | Cowbell / Rim / Clave | two-tone square pair / damped tick | TUNE · DECAY |
+| SPARK (prototype; awaiting audition) | sine body + phase/ring-modulated edge, separate low-pass responses; related hit snapshots, with MOVE deferred ([design and validation](THUMP_SPARK.md)) | TUNE · DECAY · PUNCH · METAL · COLOR |
 
 Every voice has since grown PUNCH (U3), and SNARE a membrane body with
 STRIKE and WIDTH (Phase 1B). **Sound-design round (shipped):** each voice
@@ -574,16 +575,25 @@ spectral organization, DRIFT separates group timing, SHAPE moves broad partial
 masks, STRIKE articulates the onset and BODY reinforces lower and middle energy.
 TUNE keeps the requested root stable; HOLD exports settled loop-only material.
 
-The complete 36-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
+The 40-preset bank, patches, dry sixteen-pad kit, starter, CLI and phone
 picker use the same 44.1 kHz mono/4× renderer and shared melodic loudness.
 Finite notes route as TONAL and held material as LOOP. The
 [published audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-contains the full factory bank, raw/matched voices across register and velocity,
+preserves the earlier factory bank, raw/matched voices across register and velocity,
 five-point sweeps, interaction corners and HOLD extremes. Run
-`./gradlew :synth:generatePrismAudition` to regenerate the listening pack.
+`./gradlew :synth:generatePrismAudition` to generate the current 40-preset pack.
 [PRISM](PRISM.md) records saving, rendering and loop contracts. The owner's dry
 sonic review is positive. Phone and MPC playback still require device validation;
 PRISM remains a working name pending release naming checks.
+
+The source-derived [body opening](PRISM_OPENING.md) is the owner's preferred
+motion direction. Soft Arrival, Wire Bloom, Bowed Bloom and Hollow Rise append
+their complete saved A/B recipes after the preceding 36 presets, preserving
+existing sounds and selection indices. Their finite 0.8-second movement needs
+no donor audio at playback. The phone keeps HOLD below its loop threshold for
+these recipes; factory promotion retains their motion. A separate release
+matrix covers three notes and two velocities per opening. Repeating motion,
+additional motion controls and a donor picker remain later work.
 
 ### SHOAL — materials animated by moving energy
 
