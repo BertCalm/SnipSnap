@@ -321,7 +321,8 @@ object MurmurAuditionGenerator {
 
     private fun case(id: String, group: String, voice: MurmurVoice, title: String, description: String,
                      macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f) =
-        Case(id, group, title, description, MurmurPatch(title, voice, Murmur.defaults(voice) + macros, midi, velocity))
+        Case(id, group, title, description, MurmurPatch(title, voice, Murmur.defaults(voice) + macros, midi, velocity,
+            config = Murmur.configurationFor(voice, CURRENT_MODEL)))
 
     private fun roleDescription(voice: MurmurVoice): String = when (voice) {
         MurmurVoice.BASS -> "Listen for rounded, FM-first talking body."
