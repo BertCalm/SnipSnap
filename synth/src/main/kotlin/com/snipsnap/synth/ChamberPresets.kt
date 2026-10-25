@@ -1,9 +1,14 @@
 package com.snipsnap.synth
 
-/** Provisional finite recipes, available to the listening bench without joining the factory roster. */
+/**
+ * Six finite factory recipes for the HYBRID and AQUARIUM rooms.
+ * The original listening recipes retain their controls; model 3 carries the accepted membrane mix.
+ */
 object ChamberPresets {
+    const val MODEL = 3
+
     private fun p(voice: ChamberVoice, name: String, vararg macros: Pair<String, Float>) =
-        ChamberPatch(name, voice, Chamber.defaults(voice) + macros)
+        ChamberPatch(name, voice, Chamber.defaults(voice) + macros, model = MODEL)
 
     private val presets = listOf(
         p(ChamberVoice.HYBRID, "Four Answers"),

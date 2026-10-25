@@ -78,6 +78,7 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
+import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
 import com.snipsnap.app.ui.DoorChip
 import com.snipsnap.app.ui.GearSheet
@@ -211,9 +212,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * from `Navigation.backChip`. The tab-era screens never needed a chip —
  * a tab is left by another tab — and SETUP and HELP were tabs. The list
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
- * three labs gain `◄ MAKE` with the MAKE step, the gear's two stay here.
+ * three labs gain `◄ MAKE` with the MAKE step, the gear's three stay here.
  */
-private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -379,8 +380,8 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /**
      * Where each screen the app navigates by name lands in the four-place
      * shape — `docs/SCREEN_PLAN_2026_10.md` §2's table, as code. A tab-era
-     * screen is a place with a stage, or a bench on one. The gear's two
-     * (SETUP, HELP) and KEYS open as a bench over wherever you are, so Back
+     * screen is a place with a stage, or a bench on one. The gear's three
+     * (SETUP, HELP, MIDI) and KEYS open as a bench over wherever you are, so Back
      * returns there; the rest land somewhere definite.
      *
      * Exhaustive on purpose: a new [AppScreen] without a landing here does
@@ -401,6 +402,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         AppScreen.KEYS -> nav.location.copy(benches = nav.location.benches + Bench.KEYS)
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
+        AppScreen.MIDI -> nav.location.copy(benches = nav.location.benches + Bench.MIDI)
     }
 
     /**
@@ -3955,6 +3957,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                         )
                         // The place under the gear: HELP opens its section.
                         top == Bench.HELP -> HelpScreen(cameFrom = location.place)
+                        top == Bench.MIDI -> MidiScreen()
                         top == null && location.stage == Stage.BEAT -> {
                             val songEntry = open
                             if (arrangeOpen && songEntry != null) {
@@ -4157,6 +4160,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                 GearSheet(
                     onSetup = { gearOpen = false; landOn(AppScreen.PROPERTIES) },
                     onHelp = { gearOpen = false; landOn(AppScreen.HELP) },
+                    onMidi = { gearOpen = false; landOn(AppScreen.MIDI) },
                     onDismiss = { gearOpen = false },
                 )
             }

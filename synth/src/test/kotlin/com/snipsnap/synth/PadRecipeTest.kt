@@ -75,7 +75,7 @@ class PadRecipeTest {
         FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
-        // CHAMBER is a finite prototype too; its patch carries a saved note, velocity and exact seed.
+        // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),

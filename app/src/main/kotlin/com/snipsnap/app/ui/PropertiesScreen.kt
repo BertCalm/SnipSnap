@@ -392,7 +392,7 @@ private const val SETUP_CARD_SUMMARY_NONE = "NONE PICKED"
 
 /** `versionName` from the app's own package, or null when the package manager will not say. */
 @Composable
-private fun rememberVersionName(): String? {
+internal fun rememberVersionName(): String? {
     val context = LocalContext.current
     return remember(context) {
         try {

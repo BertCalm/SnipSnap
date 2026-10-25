@@ -203,6 +203,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.filament() },
         Starter(
+            "chamber", "CHAMBER",
+            "Four struck instruments share wood, glass and aquarium rooms in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.chamber() },
+        Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
             seeded = false,
