@@ -126,7 +126,7 @@ tasks.register<JavaExec>("generateTrioMusicalBank") {
     args(providers.gradleProperty("trioMusicalOutput").orNull ?: "${rootDir}/testkit/trio-musical-bank")
 }
 
-/** First finite CHAMBER proof: a shared quartet, mixed boundaries and causal listening comparisons. */
+/** Finite CHAMBER listening studies, including the preserved timpani comparisons. */
 tasks.register<JavaExec>("generateChamberAudition") {
     group = "distribution"
     description = "Render CHAMBER raw/matched WAVs, complete room recipes and the first-listen audition page."
@@ -136,10 +136,36 @@ tasks.register<JavaExec>("generateChamberAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
     providers.gradleProperty("chamberRevision").orNull?.let {
-        require(it in setOf("timpani", "timpani-boost")) { "chamberRevision must be timpani or timpani-boost" }
+        require(it in setOf("timpani", "timpani-boost", "finite")) {
+            "chamberRevision must be timpani, timpani-boost or finite"
+        }
         args("--$it")
     }
     providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
+    providers.gradleProperty("chamberKit").orNull?.let { args("--kit=$it") }
+}
+
+/** Sixteen finite CHAMBER pads with exact recipes and both supported MPC formats. */
+tasks.register<JavaExec>("generateChamberKit") {
+    group = "distribution"
+    description = "Export the dry CHAMBER MPC 3 track, MPC 2 twin, recipes and SnipSnap-Chamber-Kit.zip."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Warm production misses and exact-recipe cache hits, with PCM compatibility hashes. */
+tasks.register<JavaExec>("benchmarkChamber") {
+    group = "verification"
+    description = "Measure finite CHAMBER production rendering and completed-recipe cache reuse."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberPerformanceBenchmark")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberBenchmarkOutput").orNull ?: "${rootDir}/testkit/chamber-performance")
+    args(providers.gradleProperty("chamberBenchmarkRounds").orNull ?: "3")
 }
 
 tasks.register<JavaExec>("replayChamberDiagnostic") {
@@ -152,6 +178,23 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
     doFirst {
         args(providers.gradleProperty("chamberRecipe").get(), providers.gradleProperty("chamberReplayOutput").get(),
             providers.gradleProperty("chamberReplayMode").orNull ?: "matched")
+    }
+}
+
+/** Separate steady sustain proof with real loop recurrence and passive note-off. */
+tasks.register<JavaExec>("generateOverlapHeldAudition") {
+    group = "distribution"
+    description = "Render the separate steady OVERLAP held proof, measured loops and note-off examples."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldAuditionGenerator")
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("overlapHeldRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("overlapHeldWav").get(),
+            providers.gradleProperty("overlapHeldMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("overlapHeldOutput").orNull ?: "${rootDir}/testkit/overlap-held-audition")
     }
 }
 
@@ -539,7 +582,7 @@ tasks.test {
     }
 }
 
-/** Stoop's dry pack; -PstoopQuick selects smoke, -PstoopBaselineDir adds original factory references. */
+/** Stoop's dry pack; preserve both published banks and the previous held-control references. */
 tasks.register<JavaExec>("generateStoopAudition") {
     group = "distribution"
     description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
@@ -548,6 +591,7 @@ tasks.register<JavaExec>("generateStoopAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
     providers.gradleProperty("stoopBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("stoopOriginalBaselineDir").orNull?.let { args("--original-baseline-dir=$it") }
     if (project.hasProperty("stoopQuick")) args("--quick")
     if (project.hasProperty("stoopRefreshPage")) args("--refresh-page")
 }

@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -18,6 +18,10 @@ import com.snipsnap.json.JsonValue
  * wah after contour and before squash: a wah is the first pedal on the
  * board, a filter in front of the compressor and the amp, and the
  * compressor then levels what the sweep did to the note.
+ *
+ * compressor after wah and before squash: the sustain pedal sits where a
+ * guitar board puts it (wah, compressor, drive, amp), and SQUASH, the
+ * sampler's punch, still has the last word on the hit before the amp.
  *
  * valve after squash and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
@@ -70,6 +74,7 @@ data class FxChain(
     val ensemble: Map<String, Float>? = null,
     val valve: Map<String, Float>? = null,
     val wah: Map<String, Float>? = null,
+    val compressor: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -197,6 +202,7 @@ data class FxChain(
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
+            Section("compressor", Compressor.MACROS, { it.compressor }, { c, m -> c.copy(compressor = m) }, Compressor::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
             Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process, gains = mapOf("DRIVE" to Valve::gainFor)),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
