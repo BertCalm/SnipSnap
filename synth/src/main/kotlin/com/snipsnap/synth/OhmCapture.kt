@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
@@ -48,7 +49,7 @@ class OhmCapture private constructor(private val pcm: ByteArray, val label: Stri
     override fun toString(): String = "OhmCapture(frames=$frameCount, label=$label, sha256=$sha256)"
 
     companion object {
-        const val SAMPLE_RATE = 44_100
+        const val SAMPLE_RATE = WavWriter.MPC_SAMPLE_RATE
         const val MAX_FRAMES = SAMPLE_RATE / 2
         const val MAX_LABEL_CHARS = 64
         const val DEFAULT_SECONDS = .25f

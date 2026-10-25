@@ -29,6 +29,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.synth.Ohm
@@ -157,7 +158,7 @@ internal fun OhmControls(
                 }
             }
             patch.options.capture?.let { capture ->
-                TapeText("${capture.label ?: "CAPTURED ATTACK"} · ${capture.frameCount * 1000 / 44_100} MS",
+                TapeText("${capture.label ?: "CAPTURED ATTACK"} · ${capture.frameCount * 1000 / WavWriter.MPC_SAMPLE_RATE} MS",
                     TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
             }
             if (pads.isEmpty()) TapeText("OPEN A KIT TO CAPTURE A PAD'S ATTACK.",
