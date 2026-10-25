@@ -7,6 +7,11 @@ import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.ChamberVoice
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Pitchwheel
@@ -41,6 +46,34 @@ class SpreadTest {
     }
 
     private fun kit(name: String) = KitBuilderModel.create(name, File(temp, name))
+
+    @Test
+    fun `Chamber spreads keep the authored root across voices models and surface balances`() {
+        // A loud A3 contradicts the saved note. Upper bar and triangle modes,
+        // or sympathetic room pitches, must not retune the four-source root.
+        val misleading = tone(220.0)
+        assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
+        for (voice in ChamberVoice.entries) for (model in 1..Chamber.MODEL_VERSION) {
+            for (midi in listOf(Chamber.MIDI_MIN, 60, Chamber.MIDI_MAX)) for (balance in listOf(0f, 1f)) {
+                val patch = ChamberPatch("Authored quartet", voice, mapOf("BALANCE" to balance),
+                    midi = midi, model = model)
+                assertEquals(midi.toFloat(), Spread.detect(misleading, patch),
+                    "$voice model $model BALANCE $balance must keep MIDI $midi")
+            }
+        }
+    }
+
+    @Test
+    fun `Caustic spreads use the authored note instead of a dominant detected partial`() {
+        val misleading = tone(220.0)
+        assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
+        for (midi in listOf(36, 60, 84)) for (body in listOf(0f, .5f, 1f)) {
+            val patch = CausticPatch("Saved root", CausticVoice.ALLOY,
+                mapOf("SOURCE" to .7f, "FOCUS" to .85f, "BODY" to body, "LENGTH" to .1f),
+                midi = midi, velocity = .35f, model = 1)
+            assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "BODY $body must retain MIDI $midi")
+        }
+    }
 
     @Test
     fun `wheel spreads use the saved root and relative tune in every model`() {

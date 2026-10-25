@@ -54,6 +54,8 @@ class MidiKeys(private val voice: Voice) {
                 MidiWire.CC_SUSTAIN -> pedal(event.value >= MidiWire.CC_SWITCH_ON)
                 MidiWire.CC_ALL_NOTES_OFF, MidiWire.CC_ALL_SOUND_OFF -> allOff()
             }
+            // The transport's clock is not a key; nothing here plays it yet.
+            is MidiWire.Event.RealTime -> {}
         }
     }
 

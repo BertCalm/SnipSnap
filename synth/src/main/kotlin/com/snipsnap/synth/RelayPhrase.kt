@@ -3,6 +3,12 @@ package com.snipsnap.synth
 /** Original generated source roles. All share the requested root; no PCM or melody data. */
 enum class RelayRole { PLUCK, ORGAN, BELL, SOFT }
 
+/**
+ * A generated role's balance, spectrum and contour. In model 1, [decaySeconds] damps
+ * PLUCK/BELL and sets SOFT's swell time. ORGAN deliberately sustains with a fixed
+ * 35 ms source-contour rise from .86 to 1, so its serialized decay value is inactive.
+ * Giving that value a new meaning requires an explicit patch-model compatibility decision.
+ */
 data class RelaySource(
     val role: RelayRole,
     val gain: Float,

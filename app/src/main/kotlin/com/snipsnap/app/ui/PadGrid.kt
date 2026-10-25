@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -335,14 +337,17 @@ internal fun PlayPad(
     // A tick under the finger, on every hit this cell makes - assigned, or
     // an empty one CATCH A HIT can land on. The hit itself is the caller's.
     val haptics = LocalHaptics.current
-    val hitWithFeel: (Int, Float, Long) -> Unit = { s, v, t -> onHit(s, v, t); haptics.pad(v) }
+    val currentOnHit by rememberUpdatedState(onHit)
+    val currentOnRelease by rememberUpdatedState(onRelease)
+    val hitWithFeel: (Int, Float, Long) -> Unit = { s, v, t -> currentOnHit(s, v, t); haptics.pad(v) }
+    val releaseCurrent: (Int, Long) -> Unit = { s, t -> currentOnRelease(s, t) }
 
     if (pad == null || glow == null) {
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
-                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", hitWithFeel, onRelease) else Modifier),
+                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", hitWithFeel, releaseCurrent) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
             // Full-opacity ink2, not a dimmed copy — the alpha reduction
@@ -376,7 +381,7 @@ internal fun PlayPad(
             // is for playing): the press-and-release gesture and its
             // accessibility floor live in `padGesture`, shared with the
             // empty slot CATCH can land on.
-            .padGesture(slot, "PAD $tag: ${pad.displayName}", hitWithFeel, onRelease)
+            .padGesture(slot, "PAD $tag: ${pad.displayName}", hitWithFeel, releaseCurrent)
             .padding(5.dp),
     ) {
         // Full-opacity ink2 on its own solid backing chip, not a dimmed

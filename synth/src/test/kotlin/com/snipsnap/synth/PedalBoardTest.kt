@@ -55,7 +55,7 @@ class PedalBoardTest {
         val board = PedalBoard(listOf(pick("wahed", 0.7f, PedalSide.PRE), pick("compressed", 1f, PedalSide.PRE)))
         val folded = board.chainFor(PedalSide.PRE)!!
         assertEquals(Treatments.chain("wahed", 0.7f).wah, folded.wah)
-        assertEquals(Treatments.chain("compressed", 1f).squash, folded.squash)
+        assertEquals(Treatments.chain("compressed", 1f).compressor, folded.compressor)
         assertContentEquals(folded.process(snare).samples, board.process(snare).samples, "one side is one pass")
 
         // DRIVE then RIG both set valve: RIG, picked later, owns it.
