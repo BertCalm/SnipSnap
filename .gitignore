@@ -419,3 +419,6 @@ testkit/murmur-luthier-audition/
 
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
 testkit/thump-spark-audition/
+
+# Owner-preferred Murmur production recipes and their regenerated proof audio.
+testkit/murmur-approved-audition/

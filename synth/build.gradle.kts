@@ -526,6 +526,17 @@ tasks.register<JavaExec>("generateMurmurLuthierAudition") {
     args(providers.gradleProperty("murmurLuthierOutput").orNull ?: "${rootDir}/testkit/murmur-luthier-audition")
 }
 
+/** Rebuild the six owner-preferred comparisons as ordinary saved production patches. */
+tasks.register<JavaExec>("generateMurmurApprovedAudition") {
+    group = "distribution"
+    description = "Render approved KEY and low CHOIR recipes and verify their published listening hashes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurApprovedAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("murmurApprovedOutput").orNull ?: "${rootDir}/testkit/murmur-approved-audition")
+}
+
 /** Export the sixteen first-listen pads through the standard MPC program pipeline. */
 tasks.register<JavaExec>("generateMurmurKit") {
     group = "distribution"

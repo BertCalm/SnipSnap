@@ -348,7 +348,7 @@ class MurmurTest {
     fun `an interrupted finite or held render stops instead of finishing beside its replacement`() {
         // SynthScreen previews run in runInterruptible: a newer request interrupts the worker, and the
         // sample loop, the decimation, the seam and the level must stop on that flag instead of finishing.
-        for (model in 1..2) for ((missing, render) in listOf<Pair<String, () -> Unit>>(
+        for (model in 1..3) for ((missing, render) in listOf<Pair<String, () -> Unit>>(
             "MURMUR finite render did not stop on the interrupt at its first look in the sample loop" to
                 { Murmur.render(MurmurVoice.KEY, config = Murmur.configurationFor(MurmurVoice.KEY, model)) },
             "MURMUR held render did not stop on the interrupt at its first look in the sample loop" to
@@ -371,7 +371,7 @@ class MurmurTest {
         // looks must still stop the seam measurement and the level instead of letting them finish unwanted.
         // After the loop an uninterrupted render looks exactly three more times: before the decimation, before the
         // seam and before the level. Removing any one of those changes the count.
-        for (model in 1..2) {
+        for (model in 1..3) {
             val config = Murmur.configurationFor(MurmurVoice.KEY, model)
             val held = mapOf("HOLD" to 1f)
             val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
