@@ -1251,6 +1251,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeAudition") {
+    group = "distribution"
+    description = "Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-audition", "${rootDir}")
+}
+
 /** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
 tasks.register<JavaExec>("generateFadeLawAudition") {
     group = "distribution"

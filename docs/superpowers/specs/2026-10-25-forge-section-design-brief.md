@@ -1,6 +1,6 @@
 # FORGE: a hydroforming transient section. Design brief
 
-**Status:** concept, prototyped in Python (`2026-10-25-forge-section-prototype.py`, beside this file). Nothing rendered in Kotlin, nothing heard.
+**Status:** built in Kotlin, awaiting the owner's listening gate (see "As built" at the end). Prototyped in Python first (`2026-10-25-forge-section-prototype.py`, beside this file). Nothing heard. No pedal chip until the gate names one.
 **Source idea:** the owner's XO_HYDROFORM design specification (explosive hydroforming as a transient synthesis paradigm: a transmission medium, a charge at a standoff, strain-rate dependent plasticity, die arrest). This brief adapts it to SnipSnap; it does not reproduce it.
 **Repository truth:** commit `ad2439e` (2026-10-25). APIs grepped and read: `Valve.process`/`Valve.upsample` (`Valve.kt:153-197`, the rack's only oversampled section), `Tide.bandLimit`, `Dsp.decimate`, `Dsp.Biquad.allpass` (`Dsp.kt:425`), `Dsp.seedFor`, `Dsp.Noise`, `Dsp.limitPeak`, `Dsp.levelTo`, `FxChain.SECTIONS` (`FxChain.kt:196`), `Squash`, `Spike`, `Compressor`, `Punch`, `Onset.render`, `Thump.render`, `Tide.fold` (`Tide.kt:357`). No slew-dependent transfer curve exists anywhere in `synth/`; no section converts clipped energy into noise.
 
@@ -161,3 +161,51 @@ Run the prototype on real pads: `testkit/` THUMP and ONSET kicks and snares, a S
 ## Prompt notes for the next round
 
 The brief was rich enough to design from without a question. Three things would have sharpened it: which pads it is for first (a THUMP kick, an ONSET snare, a chop, a keygroup attack), because the chirp's value is source-dependent (finding 1); whether CHARGE is meant to be heard as a sub layer or as an attack booster, because those pull the shock's frequency in different directions; and a reference clip with a timestamp for the "coined" sound, so the gate page can be built against it.
+
+## As built (2026-10-25, `synth` tests and docs)
+
+**What shipped.** `Forge.kt`: an `object Forge` rack section with CHARGE, STANDOFF, YIELD and ARREST, oversampled the way VALVE is. One `Section("forge", ...)` row between `squash` and `valve` in `FxChain.SECTIONS`, one appended `forge` constructor field, and the order line and placement paragraph in `FxChain`'s KDoc. `FxChain.VERSION` stays 1, and a recipe without `forge` serializes and renders exactly as before. `ForgeTest` (19 tests), `ForgeAuditionGenerator` with its `generateForgeAudition` task and its page (`synth/src/test/resources/audition/forge-audition.html`), the `testkit/forge-audition/` gitignore line, and the README's rack lines. FxTest's VALVE order test now reads "VALVE right after FORGE". No pedal chip, no `Treatments` entry, no app change: the chip is named after the gate.
+
+**The gate.** 87 clips on five sources (a THUMP kick and snare, a SKIN closed hat, a TINES bell, and the loudest hit in `reference/live3 room take.wav`), published as the listening artifact at https://claude.ai/artifact/8LMFRKLccrymzxkPPTaD9g with seven questions. Answers save to the page's store (`answers/<viewer id>`), where the next session can read them. The source grids are peak-matched, not loudness-matched, because ARREST's whole effect is loudness at the same peak; a LEVELLED section is the loudness-matched check.
+
+**Changed against the design, and why.**
+
+- **The folder is a sine, not a triangle.** `sin(π/2 · (1 + 3p) · x)`, TIDE's fold family. A triangle has corners, and the prototype measured it aliasing at 4x; a sine fold is smooth everywhere. Kotlin's steady-probe measurement is below.
+- **The slow branch is untouched.** The design had a rigid clip at a 1.3x pre-gain on slow material. That clip touched every pad's peak, so no setting was a copy. In the build, slow material passes straight to the die, and the die is where it fractures.
+- **The die opens above the blank.** The ceiling runs from 1.25 of the peak at ARREST 0, where nothing reaches its 0.8 knee, to 0.4 at ARREST 1. With YIELD's neutral at 1 (nothing flows), every neutral is an identity. Only the 4x round trip and VALVE's 5 Hz DC blocker remain there.
+- **The heat's noise is one fixed take.** The prototype seeded it from the macros, and the first Kotlin build did the same. So STANDOFF moved the noise even with no shock to place, and `STANDOFF moves the shock and is inert without one` failed. One take means a knob changes only what the knob does, and identical channels stay identical.
+- **Every normalisation is shared across channels.** The first build normalised each channel after the shock and after the medium, and `a quieter channel stays quieter` failed. Now one gain serves all channels.
+- **The heat's band is two fixed-coefficient band-passes** centred at the geometric mean of 3 and 14 kHz. The first build used four state-variable filters, each recomputing `tan()` on every sample.
+- **The medium's centres follow van der Corput's sequence** on a log scale from 300 Hz to 6 kHz. The first sections already span the range, and adding one never re-tunes the others. CHARGE therefore steps in 24 whole sections (4.2 % of the knob each), not continuously.
+- **An end fade of 4 ms when CHARGE > 0.** The all-pass chain delays a pad's last milliseconds past its end.
+
+**Measured (Kotlin, `ForgeTest`; the bars sit just inside these).**
+
+| Claim | Measured |
+|---|---|
+| Neutral point: worst third-octave, RMS | kick 0.037 dB, 0.096 dB; snare −0.080 dB, 0.356 dB (VALVE's own neutral numbers: the same round trip) |
+| CHARGE, cowbell share 20 to 120 Hz at 0, .25, .5, .75, 1 | 0.0050, 0.0267, 0.0390, 0.1025, 0.1507 |
+| The medium, 90 % energy width of a 0.8 ms click at CHARGE 0, .25, .5, 1 | 0.54, 4.76, 7.82, 13.95 ms |
+| STANDOFF 0 against 1, the kick's first 6 ms | differ by 1.27 of their RMS; inert at CHARGE 0, bit for bit |
+| YIELD, mean flow state on the kick at 0, .25, .5, .75, 1 | 0.159, 0.048, 0.012, 0.001, 0 |
+| YIELD, kick body share over 200 Hz after 50 ms | 0.0206, 0.0866, 0.0035, 0.0039, 0.0039 |
+| YIELD, kick attack share over 3 kHz in 5 ms | 0.057, 0.057, 0.132, 0.215, 0.056 |
+| ARREST, crest factor at 0 and 1 | kick 5.01 to 2.99, snare 7.89 to 5.65, monotonic at every quarter |
+| ARREST, kick share over 6 kHz at .5 and 1 (the heat) | 0.00050, 0.00102 |
+| Folder aliasing, steady 247 Hz probe, 4x / 1x | YIELD 0: 42.5 / 30.5 dB; YIELD .3: 50.5 / 28.2; YIELD .5: 52.2 / 32.7 |
+| Share over 19 kHz at YIELD .3, ARREST 1 | kick 1.65e-6 (dry 2.1e-7); the snare and hat lose more there to the round trip than the burst adds |
+| Cost per mono rendered second (JVM, this sandbox) | 21 ms at CHARGE 0 (VALVE's 22), 46 ms at CHARGE 1: a half-second kick re-renders in about 23 ms |
+
+Guards proven by reverting them alone. Unfiltered heat noise put 1.23e-5 of the kick over 19 kHz, and only `the heat is band-limited` failed. The macro seed and the per-channel normalisation each failed their own test before the fix, as above.
+
+**Disclosed, not fixed.**
+
+- **YIELD's harsh zone.** At YIELD 0.25 the threshold sits inside the body's own slew. Slew peaks at every zero crossing, so the flow switches on and off twice a cycle. That makes the body harsher (0.0866) than the steady full fold at YIELD 0 (0.0206). The gate asks whether to keep it. A slew envelope or a level-normalised detector would smooth it, at the cost of the click's onset.
+- **Hats.** A hat is all fast material, so at YIELD 0.5 nearly all of it flows. The SKIN and THUMP closed hats file as SNARE through FORGE's defaults, and the THUMP open hat as CLAP. The gate asks whether that is too much. A detector referenced to the pad's typical slew rather than its peak is the candidate fix.
+- **The round trip refiles THUMP's hats** from HAT_CLOSED or HAT_OPEN to PERC at the neutral point. VALVE's neutral does exactly the same (the rack's 19.5 kHz corner), and SKIN's hat keeps its class. This predates FORGE.
+- **A THUMP kick files as PERC at CHARGE 1.** The snare and cowbell keep their classes everywhere.
+- **YIELD 0 misses VALVE's 45 dB aliasing bar at 4x** (42.5 dB), the same kind of miss as VALVE's DRIVE 1 (40.6). Whether that wants 8x is gate question seven.
+- **STANDOFF moves the attack's colour, not a tunable comb.** No notch at 1/(2·delay) survives the folder and the die. This was found in the prototype and holds here.
+- **44.1 kHz assumed**, VALVE's note: the round trip's corner is absolute. A 48 kHz pad renders finite and its own length, and is tested.
+
+**Not heard.** This sandbox cannot play audio. Every sonic claim above is a measurement or a question on the gate page.

@@ -1086,7 +1086,12 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), RING (the sound multiplied by a sine — metal, bells, radio;
+transient), FORGE (a hit formed against a die: a low shock, an all-pass
+sweep, the fast part folded and the slow part left, then a ceiling that
+closes with a flash of grit; peak-matched, no gain envelope, no chip until
+its listening gate, see
+[`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
+RING (the sound multiplied by a sine — metal, bells, radio;
 deliberately no longer the hit it was, the exemption GHOST already
 carries), DUB (generation loss: a dub of a dub, twelve deep), VINYL (the
 record under the hit, as TAPE is the cassette: rumble, groove hiss and
@@ -1096,8 +1101,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
-tape → ensemble → phase → echo → spring → motion — owns
+spike → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
+dub → vinyl → tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
