@@ -38,18 +38,17 @@ repositories {
     mavenCentral()
 }
 
-// A stopgap for a JIT crash, not a tuning choice. C2, the JVM's optimising
-// compiler, dies with an internal error (Type::typerr, ShouldNotReachHere)
-// while compiling Filament.synthesize, a 4,556-byte method, and takes the
-// whole test process with it. Gradle then reports "There were failing
-// tests" with no test named, and the log stops wherever that run's render
-// happened to make the method hot: a different class each time. Reproduced
-// on OpenJDK 21.0.12 in :cli and :shell; CI's jvm-tests on Temurin 17 stops
-// the same way. Excluding that one method from JIT runs it interpreted, so
-// Filament's renders are slower under test and every other method keeps
-// full optimisation. Remove this once Filament.synthesize is split into
-// methods C2 can compile; a test JVM that no longer crashes without the
-// flag is the proof.
+// A stopgap for a JIT crash, not a tuning choice. On OpenJDK 21 (what cloud
+// sessions run), C2, the JVM's optimising compiler, dies with an internal
+// error (Type::typerr, ShouldNotReachHere) while compiling Filament.synthesize,
+// a 4,556-byte method, and takes the whole test process with it: Gradle
+// reports "There were failing tests" with no test named. Reproduced on
+// 21.0.12 in :cli and :shell on every run; not seen on CI's Temurin 17, whose
+// silent :shell failures were most likely the heap :shell's build file now sizes.
+// Excluding that one method from JIT runs it interpreted and leaves every
+// other method optimised; CI's jvm-tests was no slower with it. Remove this
+// once Filament.synthesize is split into methods C2 can compile; a JDK 21
+// test JVM that no longer crashes without the flag is the proof.
 subprojects {
     tasks.withType<Test>().configureEach {
         jvmArgs("-XX:CompileCommand=quiet", "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize")
