@@ -77,7 +77,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * The three panels of controls above the pad, in strip order - one shows
@@ -289,6 +288,7 @@ fun SurfaceScreen(
      */
     settings: MutableMap<String, String> = mutableMapOf(),
 ) {
+    composedOffMainThread("SurfaceScreen")
     val scheme = LocalScheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -468,7 +468,7 @@ fun SurfaceScreen(
     // SurfaceKey) and handed over with the sample, so the key the engine
     // holds is never for a pad other than the one it is playing.
     suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?, generation: Int) {
-        val loaded = withContext(Dispatchers.IO) {
+        val loaded = offMain {
             // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
@@ -514,7 +514,7 @@ fun SurfaceScreen(
         val appAudio = MicSessionService.source.value == MicSessionService.Source.INSIDE
         val generation = ++voiceGeneration
         scope.launch {
-            val loaded = withContext(Dispatchers.IO) {
+            val loaded = offMain {
                 MicSessionService.snapshotTail(RingSlot.frames(MicSessionService.SAMPLE_RATE))
                     ?.let { RingSlot.freeze(it, MicSessionService.SAMPLE_RATE) }
                     ?.let { it to SurfaceKey.sourceMidi(it) }
@@ -558,7 +558,7 @@ fun SurfaceScreen(
     // left the *previous* sample sitting in the engine would still sound
     // wherever the puck favours that vertex, while padName2 said NO PAD2.
     suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
-        val snip = withContext(Dispatchers.IO) {
+        val snip = offMain {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
         }
         if (generation != pad2Generation) return  // a later press already superseded this one
@@ -574,7 +574,7 @@ fun SurfaceScreen(
 
     // The engine's third source slot - the sample area's base-right vertex.
     suspend fun loadPad3(dir: File, pad: KitPad, generation: Int) {
-        val snip = withContext(Dispatchers.IO) {
+        val snip = offMain {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
         }
         if (generation != pad3Generation) return  // a later press already superseded this one
@@ -590,7 +590,7 @@ fun SurfaceScreen(
 
     // The engine's fourth source slot - the sample area's base-mid vertex.
     suspend fun loadPad4(dir: File, pad: KitPad, generation: Int) {
-        val snip = withContext(Dispatchers.IO) {
+        val snip = offMain {
             runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
         }
         if (generation != pad4Generation) return  // a later press already superseded this one
@@ -621,7 +621,7 @@ fun SurfaceScreen(
             // `kitSettings = next` above it has already happened, so reading
             // `kitSettings` here means every one of them writes the same,
             // latest content - the write order stops mattering.
-            withContext(Dispatchers.IO) { runCatching { SurfaceStore.save(dir, kitSettings) } }
+            offMain { runCatching { SurfaceStore.save(dir, kitSettings) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: kitSettings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -675,7 +675,7 @@ fun SurfaceScreen(
         }
         // The kit's surface settings first (a torn file is the defaults,
         // said aloud), then the pad they name, or the kit's lowest.
-        val loaded = withContext(Dispatchers.IO) { runCatching { SurfaceStore.load(entry.dir) } }
+        val loaded = offMain { runCatching { SurfaceStore.load(entry.dir) } }
         kitSettings = loaded.getOrElse {
             onToast(Copy.SURFACE_SETTINGS_UNREADABLE)
             SurfaceStore.Settings.DEFAULT
@@ -994,7 +994,7 @@ fun SurfaceScreen(
     var finishing by remember { mutableStateOf(false) }
     fun landOnTape(snip: Snip) {
         scope.launch {
-            val landed = withContext(Dispatchers.IO) {
+            val landed = offMain {
                 runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
             }
             landed.onSuccess {
@@ -1013,7 +1013,7 @@ fun SurfaceScreen(
         printing = false
         scope.launch {
             try {
-                val snip = withContext(Dispatchers.Default) { engine.stopPrint() }
+                val snip = offMain(Dispatchers.Default) { engine.stopPrint() }
                 if (snip == null || snip.frameCount < engine.sampleRate / 10) {
                     onToast(Copy.SURFACE_NOTHING_PRINTED)
                     return@launch
@@ -1039,7 +1039,7 @@ fun SurfaceScreen(
         landing = true
         scope.launch {
             try {
-                val (existed, updated) = withContext(Dispatchers.IO) {
+                val (existed, updated) = offMain {
                     // KitWrites: this kit.json write must not race SET KEY/
                     // EVIL TWINS/IN KEY off the KIT screen or another pad's
                     // own commit — same open→mutate→save-under-one-lock
