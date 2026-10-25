@@ -39,7 +39,7 @@ permissions:
 jobs:
   emulator-tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -47,30 +47,41 @@ jobs:
           distribution: temurin
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
+      # See tests.yml's identical step for why packages is empty; the
+      # emulator runner below installs the system image it needs itself.
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
-      # DIAGNOSTIC (not for merge): run jvm-tests' own command,
-      # with suite-level failures printed, the GC log and any JVM crash file
-      # kept, and the runner's memory sampled every 15 s.
-      - name: Run the shell tests with diagnostics
+      # The hosted runners have KVM but hand it to root only; without this
+      # the emulator falls back to software emulation and the boot alone
+      # outlasts the job.
+      - name: Enable KVM
         run: |
-          mkdir -p diag
-          (while true; do date -u +%T; free -m | sed -n 2p; ps -eo rss,args --sort=-rss | head -4 | cut -c1-160; sleep 15; done) > diag/memory.txt 2>&1 &
-          ./gradlew --no-daemon --init-script scripts/diagnose-shell-tests.gradle \
-            "-Dorg.gradle.jvmargs=-Xmx2g -Xlog:gc:file=$PWD/diag/gc-gradle-build.log:time,uptime -XX:ErrorFile=$PWD/diag/hs_err_gradle_%p.log" \
-            test -x :app:test
-      - name: Kernel messages
-        if: always()
-        run: sudo dmesg | tail -60 > diag/dmesg.txt || true
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run the on-device suite
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          # The runner's defaults minus -noaudio: the SURFACE engine opens an
+          # audio stream when the screen appears, and a device with no audio
+          # would make every one of these a test of the fallback toast.
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
+          # EXPERIMENT (not for merge): repeat the tests that show the screen being moved onto offMain.
+          script: REPEAT_ROUNDS=20 REPEAT_TESTS=com.snipsnap.app.ui.ExportScreenTest sh scripts/repeat-android-tests.sh
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: shell-test-diagnostics
+          name: emulator-test-reports-${{ github.sha }}
           path: |
-            diag/**
-            */build/test-results/test/**
-            */hs_err_*.log
+            app/build/reports/androidTests/connected/**
+            app/build/outputs/androidTest-results/**
+            app/build/repeat/**
           if-no-files-found: ignore
           retention-days: 7

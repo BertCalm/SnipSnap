@@ -92,11 +92,9 @@ import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 private const val TAG = "ExportScreen"
 
@@ -253,6 +251,7 @@ fun ExportScreen(
     /** ALSO ▸ BEAT WRITERS: the door to BEAT, where bounce, MIDI and chart are written from. */
     onBeatWriters: () -> Unit = {},
 ) {
+    composedOffMainThread("ExportScreen")
     val scheme = LocalScheme.current
 
     if (entry == null) {
@@ -293,7 +292,7 @@ fun ExportScreen(
         // would otherwise swallow the cancellation as an ordinary load
         // failure (`loadFailed = true`, KIT_WONT_OPEN on a perfectly good
         // kit) instead of letting it propagate.
-        val loaded = withContext(Dispatchers.IO) {
+        val loaded = offMain {
             KitWrites.mutex.withLock {
                 runCatching {
                     val kit = KitStore.load(entry.dir)
@@ -352,6 +351,7 @@ private fun ExportContent(
     onShareKit: () -> Unit,
     onBeatWriters: () -> Unit,
 ) {
+    composedOffMainThread("ExportContent")
     val model = session.model
     val kit = session.kit
 
@@ -534,7 +534,7 @@ private fun ExportContent(
      * a worse lie than the one finding 15 set out to fix.
      */
     suspend fun stampDub(kitDir: File, card: String?) {
-        withContext(Dispatchers.IO) {
+        offMain {
             runCatching { DubStamp.write(kitDir, DubStamp.Stamp(System.currentTimeMillis(), cardTree = card)) }
                 .onFailure { Log.w(TAG, "stampDub: the dub landed but its stamp did not", it) }
         }
@@ -547,7 +547,7 @@ private fun ExportContent(
     // (EXPANSION, XPN), drawn again from the same renderer and the same
     // inputs; any other format has no bitmap, so the box has no picture.
     suspend fun landedNote(outcome: ExportOutcome, onCard: Boolean, where: String) {
-        val tile = withContext(Dispatchers.IO) {
+        val tile = offMain {
             val style = model.artStyle
             if (style == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
                 null
@@ -578,7 +578,7 @@ private fun ExportContent(
         // and the golden fixtures cover it; this puts that tree on the
         // card. Only the outcome's own items — handing over the folder
         // they sit in would carry every earlier export along with them.
-        val copied = withContext(Dispatchers.IO) {
+        val copied = offMain {
             CardWriter.copy(context, card, listOfNotNull(outcome.primary, outcome.companion))
         }
         // Only now is it really on the card, so only now does the stamp
@@ -639,7 +639,7 @@ private fun ExportContent(
         // is otherwise exactly ChopScreen's SEND handler.
         appScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                val result = offMain {
                     // getExternalFilesDir does real filesystem work (creates
                     // the directory if absent, can return null if external
                     // storage isn't mounted) — resolved here, on IO, not in
@@ -680,7 +680,7 @@ private fun ExportContent(
                             // Listing only - `preflight`'s own KDoc has the
                             // cost, and a card that will not be read comes
                             // back empty, which is the old behaviour.
-                            val standing = withContext(Dispatchers.IO) {
+                            val standing = offMain {
                                 CardWriter.preflight(
                                     context,
                                     card,
@@ -974,6 +974,7 @@ private fun ProjectCard(
     onToast: (String) -> Unit,
     onNote: (LandingNote.Note) -> Unit,
 ) {
+    composedOffMainThread("ProjectCard")
     val model = remember(project, shelfRoot) { ProjectSessionModel(project, shelfRoot) }
     val scope = rememberCoroutineScope()
     // The model is a plain mutable class; what the card draws from it is
@@ -997,7 +998,7 @@ private fun ProjectCard(
     // the same KitWrites lock card one's snapshot read takes, with
     // `withLock` outside `runCatching` so a cancellation is not swallowed.
     suspend fun refresh() {
-        val fresh = withContext(Dispatchers.IO) {
+        val fresh = offMain {
             KitWrites.mutex.withLock {
                 runCatching {
                     val pf = model.runPreflight()
@@ -1016,7 +1017,7 @@ private fun ProjectCard(
         val replace = overwriting != null
         appScope.launch {
             try {
-                val result = withContext(Dispatchers.IO) {
+                val result = offMain {
                     val root = Exports.dir(context) ?: throw IOException("external storage unavailable")
                     val destRoot = dubDestRoot(root, project.name, ExportFormat.MPC3_PROJECT.selfNesting)
                     // overwrite only on the second tap, as card one's: the
@@ -1035,7 +1036,7 @@ private fun ProjectCard(
                         // The session's files: the .xpj and everything under
                         // its data folder. No SHARE here - SHARE KIT packs the
                         // open kit, which is not what this wrote.
-                        val files = withContext(Dispatchers.IO) {
+                        val files = offMain {
                             1 + (runCatching { result.result.dataDir.walkTopDown().count { it.isFile } }.getOrNull() ?: 0)
                         }
                         onNote(LandingNote.dubbed(project.name, onCard = false, files = files, where = result.result.xpj.absolutePath))
