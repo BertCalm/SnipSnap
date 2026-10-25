@@ -68,8 +68,9 @@ internal object PatchTypes {
      */
     val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)
 
-    /** Only these voices of an otherwise rostered engine remain CLI-only comparisons. */
+    /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(
         VentPatch.ENGINE to setOf(VentVoice.ROUND.name, VentVoice.WIRE.name, VentVoice.TEAR.name),
+        ThumpPatch.ENGINE to setOf(ThumpVoice.SPARK.name),
     )
 }

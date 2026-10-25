@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.Bellows
@@ -13,6 +14,8 @@ import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer
 import java.io.File
+import java.util.concurrent.CancellationException
+import kotlin.math.roundToInt
 
 /** The accepted model-2 sound as attack/sustain samples; the player supplies velocity gain and release. */
 object BellowsPadMaker {
@@ -88,8 +91,41 @@ object BellowsPadMaker {
         return program
     }
 
+    /**
+     * A C4 key held for six seconds, then released by the same sample player as the
+     * instrument reference. The hold crosses the file's end so its sustain loop is
+     * exercised; the chosen release is a player fade, never baked into export PCM.
+     * At .65 velocity the instrument selects its middle timbre and applies gain once.
+     */
     fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {
         val patch = melodyPatch(spec.patch)
-        return BellowsKeys.note(patch.voice, patch.macros, 60, .65f, patch.gesture, patch.model, cancelled).snip
+        val note = BellowsKeys.layer(patch.voice, patch.macros, 60, .65f, patch.gesture, patch.model, cancelled)
+        val source = note.snip
+        val zone = InstrumentStore.Zone(60, 60, 60, "preview.wav", source.frameCount.toLong(), note.loopStartFrame)
+        val instrument = InstrumentStore.Instrument("BELLOWS PREVIEW", spec.releaseSeconds, listOf(zone))
+        val engine = InstrumentEngine(InstrumentEngine.Loaded(instrument, source.sampleRate, listOf(source.samples)), source.sampleRate)
+        check(engine.noteOn(60, .65f))
+        val holdFrames = source.sampleRate * 6
+        // A short silent guard also covers rounding in the player's per-frame fade.
+        val releaseFrames = (spec.releaseSeconds * source.sampleRate).roundToInt()
+        val tailFrames = (source.sampleRate * .01f).roundToInt()
+        val mono = FloatArray(holdFrames + releaseFrames + tailFrames)
+        val block = FloatArray(256 * 2)
+        var at = 0
+        fun render(until: Int) {
+            while (at < until) {
+                if (Thread.currentThread().isInterrupted || cancelled()) {
+                    throw CancellationException("BELLOWS preview no longer wanted")
+                }
+                val frames = minOf(block.size / 2, until - at)
+                engine.render(block, frames)
+                for (i in 0 until frames) mono[at + i] = block[i * 2]
+                at += frames
+            }
+        }
+        render(holdFrames)
+        engine.noteOff(60)
+        render(mono.size)
+        return Snip(mono, 1, source.sampleRate)
     }
 }

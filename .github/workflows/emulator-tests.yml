@@ -22,6 +22,12 @@ on:
       - "app/**"
       - ".github/workflows/emulator-tests.yml"
   workflow_dispatch:
+    inputs:
+      filament_only:
+        description: Run only the Filament phone tests
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -66,7 +72,9 @@ jobs:
           # audio stream when the screen appears, and a device with no audio
           # would make every one of these a test of the fallback toast.
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          script: >-
+            ./gradlew --no-daemon :app:connectedDebugAndroidTest
+            ${{ github.event_name == 'workflow_dispatch' && inputs.filament_only && '-Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.FilamentScreenTest' || '' }}
       - name: Keep the reports
         if: failure()
         uses: actions/upload-artifact@v4

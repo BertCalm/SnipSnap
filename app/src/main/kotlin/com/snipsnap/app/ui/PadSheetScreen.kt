@@ -57,6 +57,7 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -96,6 +97,10 @@ import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.AquariumEditor
+import com.snipsnap.synth.AquariumOfflineRenderer
+import com.snipsnap.synth.AquariumRecipe
+import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ConfluenceWorkshop
@@ -130,6 +135,7 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -221,6 +227,8 @@ fun PadSheetScreen(
     workshopOpen: Boolean,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name, or [HIT_BOX]), remembered per kit by the caller. */
     openBox: String? = null,
+    /** The production native renderer; injectable so delayed/error previews can be exercised on a device. */
+    aquariumRenderer: AquariumOfflineRenderer = AquariumPadRenderer,
     onOpenBox: (String?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
@@ -301,12 +309,43 @@ fun PadSheetScreen(
     var boardUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var boardAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
 
+    val aquariumApplied = AquariumPadSheet.read(pad.recipe)
+    val aquariumMarker = pad.recipe?.entries?.containsKey("aquariumPad") == true
+    val aquariumRefusal = when {
+        aquariumMarker && aquariumApplied == null -> "This Aquarium recipe needs repair before editing"
+        pad.chain != null -> "Undo round-robin before using Aquarium"
+        else -> null
+    }
+    var aquariumOpen by remember(entry.dir, slot) { mutableStateOf(false) }
+    var aquariumEditor by remember(entry.dir, slot, pad.sampleFile, pad.recipe, pad.velocityLayers) {
+        mutableStateOf(AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0)))
+    }
+    var aquariumUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
+    var aquariumPreviewing by remember(entry.dir, slot) { mutableStateOf(false) }
+    var aquariumStatus by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var aquariumError by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var aquariumAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    // One generation spans slot/model changes and stop/resume, so an old native
+    // call can finish safely without gaining permission to start a new voice.
+    var aquariumGeneration by remember(entry.dir) { mutableIntStateOf(0) }
+    var aquariumPreviewJob by remember(entry.dir) { mutableStateOf<Job?>(null) }
+
     LaunchedEffect(model, slot, pad.recipe, pad.velocityLayers) {
         boardUndoAvailable = withContext(Dispatchers.IO) {
             KitWrites.mutex.withLock {
                 runCatching {
                     val fresh = KitBuilderModel.open(entry.dir)
                     fresh.kit.pad(slot)?.sampleFile == pad.sampleFile && BoardSheet.canUndo(fresh, slot)
+                }.getOrDefault(false)
+            }
+        }
+        aquariumUndoAvailable = withContext(Dispatchers.IO) {
+            KitWrites.mutex.withLock {
+                runCatching {
+                    val fresh = KitBuilderModel.open(entry.dir)
+                    val current = fresh.kit.pad(slot)
+                    current != null && current.sampleFile == pad.sampleFile && current.recipe == pad.recipe &&
+                        current.velocityLayers == pad.velocityLayers && AquariumPadSheet.canUndo(fresh, slot)
                 }.getOrDefault(false)
             }
         }
@@ -328,14 +367,54 @@ fun PadSheetScreen(
     // always releases the previous one. Mono is duplicated to LR; a board's
     // stereo reaches the same output without a mono fold.
     var voice by remember(model, slot) { mutableStateOf<MixVoice?>(null) }
+    var aquariumAuditionActive by remember(model, slot) { mutableStateOf(false) }
+    // This request survives a successful model swap, but explicit edits,
+    // closing the panel and backgrounding revoke it before a late decode.
+    var auditionOnRefresh by remember(entry.dir, slot) { mutableStateOf(false) }
+    fun stopAquariumPreview(cancelRefresh: Boolean = true) {
+        aquariumGeneration++
+        aquariumPreviewJob?.cancel()
+        aquariumPreviewJob = null
+        aquariumPreviewing = false
+        aquariumStatus = null
+        aquariumAuditionActive = false
+        if (cancelRefresh) auditionOnRefresh = false
+        voice?.release()
+        voice = null
+    }
+    fun discardAquariumDraft() {
+        aquariumStatus = null
+        aquariumError = null
+        aquariumEditor = AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0))
+    }
+    fun closeAquarium() {
+        if (busy) return
+        stopAquariumPreview()
+        aquariumOpen = false
+        discardAquariumDraft()
+    }
+    DisposableEffect(model, slot) {
+        onDispose {
+            // Ordinary pad navigation already owns generic voice cleanup.
+            // Only invalidate Aquarium state when it has an actual request
+            // or audition; unrelated benches need no extra state writes here.
+            if (aquariumPreviewJob != null || aquariumPreviewing || aquariumAuditionActive || aquariumAction != null) {
+                stopAquariumPreview(cancelRefresh = false)
+            }
+        }
+    }
+    // The caller also owns the accordion selection. External box changes must
+    // revoke a hidden panel's request even when they bypass one of its buttons.
+    LaunchedEffect(openBox, aquariumOpen) {
+        if (aquariumOpen && openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT) {
+            stopAquariumPreview()
+            aquariumOpen = false
+            discardAquariumDraft()
+        }
+    }
     // A backgrounded gathering preview must not begin later merely because the app returned.
     var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
     DisposableEffect(model, slot) { onDispose { voice?.release() } }
-    // Set by `applyTreatment`/`applySmear` when a treatment lands; read
-    // (and cleared) by the effect under `audition` below, once the fresh
-    // model's audio is decoded. Keyed on the slot, not the model, because
-    // its whole job is to outlive the model swap those writes make.
-    var auditionOnRefresh by remember(entry.dir, slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
@@ -346,6 +425,8 @@ fun PadSheetScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 gatheringPreviewGeneration++
+                stopAquariumPreview()
+                aquariumStatus = null
                 voice?.release()
                 voice = null
             }
@@ -403,6 +484,7 @@ fun PadSheetScreen(
      * result retains its image in HEAR and after KEEP.
      */
     fun audition(target: Snip, level: Float, shape: KitPad? = null) {
+        aquariumAuditionActive = false
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
@@ -520,6 +602,7 @@ fun PadSheetScreen(
     fun editPadMetadata(mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
         val m = model ?: return
+        if (aquariumOpen || aquariumPreviewing || aquariumAuditionActive) stopAquariumPreview()
         mutate(m)
         revision++
         pendingMetadataSlots = pendingMetadataSlots + slot
@@ -1193,6 +1276,123 @@ fun PadSheetScreen(
                 boardFailure("$action ${typeToKeep.name}", e)
             } finally {
                 boardAction = null
+                busy = false
+            }
+        }
+    }
+
+    // ---- Aquarium: staged PAD settings over the preserved baked source ----
+    fun aquariumFailure(action: String, error: Exception) {
+        val message = error.message ?: "Aquarium could not use this pad"
+        aquariumError = message
+        aquariumStatus = null
+        if (error is IllegalArgumentException || error is IllegalStateException || error is JsonException) onToast(message)
+        else failure(action, error)
+    }
+
+    fun hearAquarium(original: Boolean) {
+        if (busy || aquariumRefusal != null) return
+        val sourceModel = model ?: return
+        val expected = sourceModel.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = sourceModel.kitDir
+        val draft = aquariumEditor.render
+        val recipe = if (original) draft.copy(settings = AquariumRecipe(seed = draft.settings.seed)) else draft
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        stopAquariumPreview()
+        val request = aquariumGeneration
+        aquariumError = null
+        aquariumPreviewing = true
+        aquariumStatus = if (original) "Reading original…" else "Rendering main sample…"
+        aquariumPreviewJob = scope.launch {
+            try {
+                // KitWrites also serializes non-cancellable JNI calls. A newer
+                // request cancels this coroutine's delivery, not its native DSP.
+                val playable = withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock {
+                        val fresh = KitBuilderModel.open(kitDir)
+                        val current = fresh.kit.pad(targetSlot)
+                        check(current != null && sameAquariumSource(current, expected)) {
+                            "This pad changed. Open it again before previewing Aquarium"
+                        }
+                        reapplyPendingMetadataFields(fresh, stalePads)
+                        val audio = AquariumPadSheet.preview(fresh, targetSlot, recipe, aquariumRenderer)
+                        aquariumAuditionPcm(audio, fresh.kit.pad(targetSlot)!!)
+                    }
+                }
+                if (scope.isActive && request == aquariumGeneration && model === sourceModel &&
+                    liveSlot == targetSlot && liveKitDir == kitDir &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                ) {
+                    voice?.release()
+                    voice = MixVoice(playable.samples, playable.sampleRate).also { it.start() }
+                    aquariumAuditionActive = true
+                    aquariumStatus = if (original) "BEFORE · original main sample" else "PREVIEW READY · main sample"
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (request == aquariumGeneration && scope.isActive && liveSlot == targetSlot && liveKitDir == kitDir) {
+                    aquariumFailure("PREVIEW AQUARIUM", error)
+                }
+            } finally {
+                if (request == aquariumGeneration) {
+                    aquariumPreviewing = false
+                    aquariumPreviewJob = null
+                }
+            }
+        }
+    }
+
+    fun commitAquarium(action: String) {
+        if (busy || aquariumRefusal != null) return
+        val sourceModel = model ?: return
+        val expected = sourceModel.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = sourceModel.kitDir
+        val recipe = aquariumEditor.render
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        stopAquariumPreview()
+        val request = aquariumGeneration
+        aquariumError = null
+        aquariumAction = action
+        applyingSegment = null
+        busy = true
+        // A kept edit completes and reports to App even after leaving the sheet.
+        // It opens, processes every layer and saves inside the existing kit lock.
+        appScope.launch {
+            try {
+                val (fresh, _) = withFreshKit(kitDir) { currentModel ->
+                    val current = currentModel.kit.pad(targetSlot)
+                    check(current != null && sameAquariumSource(current, expected)) {
+                        "This pad changed. Open it again before changing Aquarium"
+                    }
+                    reapplyPendingMetadataFields(currentModel, stalePads)
+                    when (action) {
+                        "KEEP" -> AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer)
+                        "REMOVE" -> AquariumPadSheet.remove(currentModel, targetSlot)
+                        "UNDO" -> AquariumPadSheet.undo(currentModel, targetSlot)
+                        else -> error("Unknown Aquarium action")
+                    }
+                }
+                if (scope.isActive && liveKitDir == kitDir) {
+                    if (liveSlot == targetSlot && request == aquariumGeneration &&
+                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                    ) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                }
+                onKitUpdated(fresh.kit)
+                onToast(when (action) {
+                    "KEEP" -> if (recipe.isBypass) "Original restored on ${expected.displayName}" else "Aquarium kept on ${expected.displayName}"
+                    "REMOVE" -> "Aquarium removed from ${expected.displayName}"
+                    else -> "Aquarium change undone on ${expected.displayName}"
+                })
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (scope.isActive && liveKitDir == kitDir && liveSlot == targetSlot) aquariumFailure("$action AQUARIUM", error)
+                else onToast(error.message ?: "Aquarium could not save this pad")
+            } finally {
+                aquariumAction = null
                 busy = false
             }
         }
@@ -2403,6 +2603,10 @@ fun PadSheetScreen(
      * `DisposableEffect` is what covers those.
      */
     fun requestBack() {
+        if (aquariumOpen) {
+            closeAquarium()
+            return
+        }
         val m = model
         // `pendingMetadataSlots`, not `m.dirty` — same reasoning as the
         // debounce effect above: this flush saves a fresh model, not `m`,
@@ -2590,7 +2794,11 @@ fun PadSheetScreen(
     // the same bench. The pad nav is pinned under the scroll.
     val boxes = PadSheetBoxes.summaries(pad, outsideStage)
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
-    fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+    fun tapBox(box: PadSheetBoxes.Box) {
+        if (busy) return
+        if (aquariumOpen) closeAquarium()
+        onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+    }
 
     // LABEL THIS HIT (docs/WORKSHOP.md, WS3): what the Calibration folder
     // beside the kits holds for this pad - the BENCH box's strip and its
@@ -2694,12 +2902,14 @@ fun PadSheetScreen(
             scheme = scheme,
             busy = busy,
             onBack = ::requestBack,
-            onHit = { snip?.let { audition(it, pad.level, pad) } },
-            // A/B: only while a treatment is on and the take before it is
-            // still in the bin (`binDaysLeft` is that entry's countdown).
+            onHit = { stopAquariumPreview(); snip?.let { audition(it, pad.level, pad) } },
+            // Aquarium/boards compare their preserved input. Older treatments
+            // compare the bin take while it remains available.
             onBefore = when {
-                boardApplied != null -> ({ hearBoard(original = true) })
-                !isNoneState && binDaysLeft != null -> ({ playBefore(pad) })
+                (aquariumOpen || aquariumMarker) && aquariumRefusal == null -> ({ hearAquarium(original = true) })
+                aquariumOpen || aquariumMarker -> null
+                boardApplied != null -> ({ stopAquariumPreview(); hearBoard(original = true) })
+                !isNoneState && binDaysLeft != null -> ({ stopAquariumPreview(); playBefore(pad) })
                 else -> null
             },
         )
@@ -2794,7 +3004,53 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.TREATMENT,
                 onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
+            if (aquariumOpen) {
+                AquariumPanel(
+                    editor = aquariumEditor,
+                    applied = aquariumApplied != null,
+                    canPreview = aquariumRefusal == null && snip != null,
+                    canKeep = aquariumRefusal == null && (!aquariumEditor.render.isBypass || aquariumApplied != null),
+                    canRemove = aquariumRefusal == null && aquariumApplied != null,
+                    canUndo = aquariumRefusal == null && aquariumUndoAvailable,
+                    busy = busy,
+                    previewing = aquariumPreviewing,
+                    sourceStatus = when {
+                        aquariumMarker && aquariumApplied == null -> "KEPT RECIPE UNREADABLE"
+                        aquariumApplied != null -> "KEPT · edits use the preserved original"
+                        else -> "DRAFT · uses this pad's current audio"
+                    },
+                    status = aquariumAction?.let { "$it…" } ?: aquariumStatus,
+                    error = aquariumError,
+                    disabledReason = aquariumRefusal,
+                    scheme = scheme,
+                    color = classColor,
+                    onEditorChange = { next ->
+                        if (next.render != aquariumEditor.render) {
+                            stopAquariumPreview()
+                            aquariumError = null
+                        }
+                        aquariumEditor = next
+                    },
+                    onBefore = { hearAquarium(original = true) },
+                    onHear = { hearAquarium(original = false) },
+                    onKeep = { commitAquarium("KEEP") },
+                    onRemove = { commitAquarium("REMOVE") },
+                    onUndo = { commitAquarium("UNDO") },
+                    onCancel = ::closeAquarium,
+                )
+            } else {
+            ActionButton(
+                "AQUARIUM ▸", scheme, enabled = !busy,
+                accessibilityLabel = "AQUARIUM",
+                modifier = Modifier.fillMaxWidth().testTag("aquarium-open"),
+                onClick = {
+                    stopAquariumPreview()
+                    aquariumError = null
+                    aquariumOpen = true
+                },
+            )
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
@@ -2921,6 +3177,7 @@ fun PadSheetScreen(
                 maxLines = 2,
             )
             }
+            }
 
             GroupBox(
                 legend = PadSheetBoxes.Box.SHAPE.legend,
@@ -2928,6 +3185,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.SHAPE,
                 onToggle = { tapBox(PadSheetBoxes.Box.SHAPE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             ShapeCard(
                 knobs = listOf(
@@ -2978,6 +3236,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.MUTATE,
                 onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             // The partner as the pairing line names it: a pad on this kit by its tag and name.
             val partnerName = partner?.let { p -> MutateSheet.partnerName(p) { s -> kit.pad(s)?.displayName } }
@@ -3025,6 +3284,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
                 onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
                 scheme = scheme,
+                enabled = !busy,
                 // The trip out: the strip goes lcd-alt while the reels turn.
                 summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
             ) {
@@ -3055,6 +3315,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.MAKE,
                 onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             if (gatheringEligible) {
                 ConfluenceGatheringCard(
@@ -3178,8 +3439,14 @@ fun PadSheetScreen(
                     legend = "BENCH",
                     summary = Copy.hitStrip(hitLabel?.let { ChopReviewModel.chipName(it) }),
                     open = openBox == HIT_BOX,
-                    onToggle = { onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX) },
+                    onToggle = {
+                        if (!busy) {
+                            if (aquariumOpen) closeAquarium()
+                            onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX)
+                        }
+                    },
                     scheme = scheme,
+                    enabled = !busy,
                 ) {
                     HitLabelCard(
                         current = hitLabel,
@@ -3268,6 +3535,20 @@ fun PadSheetScreen(
 }
 
 // ---------- fresh-kit writes (Law 5) ----------
+
+/** Audio/recipe identity excludes pad controls, which retain the kit's current metadata. */
+private fun sameAquariumSource(current: KitPad, expected: KitPad): Boolean =
+    current.sampleFile == expected.sampleFile && current.recipe == expected.recipe &&
+        current.velocityLayers == expected.velocityLayers && current.chain == expected.chain && current.source == expected.source
+
+/** SHAPE, gain and mono duplication stay off the UI thread, including large finite previews. */
+private fun aquariumAuditionPcm(source: Snip, pad: KitPad): Snip {
+    val shaped = ShapeAudition.render(source, pad)
+    val stereo = FloatArray(shaped.frameCount * 2) { index ->
+        shaped.samples[if (shaped.channels == 1) index / 2 else index] * pad.level
+    }
+    return Snip(stereo, 2, shaped.sampleRate)
+}
 
 /**
  * The one correct shape for a kit mutation issued by a screen whose own

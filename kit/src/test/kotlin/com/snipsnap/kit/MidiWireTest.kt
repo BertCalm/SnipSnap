@@ -42,11 +42,14 @@ class MidiWireTest {
     }
 
     @Test
-    fun `real-time bytes in the middle of a message are stepped over and leave running status alone`() {
+    fun `real-time bytes in the middle of a message are heard in place and leave running status alone`() {
         val wire = MidiWire()
-        // Clock between the status and its data, active sensing between the data bytes.
+        // Clock between the status and its data, active sensing (dropped) between the data bytes.
         val events = wire.feed(bytes(0x90, 0xF8, 60, 0xFE, 100, 0xF8, 0xFA, 62, 100))
-        assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f), Event.NoteOn(0, 62, 100 / 127f)), events)
+        assertEquals(
+            listOf(Event.Clock(), Event.NoteOn(0, 60, 100 / 127f), Event.Clock(), Event.Start(), Event.NoteOn(0, 62, 100 / 127f)),
+            events,
+        )
     }
 
     @Test
@@ -183,14 +186,52 @@ class MidiWireTest {
     }
 
     @Test
-    fun `real-time bytes inside a SysEx are stepped over, and its data stays skipped`() {
+    fun `real-time bytes inside a SysEx are heard, and its data stays skipped`() {
         val wire = MidiWire()
         assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f)), wire.feed(bytes(0x90, 60, 100)))
-        // Clock and active sensing between the SysEx's data bytes: none of its data becomes a note.
+        // Clock and active sensing between the SysEx's data bytes: the clocks are heard, none of its data becomes a note.
         // This pins output only: 0xF0 clears running status, so a real-time byte that wrongly ended
         // the SysEx would still leave its data bytes with no status to complete.
-        assertEquals(emptyList(), wire.feed(bytes(0xF0, 0xF8, 60, 0xFE, 100, 0xF8, 62, 100)), "a real-time byte inside a SysEx")
+        assertEquals(listOf(Event.Clock(), Event.Clock()), wire.feed(bytes(0xF0, 0xF8, 60, 0xFE, 100, 0xF8, 62, 100)), "a real-time byte inside a SysEx")
         assertEquals(listOf(Event.NoteOn(0, 64, 100 / 127f)), wire.feed(bytes(0xF7, 0x90, 64, 100)))
+    }
+
+    @Test
+    fun `clock, start, continue and stop come out as events with the delivery's stamp`() {
+        val wire = MidiWire()
+        assertEquals(
+            listOf(Event.Start(7L), Event.Clock(7L), Event.Clock(7L), Event.Continue(7L), Event.Stop(7L)),
+            wire.feed(bytes(0xFA, 0xF8, 0xF8, 0xFB, 0xFC), timestampNanos = 7L),
+        )
+    }
+
+    @Test
+    fun `a clock between a status byte and its data is heard, and the note still assembles under the later stamp`() {
+        val wire = MidiWire()
+        assertEquals(emptyList(), wire.feed(bytes(0x90), timestampNanos = 1L))
+        assertEquals(listOf(Event.Clock(2L)), wire.feed(bytes(0xF8), timestampNanos = 2L))
+        assertEquals(listOf(Event.NoteOn(0, 60, 100 / 127f, 3L)), wire.feed(bytes(60, 100), timestampNanos = 3L))
+    }
+
+    @Test
+    fun `a flood of clocks leaves running status alone and costs one event each`() {
+        val wire = MidiWire()
+        val flood = IntArray(1000) { 0xF8 }
+        val events = wire.feed(bytes(0x91, 60, 100, *flood, 62, 100))
+        assertEquals(1002, events.size)
+        assertEquals(Event.NoteOn(1, 60, 100 / 127f), events.first())
+        assertTrue(events.subList(1, 1001).all { it == Event.Clock() })
+        assertEquals(Event.NoteOn(1, 62, 100 / 127f), events.last())
+    }
+
+    @Test
+    fun `a clock inside a SysEx is heard and the SysEx stays skipped`() {
+        assertEquals(listOf(Event.Clock()), MidiWire().feed(bytes(0xF0, 0x7E, 0xF8, 0x01, 0xF7)))
+    }
+
+    @Test
+    fun `active sensing, reset and the undefined real-time bytes are still dropped`() {
+        assertEquals(emptyList(), MidiWire().feed(bytes(0xFE, 0xFF, 0xF9, 0xFD)))
     }
 
     @Test

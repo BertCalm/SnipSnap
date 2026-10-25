@@ -194,3 +194,8 @@ Against the design above, read at the branch's actual base (the default branch a
 ## After R1
 
 - **2026-10-23, DELAY** (`2026-10-22-delay-head-design.md`): one entry appended after RIG, `Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = false)`. The library now holds two tail-making entries, RIG and DELAY; `PedalBoardTest` holds their shared tail budget (a two-pick form of the three-tail-pick test R1 deferred). `PedalsTest`'s entries list gained DELAY; the gated list, row seven and `PadSheetTest`'s pins move only when its gate passes.
+
+## The WAH gate (2026-10-23)
+
+WAH passed the owner's gate, and the owner asked for TOUCH and ROCK chips as well. The registry gains two entries after WAH (`touchwahed`, `rockwahed`, PRE, movable), and all three turn `gated`. Row seven derives from the registry, so it now reads DRIVE, COMP, WAH, TOUCH, ROCK, and the card draws 36 chips (the pinned inventory and count in `PadSheetTest`, and `PedalsTest`'s gated list, re-pinned). That is five of the row's six places: DELAY (above, gate pending), TREM and FLANGE (Stage 4) do not all fit, so before the second of them passes its gate either the picker (R2) holds the rest of the library or the row's layout is decided again.
+

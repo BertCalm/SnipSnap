@@ -113,3 +113,12 @@ work in this PR":
   session could not compile, is left for step 3 to add with the number that fills it.
 - Steps 3 to 8 are open. `.claude/skills/midiwright/references/snipsnap-midi-state.md` says
   what the tree has now; this review stays as read at `b429ec2`.
+
+**Update 2026-10-23 (batch A, recorded in `MIDI_GAPS_2026_10.md`).** The clock half of step 1
+landed in `f95cd75c9`: `MidiWire` emits `Clock`, `Start`, `Continue` and `Stop`, with the
+hostile fixture this review asked for. The counter half of step 3, which the review's T3 named,
+landed in `aa2583bf9`; the `getTimestamp` fit is still held for S1, and `frameOffset` is still
+0 from Kotlin. T2, the device fingerprint, landed in `bd95b1baa`. T1, the stop-drop guard,
+landed in `27d059a65` and `e7cfc0072` as the review's option (a) with a retry, not the
+fall-back to `allOff`; it is compiled and read, not run, and the 64-pad roll bench row is
+unrun. Nothing in this batch was heard on a phone.

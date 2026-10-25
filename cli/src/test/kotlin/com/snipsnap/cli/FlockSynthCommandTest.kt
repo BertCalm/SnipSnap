@@ -1,9 +1,14 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.SmplChunk
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.FlockPresets
 import com.snipsnap.synth.FlockVoice
 import com.snipsnap.synth.PadRecipe
@@ -67,6 +72,89 @@ class FlockSynthCommandTest {
                 assertTrue("\"HOLD\" to 0.1f" in line)
                 assertTrue("midi = 71, velocity = 0.4f, model = ${Flock.MODEL_VERSION}" in line)
                 assertEquals("FlockPresets.kt", UserPresets.rosterFile(patch.engine))
+            }
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `saved RIBBON exports held native notes with complete model seed velocity and release`() {
+        val directory = createTempDirectory("flock-cli-held").toFile()
+        try {
+            val patch = FlockPatch("MY HELD RIBBON", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + mapOf("FLOW" to .4f, "HOLD" to .1f),
+                midi = 37, velocity = .4f, seed = Long.MAX_VALUE, model = 1)
+            val source = File(directory, "input.patch.json").also { it.writeText(patch.toJsonText()) }
+            val destination = File(directory, "instrument")
+            val output = ByteArrayOutputStream()
+            assertEquals(0, SynthCommand.run(listOf("FLOCK", "RIBBON", "--patch", source.path,
+                "--instrument", "--midi", "84", "--velocity", ".35", "--seed", Long.MIN_VALUE.toString(),
+                "--release", "1.2", "--out", destination.path), PrintStream(output)))
+            val expectedPatch = patch.copy(midi = 84, velocity = .35f, seed = Long.MIN_VALUE,
+                playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            val replay = FlockPatch.fromJsonText(File(destination, "${patch.name}.patch.json").readText())
+            assertEquals(expectedPatch, replay)
+            assertEquals(expectedPatch, PadRecipe.fromJsonText(PadRecipe(replay).toJsonText()).patch)
+            val (sidecar, instrument) = InstrumentStore.list(destination).single()
+            assertEquals(1.2f, instrument.release)
+            assertEquals((60..84 step 3).toList(), instrument.zones.map { it.rootNote })
+            assertEquals(60, instrument.zones.first().lowNote)
+            assertEquals(84, instrument.zones.last().highNote)
+            val rootZone = instrument.zones.last()
+            val note = FlockPadMaker.renderZone(FlockPadMaker.Spec(expectedPatch), 84)
+            val sheet = SmplChunk(84, SmplChunk.Loop(note.loopStartFrame, note.snip.frameCount.toLong()))
+            val expectedWav = ByteArrayOutputStream().also { WavWriter.write(it, note.snip, smpl = sheet) }
+            assertContentEquals(expectedWav.toByteArray(), File(sidecar.parentFile, rootZone.sample).readBytes())
+            assertEquals(sheet, WavReader.readSmpl(File(sidecar.parentFile, rootZone.sample)))
+            assertTrue("9 native zones, captured RIBBON sustain" in output.toString())
+            assertTrue("recipe:" in output.toString())
+
+            val audition = File(directory, "held-wav")
+            val savedSource = File(destination, "${patch.name}.patch.json")
+            assertEquals(0, SynthCommand.run(listOf("FLOCK", "RIBBON", "--patch", savedSource.path,
+                "--out", audition.path), PrintStream(ByteArrayOutputStream())))
+            val heldWav = audition.listFiles { it.extension == "wav" }!!.single()
+            assertContentEquals(expectedWav.toByteArray(), heldWav.readBytes(), "saved HELD replay keeps native loop metadata")
+            assertEquals(expectedPatch, FlockPatch.fromJsonText(File(audition, "${heldWav.nameWithoutExtension}.patch.json").readText()))
+
+            UserPresets.save(File(directory, "presets"), expectedPatch, nowMillis = 12L)
+            val line = UserPresets.rosterLine(expectedPatch)
+            assertTrue("playback = FlockPlayback.HELD" in line)
+            assertTrue("releaseSeconds = 1.2f" in line)
+            assertTrue("heldVersion = 1" in line)
+            assertTrue("model = 1" in line)
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `held route input errors refuse before creating any output`() {
+        val directory = createTempDirectory("flock-cli-held-invalid").toFile()
+        val destination = File(directory, "not-created")
+        try {
+            val patch = FlockPresets.forVoice(FlockVoice.RIBBON).first()
+            val source = File(directory, "input.patch.json").also { it.writeText(patch.toJsonText()) }
+            val cases = listOf(
+                listOf("RIBBON", "--instrument", "--release", "NaN"),
+                listOf("RIBBON", "--instrument", "--release", "Infinity"),
+                listOf("RIBBON", "--instrument", "--release", ".09"),
+                listOf("RIBBON", "--instrument", "--release", "1.51"),
+                listOf("RIBBON", "--instrument", "--attack", ".1"),
+                listOf("RIBBON", "--instrument", "--all"),
+                listOf("GATHER", "--instrument"),
+                listOf("SPLIT", "--instrument"),
+                listOf("GATHER", "--patch", source.path),
+                listOf("RIBBON", "--patch", source.path, "--all"),
+                listOf("RIBBON", "--patch", source.path, "--preset", "1"),
+            )
+            for (args in cases) {
+                val errors = ByteArrayOutputStream()
+                assertEquals(2, Cli.run((listOf("synth", "FLOCK") + args + listOf("--out", destination.path)).toTypedArray(),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors)), "$args: $errors")
+                assertTrue("--" in errors.toString(), "$args: refusal names its flag")
+                assertFalse(destination.exists(), "$args must not create output")
             }
         } finally {
             directory.deleteRecursively()

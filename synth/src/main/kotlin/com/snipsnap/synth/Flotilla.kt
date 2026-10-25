@@ -201,9 +201,11 @@ object Flotilla {
     }
 
     internal fun population(flotilla: Float): Pair<Int, Float> {
-        val exact = MIN_VESSELS + flotilla.coerceIn(0f, 1f) * (MAX_VESSELS - MIN_VESSELS)
-        val count = ceil(exact - 1e-4).toInt().coerceIn(MIN_VESSELS, MAX_VESSELS)
-        val last = (exact - (count - 1)).toFloat().coerceIn(0.15f, 1f)
+        val exact = MIN_VESSELS + flotilla.coerceIn(0f, 1f).toDouble() * (MAX_VESSELS - MIN_VESSELS)
+        val count = ceil(exact).toInt().coerceIn(MIN_VESSELS, MAX_VESSELS)
+        // A new hull enters as a nearly uncoupled participant. A nonzero
+        // floor made every integer population boundary an audible jump.
+        val last = (exact - (count - 1)).toFloat().coerceIn(0f, 1f)
         return count to last
     }
 
@@ -295,7 +297,7 @@ object Flotilla {
         val flotilla = m.getValue("FLOTILLA")
         val weights = routeWeights(m.getValue("CROSSING"))
         val (count, lastEng) = population(flotilla)
-        val hulls = place(voice, count, lastEng, vessel, midi, flotilla)
+        val hulls = place(voice, count, lastEng, vessel, midi)
         val steps = max(8, (seconds * MECH_RATE).roundToInt())
         val dt = 1.0 / MECH_RATE
         val z = DoubleArray(MODES)
@@ -411,9 +413,9 @@ object Flotilla {
                 }
                 x[i] += vx[i] * dt
                 y[i] += vy[i] * dt
-                speedSum += sp
+                speedSum += sp * hulls[i].engagement
                 val heave = e0
-                heaveSum += abs(heave)
+                heaveSum += abs(heave) * hulls[i].engagement
                 val dh = abs(heave - prevHeave[i]) / dt
                 prevHeave[i] = heave
                 val splashLine = 0.55 - surface * 0.40
@@ -422,7 +424,7 @@ object Flotilla {
                     val amp = (dh * (0.12 + 0.88 * surface) * hulls[i].engagement).toFloat()
                     splashes.add(Contact(step, i, -1, amp, x[i].toFloat(), y[i].toFloat()))
                 }
-                kin += hulls[i].mass * (vx[i] * vx[i] + vy[i] * vy[i])
+                kin += hulls[i].engagement * hulls[i].mass * (vx[i] * vx[i] + vy[i] * vy[i])
             }
             kineticEnd = kin
 
@@ -438,15 +440,18 @@ object Flotilla {
                         val nx = dx / dist
                         val ny = dy / dist
                         val rel = (vx[i] - vx[j]) * nx + (vy[i] - vy[j]) * ny
+                        val participation = min(hulls[i].engagement, hulls[j].engagement)
                         var force = 55.0 * overlap
                         if (rel > 0) force += 9.0 * rel
-                        force = force.coerceIn(0.0, FORCE_MAX)
+                        force = force.coerceIn(0.0, FORCE_MAX) * participation
                         val impulse = force * dt
                         vx[i] -= force * nx / hulls[i].mass * dt
                         vy[i] -= force * ny / hulls[i].mass * dt
                         vx[j] += force * nx / hulls[j].mass * dt
                         vy[j] += force * ny / hulls[j].mass * dt
-                        val corr = overlap * 0.5
+                        // A fading-in vessel cannot displace a fully present
+                        // neighbour before its mechanical coupling fades in.
+                        val corr = overlap * 0.5 * participation
                         x[i] -= nx * corr
                         y[i] -= ny * corr
                         x[j] += nx * corr
@@ -474,9 +479,10 @@ object Flotilla {
                     vy[i] -= force * ny / hulls[i].mass * dt
                     x[i] -= nx * overlap
                     y[i] -= ny * overlap
-                    if (force * dt > 0.008 && outward > 0.02 && step - lastWall[i] > 18) {
+                    val heardImpulse = force * dt * hulls[i].engagement
+                    if (heardImpulse > 0.008 && outward > 0.02 && step - lastWall[i] > 18) {
                         lastWall[i] = step
-                        contacts.add(Contact(step, i, -1, (force * dt).toFloat(), x[i].toFloat(), y[i].toFloat()))
+                        contacts.add(Contact(step, i, -1, heardImpulse.toFloat(), x[i].toFloat(), y[i].toFloat()))
                     }
                 }
             }
@@ -507,8 +513,8 @@ object Flotilla {
             contacts = contacts,
             splashes = splashes,
             obstruction = (obsSum / steps).toFloat(),
-            meanSpeed = (speedSum / (steps * count)).toFloat(),
-            meanHeave = (heaveSum / (steps * count)).toFloat(),
+            meanSpeed = (speedSum / (steps * hulls.sumOf { it.engagement })).toFloat(),
+            meanHeave = (heaveSum / (steps * hulls.sumOf { it.engagement })).toFloat(),
             surfacePeak = surfacePeak.toFloat(),
             surfaceEnd = surfaceEnd.toFloat(),
             kineticEnd = kineticEnd.toFloat(),
@@ -519,30 +525,37 @@ object Flotilla {
         )
     }
 
-    private fun place(voice: FlotillaVoice, count: Int, lastEng: Float, vessel: Float, midi: Int, flotilla: Float): List<Hull> {
-        val geo = Random(seed("GEOMETRY", voice, milli(vessel), milli(flotilla), count, midi))
+    private fun place(voice: FlotillaVoice, count: Int, lastEng: Float, vessel: Float, midi: Int): List<Hull> {
+        // Lay out the maximum pool once in a stable indexed order. Knobs
+        // change these objects' properties, rather than rolling new objects.
+        // Packing uses their largest radii, so changing size or exposing a
+        // longer prefix never needs to move an already visible hull.
+        val geo = Random(seed("GEOMETRY", voice, midi))
         val ang0 = geo.nextDouble() * PI * 2
         val golden = PI * (3 - sqrt(5.0))
         val tightness = if (voice == FlotillaVoice.GATHER) 0.72 else 0.86
+        val jitter = DoubleArray(MAX_VESSELS) { 0.84 + geo.nextDouble() * 0.32 }
+        val detune = DoubleArray(MAX_VESSELS) { 0.96 + geo.nextDouble() * 0.08 }
         var radScale = 1.0
-        var x = DoubleArray(count)
-        var y = DoubleArray(count)
-        var radii = DoubleArray(count)
+        val x = DoubleArray(MAX_VESSELS)
+        val y = DoubleArray(MAX_VESSELS)
+        var radii = DoubleArray(MAX_VESSELS)
         repeat(6) {
-            radii = DoubleArray(count) {
-                val jitter = 0.84 + geo.nextDouble() * 0.32
-                (0.040 + vessel * 0.072) * jitter * radScale
+            radii = DoubleArray(MAX_VESSELS) {
+                (0.040 + 0.072) * jitter[it] * radScale
             }
-            for (i in 0 until count) {
-                val t = (i + 0.5) / count
+            for (i in 0 until MAX_VESSELS) {
+                // Low-discrepancy radius keeps every prefix spread across the
+                // pool, rather than putting the first six at its centre.
+                val t = ((i + 0.5) * (sqrt(5.0) - 1.0) * 0.5) % 1.0
                 val ring = sqrt(t) * (POOL * tightness - radii[i])
                 val ang = ang0 + i * golden
                 x[i] = ring * cos(ang)
                 y[i] = ring * sin(ang)
             }
             repeat(20) {
-                for (i in 0 until count) {
-                    for (j in i + 1 until count) {
+                for (i in 0 until MAX_VESSELS) {
+                    for (j in i + 1 until MAX_VESSELS) {
                         val dx = x[j] - x[i]
                         val dy = y[j] - y[i]
                         val dist = hypot(dx, dy)
@@ -565,10 +578,10 @@ object Flotilla {
                     }
                 }
             }
-            if (!overlaps(x, y, radii)) return hullsOf(x, y, radii, count, lastEng, vessel, geo)
+            if (!overlaps(x, y, radii)) return hullsOf(x, y, radii, detune, count, lastEng, vessel)
             radScale *= 0.90
         }
-        return hullsOf(x, y, radii, count, lastEng, vessel, geo)
+        return hullsOf(x, y, radii, detune, count, lastEng, vessel)
     }
 
     private fun overlaps(x: DoubleArray, y: DoubleArray, radii: DoubleArray): Boolean {
@@ -580,14 +593,14 @@ object Flotilla {
         return false
     }
 
-    private fun hullsOf(x: DoubleArray, y: DoubleArray, radii: DoubleArray, count: Int, lastEng: Float, vessel: Float, geo: Random): List<Hull> {
+    private fun hullsOf(x: DoubleArray, y: DoubleArray, radii: DoubleArray, detune: DoubleArray, count: Int, lastEng: Float, vessel: Float): List<Hull> {
         val out = ArrayList<Hull>(count)
+        val size = 0.040 + vessel * 0.072
         for (i in 0 until count) {
             val eng = if (i < count - 1) 1.0 else lastEng.toDouble()
-            val scale = radii[i] / (0.040 + vessel * 0.072).coerceAtLeast(0.02)
-            val mass = scale * scale * (0.55 + vessel * 0.95) * eng.coerceAtLeast(0.25)
-            val detune = 0.96 + geo.nextDouble() * 0.08
-            out.add(Hull(x[i], y[i], radii[i], mass, eng, detune, atan2(y[i], x[i])))
+            val scale = radii[i] / (0.040 + 0.072)
+            val mass = scale * scale * (0.55 + vessel * 0.95)
+            out.add(Hull(x[i], y[i], scale * size, mass, eng, detune[i], atan2(y[i], x[i])))
         }
         return out
     }
@@ -625,20 +638,19 @@ object Flotilla {
         for (i in 0 until n) out[i] = src[i]
 
         if (collisionSound) {
-            val banks = banksFor(scene, body, pulse, velocity, m.getValue("VESSEL"))
-            val wet = FloatArray(n)
-            val scratch = FloatArray(n)
-            for (bank in banks) addBank(scratch, wet, bank, 1f)
+            val wet = contactResponse(voice, scene, pulse, velocity, m.getValue("VESSEL"))
             // Preserve the pitched emitter while letting SURFACE, population
             // and the voice's material set the amount of heard hull response.
             mixBed(out, wet, src, contactShare(body, m), maximumGain = 8f)
         }
         if (aquaticSound) {
             val aqua = FloatArray(n)
-            val noise = Dsp.Noise(seed("AQUATIC", voice, midi, milli(surface), milli(velocity), scene.splashes.size))
+            // Event counts can change as a hull joins. Keep the other hulls'
+            // water textures intact instead of reseeding the entire bed.
+            val noise = Array(scene.count) { i -> Dsp.Noise(seed("AQUATIC", voice, midi, milli(velocity), i)) }
             for (s in scene.splashes) {
                 val amp = s.impulse * (0.15f + 0.85f * surface) * 0.55f
-                addBurst(aqua, s.step * SAMPLES_PER_STEP, amp, noise, surface)
+                addBurst(aqua, s.step * SAMPLES_PER_STEP, amp, noise[s.a], surface)
             }
             // Splash counts and impulses can grow much faster than the note.
             // Keep that texture beneath the emitter instead of masking hulls.
@@ -663,20 +675,38 @@ object Flotilla {
         return Snip(out, channels = 1, sampleRate = RATE)
     }
 
+    /** Linear hull radiation, before source-relative mixing or output levelling. */
+    internal fun contactResponse(voice: FlotillaVoice, scene: Scene, pulse: Float, velocity: Float, vessel: Float): FloatArray {
+        val out = FloatArray(scene.steps * SAMPLES_PER_STEP)
+        val scratch = FloatArray(out.size)
+        for (bank in banksFor(scene, BODIES.getValue(voice), pulse, velocity, vessel)) addBank(scratch, out, bank, 1f)
+        return out
+    }
+
     private fun banksFor(scene: Scene, body: Body, pulse: Float, velocity: Float, vessel: Float): List<Bank> {
         val lists = Array(scene.count * 4) { ArrayList<Int>() to ArrayList<Float>() }
         for (c in scene.contacts) {
-            val amp = c.impulse * body.contact * scene.engagement[c.a] * (0.40f + 0.60f * velocity) * (0.55f + 0.45f * pulse)
+            val amp = c.impulse * body.contact * (0.40f + 0.60f * velocity) * (0.55f + 0.45f * pulse)
+            val engA = scene.engagement[c.a]
+            val engB = if (c.b >= 0) scene.engagement[c.b] else 0f
+            // A pair shares one excitation-energy ceiling: two fully engaged
+            // hulls each receive 1/sqrt(2) of the force amplitude. Engagement
+            // fades a joining hull without amplifying its faint response.
+            val norm = sqrt(engA * engA + engB * engB).coerceAtLeast(1f)
             val loc = atan2(c.y.toDouble(), c.x.toDouble())
-            for (k in 0 until 3) {
-                val w = (0.55 + 0.45 * cos(loc * (k + 1))).toFloat()
-                val slot = lists[c.a * 4 + k]
-                slot.first.add(c.step * SAMPLES_PER_STEP)
-                slot.second.add(amp * w)
+            val endpoints = if (c.b >= 0) intArrayOf(c.a, c.b) else intArrayOf(c.a)
+            for (endpoint in endpoints) {
+                val drive = amp * scene.engagement[endpoint] / norm
+                for (k in 0 until 3) {
+                    val w = (0.55 + 0.45 * cos(loc * (k + 1))).toFloat()
+                    val slot = lists[endpoint * 4 + k]
+                    slot.first.add(c.step * SAMPLES_PER_STEP)
+                    slot.second.add(drive * w)
+                }
+                val cav = lists[endpoint * 4 + 3]
+                cav.first.add(c.step * SAMPLES_PER_STEP)
+                cav.second.add(drive * (0.75f + 0.5f * vessel))
             }
-            val cav = lists[c.a * 4 + 3]
-            cav.first.add(c.step * SAMPLES_PER_STEP)
-            cav.second.add(amp * (0.75f + 0.5f * vessel))
         }
         val banks = ArrayList<Bank>()
         for (i in 0 until scene.count) {
@@ -885,7 +915,7 @@ object Flotilla {
         val vessel = m.getValue("VESSEL")
         val body = BODIES.getValue(voice)
         val (count, lastEng) = population(m.getValue("FLOTILLA"))
-        val hulls = place(voice, count, lastEng, vessel, midi, m.getValue("FLOTILLA"))
+        val hulls = place(voice, count, lastEng, vessel, midi)
         val weights = routeWeights(m.getValue("CROSSING"))
         val scene = stationaryScene(voice, m, midi, velocity, hulls, weights, played.toFloat(), frames, surface, pulse, body, driveSurface)
         val src = periodicSource(frames, played, cycles, pulse, velocity, body.partialBias)

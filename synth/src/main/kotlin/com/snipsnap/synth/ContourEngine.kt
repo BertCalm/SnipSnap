@@ -18,6 +18,7 @@ enum class ContourVoice { BASS, KEY, PLUCK, LEAD, HOLLOW, SWELL }
 enum class ContourRelation { LAG, OPPOSED, CURVE }
 enum class ContourMotionShape { FALL, RISE, CYCLE }
 enum class ContourFilterType { LOW_PASS, BAND_PASS }
+enum class ContourEdgeResponse { LEGACY, FOREGROUND }
 enum class ContourDiagnostic { BODY_ONLY, EDGE_ONLY, COMBINED, FROZEN, OPEN, CLEAN }
 
 /**
@@ -58,6 +59,8 @@ data class ContourConfig(
     val motionSeconds: Float = 1.2f,
     val filterType: ContourFilterType = ContourFilterType.LOW_PASS,
     val loopSeconds: Float = 2f,
+    /** Saved response keeps earlier recipes on their original edge-envelope law. */
+    val edgeResponse: ContourEdgeResponse = ContourEdgeResponse.LEGACY,
 ) {
     init {
         fun bounded(name: String, x: Float, lo: Float, hi: Float) =
@@ -141,7 +144,7 @@ data class ContourConfig(
                     edgeAttack = .02f, edgeDecay = .85f, edgeSustain = .78f)
                 ContourVoice.SWELL -> c.copy(bodyHarmonics = 1.9f, edgeRootLevel = .4f,
                     edgeAttack = .4f, edgeDecay = 1.5f, edgeSustain = .88f)
-            }
+            }.copy(edgeResponse = ContourEdgeResponse.FOREGROUND)
         }
     }
 }
@@ -314,11 +317,15 @@ object ContourEngine {
         }
     }
 
-    /** A bounded edge flare; neutral patches bypass its arithmetic exactly. */
-    private fun edgeProjection(t: Double, c: ContourConfig, held: Boolean): Double {
+    /** Keep the saved flare, then let the new response expose its resting layer across EDGE. */
+    private fun edgeProjection(t: Double, c: ContourConfig, held: Boolean, edge: Double): Double {
         if (c.edgeSustain == 1f) return 1.0
-        if (held) return c.edgeSustain.toDouble()
-        return c.edgeSustain + (1 - c.edgeSustain) * (1 - exp(-t / c.edgeAttack)) * exp(-t / c.edgeDecay)
+        val original = if (held) c.edgeSustain.toDouble() else
+            c.edgeSustain + (1 - c.edgeSustain) * (1 - exp(-t / c.edgeAttack)) * exp(-t / c.edgeDecay)
+        if (c.edgeResponse == ContourEdgeResponse.LEGACY || edge == 0.0) return original
+        // A level control cannot reveal a layer whose resting envelope is almost zero.
+        // This bounded blend raises presence without adding distortion or bypassing the filter.
+        return original + (1 - original) * edge
     }
 
     private data class LoopPlan(val frames: Int, val rootCycles: Int, val noteHz: Double,
@@ -404,7 +411,7 @@ object ContourEngine {
             val emphasis = (velocity - .5) * .13
             return doubleArrayOf(scans.first + emphasis * 1.4 * scans.first * (1 - scans.first),
                 scans.second + emphasis * 4 * scans.second * (1 - scans.second),
-                amplitude(t, c, hold, held), cut, edgeProjection(t, c, held))
+                amplitude(t, c, hold, held), cut, edgeProjection(t, c, held, edgeMacro))
         }
 
         fun tick(): Float {
