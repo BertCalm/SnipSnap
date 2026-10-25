@@ -99,7 +99,7 @@ fun PropertiesScreen(
     /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
     hapticsOn: Boolean,
     onHaptics: (Boolean) -> Unit,
-    /** MIDI OUT: whether pads and keys also go to plugged-in hardware. OFF by default; the app's own SNIPSNAP OUT port is published either way. */
+    /** MIDI OUT: whether pads and keys also go to plugged-in hardware. ON by default (`MIDI_OUT_DEFAULT`); the app's own SNIPSNAP OUT port is published either way. */
     midiOutOn: Boolean,
     onMidiOut: (Boolean) -> Unit,
     /** False on a phone with no MIDI at all: the group says so and offers no switch. */
@@ -449,7 +449,7 @@ private const val SETUP_CARD_SUMMARY_NONE = "NONE PICKED"
 
 /** `versionName` from the app's own package, or null when the package manager will not say. */
 @Composable
-private fun rememberVersionName(): String? {
+internal fun rememberVersionName(): String? {
     val context = LocalContext.current
     return remember(context) {
         try {

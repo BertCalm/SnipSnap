@@ -125,10 +125,12 @@ held note from another app is let go the way a pulled cable's is.
   in `onDestroy`. A `send` that throws (`IOException` when the port is gone) is caught on the
   out thread, logged once per destination, and the destination is dropped.
 - **The switch.** `MidiOut.hardwareEnabled: Boolean`, read from `PREFS` key `"midi.out"`,
-  default **false**. When false, hardware destinations are skipped and "SnipSnap Out" still
-  sends. Rationale: the published port is inert until another app asks for it, so always-on
-  costs nothing; a USB keyboard receiving every pad hit by default is a surprise, and some
-  keyboards re-send what they receive. The player turns it on in SETUP.
+  default **true** (`MIDI_OUT_DEFAULT`; the owner's call on 2026-10-25, reversing the
+  original false). When false, hardware destinations are skipped and "SnipSnap Out" still
+  sends. Rationale for on: a player who plugs in an MPC or a synth expects it to play. The
+  cost, named when the default was false, stands: a keyboard that re-sends what it receives
+  plays each pad hit back into SnipSnap once (no thru, so never a loop), and the player turns
+  it off in SETUP.
 - **API**, main thread: `noteOn(channel, note, velocity, timestampNanos)`,
   `noteOff(channel, note, timestampNanos)`, `allNotesOff()` (CC 123 only on channels with a
   note outstanding, used by PANIC, by disposal and by the silence paths so a receiver is never
@@ -226,7 +228,8 @@ On a phone (bench rows this spec adds; none run here):
   (Android reference, via the midiwright `android-midi-api.md` §1, read 2026-10-22);
   `MidiDeviceService` manifest shape (same, §3); the virtual device lifecycle, bound on first
   open and unbound after last close (same, §3, from AOSP `MidiService`).
-- **Proposed**: the one-step sequencer gate; channels 10 and 1; default-off hardware output;
+- **Proposed**: the one-step sequencer gate; channels 10 and 1; default-on hardware output
+  (owner's decision, 2026-10-25);
   the destination id shape; every `Copy` line.
 - **Untestable here**: whether a given keyboard re-sends received notes (the reason for the
   default); `openInputPort` refusing for a busy port; how long the system holds a
@@ -251,11 +254,10 @@ On a phone (bench rows this spec adds; none run here):
    it started (`outstanding`) and sends CC 123 only on channels that have one, so an echo
    finds nothing and dies after one round. Every note SnipSnap started is still ended by
    PANIC, a cable pull, a local silence and a screen's disposal.
-5. **The risky decision** is default-off hardware output with always-on "SnipSnap Out". A
-   player who plugs in an MPC and expects it to play will find nothing until SETUP; the note
-   under the switch says where. The other default, on, surprises every keyboard owner on
-   first plug-in. If the first bench round says players expect on, flipping one constant is
-   the whole change.
+5. **The risky decision** is the hardware output default. It shipped off in the first draft
+   and is on now, by the owner's call (2026-10-25): an MPC plugged in plays at once. The cost
+   moves to the keyboard owner whose keyboard echoes what it receives, who hears each pad
+   twice until SETUP turns it off. `MIDI_OUT_DEFAULT` is the one constant either way.
 
 ## 13. As built (2026-10-23)
 
@@ -275,7 +277,7 @@ Landed in `6967038ec` to `9c4a7cda4`, eleven commits on top of `31b436701`. Test
   36 under the MPC map, a slot outside the pads), `MidiGateTest` (2 cases, both new: 125 ms at
   120 bpm, 250 ms at 60 bpm), `PersonalityTest` (26 cases).
 - **The sender and the input ports: `25ff062fe`.** `MidiOut` is an object with one
-  `HandlerThread("midi-out")`, a destination list, `hardwareEnabled` (default false, read once
+  `HandlerThread("midi-out")`, a destination list, `hardwareEnabled` (default false then, `MIDI_OUT_DEFAULT` = true since 2026-10-25, read once
   from pref `midi.out`) and a `ports` `StateFlow`. `MidiInput` opens each device's input ports as
   well as its output ports, registers a destination per open port and reports a refused port;
   `closeDevice` sends All Notes Off; a device with only an input port is now opened too.

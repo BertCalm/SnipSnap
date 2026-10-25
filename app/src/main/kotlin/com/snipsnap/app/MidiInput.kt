@@ -13,7 +13,9 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MidiDeviceId
+import com.snipsnap.shell.MidiEndpoint
 import com.snipsnap.shell.MidiFingerprint
 
 /**
@@ -54,8 +56,12 @@ import com.snipsnap.shell.MidiFingerprint
  *
  * Main thread only. [close] is idempotent, and a device that finishes
  * opening after it is closed again rather than kept.
+ *
+ * @param tapRaw also post every delivery's bytes to [Listener.onRaw]. Only
+ *   the MIDI screen asks for this: a playing screen has no use for the
+ *   copy, so it does not pay for one.
  */
-class MidiInput(context: Context) {
+class MidiInput(context: Context, private val tapRaw: Boolean = false) {
 
     interface Listener {
         fun onEvent(event: MidiWire.Event)
@@ -69,6 +75,18 @@ class MidiInput(context: Context) {
          * nothing it sent can replay a note after this.
          */
         fun onDeviceRemoved()
+
+        /**
+         * One delivery's bytes exactly as the service handed them, from
+         * [port] (the port's own name) of [device], before parsing: what
+         * the MIDI screen's monitor shows, SysEx, pitch bend and all. Only
+         * called when the input was made with `tapRaw`; posted in order
+         * with, and before, the events the same delivery completed.
+         */
+        fun onRaw(device: MidiDeviceId, port: String, bytes: ByteArray, timestampNanos: Long) {}
+
+        /** A device was found but would not open; [name] is what it calls itself. */
+        fun onRefused(name: String) {}
     }
 
     private val manager: MidiManager? =
@@ -115,6 +133,17 @@ class MidiInput(context: Context) {
     val devices: List<MidiDeviceId> get() = opened.values.map { it.id } + listOfNotNull(VirtualMidi.boundId)
 
     /**
+     * [devices] with their port names, for the MIDI screen. The published
+     * "SnipSnap In" is listed while another app holds it, as [devices] lists
+     * it; what that app sends arrives parsed, so it reaches the screens but
+     * not the MIDI screen's raw monitor.
+     */
+    val endpoints: List<MidiEndpoint>
+        get() = opened.values.map {
+            MidiEndpoint(it.id, portNames(it.info, MidiDeviceInfo.PortInfo.TYPE_OUTPUT), portNames(it.info, MidiDeviceInfo.PortInfo.TYPE_INPUT))
+        } + listOfNotNull(VirtualMidi.boundId?.let { MidiEndpoint(it, listOf(Copy.MIDI_PORT_IN_NAME), emptyList()) })
+
+    /**
      * Start listening: every device present now is opened, and the
      * callback opens each one that arrives later. False when the phone
      * has no MIDI feature, in which case nothing will ever be heard.
@@ -153,6 +182,7 @@ class MidiInput(context: Context) {
         manager.openDevice(info, { device ->
             if (device == null) {
                 Log.w(TAG, "MIDI device ${nameOf(info)} would not open")
+                listener?.onRefused(nameOf(info))
                 return@openDevice
             }
             // Opened after close(), or opened twice: not ours to keep.
@@ -160,6 +190,8 @@ class MidiInput(context: Context) {
                 device.close()
                 return@openDevice
             }
+            val id = MidiDeviceId(nameOf(info), fingerprintOf(info))
+            val names = portNames(info, MidiDeviceInfo.PortInfo.TYPE_OUTPUT)
             val ports = ArrayList<Pair<MidiOutputPort, Receiver>>()
             for (p in 0 until info.outputPortCount) {
                 val port = runCatching { device.openOutputPort(p) }.getOrNull()
@@ -167,11 +199,10 @@ class MidiInput(context: Context) {
                     Log.w(TAG, "MIDI device ${nameOf(info)} port $p would not open")
                     continue
                 }
-                val receiver = Receiver()
+                val receiver = Receiver(id, names.getOrElse(p) { "PORT ${p + 1}" })
                 port.connect(receiver)
                 ports += port to receiver
             }
-            val id = MidiDeviceId(nameOf(info), fingerprintOf(info))
             // Output ports only. The device's input ports (where this app
             // sends) are opened for the whole process by MidiOut, through a
             // second MidiDevice handle: ports are exclusive, devices are not,
@@ -224,9 +255,10 @@ class MidiInput(context: Context) {
      * One port's bytes, parsed on the service's thread and posted whole to
      * the main one. [alive] is flipped by [release] on the main thread and
      * read there by the posted block, so an event already in flight when
-     * its device went is dropped rather than played.
+     * its device went is dropped rather than played. [device] and [portName]
+     * only label what [Listener.onRaw] is handed.
      */
-    private inner class Receiver : MidiReceiver() {
+    private inner class Receiver(private val device: MidiDeviceId, private val portName: String) : MidiReceiver() {
         private val wire = MidiWire()
 
         @Volatile
@@ -240,11 +272,15 @@ class MidiInput(context: Context) {
             // the follower that will read it on this thread (roadmap P1.3/P1.8);
             // until that exists each 0xF8 would be a posted lambda thrown away
             // 24 times a beat.
+            // The raw copy is taken before parsing, here, because the service
+            // may reuse msg once onSend returns.
+            val raw = if (tapRaw && count > 0) msg.copyOfRange(offset, offset + count) else null
             val events = wire.feed(msg, offset, count, timestamp).filter { it !is MidiWire.Event.RealTime }
-            if (events.isEmpty()) return
+            if (raw == null && events.isEmpty()) return
             handler.post {
                 if (!alive) return@post
                 val l = listener ?: return@post
+                if (raw != null) l.onRaw(device, portName, raw, timestamp)
                 events.forEach(l::onEvent)
             }
         }
@@ -298,6 +334,16 @@ class MidiInput(context: Context) {
                 p.getString(MidiDeviceInfo.PROPERTY_NAME),
             )
         }
+
+        /**
+         * The names of [info]'s ports of [type] (`PortInfo.TYPE_OUTPUT` for
+         * what the device sends), in port order; a port with no name of its
+         * own is `PORT n`, counting from 1.
+         */
+        fun portNames(info: MidiDeviceInfo, type: Int): List<String> =
+            info.ports.filter { it.type == type }.sortedBy { it.portNumber }.map { p ->
+                p.name?.takeIf { it.isNotBlank() } ?: "PORT ${p.portNumber + 1}"
+            }
 
         /** The device's own name, falling back to product and manufacturer, then to its id. */
         fun nameOf(info: MidiDeviceInfo): String {

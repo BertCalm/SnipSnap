@@ -33,6 +33,14 @@ internal const val MIDI_DEVICE_PRODUCT = "SnipSnap"
 internal const val PREF_MIDI_OUT = "midi.out"
 
 /**
+ * What the MIDI OUT switch reads before the player has touched it: on, by the
+ * owner's call (2026-10-25), so an MPC or a synth plugged in plays what the
+ * pads and KEYS play without a trip to SETUP first. The one definition, read
+ * by [MidiOut] and `App`, so the two cannot disagree about a fresh install.
+ */
+internal const val MIDI_OUT_DEFAULT = true
+
+/**
  * Where the app's own notes go out: the input ports of every connected MIDI
  * device, and (Task 4) the published "SnipSnap Out" port.
  *
@@ -72,7 +80,7 @@ internal const val PREF_MIDI_OUT = "midi.out"
  * that echoes what it receives cannot start a loop.
  *
  * **The switch.** Hardware destinations send only while [hardwareEnabled]
- * is true (default false: a keyboard receiving every pad hit is a surprise).
+ * is true ([MIDI_OUT_DEFAULT] until the player sets it in SETUP).
  * Destinations added with `hardware = false` send regardless. [install]
  * reads the saved choice once; whoever changes it later writes the pref and
  * assigns [hardwareEnabled] - persistence is not this object's job.
@@ -121,7 +129,7 @@ object MidiOut {
 
     /** Main thread. Hardware destinations send only while this is true. */
     @Volatile
-    var hardwareEnabled: Boolean = false
+    var hardwareEnabled: Boolean = MIDI_OUT_DEFAULT
 
     /** Every registered destination (open) plus the ones that would not open. */
     val ports: StateFlow<List<Port>> = _ports.asStateFlow()
@@ -133,8 +141,8 @@ object MidiOut {
             installed = true
             hardwareEnabled = runCatching {
                 context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(PREF_MIDI_OUT, false)
-            }.getOrDefault(false)
+                    .getBoolean(PREF_MIDI_OUT, MIDI_OUT_DEFAULT)
+            }.getOrDefault(MIDI_OUT_DEFAULT)
             val thread = HandlerThread("midi-out").also { it.start() }
             handler = Handler(thread.looper)
         }

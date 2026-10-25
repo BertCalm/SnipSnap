@@ -107,7 +107,7 @@ S1 to S3 are answered; master-side clock out needs S1 and S2.
    `microphone|mediaProjection`), so a long session with a BLE device would depend on the
    screen staying on. `connectedDevice` is the honest type for holding one; `mediaPlayback`
    only if the app ever plays in the background.
-9. **No diagnostics screen**; the `MidiInput` logcat tag is the only window.
+9. ~~**No diagnostics screen**; the `MidiInput` logcat tag is the only window.~~ Mostly done on 2026-10-24: `MidiScreen` behind the gear lists endpoints with port names, monitors every delivery's raw bytes (`MidiMonitor`, which reads bend, pressure and SysEx for people while `MidiWire` still drops them for playing), and copies a `MidiReport`. No `latencyMillis` there yet; unrun on a phone.
 10. **The loop grid has no front door**; giving it a transport is work on a screen users
     cannot reach until that changes.
 11. **No ns-to-frame mapping.** The stamp from gap 1 and the offset from gap 5 are not yet

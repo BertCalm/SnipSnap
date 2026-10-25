@@ -541,11 +541,15 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
     }
 }
 
-/** Behind the gear in the title bar: SETUP ▸ and HELP ▸, one tap from every screen. */
+/** Behind the gear in the title bar: SETUP ▸, HELP ▸ and MIDI ▸, one tap from every screen. */
 @Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
+fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onMidi: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup), SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp)),
+        listOf(
+            SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup),
+            SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp),
+            SheetRow("${Places.GEAR_MIDI} ▸", onClick = onMidi),
+        ),
         onDismiss,
     )
 }
