@@ -36,6 +36,10 @@ package com.snipsnap.synth
  * the DSP like the rest, never heard, checked only by
  * [ThumpPresetsTest] - so they belong at the next audition too.
  *
+ * SPARK is a later prototype and has no factory roster until its own
+ * listening verdict. The counts and genre groups above describe the
+ * original eight voices.
+ *
  * Names never reference a real drum machine or model number
  * (`docs/SYNTH_ROADMAP.md`'s naming rule) — not even a near-miss; the
  * blocklist test in [ThumpPresetsTest] makes that machine-checked rather than
@@ -55,6 +59,9 @@ object ThumpPresets {
         ThumpVoice.TOM -> tomPresets
         ThumpVoice.COWBELL -> cowbellPresets
         ThumpVoice.RIM -> rimPresets
+        // SPARK stays editable through defaults and SCRAMBLE while its
+        // character is auditioned. Factory names follow a listening verdict.
+        ThumpVoice.SPARK -> emptyList()
     }
 
     fun all(): List<ThumpPatch> = ThumpVoice.entries.flatMap { forVoice(it) }

@@ -86,11 +86,12 @@ object Treatments {
         // amp this is a second amp, not a pedal in front of one. apply() fades the pad's last
         // milliseconds before it, see PRE_AMP_FADE.
         "driven" to FxChain(valve = mapOf("DRIVE" to 1.0f, "SAG" to 0.15f, "CAB" to 0.08f)),
-        // A compressor pedal for now: the strongest SQUASH there is (AMOUNT at its top, the fastest
-        // ATTACK that is not its neutral), the owner's pick at round two. The sustain compressor the
-        // owner asked for is its own section (spec, Stage 2); this recipe moves to it then. The bank's
-        // "punched" is SQUASH plus CRUNCH; this has no crunch.
-        "compressed" to FxChain(squash = mapOf("AMOUNT" to 1.0f, "ATTACK" to 0.05f)),
+        // The sustain pedal (the SUSTAIN chip): the COMPRESSOR section at full AMOUNT, ATTACK and RECOVER left
+        // at their defaults (each is its own neutral, so the AMT fade walks AMOUNT alone). It replaced SQUASH at
+        // its strongest after the owner heard that as too little twice; passed its gate on 2026-10-24
+        // (docs/superpowers/specs/2026-10-23-compressor-section-design.md). The bank's "punched" is SQUASH
+        // plus CRUNCH, the punch rather than the sustain.
+        "compressed" to FxChain(compressor = mapOf("AMOUNT" to 1.0f)),
         // A wah: a resonant band-pass swept by a free-running, flat-topped sine. AUTO is the owner's pick of the
         // three moves at the pedal board's round-two listen; SPEED and Q are left out (each is its own
         // neutral, so AMT could never move it). The WAH chip is this character once its gate passes.
@@ -100,6 +101,10 @@ object Treatments {
         "touchwahed" to FxChain(wah = mapOf("TOUCH" to 1.0f)),
         // One heel-to-toe-to-heel gesture, then it waits. CLI and saved kits only.
         "rockwahed" to FxChain(wah = mapOf("ROCK" to 1.0f)),
+        // A delay pedal: ECHO's long, dark repeats (225 ms apart, feedback 0.66, darkening) fed only the note's
+        // first 120 ms, so a held note's attack comes back as a repeat. MIX 0.75 is the owner's pick
+        // (docs/superpowers/specs/2026-10-22-delay-head-design.md). The DELAY chip is this character once its gate passes.
+        "delayed" to FxChain(echo = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA

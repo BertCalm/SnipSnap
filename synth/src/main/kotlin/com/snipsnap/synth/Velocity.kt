@@ -227,6 +227,7 @@ object Velocity {
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
+        is BallastPatch -> Ballast.macrosFor(patch.voice)
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
         is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
@@ -247,6 +248,7 @@ object Velocity {
         is OspreyPatch -> Osprey.macrosFor(patch.voice)
         is OpenSkyPatch -> OpenSky.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
+        is LatticePatch -> Lattice.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
         is ContourPatch -> ContourEngine.macrosFor(patch.voice)
         is StoopPatch -> Stoop.macrosFor(patch.voice)
@@ -262,14 +264,16 @@ object Velocity {
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
         is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
-        is NacrePatch -> Nacre.macrosFor(patch.voice)
+        is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
         is OhmPatch -> Ohm.MACROS
+        is CausticPatch -> CausticInstrument.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -360,6 +364,7 @@ object Velocity {
      * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
      * OVEN changes hammer contact and partial excitation while retaining its saved root and body recipe.
      * FLOTILLA renders velocity itself, with its saved MIDI note.
+     * BALLAST changes its bass attack/filter and structural force without moving the saved macros.
      *
      * Returns null for a voice that takes velocity through [brightnessSpec] or
      * [soften] instead. Every engine is named in an arm and there is no `else`,
@@ -375,6 +380,7 @@ object Velocity {
                 null
             }
         is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
+        is BallastPatch -> Ballast.render(patch.voice, patch.macros, velocity = v)
         is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
         is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
@@ -393,6 +399,8 @@ object Velocity {
         is OspreyPatch -> patch.copy(velocity = v).render()
         is OpenSkyPatch -> patch.copy(velocity = v).render()
         is PrismPatch -> patch.copy(velocity = v).render()
+        // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
+        is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.
@@ -409,6 +417,7 @@ object Velocity {
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is FilamentPatch -> patch.copy(velocity = v).render()
         is ScannedChainPatch -> patch.copy(velocity = v).render()
         is ChamberPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
@@ -417,6 +426,7 @@ object Velocity {
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
         is OhmPatch -> patch.copy(velocity = v).render()
+        is CausticPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()

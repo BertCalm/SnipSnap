@@ -57,12 +57,14 @@ import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
+import com.snipsnap.app.AquariumPadRenderer
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MediaDecode
 import com.snipsnap.app.MicSessionService
@@ -92,7 +94,13 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.AquariumPadSheet
+import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.AquariumEditor
+import com.snipsnap.synth.AquariumOfflineRenderer
+import com.snipsnap.synth.AquariumRecipe
+import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ConfluenceWorkshop
@@ -127,11 +135,11 @@ import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * How long a LEVEL/PAN/TUNE/ONE-SHOT/CHOKE edit waits, quiet, before it's
@@ -140,7 +148,7 @@ import kotlinx.coroutines.withContext
  */
 private const val METADATA_SAVE_DEBOUNCE_MS = 1000L
 private fun boardRemoveFirst(recipe: JsonValue.Obj?): String =
-    "Remove ${BoardSheet.read(recipe)?.type?.name ?: "the board"} before changing treatment"
+    "Remove ${if (PrintedPads.has(recipe)) PrintedPads.label(recipe) else "the board"} before changing treatment"
 
 /**
  * PAD SHEET: the long-press pad inspector, wireframe 1d ("full-screen
@@ -218,6 +226,8 @@ fun PadSheetScreen(
     workshopOpen: Boolean,
     /** Pad Sheet v2: which workshop box is open (a `PadSheetBoxes.Box` name, or [HIT_BOX]), remembered per kit by the caller. */
     openBox: String? = null,
+    /** The production native renderer; injectable so delayed/error previews can be exercised on a device. */
+    aquariumRenderer: AquariumOfflineRenderer = AquariumPadRenderer,
     onOpenBox: (String?) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
@@ -246,7 +256,7 @@ fun PadSheetScreen(
         // the same KitWrites.mutex.withLock every writer already uses means
         // this snapshot is always taken either fully before or fully after
         // that write, never mid-write — see Law 5 in ConventionTest.kt.
-        val opened = withContext(Dispatchers.IO) {
+        val opened = offMain {
             KitWrites.mutex.withLock { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
         }
         if (opened == null) loadFailed = true else model = opened
@@ -298,12 +308,43 @@ fun PadSheetScreen(
     var boardUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var boardAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
 
+    val aquariumApplied = AquariumPadSheet.read(pad.recipe)
+    val aquariumMarker = pad.recipe?.entries?.containsKey("aquariumPad") == true
+    val aquariumRefusal = when {
+        aquariumMarker && aquariumApplied == null -> "This Aquarium recipe needs repair before editing"
+        pad.chain != null -> "Undo round-robin before using Aquarium"
+        else -> null
+    }
+    var aquariumOpen by remember(entry.dir, slot) { mutableStateOf(false) }
+    var aquariumEditor by remember(entry.dir, slot, pad.sampleFile, pad.recipe, pad.velocityLayers) {
+        mutableStateOf(AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0)))
+    }
+    var aquariumUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
+    var aquariumPreviewing by remember(entry.dir, slot) { mutableStateOf(false) }
+    var aquariumStatus by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var aquariumError by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var aquariumAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    // One generation spans slot/model changes and stop/resume, so an old native
+    // call can finish safely without gaining permission to start a new voice.
+    var aquariumGeneration by remember(entry.dir) { mutableIntStateOf(0) }
+    var aquariumPreviewJob by remember(entry.dir) { mutableStateOf<Job?>(null) }
+
     LaunchedEffect(model, slot, pad.recipe, pad.velocityLayers) {
-        boardUndoAvailable = withContext(Dispatchers.IO) {
+        boardUndoAvailable = offMain {
             KitWrites.mutex.withLock {
                 runCatching {
                     val fresh = KitBuilderModel.open(entry.dir)
                     fresh.kit.pad(slot)?.sampleFile == pad.sampleFile && BoardSheet.canUndo(fresh, slot)
+                }.getOrDefault(false)
+            }
+        }
+        aquariumUndoAvailable = offMain {
+            KitWrites.mutex.withLock {
+                runCatching {
+                    val fresh = KitBuilderModel.open(entry.dir)
+                    val current = fresh.kit.pad(slot)
+                    current != null && current.sampleFile == pad.sampleFile && current.recipe == pad.recipe &&
+                        current.velocityLayers == pad.velocityLayers && AquariumPadSheet.canUndo(fresh, slot)
                 }.getOrDefault(false)
             }
         }
@@ -325,14 +366,54 @@ fun PadSheetScreen(
     // always releases the previous one. Mono is duplicated to LR; a board's
     // stereo reaches the same output without a mono fold.
     var voice by remember(model, slot) { mutableStateOf<MixVoice?>(null) }
+    var aquariumAuditionActive by remember(model, slot) { mutableStateOf(false) }
+    // This request survives a successful model swap, but explicit edits,
+    // closing the panel and backgrounding revoke it before a late decode.
+    var auditionOnRefresh by remember(entry.dir, slot) { mutableStateOf(false) }
+    fun stopAquariumPreview(cancelRefresh: Boolean = true) {
+        aquariumGeneration++
+        aquariumPreviewJob?.cancel()
+        aquariumPreviewJob = null
+        aquariumPreviewing = false
+        aquariumStatus = null
+        aquariumAuditionActive = false
+        if (cancelRefresh) auditionOnRefresh = false
+        voice?.release()
+        voice = null
+    }
+    fun discardAquariumDraft() {
+        aquariumStatus = null
+        aquariumError = null
+        aquariumEditor = AquariumEditor(aquariumApplied ?: AquariumRenderRecipe(bpm = builtModel.kit.tempoBpm?.toDouble() ?: 0.0))
+    }
+    fun closeAquarium() {
+        if (busy) return
+        stopAquariumPreview()
+        aquariumOpen = false
+        discardAquariumDraft()
+    }
+    DisposableEffect(model, slot) {
+        onDispose {
+            // Ordinary pad navigation already owns generic voice cleanup.
+            // Only invalidate Aquarium state when it has an actual request
+            // or audition; unrelated benches need no extra state writes here.
+            if (aquariumPreviewJob != null || aquariumPreviewing || aquariumAuditionActive || aquariumAction != null) {
+                stopAquariumPreview(cancelRefresh = false)
+            }
+        }
+    }
+    // The caller also owns the accordion selection. External box changes must
+    // revoke a hidden panel's request even when they bypass one of its buttons.
+    LaunchedEffect(openBox, aquariumOpen) {
+        if (aquariumOpen && openBox?.let(PadSheetBoxes::boxFor) != PadSheetBoxes.Box.TREATMENT) {
+            stopAquariumPreview()
+            aquariumOpen = false
+            discardAquariumDraft()
+        }
+    }
     // A backgrounded gathering preview must not begin later merely because the app returned.
     var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
     DisposableEffect(model, slot) { onDispose { voice?.release() } }
-    // Set by `applyTreatment`/`applySmear` when a treatment lands; read
-    // (and cleared) by the effect under `audition` below, once the fresh
-    // model's audio is decoded. Keyed on the slot, not the model, because
-    // its whole job is to outlive the model swap those writes make.
-    var auditionOnRefresh by remember(entry.dir, slot) { mutableStateOf(false) }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
@@ -343,6 +424,8 @@ fun PadSheetScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 gatheringPreviewGeneration++
+                stopAquariumPreview()
+                aquariumStatus = null
                 voice?.release()
                 voice = null
             }
@@ -360,13 +443,13 @@ fun PadSheetScreen(
             auditionOnRefresh = false
             return
         }
-        val (loadedSnip, daysLeft) = withContext(Dispatchers.IO) {
+        val (loadedSnip, daysLeft) = offMain {
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
             val s = runCatching {
                 val decoded = WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
-                if (BoardSheet.read(p.recipe) != null) decoded else Cleanup.toMono(decoded)
+                if (PrintedPads.has(p.recipe)) decoded else Cleanup.toMono(decoded)
             }.getOrNull()
             val binned = m.binContents()
                 .filter { it.originalName == p.sampleFile }
@@ -400,6 +483,7 @@ fun PadSheetScreen(
      * result retains its image in HEAR and after KEEP.
      */
     fun audition(target: Snip, level: Float, shape: KitPad? = null) {
+        aquariumAuditionActive = false
         // Release synchronously at the swap site — a composition-scoped
         // coroutine can't guarantee the previous voice actually stopped
         // before this one starts (ChopScreen's `audition()` comment).
@@ -456,7 +540,7 @@ fun PadSheetScreen(
         busy = true
         scope.launch {
             try {
-                val before = withContext(Dispatchers.IO) {
+                val before = offMain {
                     val take = KitWrites.mutex.withLock {
                         builtModel.binContents()
                             .filter { it.originalName == p.sampleFile }
@@ -517,6 +601,7 @@ fun PadSheetScreen(
     fun editPadMetadata(mutate: (KitBuilderModel) -> Unit) {
         if (busy) return
         val m = model ?: return
+        if (aquariumOpen || aquariumPreviewing || aquariumAuditionActive) stopAquariumPreview()
         mutate(m)
         revision++
         pendingMetadataSlots = pendingMetadataSlots + slot
@@ -768,7 +853,7 @@ fun PadSheetScreen(
      * same reason, as [applySmear]'s own KDoc above.
      */
     fun applyDust(m: KitBuilderModel, p: KitPad, amount: Float, padName: String, from: String? = null) {
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
         }
@@ -791,7 +876,7 @@ fun PadSheetScreen(
             try {
                 val tapeFile = File(snipsDir, tape)
                 // AMT 0 takes dust off and needs no print; anything above needs the tape's.
-                val print = if (amount > 0f) withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) } else null
+                val print = if (amount > 0f) offMain { DustPrints.forTape(tapeFile) } else null
                 if (amount > 0f && print == null) {
                     onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(tape))
                     return@launch
@@ -904,7 +989,7 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             applyingSegment = null
             onToast(boardRemoveFirst(p.recipe))
             return
@@ -1048,7 +1133,10 @@ fun PadSheetScreen(
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
                     if (freshPad != null && freshPad.sampleFile == staleSampleFile) {
-                        if (BoardSheet.read(freshPad.recipe) != null) {
+                        if (freshPad.recipe?.entries?.containsKey("aquariumPad") == true) {
+                            AquariumPadSheet.remove(f, slot)
+                            state = PadSheet.UnTreat.READY
+                        } else if (BoardSheet.read(freshPad.recipe) != null) {
                             BoardSheet.remove(f, slot)
                             state = PadSheet.UnTreat.READY
                         } else {
@@ -1106,7 +1194,7 @@ fun PadSheetScreen(
         voice = null
         scope.launch {
             try {
-                val rendered = withContext(Dispatchers.IO) {
+                val rendered = offMain {
                     KitWrites.mutex.withLock {
                         val fresh = KitBuilderModel.open(kitDir)
                         val current = fresh.kit.pad(targetSlot)
@@ -1192,6 +1280,123 @@ fun PadSheetScreen(
         }
     }
 
+    // ---- Aquarium: staged PAD settings over the preserved baked source ----
+    fun aquariumFailure(action: String, error: Exception) {
+        val message = error.message ?: "Aquarium could not use this pad"
+        aquariumError = message
+        aquariumStatus = null
+        if (error is IllegalArgumentException || error is IllegalStateException || error is JsonException) onToast(message)
+        else failure(action, error)
+    }
+
+    fun hearAquarium(original: Boolean) {
+        if (busy || aquariumRefusal != null) return
+        val sourceModel = model ?: return
+        val expected = sourceModel.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = sourceModel.kitDir
+        val draft = aquariumEditor.render
+        val recipe = if (original) draft.copy(settings = AquariumRecipe(seed = draft.settings.seed)) else draft
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        stopAquariumPreview()
+        val request = aquariumGeneration
+        aquariumError = null
+        aquariumPreviewing = true
+        aquariumStatus = if (original) "Reading original…" else "Rendering main sample…"
+        aquariumPreviewJob = scope.launch {
+            try {
+                // KitWrites also serializes non-cancellable JNI calls. A newer
+                // request cancels this coroutine's delivery, not its native DSP.
+                val playable = offMain {
+                    KitWrites.mutex.withLock {
+                        val fresh = KitBuilderModel.open(kitDir)
+                        val current = fresh.kit.pad(targetSlot)
+                        check(current != null && sameAquariumSource(current, expected)) {
+                            "This pad changed. Open it again before previewing Aquarium"
+                        }
+                        reapplyPendingMetadataFields(fresh, stalePads)
+                        val audio = AquariumPadSheet.preview(fresh, targetSlot, recipe, aquariumRenderer)
+                        aquariumAuditionPcm(audio, fresh.kit.pad(targetSlot)!!)
+                    }
+                }
+                if (scope.isActive && request == aquariumGeneration && model === sourceModel &&
+                    liveSlot == targetSlot && liveKitDir == kitDir &&
+                    lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                ) {
+                    voice?.release()
+                    voice = MixVoice(playable.samples, playable.sampleRate).also { it.start() }
+                    aquariumAuditionActive = true
+                    aquariumStatus = if (original) "BEFORE · original main sample" else "PREVIEW READY · main sample"
+                }
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (request == aquariumGeneration && scope.isActive && liveSlot == targetSlot && liveKitDir == kitDir) {
+                    aquariumFailure("PREVIEW AQUARIUM", error)
+                }
+            } finally {
+                if (request == aquariumGeneration) {
+                    aquariumPreviewing = false
+                    aquariumPreviewJob = null
+                }
+            }
+        }
+    }
+
+    fun commitAquarium(action: String) {
+        if (busy || aquariumRefusal != null) return
+        val sourceModel = model ?: return
+        val expected = sourceModel.kit.pad(slot) ?: return
+        val targetSlot = slot
+        val kitDir = sourceModel.kitDir
+        val recipe = aquariumEditor.render
+        val stalePads = pendingMetadataSlots.associateWith { sourceModel.kit.pad(it) }
+        stopAquariumPreview()
+        val request = aquariumGeneration
+        aquariumError = null
+        aquariumAction = action
+        applyingSegment = null
+        busy = true
+        // A kept edit completes and reports to App even after leaving the sheet.
+        // It opens, processes every layer and saves inside the existing kit lock.
+        appScope.launch {
+            try {
+                val (fresh, _) = withFreshKit(kitDir) { currentModel ->
+                    val current = currentModel.kit.pad(targetSlot)
+                    check(current != null && sameAquariumSource(current, expected)) {
+                        "This pad changed. Open it again before changing Aquarium"
+                    }
+                    reapplyPendingMetadataFields(currentModel, stalePads)
+                    when (action) {
+                        "KEEP" -> AquariumPadSheet.apply(currentModel, targetSlot, recipe, aquariumRenderer)
+                        "REMOVE" -> AquariumPadSheet.remove(currentModel, targetSlot)
+                        "UNDO" -> AquariumPadSheet.undo(currentModel, targetSlot)
+                        else -> error("Unknown Aquarium action")
+                    }
+                }
+                if (scope.isActive && liveKitDir == kitDir) {
+                    if (liveSlot == targetSlot && request == aquariumGeneration &&
+                        lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
+                    ) auditionOnRefresh = true
+                    model = fresh
+                    pendingMetadataSlots = emptySet()
+                }
+                onKitUpdated(fresh.kit)
+                onToast(when (action) {
+                    "KEEP" -> if (recipe.isBypass) "Original restored on ${expected.displayName}" else "Aquarium kept on ${expected.displayName}"
+                    "REMOVE" -> "Aquarium removed from ${expected.displayName}"
+                    else -> "Aquarium change undone on ${expected.displayName}"
+                })
+            } catch (error: Exception) {
+                if (error is CancellationException) throw error
+                if (scope.isActive && liveKitDir == kitDir && liveSlot == targetSlot) aquariumFailure("$action AQUARIUM", error)
+                else onToast(error.message ?: "Aquarium could not save this pad")
+            } finally {
+                aquariumAction = null
+                busy = false
+            }
+        }
+    }
+
     /** DO IT AGAIN, half one: lift this pad's last treatment onto the caller's clipboard, named. */
     fun onCopyRecipe() {
         if (busy) return
@@ -1242,7 +1447,7 @@ fun PadSheetScreen(
             scope.launch {
                 val tapeFile = File(snipsDir, plan.tape)
                 val print = try {
-                    withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) }
+                    offMain { DustPrints.forTape(tapeFile) }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     busy = false
@@ -1255,14 +1460,14 @@ fun PadSheetScreen(
                     return@launch
                 }
                 commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
-                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName) { print }.toast
+                    said = RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer) { print }.toast
                 }
             }
             return
         }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
             said = try {
-                RecipeReplay.apply(mm, slot, clip.recipe, padName).toast
+                RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer).toast
             } catch (e: KitBuilderModel.Unpitched) {
                 Copy.notANote(e.message ?: "not a note")
             }
@@ -1273,8 +1478,8 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
-            onToast(Copy.boardRemoveBeforeSoftHits(BoardSheet.read(p.recipe)?.type?.name ?: "BOARD"))
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
         val enabling = p.velocityLayers.isEmpty()
@@ -1363,7 +1568,7 @@ fun PadSheetScreen(
     var otherPads by remember { mutableStateOf<List<Int>>(emptyList()) }
     LaunchedEffect(pickedKit) {
         val k = pickedKit
-        otherPads = if (k == null) emptyList() else withContext(Dispatchers.IO) {
+        otherPads = if (k == null) emptyList() else offMain {
             try {
                 MutateSheet.padsOf(k).map { it.slot }
             } catch (e: CancellationException) {
@@ -1376,7 +1581,7 @@ fun PadSheetScreen(
     var roomsRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(entry.dir, roomsRevision) {
         val root = entry.dir.parentFile ?: entry.dir
-        rooms = withContext(Dispatchers.IO) {
+        rooms = offMain {
             try {
                 Rooms.list(root)
             } catch (e: CancellationException) {
@@ -1385,7 +1590,7 @@ fun PadSheetScreen(
                 emptyList()
             }
         }
-        otherKits = withContext(Dispatchers.IO) {
+        otherKits = offMain {
             try {
                 MutateSheet.otherKits(root, entry.dir)
             } catch (e: CancellationException) {
@@ -1543,7 +1748,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val (rendered, padMs) = withContext(Dispatchers.IO) {
+                val (rendered, padMs) = offMain {
                     MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) to MutateSheet.lengthMs(m, slot)
                 }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
@@ -1596,7 +1801,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val deal = withContext(Dispatchers.IO) { MutateSheet.deal(m, slot, root, seed) }
+                val deal = offMain { MutateSheet.deal(m, slot, root, seed) }
                 spins = seed + 1
                 partner = deal
             } catch (e: Exception) {
@@ -1741,7 +1946,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val held = withContext(Dispatchers.IO) {
+                val held = offMain {
                     val name = ShareInbox.displayName(context, uri)
                     val decoded = MediaDecode.decode(context, uri)
                     MutateSheet.hold(File(context.cacheDir, MutateSheet.PARENTS_DIR), name, decoded)
@@ -1801,7 +2006,7 @@ fun PadSheetScreen(
                 // name is decided by reading the folder, which is not work
                 // for the main thread, and deciding it any earlier widens the
                 // window in which something else could take it.
-                val made = withContext(Dispatchers.IO) {
+                val made = offMain {
                     val name = OneNote.freshName(destRoot, instrumentBase)
                     OneNote.export(name, currentSnip, destRoot, overwrite = false)
                     name
@@ -1828,8 +2033,8 @@ fun PadSheetScreen(
         if (busy || spreadOpening) return
         val currentSnip = snip ?: return
         val p = model?.kit?.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
-            onToast(Copy.boardRemoveBeforeSpread(BoardSheet.read(p.recipe)?.type?.name ?: "BOARD"))
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSpread(PrintedPads.label(p.recipe)))
             return
         }
         // A chain's file is every take end to end; spreading it would tune
@@ -1841,7 +2046,7 @@ fun PadSheetScreen(
         spreadOpening = true
         scope.launch {
             try {
-                val midi = withContext(Dispatchers.Default) { Spread.detect(currentSnip) }
+                val midi = offMain(Dispatchers.Default) { Spread.detect(currentSnip) }
                 spreadSource = SpreadSource(currentSnip, midi, Spread.defaultRoot(midi, p.tuneCoarse, p.tuneFine))
             } finally {
                 spreadOpening = false
@@ -1988,7 +2193,7 @@ fun PadSheetScreen(
                 // model — fine, this only READS the pad's current audio) and
                 // the mic capture itself, which can run for seconds. Stays on
                 // `scope`, not `appScope`: see this function's own KDoc.
-                val returned = withContext(Dispatchers.IO) {
+                val returned = offMain {
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
                     OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
@@ -2094,7 +2299,7 @@ fun PadSheetScreen(
         busy = true
         appScope.launch {
             try {
-                val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
+                val kept = offMain { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null
                 roomsRevision++
                 onShelfAssetWritten()
@@ -2148,7 +2353,7 @@ fun PadSheetScreen(
         if (!gatheringEligible) return@LaunchedEffect
         gatheringOpening = true
         try {
-            val opened = withContext(Dispatchers.IO) { ConfluenceWorkshop.open(entry.dir, pad) }
+            val opened = offMain { ConfluenceWorkshop.open(entry.dir, pad) }
             gatheringEditor = opened
             if (gatheringControls == null) gatheringControls = opened.initialControls
         } catch (e: Exception) {
@@ -2179,7 +2384,7 @@ fun PadSheetScreen(
         busy = true
         scope.launch {
             try {
-                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                val prepared = offMain(Dispatchers.Default) { editor.prepare(controls) }
                 if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir &&
                     model === sourceModel && gatheringEditor === editor &&
                     gatheringPreviewGeneration == previewGeneration &&
@@ -2233,7 +2438,7 @@ fun PadSheetScreen(
                     if (firstEmpty == null) "No empty pad. Make room before saving a variation."
                     else "The first empty pad changed. Reopen this pad before making a variation."
                 }
-                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                val prepared = offMain(Dispatchers.Default) { editor.prepare(controls) }
                 gatheringStatus = "WRITING ${padTag(destination)}…"
                 var made: KitPad? = null
                 val (fresh, _) = withFreshKit(kitDir) { current ->
@@ -2309,7 +2514,7 @@ fun PadSheetScreen(
                 // It matters more on this door: the seed above is fresh every
                 // press and is never kept, so a press that wrote over the
                 // last one destroyed a render nothing could make again.
-                val made = withContext(Dispatchers.IO) {
+                val made = offMain {
                     val name = OneNote.freshName(destRoot, padBase)
                     PadFromAnything.export(name, currentSnip, destRoot, spec, overwrite = false)
                     name
@@ -2397,6 +2602,10 @@ fun PadSheetScreen(
      * `DisposableEffect` is what covers those.
      */
     fun requestBack() {
+        if (aquariumOpen) {
+            closeAquarium()
+            return
+        }
         val m = model
         // `pendingMetadataSlots`, not `m.dirty` — same reasoning as the
         // debounce effect above: this flush saves a fresh model, not `m`,
@@ -2541,7 +2750,7 @@ fun PadSheetScreen(
         dustAmount != null -> PadSheet.DUST
         else -> applied?.segment
     }
-    val isNoneState = boardApplied == null && smearAmount == null && dustAmount == null && applied == null
+    val isNoneState = !PrintedPads.has(pad.recipe) && smearAmount == null && dustAmount == null && applied == null
     // The phone ruling, whichever row: a treatment no segment draws is
     // named on the provenance line, never shown as NONE.
     val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
@@ -2584,7 +2793,11 @@ fun PadSheetScreen(
     // the same bench. The pad nav is pinned under the scroll.
     val boxes = PadSheetBoxes.summaries(pad, outsideStage)
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
-    fun tapBox(box: PadSheetBoxes.Box) = onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+    fun tapBox(box: PadSheetBoxes.Box) {
+        if (busy) return
+        if (aquariumOpen) closeAquarium()
+        onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
+    }
 
     // LABEL THIS HIT (docs/WORKSHOP.md, WS3): what the Calibration folder
     // beside the kits holds for this pad - the BENCH box's strip and its
@@ -2597,7 +2810,7 @@ fun PadSheetScreen(
     var hitLabel by remember(entry.dir, slot) { mutableStateOf<DrumClass?>(null) }
     LaunchedEffect(entry.dir, slot, workshopOpen) {
         if (!workshopOpen) return@LaunchedEffect
-        hitLabel = withContext(Dispatchers.IO) { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
+        hitLabel = offMain { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
     }
 
     /**
@@ -2619,7 +2832,7 @@ fun PadSheetScreen(
         val taking = hitLabel == dc
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                offMain {
                     if (taking) LabelledHits.unlabel(shelfRoot, kitName, padLabel)
                     else LabelledHits.label(shelfRoot, wav, kitName, padLabel, dc)
                 }
@@ -2641,7 +2854,7 @@ fun PadSheetScreen(
     fun openDustFrom() {
         if (busy) return
         scope.launch {
-            val tapes = withContext(Dispatchers.IO) { SnipStore.list(context.filesDir) }
+            val tapes = offMain { SnipStore.list(context.filesDir) }
             if (tapes.isEmpty()) {
                 onToast(Copy.DUST_FROM_EMPTY)
                 return@launch
@@ -2654,7 +2867,7 @@ fun PadSheetScreen(
         if (busy) return
         val m = model ?: return
         val p = m.kit.pad(slot) ?: return
-        if (BoardSheet.read(p.recipe) != null) {
+        if (PrintedPads.has(p.recipe)) {
             onToast(boardRemoveFirst(p.recipe))
             return
         }
@@ -2688,12 +2901,14 @@ fun PadSheetScreen(
             scheme = scheme,
             busy = busy,
             onBack = ::requestBack,
-            onHit = { snip?.let { audition(it, pad.level, pad) } },
-            // A/B: only while a treatment is on and the take before it is
-            // still in the bin (`binDaysLeft` is that entry's countdown).
+            onHit = { stopAquariumPreview(); snip?.let { audition(it, pad.level, pad) } },
+            // Aquarium/boards compare their preserved input. Older treatments
+            // compare the bin take while it remains available.
             onBefore = when {
-                boardApplied != null -> ({ hearBoard(original = true) })
-                !isNoneState && binDaysLeft != null -> ({ playBefore(pad) })
+                (aquariumOpen || aquariumMarker) && aquariumRefusal == null -> ({ hearAquarium(original = true) })
+                aquariumOpen || aquariumMarker -> null
+                boardApplied != null -> ({ stopAquariumPreview(); hearBoard(original = true) })
+                !isNoneState && binDaysLeft != null -> ({ stopAquariumPreview(); playBefore(pad) })
                 else -> null
             },
         )
@@ -2788,7 +3003,53 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.TREATMENT,
                 onToggle = { tapBox(PadSheetBoxes.Box.TREATMENT) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
+            if (aquariumOpen) {
+                AquariumPanel(
+                    editor = aquariumEditor,
+                    applied = aquariumApplied != null,
+                    canPreview = aquariumRefusal == null && snip != null,
+                    canKeep = aquariumRefusal == null && (!aquariumEditor.render.isBypass || aquariumApplied != null),
+                    canRemove = aquariumRefusal == null && aquariumApplied != null,
+                    canUndo = aquariumRefusal == null && aquariumUndoAvailable,
+                    busy = busy,
+                    previewing = aquariumPreviewing,
+                    sourceStatus = when {
+                        aquariumMarker && aquariumApplied == null -> "KEPT RECIPE UNREADABLE"
+                        aquariumApplied != null -> "KEPT · edits use the preserved original"
+                        else -> "DRAFT · uses this pad's current audio"
+                    },
+                    status = aquariumAction?.let { "$it…" } ?: aquariumStatus,
+                    error = aquariumError,
+                    disabledReason = aquariumRefusal,
+                    scheme = scheme,
+                    color = classColor,
+                    onEditorChange = { next ->
+                        if (next.render != aquariumEditor.render) {
+                            stopAquariumPreview()
+                            aquariumError = null
+                        }
+                        aquariumEditor = next
+                    },
+                    onBefore = { hearAquarium(original = true) },
+                    onHear = { hearAquarium(original = false) },
+                    onKeep = { commitAquarium("KEEP") },
+                    onRemove = { commitAquarium("REMOVE") },
+                    onUndo = { commitAquarium("UNDO") },
+                    onCancel = ::closeAquarium,
+                )
+            } else {
+            ActionButton(
+                "AQUARIUM ▸", scheme, enabled = !busy,
+                accessibilityLabel = "AQUARIUM",
+                modifier = Modifier.fillMaxWidth().testTag("aquarium-open"),
+                onClick = {
+                    stopAquariumPreview()
+                    aquariumError = null
+                    aquariumOpen = true
+                },
+            )
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
@@ -2915,6 +3176,7 @@ fun PadSheetScreen(
                 maxLines = 2,
             )
             }
+            }
 
             GroupBox(
                 legend = PadSheetBoxes.Box.SHAPE.legend,
@@ -2922,6 +3184,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.SHAPE,
                 onToggle = { tapBox(PadSheetBoxes.Box.SHAPE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             ShapeCard(
                 knobs = listOf(
@@ -2972,6 +3235,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.MUTATE,
                 onToggle = { tapBox(PadSheetBoxes.Box.MUTATE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             // The partner as the pairing line names it: a pad on this kit by its tag and name.
             val partnerName = partner?.let { p -> MutateSheet.partnerName(p) { s -> kit.pad(s)?.displayName } }
@@ -3019,6 +3283,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.OUTSIDE,
                 onToggle = { tapBox(PadSheetBoxes.Box.OUTSIDE) },
                 scheme = scheme,
+                enabled = !busy,
                 // The trip out: the strip goes lcd-alt while the reels turn.
                 summaryColor = if (outsideStage != null) scheme.amber.tape else scheme.ink2.tape,
             ) {
@@ -3049,6 +3314,7 @@ fun PadSheetScreen(
                 open = openBoxKind == PadSheetBoxes.Box.MAKE,
                 onToggle = { tapBox(PadSheetBoxes.Box.MAKE) },
                 scheme = scheme,
+                enabled = !busy,
             ) {
             if (gatheringEligible) {
                 ConfluenceGatheringCard(
@@ -3172,8 +3438,14 @@ fun PadSheetScreen(
                     legend = "BENCH",
                     summary = Copy.hitStrip(hitLabel?.let { ChopReviewModel.chipName(it) }),
                     open = openBox == HIT_BOX,
-                    onToggle = { onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX) },
+                    onToggle = {
+                        if (!busy) {
+                            if (aquariumOpen) closeAquarium()
+                            onOpenBox(if (openBox == HIT_BOX) null else HIT_BOX)
+                        }
+                    },
                     scheme = scheme,
+                    enabled = !busy,
                 ) {
                     HitLabelCard(
                         current = hitLabel,
@@ -3263,6 +3535,20 @@ fun PadSheetScreen(
 
 // ---------- fresh-kit writes (Law 5) ----------
 
+/** Audio/recipe identity excludes pad controls, which retain the kit's current metadata. */
+private fun sameAquariumSource(current: KitPad, expected: KitPad): Boolean =
+    current.sampleFile == expected.sampleFile && current.recipe == expected.recipe &&
+        current.velocityLayers == expected.velocityLayers && current.chain == expected.chain && current.source == expected.source
+
+/** SHAPE, gain and mono duplication stay off the UI thread, including large finite previews. */
+private fun aquariumAuditionPcm(source: Snip, pad: KitPad): Snip {
+    val shaped = ShapeAudition.render(source, pad)
+    val stereo = FloatArray(shaped.frameCount * 2) { index ->
+        shaped.samples[if (shaped.channels == 1) index / 2 else index] * pad.level
+    }
+    return Snip(stereo, 2, shaped.sampleRate)
+}
+
 /**
  * The one correct shape for a kit mutation issued by a screen whose own
  * [KitBuilderModel] was opened earlier, outside any lock, and is therefore
@@ -3282,7 +3568,7 @@ fun PadSheetScreen(
  * paired with whether a save actually happened.
  */
 private suspend fun withFreshKit(kitDir: File, block: (KitBuilderModel) -> Unit): Pair<KitBuilderModel, Boolean> {
-    return withContext(Dispatchers.IO) {
+    return offMain {
         KitWrites.mutex.withLock {
             val fresh = KitBuilderModel.open(kitDir)
             block(fresh)

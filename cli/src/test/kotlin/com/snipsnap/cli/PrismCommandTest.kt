@@ -3,6 +3,7 @@ package com.snipsnap.cli
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.synth.Prism
+import com.snipsnap.synth.PrismOpeningPresets
 import com.snipsnap.synth.PrismPresets
 import com.snipsnap.synth.PrismVoice
 import java.io.ByteArrayOutputStream
@@ -81,6 +82,29 @@ class PrismCommandTest {
             assertTrue("1 rendered into" in output.toString())
         } finally {
             dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `CLI selects appended body openings with their complete accepted A B note and energy`() {
+        for (preset in listOf(PrismOpeningPresets.all().first(), PrismOpeningPresets.all().last())) {
+            val dir = createTempDirectory("prism-opening-cli").toFile()
+            try {
+                val index = PrismPresets.forVoice(preset.voice).indexOf(preset) + 1
+                assertTrue(index > 1, "the body opening must be appended after existing voice presets")
+                val output = ByteArrayOutputStream()
+                assertEquals(0, Cli.run(
+                    arrayOf("synth", "prism", preset.voiceName, "--preset", index.toString(), "--out", dir.path),
+                    PrintStream(output), PrintStream(ByteArrayOutputStream()),
+                ))
+                val wav = dir.listFiles { file -> file.extension == "wav" }!!.single()
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
+                assertTrue(expected.contentEquals(wav.readBytes()),
+                    "${preset.name}: CLI selection preserves the saved opening, destination, phase template, note and velocity")
+                assertTrue("1 rendered into" in output.toString())
+            } finally {
+                dir.deleteRecursively()
+            }
         }
     }
 

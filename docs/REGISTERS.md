@@ -4,8 +4,9 @@ REGISTERS adapts the organ/reed family idea in the
 [XOctave architecture](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md)
 to SnipSnap's deterministic offline renderer. PIPE and MUSETTE form the working
 audition baseline. The owner selected model-3 PIPE after listening to the stronger
-chiff and sustained airflow. Model 4 adds a third voice, TRANSISTOR, for listening
-review; the existing PIPE/MUSETTE synthesis and six model-3 presets are preserved.
+chiff and sustained airflow. Model 4 introduced TRANSISTOR; model 5 adds a fuller same-pitch foundation after
+the first listening verdict asked for more depth. The existing PIPE/MUSETTE
+synthesis and six model-3 presets are preserved.
 
 PIPE uses twelve harmonic partials with registration-inspired dark/principal
 weighting, staggered speech, a brief chiff and a seeded wind field. MUSETTE
@@ -89,7 +90,9 @@ approximation, not a measured emulation of a particular instrument.
 | TUNE / HOLD | Shared pitch and finite-length/held-loop controls |
 
 Three new C4 starting points are Compact Keys, Clean Combo and Garage Buzz.
-TRANSISTOR recipes explicitly use renderer model 4 and reject models 1–3.
+Original TRANSISTOR recipes use renderer model 4 and reject models 1–3.
+The current three factory settings use model 5; saved model-4 recipes retain
+their original sound.
 PIPE/MUSETTE still replay all earlier models; their six presets remain pinned
 to model 3. Missing model metadata continues to mean legacy model 1.
 
@@ -98,6 +101,28 @@ R3 pack with new TRANSISTOR identities, control sweeps, velocity examples,
 interaction studies, presets and held tones. The R4 pack preserves earlier WAVs,
 recipes, comparison pairs and review scopes. Old browser notes remain attached
 to the sound they describe; edits save under the new revision.
+
+## TRANSISTOR body — R5
+
+The next listening verdict asked for a little more depth. Model 5 adds a rounded
+8-foot foundation at the played pitch, gentler upper-rank weighting and quiet
+SPREAD-controlled detuned foundation ranks. The foundation stays outside the
+transistor saturation stage so EDGE retains its bite while the sustained note
+has more low-partial weight. The dry mono format and seven controls stay intact.
+
+The original electronic click and keying are retained. The fuller body blends in
+over 20–80 ms on finite notes and is fully present in a held loop. Both versions
+share pitch, duration, velocity and macro settings; this is a timbre comparison
+at the same listening level. Model 4 stays replayable exactly, including the
+published PCM fixtures. PIPE and MUSETTE are unchanged.
+
+Run `./gradlew :synth:generateRegistersTransistorDepthAudition` with
+`-PregistersR4Baseline=<published R4 archive>` to build the body comparison.
+R5 retains all 116 earlier recordings and recipes and adds 31 model-5 cases.
+Eleven Original R4 / More body R5 pairs cover six identities, three presets and
+two held tones. R1–R4 listening notes keep their original sound identities;
+changed model-5 recordings start with separate reviews. The body revision awaits
+listening feedback and physical phone/MPC checks.
 
 ## Playing and saving
 

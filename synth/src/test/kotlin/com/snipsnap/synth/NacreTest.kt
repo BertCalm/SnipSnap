@@ -2,9 +2,12 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import kotlin.math.abs
+import kotlin.math.PI
+import kotlin.math.cos
 import kotlin.math.ln
 import kotlin.math.sqrt
 import kotlin.test.Test
@@ -23,6 +26,39 @@ class NacreTest {
     private fun distance(a: FloatArray, b: FloatArray): Double =
         sqrt(a.indices.sumOf { (a[it].toDouble() - b[it]).let { d -> d * d } } / a.size) /
             rms(a).coerceAtLeast(1e-12)
+
+    /** Broad-band spectral evidence ignores sample phase and scalar loudness differences. */
+    private fun spectrum(x: FloatArray, fromSeconds: Double = .20): DoubleArray {
+        val n = 32768
+        val start = (fromSeconds * 44_100).toInt()
+        val re = FloatArray(n) { i -> (x[start + i] * (.5 - .5 * cos(2.0 * PI * i / (n - 1)))).toFloat() }
+        val im = FloatArray(n)
+        Fft.forward(re, im)
+        return DoubleArray(n / 2) { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+    }
+
+    private fun highFraction(x: FloatArray, boundaryHz: Double = 500.0): Double {
+        val power = spectrum(x)
+        val first = (boundaryHz * 32768 / 44_100).toInt()
+        return power.drop(first).sum() / power.sum().coerceAtLeast(1e-20)
+    }
+
+    private fun spectralShapeDistance(a: FloatArray, b: FloatArray): Double {
+        val pa = spectrum(a); val pb = spectrum(b)
+        val ea = pa.sum().coerceAtLeast(1e-20); val eb = pb.sum().coerceAtLeast(1e-20)
+        // Compare broad bands, so a tiny detuning cannot manufacture spectral contrast.
+        val boundaries = listOf(0, 200, 350, 500, 800, 1200, 2000, 4000, 8000, 16000)
+        return boundaries.zipWithNext().sumOf { (lo, hi) ->
+            val first = lo * 32768 / 44_100
+            val last = minOf(pa.size, hi * 32768 / 44_100)
+            abs((first until last).sumOf { pa[it] } / ea - (first until last).sumOf { pb[it] } / eb)
+        }
+    }
+
+    private fun direct(probe: Nacre.Probe): FloatArray {
+        val bass = probe.stems.getValue("bass"); val upper = probe.stems.getValue("upper")
+        return FloatArray(bass.size) { bass[it] + upper[it] }
+    }
 
     @Test
     fun `root seed and macro map ordering reproduce every event and sample`() {
@@ -85,6 +121,53 @@ class NacreTest {
     }
 
     @Test
+    fun `touch changes harmonic balance while diagnostic strum timing stays fixed`() {
+        val options = Nacre.Options(lockStrumTiming = true)
+        val soft = Nacre.inspect(macros = base + ("TOUCH" to 0f), options = options)
+        val hard = Nacre.inspect(macros = base + ("TOUCH" to 1f), options = options)
+        assertEquals(soft.events.map { Triple(it.performer, it.stringId, it.timeSeconds) },
+            hard.events.map { Triple(it.performer, it.stringId, it.timeSeconds) })
+        val softHigh = highFraction(soft.raw)
+        val hardHigh = highFraction(hard.raw)
+        assertTrue(hardHigh > softHigh * 2.0 + .04,
+            "TOUCH only changes level: above500Hz soft=$softHigh hard=$hardHigh")
+        assertTrue(spectralShapeDistance(soft.raw, hard.raw) > .15, "touch spectral shapes remain too similar")
+    }
+
+    @Test
+    fun `baseline rings long enough for water and exposes sympathetic and venue contributions`() {
+        val probe = Nacre.inspect(options = Nacre.Options(lockStrumTiming = true))
+        val directRms = rms(direct(probe))
+        val symRatio = rms(probe.stems.getValue("sympathetic")) / directRms
+        val venueRatio = rms(probe.stems.getValue("venue")) / directRms
+        val energy99 = probe.diagnostics.getValue("energy99Seconds")
+        val high = highFraction(probe.raw)
+        println("NACRE2 baseline: E99=$energy99 s, above500Hz=$high, sympathetic/direct=$symRatio, venue/direct=$venueRatio")
+        assertTrue(energy99 in 1.3..4.5, "energy is concentrated in $energy99 seconds")
+        assertTrue(rms(probe.raw, 44_100, 2 * 44_100) > rms(probe.raw, 8820, 44_100) * .08,
+            "the water acts after the audible note ends")
+        assertTrue(symRatio > .10, "sympathetic RMS/direct=$symRatio remains buried")
+        assertTrue(venueRatio > .08, "venue RMS/direct=$venueRatio remains buried")
+        assertTrue(high > .025, "baseline remains almost entirely the two lowest tones: above500Hz=$high")
+    }
+
+    @Test
+    fun `venues have different material spectra while current changes a fixed gesture`() {
+        val options = Nacre.Options(lockStrumTiming = true)
+        val coral = Nacre.inspect(macros = base + mapOf("VENUE" to 0f, "BLOOM" to .65f), options = options)
+        val weed = Nacre.inspect(macros = base + mapOf("VENUE" to 1f, "BLOOM" to .65f), options = options)
+        assertContentEquals(coral.stems.getValue("bass"), weed.stems.getValue("bass"))
+        assertContentEquals(coral.stems.getValue("upper"), weed.stems.getValue("upper"))
+        assertTrue(spectralShapeDistance(coral.stems.getValue("venue"), weed.stems.getValue("venue")) > .18,
+            "venue endpoints only change timing or level")
+        assertTrue(spectralShapeDistance(coral.raw, weed.raw) > .025, "venue color disappears in the full mix")
+        val still = Nacre.inspect(macros = base + ("CURRENT" to 0f), options = options)
+        val moving = Nacre.inspect(macros = base + ("CURRENT" to .8f), options = options)
+        assertEquals(still.events.map { it.timeSeconds }, moving.events.map { it.timeSeconds })
+        assertTrue(spectralShapeDistance(still.raw, moving.raw) > .06, "water only changes overall energy")
+    }
+
+    @Test
     fun `cross harp excitation reaches unplucked resonators without changing direct strings`() {
         val macros = base + ("BLOOM" to .85f)
         val on = Nacre.inspect(macros = macros, options = Nacre.Options(muteUpperPlucks = true))
@@ -114,6 +197,17 @@ class NacreTest {
             val cents = 1200.0 * ln(pitch.hz / Keys.midiHz(midi).toDouble()) / ln(2.0)
             assertTrue(abs(cents) < 15.0, "MIDI $midi: $cents cents (including octave ambiguity)")
             assertTrue(Classifier.classify(snip).drumClass !in forbidden, "MIDI $midi classified as a drum")
+        }
+    }
+
+    @Test
+    fun `hard touch retains the bass root across the audition register`() {
+        for (midi in listOf(36, 60, 72)) {
+            val snip = Nacre.inspect(macros = base + ("TOUCH" to 1f), midi = midi,
+                seed = 7L, options = Nacre.Options(lockStrumTiming = true)).snip
+            val pitch = requireNotNull(Pitch.detect(snip, fromSec = .45f, windowSec = .4f)) { "hard touch has no pitch at MIDI $midi" }
+            val cents = 1200.0 * ln(pitch.hz / Keys.midiHz(midi).toDouble()) / ln(2.0)
+            assertTrue(abs(cents) < 15.0, "hard TOUCH MIDI $midi: $cents cents (including octave ambiguity)")
         }
     }
 

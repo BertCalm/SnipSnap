@@ -68,7 +68,7 @@ class ChamberPatchTest {
         for (bad in listOf("9223372036854775808", "1.5", "-01", "+1", " 1")) {
             assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("seed", JsonValue.Str(bad))) }
         }
-        for (bad in listOf(0.0, 1.5, 3.0)) {
+        for (bad in listOf(0.0, 1.5, 4.0)) {
             assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("model", JsonValue.Num(bad))) }
         }
         assertFailsWith<JsonException> { ChamberPatch.fromJsonValue(changed("seed", JsonValue.Num(1.0))) }
@@ -81,14 +81,14 @@ class ChamberPatchTest {
     }
 
     @Test
-    fun `first listen recipes are complete finite and outside the shipped roster`() {
+    fun `factory recipes remain complete finite and available through the shared roster`() {
         val recipes = ChamberPresets.all()
         assertEquals(6, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
-        assertTrue(Presets.all().none { it.engine == ChamberPatch.ENGINE })
+        assertEquals(recipes, Presets.all().filter { it.engine == ChamberPatch.ENGINE })
         for (voice in ChamberVoice.entries) {
             assertEquals(3, ChamberPresets.forVoice(voice).size)
-            assertTrue(Presets.forVoice(ChamberPatch.ENGINE, voice.name).isEmpty())
+            assertEquals(ChamberPresets.forVoice(voice), Presets.forVoice(ChamberPatch.ENGINE, voice.name))
         }
         for (recipe in recipes) {
             assertEquals(setOf("STRIKE", "BALANCE", "MATERIAL", "DIVIDE", "PLACEMENT", "HOLD"), recipe.macros.keys)

@@ -31,10 +31,12 @@ enum class PedalSide(val id: String) {
  * several sections: RIG) owns its own chain and its own key, and that key is
  * not a [Treatments] name.
  *
- * Nothing here is heard: the day-one entries are the two chips the owner
- * picked at the pedal board's round two (DRIVE, COMP), the WAH section
- * awaiting its gate, and RIG as the first board, authored as a hypothesis
- * for its own gate.
+ * The entries: the two chips the owner picked at the pedal board's round
+ * two (DRIVE, and COMP, now SUSTAIN over its own section, gated on
+ * 2026-10-24); the WAH section's three moves (WAH, TOUCH, ROCK), which
+ * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
+ * first board, authored as a hypothesis for its own gate. DELAY, added
+ * after its own spec, awaits its gate.
  */
 object Pedals {
 
@@ -107,21 +109,29 @@ object Pedals {
     val entries: List<Entry> = listOf(
         // A drive pedal: VALVE at the top of its gain law. The amp: it cannot move. The owner's pick, round two.
         Entry("DRIVE", "driven", character("driven"), PedalSide.AMP, movable = false, gated = true),
-        // A compressor pedal for now (SQUASH at its strongest): in front of the amp by convention, movable.
-        Entry("COMP", "compressed", character("compressed"), PedalSide.PRE, movable = true, gated = true),
-        // The WAH section's AUTO move: the first pedal on a board, movable (the owner heard both ways). Gate pending.
-        Entry("WAH", "wahed", character("wahed"), PedalSide.PRE, movable = true, gated = false),
+        // The sustain pedal (the COMPRESSOR section): in front of the amp by convention, movable. The chip reads
+        // SUSTAIN, the owner's word at its gate (2026-10-24); the saved key stays `compressed`.
+        Entry("SUSTAIN", "compressed", character("compressed"), PedalSide.PRE, movable = true, gated = true),
+        // The WAH section's three moves, each its own chip: AUTO (WAH), the envelope follower (TOUCH) and the
+        // one rock (ROCK). Movable: the owner heard both ways and found them both good, in front of the amp a
+        // little better. Gate passed, 2026-10-23.
+        Entry("WAH", "wahed", character("wahed"), PedalSide.PRE, movable = true, gated = true),
+        Entry("TOUCH", "touchwahed", character("touchwahed"), PedalSide.PRE, movable = true, gated = true),
+        Entry("ROCK", "rockwahed", character("rockwahed"), PedalSide.PRE, movable = true, gated = true),
         // The first board: a compressor into the drive pedal into one slapback. A hypothesis for its own gate:
         // the brainstorm's RIG, values as the characters it is made of. It contains the amp, so it sits at AMP.
         Entry(
             "RIG", "rig",
             FxChain(
-                squash = character("compressed").squash,
+                compressor = character("compressed").compressor,
                 valve = character("driven").valve,
                 echo = character("slapback").echo,
             ),
             PedalSide.AMP, movable = false, gated = false,
         ),
+        // A delay pedal: the `delayed` character, ECHO's repeats fed by the note's head. After the amp, where a rig
+        // puts a delay; not movable. Gate pending (docs/superpowers/specs/2026-10-22-delay-head-design.md).
+        Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = false),
     )
 
     init {

@@ -55,7 +55,7 @@ class PedalBoardTest {
         val board = PedalBoard(listOf(pick("wahed", 0.7f, PedalSide.PRE), pick("compressed", 1f, PedalSide.PRE)))
         val folded = board.chainFor(PedalSide.PRE)!!
         assertEquals(Treatments.chain("wahed", 0.7f).wah, folded.wah)
-        assertEquals(Treatments.chain("compressed", 1f).squash, folded.squash)
+        assertEquals(Treatments.chain("compressed", 1f).compressor, folded.compressor)
         assertContentEquals(folded.process(snare).samples, board.process(snare).samples, "one side is one pass")
 
         // DRIVE then RIG both set valve: RIG, picked later, owns it.
@@ -92,6 +92,23 @@ class PedalBoardTest {
         val rig = PedalBoard(listOf(pick("rig", 1f))).process(snare)
         assertTrue(rig.frameCount <= snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt(), "RIG's slapback ran past the budget")
         // The cap is the chain's own: a pass that stays within it is untouched (the equivalence tests above prove it).
+    }
+
+    @Test
+    fun `RIG and DELAY on one board run two echoes, one per pass, inside the board's one tail budget`() {
+        val board = PedalBoard(listOf(pick("rig", 1f), pick("delayed", 1f)))
+        assertEquals("rig", board.owner(PedalSide.AMP, "echo")!!.key, "RIG's slapback is the AMP pass's echo")
+        assertEquals("delayed", board.owner(PedalSide.POST, "echo")!!.key, "DELAY is the POST pass's echo")
+        val out = board.process(snare)
+        val budget = snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        assertTrue(out.frameCount <= budget, "two tail-making picks ran past the board's budget")
+        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and up to the board's own
+        // 10 ms fade the pair is DELAY's chain on RIG's render.
+        val rigOnly = PedalBoard(listOf(pick("rig", 1f))).process(snare)
+        assertTrue(rigOnly.frameCount < budget, "RIG alone already fills the budget, so this test proves nothing")
+        assertEquals(budget, out.frameCount, "the board's cap did not engage: DELAY did not run on RIG's output")
+        val keep = (budget - (0.02f * snare.sampleRate).toInt()) * out.channels
+        assertContentEquals(Treatments.chain("delayed").process(rigOnly).samples.copyOfRange(0, keep), out.samples.copyOfRange(0, keep))
     }
 
     @Test
