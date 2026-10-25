@@ -134,3 +134,21 @@ The new midpoint intentionally differs from legacy. The focused
 recipes. Measurements, rationale and remaining listening limits are recorded in
 [the EDGE review](../../CONTOUR_EDGE_REVIEW.md). User listening approval remains
 the sonic gate.
+
+## As built: full EDGE range, 2026-10-24
+
+Owner feedback clarified that EDGE zero to maximum remained too subtle in seven
+recipes. Their saved `CONTRAST` response now trades body overtones for edge
+partials, retaining a 35% body-partial floor and capping the edge-partial
+multiplier at 4×. Additional body-root support depends on EDGE and the existing
+BODY root weight; the edge's fundamental is not boosted. The source mix budgets
+these contributions before DRIVE. Two earlier candidates that produced octave
+detections were rejected. The selected native prototype passes 168 additional
+BODY/register/finite/held pitch corners.
+
+Soft Digital and Bright Margin keep their previous complete FOREGROUND recipes.
+Legacy and foreground saved laws remain available; model 1 and its phase seed
+stay fixed. The 180-case audition now pins complete preceding FOREGROUND recipes
+from `47809ba2d`, and adds 0 → 50 → 100% playback on both sides. See
+[the review follow-up](../../CONTOUR_EDGE_REVIEW.md#full-range-follow-up-2026-10-24)
+for measurements, shape laws and unverified listening claims.

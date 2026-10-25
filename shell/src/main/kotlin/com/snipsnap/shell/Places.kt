@@ -26,6 +26,7 @@ object Places {
     /** Behind the gear in the title bar. */
     const val GEAR_SETUP = "SETUP"
     const val GEAR_HELP = "HELP"
+    const val GEAR_MIDI = "MIDI"
 
     // ---- the dock ----
 

@@ -8,6 +8,8 @@ import com.snipsnap.json.JsonValue
  * A complete deterministic groove voice recipe. Pitch, source registration,
  * answering gesture and fixed chord voicing travel beside the six macros.
  * HOLD saves a settled loop; its delayed attack is absent from loop-only export.
+ * New recipes use model 2. Older recipes keep model 1, including JSON written
+ * before the model field existed, so opening or editing a sound retains its renderer.
  */
 data class StoopPatch(
     override val name: String,
@@ -40,7 +42,7 @@ data class StoopPatch(
         require(chordIntervals.size in 1..4 && 0 in chordIntervals && chordIntervals.distinct() == chordIntervals && chordIntervals.all { it in -24..24 }) {
             "STOOP chord intervals must contain root and one to four distinct intervals in -24..24: $chordIntervals"
         }
-        require(model == Stoop.MODEL_VERSION) { "unsupported stoop model $model" }
+        require(model == Stoop.LEGACY_MODEL_VERSION || model == Stoop.MODEL_VERSION) { "unsupported stoop model $model" }
     }
 
     override val engine get() = ENGINE
@@ -83,8 +85,8 @@ data class StoopPatch(
                 fun field(key: String) = obj[key]?.takeUnless { it is JsonValue.Null }
                 fun integer(key: String, default: Int) = field(key)?.int() ?: default
                 fun scalar(key: String, default: Float) = field(key)?.num()?.toFloat() ?: default
-                val model = integer("model", Stoop.MODEL_VERSION)
-                if (model != Stoop.MODEL_VERSION) throw JsonException("unsupported stoop model $model")
+                val model = integer("model", Stoop.LEGACY_MODEL_VERSION)
+                if (model != Stoop.LEGACY_MODEL_VERSION && model != Stoop.MODEL_VERSION) throw JsonException("unsupported stoop model $model")
                 val defaults = Stoop.defaultSource(voice)
                 val sourceFields = field("source")?.obj()
                 fun sourceScalar(key: String, default: Float) = sourceFields?.get(key)?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: default

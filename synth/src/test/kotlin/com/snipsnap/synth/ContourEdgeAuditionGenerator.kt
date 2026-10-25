@@ -15,14 +15,13 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** Compare EDGE in complete factory sounds, including their otherwise quiet settled edge layers. */
+/** Compare the immediately previous recipes with the current complete factory EDGE ranges. */
 object ContourEdgeAuditionGenerator {
-    private const val BASELINE = "937bb05edff19584fa936e04c6c6e2ee4296985f"
+    private const val BASELINE = "47809ba2de9cf042bd77dc7feebffdffefc987b1"
     private const val TARGET = .12f
     private const val CEILING = .90f
     private val values = listOf(0f, .25f, .5f, .75f, 1f)
-    private val responses = linkedMapOf("previous" to ContourEdgeResponse.LEGACY,
-        "revised" to ContourEdgeResponse.FOREGROUND)
+    private val responses = listOf("previous", "revised")
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -37,7 +36,26 @@ object ContourEdgeAuditionGenerator {
         for (directory in listOf("raw", "matched", "patches")) {
             File(root, directory).apply { require(!exists() || deleteRecursively()); require(mkdirs()) }
         }
-        val sources = listOf(
+        val presets = ContourPresets.all().also { require(it.size == 9) }
+        val baselinePaths = presets.associate { it.name to
+            "synth/src/test/resources/contour-edge-audition/baseline/${slug(it.name)}.json" }
+        val baselineRecipeSha256 = linkedMapOf<String, String>()
+        val previous = presets.associate { preset ->
+            val path = baselinePaths.getValue(preset.name)
+            val bytes = requireNotNull(javaClass.getResourceAsStream(
+                "/contour-edge-audition/baseline/${slug(preset.name)}.json")) {
+                "Missing previous recipe for ${preset.name}"
+            }.use { it.readBytes() }
+            require(bytes.contentEquals(File(repo, path).readBytes())) { "Stale baseline recipe resource: $path" }
+            baselineRecipeSha256[slug(preset.name)] = sha(bytes)
+            val saved = ContourPatch.fromJsonText(bytes.toString(Charsets.UTF_8))
+            require(saved.name == preset.name && saved.voice == preset.voice &&
+                saved.config.edgeResponse == ContourEdgeResponse.FOREGROUND) {
+                "Invalid $BASELINE baseline recipe for ${preset.name}"
+            }
+            preset.name to saved
+        }
+        val sources = (listOf(
             "synth/src/main/kotlin/com/snipsnap/synth/ContourEngine.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ContourTables.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ContourPresets.kt",
@@ -46,16 +64,17 @@ object ContourEdgeAuditionGenerator {
             "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ContourEdgeAuditionGenerator.kt",
             "synth/src/test/resources/contour-edge-audition/index.html",
-        ).associateWith { sha(File(repo, it)) }
-        val presets = ContourPresets.all().also { require(it.size == 9) }
+        ) + baselinePaths.values).associateWith { sha(File(repo, it)) }
         val clips = mutableListOf<Map<String, Any?>>()
         val csv = mutableListOf("id,preset,mode,response,edge,frames,raw_loudness,matched_loudness,match_gain,raw_peak,raw_dc,periodic_error,state_error,seam_before_blend")
         for (preset in presets) for (mode in listOf("finite", "held")) for (edge in values) {
-            for ((response, architecture) in responses) {
+            for (response in responses) {
                 val id = "${slug(preset.name)}_${mode}_${tag(edge)}_$response"
-                val patch = preset.copy(name = "$id EDGE study",
-                    macros = preset.macros + mapOf("TUNE" to .5f, "HOLD" to if (mode == "held") 1f else 0f, "EDGE" to edge),
-                    config = preset.config.copy(edgeResponse = architecture))
+                // The previous side is a pinned complete recipe, never today's preset with
+                // one field changed. Future recipe revisions must not rewrite the reference.
+                val authored = if (response == "previous") previous.getValue(preset.name) else preset
+                val patch = authored.copy(name = "$id EDGE study",
+                    macros = authored.macros + mapOf("TUNE" to .5f, "HOLD" to if (mode == "held") 1f else 0f, "EDGE" to edge))
                 val started = System.nanoTime()
                 // The raw file is the public render, so its recipe can be replayed directly in the CLI.
                 val raw = patch.render()
@@ -91,6 +110,8 @@ object ContourEdgeAuditionGenerator {
                 clips += linkedMapOf(
                     "id" to id, "presetId" to slug(preset.name), "mode" to mode, "edge" to edge,
                     "response" to response, "matchedPath" to matchedPath, "rawPath" to rawPath, "patchPath" to patchPath,
+                    "edgeResponse" to patch.config.edgeResponse.name,
+                    "recipeSourceCommit" to if (response == "previous") BASELINE else commit,
                     "frames" to raw.frameCount, "loop" to (loop != null), "durationSeconds" to raw.durationSeconds,
                     "rawLoudness" to rawMetrics.getValue("loudness"), "matchedLoudness" to matchedMetrics.getValue("loudness"),
                     "matchGain" to matchGain, "rawMetrics" to rawMetrics, "matchedMetrics" to matchedMetrics,
@@ -114,8 +135,10 @@ object ContourEdgeAuditionGenerator {
         }
         require(sources.all { (path, hash) -> sha(File(repo, path)) == hash }) { "Source fingerprint changed." }
         val manifest = linkedMapOf(
-            "engine" to "CONTOUR", "kind" to "edge-response-review", "schemaVersion" to 1,
+            "engine" to "CONTOUR", "kind" to "edge-response-review", "schemaVersion" to 2,
             "sourceCommit" to commit, "baselineCommit" to BASELINE, "sourceSha256" to sources,
+            "baselineRecipeSha256" to baselineRecipeSha256,
+            "baselineRecipePolicy" to "Complete FOREGROUND factory recipes saved at $BASELINE; only TUNE, HOLD and EDGE are overridden for the study.",
             "workingTreeDirty" to false, "values" to values, "sampleRate" to WavWriter.MPC_SAMPLE_RATE,
             "channels" to 1, "bitDepth" to 16, "clipCount" to clips.size, "hardwareVerified" to false,
             "presets" to presets.map { linkedMapOf("id" to slug(it.name), "name" to it.name,
@@ -123,14 +146,15 @@ object ContourEdgeAuditionGenerator {
             "levelPolicy" to linkedMapOf("raw" to "Public native render level, PCM16; no rack effects or extra processing.",
                 "matched" to "Scalar gain only: Loudness.of target 0.12, sample-peak ceiling 0.90.",
                 "measurement" to "SnipSnap Loudness.of, not LUFS. A peak-limited clip may remain below the target."),
-            "notes" to listOf("All other authored macros, saved structure, note and excitation velocity stay fixed.",
-                "Previous explicitly selects LEGACY response; revised explicitly selects FOREGROUND response.",
+            "notes" to listOf("Previous uses the complete saved recipes from $BASELINE; revised uses the current factory recipes.",
+                "Only TUNE, HOLD and EDGE are overridden. All other controls and configuration stay as authored on each side.",
+                "The actual saved edge response and source recipe commit are recorded on each clip.",
                 "Finite notes preserve their complete attack and decay. Held files contain one complete settled period, without the finite attack.",
                 "Browser looping should use the whole held buffer. A short browser entry/stop fade is playback-only.",
                 "EDGE zero, half and full are control positions, not claims of equal perceived change.",
                 "Only owner listening can judge whether the response is useful or rounded enough."),
             "checks" to listOf("180 complete public renders", "90 independently measured held closures",
-                "complete recipe round trips", "PCM16 format, frame and quantization read-back", "source fingerprints"),
+                "complete recipe round trips", "pinned previous recipe resource hashes", "PCM16 format, frame and quantization read-back", "source fingerprints"),
             "clips" to clips,
         )
         File(root, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
@@ -140,8 +164,9 @@ object ContourEdgeAuditionGenerator {
         }.use { input -> File(root, "index.html").outputStream().use { input.copyTo(it) } }
         File(root, "README.txt").writeText("""
             CONTOUR EDGE RESPONSE REVIEW
-            Native Kotlin source $commit; legacy reference $BASELINE.
+            Native Kotlin source $commit; immediately previous recipe reference $BASELINE.
             Nine complete presets, finite and held, five EDGE positions, two responses: 180 cases.
+            Previous uses pinned FOREGROUND recipes; revised uses current factory recipes.
             Serve index.html over HTTP. Matched playback uses gain only, target 0.12 with a 0.90 peak ceiling.
             Raw files retain public native render level. Complete patch JSON replays each raw WAV through the CLI.
             Held downloads contain one exact period; the page repeats it. Finite attacks are retained as rendered.

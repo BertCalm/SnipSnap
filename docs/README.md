@@ -100,9 +100,11 @@ patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
 and its published comparisons remain available separately.
 
 **Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
-first-listen prototype, complete room recipes, passive feedback model and
-playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is published; the owner's listening verdict remains pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+instrument, phone controls, complete room recipes, MPC starter and passive
+feedback model. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+contains the current-model study and archived timpani comparisons. The owner
+accepted the revised membrane direction; wider listening and physical-device
+checks remain open. The supplied [`engineering specification`](CHAMBER_SPEC.md)
 remains the unchanged proposal; sustained HOLD and the wider library are later work.
 
 **Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved

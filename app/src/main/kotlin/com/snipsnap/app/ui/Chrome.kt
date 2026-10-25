@@ -94,6 +94,8 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
+    /** Behind the gear with SETUP and HELP: what MIDI is plugged in and what it sends. */
+    MIDI("MIDI"),
     /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
     KEYS("KEYS"),
 
@@ -284,7 +286,7 @@ fun TitleBar(
             }
             // The gear's accessible name says what is behind it; the glyph
             // alone would be read as a symbol name or not at all.
-            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP}", onClick = onGear)
+            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP} · ${Places.GEAR_MIDI}", onClick = onGear)
         }
     }
 }
