@@ -1,12 +1,9 @@
 package com.snipsnap.app.ui
 
-import android.os.Handler
-import android.os.Looper
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.intrinsics.COROUTINE_SUSPENDED
-import kotlin.coroutines.intrinsics.intercepted
-import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
-import kotlin.coroutines.resume
+import kotlin.coroutines.coroutineContext
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runInterruptible
@@ -16,36 +13,33 @@ import kotlinx.coroutines.withContext
  * [block] off the main thread (on [context], IO unless told otherwise), and
  * the caller back on the main thread before it carries on.
  *
- * In the app the second half costs nothing: a screen's coroutines run on
- * Compose's main-thread dispatcher, so `withContext(Dispatchers.IO)` already
- * returns there, the looper check finds the main thread, and nothing more
- * happens. The on-device tests are different. `createComposeRule()` runs
- * every `LaunchedEffect` and `rememberCoroutineScope` coroutine on an
- * unconfined test dispatcher, so the code after a plain
- * `withContext(Dispatchers.IO)` carries on on the IO worker that finished
- * the block. Its state writes wake the recomposer on that worker, and the
- * screen recomposes off the main thread while the main thread may be
- * tearing it down: the `ArrayIndexOutOfBoundsException` in `SlotTable` on
- * activity destroy that `AquariumPanelTest`'s held-preview cases hit about
- * one round in thirty. Hopping back here keeps every state write after the
- * block on the main thread, in tests as in the app.
+ * In the app this is plain `withContext`: a screen's coroutines run on
+ * Compose's main-thread dispatcher, which already brings the caller back.
+ * The on-device tests are different. `createComposeRule()` runs every
+ * `LaunchedEffect` and `rememberCoroutineScope` coroutine under a test
+ * interceptor that is not a dispatcher: it resumes a coroutine on whatever
+ * thread finished the work it waited for, and sends Compose's apply
+ * notifications from that thread as it does. After a plain
+ * `withContext(Dispatchers.IO)` that is the IO worker, so the recomposer
+ * wakes there and the screen recomposes off the main thread while the main
+ * thread may be tearing it down: the `ArrayIndexOutOfBoundsException` in
+ * `SlotTable` on activity destroy that `AquariumPanelTest`'s held-preview
+ * cases hit, and the lost SOURCE edit in `CausticSynthScreenTest`.
  *
- * The hop is a posted resume, not `withContext(Dispatchers.Main)`: when
- * that block finishes before this worker has suspended, `withContext`
- * returns straight back here, still on the worker. A 60-round run with
- * `withContext` as the hop caught exactly that in 7 rounds. Here the
- * coroutine always suspends first, and only the main thread resumes it.
+ * Under such an interceptor the block runs inside
+ * `withContext(Dispatchers.Main.immediate)`. The worker then hands the
+ * result to the main dispatcher, and only the main thread resumes the
+ * caller. Hopping after the block is not enough: by then the interceptor has
+ * already resumed the caller, and woken the recomposer, on the worker. Two
+ * earlier versions that did that each let it through, in 7 of 60 and 3 of
+ * 36 repeat rounds.
  */
 internal suspend fun <T> offMain(
     context: CoroutineContext = Dispatchers.IO,
     block: suspend CoroutineScope.() -> T,
 ): T {
-    val result = withContext(context, block)
-    if (Looper.myLooper() == Looper.getMainLooper()) return result
-    return suspendCoroutineUninterceptedOrReturn { continuation ->
-        mainThread.post { continuation.intercepted().resume(result) }
-        COROUTINE_SUSPENDED
-    }
+    if (coroutineContext[ContinuationInterceptor] is CoroutineDispatcher) return withContext(context, block)
+    return withContext(Dispatchers.Main.immediate) { withContext(context, block) }
 }
 
 /**
@@ -58,5 +52,3 @@ internal suspend fun <T> offMainInterruptible(
     context: CoroutineContext = Dispatchers.IO,
     block: () -> T,
 ): T = offMain(context) { runInterruptible(block = block) }
-
-private val mainThread = Handler(Looper.getMainLooper())
