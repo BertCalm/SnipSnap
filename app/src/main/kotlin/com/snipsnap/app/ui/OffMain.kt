@@ -9,6 +9,7 @@ import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
 import kotlin.coroutines.resume
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.withContext
 
 /**
@@ -46,5 +47,16 @@ internal suspend fun <T> offMain(
         COROUTINE_SUSPENDED
     }
 }
+
+/**
+ * [offMain] for blocking work that should stop when the coroutine is
+ * cancelled: [block] runs under [runInterruptible] on [context], so a
+ * cancel interrupts its thread, and the caller is back on the main thread
+ * after it, for the same reason as [offMain].
+ */
+internal suspend fun <T> offMainInterruptible(
+    context: CoroutineContext = Dispatchers.IO,
+    block: () -> T,
+): T = offMain(context) { runInterruptible(block = block) }
 
 private val mainThread = Handler(Looper.getMainLooper())
