@@ -58,7 +58,7 @@ class PedalPadTest {
         }
         assertEquals(picks, PadSheet.readPedals(treated.recipe), "the recipe is the board")
         assertNull(PadSheet.read(treated.recipe), "read lights no single chip for a board")
-        assertEquals("COMP 70% PRE · DRIVE 100% AMP", KitDiff.recipeName(treated.recipe!!))
+        assertEquals("SUSTAIN 70% PRE · DRIVE 100% AMP", KitDiff.recipeName(treated.recipe!!))
         assertTrue(files.all { f -> m.binContents().any { it.originalName == f } }, "every file is in the bin")
         assertEquals(PadSheet.UnTreat.READY, PadSheet.unTreatState(treated, m.binContents().map { it.originalName }.toSet()))
 
