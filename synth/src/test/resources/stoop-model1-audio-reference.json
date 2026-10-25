@@ -1,0 +1,1049 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "3f8a1198223dcb32a81fe39d9ce15fda2434a173",
+  "targetBaseCommit": "91384fa189a68c4993c8e359af6b748412bf95c3",
+  "hashAlgorithm": "SHA-256 of consecutive IEEE754 Float.toRawBits() values encoded little-endian, exactly 4 bytes per mono sample; no WAV header",
+  "sampleRate": 44100,
+  "caseCount": 18,
+  "cases": [
+    {
+      "id": "bass-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy bass-default-finite",
+        "voice": "BASS",
+        "macros": {
+          "TOUCH": 0.3499999940395355,
+          "COLOR": 0.4000000059604645,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.25,
+          "LENGTH": 0.3499999940395355,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 36,
+        "velocity": 1,
+        "source": {
+          "shape": 0.4000000059604645,
+          "sub": 0.2800000011920929,
+          "fmRatio": 1,
+          "fmIndex": 0.3499999940395355,
+          "harmonicTilt": 0.3499999940395355,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "9f5c8db47418f511d2124a149f923b31e9a4ac521ea0410d17a086101b4f1559",
+      "outputFloat32Sha256LE": "6f23702fbc8e7a5467f982898b6a2635a2914b4e9f73dcb7a9bb8dc771621ad3",
+      "frameCount": 25503,
+      "rawMetrics": {
+        "frames": 25503,
+        "peak": 0.46139800548553467,
+        "rms": 0.21199522158565265,
+        "dc": 3.274212635145471e-06,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 25503,
+        "peak": 0.6506117582321167,
+        "rms": 0.29893190600512654,
+        "dc": 4.616901359812502e-06,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "bass-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy bass-default-hold",
+        "voice": "BASS",
+        "macros": {
+          "TOUCH": 0.3499999940395355,
+          "COLOR": 0.4000000059604645,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.25,
+          "LENGTH": 0.3499999940395355,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 36,
+        "velocity": 1,
+        "source": {
+          "shape": 0.4000000059604645,
+          "sub": 0.2800000011920929,
+          "fmRatio": 1,
+          "fmIndex": 0.3499999940395355,
+          "harmonicTilt": 0.3499999940395355,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "01a83d66b44944cb70b9d998d48ad741fe20dfde103463ff1f4d664526b6959f",
+      "outputFloat32Sha256LE": "945debf5709c9e6ae466bbd4ebeb7ee19ae0ac80ab2a8e81743e3da0573dab24",
+      "frameCount": 84955,
+      "rawMetrics": {
+        "frames": 84955,
+        "peak": 0.39106541872024536,
+        "rms": 0.230688082066999,
+        "dc": -2.331425279131576e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 84955,
+        "peak": 0.5585739612579346,
+        "rms": 0.329500785434533,
+        "dc": -3.364421492785342e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "tine-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy tine-default-finite",
+        "voice": "TINE",
+        "macros": {
+          "TOUCH": 0.4000000059604645,
+          "COLOR": 0.5,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.30000001192092896,
+          "LENGTH": 0.6000000238418579,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.44999998807907104,
+          "sub": 0.07999999821186066,
+          "fmRatio": 2,
+          "fmIndex": 1.100000023841858,
+          "harmonicTilt": 0.44999998807907104,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "a2a252fadd7862dc7c77585b1bbcf00352b04eba7f485c4b7b631f45ef944a10",
+      "outputFloat32Sha256LE": "a9c1992947f04b52ddcba49c8316257fb07e0543b2e0411809514fc5a397ecfb",
+      "frameCount": 60344,
+      "rawMetrics": {
+        "frames": 60344,
+        "peak": 0.5902041792869568,
+        "rms": 0.18976919148706173,
+        "dc": -1.0920064543664804e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 60344,
+        "peak": 0.3070073127746582,
+        "rms": 0.09871249548010723,
+        "dc": -5.665812561528077e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "tine-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy tine-default-hold",
+        "voice": "TINE",
+        "macros": {
+          "TOUCH": 0.4000000059604645,
+          "COLOR": 0.5,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.30000001192092896,
+          "LENGTH": 0.6000000238418579,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.44999998807907104,
+          "sub": 0.07999999821186066,
+          "fmRatio": 2,
+          "fmIndex": 1.100000023841858,
+          "harmonicTilt": 0.44999998807907104,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "892c8b136b6d88ae433fd1f7681fe9168f77ef17e3045a9a51355d8348c63849",
+      "outputFloat32Sha256LE": "65742eb8c3277dc789905c1572733595caa847117f5558f40db67c265731c24c",
+      "frameCount": 63042,
+      "rawMetrics": {
+        "frames": 63042,
+        "peak": 0.37845733761787415,
+        "rms": 0.28811453242239754,
+        "dc": -1.4850164627628745e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 63042,
+        "peak": 0.26333439350128174,
+        "rms": 0.20047297857012672,
+        "dc": -9.967091872998071e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "clav-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy clav-default-finite",
+        "voice": "CLAV",
+        "macros": {
+          "TOUCH": 0.6000000238418579,
+          "COLOR": 0.550000011920929,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.25,
+          "LENGTH": 0.25,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.6499999761581421,
+          "sub": 0.10000000149011612,
+          "fmRatio": 1,
+          "fmIndex": 0.4000000059604645,
+          "harmonicTilt": 0.6499999761581421,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "526fe56d58aec8cde6625a73d691200144f0ce360884a9a3b880ce3ad2942a89",
+      "outputFloat32Sha256LE": "98e358a388610302d73b471f8edc2ad544e23fd354bf1666a61524f1ffdab8e4",
+      "frameCount": 27754,
+      "rawMetrics": {
+        "frames": 27754,
+        "peak": 0.5445199608802795,
+        "rms": 0.22736482780218584,
+        "dc": 2.3181316528011374e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 27754,
+        "peak": 0.4056873321533203,
+        "rms": 0.16939513225306474,
+        "dc": 1.7269211222596142e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "clav-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy clav-default-hold",
+        "voice": "CLAV",
+        "macros": {
+          "TOUCH": 0.6000000238418579,
+          "COLOR": 0.550000011920929,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.25,
+          "LENGTH": 0.25,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.6499999761581421,
+          "sub": 0.10000000149011612,
+          "fmRatio": 1,
+          "fmIndex": 0.4000000059604645,
+          "harmonicTilt": 0.6499999761581421,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "2668b4880b5fe224bbea0a5548170dad0c9b192e736ed31987e07cb007be9916",
+      "outputFloat32Sha256LE": "1f72e62aa4eddb9d49a33299f69b02ead10fb9b9f8b9e8c37c2e0ca8020e57a7",
+      "frameCount": 84955,
+      "rawMetrics": {
+        "frames": 84955,
+        "peak": 0.25158369541168213,
+        "rms": 0.17114329872909648,
+        "dc": -6.684408685442741e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 84955,
+        "peak": 0.34914788603782654,
+        "rms": 0.23751268666934158,
+        "dc": -8.896189104195273e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "organ-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy organ-default-finite",
+        "voice": "ORGAN",
+        "macros": {
+          "TOUCH": 0.3499999940395355,
+          "COLOR": 0.44999998807907104,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.20000000298023224,
+          "LENGTH": 0.5,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.3499999940395355,
+          "sub": 0.1599999964237213,
+          "fmRatio": 2,
+          "fmIndex": 0.3499999940395355,
+          "harmonicTilt": 0.44999998807907104,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "2c7938db696561330120766e888d210b7f283bdfc9a01d35ee91c2c365f9f8fc",
+      "outputFloat32Sha256LE": "22c85cc5a384004703f5557d4c492d724f7302a21fc4904feb9a3aef5e318f43",
+      "frameCount": 40366,
+      "rawMetrics": {
+        "frames": 40366,
+        "peak": 0.5167988538742065,
+        "rms": 0.30413938324205614,
+        "dc": -3.611853613554031e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 40366,
+        "peak": 0.3082585036754608,
+        "rms": 0.18141206588920894,
+        "dc": -2.1380467322842673e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "organ-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy organ-default-hold",
+        "voice": "ORGAN",
+        "macros": {
+          "TOUCH": 0.3499999940395355,
+          "COLOR": 0.44999998807907104,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.20000000298023224,
+          "LENGTH": 0.5,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.3499999940395355,
+          "sub": 0.1599999964237213,
+          "fmRatio": 2,
+          "fmIndex": 0.3499999940395355,
+          "harmonicTilt": 0.44999998807907104,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "978bac66c94b52e207d5c01b9174cd979f1dfe492cc8a5732247e1c2d49c1ed2",
+      "outputFloat32Sha256LE": "fe603811b3ff091e8787e97d13240b623a5b36b9fde1495f0d9e46719f9627a7",
+      "frameCount": 63042,
+      "rawMetrics": {
+        "frames": 63042,
+        "peak": 0.4193148612976074,
+        "rms": 0.30306952476787946,
+        "dc": 1.103014953698964e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 63042,
+        "peak": 0.27727699279785156,
+        "rms": 0.20040837084107394,
+        "dc": 7.338052859287423e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "lead-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy lead-default-finite",
+        "voice": "LEAD",
+        "macros": {
+          "TOUCH": 0.44999998807907104,
+          "COLOR": 0.6000000238418579,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.20000000298023224,
+          "LENGTH": 0.550000011920929,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.6000000238418579,
+          "sub": 0.05999999865889549,
+          "fmRatio": 1,
+          "fmIndex": 0.5,
+          "harmonicTilt": 0.6000000238418579,
+          "detuneCents": 3
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "6568e0acbca80aade6ae40488c2c8ed3d31e1183cc6b82339587c4801d1a5249",
+      "outputFloat32Sha256LE": "a156922550647830ddfe7d7537c94dfae9a3147befbfbffa4d8dc2476b97284a",
+      "frameCount": 51767,
+      "rawMetrics": {
+        "frames": 51767,
+        "peak": 0.5286012887954712,
+        "rms": 0.26011144294183713,
+        "dc": -2.2164578145820065e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 51767,
+        "peak": 0.3293357491493225,
+        "rms": 0.16205786974012923,
+        "dc": -1.3837369503506596e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "lead-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy lead-default-hold",
+        "voice": "LEAD",
+        "macros": {
+          "TOUCH": 0.44999998807907104,
+          "COLOR": 0.6000000238418579,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.20000000298023224,
+          "LENGTH": 0.550000011920929,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 60,
+        "velocity": 1,
+        "source": {
+          "shape": 0.6000000238418579,
+          "sub": 0.05999999865889549,
+          "fmRatio": 1,
+          "fmIndex": 0.5,
+          "harmonicTilt": 0.6000000238418579,
+          "detuneCents": 3
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "a1cb615b536c2fd43996d93e78ecb85e8c65b5151b7a832957022a0ea347e52f",
+      "outputFloat32Sha256LE": "ee2cc6da2ff429425ab163585be3c4d4bd617d7585ee6d2d40af39eb22a440e2",
+      "frameCount": 194183,
+      "rawMetrics": {
+        "frames": 194183,
+        "peak": 0.4858528673648834,
+        "rms": 0.2990926383250439,
+        "dc": 1.1160542535290002e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 194183,
+        "peak": 0.28404006361961365,
+        "rms": 0.17485600142513527,
+        "dc": 6.840234745637827e-11,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "chord-default-finite",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy chord-default-finite",
+        "voice": "CHORD",
+        "macros": {
+          "TOUCH": 0.4000000059604645,
+          "COLOR": 0.4000000059604645,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.30000001192092896,
+          "LENGTH": 0.4000000059604645,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.4000000059604645,
+          "sub": 0.07999999821186066,
+          "fmRatio": 1,
+          "fmIndex": 0.30000001192092896,
+          "harmonicTilt": 0.4000000059604645,
+          "detuneCents": 2
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "65cae0955ca654d94fcba251327563980cd4401c2233df50cf79d22ed2306650",
+      "outputFloat32Sha256LE": "fe55cc39d590f66f8a3f8fc4b26cafd89f5c436b3013d04b7dd75bc9866c8f85",
+      "frameCount": 37197,
+      "rawMetrics": {
+        "frames": 37197,
+        "peak": 0.5932470560073853,
+        "rms": 0.17650622236585733,
+        "dc": 9.162654574112652e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 37197,
+        "peak": 0.6457862854003906,
+        "rms": 0.19213798953331693,
+        "dc": 9.971774050197134e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "chord-default-hold",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy chord-default-hold",
+        "voice": "CHORD",
+        "macros": {
+          "TOUCH": 0.4000000059604645,
+          "COLOR": 0.4000000059604645,
+          "SHADOW": 0.20000000298023224,
+          "WEAR": 0.30000001192092896,
+          "LENGTH": 0.4000000059604645,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.4000000059604645,
+          "sub": 0.07999999821186066,
+          "fmRatio": 1,
+          "fmIndex": 0.30000001192092896,
+          "harmonicTilt": 0.4000000059604645,
+          "detuneCents": 2
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "882742b65284d0464bf5b1aacdfc1507b5ec173ceaeded2d1c461459f16bb14e",
+      "outputFloat32Sha256LE": "883e6116bfe2bc52eefec850e373176df7f188021a848c5f874ab320670ab507",
+      "frameCount": 246100,
+      "rawMetrics": {
+        "frames": 246100,
+        "peak": 0.5105931162834167,
+        "rms": 0.1695859446800909,
+        "dc": 7.967747149406979e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 246100,
+        "peak": 0.5518761873245239,
+        "rms": 0.18329751504879252,
+        "dc": 8.687550068450492e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "factory-short-wire",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Short Wire",
+        "voice": "CLAV",
+        "macros": {
+          "TOUCH": 0.9800000190734863,
+          "COLOR": 0.9399999976158142,
+          "SHADOW": 0,
+          "WEAR": 0,
+          "LENGTH": 0.23999999463558197,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.03999999910593033,
+          "sub": 0,
+          "fmRatio": 2,
+          "fmIndex": 0.75,
+          "harmonicTilt": 1,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "af2ca36c20e67fde9bdd41a87ed85c43c46d9117227ce08ca805889a6906588f",
+      "outputFloat32Sha256LE": "4078381cf036bd007a2a25d2e3f52f503f4e76b5e613eddc68cb297110f2e743",
+      "frameCount": 26959,
+      "rawMetrics": {
+        "frames": 26959,
+        "peak": 0.5788798928260803,
+        "rms": 0.2026053954037542,
+        "dc": -2.8189720547247185e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 26959,
+        "peak": 0.4844794273376465,
+        "rms": 0.16956564733972293,
+        "dc": -2.3626701504557113e-08,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "factory-grain-string",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Grain String",
+        "voice": "CLAV",
+        "macros": {
+          "TOUCH": 0.7799999713897705,
+          "COLOR": 0.9200000166893005,
+          "SHADOW": 0.07999999821186066,
+          "WEAR": 0.8399999737739563,
+          "LENGTH": 0.8199999928474426,
+          "HOLD": 1
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.8799999952316284,
+          "sub": 0.07999999821186066,
+          "fmRatio": 2,
+          "fmIndex": 0.9200000166893005,
+          "harmonicTilt": 1,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "18ac91587fed88cfcc760ac2446a7136740fc30512e9d551368524429d0ed4c5",
+      "outputFloat32Sha256LE": "0e41624a91f44847d5535ca81bf3f3676f8e1ec161d2ac7c48d91ead1d4c1a2e",
+      "frameCount": 84955,
+      "rawMetrics": {
+        "frames": 84955,
+        "peak": 0.6022613644599915,
+        "rms": 0.42821440111280773,
+        "dc": 1.2572936976357981e-09,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 84955,
+        "peak": 0.32493001222610474,
+        "rms": 0.2310287896720033,
+        "dc": 6.509023356545982e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "clav-inactive-seed-fields",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy inactive source seed",
+        "voice": "CLAV",
+        "macros": {
+          "TOUCH": 0.6000000238418579,
+          "COLOR": 0.550000011920929,
+          "SHADOW": 0.15000000596046448,
+          "WEAR": 0.25,
+          "LENGTH": 0.25,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 1,
+        "source": {
+          "shape": 0.6499999761581421,
+          "sub": 0.10000000149011612,
+          "fmRatio": 3,
+          "fmIndex": 1.2000000476837158,
+          "harmonicTilt": 0.6499999761581421,
+          "detuneCents": -3
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "18258711616a90e0f0a99d664498152232800b40fe03a0535fea134e5b62f5bf",
+      "outputFloat32Sha256LE": "fd4a94d59146266d11478a60fe399f930f1b8bb12f4a8806941b21b1d454ca17",
+      "frameCount": 27754,
+      "rawMetrics": {
+        "frames": 27754,
+        "peak": 0.544572651386261,
+        "rms": 0.2276618653916139,
+        "dc": 2.15920497753791e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 27754,
+        "peak": 0.4050670564174652,
+        "rms": 0.16934071335542558,
+        "dc": 1.606207653992698e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "tine-high-fm-no-sub",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy high FM cap",
+        "voice": "TINE",
+        "macros": {
+          "TOUCH": 1,
+          "COLOR": 1,
+          "SHADOW": 0,
+          "WEAR": 0.8999999761581421,
+          "LENGTH": 0.6000000238418579,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 84,
+        "velocity": 0.6000000238418579,
+        "source": {
+          "shape": 0.7300000190734863,
+          "sub": 0,
+          "fmRatio": 8,
+          "fmIndex": 8,
+          "harmonicTilt": 0.8799999952316284,
+          "detuneCents": 0
+        },
+        "shadowInterval": 0,
+        "shadowDelayMs": 110,
+        "shadowArticulation": 0.25,
+        "shadowReplies": 1,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "ac027c3e50a1cc1b749e8c10213fbe128ae168365de0d5c85b97512b307f5321",
+      "outputFloat32Sha256LE": "6f5549902a1e76f716e44c6acb292d9715fa4db53cc3868c34033badd9a2e1b1",
+      "frameCount": 60344,
+      "rawMetrics": {
+        "frames": 60344,
+        "peak": 0.7011474370956421,
+        "rms": 0.2370346832961081,
+        "dc": -8.645887539722543e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 60344,
+        "peak": 0.28180572390556335,
+        "rms": 0.09526916138396173,
+        "dc": -3.5843078743448845e-10,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "chord-nonroot-first-two-replies",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy ordered voicing",
+        "voice": "CHORD",
+        "macros": {
+          "TOUCH": 0.7699999809265137,
+          "COLOR": 0.7099999785423279,
+          "SHADOW": 0.8299999833106995,
+          "WEAR": 0.7799999713897705,
+          "LENGTH": 0.23000000417232513,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 0.7200000286102295,
+        "source": {
+          "shape": 0.1899999976158142,
+          "sub": 0.27000001072883606,
+          "fmRatio": 3.5,
+          "fmIndex": 2.200000047683716,
+          "harmonicTilt": 0.9100000262260437,
+          "detuneCents": -7
+        },
+        "shadowInterval": -12,
+        "shadowDelayMs": 250,
+        "shadowArticulation": 0.8399999737739563,
+        "shadowReplies": 2,
+        "chordIntervals": [
+          7,
+          0,
+          -12,
+          14
+        ]
+      },
+      "rawFloat32Sha256LE": "87db45fcbe73e3629ab4d130b1dfad969d80b61dcff6da45b2ab286ffcf93e7f",
+      "outputFloat32Sha256LE": "3e698205cf8f27577f9c3a3fef241bcdda5e7e0370c427e1843f93588e3c47b1",
+      "frameCount": 31540,
+      "rawMetrics": {
+        "frames": 31540,
+        "peak": 0.568085253238678,
+        "rms": 0.15287305832399894,
+        "dc": 1.2298553112948169e-06,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 31540,
+        "peak": 0.7207178473472595,
+        "rms": 0.19394684223080805,
+        "dc": 1.5602972276735586e-06,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    },
+    {
+      "id": "bass-low-all-high-finite-hold98",
+      "patch": {
+        "engine": "STOOP",
+        "version": 1,
+        "name": "Legacy finite boundary",
+        "voice": "BASS",
+        "macros": {
+          "TOUCH": 1,
+          "COLOR": 1,
+          "SHADOW": 1,
+          "WEAR": 1,
+          "LENGTH": 1,
+          "HOLD": 0.9800000190734863
+        },
+        "model": 1,
+        "midi": 24,
+        "velocity": 0.4300000071525574,
+        "source": {
+          "shape": 0.9300000071525574,
+          "sub": 1,
+          "fmRatio": 7.300000190734863,
+          "fmIndex": 6.099999904632568,
+          "harmonicTilt": 1,
+          "detuneCents": 13
+        },
+        "shadowInterval": -24,
+        "shadowDelayMs": 25,
+        "shadowArticulation": 1,
+        "shadowReplies": 2,
+        "chordIntervals": [
+          0,
+          7,
+          12
+        ]
+      },
+      "rawFloat32Sha256LE": "1d293b4d0ddf7bbb656b8926f11123bb7337b54797321e0594ae5bea44e2b6e0",
+      "outputFloat32Sha256LE": "a24b3a85ed0e2cfffe3ccf8a8164e50ab23c48c9edcca7085ea7344eff0257c8",
+      "frameCount": 220620,
+      "rawMetrics": {
+        "frames": 220620,
+        "peak": 0.9085654616355896,
+        "rms": 0.44452808377463965,
+        "dc": 1.9804918656046546e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      },
+      "outputMetrics": {
+        "frames": 220620,
+        "peak": 0.7239433526992798,
+        "rms": 0.35419918998992056,
+        "dc": 1.5778633661165748e-07,
+        "sampleRate": 44100,
+        "channels": 1
+      }
+    }
+  ],
+  "sourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Stoop.kt": "05c405bcf5b21eb44d1629444d875cd2686022e14fb8313a78b6fe0774c10b0e",
+    "synth/src/main/kotlin/com/snipsnap/synth/StoopPatch.kt": "6ef84706fa31be6cd066e283d824c56bb23a28a5fc5568f4b633686bca7ef3b7",
+    "synth/src/main/kotlin/com/snipsnap/synth/StoopPresets.kt": "38a1e1e83e4b2be383121482a2fe53fda08a80039fe1a0c4031f11d13bc71a05",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "1379c6a8734290a58bdfcc86b2c8ede3021e71d2bf9b7c0f86c279f8568664a2"
+  },
+  "targetBaseSourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Stoop.kt": "05c405bcf5b21eb44d1629444d875cd2686022e14fb8313a78b6fe0774c10b0e",
+    "synth/src/main/kotlin/com/snipsnap/synth/StoopPatch.kt": "6ef84706fa31be6cd066e283d824c56bb23a28a5fc5568f4b633686bca7ef3b7",
+    "synth/src/main/kotlin/com/snipsnap/synth/StoopPresets.kt": "38a1e1e83e4b2be383121482a2fe53fda08a80039fe1a0c4031f11d13bc71a05",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "6f5aa79fd55e20dde359b9745afd785003f108b04c37114b9df235dbaf1a5103"
+  },
+  "compiledClassSha256": {
+    "com/snipsnap/synth/Stoop$Gesture.class": "597c70ab54b42d8da3b1a526649f8a5197c18d9ab20b6132c18df3e98c59d413",
+    "com/snipsnap/synth/Stoop$LoopPlan.class": "67b2ebbeb0560e758b683068ca2c7011541b28df3ac1e22421ee0cceaacb008f",
+    "com/snipsnap/synth/Stoop$Probe.class": "6037506e8df5fe112d1faac36f3c87d3dc56228879d613a9a0c8ef9174faacf0",
+    "com/snipsnap/synth/Stoop$Rendered.class": "f3e6d5822ab86b392599c526b021628e16ff5727195bab757b1fdd51c848c549",
+    "com/snipsnap/synth/Stoop$ShadowEvent.class": "38ab448f94ca7627f3e1bc73443a5af44d9d8c1b7f59c96fd04040d3a2c9bcbc",
+    "com/snipsnap/synth/Stoop$Tone.class": "1a52e855277843bfe7b45c187730a4eec8fc0c52777795a25e4394153f3484df",
+    "com/snipsnap/synth/Stoop$WhenMappings.class": "f280830e7b481b65b5523b7b734216f9f3f9ccde43a22582b1e49c1f65649ce5",
+    "com/snipsnap/synth/Stoop.class": "f48fc5be8455987d20859fc715f3e12303407c42048af1144c7b2c9c3f223979",
+    "com/snipsnap/synth/StoopPatch$Companion.class": "027c2aa64a571aa6c9803e3242a61b423b4cd869dfb5e7fdf827e1a12b0190f7",
+    "com/snipsnap/synth/StoopPatch.class": "e6a308f6788110e526e8e7dace86af1c401317a683e4f978f574e5e84bec9429",
+    "com/snipsnap/synth/StoopPresetMetadata.class": "34b65fa0bfb121ae950450accba0dbda473ec67ad4d4321194c7469981f5064a",
+    "com/snipsnap/synth/StoopSource.class": "535f7b6fdf0e7b171668912557de823c905e69b0c2c930563ec6107a30a2a115",
+    "com/snipsnap/synth/StoopVoice.class": "90d8660653bcc082e09467d5a88bbeb729971b148a5182c115f433e3aba4be22"
+  },
+  "provenance": "Original published palette compiled classes at 3f8a; Stoop.kt, StoopPatch.kt and StoopPresets.kt are byte-identical in target base91384fa. Target shared Dsp.kt has finite-safe normalization changes; no expected finite mono arithmetic drift, but new compiled model1 hashes must match rather than assuming.",
+  "scratchSource": "/workspace/artifacts/stoop-polish-baseline/Model1Golden.kt",
+  "baselineFloatDirectory": "/workspace/artifacts/stoop-polish-baseline/audio"
+}

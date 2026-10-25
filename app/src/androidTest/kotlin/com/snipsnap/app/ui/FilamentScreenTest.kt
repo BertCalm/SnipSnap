@@ -417,11 +417,29 @@ class FilamentScreenTest : ComposeScreenTest() {
         dial("INJECT", .83f)
         dial("LENGTH", .16f)
         dial("ROOT", 0f)
+        // These assertions read the external navigation bag, which is written
+        // by a LaunchedEffect after the live edit and its recomposition. One
+        // fixed frame pump does not establish that this publication completed.
+        waitFor("the low ROOT edit in the complete FILAMENT draft") {
+            currentPatch(source.voice)?.midi == Filament.MIN_MIDI
+        }
         assertEquals(Filament.MIN_MIDI, checkNotNull(currentPatch(source.voice)).midi)
         dial("ROOT", 1f)
+        waitFor("the high ROOT edit in the complete FILAMENT draft") {
+            currentPatch(source.voice)?.midi == Filament.MAX_MIDI
+        }
         assertEquals(Filament.MAX_MIDI, checkNotNull(currentPatch(source.voice)).midi)
         dial("ROOT", .75f) // MIDI 72; changing the note cannot replace the saved strand roster.
+        waitFor("the middle ROOT edit in the complete FILAMENT draft") {
+            currentPatch(source.voice)?.midi == 72
+        }
         dial("VELOCITY", .37f)
+        waitFor("the final performance and controls in the complete FILAMENT draft") {
+            currentPatch(source.voice)?.let { patch ->
+                patch.midi == 72 && patch.velocity == .37f &&
+                    patch.macros["INJECT"] == .83f && patch.macros["LENGTH"] == .16f
+            } == true
+        }
         val edited = checkNotNull(currentPatch(source.voice))
         assertGeometry(source.copy(midi = 72, velocity = .37f), edited)
         assertEquals(.83f, edited.macros.getValue("INJECT"), 0f)

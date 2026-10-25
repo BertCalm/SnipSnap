@@ -36,13 +36,15 @@ java {
 
 tasks.test {
     useJUnitPlatform()
-    // Gradle's default 512 MB is not enough once the audio tests have run.
-    // By SnipStoreTest's long import the heap holds about 300 MB of live
-    // arrays, and G1 never moves those, so the 32 MB copy of a three-minute
-    // import found no unbroken run of free regions and threw
-    // OutOfMemoryError. JUnit lets that kill the test JVM, which Gradle
-    // reports only as "There were failing tests" with no test named.
-    maxHeapSize = "1g"
+    // Measured 2026-10-24 on the default at 9c10bab15: Gradle's default 512m test heap held
+    // 266 to 298 MB live after full GCs, almost all of it rendered audio that the pad-maker
+    // tests memoise in companion `by lazy` fields (CreasePadMakerTest's touch notes alone
+    // are 34.5 MB), and SnipStoreTest's three-minute import then could not find room for
+    // its 32 MB buffer. The memos are deliberate (one render per class, not per test), so
+    // the live set grows with every engine (10 to 35 MB each). With 1g the whole suite
+    // passed at a 475 MB peak live set; 1536m is that peak with room for the next
+    // dozen engines, set here rather than discovered when one tips it over.
+    maxHeapSize = "1536m"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole

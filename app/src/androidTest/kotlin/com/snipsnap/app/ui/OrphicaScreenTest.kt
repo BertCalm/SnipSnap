@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -75,7 +76,18 @@ class OrphicaScreenTest : ComposeScreenTest() {
         // Invoke semantics directly, as PadSheetScreenTest does for sliders:
         // controls below the fold need no animated scroll on the frozen clock.
         for (engine in listOf("THUMP", "SCANNED CHAIN", "SKIN", "ONSET", "TINES", "VELVET", "VOX", "PLUCK")) {
+            // A click schedules recomposition. Await that exact engine's
+            // header before advancing again; the fixed frame pump alone
+            // cannot establish that the previous transition has completed.
+            waitFor("SYNTH to display $engine before cycling") {
+                compose.onAllNodesWithContentDescription("ENGINE $engine · TAP FOR NEXT")
+                    .fetchSemanticsNodes().size == 1
+            }
             click(button("ENGINE $engine · TAP FOR NEXT"))
+        }
+        waitFor("SYNTH to display ORPHICA after PLUCK") {
+            compose.onAllNodesWithContentDescription("ENGINE ORPHICA · TAP FOR NEXT")
+                .fetchSemanticsNodes().size == 1
         }
         button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
     }

@@ -3,6 +3,7 @@ package com.snipsnap.synth
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
@@ -11,6 +12,7 @@ import java.security.MessageDigest
 import java.time.Instant
 import java.util.Locale
 import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.sqrt
@@ -48,19 +50,24 @@ object ChamberAuditionGenerator {
             ChamberDiagnosticReplay.main(args.drop(1).toTypedArray())
             return
         }
-        require(args.all { !it.startsWith("--") || it == "--timpani" || it == "--timpani-boost" || it.startsWith("--previous=") }) {
-            "supply the output directory, --timpani or --timpani-boost and optionally --previous=/absolute/previous-audition"
+        require(args.all { !it.startsWith("--") || it in setOf("--timpani", "--timpani-boost", "--finite") ||
+            it.startsWith("--previous=") || it.startsWith("--kit=") }) {
+            "supply the output directory, an optional revision (--timpani, --timpani-boost or --finite), --previous= and --kit="
         }
         val positional = args.filterNot { it.startsWith("--") }
         require(positional.size <= 1) { "supply only one output directory" }
         val timpaniBoost = "--timpani-boost" in args
-        require(!timpaniBoost || "--timpani" !in args) { "choose one timpani revision" }
+        val finite = "--finite" in args
+        require(args.count { it in setOf("--timpani", "--timpani-boost", "--finite") } <= 1) { "choose one CHAMBER revision" }
         val timpaniRevision = "--timpani" in args || timpaniBoost
         val previous = args.firstOrNull { it.startsWith("--previous=") }?.substringAfter('=')?.let(::File)
-        require(previous == null || timpaniRevision) { "--previous requires a timpani revision" }
+        val kit = args.firstOrNull { it.startsWith("--kit=") }?.substringAfter('=')?.let(::File)
+        require(previous == null || timpaniRevision || finite) { "--previous requires a named revision" }
+        require(kit == null || finite) { "--kit requires --finite" }
         val root = File(positional.firstOrNull() ?: "../testkit/chamber-audition").canonicalFile
         root.mkdirs()
         File(root, "manifest.json").delete()
+        val kitDownloads = kit?.let { copyKitDownload(root, it) }.orEmpty()
         val repo = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .firstOrNull { File(it, ".git").exists() } ?: error("run from the SnipSnap repository")
         val source = provenance(repo, root)
@@ -70,8 +77,8 @@ object ChamberAuditionGenerator {
             resource.use { input -> File(root, name).outputStream().use { input.copyTo(it) } }
         }
         val sourceRevision = source.getValue("revision")
-        val previousAudition = previous?.let { archivePrevious(it, root, if (timpaniBoost) 2 else 1) }
-        val cases = if (timpaniRevision) timpaniCases(timpaniBoost) else cases()
+        val previousAudition = previous?.let { archivePrevious(it, root, if (finite) 3 else if (timpaniBoost) 2 else 1) }
+        val cases = if (timpaniRevision) timpaniCases(timpaniBoost) else cases(finite)
         require(cases.map { it.id }.distinct().size == cases.size) { "duplicate CHAMBER clip ID" }
         val clips = mutableListOf<Map<String, Any?>>()
         val failures = mutableListOf<Map<String, Any?>>()
@@ -234,32 +241,44 @@ object ChamberAuditionGenerator {
             }
         }
 
+        val performanceCount = if (kit == null) 0 else {
+            val performances = performances(root, kit, sourceRevision)
+            clips += performances
+            performances.size
+        }
+        val requested = cases.size + performanceCount
         val starterIds = clips.filter { clip ->
-            timpaniRevision || clip["section"] == "first-listen" || clip["section"] == "mechanisms" || clip["section"] == "materials"
+            timpaniRevision || clip["section"] in setOf("first-listen", "mechanisms", "materials") ||
+                (finite && clip["section"] in setOf("presets", "performance"))
         }.map { it.getValue("id") as String }.toSet()
         writeJson(File(root, "source-provenance.json"), source)
         writeJson(File(root, "checks.json"), linkedMapOf("passed" to failures.isEmpty(), "defaultReplays" to defaultChecks,
-            "rendered" to clips.size, "requested" to cases.size, "failures" to failures))
+            "rendered" to clips.size, "requested" to requested, "singleStrikeCases" to cases.size,
+            "samplerPerformances" to performanceCount, "failures" to failures))
         val manifest = linkedMapOf<String, Any?>(
-            "title" to if (timpaniBoost) "CHAMBER — Timpani Mix Lift" else if (timpaniRevision) "CHAMBER — Timpani Revision" else "CHAMBER — First Listen",
+            "title" to if (finite) "CHAMBER — Finite Instrument" else if (timpaniBoost) "CHAMBER — Timpani Mix Lift" else if (timpaniRevision) "CHAMBER — Timpani Revision" else "CHAMBER — First Listen",
             "model" to cases.maxOf { it.patch.model }, "sourceRevision" to sourceRevision, "createdAt" to Instant.now().toString(),
             "models" to cases.map { it.patch.model }.distinct().sorted(),
-            "auditionRevision" to if (timpaniBoost) "timpani-boost" else if (timpaniRevision) "timpani" else null,
+            "auditionRevision" to if (finite) "finite" else if (timpaniBoost) "timpani-boost" else if (timpaniRevision) "timpani" else null,
             "membraneMixLiftDb" to if (timpaniBoost) 3.0 else null,
             "previousAudition" to previousAudition,
             "sampleRate" to Dsp.RATE,
-            "summary" to if (timpaniBoost)
+            "summary" to if (finite)
+                "The current model-3 HYBRID and AQUARIUM instrument: six finite presets, source and room comparisons, five-step controls, paired-control corners, native notes and velocity. The accepted timpani voicing and 3 dB mix lift are retained. Sampler performances, when included, layer the exact exported kit samples without external effects."
+                else if (timpaniBoost)
                 "Timpani mix lift: the accepted model-2 membrane sound with 3 dB more listener pickup in model 3. Before/after quartets and dry membrane solos at C3 and C4 share one gain per room and note from the boosted full quartet. Voicing, strike, tuning, room and feedback are unchanged."
                 else if (timpaniRevision)
                 "Timpani revision: previous and revised quartet strikes at C3 and C4, with the membrane heard alone at its actual mix level. Each four-clip group shares one gain from the revised full quartet. The note, velocity, macros, seed and room remain identical across models."
                 else "One simultaneous membrane, bar, cowbell and triangle strike. Two rooms with independently addressed material regions return energy into those instruments. Actual finite Kotlin engine renders, with direct, surface, position and return comparisons.",
-            "limitations" to listOf("First listening prototype: HYBRID and AQUARIUM only; HOLD is unsupported.",
+            "limitations" to listOf("Finite HYBRID and AQUARIUM only; HOLD and seamless sustain are unsupported.",
                 "Designed acoustic materials and modal instruments; no measured-room or orchestral realism claim.",
                 "Each rendered note contains its own mono room. Chords mix separate room recordings; sample transposition shifts room resonances too.",
                 "Submerged-glass modulation is a listener-only branch, excluded from the passive feedback network.",
                 "Near-root spectral measurements locate energy near the requested pitch; they do not replace the independent pitch detector or listening.",
-                "The factory roster, phone picker and starter menu are unchanged pending listening review."),
-            "checks" to linkedMapOf("passed" to failures.isEmpty(), "rendered" to clips.size, "requested" to cases.size,
+                if (finite) "Numerical and export checks do not establish listening approval or physical phone/MPC acceptance."
+                else "The factory roster, phone picker and starter menu are unchanged pending listening review."),
+            "checks" to linkedMapOf("passed" to failures.isEmpty(), "rendered" to clips.size, "requested" to requested,
+                "singleStrikeCases" to cases.size, "samplerPerformances" to performanceCount,
                 "defaults" to defaultChecks, "failures" to failures,
                 "report" to "checks.json", "provenance" to "source-provenance.json",
                 "renderSeconds" to (System.nanoTime() - started) / 1e9),
@@ -272,27 +291,60 @@ object ChamberAuditionGenerator {
                 "fullMix" to "AuditionLevel: loudest 200 ms RMS 0.03, 0.99 peak guard on the prelevel mix, followed by the production tail fade.",
                 "diagnostics" to "Causal comparisons and stems share one gain derived from their full reference and the same tail fade. Weak returns and surface stems are never independently boosted.",
                 "instrumentStatePickup" to "Sum of local radiation stems times the corresponding direct-distance gain and fixed direct pickup 0.46; no propagation delay. Identical pickup and gain in return on/off.",
+                "samplerPerformances" to "Production-normalized exported PCM24 samples are triggered at native pitch with the score's playback gains, then mixed. Raw preserves that sum; matched uses one gain for the complete phrase. Playback gain does not claim a new physical strike velocity.",
                 "raw" to "Raw WAVs contain unscaled prelevel samples at common gain 1.0; peaks are checked before PCM conversion."),
             "clips" to clips,
             "downloads" to linkedMapOf("zip" to "starter-pack.zip", "manifest" to "manifest.json",
-                "checks" to "checks.json", "provenance" to "source-provenance.json"),
+                "checks" to "checks.json", "provenance" to "source-provenance.json").also { it.putAll(kitDownloads) },
         )
         writeJson(File(root, "manifest.json"), manifest)
         File(root, "README.txt").writeText(
-            "CHAMBER ${if (timpaniBoost) "timpani mix lift" else if (timpaniRevision) "timpani revision" else "first-listen prototype"}\nActual Kotlin 4x renders, 44.1 kHz mono PCM16.\n" +
+            "CHAMBER ${if (finite) "finite instrument" else if (timpaniBoost) "timpani mix lift" else if (timpaniRevision) "timpani revision" else "first-listen prototype"}\nActual Kotlin 4x renders, 44.1 kHz mono PCM16.\n" +
                 "Raw WAVs use common gain $RAW_GAIN; full mixes use AuditionLevel 0.03, diagnostic groups share the full reference gain.\n" +
                 "Production recipes are PadRecipe JSON. Diagnostic recipes explicitly record probe options and output selection.\n" +
                 "Replay a diagnostic: ./gradlew :synth:replayChamberDiagnostic -PchamberRecipe=/absolute/recipe.json -PchamberReplayOutput=/absolute/output.wav\n" +
                 "Use -PchamberReplayMode=raw for common-gain prelevel audio; matched is the default.\n" +
+                (if (performanceCount > 0) "Sampler performance recipes use the same replay task and the copied, SHA-256-checked PCM24 sources under performance-sources/. They layer finite samples; playback gains do not alter native strike velocity.\n" else "") +
                 "Source revision: $sourceRevision; exact source hashes and copies: source-provenance.json and source/.\n" +
                 "Serve this directory over HTTP (for example python3 -m http.server) to open the included page and JSON manifest.\n" +
                 (if (timpaniBoost) "Accepted model 2 and boosted model 3 differ only by 3 dB membrane listener pickup. Each quartet/solo group shares the boosted full quartet gain. Previous pages are archived on the hosted page when supplied with --previous; archives are excluded from this compact starter ZIP.\n" else if (timpaniRevision) "Previous and revised quartet/solo comparisons share one gain from the revised full quartet for each room and note. The original 114-clip study is archived on the hosted page when supplied with --previous. It is not included in this compact starter ZIP.\n" else "") +
-                "HOLD, seamless looping, six-voice factory integration and the room editor are future work.\n",
+                "HOLD, seamless looping, the four additional voices and the room editor are future work.\n",
         )
         starterZip(root, clips.filter { it["id"] in starterIds }, manifest)
         check(File(root, "starter-pack.zip").length() < 20L * 1024 * 1024) { "starter ZIP exceeds hosting file limit" }
-        println("CHAMBER: ${clips.size}/${cases.size} clips, ${failures.size} failed cases, ${(System.nanoTime() - started) / 1e9} seconds; ${root.path}")
-        check(failures.isEmpty() && clips.size == cases.size) { "CHAMBER hard gates failed; see checks.json" }
+        println("CHAMBER: ${clips.size}/$requested clips, ${failures.size} failed cases, ${(System.nanoTime() - started) / 1e9} seconds; ${root.path}")
+        check(failures.isEmpty() && clips.size == requested) { "CHAMBER hard gates failed; see checks.json" }
+    }
+
+    /** A stale sibling ZIP must not become the download for newly generated pad performances. */
+    internal fun copyKitDownload(root: File, kitDirectory: File): Map<String, String> {
+        val kit = kitDirectory.canonicalFile
+        val archive = File(kit.parentFile, ChamberKitGenerator.ARCHIVE_NAME)
+        if (!archive.isFile) return emptyMap()
+        require(archive.length() < 20L * 1024 * 1024) { "MPC kit ZIP exceeds hosting file limit" }
+        val manifest = File(kit, "manifest.json").readBytes()
+        ZipFile(archive).use { zip ->
+            val entry = zip.getEntry("${ChamberKitGenerator.KIT_NAME}/manifest.json")
+                ?: error("CHAMBER kit ZIP has no kit manifest")
+            require(zip.getInputStream(entry).use { it.readBytes() }.contentEquals(manifest)) {
+                "CHAMBER kit ZIP does not match the supplied kit manifest"
+            }
+        }
+        val checksum = File(archive.parentFile, "${archive.name}.sha256")
+        if (checksum.isFile) {
+            require(checksum.readText().trim().substringBefore(' ').equals(sha(archive), ignoreCase = true)) {
+                "CHAMBER kit ZIP checksum does not match the archive"
+            }
+        }
+        val relative = "assets/${archive.name}"
+        val destination = File(root, relative).also { it.parentFile.mkdirs() }
+        archive.copyTo(destination, overwrite = true)
+        return linkedMapOf("mpcKit" to relative).also { downloads ->
+            if (checksum.isFile) {
+                checksum.copyTo(File(root, "$relative.sha256"), overwrite = true)
+                downloads["mpcKitChecksum"] = "$relative.sha256"
+            }
+        }
     }
 
     /** A bounded listening response; the complete original matrix remains available via cases(). */
@@ -333,7 +385,7 @@ object ChamberAuditionGenerator {
     }
 
     /** Keep historical PCM, recipes and source intact while making the older archive a sibling. */
-    private fun archivePrevious(previous: File, root: File, expectedModel: Int): Map<String, Any?> {
+    internal fun archivePrevious(previous: File, root: File, expectedModel: Int): Map<String, Any?> {
         val source = previous.canonicalFile
         require(source.isDirectory && File(source, "index.html").isFile && File(source, "source-provenance.json").isFile) {
             "--previous must be a complete previous CHAMBER audition directory"
@@ -353,37 +405,48 @@ object ChamberAuditionGenerator {
             source.listFiles().orEmpty().filter { it.name != "archive" }.forEach { file ->
                 check(file.copyRecursively(File(target, file.name), overwrite = false)) { "could not archive ${file.name}" }
             }
-            val original = File(target, "manifest-original.json")
-            manifestFile.copyTo(original, overwrite = true)
             val previousLink = manifest["previousAudition"]?.takeUnless { it is JsonValue.Null }?.obj()
             if (previousLink != null) {
-                val oldArchive = File(source, "archive/model-1")
-                require(File(oldArchive, "manifest.json").isFile && File(oldArchive, "index.html").isFile) {
-                    "the previous audition's model-1 archive is missing"
+                val previousModel = expectedModel - 1
+                val older = File(source, "archive")
+                require(File(older, "model-$previousModel/manifest.json").isFile &&
+                    File(older, "model-$previousModel/index.html").isFile) {
+                    "the previous audition's model-$previousModel archive is missing"
                 }
-                val sibling = File(root, "archive/model-1")
-                if (sibling.exists()) check(sibling.deleteRecursively()) { "could not replace original audition archive" }
-                check(oldArchive.copyRecursively(sibling, overwrite = false)) { "could not preserve original audition archive" }
+                for (oldArchive in older.listFiles().orEmpty().filter { it.isDirectory }) {
+                    require(oldArchive.name.matches(Regex("model-[1-9][0-9]*"))) { "unexpected archive ${oldArchive.name}" }
+                    val sibling = File(root, "archive/${oldArchive.name}")
+                    require(sibling != target) { "previous audition contains its own archive" }
+                    if (sibling.exists()) check(sibling.deleteRecursively()) { "could not replace historical archive" }
+                    check(oldArchive.copyRecursively(sibling, overwrite = false)) { "could not preserve historical archive" }
+                }
+                val original = File(target, "manifest-original.json")
+                manifestFile.copyTo(original, overwrite = true)
+                val relocatedUrl = "../model-$previousModel/index.html"
                 val updated = LinkedHashMap(manifest)
                 updated["previousAudition"] = JsonValue.Obj(LinkedHashMap(previousLink).also {
-                    it["url"] = JsonValue.Str("../model-1/index.html")
+                    it["url"] = JsonValue.Str(relocatedUrl)
                 })
                 updated["navigationRelocation"] = JsonValue.Obj(linkedMapOf(
                     "description" to JsonValue.Str("Only the archived page's previous-audition URL moved to its sibling. Audio, recipes and source snapshots are unchanged."),
                     "originalManifest" to JsonValue.Str("manifest-original.json"),
                     "originalManifestSha256" to JsonValue.Str(sha(original)),
                     "previousUrl" to previousLink.getValue("url"),
-                    "relocatedUrl" to JsonValue.Str("../model-1/index.html"),
+                    "relocatedUrl" to JsonValue.Str(relocatedUrl),
                 ))
                 writeJson(File(target, "manifest.json"), JsonValue.Obj(updated))
             }
         }
         return linkedMapOf("url" to "archive/model-$expectedModel/index.html",
-            "title" to if (expectedModel == 1) "Original 114-clip audition · model 1" else "Previous timpani audition · model 2",
+            "title" to when (expectedModel) {
+                1 -> "Original 114-clip audition · model 1"
+                2 -> "Previous timpani audition · model 2"
+                else -> "Accepted timpani mix comparison · model 3"
+            },
             "model" to expectedModel, "sourceRevision" to manifest["sourceRevision"]?.str())
     }
 
-    private fun cases(): List<Case> = buildList {
+    private fun cases(finite: Boolean = false): List<Case> = buildList {
         for (voice in ChamberVoice.entries) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val defaults = ChamberPresets.forVoice(voice).first()
@@ -395,7 +458,7 @@ object ChamberAuditionGenerator {
                 tags = listOf("default", "preset")))
             for ((index, preset) in ChamberPresets.forVoice(voice).drop(1).withIndex()) {
                 add(Case("$slug-preset-${index + 2}", preset.name, "presets", preset,
-                    "Provisional ${voice.name} recipe with the complete saved room configuration.",
+                    "Finite ${voice.name} recipe with the complete saved room configuration.",
                     "Does this control combination suggest a useful musical role?", tags = listOf("preset")))
             }
             val required = defaults.copy(name = "${voice.name} exact split", macros = defaults.macros +
@@ -473,10 +536,131 @@ object ChamberAuditionGenerator {
                     "Does the quartet stay pitched and recognizable across low, middle and high registers?",
                     compareGroup = "$slug-register-$midi", variant = velocity.toString(), tags = listOf("register", "midi-$midi", "velocity-$velocity")))
             }
+            if (finite) {
+                for ((left, right) in listOf("MATERIAL" to "PLACEMENT", "DIVIDE" to "PLACEMENT",
+                    "STRIKE" to "MATERIAL", "BALANCE" to "DIVIDE")) {
+                    for (a in listOf(0f, 1f)) for (b in listOf(0f, 1f)) {
+                        val pair = "${left.lowercase(Locale.ROOT)}-${right.lowercase(Locale.ROOT)}"
+                        add(Case("$slug-pair-$pair-${a.toInt()}-${b.toInt()}",
+                            "${voice.name}: $left $a · $right $b", "interactions",
+                            defaults.copy(name = "${voice.name} $left $a $right $b",
+                                macros = defaults.macros + mapOf(left to a, right to b)),
+                            "Four corners of $left × $right. Other controls, note, velocity, seed and authored room remain at the voice default. Each complete quartet uses the usual audition matching rule.",
+                            "Do the controls retain useful contrast together, and does the membrane remain part of the quartet?",
+                            compareGroup = "$slug-pair-$pair", variant = "$a / $b",
+                            tags = listOf("paired-controls", left, right)))
+                    }
+                }
+                for (midi in listOf(36, 84)) for (velocity in listOf(.3f, 1f)) {
+                    add(Case("$slug-edge-midi-$midi-v-${(velocity * 100).toInt()}",
+                        "${voice.name}: range edge MIDI $midi, velocity $velocity", "registers",
+                        defaults.copy(name = "${voice.name} range edge $midi effort $velocity", midi = midi, velocity = velocity),
+                        "Native note rendering at the supported MIDI boundary. Soft and hard event strikes retain the saved macros and physical room.",
+                        "Does the note remain useful at the edge, without an overpowering metal partial or a lost membrane body?",
+                        compareGroup = "$slug-edge-register-$midi", variant = velocity.toString(),
+                        tags = listOf("register-edge", "midi-$midi", "velocity-$velocity")))
+                }
+            }
             add(Case("$slug-all-high", "${voice.name}: all controls high", "extremes",
                 defaults.copy(name = "${voice.name} all high", macros = defaults.macros + controls.associateWith { 1f }, velocity = 1f),
                 "The five timbral controls and event velocity at their maximum. HOLD stays zero. Raw energy and passive-network checks remain active.",
                 "Does the demanding corner remain musical and bounded?", tags = listOf("extreme")))
+        }
+    }
+
+    /** These phrases play the actual exported samples, including their baked room and ending. */
+    private fun performances(root: File, kitDirectory: File, sourceRevision: Any?): List<Map<String, Any?>> {
+        val kit = kitDirectory.canonicalFile
+        val manifestFile = File(kit, "manifest.json")
+        val kitManifest = Json.parse(manifestFile.readText()).obj()
+        require(kitManifest.getValue("engine").str() == ChamberPatch.ENGINE) { "--kit is not a CHAMBER kit" }
+        val pads = kitManifest.getValue("pads").arr().associateBy { it.obj().getValue("pad").str() }
+        require(pads.size == 16) { "the performance study requires the complete sixteen-pad kit" }
+        manifestFile.copyTo(File(root, "performance-kit-manifest.json"), overwrite = true)
+        val copiedSources = pads.mapValues { (label, value) ->
+            require(label.matches(Regex("A(?:0[1-9]|1[0-6])"))) { "unexpected CHAMBER kit pad $label" }
+            val pad = value.obj()
+            val sample = File(kit, pad.getValue("sample").str()).canonicalFile
+            require(sample.toPath().startsWith(kit.toPath()) && sha(sample) == pad.getValue("sampleSha256").str()) {
+                "$label exported sample is outside the kit or has changed"
+            }
+            val recipe = PadRecipe.fromJsonValue(pad.getValue("savedRecipe"))
+            val patch = recipe.patch as? ChamberPatch ?: error("$label has no CHAMBER recipe")
+            require(recipe.fx == null && patch.model == Chamber.MODEL_VERSION && patch.macros["HOLD"] == 0f) {
+                "$label must contain the current dry finite instrument"
+            }
+            val destination = File(root, "performance-sources/$label.wav").also { it.parentFile.mkdirs() }
+            sample.copyTo(destination, overwrite = true)
+            linkedMapOf<String, Any?>("id" to label, "sample" to "../performance-sources/$label.wav",
+                "sampleSha256" to sha(destination), "savedRecipe" to recipe.toJsonValue())
+        }
+        data class Phrase(val id: String, val title: String, val description: String, val order: List<String>, val interval: Double)
+        val phrases = listOf(
+            Phrase("hybrid-kit-phrase", "HYBRID: eight native notes",
+                "A short pentatonic phrase played from the exported A01–A08 HYBRID samples. Every note keeps its native pitch, saved strike velocity and full room tail. No external effects or sample transposition.",
+                listOf("A01", "A03", "A05", "A02", "A06", "A04", "A08", "A07"), .5),
+            Phrase("chamber-kit-portraits", "Eight room portraits",
+                "Exported A09–A16 samples take turns: the six saved presets, Uniform Room and Low Canopy. Their finite room recordings overlap naturally. A fixed playback gain provides headroom; it does not change their physical excitation.",
+                (9..16).map { "A%02d".format(Locale.ROOT, it) }, .75),
+        )
+        return phrases.map { phrase ->
+            val started = System.nanoTime()
+            val sourceFrames = phrase.order.maxOf { label -> WavReader.read(File(root, "performance-sources/$label.wav")).samples.size }
+            val frames = ((phrase.order.lastIndex * phrase.interval * Dsp.RATE).toInt() + sourceFrames)
+            val score = linkedMapOf<String, Any?>(
+                "performanceRecipe" to 1, "engine" to ChamberPatch.ENGINE, "model" to Chamber.MODEL_VERSION,
+                "sampleRate" to Dsp.RATE, "frames" to frames, "mixGain" to .125f,
+                "sourcePolicy" to "SHA-256-checked exported PCM24; native sample pitch; independent baked rooms",
+                "sources" to phrase.order.distinct().map { copiedSources.getValue(it) },
+                "events" to phrase.order.mapIndexed { i, label -> linkedMapOf("pad" to label,
+                    "atFrame" to (i * phrase.interval * Dsp.RATE).toInt(), "gain" to if (i % 3 == 1) .75f else 1f) },
+                "rawGain" to 1f, "matchedGain" to 1f, "matchedTailTreatment" to "Dsp.fadeTail",
+            )
+            val recipePath = "recipes/${phrase.id}.json"
+            val recipeFile = File(root, recipePath)
+            writeJson(recipeFile, score)
+            val raw = ChamberPerformanceReplay.render(recipeFile)
+            val gain = matchingGain(raw.samples, AuditionLevel.level(raw).samples)
+            score["matchedGain"] = gain
+            writeJson(recipeFile, score)
+            val matched = Snip(scaled(raw.samples, gain).also { Dsp.fadeTail(it) }, 1, Dsp.RATE)
+            require(raw.samples.all { it.isFinite() } && raw.peak() > 0f && raw.peak() < 1f && matched.peak() <= .991f) {
+                "${phrase.id} is silent, non-finite or clipped"
+            }
+            val rawPath = "raw/${phrase.id}.wav"
+            val matchedPath = "matched/${phrase.id}.wav"
+            WavWriter.write(File(root, rawPath), raw, WavWriter.BitDepth.PCM_16)
+            WavWriter.write(File(root, matchedPath), matched, WavWriter.BitDepth.PCM_16)
+            val replay = File(root, "${phrase.id}-replay.wav")
+            for ((mode, expected) in listOf("raw" to File(root, rawPath), "matched" to File(root, matchedPath))) {
+                ChamberPerformanceReplay.replay(recipeFile, replay, mode)
+                require(replay.readBytes().contentEquals(expected.readBytes())) { "${phrase.id} $mode score replay changed the PCM" }
+            }
+            replay.delete()
+            val tracePath = "diagnostics/${phrase.id}.json"
+            writeJson(File(root, tracePath), linkedMapOf("clip" to phrase.id, "scoreReplayExact" to true,
+                "kitManifestSha256" to sha(manifestFile), "kitManifest" to "performance-kit-manifest.json",
+                "sourcePads" to phrase.order, "events" to score["events"], "mixGain" to score["mixGain"],
+                "description" to "Finite exported samples at native pitch. No new shared room or sustained-state claim."))
+            // A phrase has several notes. Do not attach a single-note pitch estimate to it.
+            val metrics = linkedMapOf<String, Any?>("rawPeak" to raw.peak(), "rawRms" to TangleMeasure.rms(raw.samples),
+                "rawDc" to raw.samples.average(), "peak" to matched.peak(), "rms" to TangleMeasure.rms(matched.samples),
+                "dc" to matched.samples.average(), "finite" to true, "durationSeconds" to raw.durationSeconds,
+                "matchedLoudness" to Loudness.of(matched), "renderMs" to (System.nanoTime() - started) / 1e6)
+            metrics["rawExportGain"] = 1f
+            metrics["matchedGainFromPrelevel"] = gain
+            metrics["matchingPolicy"] = "One gain for the complete production-sample phrase; no individual source rematching"
+            metrics["scoreReplayExact"] = true
+            metrics["passedHardGates"] = true
+            metrics["audioSha256"] = linkedMapOf("raw" to sha(File(root, rawPath)), "matched" to sha(File(root, matchedPath)))
+            metrics["recipeSha256"] = sha(recipeFile)
+            metrics["diagnostics"] = tracePath
+            linkedMapOf("id" to phrase.id, "title" to phrase.title, "section" to "performance",
+                "model" to Chamber.MODEL_VERSION, "sourceRevision" to sourceRevision,
+                "voice" to if (phrase.id == "hybrid-kit-phrase") "HYBRID" else "MIXED", "midi" to null,
+                "description" to phrase.description, "question" to "Do the attack, membrane body and overlapping tails make a useful playable instrument?",
+                "raw" to rawPath, "matched" to matchedPath, "recipe" to recipePath, "metrics" to metrics,
+                "tags" to listOf("sampler-performance", "exported-kit", "finite-one-shots", "dry"))
         }
     }
 
@@ -493,17 +677,26 @@ object ChamberAuditionGenerator {
         val paths = listOf("synth/src/main/kotlin/com/snipsnap/synth/Chamber.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ChamberConfig.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberRoom.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/ChamberPatch.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberPresets.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/ChamberKits.kt", "synth/src/main/kotlin/com/snipsnap/synth/ChamberRenderer.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt", "synth/src/main/kotlin/com/snipsnap/synth/Tide.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Keys.kt", "synth/src/main/kotlin/com/snipsnap/synth/PadRecipe.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt", "synth/src/main/kotlin/com/snipsnap/synth/Thump.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/Classifier.kt", "audio/src/main/kotlin/com/snipsnap/audio/Pitch.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/Fft.kt", "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt", "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt",
+            "audio/src/main/kotlin/com/snipsnap/audio/WavReader.kt", "synth/src/main/kotlin/com/snipsnap/synth/SynthKits.kt",
             "json/src/main/kotlin/com/snipsnap/json/Json.kt", "synth/src/test/kotlin/com/snipsnap/synth/FineTuning.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt", "synth/src/test/kotlin/com/snipsnap/synth/TangleMeasure.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ChamberAuditionGenerator.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ChamberDiagnosticReplayTest.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/ChamberTimpaniTest.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberRendererTest.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberProductionCompatibilityTest.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberPerformanceBenchmark.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberAuditionExportTest.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberKitGenerator.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberKitTest.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/ChamberPresetsTest.kt",
             "synth/src/test/resources/chamber-model-1/hybrid-default.json",
             "synth/src/test/resources/chamber-model-1/aquarium-default.json",
             "synth/src/test/resources/chamber-model-2/hybrid-timpani-r2-c3-full.json",
@@ -537,6 +730,8 @@ object ChamberAuditionGenerator {
             paths += metrics.getValue("diagnostics") as String
         }
         File(root, "source").walkTopDown().filter { it.isFile }.forEach { paths += it.relativeTo(root).invariantSeparatorsPath }
+        File(root, "performance-kit-manifest.json").takeIf { it.isFile }?.let { paths += it.name }
+        File(root, "performance-sources").walkTopDown().filter { it.isFile }.forEach { paths += it.relativeTo(root).invariantSeparatorsPath }
         ZipOutputStream(File(root, "starter-pack.zip").outputStream().buffered()).use { zip ->
             @Suppress("UNCHECKED_CAST")
             val fullChecks = manifest.getValue("checks") as Map<String, Any?>
@@ -571,6 +766,59 @@ object ChamberAuditionGenerator {
         is Map<*, *> -> JsonValue.Obj(value.entries.associateTo(linkedMapOf()) { it.key.toString() to json(it.value) })
         is Iterable<*> -> JsonValue.Arr(value.map(::json))
         else -> error("unsupported JSON ${value.javaClass.simpleName}")
+    }
+}
+
+/** A score replays exact exported samples rather than synthesizing a different instrument. */
+internal object ChamberPerformanceReplay {
+    fun render(recipeFile: File): Snip {
+        val score = Json.parse(recipeFile.readText()).obj()
+        require(score.getValue("performanceRecipe").int() == 1 && score.getValue("engine").str() == ChamberPatch.ENGINE) {
+            "unsupported CHAMBER sampler score"
+        }
+        require(score.getValue("sampleRate").int() == Dsp.RATE) { "CHAMBER sampler score must use 44100 Hz" }
+        val frames = score.getValue("frames").int().also { require(it in 1..Dsp.RATE * 30) }
+        val mixGain = score.getValue("mixGain").num().toFloat().also { require(it.isFinite() && it > 0f && it <= 1f) }
+        val auditionRoot = recipeFile.canonicalFile.parentFile.parentFile
+        val sources = score.getValue("sources").arr().also { require(it.size in 1..16) }.associate { value ->
+            val source = value.obj()
+            val id = source.getValue("id").str()
+            val file = File(recipeFile.parentFile, source.getValue("sample").str()).canonicalFile
+            require(file.toPath().startsWith(auditionRoot.toPath())) { "$id sample escapes the audition directory" }
+            val hash = MessageDigest.getInstance("SHA-256").digest(file.readBytes())
+                .joinToString("") { "%02x".format(Locale.ROOT, it.toInt() and 255) }
+            require(hash == source.getValue("sampleSha256").str()) { "$id exported sample hash changed" }
+            val sample = WavReader.read(file)
+            require(sample.channels == 1 && sample.sampleRate == Dsp.RATE && sample.samples.size in 1..Dsp.RATE * 8 &&
+                sample.samples.all { it.isFinite() }) { "$id is not a finite mono native-rate sample" }
+            id to sample
+        }
+        require(sources.size == score.getValue("sources").arr().size) { "duplicate CHAMBER score source" }
+        val out = FloatArray(frames)
+        val events = score.getValue("events").arr().also { require(it.size in 1..128) }
+        for (value in events) {
+            val event = value.obj()
+            val at = event.getValue("atFrame").int().also { require(it in 0 until frames) }
+            val gain = event.getValue("gain").num().toFloat().also { require(it.isFinite() && it in 0f..1f) }
+            val sample = sources[event.getValue("pad").str()] ?: error("score event references an unknown pad")
+            require(sample.samples.size <= frames - at) { "CHAMBER score would truncate a finite room tail" }
+            for (i in sample.samples.indices) out[at + i] += sample.samples[i] * gain * mixGain
+        }
+        return Snip(out, 1, Dsp.RATE)
+    }
+
+    fun replay(recipeFile: File, output: File, mode: String) {
+        require(mode in setOf("raw", "matched")) { "replay mode must be raw or matched" }
+        val score = Json.parse(recipeFile.readText()).obj()
+        val raw = render(recipeFile)
+        val gain = score.getValue(if (mode == "raw") "rawGain" else "matchedGain").num().toFloat()
+        require(gain.isFinite() && gain > 0f) { "invalid CHAMBER score output gain" }
+        val samples = FloatArray(raw.samples.size) { raw.samples[it] * gain }
+        if (mode == "matched") {
+            require(score.getValue("matchedTailTreatment").str() == "Dsp.fadeTail")
+            Dsp.fadeTail(samples)
+        }
+        WavWriter.write(output, Snip(samples, 1, Dsp.RATE), WavWriter.BitDepth.PCM_16)
     }
 }
 
@@ -613,7 +861,13 @@ object ChamberDiagnosticReplay {
         require(args.size in 2..3) { "diagnostic replay wants <recipe.json> <output.wav> [raw|matched]" }
         val mode = args.getOrNull(2) ?: "matched"
         require(mode in setOf("raw", "matched")) { "replay mode must be raw or matched" }
-        val obj = Json.parse(File(args[0]).readText()).obj()
+        val recipeFile = File(args[0])
+        val obj = Json.parse(recipeFile.readText()).obj()
+        if (obj.containsKey("performanceRecipe")) {
+            ChamberPerformanceReplay.replay(recipeFile, File(args[1]), mode)
+            println("Replayed CHAMBER $mode sampler performance to ${args[1]}")
+            return
+        }
         require(obj.getValue("diagnosticRecipe").int() == 1) { "unsupported CHAMBER diagnostic recipe" }
         require(obj.getValue("engine").str() == ChamberPatch.ENGINE)
         val patch = ChamberPatch.fromJsonValue(obj.getValue("patch"))

@@ -534,10 +534,11 @@ DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube folds back far less),
 `driven` (a drive pedal: the tube at the top of its gain law with the
 speaker barely in, the last stretch of the pad faded ahead of the amp so
-a quiet tail is not lifted into a click), `compressed` (a compressor
-pedal, for now: SQUASH at its strongest, the body leaned on so the tail
-stands up; `punched` is the same section plus CRUNCH, this has no
-crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
+a quiet tail is not lifted into a click), `compressed` (the sustain
+pedal: the COMPRESSOR section at full AMOUNT, the body pressed down and the
+peak brought back so the decay comes up; a snare rings about three times as
+long at AMT 70; `punched` is SQUASH plus CRUNCH, the punch rather than the
+sustain), `wahed` (a wah: a resonant band-pass swept between a heel and a
 toe a decade above it by a sine with a flat top, which never parks at the heel but rests
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
@@ -554,18 +555,17 @@ same pad instead of one character: every pick with its own AMT and its side
 of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
-recipe riding the pad. The library today: `driven` (the amp), `compressed`,
-`wahed`, `delayed` (after the amp), and `rig` (a board: compressor, drive,
-slapback); none of these three draws a chip until its gate — e.g.
+recipe riding the pad. The library today: `driven` (the amp), `compressed` (the
+sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `delayed` (after the amp), and
+`rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip
+until their gates — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
 six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
 refused by name. `--undo` restores as for a character.
  On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision), the three wah
-characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
-`rockwahed` are CLI and saved kits only) and `delayed` (the DELAY chip waits
-for its listening gate), sit on the PAD SHEET's
+`amped` (its chip is a later layout decision) and `delayed` (the DELAY chip
+waits for its listening gate), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
@@ -576,7 +576,8 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · COMP — `driven` and `compressed`),
+the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK — `driven`, `compressed`,
+`wahed`, `touchwahed` and `rockwahed`),
 grouped by what an effect *is*, because a guitarist looks for a pedal by
 its name; tapping any
 of them changes every file the pad references, velocity layers included.

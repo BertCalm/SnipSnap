@@ -72,7 +72,7 @@ object StoopPresets {
     private val entries = listOf(
         // Bass: sub/body proportions and harmonic shapes change the source itself.
         p(StoopVoice.BASS, "Round Corner", StoopSource(shape = .12f, sub = .70f, harmonicTilt = .18f),
-            "Rounded root support with a clean, direct attack.", "rounded,clean,direct", touch = .24f, color = .32f, shadow = 0f, wear = 0f, length = .42f),
+            "Rounded root support with a clean, direct attack.", "rounded,clean,direct", touch = .24f, color = .32f, shadow = 0f, wear = 0f, length = .42f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.BASS, "Rubber Sole", StoopSource(shape = .05f, sub = .22f, harmonicTilt = .35f),
             "A springy saw-shaped body with a longer filter accent.", "saw,rubbery,medium", touch = .72f, color = .64f, shadow = .10f, wear = .08f, length = .58f),
         p(StoopVoice.BASS, "Muted Wire", StoopSource(shape = .62f, sub = .05f, fmRatio = 1f, fmIndex = .28f, harmonicTilt = .12f),
@@ -106,7 +106,7 @@ object StoopPresets {
 
         // Tines: different FM ratios, strike depth and body registration.
         p(StoopVoice.TINE, "Dust Tines", StoopSource(shape = .28f, sub = .12f, fmRatio = 2f, fmIndex = .70f, harmonicTilt = .34f),
-            "Warm strikes with softened grain and a modest reply.", "warm,struck,worn", color = .42f, wear = .42f, length = .62f),
+            "Warm strikes with softened grain and a modest reply.", "warm,struck,worn", color = .42f, wear = .42f, length = .62f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.TINE, "Bent Bell", StoopSource(shape = .14f, sub = 0f, fmRatio = 3f, fmIndex = 1.55f, harmonicTilt = .54f),
             "A clear bell contact above a longer ringing root.", "bell,struck,long", touch = .70f, color = .80f, shadow = .10f, wear = .04f, length = .80f, shadowInterval = 12, shadowDelayMs = 165f),
         p(StoopVoice.TINE, "Amber Key", StoopSource(shape = .42f, sub = .24f, fmRatio = 1f, fmIndex = .12f, harmonicTilt = .22f),
@@ -128,7 +128,7 @@ object StoopPresets {
 
         // Clav: body, harmonic slope and contact vary together.
         p(StoopVoice.CLAV, "Soft Clav", StoopSource(shape = .30f, sub = .22f, fmRatio = 1f, fmIndex = .30f, harmonicTilt = .26f),
-            "A rounded muted pick with enough body to carry a riff.", "soft,muted", touch = .28f, color = .38f, length = .30f),
+            "A rounded muted pick with enough body to carry a riff.", "soft,muted", touch = .28f, color = .38f, length = .30f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.CLAV, "Short Wire", StoopSource(shape = .04f, sub = 0f, fmRatio = 2f, fmIndex = .75f, harmonicTilt = 1f),
             "A bright clean bridge-like pick with a clipped tonal tail.", "bright,picked,short", touch = .98f, color = .94f, shadow = 0f, wear = 0f, length = .24f),
         p(StoopVoice.CLAV, "Back Step", StoopSource(shape = .45f, sub = .06f, fmRatio = 1f, fmIndex = .45f, harmonicTilt = .85f),
@@ -146,7 +146,7 @@ object StoopPresets {
 
         // Organ: registrations retain harmonic identity at both TOUCH ends.
         p(StoopVoice.ORGAN, "Amber Organ", StoopSource(shape = .28f, sub = .28f, harmonicTilt = .24f),
-            "A smooth full registration with mild recording warmth.", "smooth,warm", touch = .20f, color = .34f, length = .65f),
+            "A smooth full registration with mild recording warmth.", "smooth,warm", touch = .20f, color = .34f, length = .65f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.ORGAN, "Small Pipes", StoopSource(shape = 0f, sub = 0f, harmonicTilt = .80f),
             "A clean odd-harmonic registration for longer hollow phrases.", "hollow,clean,long", touch = .12f, color = .70f, shadow = 0f, wear = 0f, length = .72f),
         p(StoopVoice.ORGAN, "Corner Stab", StoopSource(shape = 1f, sub = .06f, harmonicTilt = .95f),
@@ -159,7 +159,7 @@ object StoopPresets {
             "A settled hollow pipe loop with a quieter sustained octave.", "held,hollow,octave", touch = .50f, color = .84f, shadow = .35f, wear = 0f, length = .84f, hold = 1f, shadowInterval = 12, shadowArticulation = .12f),
 
         p(StoopVoice.LEAD, "Nose Talk", StoopSource(shape = .88f, sub = .08f, fmRatio = 2f, fmIndex = .65f, harmonicTilt = .74f),
-            "A nasal accent for short conversational lead phrases.", "nasal,accented", touch = .68f, color = .72f, length = .40f),
+            "A nasal accent for short conversational lead phrases.", "nasal,accented", touch = .68f, color = .72f, length = .40f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.LEAD, "Pocket Whistle", StoopSource(shape = .98f, sub = 0f, fmRatio = 1f, fmIndex = .16f, harmonicTilt = .18f),
             "A dark clean whistle-like line with a very soft onset.", "soft,clean,direct", touch = .04f, color = .02f, shadow = 0f, wear = 0f, length = .76f),
         p(StoopVoice.LEAD, "Thin Brass", StoopSource(shape = 0f, sub = .10f, fmRatio = 1.5f, fmIndex = 1.1f, harmonicTilt = .66f),
@@ -168,7 +168,7 @@ object StoopPresets {
             "A soft sustained lead loop with a gently beating companion.", "held,rounded,long,spread", touch = .12f, color = .30f, shadow = .12f, wear = .18f, length = .94f, hold = 1f, shadowArticulation = .65f),
 
         p(StoopVoice.CHORD, "Velvet Stack", StoopSource(shape = .28f, sub = .24f, harmonicTilt = .32f, detuneCents = 3f),
-            "A soft root/fifth/octave block with a restrained root reply.", "soft,block,open", touch = .28f, color = .38f, length = .52f),
+            "A soft root/fifth/octave block with a restrained root reply.", "soft,block,open", touch = .28f, color = .38f, length = .52f, model = Stoop.LEGACY_MODEL_VERSION),
         p(StoopVoice.CHORD, "Small Cinema", StoopSource(shape = 0f, sub = 0f, harmonicTilt = .58f),
             "An explicit clean major-triad stab with a saw-shaped edge.", "major,clipped,clean,saw", touch = .94f, color = .68f, shadow = 0f, wear = 0f, length = .18f, chordIntervals = listOf(0, 4, 7)),
         p(StoopVoice.CHORD, "Minor Corner", StoopSource(shape = 1f, sub = .30f, harmonicTilt = .46f),

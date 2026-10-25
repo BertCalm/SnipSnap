@@ -164,17 +164,21 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
-CHAMBER's first listening prototype strikes a membrane, bar, cowbell and triangle
+CHAMBER's finite instrument strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
-returns into the instruments. Six provisional recipes and complete saved rooms
-work through the CLI and kit renderer, outside the phone picker pending listening.
+returns into the instruments. Six factory recipes and complete saved rooms work
+through the CLI, phone SYNTH controls and FRESH TAPE starter. Preview supports
+cancellation and bounded reuse of completed recordings.
 Run `./gradlew :synth:generateChamberAudition` for raw/matched comparisons and
-replayable diagnostics. [Implementation notes](docs/CHAMBER.md) distinguish the
-finite prototype from the proposed HOLD, room editor and larger library. The
+replayable diagnostics, or `./gradlew :synth:generateChamberKit` for the dry
+sixteen-pad MPC 3 track, MPC 2 twin and editable recipes.
+[Implementation notes](docs/CHAMBER.md) record the finite controls, performance
+limits and proposed HOLD, room editor and larger library. The
 [published private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-opens 16 previous/revised timpani comparisons with raw/matched playback and
-downloadable recipes; the original 114-clip study remains archived there.
+provides the current-model control study, kit-sample phrases and downloadable
+recipes; earlier timpani comparisons remain archived there. Physical phone/MPC
+acceptance and the broader listening verdict remain open.
 
 CONFLUENCE's first recorded-source proof renders a small gathering from supplied
 vocal regions: one to eight persistent performers, complete phrase responses,
@@ -348,7 +352,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 49 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 50 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -908,8 +912,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY and GRAINS round out the lineup —
-60 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER and GRAINS round out the lineup —
+61 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1052,7 +1056,10 @@ swept between a heel and a toe by three moves held as weights, TOUCH from the
 hit's own envelope, AUTO a sine with a flat top (it rests at the toe for 39
 percent of each cycle at AMT 100 and 14 percent at AMT 70) and ROCK one
 heel-toe-heel gesture, with SPEED and Q beside them; the first pedal on the board, in front of
-the compressor and the amp), SQUASH
+the compressor and the amp), COMPRESSOR (the sustain pedal behind the SUSTAIN chip: the body
+pressed down under a threshold 10 to 40 dB beneath the pad's loudest level, a lookahead limiter
+so the hit cannot cancel the make-up, and the peak-match bringing the decay up; AMOUNT, ATTACK,
+and RECOVER, where up means the sound comes back sooner and rings longer), SQUASH
 (lookahead compressor: fast clamp is glue, slow clamp is punch), VALVE (a
 tube amp and its speaker: DRIVE into an asymmetric curve, SAG the supply
 giving way under it on loud passages, TONE after the tube, CAB from no
@@ -1103,11 +1110,12 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM,
-RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO,
-ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR,
-STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY,
-OVERLAP, OVEN, FLOCK, VENT, CREASE, LATTICE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, plus GRAINS, SNAP and DRAW, which sit beside the
+LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
+TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
+TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
+UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
+SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
+OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
