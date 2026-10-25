@@ -11,6 +11,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
@@ -115,6 +116,7 @@ object Spread {
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
         is CausticPatch -> patch.midi.toFloat()
+        is ChamberPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

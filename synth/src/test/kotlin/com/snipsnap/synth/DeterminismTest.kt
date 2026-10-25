@@ -24,6 +24,19 @@ class DeterminismTest {
     }
 
     @Test
+    fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
+        val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
+            midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,
+            configuration = ChamberConfig.aquarium().copy(splitHeight = .67f),
+        )
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch.copy(
+            macros = patch.macros.entries.reversed().associate { it.toPair() },
+        )).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples,
+            "factory promotion must preserve the complete coupled room through saved recipe replay")
+    }
+
+    @Test
     fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
         val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
         val first = CreaseTouchKeys.render(patch, midi = 60)
