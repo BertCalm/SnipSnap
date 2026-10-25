@@ -116,7 +116,7 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "COMP", "WAH", "TOUCH", "ROCK"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK"), PadSheet.PEDAL_SEGMENTS)
         assertEquals(36, PadSheet.ALL_SEGMENTS.size, "the card should draw 36 chips")
     }
 
@@ -148,7 +148,7 @@ class PadSheetTest {
             // the same section as six independent players
             "SECTION",
             // the pedal board's Stage 0
-            "DRIVE", "COMP",
+            "DRIVE", "SUSTAIN", // COMP until its section passed its gate (2026-10-24)
             // the WAH section's gate (its three moves)
             "WAH", "TOUCH", "ROCK",
         )
@@ -172,7 +172,7 @@ class PadSheetTest {
     fun `the pedals are the last row, and each chip draws a rack character`() {
         assertEquals(PadSheet.PEDAL_SEGMENTS, PadSheet.ROWS.last())
         assertEquals(PadSheet.Treatment.Character("driven"), PadSheet.treatmentFor("DRIVE"))
-        assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("COMP"))
+        assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("SUSTAIN"))
         assertEquals(PadSheet.Treatment.Character("wahed"), PadSheet.treatmentFor("WAH"))
         assertEquals(PadSheet.Treatment.Character("touchwahed"), PadSheet.treatmentFor("TOUCH"))
         assertEquals(PadSheet.Treatment.Character("rockwahed"), PadSheet.treatmentFor("ROCK"))

@@ -33,7 +33,10 @@ data class StoopSource(
  * WEAR has no noise floor or unfiltered sample-hold stage.
  */
 object Stoop {
-    const val MODEL_VERSION = 1
+    const val LEGACY_MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    // Model revisions change a projection, not the deterministic oscillator phases.
+    private const val PHASE_SEED_VERSION = 1
     const val RATE = Dsp.RATE
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
@@ -44,6 +47,7 @@ object Stoop {
     private const val TAU = 2.0 * PI
     private const val SOURCE_CEILING = 15_000.0
     private const val HISTORY = 256
+    private const val CLAV_BODY_JOIN_SECONDS = .025
 
     private val settings = arrayOf(
         floatArrayOf(.35f, .40f, .15f, .25f, .35f),
@@ -79,6 +83,7 @@ object Stoop {
         Dsp.scrambleNear(settled(voice, if (near is StoopPatch && near.voice == voice) near.macros else emptyMap()), temperature, random)
             .toMutableMap().also { it["HOLD"] = it.getValue("HOLD").coerceAtMost(.95f) }
 
+    data class FilterVoicing(val rootHz: Double, val cutoffBaseHz: Double)
     data class ShadowEvent(val frame: Int, val midi: Int, val articulation: Float, val durationFrames: Int)
     /** Components are pre-WEAR but output-rate/DC-conditioned, for clean causal comparisons. */
     data class Probe(
@@ -95,6 +100,7 @@ object Stoop {
         /** Continuous conditioned component histories, before the shared WEAR stage. */
         val previousMain: FloatArray = FloatArray(0),
         val previousShadow: FloatArray = FloatArray(0),
+        val filterVoicings: List<FilterVoicing> = emptyList(),
     ) {
         val actualShadowEvents get() = events
     }
@@ -108,7 +114,7 @@ object Stoop {
     private data class Rendered(val samples: FloatArray, val main: FloatArray, val shadow: FloatArray,
         val events: List<ShadowEvent>, val previous: FloatArray, val seam: Double,
         val frequencies: List<Double>, val adjustment: Double, val warm: Int,
-        val previousMain: FloatArray, val previousShadow: FloatArray)
+        val previousMain: FloatArray, val previousShadow: FloatArray, val filterVoicings: List<FilterVoicing>)
 
     private fun duration(voice: StoopVoice, length: Float, hold: Float): Double {
         val short = when (voice) {
@@ -134,7 +140,7 @@ object Stoop {
     private fun tones(p: StoopPatch, shadow: Boolean): List<Tone> {
         val intervals = if (p.voice == StoopVoice.CHORD && !shadow) p.chordIntervals else listOf(0)
         val baseMidi = p.midi + if (shadow) p.shadowInterval else 0
-        val seed = Dsp.seedFor("STOOP", MODEL_VERSION, p.voice, p.midi, p.source, if (shadow) 1 else 0)
+        val seed = Dsp.seedFor("STOOP", PHASE_SEED_VERSION, p.voice, p.midi, p.source, if (shadow) 1 else 0)
         val phases = Dsp.phases(intervals.size, seed)
         return intervals.mapIndexed { n, interval ->
             val hz = 440.0 * 2.0.pow((baseMidi + interval - 69) / 12.0)
@@ -244,7 +250,7 @@ object Stoop {
      * gesture computes it once per tone with the oscillator's own expression; index h is harmonic h.
      */
     private fun organAmplitudes(t: Tone, touch: Double, color: Double, source: StoopSource, held: Boolean,
-        velocity: Double): DoubleArray {
+        velocity: Double, length: Double, model: Int): DoubleArray {
         val count = min(12, floor(SOURCE_CEILING / t.hz).toInt()).coerceAtLeast(1)
         val shape = source.shape.toDouble()
         val tilt = source.harmonicTilt.toDouble()
@@ -254,13 +260,71 @@ object Stoop {
         for (h in 2..count) {
             val registration = if (h % 2 == 0) .22 + .60 * shape else .60 - .25 * shape
             val contactRegistration = 1.0 + heldContact * .34 * touch * (h - 1) / count
-            amplitudes[h] = registration * contactRegistration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
+            val legacy = registration * contactRegistration * (.16 + .84 * bright) / h.toDouble().pow(.6 + 1.2 * (1.0 - tilt))
+            amplitudes[h] = if (held && model >= 2) legacy * (.62 + .55 * length) else legacy
         }
         return amplitudes
     }
+    private data class ClavRegistration(val picks: DoubleArray, val divisors: DoubleArray,
+        val level: Double, val heldAmplitudes: DoubleArray?, val bodyAtJoin: DoubleArray, val bodyTau: Double)
+
+    /**
+     * The pick geometry and harmonic slope are constant through a gesture. A
+     * held clav also has constant losses, so no sin/pow/exp remains in its
+     * partial-weight loop. The legacy products retain their original order.
+     */
+    private fun clavRegistration(t: Tone, touch: Double, color: Double, source: StoopSource,
+        length: Double, held: Boolean, velocity: Double): ClavRegistration {
+        val count = min(12, floor(SOURCE_CEILING / t.hz).toInt()).coerceAtLeast(1)
+        val shape = source.shape.toDouble()
+        val tilt = source.harmonicTilt.toDouble()
+        val bright = (.16 + .72 * color) * (.58 + .42 * velocity)
+        val level = .22 + .66 * bright + .20 * touch
+        val picks = DoubleArray(count + 1)
+        val divisors = DoubleArray(count + 1)
+        val amplitudes = if (held) DoubleArray(count + 1) else null
+        val bodyAtJoin = DoubleArray(count + 1)
+        for (h in 2..count) {
+            picks[h] = abs(sin(PI * h * (.12 + .28 * shape)))
+            divisors[h] = h.toDouble().pow(.65 + .8 * (1.0 - tilt))
+            if (amplitudes != null) {
+                val damping = exp(-h * (.10 + .23 * (1.0 - length)))
+                amplitudes[h] = level * picks[h] * damping / divisors[h]
+            } else if (h in 2..5) {
+                bodyAtJoin[h] = .15 * exp(-CLAV_BODY_JOIN_SECONDS / (.18 + .70 * length)) +
+                    .85 * exp(-h * CLAV_BODY_JOIN_SECONDS / (.025 + .26 * length))
+            }
+        }
+        return ClavRegistration(picks, divisors, level, amplitudes, bodyAtJoin, .24 + .18 * length)
+    }
+
+    private data class HarmonicProjection(val sine: Double, val cosine: Double)
+
+    /** The quadratic BLEP is a triangular smoothing kernel with sinc-squared partial gain. */
+    private fun harmonicProjection(t: Tone, voice: StoopVoice, source: StoopSource): HarmonicProjection {
+        val dt = (t.hz / INTERNAL_RATE).coerceAtMost(.25)
+        val sinc = sin(PI * dt) / (PI * dt)
+        val gain = 2.0 * sinc * sinc / PI
+        val shape = source.shape.toDouble()
+        val duty = if (voice == StoopVoice.BASS) .23 + .32 * shape else .20 + .35 * shape
+        return HarmonicProjection(
+            gain * (-(1.0 - shape) + shape * (1.0 - cos(TAU * duty))),
+            gain * shape * sin(TAU * duty),
+        )
+    }
+
+    private fun heldUpperSpectrum(harmonic: Double, fundamental: Double, phase: Double,
+        scale: Double, projection: HarmonicProjection?): Double {
+        if (projection == null) return harmonic
+        // The saw's fundamental can oppose the separate sine anchor. Scale
+        // only the remaining partials, so LENGTH cannot cross a root null.
+        val upper = harmonic - projection.sine * fundamental - projection.cosine * cos(phase)
+        return harmonic + (scale - 1.0) * upper
+    }
+
     private fun oscillator(voice: StoopVoice, t: Tone, age: Double, warpedAge: Double,
         touch: Double, color: Double, source: StoopSource, length: Double, held: Boolean, velocity: Double,
-        organ: DoubleArray?): Double {
+        model: Int, organ: DoubleArray?, clav: ClavRegistration?, projection: HarmonicProjection?): Double {
         if (t.hz >= SOURCE_CEILING) return 0.0
         val p = (warpedAge * t.hz + t.phase) % 1.0
         val phase = TAU * p
@@ -275,18 +339,26 @@ object Stoop {
         // source spectrum so TOUCH and the companion's own articulation
         // remain useful after settling, without repeating an attack.
         val heldContact = if (held) 1.0 else 0.0
+        val heldLengthSpectrum = if (held && model >= 2) .62 + .55 * length else 1.0
         val bright = (.16 + .72 * color) * (.58 + .42 * velocity)
         val twin = if (source.detuneCents != 0f && voice != StoopVoice.CLAV && t.twin < SOURCE_CEILING)
             .14 * sin(TAU * ((warpedAge * t.twin + t.phase + .19) % 1.0)) else 0.0
         val body = when (voice) {
             StoopVoice.BASS -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .23 + .32 * shape)
-                .64 * fundamental + (.26 + .40 * bright + .14 * tilt + .16 * touch * (transient + .75 * heldContact)) * harmonic
+                .64 * fundamental + (.26 + .40 * bright + .14 * tilt + .16 * touch * (transient + .75 * heldContact)) *
+                    heldUpperSpectrum(harmonic, fundamental, phase, heldLengthSpectrum, projection)
             }
             StoopVoice.TINE -> {
                 // Carson-style sideband bound; high-note index retreats before the decimator.
                 val bandwidthIndex = ((SOURCE_CEILING - t.hz) / t.mod - 1.0).coerceAtLeast(0.0)
-                val index = (source.fmIndex * (.24 + 1.35 * bright + .75 * touch * (transient + .55 * heldContact)) *
+                val index = if (held && model >= 2) {
+                    // Apply loss after the safe index bound: LENGTH stays active
+                    // when a bright source has reached that bound.
+                    val contact = (source.fmIndex * (.24 + 1.35 * bright + .75 * touch * (transient + .55 * heldContact)))
+                        .coerceAtMost(min(3.0, bandwidthIndex))
+                    contact * (.55 + .45 * length)
+                } else (source.fmIndex * (.24 + 1.35 * bright + .75 * touch * (transient + .55 * heldContact)) *
                     (if (held) .55 + .45 * length else 1.0)).coerceAtMost(min(3.0, bandwidthIndex))
                 val mod = sin(TAU * ((warpedAge * t.mod + .07) % 1.0))
                 .64 * fundamental + .38 * sin(phase + index * mod) +
@@ -305,10 +377,16 @@ object Stoop {
                     hc = hc * c - hs * s
                     hs = nextS
                     val amplitude = if (voice == StoopVoice.CLAV) {
-                        val pick = abs(sin(PI * h * (.12 + .28 * shape)))
-                        val damping = if (held) exp(-h * (.10 + .23 * (1.0 - length)))
-                            else .15 * exp(-age / (.18 + .70 * length)) + .85 * exp(-h * age / (.025 + .26 * length))
-                        (.22 + .66 * bright + .20 * touch) * pick * damping / h.toDouble().pow(.65 + .8 * (1.0 - tilt))
+                        if (held) clav!!.heldAmplitudes!![h] else {
+                            val damping = if (model >= 2 && h in 2..5 && age > CLAV_BODY_JOIN_SECONDS) {
+                                // Preserve the pick's first 25 ms, then retain
+                                // selected low harmonics with a slower loss.
+                                // Matching the existing level at the join keeps
+                                // this a monotonic decay, without a second push.
+                                clav!!.bodyAtJoin[h] * exp(-(age - CLAV_BODY_JOIN_SECONDS) / clav.bodyTau)
+                            } else .15 * exp(-age / (.18 + .70 * length)) + .85 * exp(-h * age / (.025 + .26 * length))
+                            clav!!.level * clav.picks[h] * damping / clav.divisors[h]
+                        }
                     } else organ!![h]
                     sum += amplitude * hs
                     weight += amplitude
@@ -319,7 +397,8 @@ object Stoop {
             }
             StoopVoice.LEAD, StoopVoice.CHORD -> {
                 val harmonic = (1.0 - shape) * saw(p, dt) + shape * pulse(p, dt, .20 + .35 * shape)
-                .53 * fundamental + (.34 + .35 * bright + .13 * touch * (transient + .90 * heldContact)) * harmonic
+                .53 * fundamental + (.34 + .35 * bright + .13 * touch * (transient + .90 * heldContact)) *
+                    heldUpperSpectrum(harmonic, fundamental, phase, heldLengthSpectrum, projection)
             }
         }
         return body + sub + twin
@@ -371,7 +450,11 @@ object Stoop {
         val m = settled(p.voice, p.macros)
         val held = isLoop(m.getValue("HOLD"))
         val allTones = tones(p, false) + if (m.getValue("SHADOW") > 0f) tones(p, true) else emptyList()
-        val plan = if (held) loopPlan(allTones, p.voice, p.source) else null
+        // The configured companion constrains model 2's clock even when muted.
+        // SHADOW then changes energy continuously instead of moving the main's
+        // fitted frequencies and sample duration at its zero endpoint.
+        val planTones = if (held && p.model >= 2) tones(p, false) + tones(p, true) else allTones
+        val plan = if (held) loopPlan(planTones, p.voice, p.source) else null
         val gs = gestures(p, m, plan)
         val length = m.getValue("LENGTH").toDouble()
         val wear = m.getValue("WEAR").toDouble()
@@ -386,20 +469,30 @@ object Stoop {
         val drift = (2.0.pow(2.3 * wear / 1200.0) - 1.0) / (TAU * wearHz)
         val seedPhase = Random(Dsp.seedFor("STOOP_WEAR", p.voice, p.midi, p.source)).nextDouble() * TAU
         fun warp(seconds: Double): Double = if (wear == 0.0) seconds else seconds + drift * sin(TAU * wearHz * seconds + seedPhase)
-        for (g in gs) {
+        val filterVoicings = gs.map { g ->
+            val baseHz = (if (p.model >= 2) g.tones.first { it.root } else g.tones.first()).hz
+            FilterVoicing(baseHz, ((2.2 + 25.0 * g.color.pow(1.5)) * baseHz.pow(.73) * 3.1)
+                .coerceIn(min(baseHz * 1.5, 11_000.0), 11_000.0))
+        }
+        for (gi in gs.indices) {
+            val g = gs[gi]
             if (g.gain == 0.0) continue
             val dest = if (g.shadow) shadow else main
             val filter = Dsp.TptSvf(INTERNAL_RATE)
             val startFrame = (g.start * INTERNAL_RATE).roundToInt()
             val end = if (held) dest.size else min(dest.size, ceil((g.start + g.duration + g.release) * INTERNAL_RATE).toInt())
-            val baseHz = g.tones.first().hz
-            val cutoffBase = ((2.2 + 25.0 * g.color.pow(1.5)) * baseHz.pow(.73) * 3.1)
-                .coerceIn(min(baseHz * 1.5, 11_000.0), 11_000.0)
+            val baseHz = filterVoicings[gi].rootHz
+            val cutoffBase = filterVoicings[gi].cutoffBaseHz
             var cutoff = cutoffBase
             var transient = 0.0
             val organ = if (p.voice == StoopVoice.ORGAN) Array(g.tones.size) { n ->
-                organAmplitudes(g.tones[n], g.touch, g.color, p.source, held, p.velocity.toDouble())
+                organAmplitudes(g.tones[n], g.touch, g.color, p.source, held, p.velocity.toDouble(), length, p.model)
             } else null
+            val clav = if (p.voice == StoopVoice.CLAV) Array(g.tones.size) { n ->
+                clavRegistration(g.tones[n], g.touch, g.color, p.source, length, held, p.velocity.toDouble())
+            } else null
+            val projection = if (held && p.model >= 2 && p.voice in listOf(StoopVoice.BASS, StoopVoice.LEAD, StoopVoice.CHORD))
+                Array(g.tones.size) { n -> harmonicProjection(g.tones[n], p.voice, p.source) } else null
             for (i in startFrame until end) {
                 if ((i - startFrame) % 8192 == 0) stopIfUnwanted()
                 val seconds = i.toDouble() / INTERNAL_RATE
@@ -418,7 +511,7 @@ object Stoop {
                     val tone = g.tones[n]
                     value += (if (g.tones.size > 1 && !tone.root) .76 else 1.0) *
                         oscillator(p.voice, tone, age, warped, g.touch, g.color,
-                            p.source, length, held, p.velocity.toDouble(), organ?.get(n))
+                            p.source, length, held, p.velocity.toDouble(), p.model, organ?.get(n), clav?.get(n), projection?.get(n))
                 }
                 // Root keeps more weight in a chord, and each note retains its own source state.
                 value /= sqrt(g.tones.size.toDouble())
@@ -451,7 +544,7 @@ object Stoop {
         return Rendered(samples, if (components) mainOut.copyOfRange(warm, warm + kept) else mainOut,
             if (shadowOut.isNotEmpty()) shadowOut.copyOfRange(warm, warm + kept) else FloatArray(kept),
             events, previous, seam, allTones.flatMap { t -> listOf(fitted(t, plan).hz, fitted(t, plan).mod, fitted(t, plan).twin) },
-            plan?.adjustment ?: 0.0, warm, previousMain, previousShadow)
+            plan?.adjustment ?: 0.0, warm, previousMain, previousShadow, filterVoicings)
     }
 
     fun render(voice: StoopVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Snip =
@@ -477,6 +570,6 @@ object Stoop {
             for (i in r.previousShadow.indices) r.previousShadow[i] *= gain
             for (i in r.main.indices) { r.main[i] *= gain; r.shadow[i] *= gain }
         }
-        return Probe(r.samples, r.main, r.shadow, r.events, r.previous, r.seam, r.frequencies, r.adjustment, r.warm, r.previousMain, r.previousShadow)
+        return Probe(r.samples, r.main, r.shadow, r.events, r.previous, r.seam, r.frequencies, r.adjustment, r.warm, r.previousMain, r.previousShadow, r.filterVoicings)
     }
 }
