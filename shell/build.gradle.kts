@@ -36,6 +36,15 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Measured 2026-10-24 on the default at 9c10bab15: Gradle's default 512m test heap held
+    // 266 to 298 MB live after full GCs, almost all of it rendered audio that the pad-maker
+    // tests memoise in companion `by lazy` fields (CreasePadMakerTest's touch notes alone
+    // are 34.5 MB), and SnipStoreTest's three-minute import then could not find room for
+    // its 32 MB buffer. The memos are deliberate (one render per class, not per test), so
+    // the live set grows with every engine (10 to 35 MB each). With 1g the whole suite
+    // passed at a 475 MB peak live set; 1536m is that peak with room for the next
+    // dozen engines, set here rather than discovered when one tips it over.
+    maxHeapSize = "1536m"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
