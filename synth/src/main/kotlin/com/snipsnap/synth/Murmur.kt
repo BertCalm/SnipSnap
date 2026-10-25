@@ -61,10 +61,10 @@ data class MurmurConfig(
     val sustain: Double,
     val release: Double,
     val targets: List<MurmurFormantTarget>,
-    val model: Int = 2,
+    val model: Int = 3,
 ) {
     init {
-        require(model in 1..2) { "unsupported Murmur model $model" }
+        require(model in 1..3) { "unsupported Murmur model $model" }
         require(ratios.size == 4 && ratios.all { it.isFinite() && it in .5..8.0 }) { "Murmur needs four bounded operator ratios" }
         require(ratios[0] == 1.0) { "Murmur's principal carrier must bear the requested root" }
         require(direction == -1 || direction == 1) { "Murmur trajectory direction must be -1 or +1" }
@@ -168,11 +168,17 @@ object Murmur {
      * Model 1 is the published shared-source instrument. Model 2 gives each musical role its
      * own source, sustained index, carrier balance and original spectral voicing. The patch
      * still owns its actual ratios, targets and envelope: profiles never replace saved edits.
+     * Model 3 retains those sources, promotes the owner-preferred stronger KEY targets, and
+     * gives low CHOIR HOLD notes the approved beat-period plan. Earlier definitions stay exact.
      */
-    fun configurationFor(voice: MurmurVoice, model: Int = 2): MurmurConfig {
-        require(model in 1..2) { "unsupported Murmur model $model" }
+    fun configurationFor(voice: MurmurVoice, model: Int = 3): MurmurConfig {
+        require(model in 1..3) { "unsupported Murmur model $model" }
         if (model == 1) return legacyConfigurationFor(voice)
-        val targets = voicedTargets(voice)
+        val targets = voicedTargets(voice).let { targets ->
+            if (model >= 3 && voice == MurmurVoice.KEY) targets.map { target ->
+                target.copy(gains = target.gains.map { (it * 3.0).coerceAtMost(3.0) })
+            } else targets
+        }
         return when (voice) {
             MurmurVoice.BASS -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 1.0, 2.0, 3.0), MurmurTrajectory.ATTACK, 1, .52, .008, .24, .60, .50, targets)
             MurmurVoice.KEY -> MurmurConfig(MurmurRouting.PAIRS, listOf(1.0, 2.0, 3.0, 5.0), MurmurTrajectory.ATTACK, -1, .52, .005, .70, .24, .90, targets)
@@ -180,7 +186,7 @@ object Murmur {
             MurmurVoice.LEAD -> MurmurConfig(MurmurRouting.STACK, listOf(1.0, 1.0, 2.0, 3.0), MurmurTrajectory.CYCLE, 1, 1.35, .018, .20, .88, .85, targets)
             MurmurVoice.CHOIR -> MurmurConfig(MurmurRouting.PARALLEL, listOf(1.0, 1.0, 2.0, 1.003), MurmurTrajectory.CYCLE, -1, 2.20, .24, .75, .92, 1.20, targets)
             MurmurVoice.METAL -> MurmurConfig(MurmurRouting.STACK, listOf(1.0, 2.0, 5.0, 7.0), MurmurTrajectory.ATTACK, -1, .72, .003, .95, .36, 1.00, targets)
-        }
+        }.copy(model = model)
     }
 
     private fun voicedTargets(voice: MurmurVoice): List<MurmurFormantTarget> {
@@ -372,6 +378,26 @@ object Murmur {
         return LoopPlan(bestFrames, tuned, bestCycles, DoubleArray(4) { (ratios[it] * bestCycles).roundToInt() / bestCycles.toDouble() })
     }
 
+    /**
+     * One complete cycle of the fourth operator's near-unison beating preserves the gentle
+     * detune that a short C2 loop rounds away. This is the owner-preferred C2/C3 policy;
+     * higher notes keep the established plan rather than shortening into sub-second loops.
+     * Custom ratios use this policy only when its complete period fits the render bounds.
+     */
+    private fun planBeatPeriod(hz: Double, ratios: List<Double>): LoopPlan? {
+        val delta = abs(ratios[3] - 1.0)
+        if (delta == 0.0) return null
+        val beatCycles = 1.0 / delta
+        val seconds = beatCycles / hz
+        // Bound the count before rounding, so a tiny custom detune cannot overflow an Int.
+        if (!seconds.isFinite() || seconds !in 1.8..MAX_SECONDS) return null
+        val cycles = ((beatCycles / 2.0).roundToInt() * 2).coerceAtLeast(2)
+        val frames = (cycles * RATE / hz / 16.0).roundToInt() * 16
+        if (frames / RATE.toDouble() !in 1.8..MAX_SECONDS) return null
+        return LoopPlan(frames, cycles * RATE / frames.toDouble(), cycles,
+            DoubleArray(4) { (ratios[it] * cycles).roundToInt() / cycles.toDouble() })
+    }
+
     private fun cleanVelocity(velocity: Float) = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
     private fun smooth(x: Double): Double { val t = x.coerceIn(0.0, 1.0); return t * t * (3.0 - 2.0 * t) }
 
@@ -396,7 +422,11 @@ object Murmur {
         val hz = Keys.midiHz(note).toDouble()
         val v = cleanVelocity(velocity)
         val held = isLoop(m.getValue("HOLD"))
-        val plan = if (held) planLoop(hz, c.ratios) else null
+        val plan = if (held) {
+            val beatPeriod = if (c.model >= 3 && voice == MurmurVoice.CHOIR && note in MIN_MIDI..48)
+                planBeatPeriod(hz, c.ratios) else null
+            beatPeriod ?: planLoop(hz, c.ratios)
+        } else null
         val effectiveAttack = c.attack * (.75 + m.getValue("BREATH") * .9 + (1.0 - v) * .4)
         val gate = max(shape(voice).gate + m.getValue("HOLD") * 1.4, effectiveAttack + c.decay + .05)
             .coerceAtMost(MAX_SECONDS - c.release)
@@ -488,7 +518,7 @@ object Murmur {
         plan: LoopPlan?, gate: Double, attack: Double, preroll: Int, keep: Int,
     ): FloatArray {
         val held = plan != null
-        val profile = if (config.model == 2) profileFor(voice) else null
+        val profile = if (config.model >= 2) profileFor(voice) else null
         val root = plan?.root ?: Keys.midiHz(midi).toDouble()
         val ratios = plan?.ratios ?: config.ratios.toDoubleArray()
         val upperOperator = ratios.indices.maxBy { ratios[it] }

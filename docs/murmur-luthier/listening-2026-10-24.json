@@ -1,0 +1,2123 @@
+{
+  "schemaVersion": 1,
+  "engine": "MURMUR",
+  "scope": "Experimental Luthier listening comparisons",
+  "exportedAt": "2026-10-24T18:18:15.106Z",
+  "manifest": {
+    "schemaVersion": 1,
+    "title": "Murmur · Luthier comparisons",
+    "sourceRevision": "7b17c3441cd927bc254af0b2baa4ec3425a78234",
+    "sourceTreeDirty": false,
+    "sourceSha256": "7da9f39cd32f6a98dc615f410acc854d8391354c7aa219c733ea46a941ee5205",
+    "generatorSha256": "63d1c9d225b9053d2db0bbf9b82149d9758712134d2b5de171154d7c7d54358b",
+    "clipCount": 12,
+    "wavCount": 24,
+    "sampleRate": 44100,
+    "channels": 1,
+    "bitDepth": 24,
+    "internalOversampling": 4,
+    "listeningTarget": 0.029999999329447746,
+    "acceptance": "Experimental comparisons awaiting owner listening. Approved model-1/model-2 voices and the factory bank remain unchanged.",
+    "keyCandidate": "Ordinary model-2 custom targets: each existing target gain multiplied by 3, capped at the existing limit of 3. Centers, widths, sources, envelopes, macros and ratios are unchanged. This is a conservative contour candidate, not a complete fix for weak KEY motion.",
+    "choirCandidate": "Longer test-only loop plan retains requested near-unison beating more closely. It also changes repeated-noise period and whole-cycle formant motion quantization; this comparison does not isolate beating from all duration-dependent effects.",
+    "seamMetric": "Keys.seamError between two independently synthesized adjacent settled cycles; reflected finish verified bit-identical against current probe for both comparison notes.",
+    "timingNote": "Single JVM render excluding encoding and metrics. Cloud CPU/JIT timing, not phone latency. Long-loop render cost scales with duration.",
+    "hearing": "No listening claim. Measurements do not approve the candidate sound.",
+    "clips": [
+      {
+        "id": "key_motion_000_current",
+        "comparisonId": "key_motion_000",
+        "group": "key-motion",
+        "variant": "current",
+        "title": "KEY · MOTION 0.0 · approved",
+        "description": "Approved source and targets. MOTION 0 is the static control.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                0.81,
+                0.8800000000000001,
+                0.425,
+                0.27999999999999997,
+                0.11000000000000001
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                0.765,
+                0.9900000000000001,
+                0.51,
+                0.27999999999999997,
+                0.165
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                0.5850000000000001,
+                1.54,
+                1.105,
+                0.5599999999999999,
+                0.165
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                0.49500000000000005,
+                1.4850000000000003,
+                1.275,
+                0.42,
+                0.132
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_000_current.wav",
+        "matchedPath": "matched/key_motion_000_current.wav",
+        "recipePath": "recipes/key_motion_000_current.json",
+        "rawSha256": "cb7fc544eb43677f020ae2e56a1392e70db779b41d24c9717f60e68722bdb1b9",
+        "matchedSha256": "e02555955ef2e1f3b9d562b06b0e1dfb7aa786fece004fad1e13342b54056636",
+        "rawMetrics": {
+          "peak": 0.23945286870002747,
+          "rms": 0.03765037848611058,
+          "dc": -1.9225656743446396e-11,
+          "loudness": 0.10319959372282028
+        },
+        "matchedMetrics": {
+          "peak": 0.0696086660027504,
+          "rms": 0.010944920836246512,
+          "dc": -6.495294412446483e-12,
+          "loudness": 0.030000001192092896
+        },
+        "matchedGain": 0.2906988263130188,
+        "renderMilliseconds": 153.074066,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_000_candidate",
+        "comparisonId": "key_motion_000",
+        "group": "key-motion",
+        "variant": "candidate",
+        "title": "KEY · MOTION 0.0 · stronger formants",
+        "description": "Target gains ×3, capped at 3. Compare development after the strike at the same matched level.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                2.43,
+                2.6400000000000006,
+                1.275,
+                0.8399999999999999,
+                0.33000000000000007
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                2.295,
+                2.97,
+                1.53,
+                0.8399999999999999,
+                0.495
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                1.7550000000000003,
+                3,
+                3,
+                1.6799999999999997,
+                0.495
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                1.485,
+                3,
+                3,
+                1.26,
+                0.396
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_000_candidate.wav",
+        "matchedPath": "matched/key_motion_000_candidate.wav",
+        "recipePath": "recipes/key_motion_000_candidate.json",
+        "rawSha256": "2dd9a7bdb1f6b277e6612c8b14919531d7b34b825d54aac3ad93ee2eb8d39d3e",
+        "matchedSha256": "6c60f45be9fb3ae67dbaf269061897bdfc71be54bc6ffcf89202babcef86f88e",
+        "rawMetrics": {
+          "peak": 0.27043861150741577,
+          "rms": 0.0417168492492672,
+          "dc": -1.081798408157149e-11,
+          "loudness": 0.11537981033325195
+        },
+        "matchedMetrics": {
+          "peak": 0.07031696289777756,
+          "rms": 0.010846831707939595,
+          "dc": -3.761434616996185e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.26001080870628357,
+        "renderMilliseconds": 164.236973,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_050_current",
+        "comparisonId": "key_motion_050",
+        "group": "key-motion",
+        "variant": "current",
+        "title": "KEY · MOTION 0.5 · approved",
+        "description": "Approved source and targets. MOTION 0 is the static control.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0.5,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                0.81,
+                0.8800000000000001,
+                0.425,
+                0.27999999999999997,
+                0.11000000000000001
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                0.765,
+                0.9900000000000001,
+                0.51,
+                0.27999999999999997,
+                0.165
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                0.5850000000000001,
+                1.54,
+                1.105,
+                0.5599999999999999,
+                0.165
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                0.49500000000000005,
+                1.4850000000000003,
+                1.275,
+                0.42,
+                0.132
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_050_current.wav",
+        "matchedPath": "matched/key_motion_050_current.wav",
+        "recipePath": "recipes/key_motion_050_current.json",
+        "rawSha256": "b00dabfc67cd736069c6891620594d86b4f7ecde0f3a85b6466054c131f14c22",
+        "matchedSha256": "fbf8b247cd3973db177c06d2c55b5132bb7a81b7f34f6b48d7e20acdcc576ce8",
+        "rawMetrics": {
+          "peak": 0.23244608938694,
+          "rms": 0.03739760002727694,
+          "dc": -1.8805659333622494e-11,
+          "loudness": 0.10146632790565491
+        },
+        "matchedMetrics": {
+          "peak": 0.0687260776758194,
+          "rms": 0.011057145657971161,
+          "dc": -5.408191977935111e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.29566457867622375,
+        "renderMilliseconds": 446.386524,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_050_candidate",
+        "comparisonId": "key_motion_050",
+        "group": "key-motion",
+        "variant": "candidate",
+        "title": "KEY · MOTION 0.5 · stronger formants",
+        "description": "Target gains ×3, capped at 3. Compare development after the strike at the same matched level.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0.5,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                2.43,
+                2.6400000000000006,
+                1.275,
+                0.8399999999999999,
+                0.33000000000000007
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                2.295,
+                2.97,
+                1.53,
+                0.8399999999999999,
+                0.495
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                1.7550000000000003,
+                3,
+                3,
+                1.6799999999999997,
+                0.495
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                1.485,
+                3,
+                3,
+                1.26,
+                0.396
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_050_candidate.wav",
+        "matchedPath": "matched/key_motion_050_candidate.wav",
+        "recipePath": "recipes/key_motion_050_candidate.json",
+        "rawSha256": "1d53370aba8929b7fecec3afa3efa2fd3b9a2b1f0dd6c8d6019b4456c0a962dd",
+        "matchedSha256": "89c45f7bf1c7112b189e77911a443a9099fd12b98235bf8dccaa956f9cdf9545",
+        "rawMetrics": {
+          "peak": 0.24786652624607086,
+          "rms": 0.041035416197261865,
+          "dc": -1.5772249887787283e-11,
+          "loudness": 0.10948974639177322
+        },
+        "matchedMetrics": {
+          "peak": 0.06791500002145767,
+          "rms": 0.011243632656481345,
+          "dc": -3.3089066420817485e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.2739982604980469,
+        "renderMilliseconds": 98.937504,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_075_current",
+        "comparisonId": "key_motion_075",
+        "group": "key-motion",
+        "variant": "current",
+        "title": "KEY · MOTION 0.75 · approved",
+        "description": "Approved source and targets. MOTION 0 is the static control.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0.75,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                0.81,
+                0.8800000000000001,
+                0.425,
+                0.27999999999999997,
+                0.11000000000000001
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                0.765,
+                0.9900000000000001,
+                0.51,
+                0.27999999999999997,
+                0.165
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                0.5850000000000001,
+                1.54,
+                1.105,
+                0.5599999999999999,
+                0.165
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                0.49500000000000005,
+                1.4850000000000003,
+                1.275,
+                0.42,
+                0.132
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_075_current.wav",
+        "matchedPath": "matched/key_motion_075_current.wav",
+        "recipePath": "recipes/key_motion_075_current.json",
+        "rawSha256": "86e1e47ac843eafbf2fdeaef524ab51ea314539e37c6fed4a555dedb6af35c98",
+        "matchedSha256": "0fa7ec415d1340e581084994603a6eda169fd3d692251422b1a10977e5732af8",
+        "rawMetrics": {
+          "peak": 0.21823056042194366,
+          "rms": 0.03749054916967334,
+          "dc": -2.188223695280491e-11,
+          "loudness": 0.10167191922664642
+        },
+        "matchedMetrics": {
+          "peak": 0.0643925741314888,
+          "rms": 0.011062213156125865,
+          "dc": -5.602779052935151e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.2950667142868042,
+        "renderMilliseconds": 149.909084,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_075_candidate",
+        "comparisonId": "key_motion_075",
+        "group": "key-motion",
+        "variant": "candidate",
+        "title": "KEY · MOTION 0.75 · stronger formants",
+        "description": "Target gains ×3, capped at 3. Compare development after the strike at the same matched level.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 0.75,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                2.43,
+                2.6400000000000006,
+                1.275,
+                0.8399999999999999,
+                0.33000000000000007
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                2.295,
+                2.97,
+                1.53,
+                0.8399999999999999,
+                0.495
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                1.7550000000000003,
+                3,
+                3,
+                1.6799999999999997,
+                0.495
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                1.485,
+                3,
+                3,
+                1.26,
+                0.396
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_075_candidate.wav",
+        "matchedPath": "matched/key_motion_075_candidate.wav",
+        "recipePath": "recipes/key_motion_075_candidate.json",
+        "rawSha256": "6cf915ab706716b24852939692d55d58abc3f5dbd69db11137e28c83fcf46e69",
+        "matchedSha256": "569b35b1d995b96d5d8085f5c1b34270c5980604df50eaf16d4e04a3fff2685a",
+        "rawMetrics": {
+          "peak": 0.2588840425014496,
+          "rms": 0.041519902349332026,
+          "dc": -1.4487682525753368e-11,
+          "loudness": 0.11085467040538788
+        },
+        "matchedMetrics": {
+          "peak": 0.07006038725376129,
+          "rms": 0.011236306051100924,
+          "dc": -5.078398196331146e-12,
+          "loudness": 0.029999997466802597
+        },
+        "matchedGain": 0.270624577999115,
+        "renderMilliseconds": 99.973026,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_100_current",
+        "comparisonId": "key_motion_100",
+        "group": "key-motion",
+        "variant": "current",
+        "title": "KEY · MOTION 1.0 · approved",
+        "description": "Approved source and targets. MOTION 0 is the static control.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 1,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                0.81,
+                0.8800000000000001,
+                0.425,
+                0.27999999999999997,
+                0.11000000000000001
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                0.765,
+                0.9900000000000001,
+                0.51,
+                0.27999999999999997,
+                0.165
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                0.5850000000000001,
+                1.54,
+                1.105,
+                0.5599999999999999,
+                0.165
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                0.49500000000000005,
+                1.4850000000000003,
+                1.275,
+                0.42,
+                0.132
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_100_current.wav",
+        "matchedPath": "matched/key_motion_100_current.wav",
+        "recipePath": "recipes/key_motion_100_current.json",
+        "rawSha256": "a0431349113ef0e4ecab671a11f0e476285ec42880758a3f60412bbdacb428d0",
+        "matchedSha256": "0735089518b710abaf18305c7126ffd196269d45b82a8a19aa8285f652b09867",
+        "rawMetrics": {
+          "peak": 0.23610052466392517,
+          "rms": 0.03747187472707075,
+          "dc": -1.912830838605803e-11,
+          "loudness": 0.10110876709222794
+        },
+        "matchedMetrics": {
+          "peak": 0.07005342841148376,
+          "rms": 0.011118286070596416,
+          "dc": -5.309118176266279e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.29671016335487366,
+        "renderMilliseconds": 101.001129,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "key_motion_100_candidate",
+        "comparisonId": "key_motion_100",
+        "group": "key-motion",
+        "variant": "candidate",
+        "title": "KEY · MOTION 1.0 · stronger formants",
+        "description": "Target gains ×3, capped at 3. Compare development after the strike at the same matched level.",
+        "voice": "KEY",
+        "midi": 60,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.4000000059604645,
+          "EDGE": 0.4000000059604645,
+          "BREATH": 0.11999999731779099,
+          "MOTION": 1,
+          "BODY": 0.550000011920929,
+          "HOLD": 0
+        },
+        "config": {
+          "routing": "PAIRS",
+          "ratios": [
+            1,
+            2,
+            3,
+            5
+          ],
+          "trajectory": "ATTACK",
+          "direction": -1,
+          "referenceSeconds": 0.52,
+          "attack": 0.005,
+          "decay": 0.7,
+          "sustain": 0.24,
+          "release": 0.9,
+          "targets": [
+            {
+              "name": "key Closed hum",
+              "centers": [
+                364.5,
+                919.9999999999999,
+                1650.0000000000002,
+                2730,
+                3800
+              ],
+              "widths": [
+                85,
+                162,
+                221,
+                315,
+                500
+              ],
+              "gains": [
+                2.43,
+                2.6400000000000006,
+                1.275,
+                0.8399999999999999,
+                0.33000000000000007
+              ],
+              "sourceBalance": 0.05
+            },
+            {
+              "name": "key Rounded",
+              "centers": [
+                445.50000000000006,
+                862.4999999999999,
+                1540.0000000000002,
+                2467.5,
+                3500
+              ],
+              "widths": [
+                102,
+                144,
+                204,
+                315,
+                450
+              ],
+              "gains": [
+                2.295,
+                2.97,
+                1.53,
+                0.8399999999999999,
+                0.495
+              ],
+              "sourceBalance": 0.11
+            },
+            {
+              "name": "key Open",
+              "centers": [
+                1026,
+                1437.5,
+                2695,
+                3465,
+                4400
+              ],
+              "widths": [
+                161.5,
+                180,
+                255,
+                342,
+                520
+              ],
+              "gains": [
+                1.7550000000000003,
+                3,
+                3,
+                1.6799999999999997,
+                0.495
+              ],
+              "sourceBalance": 0.275
+            },
+            {
+              "name": "key Narrow",
+              "centers": [
+                486.00000000000006,
+                2357.5,
+                3135.0000000000005,
+                3990,
+                4800
+              ],
+              "widths": [
+                93.5,
+                207,
+                297.5,
+                378,
+                580
+              ],
+              "gains": [
+                1.485,
+                3,
+                3,
+                1.26,
+                0.396
+              ],
+              "sourceBalance": 0.15
+            }
+          ],
+          "model": 2
+        },
+        "loop": false,
+        "frames": 132300,
+        "durationSeconds": 3,
+        "rawPath": "raw/key_motion_100_candidate.wav",
+        "matchedPath": "matched/key_motion_100_candidate.wav",
+        "recipePath": "recipes/key_motion_100_candidate.json",
+        "rawSha256": "a8e2454f559a7d53684d238063c1990d2dc9c905bb2a44497bcad158c67394f7",
+        "matchedSha256": "3cfe9450e58f9aca9334ecc32d3da69a38c7835836c5fe40383cc4ec0cfd1d7b",
+        "rawMetrics": {
+          "peak": 0.2527776062488556,
+          "rms": 0.041409936926700086,
+          "dc": -1.3180058872266318e-11,
+          "loudness": 0.10836602747440338
+        },
+        "matchedMetrics": {
+          "peak": 0.06997883319854736,
+          "rms": 0.011463907247501908,
+          "dc": -3.240466883224021e-12,
+          "loudness": 0.030000001192092896
+        },
+        "matchedGain": 0.27683955430984497,
+        "renderMilliseconds": 99.971972,
+        "requestedHz": 261.62554931640625,
+        "renderedRootHz": 261.62554931640625,
+        "seamError": null,
+        "loopPlan": null,
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "choir_hold_c2_current",
+        "comparisonId": "choir_hold_c2",
+        "group": "choir-hold",
+        "variant": "current",
+        "title": "CHOIR · C2 · approved loop",
+        "description": "Approved short-loop policy rounds every operator to a whole cycle. At C2, operator 4 becomes unison.",
+        "voice": "CHOIR",
+        "midi": 36,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.44999998807907104,
+          "EDGE": 0.20000000298023224,
+          "BREATH": 0.30000001192092896,
+          "MOTION": 0.30000001192092896,
+          "BODY": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "config": {
+          "routing": "PARALLEL",
+          "ratios": [
+            1,
+            1,
+            2,
+            1.003
+          ],
+          "trajectory": "CYCLE",
+          "direction": -1,
+          "referenceSeconds": 2.2,
+          "attack": 0.24,
+          "decay": 0.75,
+          "sustain": 0.92,
+          "release": 1.2,
+          "targets": [
+            {
+              "name": "choir Closed hum",
+              "centers": [
+                256.5,
+                736,
+                1455,
+                2600,
+                3800
+              ],
+              "widths": [
+                180,
+                306,
+                416,
+                489.99999999999994,
+                650
+              ],
+              "gains": [
+                1.26,
+                0.68,
+                0.25,
+                0.16000000000000003,
+                0.06
+              ],
+              "sourceBalance": 0.355
+            },
+            {
+              "name": "choir Rounded",
+              "centers": [
+                313.5,
+                690,
+                1358,
+                2350,
+                3500
+              ],
+              "widths": [
+                216,
+                272,
+                384,
+                489.99999999999994,
+                585
+              ],
+              "gains": [
+                1.19,
+                0.765,
+                0.3,
+                0.16000000000000003,
+                0.09
+              ],
+              "sourceBalance": 0.421
+            },
+            {
+              "name": "choir Open",
+              "centers": [
+                722,
+                1150,
+                2376.5,
+                3300,
+                4400
+              ],
+              "widths": [
+                342,
+                340,
+                480,
+                532,
+                676
+              ],
+              "gains": [
+                0.9099999999999999,
+                1.19,
+                0.65,
+                0.32000000000000006,
+                0.09
+              ],
+              "sourceBalance": 0.6025
+            },
+            {
+              "name": "choir Narrow",
+              "centers": [
+                342,
+                1886,
+                2764.5,
+                3800,
+                4800
+              ],
+              "widths": [
+                198,
+                391,
+                560,
+                588,
+                754
+              ],
+              "gains": [
+                0.77,
+                1.1475,
+                0.75,
+                0.24,
+                0.072
+              ],
+              "sourceBalance": 0.46499999999999997
+            }
+          ],
+          "model": 2
+        },
+        "loop": true,
+        "frames": 86304,
+        "durationSeconds": 1.957006812095642,
+        "rawPath": "raw/choir_hold_c2_current.wav",
+        "matchedPath": "matched/choir_hold_c2_current.wav",
+        "recipePath": "recipes/choir_hold_c2_current.json",
+        "rawSha256": "d7e03af16d9f2d86970acb135a8811c07aa31a40b5d43e3ccf4d5c009e81e30f",
+        "matchedSha256": "3fe7661721667638c4da2c3f7a14c17c29485177e66f9b648876172097f49644",
+        "rawMetrics": {
+          "peak": 0.2269478738307953,
+          "rms": 0.10092686728297866,
+          "dc": -1.4841688624597915e-11,
+          "loudness": 0.06325958669185638
+        },
+        "matchedMetrics": {
+          "peak": 0.10762694478034973,
+          "rms": 0.04786319409571597,
+          "dc": 7.104623814648066e-13,
+          "loudness": 0.029999997466802597
+        },
+        "matchedGain": 0.4742363691329956,
+        "renderMilliseconds": 301.279562,
+        "requestedHz": 65.40638732910156,
+        "renderedRootHz": 65.40600667408232,
+        "seamError": 1.5395073558631916e-17,
+        "loopPlan": {
+          "rootCycles": 128,
+          "ratios": [
+            1,
+            1,
+            2,
+            1
+          ],
+          "requestedDetuneCents": 5.185927140112161,
+          "detuneCents": 0,
+          "requestedBeatHz": 0.1962191619872976,
+          "beatHz": 0,
+          "contourCycles": 1,
+          "rootErrorCents": -0.010075542692700421
+        },
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "choir_hold_c2_candidate",
+        "comparisonId": "choir_hold_c2",
+        "group": "choir-hold",
+        "variant": "candidate",
+        "title": "CHOIR · C2 · longer loop",
+        "description": "Experimental loop plan preserves the requested mild detune more closely. Repeat several wraps and compare the slow beating and moving mouth.",
+        "voice": "CHOIR",
+        "midi": 36,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.44999998807907104,
+          "EDGE": 0.20000000298023224,
+          "BREATH": 0.30000001192092896,
+          "MOTION": 0.30000001192092896,
+          "BODY": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "config": {
+          "routing": "PARALLEL",
+          "ratios": [
+            1,
+            1,
+            2,
+            1.003
+          ],
+          "trajectory": "CYCLE",
+          "direction": -1,
+          "referenceSeconds": 2.2,
+          "attack": 0.24,
+          "decay": 0.75,
+          "sustain": 0.92,
+          "release": 1.2,
+          "targets": [
+            {
+              "name": "choir Closed hum",
+              "centers": [
+                256.5,
+                736,
+                1455,
+                2600,
+                3800
+              ],
+              "widths": [
+                180,
+                306,
+                416,
+                489.99999999999994,
+                650
+              ],
+              "gains": [
+                1.26,
+                0.68,
+                0.25,
+                0.16000000000000003,
+                0.06
+              ],
+              "sourceBalance": 0.355
+            },
+            {
+              "name": "choir Rounded",
+              "centers": [
+                313.5,
+                690,
+                1358,
+                2350,
+                3500
+              ],
+              "widths": [
+                216,
+                272,
+                384,
+                489.99999999999994,
+                585
+              ],
+              "gains": [
+                1.19,
+                0.765,
+                0.3,
+                0.16000000000000003,
+                0.09
+              ],
+              "sourceBalance": 0.421
+            },
+            {
+              "name": "choir Open",
+              "centers": [
+                722,
+                1150,
+                2376.5,
+                3300,
+                4400
+              ],
+              "widths": [
+                342,
+                340,
+                480,
+                532,
+                676
+              ],
+              "gains": [
+                0.9099999999999999,
+                1.19,
+                0.65,
+                0.32000000000000006,
+                0.09
+              ],
+              "sourceBalance": 0.6025
+            },
+            {
+              "name": "choir Narrow",
+              "centers": [
+                342,
+                1886,
+                2764.5,
+                3800,
+                4800
+              ],
+              "widths": [
+                198,
+                391,
+                560,
+                588,
+                754
+              ],
+              "gains": [
+                0.77,
+                1.1475,
+                0.75,
+                0.24,
+                0.072
+              ],
+              "sourceBalance": 0.46499999999999997
+            }
+          ],
+          "model": 2
+        },
+        "loop": true,
+        "frames": 225200,
+        "durationSeconds": 5.106575965881348,
+        "rawPath": "raw/choir_hold_c2_candidate.wav",
+        "matchedPath": "matched/choir_hold_c2_candidate.wav",
+        "recipePath": "recipes/choir_hold_c2_candidate.json",
+        "rawSha256": "737cde38826cab81b5b5cdff9e1f72ec757c9a591888433e0a985353603797c7",
+        "matchedSha256": "311c1aad3a5c5827710be209bc330ce840cf5ab39bdacf7410f73435084e7e06",
+        "rawMetrics": {
+          "peak": 0.22076833248138428,
+          "rms": 0.08410243243276827,
+          "dc": -5.3585526148542206e-12,
+          "loudness": 0.06302149593830109
+        },
+        "matchedMetrics": {
+          "peak": 0.10509192198514938,
+          "rms": 0.04003511732218544,
+          "dc": -6.057909413890361e-13,
+          "loudness": 0.030000001192092896
+        },
+        "matchedGain": 0.47602808475494385,
+        "renderMilliseconds": 647.347911,
+        "requestedHz": 65.40638732910156,
+        "renderedRootHz": 65.40586145648312,
+        "seamError": 3.9082790863088985e-18,
+        "loopPlan": {
+          "rootCycles": 334,
+          "ratios": [
+            1,
+            1,
+            2,
+            1.0029940119760479
+          ],
+          "requestedDetuneCents": 5.185927140112161,
+          "detuneCents": 5.175591445299013,
+          "requestedBeatHz": 0.1962191619872976,
+          "beatHz": 0.1958259325044384,
+          "contourCycles": 3,
+          "rootErrorCents": -0.013919317051359676
+        },
+        "experimentalLoopPolicy": {
+          "name": "choir-beat-period-v1",
+          "productionRecipe": false,
+          "rootCycles": 334,
+          "frames": 225200,
+          "rule": "Nearest even root-cycle count to one cycle of requested operator-4 beating; nearest 16 output frames. Other operators use nearest whole cycles.",
+          "reproduction": "MurmurLuthierAuditionGenerator.renderWithPlan using this basePatch and recorded loop plan; basePatch.render alone retains the approved short loop."
+        },
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "choir_hold_c3_current",
+        "comparisonId": "choir_hold_c3",
+        "group": "choir-hold",
+        "variant": "current",
+        "title": "CHOIR · C3 · approved loop",
+        "description": "Approved short-loop policy rounds every operator to a whole cycle. At C2, operator 4 becomes unison.",
+        "voice": "CHOIR",
+        "midi": 48,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.44999998807907104,
+          "EDGE": 0.20000000298023224,
+          "BREATH": 0.30000001192092896,
+          "MOTION": 0.30000001192092896,
+          "BODY": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "config": {
+          "routing": "PARALLEL",
+          "ratios": [
+            1,
+            1,
+            2,
+            1.003
+          ],
+          "trajectory": "CYCLE",
+          "direction": -1,
+          "referenceSeconds": 2.2,
+          "attack": 0.24,
+          "decay": 0.75,
+          "sustain": 0.92,
+          "release": 1.2,
+          "targets": [
+            {
+              "name": "choir Closed hum",
+              "centers": [
+                256.5,
+                736,
+                1455,
+                2600,
+                3800
+              ],
+              "widths": [
+                180,
+                306,
+                416,
+                489.99999999999994,
+                650
+              ],
+              "gains": [
+                1.26,
+                0.68,
+                0.25,
+                0.16000000000000003,
+                0.06
+              ],
+              "sourceBalance": 0.355
+            },
+            {
+              "name": "choir Rounded",
+              "centers": [
+                313.5,
+                690,
+                1358,
+                2350,
+                3500
+              ],
+              "widths": [
+                216,
+                272,
+                384,
+                489.99999999999994,
+                585
+              ],
+              "gains": [
+                1.19,
+                0.765,
+                0.3,
+                0.16000000000000003,
+                0.09
+              ],
+              "sourceBalance": 0.421
+            },
+            {
+              "name": "choir Open",
+              "centers": [
+                722,
+                1150,
+                2376.5,
+                3300,
+                4400
+              ],
+              "widths": [
+                342,
+                340,
+                480,
+                532,
+                676
+              ],
+              "gains": [
+                0.9099999999999999,
+                1.19,
+                0.65,
+                0.32000000000000006,
+                0.09
+              ],
+              "sourceBalance": 0.6025
+            },
+            {
+              "name": "choir Narrow",
+              "centers": [
+                342,
+                1886,
+                2764.5,
+                3800,
+                4800
+              ],
+              "widths": [
+                198,
+                391,
+                560,
+                588,
+                754
+              ],
+              "gains": [
+                0.77,
+                1.1475,
+                0.75,
+                0.24,
+                0.072
+              ],
+              "sourceBalance": 0.46499999999999997
+            }
+          ],
+          "model": 2
+        },
+        "loop": true,
+        "frames": 81584,
+        "durationSeconds": 1.8499773740768433,
+        "rawPath": "raw/choir_hold_c3_current.wav",
+        "matchedPath": "matched/choir_hold_c3_current.wav",
+        "recipePath": "recipes/choir_hold_c3_current.json",
+        "rawSha256": "135758134a1942e1d9ef39b78743a59930c00b5fb163603f88030745974f95bd",
+        "matchedSha256": "a5a5b47c6c0b9a02476374e819e65d72a4aca4c01e8f4d0a287b0f1a960cbcb8",
+        "rawMetrics": {
+          "peak": 0.22663037478923798,
+          "rms": 0.08768396671472366,
+          "dc": 1.4219979315778111e-11,
+          "loudness": 0.08648958802223206
+        },
+        "matchedMetrics": {
+          "peak": 0.07860959321260452,
+          "rms": 0.030414284685979055,
+          "dc": 3.6303278267216584e-12,
+          "loudness": 0.030000001192092896
+        },
+        "matchedGain": 0.3468625843524933,
+        "renderMilliseconds": 231.82439,
+        "requestedHz": 130.81277465820312,
+        "renderedRootHz": 130.8124141988625,
+        "seamError": 0,
+        "loopPlan": {
+          "rootCycles": 242,
+          "ratios": [
+            1,
+            1,
+            2,
+            1.0041322314049588
+          ],
+          "requestedDetuneCents": 5.185927140112161,
+          "detuneCents": 7.139119597423841,
+          "requestedBeatHz": 0.3924383239745952,
+          "beatHz": 0.5405471661110148,
+          "contourCycles": 1,
+          "rootErrorCents": -0.00477048472661222
+        },
+        "experimentalLoopPolicy": null,
+        "deterministicFloatPcm": true
+      },
+      {
+        "id": "choir_hold_c3_candidate",
+        "comparisonId": "choir_hold_c3",
+        "group": "choir-hold",
+        "variant": "candidate",
+        "title": "CHOIR · C3 · longer loop",
+        "description": "Experimental loop plan preserves the requested mild detune more closely. Repeat several wraps and compare the slow beating and moving mouth.",
+        "voice": "CHOIR",
+        "midi": 48,
+        "velocity": 1,
+        "model": 2,
+        "macros": {
+          "MOUTH": 0.44999998807907104,
+          "EDGE": 0.20000000298023224,
+          "BREATH": 0.30000001192092896,
+          "MOTION": 0.30000001192092896,
+          "BODY": 0.6499999761581421,
+          "HOLD": 1
+        },
+        "config": {
+          "routing": "PARALLEL",
+          "ratios": [
+            1,
+            1,
+            2,
+            1.003
+          ],
+          "trajectory": "CYCLE",
+          "direction": -1,
+          "referenceSeconds": 2.2,
+          "attack": 0.24,
+          "decay": 0.75,
+          "sustain": 0.92,
+          "release": 1.2,
+          "targets": [
+            {
+              "name": "choir Closed hum",
+              "centers": [
+                256.5,
+                736,
+                1455,
+                2600,
+                3800
+              ],
+              "widths": [
+                180,
+                306,
+                416,
+                489.99999999999994,
+                650
+              ],
+              "gains": [
+                1.26,
+                0.68,
+                0.25,
+                0.16000000000000003,
+                0.06
+              ],
+              "sourceBalance": 0.355
+            },
+            {
+              "name": "choir Rounded",
+              "centers": [
+                313.5,
+                690,
+                1358,
+                2350,
+                3500
+              ],
+              "widths": [
+                216,
+                272,
+                384,
+                489.99999999999994,
+                585
+              ],
+              "gains": [
+                1.19,
+                0.765,
+                0.3,
+                0.16000000000000003,
+                0.09
+              ],
+              "sourceBalance": 0.421
+            },
+            {
+              "name": "choir Open",
+              "centers": [
+                722,
+                1150,
+                2376.5,
+                3300,
+                4400
+              ],
+              "widths": [
+                342,
+                340,
+                480,
+                532,
+                676
+              ],
+              "gains": [
+                0.9099999999999999,
+                1.19,
+                0.65,
+                0.32000000000000006,
+                0.09
+              ],
+              "sourceBalance": 0.6025
+            },
+            {
+              "name": "choir Narrow",
+              "centers": [
+                342,
+                1886,
+                2764.5,
+                3800,
+                4800
+              ],
+              "widths": [
+                198,
+                391,
+                560,
+                588,
+                754
+              ],
+              "gains": [
+                0.77,
+                1.1475,
+                0.75,
+                0.24,
+                0.072
+              ],
+              "sourceBalance": 0.46499999999999997
+            }
+          ],
+          "model": 2
+        },
+        "loop": true,
+        "frames": 112592,
+        "durationSeconds": 2.5531065464019775,
+        "rawPath": "raw/choir_hold_c3_candidate.wav",
+        "matchedPath": "matched/choir_hold_c3_candidate.wav",
+        "recipePath": "recipes/choir_hold_c3_candidate.json",
+        "rawSha256": "4c814db899f7cc6851d0603b1df49527b7a578cefbc626b8f6e3838586668ad1",
+        "matchedSha256": "284a74f9b3361cbf7f60c4b67771e1c1af26ee2ee558bdc21d01b6587e54b676",
+        "rawMetrics": {
+          "peak": 0.23245874047279358,
+          "rms": 0.08915354038345706,
+          "dc": -8.900825571039854e-12,
+          "loudness": 0.08809687197208405
+        },
+        "matchedMetrics": {
+          "peak": 0.07916015386581421,
+          "rms": 0.030359830463562693,
+          "dc": -6.516555346746908e-12,
+          "loudness": 0.029999999329447746
+        },
+        "matchedGain": 0.3405342102050781,
+        "renderMilliseconds": 319.487889,
+        "requestedHz": 130.81277465820312,
+        "renderedRootHz": 130.82101747903937,
+        "seamError": 8.356489038369242e-20,
+        "loopPlan": {
+          "rootCycles": 334,
+          "ratios": [
+            1,
+            1,
+            2,
+            1.0029940119760479
+          ],
+          "requestedDetuneCents": 5.185927140112161,
+          "detuneCents": 5.175591445299013,
+          "requestedBeatHz": 0.3924383239745952,
+          "beatHz": 0.3916796930510119,
+          "contourCycles": 2,
+          "rootErrorCents": 0.10908569554582002
+        },
+        "experimentalLoopPolicy": {
+          "name": "choir-beat-period-v1",
+          "productionRecipe": false,
+          "rootCycles": 334,
+          "frames": 112592,
+          "rule": "Nearest even root-cycle count to one cycle of requested operator-4 beating; nearest 16 output frames. Other operators use nearest whole cycles.",
+          "reproduction": "MurmurLuthierAuditionGenerator.renderWithPlan using this basePatch and recorded loop plan; basePatch.render alone retains the approved short loop."
+        },
+        "deterministicFloatPcm": true
+      }
+    ]
+  },
+  "notes": {
+    "choir_hold_c3": {
+      "verdict": "candidate"
+    },
+    "choir_hold_c2": {
+      "verdict": "candidate"
+    },
+    "key_motion_100": {
+      "verdict": "candidate"
+    },
+    "key_motion_075": {
+      "verdict": "candidate"
+    },
+    "key_motion_050": {
+      "verdict": "candidate"
+    },
+    "key_motion_000": {
+      "verdict": "candidate"
+    }
+  }
+}
