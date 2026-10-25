@@ -38,6 +38,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -102,7 +103,10 @@ fun KeysScreen(
         MidiKeys(object : MidiKeys.Voice {
             override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
             override fun noteOff(note: Int) = player.noteOff(note)
-            override fun allOff() = player.allOff()
+            // Every local silence is mirrored on the wire (the one funnel for
+            // midiKeys.allOff()): a local silence that is not mirrored leaves a
+            // receiver holding a note whose off will name a different key.
+            override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
         })
     }
     fun silence() = midiKeys.allOff()
@@ -166,6 +170,8 @@ fun KeysScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen with a key down: its release never comes.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -215,8 +221,10 @@ fun KeysScreen(
                         KeyPad(
                             label = note?.let { KeysLayout.label(it) } ?: "—",
                             enabled = covered,
-                            onPress = { v -> note?.let { player.noteOn(it, v) } },
-                            onRelease = { note?.let { player.noteOff(it) } },
+                            // Touch only: these go out over MIDI on the keys channel, and only for a note that sounded locally.
+                            // The MidiKeys.Voice above is MIDI in and stays silent.
+                            onPress = { v -> note?.let { if (player.noteOn(it, v)) MidiOut.keysOn(it, v, System.nanoTime()) } },
+                            onRelease = { note?.let { player.noteOff(it); MidiOut.keysOff(it, System.nanoTime()) } },
                             modifier = Modifier.weight(1f),
                         )
                     }
