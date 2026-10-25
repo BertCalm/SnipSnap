@@ -866,7 +866,7 @@ object SynthKits {
     fun murmur(): List<ArrangedPad?> {
         fun note(n: Int, semitone: Int) = MurmurPatch(
             "Murmur $n", MurmurVoice.KEY, Murmur.defaults(MurmurVoice.KEY),
-            midi = 48 + semitone,
+            midi = 48 + semitone, config = Murmur.configurationFor(MurmurVoice.KEY, model = 2),
         ).let { pad(it, Murmur.drumClassFor(it.voice, it.macros)) }
         val contrasts = listOf(
             "CLOSED CIRCUIT", "ROUND HUM", "DUST VOWEL", "POCKET VOICE",

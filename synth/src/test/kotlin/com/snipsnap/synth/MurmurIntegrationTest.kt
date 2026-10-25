@@ -38,7 +38,7 @@ class MurmurIntegrationTest {
 
     @Test
     fun `complete routing ratios mouth targets trajectory envelopes root and velocity survive JSON and editing`() {
-        for (model in 1..2) for (voice in MurmurVoice.entries) {
+        for (model in 1..3) for (voice in MurmurVoice.entries) {
             val original = patch(voice, model)
             val base = original.config
             val altered = base.copy(
@@ -90,14 +90,14 @@ class MurmurIntegrationTest {
     }
 
     @Test
-    fun `new patches explicitly save model two without changing the shared patch version`() {
+    fun `new patches explicitly save model three without changing the shared patch version`() {
         for (voice in MurmurVoice.entries) {
             val source = MurmurPatch("New Mouth", voice, Murmur.defaults(voice))
-            assertEquals(2, source.config.model)
-            assertEquals(Murmur.configurationFor(voice, model = 2), source.config)
+            assertEquals(3, source.config.model)
+            assertEquals(Murmur.configurationFor(voice, model = 3), source.config)
             val json = source.toJsonValue().entries
             assertEquals(1, json.getValue("version").int())
-            assertEquals(2, json.getValue("config").obj().getValue("model").int())
+            assertEquals(3, json.getValue("config").obj().getValue("model").int())
             assertEquals(source, Patches.fromJsonText(source.toJsonText()))
         }
     }
@@ -207,7 +207,7 @@ class MurmurIntegrationTest {
             refuses("macro $name out of 0..1: $value", "$name $value") { source.copy(macros = mapOf(name to value)) }
         }
         val config = source.config
-        for (model in listOf(0, 3)) {
+        for (model in listOf(0, 4)) {
             refuses("unsupported Murmur model $model", "model $model") { config.copy(model = model) }
             val invalid = JsonValue.Obj(LinkedHashMap(source.toJsonValue().entries.getValue("config").obj()).also {
                 it["model"] = JsonValue.Num(model.toDouble())
@@ -241,7 +241,7 @@ class MurmurIntegrationTest {
 
     @Test
     fun `pad recipes replay effects and production velocity layers excite the saved instrument`() {
-        for (model in 1..2) {
+        for (model in 1..3) {
             val source = patch(model = model)
             val rack = FxChain(reverse = true)
             val recipe = PadRecipe(source, rack)
