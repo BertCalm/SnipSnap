@@ -681,6 +681,7 @@ fun SynthScreen(
     // This lab's bag in the navigation model's MAKE state (see the KDoc).
     settings: MutableMap<String, String> = mutableMapOf(),
 ) {
+    composedOffMainThread("SynthScreen")
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
@@ -867,6 +868,7 @@ fun SynthScreen(
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
         }
+        composedOffMainThread("SynthScreen macro settings write")
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
