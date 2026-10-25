@@ -1,6 +1,6 @@
 # The COMPRESSOR section: a sustain compressor for the COMP chip
 
-**Status:** design, 2026-10-23, prototyped in Python (not Kotlin). The owner's gate, round one (2026-10-24): the sustain is enough on all four pads, ATTACK's ends are fine, the chip reads SUSTAIN; the release knob needed more range and ran the wrong way, so it is now RECOVER (round two pending on the same page). Nothing built. This is Stage 2 of `2026-10-04-pedal-board-design.md`. Repository truth: commit `b503b379`.
+**Status:** built, 2026-10-24 (see "As built" at the end). Prototyped in Python first; the owner's gate passed in two rounds on 2026-10-24 (round one: the sustain is enough on all four pads, ATTACK's ends are fine, the chip reads SUSTAIN; round two: RECOVER runs the right way round with ends that are fine, and the guitars are fine as they are until the pedal goes in front of the amp).
 **Builds on:** SQUASH (`Squash.kt`, the rack's punch compressor and the COMP chip's recipe today), the pedal library (`Pedals.kt`, where COMP is an entry), and the owner's verdict on the WAH gate's page (2026-10-23): COMP at AMT 70 lifts the tail too little on the snare and the choir, and the guitars need it now.
 
 ## Why
@@ -143,7 +143,8 @@ About SQUASH's size (96 lines) plus a limiter: a section of about 140 lines, its
 | The Kotlin section reproduces the prototype's numbers | proposed | the tests above |
 | The sustain is enough at 70 on all four pads; ATTACK's ends are fine | heard | the owner, round one, 2026-10-24 |
 | A release faster than 8 ms loses sustain on the snare; a following detector shortens the choir | measured | prototype round two |
-| RECOVER's ends are right, and the guitars' 5 to 6 dB is fine until Stage 3 | heard? | not heard; round two on the same page |
+| RECOVER's ends are right, and the guitars' 5 to 6 dB is fine until Stage 3 | heard | the owner, round two, 2026-10-24 |
+| The Kotlin section reproduces the prototype | measured | within one 16-bit step on twelve clips; see As built |
 
 ## Why it is built this way
 
@@ -152,3 +153,14 @@ About SQUASH's size (96 lines) plus a limiter: a section of about 140 lines, its
 - **RECOVER is fast by default** because a one-shot is one hit, not a stream of notes: the gain has to come back up while the note is still ringing. Turning it down gives the note back its own fade; turning it up past about 8 ms would start to cost sustain, so the knob stops there.
 - **ATTACK does two things at once** (how fast the squeeze lands, and how much room the hit has above the body), because one without the other did not sound like punch at all.
 - **The one risky decision** is the floor: 50 dB under the loudest level the make-up is taken back out, so silence and the pad's own end fade stay where they were. Set it too high and quiet tails stop sustaining; too low and hiss comes up with the note.
+
+## As built (2026-10-24, `synth`, `shell` tests and docs)
+
+- **The section** is `Compressor` (`Compressor.kt`), saved key `compressor`, in `FxChain.SECTIONS` right after `wah` and before `squash`, the last constructor field. Macros AMOUNT (default 0.5, neutral 0), ATTACK (0.5, neutral 0.5) and RECOVER (0.66, neutral 0.66), with the maps the prototype settled: threshold 10 to 40 dB under the loudest level, ratio 2 to 10, attack 0.5 to 40 ms, recovery 4 s down to 8 ms, the floor 50 dB under with a 12 dB taper, the limiter's headroom 12 dB times ATTACK plus 3. `FxChain.VERSION` stays 1.
+- **Against the prototype:** the Kotlin section run on the prototype's own inputs (`testkit/pedal-audition/`) matched the round-two clips within 2.3e-5 at worst on twelve clips (the default, RECOVER 0 and ATTACK 1 on all four pads), under one 16-bit step (3.05e-5). No re-tune was needed.
+- **The recipe:** `compressed` = `compressor = {AMOUNT 1.0}`. The library's COMP entry now reads **SUSTAIN** (its key, side and movability unchanged), so row seven is DRIVE, SUSTAIN, WAH, TOUCH, ROCK. RIG takes `compressed`'s new section by reference (`compressor`, `valve`, `echo`), so the board stays "the characters it is made of".
+- **On real renders** (stereo, not the mono listening clips): the snare rings 84 ms dry, 124 through the old recipe at 0.7 and 249 at AMOUNT 0.7; the choir 371, 527 and 829 (the prototype's mono clip gave 776). Guitars match the prototype: JANGLE +0.9 dB at 1.5 s (baked -6.3), CHUG -0.5 (-7.6). The treatment test's measure (the snare's tail against its body at AMT 1) rose from 7.78 dB under SQUASH to 19.64.
+- **Tests:** `CompressorTest` (a copy at AMOUNT 0; determinism; placement and the chain row; the sustain law with bars 2.5 and 2.0 times dry; AMOUNT and RECOVER raising the ring; the guitars' second half; ATTACK raising the hit; the floor at 50 dB; a low E clean at the fastest recovery; one linked detector keeping a stereo image), with two guards proven by mutation: disabling the limiter fails the sustain law and the AMOUNT test, and removing the floor fails the end test. Re-pinned: `FxTest` (WAH's neighbour), `TreatmentsTest` (the recipe's section and its tail test, bar 15 dB), `PedalsTest` (SUSTAIN, RIG's sections), `PedalBoardTest` (the fold) and `PadSheetTest` (the chip word).
+- **Not changed:** `PedalAuditionGenerator` keeps its Stage 0 labels (COMP, `comp_70`), since its clips are that listen's record. A pad saved with `compressed` keeps its baked audio; replaying its recipe now renders the new sound, which is the point.
+- **Docs:** `FxChain`'s order line and rationale, `README.md`'s rack paragraph and `docs/CLI.md` (the recipe, the library list and row seven, which also had the WAH chips missing since #645).
+
