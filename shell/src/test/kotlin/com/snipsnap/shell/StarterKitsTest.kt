@@ -176,6 +176,7 @@ class StarterKitsTest {
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
                     "vent" -> 12
+                    "strike-fx" -> 4
                     else -> 16
                 }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
@@ -491,7 +492,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "aerostat", "tremor", "ballast", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val cistern = StarterKits.byId("cistern")!!

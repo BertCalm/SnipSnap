@@ -85,6 +85,11 @@ object StarterKits {
             seeded = false,
         ) { ThumpKits.classic() },
         Starter(
+            "strike-fx", "STRIKE FX",
+            "Four short hits: DRY, REVERB, ECHO. Turn STRIKE ON, use STAY and VOL OFF, then tap while moving the strip.",
+            seeded = false,
+        ) { com.snipsnap.synth.StrikeDemoKit.build() },
+        Starter(
             "lucky-dip", "LUCKY DIP",
             "Dice-rolled drums. The dice are audited - they can't roll a bad kit.",
             seeded = true,

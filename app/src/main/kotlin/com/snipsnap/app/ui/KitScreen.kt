@@ -287,6 +287,7 @@ fun KitScreen(
 
     val kit = entry.kit
     val strike = rememberSaveable(entry.dir.absolutePath, saver = StrikeState.Saver) { StrikeState() }
+    LaunchedEffect(kit) { strike.lastHit = null }
 
     // The glow the pad cells cannot draw for themselves: a hit that did not
     // arrive as a finger on a cell (a MIDI note, the fullscreen grid) has no
@@ -321,7 +322,9 @@ fun KitScreen(
         // be built and never heard.
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)) allocator.voiceEnded(allocation.started.id)
+        if (player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)) {
+            strike.recordHit(pad, velocity)
+        } else allocator.voiceEnded(allocation.started.id)
     }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
@@ -349,6 +352,8 @@ fun KitScreen(
             // Nothing loaded for this pad (or nothing yet): the allocator
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
+        } else {
+            strike.recordHit(pad, velocity)
         }
         flash(slot)
     }
@@ -651,6 +656,7 @@ fun KitScreen(
         }
 
         StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
             TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
