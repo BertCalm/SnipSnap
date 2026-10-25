@@ -38,24 +38,6 @@ repositories {
     mavenCentral()
 }
 
-// A stopgap for a JIT crash, not a tuning choice. C2, the JVM's optimising
-// compiler, dies with an internal error (Type::typerr, ShouldNotReachHere)
-// while compiling Filament.synthesize, a 4,556-byte method, and takes the
-// whole test process with it. Gradle then reports "There were failing
-// tests" with no test named, and the log stops wherever that run's render
-// happened to make the method hot: a different class each time. Reproduced
-// on OpenJDK 21.0.12 in :cli and :shell; CI's jvm-tests on Temurin 17 stops
-// the same way. Excluding that one method from JIT runs it interpreted, so
-// Filament's renders are slower under test and every other method keeps
-// full optimisation. Remove this once Filament.synthesize is split into
-// methods C2 can compile; a test JVM that no longer crashes without the
-// flag is the proof.
-subprojects {
-    tasks.withType<Test>().configureEach {
-        jvmArgs("-XX:CompileCommand=quiet", "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize")
-    }
-}
-
 dependencyCheck {
     // High and Critical (CVSS 7.0+) fail the build; Medium/Low land in the
     // report without blocking anything. A scan that fails on every Low
