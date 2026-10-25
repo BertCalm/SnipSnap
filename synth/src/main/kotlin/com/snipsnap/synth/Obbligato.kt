@@ -26,13 +26,15 @@ enum class ObbligatoRelationship {
  *
  * Dry mono, explicit C4–C5 notes, independently seeded players and one final loudness target.
  * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
- * Model 5 is accepted. Model 6 is an explicit, unheard activity-driven Fight experiment.
+ * Model 5 is accepted. Model 6 adds activity-driven Fight entries. Model 7 is an explicit
+ * gentler-voiced listening revision; both experiments remain opt-in.
  */
 object Obbligato {
     /** The accepted sound stays the default until the responsive experiment is heard. */
     const val MODEL = 5
     const val EXPERIMENTAL_MODEL = 6
-    const val MAX_MODEL = EXPERIMENTAL_MODEL
+    const val MUSICAL_MODEL = 7
+    const val MAX_MODEL = MUSICAL_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
@@ -53,6 +55,10 @@ object Obbligato {
     // the audition retains both stems at their duet's gain so other notes can be judged too.
     private const val AIR_GAIN = .045f
     private const val REED_GAIN = .32f
+    // Less rasp compresses the reed less: at the reference note its raw RMS nearly
+    // doubles. One fixed radiation weight restores the duet's balance for this voicing;
+    // every note and stem keeps it, rather than being normalized independently.
+    private const val MUSICAL_REED_GAIN = .17f
 
     fun macrosFor(): List<MacroSpec> = listOf(
         MacroSpec("BREATH", .65f),
@@ -163,7 +169,7 @@ object Obbligato {
     /**
      * Physical source removal is a causal probe. For models 1–5, responses=false keeps the
      * saved timed gesture and player seeds but removes reciprocal pressure response. In
-     * model 6 it also disables activity-driven entries, preserving the opening air assertion.
+     * models 6 and 7 it also disables activity-driven entries, preserving the opening air assertion.
      * This is not a live relationship across pads: each call starts two new source states.
      */
     fun probe(
@@ -227,7 +233,7 @@ object Obbligato {
             4 -> current.copy(irregularity = 0.0)
             else -> current
         }
-        val interaction = if (model == EXPERIMENTAL_MODEL && r.rivalry > 0.0)
+        val interaction = if (model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
             ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.
         // Protect now exposes that tone before the reed joins. Subtracting the same
@@ -307,6 +313,13 @@ object Obbligato {
                     pitchReed += (r.irregularity * (interaction?.reedPitchPush
                         ?: rivalPitchPush(t, heldSeconds, air = false))).toFloat()
                 }
+                // Keep the same conversational inflections, closer to the requested note.
+                // The prior opposing offsets produced about 24 cents of separation at
+                // default Fight, so upper harmonics beat faster than the phrase itself.
+                if (model == MUSICAL_MODEL) {
+                    pitchAir *= .25f
+                    pitchReed *= .25f
+                }
                 if (capture) {
                     maxPitch = maxOf(maxPitch, abs(pitchAir.toDouble()), abs(pitchReed.toDouble()))
                     val index = frame / CONTROL_BLOCK
@@ -344,13 +357,20 @@ object Obbligato {
         }
 
         val air = Bore.condition(rawAir, RATE, 0f, 0f, Bore.Voicing.NONE)
-        val reed = Bore.condition(rawReed, RATE, Bore.biteBoostDb(BoreVoice.SAX, .60f),
-            Bore.raspAmount(BoreVoice.SAX, .60f, contactBreath), Bore.voicingFor(BoreVoice.SAX))
+        // The standalone sax's deliberately raspy radiation is too forceful for a warm
+        // duet. Change the audible reed, leaving its calibrated mouth pressure and pipe
+        // untouched. These restrained voicing choices still require a listening verdict.
+        val reed = if (model == MUSICAL_MODEL) {
+            Bore.condition(rawReed, RATE, 2f, .06f, Bore.Voicing(-4f, 3f))
+        } else {
+            Bore.condition(rawReed, RATE, Bore.biteBoostDb(BoreVoice.SAX, .60f),
+                Bore.raspAmount(BoreVoice.SAX, .60f, contactBreath), Bore.voicingFor(BoreVoice.SAX))
+        }
         val inputEnergy = sqrt(breath) * velocity
         val reactiveRadiation = interaction?.radiationReader()
         for (i in air.indices) {
             air[i] *= AIR_GAIN * inputEnergy
-            reed[i] *= REED_GAIN * inputEnergy
+            reed[i] *= (if (model == MUSICAL_MODEL) MUSICAL_REED_GAIN else REED_GAIN) * inputEnergy
             if (r.callDepth > 0.0 || r.rivalry > 0.0) {
                 presence.update(i.toDouble() / Dsp.RATE, heldSeconds, r.callDepth,
                     if (interaction == null) r.rivalry else 0.0, r.irregularity)

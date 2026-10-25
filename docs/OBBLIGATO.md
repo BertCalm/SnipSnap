@@ -1,4 +1,4 @@
-# OBBLIGATO: accepted duet and responsive Fight experiment
+# OBBLIGATO: accepted duet and listening revisions
 
 Repository baseline: `91384fa189a68c4993c8e359af6b748412bf95c3`.
 
@@ -7,9 +7,61 @@ recipes and the sixteen-pad kit. Model 6 is an explicit listening experiment. It
 characteristic gesture is **air asserts → reed hears and readies → reed interrupts
 smoothly → air counters → both release**. Each note starts fresh.
 
+Model 7 is a separate gentler voicing in response to the owner's report of
+harshness and wish for more musicality. It retains the responsive controller.
+It remains opt-in and awaits a listening verdict.
+
 The air jet and reed are the existing independently seeded `Bore.Player` sources.
 The relationship is an invented behavioural analogy. It does not simulate two
 human players, a shared lung or energy transfer between acoustic instruments.
+
+## Gentler voicing after the harshness report
+
+Review baseline: `42f12776ebeb45b26ce670aa129604e110001085`.
+The responsive controller exposes more of the existing reed. Its standalone SAX
+conditioning deliberately adds rasp, a +7.68 dB presence bell at 2 kHz, and up to
++18 dB above 3 kHz at the default recipe. The original Fight also places the
+players on opposite sides of the requested note.
+
+Model 7 keeps both calibrated pipe sources and their speaking pressure. Its
+reed radiation uses 2 dB of presence, rasp amount .06 and shelves of -4/+3 dB
+instead of -26/+18 dB. Total pitch offsets, including entry inflections, are
+one quarter of their previous size. These are audition choices. There is no
+extra final mix filter, rack effect, pressure reduction or new phrase clock.
+The two players still make decisions from actual outgoing activity.
+
+Reducing the rasp also reduces its compression: C4/.8/seed 0 default Fight's
+raw reed RMS rose from .02661 to .05109 with the original radiation weight.
+Model 7 uses one fixed reed weight of .17 instead of .32 to retain the duet's
+balance. Air stays at .045. This applies to every note; no individual source or
+note is normalized as part of the instrument.
+
+These voicing and tuning changes apply across **all BOND relationships** in
+model 7; the listening comparison concentrates on Fight. Models 1–6 keep their
+original DSP. Three model-6 raw sum/stem and complete PCM24 export receipts were
+captured before editing and are pinned in `obbligato/model6-sha256.json`, in
+addition to the original thirty model-1–5 fixtures.
+
+Generate the focused comparison with:
+
+```sh
+./gradlew --no-daemon :synth:generateObbligatoMusicalAudition
+```
+
+It includes previous responsive, gentler and accepted reference duets; the
+actual previous/gentler stems; and four-note melodies with complete overlapping
+release tails. Each complete duet and complete melody is matched to the same
+house loudness. Its stems inherit that duet's gain. One final common attenuation
+protects every recording's headroom. Full patches, phrase onset recipes and
+recording hashes accompany the ten WAVs.
+
+Why it is built this way:
+
+1. Less harmonic generation at the reed preserves a clearer body before mixing.
+2. Closer tuning reduces beating while leaving each player's entry inflection.
+3. Keeping the calibrated pressure avoids making a quieter source stop speaking.
+4. A matched melody comparison gives the owner a musical context for judging
+   the revision. Spectral measurements cannot establish musicality.
 
 ## Why this belongs in the existing engine
 

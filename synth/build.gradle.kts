@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
+tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
+    group = "distribution"
+    description = "Compare previous and gentler OBBLIGATO Fight single notes, melodies and actual source taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMusicalOutput").orNull ?: "${rootDir}/testkit/obbligato-musical-audition")
+}
+
 /** An opt-in listening comparison; the accepted model-five kit remains unchanged. */
 tasks.register<JavaExec>("generateObbligatoResponsiveAudition") {
     group = "distribution"
