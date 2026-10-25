@@ -49,7 +49,6 @@ class PatchesTest {
         OverlapPresets.all().first(),
         WickPresets.all().first(),
         NacrePresets.all().first(),
-        ChamberPresets.all().first(),
         TidalPresets.all().first(),
     )
 
