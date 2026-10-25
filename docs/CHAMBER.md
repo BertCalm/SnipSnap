@@ -115,6 +115,63 @@ root notes, overlapping tails and the membrane balance at soft and hard playing
 levels. Software builds, emulator checks and format read-back do not establish
 these physical-device results.
 
+## Wider endpoints — explicit model-4 listening candidate
+
+The [wider-extremes comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/extremes/index.html)
+puts twenty wider endpoints beside twenty existing model-3 endpoints and the two
+accepted defaults. It changes one control at a time at C4, velocity .75 and seed
+zero. The accepted model-3 factory recipes, default model and MPC kit stay intact;
+model 4 must be requested explicitly. Saved models 1–3 keep their renderer laws.
+
+The five controls reach different underlying quantities:
+
+| Control | Wider candidate behavior |
+| --- | --- |
+| STRIKE | Soft contact can reach twice the old duration, with less upper-mode participation; hard contact reaches a quarter of the old duration with an 80 μs minimum. Soft extension is bounded by each source's actual tuned period. |
+| BALANCE | The excitation floor falls from .17 to .025 and the focus width from .69 to .30 at the endpoints. A small low-pitched anchor remains while the selected source becomes more distinct. |
+| MATERIAL | Boundary decay scales from .22× to 2×, capped at three seconds; reflection cutoff scales from .30× to 1.30×. These are designed responses, not measured materials. |
+| DIVIDE | Normalized geometric coupling weights become more blended or local, with powers .50 to 2.50. Material weights remain convex and the scattering network remains passive. |
+| PLACEMENT | Sources move nearer or farther around the fixed listener. A common scale respects wall, source and listener clearance. Authored `EXPLICIT` positions remain unchanged. |
+
+MATERIAL and DIVIDE also bring the room pickup forward by up to 10×, outside
+feedback. This changes the room/source proportion, rather than master gain;
+matched playback and normalized spectral comparisons separate timbre from level.
+Each voice's accepted default follows the unchanged renderer path exactly.
+All new endpoint constants are shape choices awaiting listening acceptance.
+
+Local verification covers 61 distinct CHAMBER tests across the full focused run
+and a subsequent rate-reference run. Published model-1/model-2 WAVs and four
+accepted model-3 Float32 production hashes remain exact. Both wider voices pass
+the existing high-register 4×/8× pressure and spectral targets without relaxing
+their margins. These are JVM measurements, not listening or phone results.
+
+The study measures attack, body, early answer and late-tail windows separately,
+plus cumulative-energy times and requested-root/octave-down tone shares. Complete
+energy ledgers cover the new endpoints and combined extremes. Upper metal sources
+can cross a half-sine contact notch as STRIKE changes at high notes; separate
+diagnostics inspect that transition. The membrane/bar root guards do not imply
+uniform triangle-root strength throughout the control range.
+
+```sh
+./gradlew --no-daemon :synth:generateChamberExtremesAudition -PchamberExtremesBaseline=/absolute/finite-WAV-study -PchamberExtremesOutput=/tmp/chamber-extremes -PchamberExtremesExtendedChecks=true
+python3 scripts/package_chamber_extremes_site.py /absolute/current-hosted-dist /tmp/chamber-extremes /tmp/chamber-extremes-hosting
+```
+
+The full generated study stays in WAV. Hosting encodes only its new raw/matched
+recordings in lossless FLAC, verifies every PCM16 sample and references the prior
+recordings in place. Existing archives, recipes and listening notes are retained.
+Fresh settings still require the coupled simulation; this is a sound-range study,
+not a claim of new phone latency or hardware acceptance.
+
+### Why these ranges are separate
+
+- Preserve the accepted center and exact saved sounds while testing stronger edges.
+- Change contact, source participation, boundary behavior and geometry so overall
+  volume alone cannot account for the variation.
+- Keep observer pickup outside feedback so a more audible room does not inject
+  energy into the passive physical network.
+- Compare a small set of endpoints before changing the current factory library.
+
 ## Timpani mix lift — model 3
 
 The owner heard model 2 and approved its sound, then asked for a little more

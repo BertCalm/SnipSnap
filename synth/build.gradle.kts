@@ -145,6 +145,19 @@ tasks.register<JavaExec>("generateChamberAudition") {
     providers.gradleProperty("chamberKit").orNull?.let { args("--kit=$it") }
 }
 
+/** Compare accepted CHAMBER endpoints with an explicit wider-range candidate. */
+tasks.register<JavaExec>("generateChamberExtremesAudition") {
+    group = "distribution"
+    description = "Render the CHAMBER current/wider endpoint comparison without changing accepted factory sounds."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberExtremesAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberExtremesOutput").orNull ?: "${rootDir}/testkit/chamber-extremes")
+    providers.gradleProperty("chamberExtremesBaseline").orNull?.let { args("--baseline=$it") }
+    if (providers.gradleProperty("chamberExtremesExtendedChecks").orNull == "true") args("--extended-checks")
+}
+
 /** Sixteen finite CHAMBER pads with exact recipes and both supported MPC formats. */
 tasks.register<JavaExec>("generateChamberKit") {
     group = "distribution"
