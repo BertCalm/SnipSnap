@@ -64,7 +64,7 @@ class StoopPatchTest {
         for (voice in StoopVoice.entries) {
             for (optional in listOf("", "\"midi\":null,\"velocity\":null,\"model\":null,\"source\":null,\"shadowInterval\":null,\"shadowDelayMs\":null,\"shadowArticulation\":null,\"shadowReplies\":null,\"chordIntervals\":null,")) {
                 val restored = StoopPatch.fromJsonText("""{"engine":"STOOP","version":1,"name":"Default","voice":"${voice.name}",$optional"macros":{"TOUCH":0.6},"futureField":"ignored"}""")
-                assertEquals(StoopPatch("Default", voice, mapOf("TOUCH" to .6f)), restored)
+                assertEquals(StoopPatch("Default", voice, mapOf("TOUCH" to .6f), model = Stoop.LEGACY_MODEL_VERSION), restored)
             }
         }
         val restored = StoopPatch.fromJsonText("""{"engine":"STOOP","version":1,"name":"Partial","voice":"TINE","macros":{},"source":{"fmRatio":3}}""")
@@ -78,7 +78,7 @@ class StoopPatchTest {
     fun `unsupported formats and malformed field types are refused`() {
         for ((field, value) in listOf(
             "engine" to JsonValue.Str("FLOTILLA"), "voice" to JsonValue.Str("KICK"),
-            "version" to JsonValue.Num(2.0), "model" to JsonValue.Num(2.0),
+            "version" to JsonValue.Num(2.0), "model" to JsonValue.Num(3.0),
             "midi" to JsonValue.Num(48.5), "velocity" to JsonValue.Str("loud"),
             "source" to JsonValue.Bool(true), "shadowInterval" to JsonValue.Num(7.5),
             "shadowReplies" to JsonValue.Num(1.5), "chordIntervals" to JsonValue.Str("major"),
@@ -126,6 +126,7 @@ class StoopPatchTest {
         }
         assertFailsWith<IllegalArgumentException> { patch.copy(name = " ") }
         assertFailsWith<IllegalArgumentException> { patch.copy(model = 0) }
+        assertFailsWith<IllegalArgumentException> { patch.copy(model = 3) }
         assertFailsWith<IllegalArgumentException> { StoopPatch.fromJsonValue(changed("source", JsonValue.Obj(mapOf("fmIndex" to JsonValue.Num(1e100))))) }
         assertFailsWith<IllegalArgumentException> { StoopPatch.fromJsonValue(changed("shadowDelayMs", JsonValue.Num(500.0))) }
     }

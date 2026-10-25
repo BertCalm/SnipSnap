@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import android.content.Context
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
@@ -45,6 +46,21 @@ class InstrumentPlayer(context: Context) {
      */
     fun open(sidecar: File, instrument: InstrumentStore.Instrument) {
         val dir = sidecar.parentFile ?: File(".")
+        load(instrument) { file ->
+            runCatching { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        }
+    }
+
+    /**
+     * Load an offline-rendered preview without writing a temporary package.
+     * Sample copying belongs on a worker dispatcher, just like [open]'s WAV reads.
+     * Note-on still uses the same zone, loop and release map as a shelf instrument.
+     */
+    fun open(instrument: InstrumentStore.Instrument, samples: Map<String, Snip>) {
+        load(instrument) { samples[it] }
+    }
+
+    private fun load(instrument: InstrumentStore.Instrument, sample: (String) -> Snip?) {
         val index = HashMap<String, Int>()
         val frames = HashMap<String, Long>()
         synchronized(this) {
@@ -54,7 +70,7 @@ class InstrumentPlayer(context: Context) {
         }
         for (file in instrument.sampleFiles) {
             // Load every velocity layer once; a missing soft sample must not silently play the hard one.
-            val snip = runCatching { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
+            val snip = sample(file) ?: continue
             val i = synchronized(this) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
@@ -70,6 +86,13 @@ class InstrumentPlayer(context: Context) {
             framesOf = frames
             voices.clear()
         }
+    }
+
+    /** Change a captured instrument's note-off fade without loading or rendering its samples again. */
+    @Synchronized
+    fun setReleaseSeconds(seconds: Float) {
+        require(seconds.isFinite() && seconds in 0f..InstrumentStore.MAX_RELEASE_SECONDS)
+        instrument = instrument?.copy(release = seconds)
     }
 
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */

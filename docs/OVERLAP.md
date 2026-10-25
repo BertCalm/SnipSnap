@@ -251,3 +251,90 @@ The listening pages start silent and play one clip at a time. Keep/revise/pass
 decisions and notes stay in browser storage and export as JSON. The musical bank
 uses its own note key, separate from both earlier auditions. Earlier notes remain
 accessible on the retained first- and second-listen pages.
+
+## Separate steady held proof
+
+The held experiment is an opt-in Kotlin prototype, separate from saved engine
+models and the approved factory bank. Its gesture is excitation builds → the
+network settles into sustain → note-off withdraws the drive → stored energy
+rings out. It keeps the six delay proportions, fractional-delay tuning, passive
+scattering and pickup of model 2. A periodic six-node excitation replaces the
+finite rubbing source. This is a driven adaptation, not an indefinite replay of
+the original finite gesture.
+
+```text
+./gradlew :synth:generateOverlapHeldAudition
+```
+
+`OverlapHeldPrototype` is not registered as a patch or connected to the phone
+picker. `generateOverlapHeldAudition` writes reproducible listening assets under
+`testkit/overlap-held-audition/`, with source in
+`prototype/overlap-held-audition/`. The original bank and both earlier auditions
+remain the listening references. The experiment introduces no new factory presets.
+
+This first proof requires HOLD=1, PULSE=0 and GLOW=0. KNOT changes geometry and
+scattering as in model 2; it remains inactive in SELF. RING changes the nominal
+low-frequency T60. LOCK is accepted but inactive while PULSE is off. Reference
+MIDI and velocity remain explicit. These limitations avoid presenting unsupported
+controls as finished sound design. In particular, a short loop of freely drifting
+breathing phases would require changing their rates or repeating a constrained
+control trajectory, and needs its own listening decision.
+
+The source period fits an integer number of requested note cycles to whole output
+frames. The resonator geometry still uses the requested reference frequency. The
+finite source grid can change which nearby resonance receives the most energy;
+reference note and perceived pitch remain separate listening questions. The
+solver must verify full-state and full-period audio recurrence, then check a
+further independently evolved period. Delay memories are compared in cursor
+order. Decimation uses continuous physical audio before and after the kept
+period. The seam is measured against genuine preceding and following audio,
+using `Keys.seamError`, not against two copies of an exported loop.
+
+Release withdraws excitation over a smooth transition while the same delay and
+filter states continue. The prototype exposes causal internal audio for exact
+prefix checks because the shared offline decimator looks ahead. It applies no
+late output fade to disguise residual energy. The default tail budget follows
+RING; explicitly shortened captures disclose their final measured energy.
+
+The page contains four settled periods repeated eight times and four note-off
+examples. Each topology's loop and release share one matched-level scalar, so
+their level relationship survives the comparison. Native playback uses the
+prototype's house leveling with one additional, collection-wide only-down
+safety gain. Capture-dependent house leveling means exact note-off prefix tests
+use the prelevel causal signal, not separately normalized native WAVs.
+
+Downloads include one-period native loops, both preview levels, complete
+experimental recipes, diagnostics, source/WAV hashes and a deterministic ZIP.
+These recipes cannot be imported as ordinary `PadRecipe` files. Replay a downloaded
+recipe with the audition task's `-PoverlapHeldRecipe=/absolute/path/recipe.json`,
+`-PoverlapHeldWav=/absolute/path/replay.wav` and optional
+`-PoverlapHeldMode=matched` properties. Replay verifies the recorded WAV hash.
+
+The focused Kotlin verification passed all 18 tests across `OverlapTest`,
+`OverlapV2ModalTest` and `OverlapHeldPrototypeTest`. Checks include low/middle/high
+modal identities, held register/loss edges, full-state recurrence, both real
+neighbouring seams, causal prefix invariance, quiet passive continuation and
+monotonic source withdrawal for a key released during its attack. A scratch
+mutation replacing every topology's scattering with SELF made the new modal test
+fail; the approved source was restored afterward.
+
+The generator records uncached setup, settling and conditioning milliseconds in
+`metrics-runtime.json`, outside the deterministic download archive. Settling is
+capped by a T60-derived budget and an absolute 192-period limit, with cancellation
+checks during simulation. Those host timings do not establish phone performance.
+Listening acceptance, moving-breath loops and an engine-specific aliasing bound
+remain unverified.
+
+### Why it is built this way
+
+- A separate entry point protects existing recipes while the sustain is judged.
+- Periodic excitation lets the entire passive network settle to a repeatable
+  state. Deterministic noise alone would not guarantee a short seamless loop.
+- Withdrawing the drive preserves the resonator's own release instead of
+  replacing it with an arbitrary output envelope.
+- The bounded settling search is export/prototype work. A future interactive
+  path needs a bounded cache keyed by topology, KNOT, RING, reference MIDI,
+  period frames, excitation seed and prototype revision. Matrix and geometry
+  setup already happen once per render; caching those alone will not remove
+  repeated network simulation. Phone timing and a cache implementation are not
+  established by this proof.

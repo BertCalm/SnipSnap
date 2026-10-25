@@ -35,6 +35,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),
         TinesPatch("Bell Test", TinesVoice.BELL, mapOf("RATIO" to 0.9f)),
@@ -75,7 +76,7 @@ class PadRecipeTest {
         CairnPatch("Stone Test", CairnVoice.ANSWER, mapOf("BODY" to .5f), midi = 55, velocity = .6f, startAtContact = false),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
-        // CHAMBER is a finite prototype too; its patch carries a saved note, velocity and exact seed.
+        // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),

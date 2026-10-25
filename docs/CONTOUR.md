@@ -27,7 +27,7 @@ oscillator, envelope and filter state and produces mono 44.1 kHz audio.
 | DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
 | HOLD | Finite sustain length; the top step supplies settled loop-only material |
 | BODY | Root-to-overtone balance: rounded root emphasis through a fuller partial spectrum |
-| EDGE | Independent edge-layer level, from muted through the authored balance to a forward layer |
+| EDGE | Edge-layer level and sustained projection; the contrast response also trades body overtones for edge detail with root support |
 | ATTACK | Amplitude, edge and filter attack times, approximately ⅛–8× the saved recipe |
 | DECAY | Amplitude decay/release and edge/filter decay times, approximately ¼–4× the saved recipe |
 | RATE | Independent scan clock, approximately ⅛–8×; MOTION still sets travel and must be nonzero |
@@ -50,7 +50,7 @@ body more overtone detail and the edge a distinct articulation. Older recipes
 missing these fields decode to neutral settings, including recipes without a
 configuration object; they retain their original rendered samples.
 
-The seven added controls are neutral at .5. Missing values also resolve to .5,
+In legacy recipes the seven added controls are neutral at .5. Missing values also resolve to .5,
 with explicit neutral paths retaining the original model-1 arithmetic. Older
 seven-control patches need no migration. BODY changes the root/partial balance
 before the filter rather than adding distortion: its root contribution spans
@@ -61,6 +61,33 @@ curve and supplies an independent clock multiplier; HOLD fits 1–16 whole motio
 cycles per loop. RESO varies SVF damping from 2.5 to .4 around the authored value.
 ENV adds up to two filter octaves beyond the authored amount, bounded by the
 18 kHz cutoff ceiling. Settled HOLD has no attack or filter-contour gesture.
+
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) first addressed low edge sustain
+with the saved `FOREGROUND` response, which blends the envelope projection toward
+one across EDGE. The owner heard a useful range in Soft Digital and Bright Margin,
+but reported the other seven recipes still too subtle from zero to maximum.
+
+The corresponding fresh voices and those seven recipes now select `CONTRAST`.
+The fresh PLUCK voice keeps `FOREGROUND`. Alongside the
+foreground projection, EDGE reduces the body's non-root contribution toward
+35%, raises edge partial amplitude toward 4×, and adds bounded support to the
+body root. The edge's own fundamental is not boosted. The mix budgets the added
+contributions before DRIVE. Tables, tuning, motion and the shared filter retain
+their mechanisms. Soft Digital and Bright Margin keep their previous complete
+recipes. These shape laws broaden the control range; listening still decides
+whether the result is rounded enough.
+
+Missing/null response fields decode to `LEGACY`; explicit `FOREGROUND` recipes
+retain their previous arithmetic. Saved recipes keep that choice when macros are
+edited. Model 1 and its phase seed remain unchanged. Load a fresh preset in the
+updated app to use the revised response.
+
+`./gradlew :synth:generateContourEdgeAudition` writes a focused 180-clip comparison
+under `testkit/contour-edge-audition/`, with finite and held forms of all nine
+recipes at five EDGE settings, matched WAVs and complete replay JSON. Its previous
+side loads nine pinned complete recipes from `47809ba2d`, the preceding audition.
+Each page card can play 0%, 50% and 100% in sequence; finite notes retain their
+whole attack and held steps repeat for two seconds each.
 
 Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
@@ -120,8 +147,45 @@ Ordinary drum pads play their WAV once; their format does not expose a separate
 attack-plus-loop region. `Keys.contourPad()` supplies two copies of the settled
 region and a nonzero `loopStartFrame`, matching the existing keygroup export
 convention. Repeated playback on the audition page exposes the actual wrap.
-`Keys.contourPad()` is a tested helper; SYNTH MAKE INSTRUMENT and the CLI
-`--instrument` path do not call it yet.
+SYNTH **MAKE INSTRUMENT** and CLI `--instrument` now use `ContourPadMaker` to
+export seventeen minor-third roots across the voice's supported four octaves.
+Adjacent roots cover the intervening semitones; keys outside that range are
+unmapped. The complete edited patch supplies tables, layer relationships,
+movement, filter and excitation velocity. Each zone replaces TUNE with its
+absolute MIDI pitch and forces HOLD. A five-millisecond entry fade affects only
+the first copy; the repeating cycle and loop marker remain unchanged. RELEASE
+sets the player's key-up fade, from 0.1 to 1.5 seconds (default 0.6).
+
+These are captured settled tones: the finite attack, decay and transient filter
+contour do not retrigger. Saved velocity authors the sampled excitation; playing
+velocity controls sample amplitude through the standard single-layer instrument
+path. There are no separately captured velocity layers. MPC velocity defaults
+and physical playback still require a device check.
+
+```text
+./gradlew :cli:run --args="synth CONTOUR KEY --preset 1 --instrument --release .6 --out /tmp/contour-keys"
+./gradlew :cli:run --args="synth CONTOUR KEY --patch /tmp/contour-patch.json --instrument --velocity .6 --macros BODY=.8 --out /tmp/contour-keys"
+./gradlew :shell:generateContourStarter
+```
+
+Instrument mode rejects explicit `--midi`, `--attack`, and TUNE/HOLD macro edits
+because its keyboard and settled sustain own those settings. Both MPC generations
+share the exported PCM24 WAVs: a native `.xty` track sits beside its
+`_[TrackData]/` folder containing the MPC 2 `.xpm` twin. The phone's
+`.instrument.json` sidecar sits beside that folder. Keep each track and sidecar
+with their matching folder.
+
+The starter task packages the current nine recipes and 153 zones under
+`testkit/contour-starter/`, with editable patch JSON, source fingerprints, file
+hashes and a ZIP. It reads back the native JSON, XPM XML, phone sidecars and WAV
+sampler sheets before packaging. Commit the source before running it so the bank
+identifies its exact implementation. The Android panel groups all fourteen
+controls into Tone, Envelope, Movement, Filter and Play.
+
+The bank task also writes `web/` with nine exact root-loop previews and recipe
+downloads. Copy it into an existing audition's `instruments/` directory and
+refresh that audition's page to show its instrument link. The published page
+includes this companion listening view; its R05 matrix audio stays unchanged.
 
 ## Audition and verification
 

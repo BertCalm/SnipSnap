@@ -86,6 +86,12 @@ class NavigationTest {
         nav.open(Bench.SETUP)
         nav.open(Bench.HELP)
         assertEquals("◄ SETUP", nav.backChip, "HELP from SETUP goes back to SETUP")
+        nav.closeBench()
+        nav.closeBench()
+        nav.open(Bench.MIDI)
+        assertEquals("◄ BEAT", nav.backChip, "MIDI is behind the gear too: it names where back goes")
+        nav.open(Bench.HELP)
+        assertEquals("◄ MIDI", nav.backChip, "HELP from MIDI goes back to MIDI")
         assertTrue(Bench.SETUP.backChip.startsWith("◄ ") && Bench.HELP.backChip.startsWith("◄ "), "the bench's own is still a back chip")
     }
 

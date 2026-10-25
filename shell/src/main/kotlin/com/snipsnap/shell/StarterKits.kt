@@ -192,6 +192,18 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.origami() },
         Starter(
+            "filament", "FILAMENT",
+            "Glass threads, pulsing routes and blooming curls in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.filament() },
+        Starter(
+            "chamber", "CHAMBER",
+            "Four struck instruments share wood, glass and aquarium rooms in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.chamber() },
+        Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
             seeded = false,
@@ -234,11 +246,23 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.tangle() },
         Starter(
+            "caustic", "CAUSTIC",
+            "Finite metal-bodied notes in C minor pentatonic. Source and pickup carve a resonant body.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.caustic() },
+        Starter(
             "crease", "CREASE",
             "Pressure-shaped bass, keys and elastic leads in C minor pentatonic, with unfolding held layers.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.crease() },
+        Starter(
+            "lattice", "LATTICE",
+            "Warm, plucked and hollow notes in C minor pentatonic, shaped by directional gates and a rejected outline.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.lattice() },
         Starter(
             "flock", "FLOCK",
             "Gathering notes, traveling ribbons and split harmonics in C minor pentatonic. Finite moving flocks.",
@@ -321,6 +345,22 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.cistern() },
+        Starter(
+            "aerostat", "AEROSTAT",
+            "Paddle-struck PVC, catching pipes and drifting steam. Five distinct factory gestures.",
+            seeded = false,
+        ) { SynthKits.aerostat() },
+        Starter(
+            "tremor", "TREMOR",
+            "Tuned hides, returning beads and a wire cage, with clean and powered voices.",
+            seeded = false,
+        ) { SynthKits.tremor() },
+        Starter(
+            "ballast", "BALLAST",
+            "Deep bass drives sympathetic wires, a resonant frame and hanging glass tiles.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.ballast() },
         Starter(
             "velocity", "VELOCITY",
             "The house kit with ghost notes. Soft hits sound soft, not just quiet.",

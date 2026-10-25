@@ -79,6 +79,8 @@ object MidiPads {
             is MidiWire.Event.Control -> when (event.controller) {
                 MidiWire.CC_ALL_NOTES_OFF, MidiWire.CC_ALL_SOUND_OFF -> onPanic()
             }
+            // The transport's clock is not a key; nothing here plays it yet.
+            is MidiWire.Event.RealTime -> {}
         }
     }
 }

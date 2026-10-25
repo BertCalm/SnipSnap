@@ -48,6 +48,7 @@ import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
@@ -110,13 +111,13 @@ fun KeysScreen(
     // keyboard is opened and closed with the lifecycle, below, beside the
     // audio focus: a note arriving while the app is backgrounded would
     // otherwise restart the stream ON_STOP had just silenced.
-    var midiDevices by remember(player) { mutableStateOf<List<String>>(emptyList()) }
+    var midiDevices by remember(player) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     var midiSupported by remember(player) { mutableStateOf(false) }
     val midi = remember(player) { MidiInput(context) }
     val midiListener = remember(player) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = midiKeys.handle(event)
-            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
             override fun onDeviceRemoved() = midiKeys.allOff()
         }
@@ -235,9 +236,9 @@ fun KeysScreen(
 }
 
 /** The words under the grid: the connected keyboard by name, or the invitation. */
-internal fun midiLine(devices: List<String>): String =
+internal fun midiLine(devices: List<MidiDeviceId>): String =
     if (devices.isEmpty()) NO_MIDI_DEVICE
-    else "MIDI · " + devices.joinToString(" + ") { it.uppercase(java.util.Locale.ROOT) }
+    else "MIDI · " + devices.joinToString(" + ") { it.name.uppercase(java.util.Locale.ROOT) }
 
 /** Nothing plugged in: say what would work, in the words the USB cable is sold under. */
 internal const val NO_MIDI_DEVICE = "NO MIDI KEYBOARD · PLUG ONE IN OVER USB"

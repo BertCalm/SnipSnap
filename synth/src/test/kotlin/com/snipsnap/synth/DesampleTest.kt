@@ -12,6 +12,14 @@ import kotlin.test.assertTrue
 class DesampleTest {
 
     @Test
+    fun `provisional SPARK leaves the established desample grid and tie order intact`() {
+        assertEquals(listOf("KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN", "CLAP", "TOM", "COWBELL", "RIM"),
+            Desample.Voices.THUMP.map { it.name })
+        assertEquals(null, Desample.Voices.of(ThumpPatch.ENGINE, ThumpVoice.SPARK.name))
+        assertTrue(Desample.Voices.ALL.none { it.engine == ThumpPatch.ENGINE && it.name == ThumpVoice.SPARK.name })
+    }
+
+    @Test
     fun `a rendered THUMP kick returns its own patch`() {
         val macros = mapOf("TUNE" to 0.5f, "SWEEP" to 0.15f, "DECAY" to 0.85f, "CLICK" to 0.5f, "DRIVE" to 0.15f)
         val rendered = Thump.render(ThumpVoice.KICK, macros)
