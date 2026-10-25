@@ -63,6 +63,19 @@ Why it is built this way:
 4. A matched melody comparison gives the owner a musical context for judging
    the revision. Spectral measurements cannot establish musicality.
 
+Measured from the written, level-matched C4 recordings with Python scipy:
+
+| Quantity | Previous responsive | Gentler |
+| --- | ---: | ---: |
+| Sustained duet power at 2–8 kHz | 12.19% | .31% |
+| Median source tuning separation | 23.81 cents | 6.40 cents |
+| Time with air at least 3 dB above reed | 1.32 s | 1.32 s |
+| Time with reed at least 3 dB above air | 1.68 s | 1.69 s |
+
+Spectra use the .35–3.25 second body; lead windows use 50 ms RMS windows
+every 10 ms. These are measures of spectral edge, pitch spacing and actual
+prominence, not a listening score. Both players retain three prominent turns.
+
 ## Why this belongs in the existing engine
 
 BORE supplies one woodwind source per render. FLOCK supplies a social controller
@@ -226,12 +239,21 @@ does not mean the original timed phrase with only a pressure effect removed.
 ## Verified, measured, proposed and heard
 
 The source APIs and bounds above are verified against the repository. Compatibility,
-causal and performance results are produced by Kotlin/JVM tests and probes. Model-6
-thresholds and musical meaning remain proposed until Josh hears the comparison.
-Model 5 was previously heard and accepted. No new listening claim is made here.
+causal and performance results are produced by Kotlin/JVM tests and probes.
+Controller thresholds and voicing choices remain proposed. Model 5 was previously
+heard and accepted. The owner reported harshness in the subsequent comparison;
+model 7 has no listening verdict yet.
 
 As built, the focused audio and OBBLIGATO run passed 475 tests in 64 suites,
 including the 30 original audio recipes, all six interaction tests and kit
 export/readback. The comparison generator produced 19 mono PCM24 recordings at
 44.1 kHz and an 11.85 MiB portable ZIP. Broader repository and Android checks are
 separate from this focused evidence.
+
+The gentler revision passed all 35 focused OBBLIGATO tests before its final
+balance adjustment. After that adjustment, all five new voicing/compatibility
+tests plus the original fixture test passed again, including after merging the
+current default branch. They cover immutable model-6
+receipts, root pitch, actual alternating source dominance, continuity and causal
+answers. The generator produced ten mono PCM24 recordings with matching levels.
+Broader checks for this revision are reported separately from those results.
