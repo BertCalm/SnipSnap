@@ -2795,11 +2795,19 @@ object Copy {
     /** The position sat still at the start for [ms], then moved. */
     fun clockStoodStill(ms: Long): String = "POSITION STOOD STILL $ms MS AT THE START, THEN TRACKED."
     /** The position stopped for [ms], starting [atSeconds] into the run. */
-    fun clockStopped(ms: Long, atSeconds: Double): String = "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN."
+    fun clockStopped(ms: Long, atSeconds: Double, slowStartMs: Long? = null): String =
+        "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN" +
+            (if (slowStartMs != null) ", AFTER A SLOW START OF $slowStartMs MS." else ".")
     /** The position never moved in [seconds] of playing: the clock cannot be trusted. */
     fun clockNeverMoved(seconds: Double): String = "POSITION NEVER MOVED IN ${"%.1f".format(java.util.Locale.ROOT, seconds)} S. THIS PHONE'S CLOCK CANNOT BE TRUSTED ON THIS STREAM."
     /** How far the position's clock runs from the stream's rate. */
-    fun clockRate(ppm: Long): String = "RATE OFF ${kotlin.math.abs(ppm)} PPM."
+    fun clockRate(ppm: Long): String = when {
+        ppm > 0 -> "RATE $ppm PPM FAST."
+        ppm < 0 -> "RATE ${-ppm} PPM SLOW."
+        else -> "RATE 0 PPM OFF."
+    }
     /** Coarse: the position trails the frames written by about [ms]. */
     fun clockBehind(ms: Long): String = "ABOUT $ms MS BEHIND."
+    /** Coarse: the position is ahead of the frames written by about [ms] (the two reads skew). */
+    fun clockAhead(ms: Long): String = "ABOUT $ms MS AHEAD."
 }

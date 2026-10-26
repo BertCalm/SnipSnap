@@ -6,6 +6,7 @@ import kotlin.math.abs
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -158,6 +159,60 @@ class ClockProbeTest {
         val jittered = ClockProbe.analyze(stream(48_000, 10_000, wallJitterMs = 8.0), 48_000)
         assertEquals(Verdict.TRACKED, jittered.verdict)
         assertNear(clean.rateErrorPpm!!, jittered.rateErrorPpm, 1.0, "rate error")
+    }
+
+    @Test
+    fun `one tiny odd step and a creeping 500 ms span is still a stall`() {
+        val base = stream(48_000, 8_000)
+        val start = base.indexOfFirst { (it.wallNanos - 1_000_000_000L) >= 2_000_000_000L }
+        val end = base.indexOfFirst { (it.wallNanos - 1_000_000_000L) >= 2_500_000_000L }
+        val odd = 30 // from here on every position carries one 3-frame step the burst never made
+        val held = base[start].hwFrame!! + 3
+        val sneaky = base.mapIndexed { i, s ->
+            when {
+                i in start until end -> s.copy(hwFrame = held + 2L * (i - start)) // 2 frames per read
+                i >= odd -> s.copy(hwFrame = s.hwFrame!! + 3)
+                else -> s
+            }
+        }
+        val r = ClockProbe.analyze(sneaky, 48_000)
+        assertEquals(Verdict.STALLED, r.verdict)
+        assertNear(500.0, r.longestStallMs, 40.0, "longest stall")
+        assertNear(2_000.0, r.stallAtMs, 40.0, "stall at")
+    }
+
+    @Test
+    fun `a slow start and a later stall are both named`() {
+        val r = ClockProbe.analyze(stream(48_000, 10_000, hwStartMs = 800, freezeAtMs = 3_000, freezeMs = 500), 48_000)
+        assertEquals(Verdict.STALLED, r.verdict)
+        assertTrue(r.startupGapMs!! > ClockProbe.SLOW_START_MS)
+        val line = ClockProbe.describe(r)
+        assertTrue(line.startsWith("POSITION STOPPED FOR "), line)
+        assertTrue(line.contains(", AFTER A SLOW START OF ${Math.round(r.startupGapMs!!)} MS."), line)
+    }
+
+    @Test
+    fun `a position ahead of the frames written says ahead`() {
+        // hardware at 10000 frames with only 9000 written: 1000 frames, ABOUT 21 MS AHEAD at 48 kHz
+        val ahead = stream(48_000, 10_000).map { it.copy(framesWritten = it.hwFrame!! - 1_000) }
+        val r = ClockProbe.analyze(ahead, 48_000)
+        assertNear(-1_000 * 1000.0 / 48_000, r.lagMs, 0.001, "lag")
+        assertTrue(ClockProbe.describe(r).contains(Copy.clockAhead(21)), ClockProbe.describe(r))
+    }
+
+    @Test
+    fun `rate words carry the sign`() {
+        assertEquals("RATE 12 PPM FAST.", Copy.clockRate(12))
+        assertEquals("RATE 9 PPM SLOW.", Copy.clockRate(-9))
+        val fast = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = 200.0), 48_000)
+        assertTrue(ClockProbe.describe(fast).contains("PPM FAST."), ClockProbe.describe(fast))
+        val slow = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = -300.0), 48_000)
+        assertTrue(ClockProbe.describe(slow).contains("PPM SLOW."), ClockProbe.describe(slow))
+    }
+
+    @Test
+    fun `a sample rate of zero is refused`() {
+        assertFailsWith<IllegalArgumentException> { ClockProbe.analyze(stream(48_000, 3_000), 0) }
     }
 
     @Test

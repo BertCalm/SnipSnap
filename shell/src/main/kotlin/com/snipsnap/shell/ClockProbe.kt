@@ -19,8 +19,14 @@ object ClockProbe {
     /** Proposed. Less than this much run after the first movement is TOO_SHORT, and no rate is fitted. */
     const val MIN_TRACKED_MS = 2_000L
 
-    // The spec's fifth proposed figure, "one burst of movement", is not a constant: `Sample`
-    // does not carry the burst size, so [analyze] infers it (see there).
+    /**
+     * Proposed. The least the position must move to count as moving at all, in ms of audio at
+     * the stream's rate. A healthy 48 kHz stream moves about 800 frames per display-frame read
+     * and 4800 per 100 ms, so "moved at most this much while at least [MOVING_AUDIO_MS] was
+     * written" is a stall whatever the device's burst size. It is the floor under the burst
+     * [analyze] infers.
+     */
+    const val BURST_FLOOR_MS = 10L
 
     enum class Verdict { UNAVAILABLE, TOO_SHORT, STALLED, SLOW_START, TRACKED }
 
@@ -48,8 +54,14 @@ object ClockProbe {
      * Judge a run of samples against [sampleRate] (frames per second of the stream).
      *
      * "One burst" for the stall rule is **inferred**, not a parameter: the smallest positive
-     * step between consecutive distinct hardware positions after the first movement. A
-     * position that creeps by no more than that between two reads has not really moved.
+     * step between consecutive distinct hardware positions after the first movement, but never
+     * less than [BURST_FLOOR_MS] of audio at [sampleRate] (one odd tiny step must not set a
+     * threshold a creeping stall can beat). A position that moves by no more than that
+     * between two reads has not really moved.
+     *
+     * Sign of `rateErrorPpm`: positive when the hardware clock runs fast against [sampleRate]
+     * (it counts more frames per second than the stream's rate), negative when slow.
+     * Throws [IllegalArgumentException] if [sampleRate] is not positive.
      * Choices the spec leaves open: stalls are timed on `wallNanos` (failed reads have no
      * hardware time); the lag and rate are taken over the samples from the first movement on.
      *
@@ -60,9 +72,10 @@ object ClockProbe {
      * lag. Never moved with less audio than that stays TOO_SHORT.
      */
     fun analyze(samples: List<Sample>, sampleRate: Int): Result {
+        require(sampleRate > 0) { "sampleRate must be positive, was $sampleRate" }
         val n = samples.size
         val validSamples = samples.count { it.hwFrame != null }
-        if (validSamples == 0 || sampleRate <= 0) {
+        if (validSamples == 0) {
             return Result(Verdict.UNAVAILABLE, n, validSamples, null, 0.0, null, null, null)
         }
 
@@ -98,11 +111,13 @@ object ClockProbe {
             after[k].hwFrame?.let { last = it }
             held[k] = last
         }
-        var burst = Long.MAX_VALUE
+        var inferred = Long.MAX_VALUE
         for (k in 1 until held.size) {
             val step = held[k] - held[k - 1]
-            if (step in 1 until burst) burst = step
+            if (step in 1 until inferred) inferred = step
         }
+        val burstFloor = BURST_FLOOR_MS * sampleRate / 1000
+        val burst = if (inferred == Long.MAX_VALUE) burstFloor else maxOf(inferred, burstFloor)
         val movingFrames = MOVING_AUDIO_MS * sampleRate / 1000.0
         var longestStall = 0.0
         var stallAt: Double? = null
@@ -162,7 +177,11 @@ object ClockProbe {
         Verdict.STALLED -> if (result.startupGapMs == null) {
             Copy.clockNeverMoved(Math.round(result.longestStallMs / 100.0) / 10.0)
         } else listOfNotNull(
-            Copy.clockStopped(Math.round(result.longestStallMs), Math.round((result.stallAtMs ?: 0.0) / 100.0) / 10.0),
+            Copy.clockStopped(
+                Math.round(result.longestStallMs),
+                Math.round((result.stallAtMs ?: 0.0) / 100.0) / 10.0,
+                result.startupGapMs?.takeIf { it > SLOW_START_MS }?.let { Math.round(it) },
+            ),
             rateSentence(result),
         ).joinToString(" ")
         Verdict.SLOW_START -> listOfNotNull(
@@ -172,7 +191,7 @@ object ClockProbe {
         Verdict.TRACKED -> listOfNotNull(
             Copy.CLOCK_TRACKED,
             rateSentence(result),
-            result.lagMs?.takeIf { it >= 0.0 }?.let { Copy.clockBehind(Math.round(it)) },
+            result.lagMs?.let { if (it >= 0.0) Copy.clockBehind(Math.round(it)) else Copy.clockAhead(Math.round(-it)) },
         ).joinToString(" ")
     }
 
