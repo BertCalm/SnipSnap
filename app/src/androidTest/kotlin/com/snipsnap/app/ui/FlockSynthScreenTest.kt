@@ -1,11 +1,15 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.onNodeWithText
@@ -36,6 +40,8 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 
 /** Real SYNTH bindings: mode/release never replace a saved pitch, full-width seed or old model. */
 @RunWith(AndroidJUnit4::class)
@@ -47,7 +53,8 @@ class FlockSynthScreenTest : ComposeScreenTest() {
     private var generation by mutableStateOf(0)
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private var kitUpdates = 0
-    private var instrumentUpdates = 0
+    private val instrumentUpdates = AtomicInteger()
+    private val latestToast = AtomicReference("")
 
     @After
     fun cleanUp() {
@@ -68,9 +75,9 @@ class FlockSynthScreenTest : ComposeScreenTest() {
                 SynthScreen(
                     entry = entry,
                     shelfRoot = shelf,
-                    onToast = {},
+                    onToast = { latestToast.set(it) },
                     onKitUpdated = { updated -> entry = entry?.copy(kit = updated); kitUpdates++ },
-                    onShelfAssetWritten = { instrumentUpdates++ },
+                    onShelfAssetWritten = { instrumentUpdates.incrementAndGet() },
                     onDroneToLoop = { _, _, _ -> },
                     onOpenSurface = {},
                     appScope = appScope,
@@ -105,6 +112,57 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         cancels[cancels.fetchSemanticsNodes().lastIndex]
             .performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
         pump(16)
+    }
+
+    /** The DSP follows wall time, not the manual Compose clock. Limit this local
+     * long-render poll to one frame per 40 ms so it does not spin UI work against
+     * the serial capture worker on a two-core emulator. Keep the real deadline
+     * and record progress instead of giving a stalled renderer a longer wait. */
+    private fun waitForBackgroundRender(
+        what: String,
+        timeoutMillis: Long,
+        diagnostic: () -> String,
+        condition: () -> Boolean,
+    ) {
+        val started = SystemClock.elapsedRealtime()
+        var lastProgress = diagnostic()
+        var lastChangedAt = started
+        var nextDiagnosticAt = started + 1_000
+        val history = mutableListOf("0 ms: $lastProgress")
+        while (!condition()) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - started >= timeoutMillis) {
+                throw AssertionError("waited $timeoutMillis ms and $what never came; " +
+                    "last progress: $lastProgress (unchanged for ${now - lastChangedAt} ms); " +
+                    "progress history: ${history.joinToString("; ")}; latest toast: ${latestToast.get()}")
+            }
+            SystemClock.sleep(40)
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            val sampledAt = SystemClock.elapsedRealtime()
+            if (sampledAt >= nextDiagnosticAt) {
+                val progress = diagnostic()
+                if (progress != lastProgress) {
+                    lastProgress = progress
+                    lastChangedAt = sampledAt
+                    val event = "${sampledAt - started} ms: $progress"
+                    history += event
+                    Log.i("FlockSynthScreenTest", "$what: $event")
+                }
+                nextDiagnosticAt = sampledAt + 1_000
+            }
+        }
+        Log.i("FlockSynthScreenTest", "$what completed in ${SystemClock.elapsedRealtime() - started} ms")
+    }
+
+    private fun instrumentRenderProgress(): String {
+        val progress = compose.onAllNodes(SemanticsMatcher("instrument render counter") { node ->
+            node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
+                node.config.getOrNull(SemanticsProperties.ContentDescription)
+                    ?.any { it.startsWith("RENDERING ") } == true
+        }).fetchSemanticsNodes().singleOrNull()
+        return progress?.config?.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+            ?: "no instrument render counter on screen"
     }
 
     @Test
@@ -222,7 +280,8 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         activate("MAKE INSTRUMENT")
         button("TOUCH LAYERS").assertIsSelected()
         activate("MAKE")
-        waitFor("three-layer RIBBON instrument", timeoutMillis = 240_000) { instrumentUpdates > 0 }
+        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 240_000,
+            diagnostic = ::instrumentRenderProgress) { instrumentUpdates.get() > 0 }
         val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
         val sidecar = dir.listFiles()!!.single { it.name.endsWith(InstrumentStore.SUFFIX) }
         val instrument = InstrumentStore.read(sidecar)
@@ -255,7 +314,10 @@ class FlockSynthScreenTest : ComposeScreenTest() {
             FlockHeldAudition(held, androidx.compose.ui.graphics.Color.Cyan,
                 com.snipsnap.shell.Schemes.DEFAULT)
         }
-        waitFor("native held preview", timeoutMillis = 180_000) { failed || preview?.ready == true }
+        waitForBackgroundRender("native held preview", timeoutMillis = 180_000,
+            diagnostic = { "rendering=${preview?.rendering}, ready=${preview?.ready}, failed=$failed" }) {
+            failed || preview?.ready == true
+        }
         assertFalse("held capture failed", failed)
         val capture = preview!!.snip
         val playerState = preview
