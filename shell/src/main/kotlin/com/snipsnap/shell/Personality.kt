@@ -2784,4 +2784,20 @@ object Copy {
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
 
+
+    // ---- SETUP · HELP · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
+    /** The clock check found a position that tracks. Rate and lag follow it. */
+    const val CLOCK_TRACKED = "POSITION TRACKED."
+    /** Every read of the playback position failed. */
+    const val CLOCK_UNAVAILABLE = "THIS PHONE REPORTS NO POSITION FOR THIS STREAM."
+    /** Not enough run after the position first moved to judge it. */
+    const val CLOCK_TOO_SHORT = "TOO SHORT. RUN IT AGAIN."
+    /** The position sat still at the start for [ms], then moved. */
+    fun clockStoodStill(ms: Long): String = "POSITION STOOD STILL $ms MS AT THE START, THEN TRACKED."
+    /** The position stopped for [ms], starting [atSeconds] into the run. */
+    fun clockStopped(ms: Long, atSeconds: Double): String = "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN."
+    /** How far the position's clock runs from the stream's rate. */
+    fun clockRate(ppm: Long): String = "RATE OFF ${kotlin.math.abs(ppm)} PPM."
+    /** Coarse: the position trails the frames written by about [ms]. */
+    fun clockBehind(ms: Long): String = "ABOUT $ms MS BEHIND."
 }
