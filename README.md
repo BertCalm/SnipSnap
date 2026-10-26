@@ -595,15 +595,17 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
-Its latest body revision adds a rounded same-pitch foundation while retaining
-the opening click and all original model-4 recipes.
-Nine starting settings, saved recipes, native velocity and CLI rendering share
+Its fuller body adds a rounded same-pitch foundation while retaining the opening
+click. The sustain revision keeps subtle ensemble movement in short held loops
+and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
+Ten starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
-compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
-baseline and retains the original chiff and airflow comparisons. TRANSISTOR
-awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
+opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
+preset with stronger bank motion and vibrato and a nine-zone MPC download. The
+earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of Rich Ensemble is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
