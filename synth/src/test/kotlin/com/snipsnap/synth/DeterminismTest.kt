@@ -10,6 +10,15 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+        for (voice in CairnVoice.entries) {
+            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
+            val a = patch.render().samples
+            Cairn.clearMotionCache()
+            assertContentEquals(a, patch.render().samples)
+        }
+    }
 
     @Test
     fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {

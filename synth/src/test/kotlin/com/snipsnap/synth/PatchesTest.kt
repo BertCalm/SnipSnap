@@ -47,6 +47,7 @@ class PatchesTest {
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
+        CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
         WickPresets.all().first(),
         NacrePresets.all().first(),
     )

@@ -6,6 +6,14 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
+**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
+motion/contact core. Higher contacts survive the 243-point middle-control grid
+and disappear when mount coupling is removed. Saved model/note/velocity/cue
+recipes and 92 finite audition cases are available outside the factory roster
+and phone picker. Historical six-voice recordings remain separate references.
+HOLD loops, other voices, phone cost and sonic acceptance remain open. See
+[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
+
 **Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
 cohorts, surviving cores, and extended ringing strands. The owner approved the
