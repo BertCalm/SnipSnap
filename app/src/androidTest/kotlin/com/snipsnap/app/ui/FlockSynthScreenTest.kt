@@ -287,9 +287,9 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         activate("MAKE")
         // Android 14 debug CI reached 24/27 at 236.159 s, completing each
         // three-sample root in about 28.4 s. Nine roots project to about 265 s.
-        // Bound the complete bank and package write at 330 s, while 75 s with
-        // no displayed progress still fails a stalled capture promptly.
-        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 330_000,
+        // Keep the incoming 420 s bank/write budget, while 75 s with no
+        // displayed progress still fails a stalled capture promptly.
+        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 420_000,
             progressTimeoutMillis = 75_000,
             diagnostic = ::instrumentRenderProgress) { instrumentUpdates.get() > 0 }
         val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
