@@ -2785,6 +2785,18 @@ object Copy {
     const val INSTANT_KIT_BUSY = "CHOPPING…"
 
 
+    // ---- SETUP · HELP · MIDI: the CLOCK CHECK button and what it says around the run ----
+    /** The MIDI screen's button that runs the six-second clock check (bench S1). */
+    const val MIDI_CLOCK_CHECK = "CLOCK CHECK"
+    /** The same button while the check runs; a tap does nothing. */
+    const val MIDI_CLOCK_RUNNING = "CHECKING…"
+    /** The pad engine's stream would not start, so there is nothing to check. */
+    const val MIDI_CLOCK_NO_STREAM = "NO AUDIO STREAM. THE CLOCK CHECK CANNOT RUN."
+    /** Headphones went in or out, or the device restarted the stream, mid-check. */
+    const val MIDI_CLOCK_ROUTE_CHANGED = "THE AUDIO ROUTE CHANGED. RUN IT AGAIN."
+    /** The stream fell back to shared mode; it may not be what clock out would get. */
+    const val MIDI_CLOCK_SHARED = "SHARED STREAM: SOMETHING ELSE HELD THE AUDIO. RUN IT WITH NOTHING ELSE PLAYING."
+
     // ---- SETUP · HELP · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
     /** The clock check found a position that tracks. Rate and lag follow it. */
     const val CLOCK_TRACKED = "POSITION TRACKED."

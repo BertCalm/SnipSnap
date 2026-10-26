@@ -2,6 +2,9 @@ package com.snipsnap.app.ui
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.Context
+import android.media.AudioDeviceInfo
+import android.media.AudioManager
 import android.os.Build
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -16,8 +19,10 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -25,16 +30,24 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.PadEngine
+import com.snipsnap.app.deviceSampleRate
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
+import com.snipsnap.audio.DrumSynth
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.ClockProbe
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiEndpoint
 import com.snipsnap.shell.MidiMonitor
 import com.snipsnap.shell.MidiReport
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 
 /**
  * MIDI: what is plugged in, and what it sends. Behind the gear, so it is
@@ -73,6 +86,49 @@ fun MidiScreen() {
     var supported by remember { mutableStateOf(true) }
     var copied by remember { mutableStateOf(false) }
 
+    // CLOCK CHECK (bench S1). The engine lives only for the run; [hold] is how the
+    // screen closes it if the screen is left or stopped before the run ends.
+    val scope = rememberCoroutineScope()
+    val hold = remember { ClockHold() }
+    var clockRunning by remember { mutableStateOf(false) }
+    var clockLines by remember { mutableStateOf<List<String>>(emptyList()) }
+    var clockReport by remember { mutableStateOf<MidiReport.ClockReport?>(null) }
+    fun abortClock() {
+        hold.job?.cancel()
+        hold.job = null
+        hold.engine?.close()
+        hold.engine = null
+        clockRunning = false
+    }
+    fun startClock() {
+        if (clockRunning) return
+        clockRunning = true
+        clockLines = emptyList()
+        clockReport = null
+        copied = false
+        hold.job = scope.launch {
+            val outcome = try {
+                runClockCheck(context, hold)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ClockOutcome.NoStream
+            }
+            // Only the run that is still current may write: an abort has already reset the screen.
+            if (hold.job === coroutineContext[Job]) {
+                clockLines = when (outcome) {
+                    ClockOutcome.NoStream -> listOf(Copy.MIDI_CLOCK_NO_STREAM)
+                    ClockOutcome.RouteChanged -> listOf(Copy.MIDI_CLOCK_ROUTE_CHANGED)
+                    is ClockOutcome.Done ->
+                        listOf(outcome.report.line) + if (outcome.shared) listOf(Copy.MIDI_CLOCK_SHARED) else emptyList()
+                }
+                clockReport = (outcome as? ClockOutcome.Done)?.report
+                hold.job = null
+                clockRunning = false
+            }
+        }
+    }
+
     val midi = remember { MidiInput(context, tapRaw = true) }
     val listener = remember {
         object : MidiInput.Listener {
@@ -101,6 +157,9 @@ fun MidiScreen() {
                     endpoints = midi.endpoints
                 }
                 Lifecycle.Event.ON_STOP -> {
+                    // A background app gets no frames, so a run left going would resume on
+                    // a dead or rerouted stream; end it here and let the player run it again.
+                    abortClock()
                     midi.close()
                     endpoints = emptyList()
                     refused = emptyList()
@@ -111,6 +170,7 @@ fun MidiScreen() {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            abortClock()
             midi.close()
         }
     }
@@ -151,6 +211,24 @@ fun MidiScreen() {
             }
         }
 
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .lcdPanel(scheme)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            ActionButton(
+                if (clockRunning) Copy.MIDI_CLOCK_RUNNING else Copy.MIDI_CLOCK_CHECK,
+                scheme,
+                enabled = !clockRunning,
+                modifier = Modifier.fillMaxWidth(),
+            ) { startClock() }
+            for (line in clockLines) {
+                TapeText(line, TapeType.lcdSmall, scheme.lcdInk2, maxLines = 4)
+            }
+        }
+
         var monitorOpen by rememberSaveable { mutableStateOf(true) }
         GroupBox(
             legend = MidiReport.MONITOR,
@@ -182,7 +260,7 @@ fun MidiScreen() {
                 modifier = Modifier.weight(1f),
             ) {
                 val phone = MidiReport.Phone(versionName, Build.VERSION.RELEASE, Build.VERSION.SDK_INT, Build.MANUFACTURER, Build.MODEL)
-                val text = MidiReport.text(phone, supported, endpoints, refused, snapshot)
+                val text = MidiReport.text(phone, supported, endpoints, refused, snapshot, clock = clockReport)
                 context.getSystemService(ClipboardManager::class.java)
                     ?.setPrimaryClip(ClipData.newPlainText(MidiReport.CLIP_LABEL, text))
                 copied = true
@@ -193,5 +271,106 @@ fun MidiScreen() {
                 copied = false
             }
         }
+    }
+}
+
+/**
+ * What a CLOCK CHECK leaves behind: the engine it opened (so the screen can
+ * close it if the screen goes first) and the job running it. Main thread only.
+ */
+private class ClockHold {
+    var engine: PadEngine? = null
+    var job: Job? = null
+}
+
+private sealed interface ClockOutcome {
+    data object NoStream : ClockOutcome
+    data object RouteChanged : ClockOutcome
+    data class Done(val report: MidiReport.ClockReport, val shared: Boolean) : ClockOutcome
+}
+
+/** How long the check samples, and how often the click sounds. */
+private const val CLOCK_RUN_NANOS = 6_000_000_000L
+private const val CLOCK_HIT_EVERY_NANOS = 1_000_000_000L
+
+/**
+ * Bench S1 (`docs/MIDI_CLOCK_PROBE_SPEC_2026_10.md` 2.3): open a pad engine the way
+ * [com.snipsnap.app.PadHost] does, sound a click once a second for six seconds, and
+ * sample the frames written against the hardware position once per display frame.
+ *
+ * Main thread throughout: every [PadEngine] call, [PadEngine.hardwarePosition] above
+ * all, happens inside `withFrameNanos`, which is why this runs in the screen's scope
+ * and nowhere else. The engine is closed in `finally`, so a cancel (screen left, app
+ * stopped) closes it too; [hold] lets the screen close it first if it goes first.
+ */
+private suspend fun runClockCheck(context: Context, hold: ClockHold): ClockOutcome {
+    val engine = PadEngine(deviceSampleRate(context))
+    hold.engine = engine
+    try {
+        if (!engine.start()) return ClockOutcome.NoStream
+        val click = DrumSynth.click(engine.sampleRate(), accent = false)
+        val sample = engine.loadSnips(listOf(click)).firstOrNull() ?: return ClockOutcome.NoStream
+        val route = outputRoute(context)
+        val out = LongArray(2)
+        val samples = ArrayList<ClockProbe.Sample>()
+        var startNanos = -1L
+        var nextHit = 0L
+        var voiceId = 0
+        while (true) {
+            val s = withFrameNanos {
+                val now = System.nanoTime()
+                if (startNanos < 0L) startNanos = now
+                if (now - startNanos >= nextHit) {
+                    nextHit += CLOCK_HIT_EVERY_NANOS
+                    engine.hitLayers(
+                        layers = listOf(PadEngine.Layer(voiceId++, sample, PadEngine.CLICK_GAIN, PadEngine.CLICK_GAIN, reverse = false)),
+                        startFrame = 0L,
+                        endFrame = click.frameCount.toLong(),
+                        loopStart = -1L,
+                        pitch = 1.0,
+                    )
+                }
+                val ok = engine.hardwarePosition(out)
+                ClockProbe.Sample(now, engine.framesRendered(), if (ok) out[0] else null, if (ok) out[1] else null)
+            }
+            // A route change (headphones in or out) restarts the stream under us: what
+            // was sampled before it and after it is two clocks, so stop rather than fit across them.
+            if (engine.needsRestart()) return ClockOutcome.RouteChanged
+            samples += s
+            if (s.wallNanos - startNanos >= CLOCK_RUN_NANOS) break
+        }
+        val rate = engine.sampleRate()
+        val result = ClockProbe.analyze(samples, rate)
+        val shared = engine.isShared()
+        return ClockOutcome.Done(
+            MidiReport.ClockReport(
+                line = ClockProbe.describe(result),
+                result = result,
+                sampleRate = rate,
+                shared = shared,
+                framesPerBurst = engine.framesPerBurst(),
+                audioApi = engine.audioApi(),
+                latencyMillis = engine.latencyMillis(),
+                model = Build.MODEL,
+                sdk = Build.VERSION.SDK_INT,
+                route = route,
+            ),
+            shared,
+        )
+    } finally {
+        engine.close()
+        if (hold.engine === engine) hold.engine = null
+    }
+}
+
+/** The first of Bluetooth, wired, USB that is plugged in, else the speaker: what the report calls the route. */
+private fun outputRoute(context: Context): MidiReport.Route {
+    val am = context.getSystemService(AudioManager::class.java) ?: return MidiReport.Route.SPEAKER
+    val types = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type }.toSet()
+    return when {
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP in types -> MidiReport.Route.BLUETOOTH
+        AudioDeviceInfo.TYPE_WIRED_HEADPHONES in types || AudioDeviceInfo.TYPE_WIRED_HEADSET in types -> MidiReport.Route.WIRED
+        AudioDeviceInfo.TYPE_USB_HEADSET in types || AudioDeviceInfo.TYPE_USB_DEVICE in types -> MidiReport.Route.USB
+        else -> MidiReport.Route.SPEAKER
     }
 }
