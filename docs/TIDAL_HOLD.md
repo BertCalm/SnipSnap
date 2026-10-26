@@ -60,7 +60,8 @@ precedents; neither carries Tidal's original-population encounter readout.
 `HOLD` is an explicit 0/1 switch. Fractional or non-finite values fail. Held patch
 JSON requires `heldModel = 1`; finite JSON remains compatible. Source model, exact
 signed Long seed, MIDI, velocity and all five encounter controls survive editing,
-saving, drafts and pad reopening. HOLD pads are gated loops of the aftermath;
+saving, drafts and pad reopening. BREED crosses timbre while retaining parent
+A's playback switch with its source model, note, velocity and seed. HOLD pads are gated loops of the aftermath;
 NOTE pads play the full finite performance once. A pad loop is cyclically rotated
 to its smallest-magnitude sample before delivery, avoiding a large trigger step.
 No sample is faded or reshaped, and the instrument's opening and loop marker are unchanged.

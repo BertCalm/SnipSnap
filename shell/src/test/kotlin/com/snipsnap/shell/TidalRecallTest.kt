@@ -35,6 +35,26 @@ import kotlin.test.assertTrue
 
 /** The finite instrument's phone-independent save, replay, spread and export doors. */
 class TidalRecallTest {
+    @Test
+    fun `breeding crosses timbre while keeping the source playback choice and exact performance`() {
+        var timbreCrossed = false
+        for (hold in listOf(0f, 1f)) for (seed in 0L..31L) {
+            val a = TidalPatch("A", TidalVoice.PAIR, mapOf("HOLD" to hold, "PASSAGE" to .2f),
+                midi = 57, velocity = .42f, seed = Long.MAX_VALUE, model = 1)
+            val b = TidalPatch("B", TidalVoice.PAIR, mapOf("HOLD" to (1f - hold), "PASSAGE" to .8f),
+                midi = 72, velocity = .9f, seed = Long.MIN_VALUE, model = 2)
+            val child = Breed.cross(PadRecipe(a), PadRecipe(b), java.util.Random(seed)).patch as TidalPatch
+            if (child.macros["PASSAGE"] != a.macros["PASSAGE"]) timbreCrossed = true
+            assertEquals(hold, child.macros["HOLD"])
+            assertEquals(a.midi, child.midi)
+            assertEquals(a.velocity, child.velocity)
+            assertEquals(a.seed, child.seed)
+            assertEquals(a.model, child.model)
+            assertEquals(child, TidalPatch.fromJsonText(child.toJsonText()))
+        }
+        assertTrue(timbreCrossed, "the playback guard must still allow TIDAL timbre crossover")
+    }
+
     private fun authored(model: Int) = TidalPatch(
         "MY \"A\\ \$",
         TidalVoice.STREAM,
