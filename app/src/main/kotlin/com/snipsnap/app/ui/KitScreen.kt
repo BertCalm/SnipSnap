@@ -290,6 +290,7 @@ fun KitScreen(
 
     val kit = entry.kit
     val strike = rememberSaveable(entry.dir.absolutePath, saver = StrikeState.Saver) { StrikeState() }
+    LaunchedEffect(kit) { strike.lastHit = null }
 
     // The glow the pad cells cannot draw for themselves: a hit that did not
     // arrive as a finger on a cell (a MIDI note, the fullscreen grid) has no
@@ -328,7 +329,9 @@ fun KitScreen(
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
         val sounded = player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)
-        if (!sounded) allocator.voiceEnded(allocation.started.id)
+        if (sounded) {
+            strike.recordHit(pad, velocity)
+        } else allocator.voiceEnded(allocation.started.id)
         // Out over MIDI (touch only), and only for a hit that made local sound.
         // No release gesture here, so MidiOut schedules the note-off one step
         // later; the window grid sends under PLAY's current map, like fullscreen.
@@ -375,6 +378,8 @@ fun KitScreen(
             // Nothing loaded for this pad (or nothing yet): the allocator
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
+        } else {
+            strike.recordHit(pad, velocity)
         }
         flash(slot)
         if (!fromMidi && sounded) {
@@ -697,6 +702,7 @@ fun KitScreen(
         }
 
         StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
             TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }

@@ -37,7 +37,7 @@ class ImportSidecarTest {
                 colorHex = "#aabbcc", recipe = recipe,
                 source = mapOf("rawSha256" to hash(File(samples, "Kick.wav")), "renderer" to "ONSET")),
             KitPad(2, "Hard.wav", displayName = "MY LAYERS", recipe = recipe,
-                velocityLayers = listOf(KitLayer("Soft.wav", 0, 63), KitLayer("Hard.wav", 64, 127))),
+                velocityLayers = listOf(KitLayer("Soft.wav", 0, 63, "DRY"), KitLayer("Hard.wav", 64, 127, "ECHO"))),
         ))
     }
 
@@ -49,6 +49,7 @@ class ImportSidecarTest {
         val imported = saved.copy(pads = saved.pads.map { it.copy(
             displayName = it.sampleStem, drumClass = DrumClass.UNKNOWN, colorHex = null,
             recipe = null, source = mapOf("importedFrom" to "Card.zip"),
+            velocityLayers = it.velocityLayers.map { layer -> layer.copy(displayName = null) },
             level = .24f, pan = .8f, tuneCoarse = 3, muteGroup = 7, attack = .2f,
         ) })
         assertSame(imported, ImportSidecar.restore(imported, null, samples, "kit.json"))
@@ -57,6 +58,7 @@ class ImportSidecarTest {
             val original = saved.pad(pad.slot)!!
             assertEquals(original.recipe, pad.recipe)
             assertEquals(original.displayName, pad.displayName)
+            assertEquals(original.velocityLayers, pad.velocityLayers, "restore labels without changing program zones")
             assertEquals(original.drumClass, pad.drumClass)
             assertEquals(original.colorHex, pad.colorHex)
             assertEquals(.24f, pad.level)

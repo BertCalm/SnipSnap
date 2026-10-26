@@ -1,0 +1,770 @@
+{
+  "schemaVersion": 1,
+  "originalCommit": "91384fa189a68c4993c8e359af6b748412bf95c3",
+  "sourceGitBlobs": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Obbligato.kt": "0b48669545d478f1eda0912c92094e3d1d95dec3",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObbligatoPatch.kt": "944a569c0528e5cad6eb8663c8b88934e7c67dff",
+    "synth/src/main/kotlin/com/snipsnap/synth/Bore.kt": "2e4b6ede528ff4a9d4a50ef43275ae1edd369dc8",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "9110eee0af6aab2937c0e5a813f33652c9f0dc73",
+    "synth/src/main/kotlin/com/snipsnap/synth/Strings.kt": "d07a9f16756456107c121dc96d5f703e6e34ca8c",
+    "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt": "4c9b44768c33c0b359c1f6353cfd6b1e7ab83fa5",
+    "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt": "9fd614f2ec41fb6d5768bced9d6f2cfe3229ba06",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "9416e761921b65a5cc32480462391a8dd4f4e960"
+  },
+  "javaVersion": "17.0.21",
+  "osArch": "amd64",
+  "floatFormat": "IEEE754 binary32 little endian, exact bits",
+  "exportFormat": "WavWriter PCM24 complete RIFF bytes, mono 44100Hz",
+  "cases": [
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 Harmony C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "449d8e4812923ffd6d63c16903c2c7cabd1b9b94e8d9ffce20eefcc70ee17dc9",
+      "airFloat32LittleEndianSha256": "b0f0adcb6605da277f60f4bd5bd42ddba5581c511fc47e9ab679c3f2ccb9d561",
+      "reedFloat32LittleEndianSha256": "42a0d27618a255283a33122e923f939e7bc43eabd822b921fb354df12560c8e0",
+      "finalPcm24WavSha256": "6921e2261c1527d989b2d8b237d4c0fe6f246e5eec74abb09b9ce6968019b926"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 Play C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "0041b374c6affae3168c530aa174aebce59d4d1061a41b57b1855a46d523aaf1",
+      "airFloat32LittleEndianSha256": "c4ebee507a131fc37638a705a2a35f93c67a0a428ef02adb27141a2560bb1924",
+      "reedFloat32LittleEndianSha256": "f4f711ce0da1246a0818aa04db6101df6b6d21b1ef29db85b75ab3fa52ccfa06",
+      "finalPcm24WavSha256": "f4944525975d4d733b4e48f450236fc37ef07ea59cabef0e72c6de780a6fc01b"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 Fight C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "fa88fc27640183485c9c669fc8729eed31b5af7e9f438d25a311dce1963fac8a",
+      "airFloat32LittleEndianSha256": "06edf31e464f235c3d899507f494dfdc449d8ccb4472f2477ab126027b543928",
+      "reedFloat32LittleEndianSha256": "cc7fd61af07eb397ef60ec40b11b1ac599aedb4158d4064361ca325194339e6d",
+      "finalPcm24WavSha256": "d14fcb75b0bf5fc0d80aded489f7076a2cd3a3d662f298dabf321a3a49b5e5af"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 Protect C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "3db8cb4758a9de6bb75b17db5e92de92b4043ec3ff26c80bc66e90102af33ecf",
+      "airFloat32LittleEndianSha256": "c64989ee271429418adb248ed03a0b9e4758f00e837a5552a70b8e23e9f56349",
+      "reedFloat32LittleEndianSha256": "df7bcbb83ca56338ad6aebb76f3e1c9f147c4dfc0f0defd530d74e70003eb1fc",
+      "finalPcm24WavSha256": "07353e5b0162e511791efe3207cc8d973aa4f90f838cee1973851284832a5f06"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 C5 soft interpolated",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.10000000149011612,
+          "BOND": 0.5,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.30000001192092896,
+        "seed": 17,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 253575,
+      "rawFloat32LittleEndianSha256": "61f20690f31fe513e3b5d35e838207155860dcfe16329a6748a7239c3b6ca13c",
+      "airFloat32LittleEndianSha256": "ca686299569a2a43113004d2dc745ed20b8f239daf4e77cc44858f13d4d01635",
+      "reedFloat32LittleEndianSha256": "0bbc5e9f5959445753ba5f0dbda37c3e904260efaa5ec14e7157aaa070d5db1d",
+      "finalPcm24WavSha256": "4a5d734e5091c11ae0964acf6d6d91b41add46cdff5d81a5c5c5b31ffc27993a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 1 G4 seeded short",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 1,
+          "BOND": 0.6100000143051147,
+          "MISCHIEF": 0.75,
+          "HOLD": 0
+        },
+        "midi": 67,
+        "velocity": 0.6000000238418579,
+        "seed": -23,
+        "model": 1
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 121275,
+      "rawFloat32LittleEndianSha256": "b1bae3def38f4c6de59681d89c4d508f8334e5f916e3c2040e082a7df7fb0991",
+      "airFloat32LittleEndianSha256": "660a8e2d1e404fad06e7b0bbbecdeda77df4a00881e7253a598d910def8b2e43",
+      "reedFloat32LittleEndianSha256": "140127a19fa865f41dd0e827d2b92769965de96f9cee2b2ab6537646d5f0cbd0",
+      "finalPcm24WavSha256": "fd90820efaa55c157bc8b7478a3fc426561986195e57541e3879777ae7b1124a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 Harmony C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "449d8e4812923ffd6d63c16903c2c7cabd1b9b94e8d9ffce20eefcc70ee17dc9",
+      "airFloat32LittleEndianSha256": "b0f0adcb6605da277f60f4bd5bd42ddba5581c511fc47e9ab679c3f2ccb9d561",
+      "reedFloat32LittleEndianSha256": "42a0d27618a255283a33122e923f939e7bc43eabd822b921fb354df12560c8e0",
+      "finalPcm24WavSha256": "6921e2261c1527d989b2d8b237d4c0fe6f246e5eec74abb09b9ce6968019b926"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 Play C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "290dd680f0fc2c87073f29937482c5a0fdbcc75a74f140b94c3e2d9d64f4796c",
+      "airFloat32LittleEndianSha256": "c02660f547fa3e660c2f923f03b9c6335b5663618d6605f20962e3605f23f348",
+      "reedFloat32LittleEndianSha256": "9f035d3b4169204b6a396f3f786d6fe9b60a5aabd9dac768eddeaedbda43dcdd",
+      "finalPcm24WavSha256": "514f25f2bcf0f0944d345ff30c79e599d42b7cfc717e94dc5064e1c5a27583f8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 Fight C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "fa88fc27640183485c9c669fc8729eed31b5af7e9f438d25a311dce1963fac8a",
+      "airFloat32LittleEndianSha256": "06edf31e464f235c3d899507f494dfdc449d8ccb4472f2477ab126027b543928",
+      "reedFloat32LittleEndianSha256": "cc7fd61af07eb397ef60ec40b11b1ac599aedb4158d4064361ca325194339e6d",
+      "finalPcm24WavSha256": "d14fcb75b0bf5fc0d80aded489f7076a2cd3a3d662f298dabf321a3a49b5e5af"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 Protect C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "16f5d71884600fc36d4d3366f4e75afe82a63dca4096e21a2deff4975df19e95",
+      "airFloat32LittleEndianSha256": "04231c8f14476e582c613bb79f8551bc4ea5a68a6e31d96e2bc81c514f76089c",
+      "reedFloat32LittleEndianSha256": "eaa8910ae8b6b9ebf05bbf34e4dbf4e907be3dbb3742aa5e237b467f38df0459",
+      "finalPcm24WavSha256": "67c3d05fbb39742f63ee43ccab565c6424ab1b902a142d48a6dd4bd4fa6c02a5"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 C5 soft interpolated",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.10000000149011612,
+          "BOND": 0.5,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.30000001192092896,
+        "seed": 17,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 253575,
+      "rawFloat32LittleEndianSha256": "61f20690f31fe513e3b5d35e838207155860dcfe16329a6748a7239c3b6ca13c",
+      "airFloat32LittleEndianSha256": "ca686299569a2a43113004d2dc745ed20b8f239daf4e77cc44858f13d4d01635",
+      "reedFloat32LittleEndianSha256": "0bbc5e9f5959445753ba5f0dbda37c3e904260efaa5ec14e7157aaa070d5db1d",
+      "finalPcm24WavSha256": "4a5d734e5091c11ae0964acf6d6d91b41add46cdff5d81a5c5c5b31ffc27993a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 2 G4 seeded short",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 1,
+          "BOND": 0.6100000143051147,
+          "MISCHIEF": 0.75,
+          "HOLD": 0
+        },
+        "midi": 67,
+        "velocity": 0.6000000238418579,
+        "seed": -23,
+        "model": 2
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 121275,
+      "rawFloat32LittleEndianSha256": "b1bae3def38f4c6de59681d89c4d508f8334e5f916e3c2040e082a7df7fb0991",
+      "airFloat32LittleEndianSha256": "660a8e2d1e404fad06e7b0bbbecdeda77df4a00881e7253a598d910def8b2e43",
+      "reedFloat32LittleEndianSha256": "140127a19fa865f41dd0e827d2b92769965de96f9cee2b2ab6537646d5f0cbd0",
+      "finalPcm24WavSha256": "fd90820efaa55c157bc8b7478a3fc426561986195e57541e3879777ae7b1124a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 Harmony C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "449d8e4812923ffd6d63c16903c2c7cabd1b9b94e8d9ffce20eefcc70ee17dc9",
+      "airFloat32LittleEndianSha256": "b0f0adcb6605da277f60f4bd5bd42ddba5581c511fc47e9ab679c3f2ccb9d561",
+      "reedFloat32LittleEndianSha256": "42a0d27618a255283a33122e923f939e7bc43eabd822b921fb354df12560c8e0",
+      "finalPcm24WavSha256": "6921e2261c1527d989b2d8b237d4c0fe6f246e5eec74abb09b9ce6968019b926"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 Play C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "290dd680f0fc2c87073f29937482c5a0fdbcc75a74f140b94c3e2d9d64f4796c",
+      "airFloat32LittleEndianSha256": "c02660f547fa3e660c2f923f03b9c6335b5663618d6605f20962e3605f23f348",
+      "reedFloat32LittleEndianSha256": "9f035d3b4169204b6a396f3f786d6fe9b60a5aabd9dac768eddeaedbda43dcdd",
+      "finalPcm24WavSha256": "514f25f2bcf0f0944d345ff30c79e599d42b7cfc717e94dc5064e1c5a27583f8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 Fight C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "fa88fc27640183485c9c669fc8729eed31b5af7e9f438d25a311dce1963fac8a",
+      "airFloat32LittleEndianSha256": "06edf31e464f235c3d899507f494dfdc449d8ccb4472f2477ab126027b543928",
+      "reedFloat32LittleEndianSha256": "cc7fd61af07eb397ef60ec40b11b1ac599aedb4158d4064361ca325194339e6d",
+      "finalPcm24WavSha256": "d14fcb75b0bf5fc0d80aded489f7076a2cd3a3d662f298dabf321a3a49b5e5af"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 Protect C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "b09186709e9fef522ee5ef6fb9ee6436e7d04a604fe451e75a182f2c12225625",
+      "airFloat32LittleEndianSha256": "6b8ba2d0704f7b730b2a94725830776261dbde2dd3b0fe4b314b979b6e05d2c2",
+      "reedFloat32LittleEndianSha256": "7b76ee0aa117e271fb55f9def5e35a3030770c2b9ea3f7229c3da38e11bf190b",
+      "finalPcm24WavSha256": "ac1f453af02b79e96f841fb06ba69f85146e0cd5b2811f5c0eeb50a8a34bfdc4"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 C5 soft interpolated",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.10000000149011612,
+          "BOND": 0.5,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.30000001192092896,
+        "seed": 17,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 253575,
+      "rawFloat32LittleEndianSha256": "61f20690f31fe513e3b5d35e838207155860dcfe16329a6748a7239c3b6ca13c",
+      "airFloat32LittleEndianSha256": "ca686299569a2a43113004d2dc745ed20b8f239daf4e77cc44858f13d4d01635",
+      "reedFloat32LittleEndianSha256": "0bbc5e9f5959445753ba5f0dbda37c3e904260efaa5ec14e7157aaa070d5db1d",
+      "finalPcm24WavSha256": "4a5d734e5091c11ae0964acf6d6d91b41add46cdff5d81a5c5c5b31ffc27993a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 3 G4 seeded short",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 1,
+          "BOND": 0.6100000143051147,
+          "MISCHIEF": 0.75,
+          "HOLD": 0
+        },
+        "midi": 67,
+        "velocity": 0.6000000238418579,
+        "seed": -23,
+        "model": 3
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 121275,
+      "rawFloat32LittleEndianSha256": "b1bae3def38f4c6de59681d89c4d508f8334e5f916e3c2040e082a7df7fb0991",
+      "airFloat32LittleEndianSha256": "660a8e2d1e404fad06e7b0bbbecdeda77df4a00881e7253a598d910def8b2e43",
+      "reedFloat32LittleEndianSha256": "140127a19fa865f41dd0e827d2b92769965de96f9cee2b2ab6537646d5f0cbd0",
+      "finalPcm24WavSha256": "fd90820efaa55c157bc8b7478a3fc426561986195e57541e3879777ae7b1124a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 Harmony C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "449d8e4812923ffd6d63c16903c2c7cabd1b9b94e8d9ffce20eefcc70ee17dc9",
+      "airFloat32LittleEndianSha256": "b0f0adcb6605da277f60f4bd5bd42ddba5581c511fc47e9ab679c3f2ccb9d561",
+      "reedFloat32LittleEndianSha256": "42a0d27618a255283a33122e923f939e7bc43eabd822b921fb354df12560c8e0",
+      "finalPcm24WavSha256": "6921e2261c1527d989b2d8b237d4c0fe6f246e5eec74abb09b9ce6968019b926"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 Play C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "290dd680f0fc2c87073f29937482c5a0fdbcc75a74f140b94c3e2d9d64f4796c",
+      "airFloat32LittleEndianSha256": "c02660f547fa3e660c2f923f03b9c6335b5663618d6605f20962e3605f23f348",
+      "reedFloat32LittleEndianSha256": "9f035d3b4169204b6a396f3f786d6fe9b60a5aabd9dac768eddeaedbda43dcdd",
+      "finalPcm24WavSha256": "514f25f2bcf0f0944d345ff30c79e599d42b7cfc717e94dc5064e1c5a27583f8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 Fight C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "b54322f1cc3f2915b980f85565fd78b6e522e53d4e5d8e1697383da866bf3358",
+      "airFloat32LittleEndianSha256": "4bab1ff346f7ae476f8aec18f22494825d657d8097e51d0847d8cfa011a6065f",
+      "reedFloat32LittleEndianSha256": "9ae6759b1e52949a8c74a4f328f0a5702857846e1763e436878c2dc485b02636",
+      "finalPcm24WavSha256": "fb7e0f374f48f57690052efe09736d24f7ceeca05727b50ae682e7442173ea42"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 Protect C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "b09186709e9fef522ee5ef6fb9ee6436e7d04a604fe451e75a182f2c12225625",
+      "airFloat32LittleEndianSha256": "6b8ba2d0704f7b730b2a94725830776261dbde2dd3b0fe4b314b979b6e05d2c2",
+      "reedFloat32LittleEndianSha256": "7b76ee0aa117e271fb55f9def5e35a3030770c2b9ea3f7229c3da38e11bf190b",
+      "finalPcm24WavSha256": "ac1f453af02b79e96f841fb06ba69f85146e0cd5b2811f5c0eeb50a8a34bfdc4"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 C5 soft interpolated",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.10000000149011612,
+          "BOND": 0.5,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.30000001192092896,
+        "seed": 17,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 253575,
+      "rawFloat32LittleEndianSha256": "00b6e58b477ced428e0e6107ae6be22cdc30b076fcbb7f08184f4b9c18fc9ecb",
+      "airFloat32LittleEndianSha256": "3f057638c3cc759d55b35434d3785267aee71c4b26bac4390a3f2c8cb3d2ce65",
+      "reedFloat32LittleEndianSha256": "1f4b711795352768d9da64a1ade7c3a2f2746ae7b0905abfe7d8324cefbf2fb1",
+      "finalPcm24WavSha256": "aa7a096e80153ca7b1554cf09224f5f3fd0d6c3456290c7db51589cedbf9164c"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 4 G4 seeded short",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 1,
+          "BOND": 0.6100000143051147,
+          "MISCHIEF": 0.75,
+          "HOLD": 0
+        },
+        "midi": 67,
+        "velocity": 0.6000000238418579,
+        "seed": -23,
+        "model": 4
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 121275,
+      "rawFloat32LittleEndianSha256": "b1bae3def38f4c6de59681d89c4d508f8334e5f916e3c2040e082a7df7fb0991",
+      "airFloat32LittleEndianSha256": "660a8e2d1e404fad06e7b0bbbecdeda77df4a00881e7253a598d910def8b2e43",
+      "reedFloat32LittleEndianSha256": "140127a19fa865f41dd0e827d2b92769965de96f9cee2b2ab6537646d5f0cbd0",
+      "finalPcm24WavSha256": "fd90820efaa55c157bc8b7478a3fc426561986195e57541e3879777ae7b1124a"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 Harmony C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "449d8e4812923ffd6d63c16903c2c7cabd1b9b94e8d9ffce20eefcc70ee17dc9",
+      "airFloat32LittleEndianSha256": "b0f0adcb6605da277f60f4bd5bd42ddba5581c511fc47e9ab679c3f2ccb9d561",
+      "reedFloat32LittleEndianSha256": "42a0d27618a255283a33122e923f939e7bc43eabd822b921fb354df12560c8e0",
+      "finalPcm24WavSha256": "6921e2261c1527d989b2d8b237d4c0fe6f246e5eec74abb09b9ce6968019b926"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 Play C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "290dd680f0fc2c87073f29937482c5a0fdbcc75a74f140b94c3e2d9d64f4796c",
+      "airFloat32LittleEndianSha256": "c02660f547fa3e660c2f923f03b9c6335b5663618d6605f20962e3605f23f348",
+      "reedFloat32LittleEndianSha256": "9f035d3b4169204b6a396f3f786d6fe9b60a5aabd9dac768eddeaedbda43dcdd",
+      "finalPcm24WavSha256": "514f25f2bcf0f0944d345ff30c79e599d42b7cfc717e94dc5064e1c5a27583f8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 Fight C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "c1cfe931f762fb1319c04c844294fa97ae0eb9d647e3edf69aad0bc455ca58de",
+      "airFloat32LittleEndianSha256": "b708633a7a2451da066130abf110d5a1f3ad9e43fafdec94b2c29856777abde5",
+      "reedFloat32LittleEndianSha256": "f21dc4d1dce35389eeac2018c70862029302265b5de850a0a2b9e1ca88ac1489",
+      "finalPcm24WavSha256": "73455a438a538398c35c65ad4d6368b78878dc04dcd6e200291ef7b8a1b67178"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 Protect C4",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 180809,
+      "rawFloat32LittleEndianSha256": "b09186709e9fef522ee5ef6fb9ee6436e7d04a604fe451e75a182f2c12225625",
+      "airFloat32LittleEndianSha256": "6b8ba2d0704f7b730b2a94725830776261dbde2dd3b0fe4b314b979b6e05d2c2",
+      "reedFloat32LittleEndianSha256": "7b76ee0aa117e271fb55f9def5e35a3030770c2b9ea3f7229c3da38e11bf190b",
+      "finalPcm24WavSha256": "ac1f453af02b79e96f841fb06ba69f85146e0cd5b2811f5c0eeb50a8a34bfdc4"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 C5 soft interpolated",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.10000000149011612,
+          "BOND": 0.5,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.30000001192092896,
+        "seed": 17,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 253575,
+      "rawFloat32LittleEndianSha256": "f6cb08762fde84b072c8e6322a8617f85217af42173b8c8208c056cb374edad3",
+      "airFloat32LittleEndianSha256": "edfeea7825d63e26b614706d436c9692396e1ec3e197eedbcc58119bf485f9c6",
+      "reedFloat32LittleEndianSha256": "aa1604764c30ab0d3aea00c0619ff70b521fdabdfc35a51bdaefe1e24033e6cc",
+      "finalPcm24WavSha256": "ea8a4914956d9c85e95069dd3fb3903eaedf9a67efec1aedab0bf4e216685d04"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Model 5 G4 seeded short",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 1,
+          "BOND": 0.6100000143051147,
+          "MISCHIEF": 0.75,
+          "HOLD": 0
+        },
+        "midi": 67,
+        "velocity": 0.6000000238418579,
+        "seed": -23,
+        "model": 5
+      },
+      "sampleRate": 44100,
+      "channels": 1,
+      "frames": 121275,
+      "rawFloat32LittleEndianSha256": "b1bae3def38f4c6de59681d89c4d508f8334e5f916e3c2040e082a7df7fb0991",
+      "airFloat32LittleEndianSha256": "660a8e2d1e404fad06e7b0bbbecdeda77df4a00881e7253a598d910def8b2e43",
+      "reedFloat32LittleEndianSha256": "140127a19fa865f41dd0e827d2b92769965de96f9cee2b2ab6537646d5f0cbd0",
+      "finalPcm24WavSha256": "fd90820efaa55c157bc8b7478a3fc426561986195e57541e3879777ae7b1124a"
+    }
+  ]
+}

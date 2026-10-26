@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
+tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
+    group = "distribution"
+    description = "Compare previous and gentler OBBLIGATO Fight single notes, melodies and actual source taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMusicalOutput").orNull ?: "${rootDir}/testkit/obbligato-musical-audition")
+}
+
+/** An opt-in listening comparison; the accepted model-five kit remains unchanged. */
+tasks.register<JavaExec>("generateObbligatoResponsiveAudition") {
+    group = "distribution"
+    description = "Compare accepted OBBLIGATO model 5 with responsive model 6 and causal source interventions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoResponsiveAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoResponsiveOutput").orNull ?: "${rootDir}/testkit/obbligato-responsive-audition")
+}
+
 /** LATTICE source proof, native instrument phrases, periodic HOLD and MPC starter. */
 tasks.register<JavaExec>("generateLatticeAudition") {
     group = "distribution"
@@ -81,6 +103,23 @@ tasks.register<JavaExec>("generateOhmAudition") {
     workingDir = projectDir
     maxHeapSize = "1g"
     args("${rootDir}/testkit/ohm-audition")
+}
+
+/** Isolated model-3 additions, explicit capture provenance and actual held-region playback. */
+tasks.register<JavaExec>("generateOhmExpandedAudition") {
+    group = "distribution"
+    description = "Render OHM model-3 feature comparisons, phrases, held-loop studies and portable source recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmExpandedAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("ohmExpandedReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("ohmExpandedReplayOutput").get(),
+            providers.gradleProperty("ohmExpandedReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("ohmExpandedOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-audition")
+    }
 }
 
 /** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
@@ -1821,6 +1860,17 @@ tasks.register<JavaExec>("generateCausticAudition") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
+}
+
+/** One saved VENT orbit with an optional amplitude envelope for listening comparison. */
+tasks.register<JavaExec>("generateVentKnuckleAudition") {
+    group = "distribution"
+    description = "Render the original and optional decay Pulse Knuckle hits, identical rhythms, recipes and measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentKnuckleAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ventKnuckleOutput").orNull ?: "${rootDir}/testkit/vent-knuckle-audition")
 }
 
 /** Three model-1 clips, preserving the foreground and comparing only venue return. */
