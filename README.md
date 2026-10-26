@@ -164,6 +164,14 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
+and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
+contact-aligned playback, a 243-point middle-control check and a 92-clip audition
+are available outside the factory roster and phone picker. The earlier six-voice
+recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
+new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
+provides the next listening gate. HOLD loops and the other four voices are deferred.
+
 APSIS's first listening prototype is a pitched center with independently
 orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
 COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation

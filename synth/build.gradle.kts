@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
+tasks.register<JavaExec>("generateCairnAudition") {
+    group = "distribution"
+    description = "Render CAIRN KNOCK/ANSWER, common controls, sweeps, causes, recipes and render cost."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnOutput").orNull ?: "${rootDir}/testkit/cairn-reconstruction")
+    if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
 /** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
 tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
     group = "distribution"
