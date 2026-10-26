@@ -69,6 +69,7 @@ class MidiReportTest {
     private val clockResult = ClockProbe.Result(
         verdict = ClockProbe.Verdict.SLOW_START, samples = 372, validSamples = 340,
         startupGapMs = 812.4, longestStallMs = 0.0, stallAtMs = null, rateErrorPpm = 9.0, lagMs = 23.0,
+        neverMoved = false, timestampAgeMeanMs = 4.6, timestampAgeMaxMs = 7.2, burstMs = 16.0, medianUpdateMs = 16.7,
     )
     private fun clock(shared: Boolean = false, api: Int = 2) = MidiReport.ClockReport(
         line = ClockProbe.describe(clockResult), result = clockResult, sampleRate = 48_000, shared = shared,
@@ -98,6 +99,9 @@ class MidiReportTest {
         assertTrue("ROUTE BLUETOOTH" in text, text)
         assertTrue("LATENCY 31.5 MS" in text, text)
         assertTrue("Pixel 8" in text && "SDK 35" in text, text)
+        assertTrue("TIMESTAMP AGE 4.6 MS, MAX 7.2 MS" in text, text)
+        assertTrue("BURST USED 16.0 MS" in text, text)
+        assertTrue("POSITION UPDATES EVERY 16.7 MS" in text, text)
         assertTrue("Answers S1 for the pad engine's Oboe stream, the one clock out uses. The AudioTrack path is not probed." in text, text)
     }
 
@@ -109,5 +113,7 @@ class MidiReportTest {
         val none = clockResult.copy(startupGapMs = null, stallAtMs = 2000.0, longestStallMs = 500.0)
         val text = withClock(clock().copy(result = none, latencyMillis = null))
         assertTrue("START-UP GAP NONE" in text && "STALL 500 MS AT 2000 MS" in text && "LATENCY UNKNOWN" in text, text)
+        val blank = withClock(clock().copy(result = none.copy(timestampAgeMeanMs = null, timestampAgeMaxMs = null, burstMs = null, medianUpdateMs = null)))
+        assertTrue("TIMESTAMP AGE UNKNOWN" in blank && "BURST USED UNKNOWN" in blank && "POSITION UPDATES EVERY UNKNOWN" in blank, blank)
     }
 }

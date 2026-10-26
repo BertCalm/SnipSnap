@@ -1,5 +1,7 @@
 package com.snipsnap.shell
 
+import kotlin.math.abs
+
 /**
  * Bench S1: does the phone's reported playback position tell the truth?
  * Pure analysis of samples taken once per display frame; the reading itself
@@ -28,7 +30,14 @@ object ClockProbe {
      */
     const val BURST_FLOOR_MS = 10L
 
-    enum class Verdict { UNAVAILABLE, TOO_SHORT, STALLED, SLOW_START, TRACKED }
+    /**
+     * Proposed. A fitted rate further than this from the stream's rate, in either direction, is
+     * [Verdict.RATE_WRONG]. A 44.1 kHz position under a 48 kHz claim is about 81 000 ppm off;
+     * crystal drift is tens of ppm. 1000 sits between a wrong rate and drift with room on both sides.
+     */
+    const val RATE_LIMIT_PPM = 1_000.0
+
+    enum class Verdict { UNAVAILABLE, TOO_SHORT, STALLED, RATE_WRONG, SLOW_START, TRACKED }
 
     data class Sample(
         val wallNanos: Long,        // System.nanoTime() when the main thread read it
@@ -46,6 +55,15 @@ object ClockProbe {
         val stallAtMs: Double?,
         val rateErrorPpm: Double?,
         val lagMs: Double?,
+        /** True when a valid position was read and it never changed. False when no read was valid, so it is never inferred from a null gap. */
+        val neverMoved: Boolean,
+        /** Over reads with a hardware time, `wallNanos - hwNanos` in ms: positive means the timestamp is in the past, as it should be. Context only, not part of the verdict. */
+        val timestampAgeMeanMs: Double?,
+        val timestampAgeMaxMs: Double?,
+        /** The burst the stall rule used (inferred step, after the floor), in ms at the sample rate; null if the position never moved. */
+        val burstMs: Double?,
+        /** Median wall-time spacing, in ms, between reads where the hardware position changed; null with fewer than two changes. Tells a coarse updater from a stalled one. */
+        val medianUpdateMs: Double?,
     )
 
     private const val NANOS_PER_MS = 1_000_000.0
@@ -65,7 +83,12 @@ object ClockProbe {
      * Choices the spec leaves open: stalls are timed on `wallNanos` (failed reads have no
      * hardware time); the lag and rate are taken over the samples from the first movement on.
      *
-     * Verdict order: UNAVAILABLE, never-moved-STALLED, TOO_SHORT, STALLED, SLOW_START, TRACKED.
+     * Verdict order: UNAVAILABLE, never-moved-STALLED, TOO_SHORT, STALLED, RATE_WRONG, SLOW_START, TRACKED.
+     * RATE_WRONG needs at least [MIN_TRACKED_MS] of wall time after the first movement, and is
+     * called when `rateErrorPpm` is null (the hardware timestamps spanned less than
+     * [MIN_TRACKED_MS], or did not advance: a run whose fit cannot be made cannot lead with
+     * TRACKED) or its size is over [RATE_LIMIT_PPM]. Ambiguity: a null rate from many failed
+     * `getTimestamp` reads reads as "did not advance"; the report's WITH POSITION count shows which.
      * The second is the controller's addition to the spec: a valid position that never moves
      * while at least [STALL_FLOOR_MS] of audio is written is STALLED, with `startupGapMs` null,
      * `longestStallMs` the span from the first written frame to the last sample, and no rate or
@@ -76,7 +99,27 @@ object ClockProbe {
         val n = samples.size
         val validSamples = samples.count { it.hwFrame != null }
         if (validSamples == 0) {
-            return Result(Verdict.UNAVAILABLE, n, validSamples, null, 0.0, null, null, null)
+            return Result(Verdict.UNAVAILABLE, n, validSamples, null, 0.0, null, null, null, false, null, null, null, null)
+        }
+
+        // Timestamp age against the wall clock, context only.
+        val ages = samples.filter { it.hwFrame != null && it.hwNanos != null }.map { (it.wallNanos - it.hwNanos!!) / NANOS_PER_MS }
+        val ageMean = if (ages.isEmpty()) null else ages.average()
+        val ageMax = ages.maxOrNull()
+
+        // Update spacing: wall time between reads where the position changed.
+        val changeTimes = ArrayList<Long>()
+        var prevHw: Long? = null
+        for (s in samples) {
+            val h = s.hwFrame ?: continue
+            if (prevHw != null && h != prevHw) changeTimes += s.wallNanos
+            prevHw = h
+        }
+        val gaps = (1 until changeTimes.size).map { (changeTimes[it] - changeTimes[it - 1]) / NANOS_PER_MS }.sorted()
+        val medianUpdateMs = when {
+            gaps.isEmpty() -> null
+            gaps.size % 2 == 1 -> gaps[gaps.size / 2]
+            else -> (gaps[gaps.size / 2 - 1] + gaps[gaps.size / 2]) / 2.0
         }
 
         // First movement: first sample whose position differs from the first valid one.
@@ -96,9 +139,9 @@ object ClockProbe {
             if (firstWritten >= 0 && writtenFrames >= STALL_FLOOR_MS * sampleRate / 1000.0) {
                 val spanMs = (samples.last().wallNanos - samples[firstWritten].wallNanos) / NANOS_PER_MS
                 val at = (samples[firstWritten].wallNanos - samples[0].wallNanos) / NANOS_PER_MS
-                return Result(Verdict.STALLED, n, validSamples, null, spanMs, at, null, null)
+                return Result(Verdict.STALLED, n, validSamples, null, spanMs, at, null, null, true, ageMean, ageMax, null, medianUpdateMs)
             }
-            return Result(Verdict.TOO_SHORT, n, validSamples, null, 0.0, null, null, null)
+            return Result(Verdict.TOO_SHORT, n, validSamples, null, 0.0, null, null, null, true, ageMean, ageMax, null, medianUpdateMs)
         }
 
         val after = samples.subList(move, n)
@@ -164,17 +207,22 @@ object ClockProbe {
         val verdict = when {
             spanMs < MIN_TRACKED_MS -> Verdict.TOO_SHORT
             longestStall >= STALL_FLOOR_MS -> Verdict.STALLED
+            rateErrorPpm == null || abs(rateErrorPpm) > RATE_LIMIT_PPM -> Verdict.RATE_WRONG
             startupGapMs != null && startupGapMs > SLOW_START_MS -> Verdict.SLOW_START
             else -> Verdict.TRACKED
         }
-        return Result(verdict, n, validSamples, startupGapMs, longestStall, stallAt, rateErrorPpm, lagMs)
+        return Result(
+            verdict, n, validSamples, startupGapMs, longestStall, stallAt, rateErrorPpm, lagMs,
+            false, ageMean, ageMax, burst * 1000.0 / sampleRate, medianUpdateMs,
+        )
     }
 
     /** The one screen line for [result], built from [Copy]. */
     fun describe(result: Result): String = when (result.verdict) {
         Verdict.UNAVAILABLE -> Copy.CLOCK_UNAVAILABLE
         Verdict.TOO_SHORT -> Copy.CLOCK_TOO_SHORT
-        Verdict.STALLED -> if (result.startupGapMs == null) {
+        Verdict.RATE_WRONG -> result.rateErrorPpm?.let { Copy.clockRateWrong(Math.round(it)) } ?: Copy.CLOCK_TIMESTAMPS_STUCK
+        Verdict.STALLED -> if (result.neverMoved) {
             Copy.clockNeverMoved(Math.round(result.longestStallMs / 100.0) / 10.0)
         } else listOfNotNull(
             Copy.clockStopped(

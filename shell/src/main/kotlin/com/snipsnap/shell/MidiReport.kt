@@ -153,6 +153,11 @@ object MidiReport {
         val gap = r.startupGapMs?.let { "${Math.round(it)} MS" } ?: "NONE"
         val stallAt = r.stallAtMs?.let { " AT ${Math.round(it)} MS" } ?: ""
         appendLine("START-UP GAP $gap · LONGEST STALL ${Math.round(r.longestStallMs)} MS$stallAt")
+        fun ms(v: Double?) = v?.let { "%.1f".format(java.util.Locale.ROOT, it) }
+        val age = ms(r.timestampAgeMeanMs)?.let { "$it MS, MAX ${ms(r.timestampAgeMaxMs) ?: "UNKNOWN"} MS" } ?: "UNKNOWN"
+        appendLine("TIMESTAMP AGE $age")
+        appendLine("BURST USED ${ms(r.burstMs)?.let { "$it MS" } ?: "UNKNOWN"}")
+        appendLine("POSITION UPDATES EVERY ${ms(r.medianUpdateMs)?.let { "$it MS" } ?: "UNKNOWN"}")
         val latency = c.latencyMillis?.let { "%.1f MS".format(java.util.Locale.ROOT, it) } ?: "UNKNOWN"
         appendLine("SAMPLE RATE ${c.sampleRate} · ${if (c.shared) "SHARED" else "EXCLUSIVE"} · BURST ${c.framesPerBurst} FRAMES · API ${apiWord(c.audioApi)} · LATENCY $latency")
         appendLine("ROUTE ${c.route.name} · ${c.model} · SDK ${c.sdk}")

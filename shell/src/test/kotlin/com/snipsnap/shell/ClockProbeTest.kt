@@ -27,6 +27,9 @@ class ClockProbeTest {
      * either fails ([failBeforeStart]) or reports position 0.
      * Reads in [freezeAtMs, freezeAtMs + freezeMs) repeat the last pair before them (a lying
      * position), reads in [failFromMs, failToMs) fail. [wallJitterMs] moves wallNanos alone.
+     * With [hwAgeMs] set, each hardware time is the (jitter-free) wall time minus that age,
+     * so the timestamp is that far in the past. With [updateEveryMs] set, the position only
+     * changes at multiples of that many ms.
      */
     private fun stream(
         rate: Int,
@@ -41,13 +44,16 @@ class ClockProbeTest {
         failToMs: Long = -1,
         hwRatePpm: Double = 0.0,
         wallJitterMs: Double = 0.0,
+        hwAgeMs: Double? = null,
+        updateEveryMs: Long = 0,
         seed: Int = 1,
     ): List<Sample> {
         val rnd = Random(seed)
         val hwRate = rate * (1.0 + hwRatePpm / 1e6)
         val n = (durationMs * 1_000_000L / stepNanos).toInt()
         fun pairAt(tNanos: Long): Pair<Long, Long> {
-            val th = (tNanos - hwStartMs * 1_000_000L).coerceAtLeast(0L)
+            var th = (tNanos - hwStartMs * 1_000_000L).coerceAtLeast(0L)
+            if (updateEveryMs > 0) th = th / (updateEveryMs * 1_000_000L) * (updateEveryMs * 1_000_000L)
             val pos = (th * hwRate / 1e9).toLong() / burst * burst
             return pos to hwEpochNanos + (pos / hwRate * 1e9).toLong()
         }
@@ -62,7 +68,7 @@ class ClockProbeTest {
                 wallNanos = 1_000_000_000L + t + jitter,
                 framesWritten = t * rate / 1_000_000_000L,
                 hwFrame = if (failed) null else pos,
-                hwNanos = if (failed) null else ns,
+                hwNanos = if (failed) null else if (hwAgeMs != null) 1_000_000_000L + t - (hwAgeMs * 1e6).toLong() else ns,
             )
         }
     }
@@ -166,7 +172,7 @@ class ClockProbeTest {
         val base = stream(48_000, 8_000)
         val start = base.indexOfFirst { (it.wallNanos - 1_000_000_000L) >= 2_000_000_000L }
         val end = base.indexOfFirst { (it.wallNanos - 1_000_000_000L) >= 2_500_000_000L }
-        val odd = 30 // from here on every position carries one 3-frame step the burst never made
+        val odd = 30 // a constant 3-frame offset from here on: it adds no new step; the 2-frame creep below does the work
         val held = base[start].hwFrame!! + 3
         val sneaky = base.mapIndexed { i, s ->
             when {
@@ -179,6 +185,73 @@ class ClockProbeTest {
         assertEquals(Verdict.STALLED, r.verdict)
         assertNear(500.0, r.longestStallMs, 40.0, "longest stall")
         assertNear(2_000.0, r.stallAtMs, 40.0, "stall at")
+    }
+
+    @Test
+    fun `a 44_1 kHz position analysed at 48 kHz is a wrong rate, never tracked`() {
+        val r = ClockProbe.analyze(stream(44_100, 10_000, burst = 128), 48_000)
+        assertEquals(Verdict.RATE_WRONG, r.verdict)
+        assertTrue(r.rateErrorPpm!! < -50_000, "rate error ${r.rateErrorPpm}")
+        val line = ClockProbe.describe(r)
+        assertEquals(Copy.clockRateWrong(Math.round(r.rateErrorPpm!!)), line)
+        assertTrue("SLOW" in line && !line.contains(Copy.CLOCK_TRACKED), line)
+    }
+
+    @Test
+    fun `timestamps that never advance while the position does are a wrong rate with no rate`() {
+        val frozenNanos = stream(48_000, 4_000).map { it.copy(hwNanos = hwEpochNanos) }
+        val r = ClockProbe.analyze(frozenNanos, 48_000)
+        assertEquals(Verdict.RATE_WRONG, r.verdict)
+        assertNull(r.rateErrorPpm)
+        assertEquals(Copy.CLOCK_TIMESTAMPS_STUCK, ClockProbe.describe(r))
+    }
+
+    @Test
+    fun `a rate just inside the limit tracks and just outside is wrong`() {
+        val inside = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = ClockProbe.RATE_LIMIT_PPM * 0.8), 48_000)
+        assertEquals(Verdict.TRACKED, inside.verdict)
+        val outside = ClockProbe.analyze(stream(48_000, 10_000, hwRatePpm = ClockProbe.RATE_LIMIT_PPM * 1.5), 48_000)
+        assertEquals(Verdict.RATE_WRONG, outside.verdict)
+        assertTrue(ClockProbe.describe(outside).contains("FAST."), ClockProbe.describe(outside))
+    }
+
+    @Test
+    fun `an honest stream reports the timestamp age the generator put in`() {
+        val r = ClockProbe.analyze(stream(48_000, 10_000, hwAgeMs = 5.0), 48_000)
+        assertNear(5.0, r.timestampAgeMeanMs, 0.001, "mean age")
+        assertNear(5.0, r.timestampAgeMaxMs, 0.001, "max age")
+    }
+
+    @Test
+    fun `update spacing is one display frame for an honest stream and 100 ms for a coarse one`() {
+        val honest = ClockProbe.analyze(stream(48_000, 10_000), 48_000)
+        assertNear(stepNanos / 1e6, honest.medianUpdateMs, 0.001, "median update")
+        val coarse = ClockProbe.analyze(stream(48_000, 10_000, updateEveryMs = 100), 48_000)
+        assertNear(100.0, coarse.medianUpdateMs, 5.0, "median update")
+    }
+
+    @Test
+    fun `the burst used is carried, floored at 10 ms, and follows the position's step`() {
+        val honest = ClockProbe.analyze(stream(48_000, 10_000), 48_000)
+        assertTrue(honest.burstMs!! >= ClockProbe.BURST_FLOOR_MS, "burst ${honest.burstMs}")
+        // a position that moves in 100 ms steps has a 100 ms burst: 4800 frames at 48 kHz
+        val coarse = ClockProbe.analyze(stream(48_000, 10_000, updateEveryMs = 100), 48_000)
+        assertNear(100.0, coarse.burstMs, 1.0, "burst")
+        // a 1-frame creep is under the floor, so the floor is what is reported
+        val creeping = (0..600).map { i -> Sample(i * stepNanos, i * 800L, i.toLong(), hwEpochNanos + i * stepNanos) }
+        assertNear(ClockProbe.BURST_FLOOR_MS.toDouble(), ClockProbe.analyze(creeping, 48_000).burstMs, 0.001, "burst")
+    }
+
+    @Test
+    fun `never moved is a flag, not a null gap`() {
+        val frozen = (0..300).map { i -> Sample(i * stepNanos, i * 800L, 0L, hwEpochNanos) }
+        assertTrue(ClockProbe.analyze(frozen, 48_000).neverMoved)
+        assertTrue(!ClockProbe.analyze(stream(48_000, 10_000), 48_000).neverMoved)
+        // moved, but no write has happened yet at the first movement: the gap is null, the position moved
+        val unwritten = stream(48_000, 10_000).map { it.copy(framesWritten = 0) }
+        val u = ClockProbe.analyze(unwritten, 48_000)
+        assertNull(u.startupGapMs)
+        assertTrue(!u.neverMoved)
     }
 
     @Test

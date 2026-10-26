@@ -2795,7 +2795,7 @@ object Copy {
     /** Headphones went in or out, or the device restarted the stream, mid-check. */
     const val MIDI_CLOCK_ROUTE_CHANGED = "THE AUDIO ROUTE CHANGED. RUN IT AGAIN."
     /** The stream fell back to shared mode; it may not be what clock out would get. */
-    const val MIDI_CLOCK_SHARED = "SHARED STREAM: SOMETHING ELSE HELD THE AUDIO. RUN IT WITH NOTHING ELSE PLAYING."
+    const val MIDI_CLOCK_SHARED = "SHARED STREAM: ANOTHER STREAM WAS PLAYING, MAYBE SNIPSNAP'S OWN BEAT. STOP EVERYTHING AND RUN IT AGAIN."
 
     // ---- SETUP · HELP · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
     /** The clock check found a position that tracks. Rate and lag follow it. */
@@ -2812,6 +2812,11 @@ object Copy {
             (if (slowStartMs != null) ", AFTER A SLOW START OF $slowStartMs MS." else ".")
     /** The position never moved in [seconds] of playing: the clock cannot be trusted. */
     fun clockNeverMoved(seconds: Double): String = "POSITION NEVER MOVED IN ${"%.1f".format(java.util.Locale.ROOT, seconds)} S. THIS PHONE'S CLOCK CANNOT BE TRUSTED ON THIS STREAM."
+    /** The position's clock runs [ppm] from the stream's rate (signed: negative is slow), far more than drift. */
+    fun clockRateWrong(ppm: Long): String =
+        "POSITION RUNS AT THE WRONG RATE: ${Math.abs(ppm)} PPM ${if (ppm < 0) "SLOW" else "FAST"}. DON'T TRUST THIS CLOCK."
+    /** The phone's position timestamps never advanced, or spanned too little to fit a rate. */
+    const val CLOCK_TIMESTAMPS_STUCK = "THE PHONE'S TIMESTAMPS DID NOT ADVANCE. DON'T TRUST THIS CLOCK."
     /** How far the position's clock runs from the stream's rate. */
     fun clockRate(ppm: Long): String = when {
         ppm > 0 -> "RATE $ppm PPM FAST."
