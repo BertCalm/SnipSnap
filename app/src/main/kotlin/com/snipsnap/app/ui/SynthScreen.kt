@@ -1436,6 +1436,7 @@ fun SynthScreen(
             return@LaunchedEffect
         }
         delay(MACRO_DEBOUNCE_MS)
+        val effectJob = coroutineContext[Job]
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val previewJob = coroutineContext[Job]
@@ -1483,7 +1484,10 @@ fun SynthScreen(
             onToast(Copy.RENDER_FAILED)
         } finally {
             shimmerJob.cancel()
-            rendering = false
+            // A cancelled preview belongs to a screen that is already leaving.
+            // Writing rendering here reapplies the last frame and the engine
+            // control stays in the tree after the bench is hidden.
+            if (effectJob?.isCancelled == false) rendering = false
         }
     }
 
