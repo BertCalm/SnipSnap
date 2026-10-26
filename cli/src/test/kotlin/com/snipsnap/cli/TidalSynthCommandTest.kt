@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 
 class TidalSynthCommandTest {
     @Test
-    fun `CLI auditions a provisional recipe and saves its complete performance`() {
+    fun `CLI auditions a factory recipe and saves its complete performance`() {
         val directory = createTempDirectory("tidal-cli").toFile()
         try {
             val output = ByteArrayOutputStream()
@@ -31,7 +31,7 @@ class TidalSynthCommandTest {
             val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
             assertContentEquals(encoded, requireNotNull(directory.listFiles { it.extension == "wav" }).single().readBytes())
             assertEquals(expected, TidalPatch.fromJsonText(requireNotNull(directory.listFiles { it.extension == "patch" }).single().readText()))
-            assertTrue(Presets.forVoice(TidalPatch.ENGINE, "PAIR").isEmpty())
+            assertEquals(TidalPresets.forVoice(TidalVoice.PAIR), Presets.forVoice(TidalPatch.ENGINE, "PAIR"))
             assertTrue("1 rendered into" in output.toString())
             assertFalse("lands with" in output.toString())
         } finally {

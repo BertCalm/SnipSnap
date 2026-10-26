@@ -121,6 +121,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "tidal", "TIDAL",
+            "String and metal populations in C minor pentatonic. Gather, pass, and unravel into ringing strands.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tidal() },
+        Starter(
             "ohm", "OHM",
             "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
             seeded = false,

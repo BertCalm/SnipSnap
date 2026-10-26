@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "sameBenchmarkBytecode": true,
+  "baselineEngine": {
+    "path": "/workspace/scratch/tidal-performance/baseline-main.jar",
+    "classSha256": "3d47c55e019fede5ff7c7f67f820d3abdbcbbf7300b9af1e9f2fc989ed39373f",
+    "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f"
+  },
+  "optimizedEngine": {
+    "path": "/workspace/SnipSnap-tidal-playability/synth/build/classes/kotlin/main",
+    "classSha256": "867f82ea0e1fd8efb5e771cb51659eec7df952c5293e766400fc7e93c1df2401",
+    "jarSha256": null
+  },
+  "runtime": {
+    "javaVersion": "21.0.12.1",
+    "vm": "OpenJDK 64-Bit Server VM",
+    "os": "Linux",
+    "architecture": "amd64",
+    "processors": 4,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "heapMaximumBytes": 805306368,
+    "vmArguments": [
+      "-Xms256m",
+      "-Xmx768m",
+      "-XX:ActiveProcessorCount=4"
+    ]
+  },
+  "memoryDefinition": {
+    "allocatedBytesCurrentThread": "HotSpot ThreadMXBean allocation counter delta around the render call; null if unsupported.",
+    "heapUsedBeforeBytes": "MemoryMXBean heap used after explicit GC immediately before the timer.",
+    "heapUsedAfterBytes": "MemoryMXBean heap used immediately after the timer; includes garbage not yet collected.",
+    "sumOfHeapPoolPeakUsedBytes": "Sum of per-heap-pool peak used after reset immediately before render. Upper envelope, not simultaneous live heap or process RSS."
+  },
+  "rows": [
+    {
+      "id": "pair-model2-c3",
+      "state": "cold",
+      "beforeMedianMs": 2281.606692,
+      "afterMedianMs": 1233.264435,
+      "speedup": 1.85005472244888,
+      "beforeAllocatedMedianBytes": 86121312,
+      "afterAllocatedMedianBytes": 54241712,
+      "beforeHeapPoolPeakMedianBytes": 96507728,
+      "afterHeapPoolPeakMedianBytes": 61680704
+    },
+    {
+      "id": "pair-model2-c3",
+      "state": "warm",
+      "beforeMedianMs": 2231.315634,
+      "afterMedianMs": 1018.479309,
+      "speedup": 2.1908305984054115,
+      "beforeAllocatedMedianBytes": 83418368,
+      "afterAllocatedMedianBytes": 51538768,
+      "beforeHeapPoolPeakMedianBytes": 94976320,
+      "afterHeapPoolPeakMedianBytes": 60168480
+    },
+    {
+      "id": "pair-model2-c3",
+      "state": "repeat",
+      "beforeMedianMs": 2196.694874,
+      "afterMedianMs": 0.305309,
+      "speedup": 7194.988925973357,
+      "beforeAllocatedMedianBytes": 83418368,
+      "afterAllocatedMedianBytes": 1730752,
+      "beforeHeapPoolPeakMedianBytes": 94979864,
+      "afterHeapPoolPeakMedianBytes": 7742576
+    },
+    {
+      "id": "stream-model2-c3",
+      "state": "cold",
+      "beforeMedianMs": 2351.674241,
+      "afterMedianMs": 1225.435606,
+      "speedup": 1.9190516657796544,
+      "beforeAllocatedMedianBytes": 89735480,
+      "afterAllocatedMedianBytes": 57855848,
+      "beforeHeapPoolPeakMedianBytes": 99698160,
+      "afterHeapPoolPeakMedianBytes": 64890168
+    },
+    {
+      "id": "stream-model2-c3",
+      "state": "warm",
+      "beforeMedianMs": 2154.085028,
+      "afterMedianMs": 1000.866602,
+      "speedup": 2.152219909921622,
+      "beforeAllocatedMedianBytes": 87032576,
+      "afterAllocatedMedianBytes": 55152944,
+      "beforeHeapPoolPeakMedianBytes": 99181816,
+      "afterHeapPoolPeakMedianBytes": 64375768
+    },
+    {
+      "id": "stream-model2-c3",
+      "state": "repeat",
+      "beforeMedianMs": 2205.618527,
+      "afterMedianMs": 0.372918,
+      "speedup": 5914.486635131584,
+      "beforeAllocatedMedianBytes": 87032576,
+      "afterAllocatedMedianBytes": 1730752,
+      "beforeHeapPoolPeakMedianBytes": 99185328,
+      "afterHeapPoolPeakMedianBytes": 7755144
+    }
+  ]
+}

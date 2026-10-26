@@ -40,14 +40,19 @@ object SynthKits {
         return melody + (sourceChoices + alternatives + held).map { arranged(it) }
     }
 
-    /** Sixteen dry, finite prototype encounters; long samples play once despite LOOP classification. */
+    /** Sixteen dry, finite encounters; long samples play once despite LOOP classification. */
     fun tidal(): List<ArrangedPad?> {
+        fun arranged(patch: TidalPatch) = pad(patch, Tidal.drumClassFor(patch.voice, patch.macros)).copy(
+            oneShot = true,
+            displayName = patch.name,
+            source = mapOf("engine" to patch.engine, "voice" to patch.voiceName,
+                "preset" to patch.name, "authoredMidi" to patch.midi.toString()),
+        )
         val notes = intArrayOf(48, 51, 53, 55, 58)
         return TidalVoice.entries.flatMap { voice ->
             notes.map { midi ->
-                val patch = TidalPatch("${voice.name} $midi", voice, Tidal.defaults(voice), midi = midi)
-                pad(patch, Tidal.drumClassFor(voice, patch.macros))
-            } + TidalPresets.forVoice(voice).map { patch -> pad(patch, Tidal.drumClassFor(voice, patch.macros)) }
+                arranged(TidalPatch("${voice.name} ${Scales.nameOf(midi)}", voice, Tidal.defaults(voice), midi = midi))
+            } + TidalPresets.forVoice(voice).map(::arranged)
         }
     }
 
@@ -1166,15 +1171,16 @@ object SynthKits {
 
     /**
      * WICK's dry first-listen kit, kept outside FRESH TAPE while provisional.
-     * PLUCK, WOOD, BUBBLE, BREATH and FLICKER each speak at C3 and C4. The
-     * remaining six pads compare one held buffer per voice and an isolated
-     * FLICKER glint. Each voice's native-root default is its exact library patch.
-     * This sixteen-pad selection samples the twenty-one-recipe library;
+     * PLUCK, WOOD, BUBBLE, BREATH, FLICKER and RATTLE each speak at C3 and C4.
+     * The remaining four pads compare held BUBBLE, BREATH, FLICKER and RATTLE.
+     * Each voice's native-root default is its exact library patch. This
+     * sixteen-pad selection samples the twenty-five-recipe library with ten
+     * exact library recipes and six transposed default variations;
      * the complete bank remains available through the audition and CLI.
      * Every pad retains its note, velocity and controls in its recipe.
      */
     fun wick(): List<ArrangedPad?> {
-        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER)
+        val voices = listOf(WickVoice.PLUCK, WickVoice.WOOD, WickVoice.BUBBLE, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)
         val defaults = voices.map { WickPresets.forVoice(it).first() }
         val notes = defaults.flatMap { patch ->
             listOf(48, 60).map { midi ->
@@ -1185,7 +1191,7 @@ object SynthKits {
             }
         }
         val recipeNames = listOf(
-            "Held Glow", "Held Wood", "Held Bubbles", "Held Breath", "Held Flicker", "Single Glint",
+            "Held Bubbles", "Held Breath", "Held Flicker", "Held Rattle",
         )
         val recipes = recipeNames.map { name -> WickPresets.all().first { it.name == name } }
         return (notes + recipes).map { pad(it, Wick.drumClassFor(it.voice, it.macros)) }

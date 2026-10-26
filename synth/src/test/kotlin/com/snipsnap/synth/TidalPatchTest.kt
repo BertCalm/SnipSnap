@@ -86,14 +86,14 @@ class TidalPatchTest {
     }
 
     @Test
-    fun `first listen recipes remain finite and outside the shipped roster`() {
+    fun `factory encounter recipes remain finite and discoverable`() {
         val recipes = TidalPresets.all()
         assertEquals(6, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
-        assertTrue(Presets.all().none { it.engine == TidalPatch.ENGINE })
+        assertEquals(recipes, Presets.all().filter { it.engine == TidalPatch.ENGINE })
         for (voice in TidalVoice.entries) {
             assertEquals(3, TidalPresets.forVoice(voice).size)
-            assertTrue(Presets.forVoice(TidalPatch.ENGINE, voice.name).isEmpty())
+            assertEquals(TidalPresets.forVoice(voice), Presets.forVoice(TidalPatch.ENGINE, voice.name))
         }
         for (recipe in recipes) {
             assertEquals(setOf("APPROACH", "PASSAGE", "TILT", "BIND", "TAIL", "HOLD"), recipe.macros.keys)
