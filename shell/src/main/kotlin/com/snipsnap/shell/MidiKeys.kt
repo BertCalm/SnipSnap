@@ -56,6 +56,8 @@ class MidiKeys(private val voice: Voice) {
             }
             // The transport's clock is not a key; nothing here plays it yet.
             is MidiWire.Event.RealTime -> {}
+            // Bend and pressure: nothing here plays them until the controller plan gives them a voice.
+            is MidiWire.Event.Expression -> {}
         }
     }
 

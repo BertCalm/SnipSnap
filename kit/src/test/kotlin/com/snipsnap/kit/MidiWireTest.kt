@@ -78,11 +78,62 @@ class MidiWireTest {
     }
 
     @Test
-    fun `one-byte and three-byte messages nothing here plays keep the stream in step`() {
+    fun `a program change is read and dropped, and the next note is heard`() {
+        assertEquals(emptyList(), MidiWire().feed(bytes(0xC0, 0x05)))
+        assertEquals(listOf(Event.NoteOn(0, 60, 80 / 127f)), MidiWire().feed(bytes(0xC0, 5, 0x90, 60, 80)))
+    }
+
+    @Test
+    fun `pitch bend reads its low seven bits first, centred on zero`() {
+        // A swapped byte order passes a round-number test; these three do not.
+        assertEquals(listOf(Event.PitchBend(0, 0)), MidiWire().feed(bytes(0xE0, 0x00, 0x40)))
+        assertEquals(listOf(Event.PitchBend(0, 8191)), MidiWire().feed(bytes(0xE0, 0x7F, 0x7F)))
+        assertEquals(listOf(Event.PitchBend(0, -8192)), MidiWire().feed(bytes(0xE0, 0x00, 0x00)))
+        // Low byte 1, high byte 0 is +1 from the bottom; low 0, high 1 is 128 from the bottom.
+        assertEquals(listOf(Event.PitchBend(0, -8191)), MidiWire().feed(bytes(0xE0, 0x01, 0x00)))
+        assertEquals(listOf(Event.PitchBend(0, -8064)), MidiWire().feed(bytes(0xE0, 0x00, 0x01)))
+    }
+
+    @Test
+    fun `pitch bend running status gives one bend per pair`() {
+        assertEquals(
+            listOf(Event.PitchBend(3, 0), Event.PitchBend(3, 16)),
+            MidiWire().feed(bytes(0xE3, 0x00, 0x40, 0x10, 0x40)),
+        )
+    }
+
+    @Test
+    fun `a pitch bend split across three deliveries is stamped by the last`() {
         val wire = MidiWire()
-        // Program change (1 data byte), pitch bend (2), aftertouch (1), poly pressure (2), then a note.
-        val events = wire.feed(bytes(0xC0, 5, 0xE0, 0, 64, 0xD0, 50, 0xA0, 60, 10, 0x90, 60, 80))
-        assertEquals(listOf(Event.NoteOn(0, 60, 80 / 127f)), events)
+        assertEquals(emptyList(), wire.feed(bytes(0xE0), timestampNanos = 1L))
+        assertEquals(emptyList(), wire.feed(bytes(0x00), timestampNanos = 2L))
+        assertEquals(listOf(Event.PitchBend(0, 2048, timestampNanos = 3L)), wire.feed(bytes(0x50), timestampNanos = 3L))
+    }
+
+    @Test
+    fun `a clock between a bend's two data bytes is heard and the bend stays whole`() {
+        assertEquals(
+            listOf(Event.Clock(), Event.PitchBend(0, 0)),
+            MidiWire().feed(bytes(0xE0, 0x00, 0xF8, 0x40)),
+        )
+    }
+
+    @Test
+    fun `channel pressure takes one data byte, poly pressure two`() {
+        assertEquals(listOf(Event.ChannelPressure(5, 64)), MidiWire().feed(bytes(0xD5, 0x40)))
+        assertEquals(listOf(Event.PolyPressure(2, 60, 127)), MidiWire().feed(bytes(0xA2, 0x3C, 0x7F)))
+        // Running status on channel pressure is one byte per message.
+        assertEquals(
+            listOf(Event.ChannelPressure(0, 10), Event.ChannelPressure(0, 20), Event.NoteOn(0, 60, 80 / 127f)),
+            MidiWire().feed(bytes(0xD0, 10, 20, 0x90, 60, 80)),
+        )
+    }
+
+    @Test
+    fun `bend and pressure are expression on a channel, so nothing treats them as notes`() {
+        val events = MidiWire().feed(bytes(0xE0, 0, 64, 0xD0, 50, 0xA0, 60, 10))
+        assertEquals(3, events.size)
+        assertTrue(events.all { it is Event.Expression && it is Event.Channel })
     }
 
     @Test

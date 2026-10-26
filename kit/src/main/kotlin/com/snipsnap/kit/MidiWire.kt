@@ -24,9 +24,10 @@ package com.snipsnap.kit
  *    status, as the spec says.
  *
  * What comes out is what a player and a transport need: notes,
- * controllers, and the clock's own four bytes. Pitch bend,
- * aftertouch and program changes are read correctly - their lengths
- * are honoured, so the bytes after them stay in step - and dropped.
+ * controllers, pitch bend and the two pressures (as [Event.Expression]),
+ * and the clock's own four bytes. Program changes are read correctly -
+ * their length is honoured, so the bytes after them stay in step - and
+ * dropped. A bend's 14 bits arrive least significant seven first.
  * A note-on at velocity 0 is a note-off, the convention every
  * keyboard built since 1983 relies on.
  *
@@ -92,6 +93,23 @@ class MidiWire {
             val value: Int,
             override val timestampNanos: Long = 0L,
         ) : Channel
+
+        /** Bend and pressure: continuous expression on one channel. Nothing plays them yet. */
+        sealed interface Expression : Channel
+
+        /** 14-bit bend, LSB first on the wire, centred: -8192..8191, 0 is centre. */
+        data class PitchBend(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Expression
+
+        /** Channel pressure (D0): 0..127. */
+        data class ChannelPressure(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Expression
+
+        /** Polyphonic key pressure (A0): one note's pressure, 0..127. */
+        data class PolyPressure(
+            override val channel: Int,
+            val note: Int,
+            val value: Int,
+            override val timestampNanos: Long = 0L,
+        ) : Expression
 
         /** A system real-time message: one byte, no channel, the transport's clock and its buttons. */
         sealed interface RealTime : Event
@@ -199,6 +217,11 @@ class MidiWire {
             NOTE_ON -> if (second == 0) Event.NoteOff(channel, first, stamp) else Event.NoteOn(channel, first, velocity(second), stamp)
             NOTE_OFF -> Event.NoteOff(channel, first, stamp)
             CONTROL_CHANGE -> Event.Control(channel, first, second, stamp)
+            // Bend is LSB first on the wire: `first` is the low seven bits, `second` the high.
+            PITCH_BEND -> Event.PitchBend(channel, ((second shl 7) or first) - 8192, stamp)
+            // One data byte, so the caller passes it as both `first` and `second`.
+            CHANNEL_PRESSURE -> Event.ChannelPressure(channel, first, stamp)
+            POLY_PRESSURE -> Event.PolyPressure(channel, first, second, stamp)
             else -> null
         }
     }
@@ -206,9 +229,11 @@ class MidiWire {
     companion object {
         const val NOTE_OFF = 0x80
         const val NOTE_ON = 0x90
+        const val POLY_PRESSURE = 0xA0
         const val CONTROL_CHANGE = 0xB0
         private const val PROGRAM_CHANGE = 0xC0
-        private const val CHANNEL_PRESSURE = 0xD0
+        const val CHANNEL_PRESSURE = 0xD0
+        const val PITCH_BEND = 0xE0
         private const val SYSEX_START = 0xF0
 
         /** System real-time: the timing clock, 24 to a quarter note. */
