@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
  * listens that cost no new section, proposed in
  * docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md and run beside the WAH gate.
  *
- * Five sheets. (1) WAH on the short pads a kit is mostly made of (a closed hat, a rim, a snare
+ * Six sheets. (1) WAH on the short pads a kit is mostly made of (a closed hat, a rim, a snare
  * trimmed to [TRIM_SEC]; no click, because no engine renders one, so the rim stands in) and on the
  * full snare, each with the shipped AUTO move and with a
  * one-cycle floor on its rate ([Wah.fitted]: the sweep completes at least [MIN_CYCLES] before the
@@ -29,8 +29,13 @@ import kotlin.math.roundToInt
  * snare and JANGLE only, MIX 1.0 and 0.5 beside the owner's 0.75 at 70; then the spec's known edge, the
  * bank-B reversed snare through DELAY at 70 with HEAD on and off, because the head is the pad's start and
  * every other gate source starts on its hit. Each clip that reaches the rack's tail cap prints where the
- * cut lands. It replaces the long-note sheet (ROLL and three attack-fed echo prototypes), retired with its
- * test-source DSP once HEAD was built; that sheet's ten clips stay on the published page only.
+ * cut lands. (6) DELAY as the owner answered it at the gate (2026-10-24: HEAD off, MIX 1.0, TIME 1.0), a
+ * recipe nobody had heard as one, at 70 and 100 on the same four sources, and at 100 on the three held
+ * notes, where the rack's cap lands on TIME 1.0's trail 21 to 38 dB under the peak, the same render with
+ * its last [CUT_FADE_SEC] faded out: a prototype of a gentler cut, not a shipped change. Here too the page
+ * asks whether the cut is heard. Sheet (5) replaces the long-note sheet (ROLL and three attack-fed echo
+ * prototypes), retired with its test-source DSP once HEAD was built; that sheet's ten clips stay on the
+ * published page only.
  *
  * JANGLE is heard as the kit has it (the dry string through its landing amp). A pedal that belongs
  * in front of the amp (SWELL) is put there, in the rig order, with the amp's own values; a pedal that
@@ -39,7 +44,7 @@ import kotlin.math.roundToInt
  * index.html (the page at src/test/resources/audition/pedal-listens.html with the clip table
  * written in). Run via `./gradlew :synth:generatePedalListens`. The page is published as a listening
  * artifact with root testkit/pedal-listens and the answer store (the db capability), as the WAH listen
- * is. Its files are the clips of sheets (1) to (4), the gate's 30, and the ten retired long-note clips,
+ * is. Its files are the clips of sheets (1) to (4), the gate's 30, the confirm's 11, and the ten retired long-note clips,
  * which stay on the published artifact only: a published clip is never re-uploaded, because the owner's
  * answers (its verdicts/ documents) point at the bytes they heard.
  */
@@ -75,6 +80,21 @@ object PedalListensGenerator {
     internal fun tapeWobble(depth: Float) = FxChain(tape = mapOf("WOBBLE" to depth, "DRIVE" to 0f, "AGE" to 0f))
 
     private fun pct(amount: Float) = (amount * 100).roundToInt()
+
+    /** The confirm sheet's gentler cut: a little under one repeat's spacing at TIME 1.0 (350 ms), faded instead of the rack's 10 ms. */
+    const val CUT_FADE_SEC = 0.3f
+
+    /** [s] with its last [seconds] faded out on a raised cosine: a listening prototype of a longer fade at the rack's cut. */
+    internal fun fadedEnd(s: Snip, seconds: Float): Snip {
+        val out = s.samples.copyOf()
+        val n = minOf(s.frameCount, (seconds * s.sampleRate).toInt())
+        val start = s.frameCount - n
+        for (f in start until s.frameCount) {
+            val g = (0.5 + 0.5 * kotlin.math.cos(Math.PI * (f - start) / n)).toFloat()
+            for (ch in 0 until s.channels) out[f * s.channels + ch] *= g
+        }
+        return Snip(out, s.channels, s.sampleRate)
+    }
 
     /** [s] cut to its first [seconds], the last 3 ms faded so the cut itself does not click. */
     internal fun trimmed(s: Snip, seconds: Float): Snip {
@@ -192,7 +212,20 @@ object PedalListensGenerator {
         gate("SNARE", reversed, "gate_rev_delay_70", "SNARE REVERSED (THE BANK-B TWIN), THEN DELAY AT 70", Treatments.apply("delayed", reversed, 0.7f).snip)
         gate("SNARE", reversed, "gate_rev_head0_70", "SNARE REVERSED, THEN DELAY AT 70 WITH HEAD OFF", Treatments.fade(variant("HEAD" to 0f), 0.7f).process(reversed))
 
-        check(entries.size == 78) { "expected 78 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, the DELAY gate 30), wrote ${entries.size}" }
+        // (6) DELAY as the gate's answers put it (2026-10-24): HEAD off (HEAD on lost to it at the same level on every held note),
+        // MIX 1.0 and TIME 1.0 ("further apart"), three changes nobody had heard as one recipe. At 100 the rack's one-second cap
+        // lands on the trail while it may still be heard on the held notes (35.6, 38.0 and 20.7 dB under the peak on the choir,
+        // JANGLE and CHUG; the snare's is 75.5). TIME 0.9 was tried and does not help (choir 29.4, CHUG 21.9), so those three
+        // also get the render with its end faded out.
+        val answered = FxChain(echo = mapOf("TIME" to 1f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 1f))
+        for ((name, dry) in linkedMapOf("SNARE" to snare, "CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
+            for (amount in AMOUNTS) gate(name, dry, "confirm_${pct(amount)}", "$name DELAY AS ANSWERED (TIME 100, MIX 100, HEAD OFF) AT ${pct(amount)}", Treatments.fade(answered, amount).process(dry))
+        }
+        for ((name, dry) in linkedMapOf("CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
+            gate(name, dry, "confirm_fade_100", "$name DELAY AS ANSWERED AT 100, ITS LAST ${(CUT_FADE_SEC * 1000).roundToInt()} MS FADED OUT (A PROTOTYPE)", fadedEnd(answered.process(dry), CUT_FADE_SEC))
+        }
+
+        check(entries.size == 89) { "expected 89 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, the DELAY gate 30, the confirm 11), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         val template = PedalListensGenerator::class.java.getResourceAsStream("/audition/pedal-listens.html")
             ?.bufferedReader()?.use { it.readText() }

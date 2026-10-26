@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Hear OHM's extended family: bowing, captured excitation, FM, audio grains, captured-buffer freeze and sustained playback for SnipSnap.">
+  <title>OHM / Extended family — SnipSnap listening room</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2387ae73'/%3E%3Cpath d='M8 16h16M16 8v16' stroke='%23252e25' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listen">Skip to the recordings</a>
+  <header class="site-header wrap">
+    <a class="brand" href="https://ohm-snipsnap-audition.bertcalm.chatgpt.site/">SnipSnap <span>/</span> OHM</a>
+    <div class="header-actions"><a href="https://ohm-snipsnap-audition.bertcalm.chatgpt.site/">Accepted audition <span aria-hidden="true">↗</span></a><button type="button" id="stop-all">Stop all <kbd>esc</kbd></button></div>
+  </header>
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow"><span aria-hidden="true">●</span> FAMILY STRINGS / NEW EXPERIMENTS</p>
+        <h1 id="page-title">A larger<br><em>circle.</em></h1>
+        <p class="hero-line">The family stays. The conversation grows.</p>
+        <p class="hero-copy">A bow in place of a pick. A captured hit. An elder, a scatter of audio, a little memory. Hear each addition by itself before bringing them together.</p>
+        <button type="button" id="first-play" class="primary-button" disabled>Play the first comparison <span aria-hidden="true">▶</span></button>
+        <p class="caption">Actual Kotlin recordings · no autoplay · new sounds awaiting your listen</p>
+      </div>
+      <figure class="family-sketch">
+        <p>ATTACK → COMPANY → SUSTAIN → RELEASE</p>
+        <svg viewBox="0 0 480 300" role="img" aria-labelledby="sketch-title sketch-description">
+          <title id="sketch-title">Three strings become a continuing relationship</title>
+          <desc id="sketch-description">Three separate strings enter a shared circle, then continue together.</desc>
+          <g class="sketch-grid"><path d="M24 80h432M24 150h432M24 220h432M92 28v244M388 28v244"/><circle cx="268" cy="150" r="95"/><circle cx="268" cy="150" r="130"/></g>
+          <path class="sketch-string thin" d="M25 80C91 80 108 184 163 184S212 101 268 101 321 183 374 183 416 150 456 150"/>
+          <path class="sketch-string" d="M25 150C93 150 104 70 156 70S211 230 268 230 322 70 374 70 417 150 456 150"/>
+          <path class="sketch-string thin" d="M25 220C91 220 108 118 163 118S212 201 268 201 321 118 374 118 416 150 456 150"/>
+          <g class="sketch-nodes"><circle cx="25" cy="80" r="4"/><circle cx="25" cy="150" r="6"/><circle cx="25" cy="220" r="4"/><circle cx="456" cy="150" r="7"/></g>
+        </svg>
+        <figcaption>ONE SHARED BODY <span>SIX WAYS TO EXTEND IT</span></figcaption>
+      </figure>
+    </section>
+
+    <section class="guide wrap" aria-label="Listening guide">
+      <p><b>First, compare.</b> Each feature plays OFF, pauses, then plays ON.</p>
+      <p><b>Then, share.</b> Hear it with independent and coupled companions.</p>
+      <p><b>Finally, stay.</b> The held studies repeat the sustain region eight times.</p>
+    </section>
+
+    <section id="listen" class="listening-room wrap" aria-labelledby="listen-title">
+      <div class="room-heading"><div><p class="eyebrow">THE EXTENDED FAMILY</p><h2 id="listen-title">One addition at a time.</h2></div><div class="level-control"><span id="level-label">Playback level</span><div class="segmented" role="group" aria-labelledby="level-label"><button type="button" data-level="matched" aria-pressed="true">Matched</button><button type="button" data-level="raw" aria-pressed="false">Raw</button></div></div></div>
+      <p id="library-status" class="library-status" role="status">Opening the listening room…</p>
+      <div id="library-error" class="library-error" role="alert" hidden><p id="error-message">The recordings could not load.</p><button id="retry-load" type="button">Try again</button></div>
+      <div id="audition-content" hidden>
+        <nav class="filters" id="filters" aria-label="Choose a listening study"></nav>
+        <div class="audition-layout">
+          <section class="player" aria-labelledby="player-title">
+            <div class="console-heading"><span id="player-category">OHM / MODEL 3</span><span id="player-state">READY</span></div>
+            <h3 id="player-title">Choose an experiment</h3>
+            <p id="player-description"></p>
+            <div class="playback-order"><div class="order-heading"><span>PLAYBACK ORDER</span><span id="part-status" role="status">Ready to listen</span></div><div id="parts" class="parts"></div></div>
+            <svg id="waveform" class="waveform" viewBox="0 0 480 70" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <audio id="audio" controls preload="metadata" aria-label="Selected OHM recording"></audio>
+            <p id="audio-status" class="audio-status" role="status">Choose a recording, then press Play.</p>
+            <div class="console-footer"><span id="level-description">MATCHED · EACH COMPARISON PART LEVELED SEPARATELY</span><a id="audio-download" download>WAV ↓</a><a id="recipe-download" download>Recipe ↓</a></div>
+          </section>
+
+          <section class="collection" aria-label="Listening recordings"><div class="collection-heading"><p id="collection-count"></p><p>MONO / 44.1 kHz</p></div><div id="clip-groups"></div></section>
+        </div>
+        <div class="bundle-row"><span>Every recording has an exact saved recipe.</span><a id="bundle-download" class="download-link" download>Download the complete audition ZIP ↓</a><a id="source-download" class="download-link" download>Download the captured hit ↓</a></div>
+        <section class="notes" aria-labelledby="notes-title"><div><p class="eyebrow">WHAT WOULD YOU KEEP?</p><h2 id="notes-title">Leave a listening note.</h2><p>Does the new source belong to the same body? Does the sustain stay interesting? Your notes stay in this browser.</p><p id="storage-status" class="caption"></p></div><div><label for="review-decision">Your verdict for <strong id="review-title">this recording</strong></label><select id="review-decision"><option value="">No verdict yet</option><option>Keep</option><option>Revise</option><option>Drop</option></select><label for="review-note">Listening note</label><textarea id="review-note" rows="4" maxlength="4000" placeholder="The onset, the companion texture, the loop, the release…"></textarea><div class="notes-bottom"><span id="review-status" role="status"></span><button id="export-review" type="button">Export review JSON ↓</button></div></div></section>
+        <details class="provenance"><summary>What these recordings contain</summary><div class="provenance-copy"><p>The six rows isolate bowing, captured excitation, FM elder, actual source-audio grains, captured-buffer freeze and sustained playback. Independent means MEDDLING .65 / COMMUNE 0; shared means MEDDLING .65 / COMMUNE 1.</p><p>The captured hit is original authored audio included with the audition. Its prepared PCM is embedded in the relevant recipes. Freeze captures a populated source-audio buffer; it is not an FFT spectral-freeze claim.</p><p>The held clips play the arrival once, then only the marked sustain region eight times. Bowed HOLD uses a captured, blended stretch of continuing physical bow. Their final listening fade does not modify the looping instrument material. Separate notes start independent ensembles.</p><p>Raw preserves the renderers’ source dynamics with one common PCM headroom gain. Matched levels each OFF/ON part separately; phrases and held studies are leveled once as complete recordings.</p><p>These new options are awaiting listening approval. The accepted five factory recipes and original audition remain available separately. Phone response and MPC hardware acceptance require device checks.</p><a href="assets/manifest.json" download>Manifest and measurements ↓</a><a href="assets/diagnostics.json" download>Audio diagnostics ↓</a></div></details>
+      </div>
+      <noscript><p>This page needs JavaScript for its player. The audio and complete recipes are also available in the audition ZIP.</p><a href="assets/ohm-expanded-audition.zip" download>Download the audition ZIP</a></noscript>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><strong>OHM <span>/ EXTENDED FAMILY</span></strong><p>A new listening study for SnipSnap.</p><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener noreferrer">SnipSnap on GitHub ↗</a></footer>
+</body>
+</html>

@@ -21,6 +21,13 @@ class DeterminismTest {
     }
 
     @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
     fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
         val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
             midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,
@@ -193,6 +200,15 @@ class DeterminismTest {
     fun `RESIN is byte-identical across renders`() {
         val patch = ResinPatch("Canary", ResinVoice.LEAD, Resin.defaults(ResinVoice.LEAD))
         assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `VENT saved clean recipes keep note touch and trajectory history across replay`() {
+        for (entry in VentKitPresets.entries.filter { it.role == "Percussive hit" }) {
+            val patch = entry.patch
+            val restored = VentPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, restored.render().samples, "${entry.id} recipe replay changed its sound")
+        }
     }
 
     // TIDE seeds WANDER from the recipe itself (Tide.seedFor), so this is
