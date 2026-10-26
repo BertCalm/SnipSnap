@@ -10,6 +10,7 @@ from pathlib import Path
 import shutil
 
 from package_chamber_site import directory_bytes, encode_verified, sha256
+from chamber_flac_seektable import index_flac
 
 
 def write_json(path: Path, value: object) -> None:
@@ -23,7 +24,8 @@ def contained(root: Path, relative: str) -> Path:
     return path
 
 
-def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit: int) -> dict:
+def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit: int,
+            ffprobe: str = "ffprobe") -> dict:
     current, rendered, destination = (p.resolve() for p in (current, rendered, destination))
     for a, b in ((current, rendered), (current, destination), (rendered, destination)):
         if a == b or a.is_relative_to(b) or b.is_relative_to(a):
@@ -52,10 +54,11 @@ def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit
     study = destination / "extremes"
     shutil.copytree(rendered, study)
     (study / "manifest-rendered.json").write_bytes(original_manifest)
-    proof = {"schemaVersion": 1, "policy": "New study audio in verified lossless FLAC; prior recordings retain their original bytes",
+    proof = {"schemaVersion": 1, "policy": "Verified lossless FLAC with frame seek tables for new recordings and study-local copies of reused FLAC; prior site files retain their original bytes",
              "acceptedManifestSha256": before["manifest.json"],
              "renderedManifestSha256": hashlib.sha256(original_manifest).hexdigest(),
              "sourceRevision": manifest["sourceRevision"], "compressed": [], "reused": [],
+             "indexedReferences": [],
              "priorFiles": len(before), "priorBytes": directory_bytes(current), "limitBytes": limit}
     new_ids = []
     for clip in manifest["clips"]:
@@ -66,10 +69,29 @@ def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit
                 if old.get(field):
                     asset = contained(current, old[field])
                     clip[field] = "../" + old[field]
-                    proof["reused"].append({"clipId": clip["id"], "baselineClipId": baseline_id,
-                                             "field": field, "path": clip[field], "sha256": sha256(asset)})
+                    reuse = {"clipId": clip["id"], "baselineClipId": baseline_id,
+                             "field": field, "path": clip[field], "sha256": sha256(asset)}
+                    if field in ("raw", "matched") and asset.suffix.lower() == ".flac":
+                        local = study / "references" / old[field]
+                        local.parent.mkdir(parents=True, exist_ok=True)
+                        if local.exists():
+                            raise ValueError(f"Duplicate indexed reference destination: {local}")
+                        shutil.copyfile(asset, local)
+                        indexed = index_flac(ffmpeg, ffprobe, local)
+                        entry = {"clipId": clip["id"], "baselineClipId": baseline_id, "mode": field,
+                                 "originalFlac": clip[field], "originalFlacSha256": sha256(asset),
+                                 "flac": local.relative_to(study).as_posix(), "flacSha256": sha256(local),
+                                 "originalBytes": asset.stat().st_size, "flacBytes": local.stat().st_size,
+                                 "seekTable": indexed, "samplesIdentical": True}
+                        proof["indexedReferences"].append(entry)
+                        clip.setdefault("hostingAudio", {})[field] = entry
+                        clip[field] = entry["flac"]
+                        reuse.update({"originalPath": reuse["path"], "originalSha256": reuse["sha256"],
+                                      "path": clip[field], "sha256": entry["flacSha256"],
+                                      "samplesIdentical": True})
+                    proof["reused"].append(reuse)
                     if field in ("raw", "matched"):
-                        clip["metrics"]["audioSha256"][field] = sha256(asset)
+                        clip["metrics"]["audioSha256"][field] = reuse["sha256"]
             clip["sourceRevision"] = old.get("sourceRevision", current_manifest["sourceRevision"])
             continue
         new_ids.append(clip["id"])
@@ -82,11 +104,14 @@ def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit
             if wav.suffix.lower() != ".wav" or flac.exists():
                 raise ValueError("Expected distinct newly rendered WAVs")
             verified = encode_verified(ffmpeg, wav, flac)
+            indexed = index_flac(ffmpeg, ffprobe, flac)
+            if indexed["pcmSha256"] != verified["pcmSha256"]:
+                raise ValueError("Seek-table insertion changed the verified render samples")
             container = flac.relative_to(study).as_posix()
             entry = {"clipId": clip["id"], "mode": field, "originalWav": relative,
                      "originalWavSha256": sha256(original), "flac": container,
                      "flacSha256": sha256(flac), "originalBytes": wav.stat().st_size,
-                     "flacBytes": flac.stat().st_size} | verified
+                     "flacBytes": flac.stat().st_size, "seekTable": indexed} | verified
             proof["compressed"].append(entry)
             hosted[field] = entry
             clip[field] = container
@@ -96,7 +121,8 @@ def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit
     if len(new_ids) != 20 or len(proof["compressed"]) != 40 or len(proof["reused"]) != 66:
         raise ValueError("Expected 20 new raw/matched pairs and 22 complete prior references")
     manifest["hostingAudio"] = {"report": "hosting-audio.json", "renderedManifest": "manifest-rendered.json",
-                                "policy": "Lossless FLAC for new recordings only", "samplesIdentical": True}
+                                "policy": "Lossless FLAC with verified frame seek tables; reused FLAC gets a study-local indexed copy without changing prior files",
+                                "indexedReferenceFiles": len(proof["indexedReferences"]), "samplesIdentical": True}
     manifest["baseline"]["hostedManifestSha256"] = before["manifest.json"]
     write_json(study / "manifest.json", manifest)
     index = destination / "index.html"
@@ -113,19 +139,29 @@ def package(current: Path, rendered: Path, destination: Path, ffmpeg: str, limit
                                        for path, digest in before.items() if path != "index.html")
     if proof["preservedPriorFiles"] != len(before) - 1:
         raise ValueError("An earlier audio, recipe, archive or source asset changed")
-    # Retain both scripts so the immutable render and hosting containers are reproducible.
+    # Retain every packaging source so the immutable render and containers are reproducible.
     scripts = study / "hosting-source"
     scripts.mkdir(exist_ok=True)
-    for name in ("package_chamber_extremes_site.py", "package_chamber_site.py"):
+    proof["hostingSourceFiles"] = []
+    for name in ("package_chamber_extremes_site.py", "package_chamber_site.py", "chamber_flac_seektable.py"):
         source = Path(__file__).resolve().with_name(name)
         shutil.copyfile(source, scripts / name)
-    write_json(study / "hosting-audio.json", proof)
-    proof["expandedBytes"] = directory_bytes(destination)
-    write_json(study / "hosting-audio.json", proof)
+        proof["hostingSourceFiles"].append({"path": "hosting-source/" + name, "sha256": sha256(scripts / name)})
+    # Include this report's own final digit count in the expanded-size proof.
+    proof["expandedBytes"] = 0
+    for _ in range(10):
+        write_json(study / "hosting-audio.json", proof)
+        measured = directory_bytes(destination)
+        if proof["expandedBytes"] == measured:
+            break
+        proof["expandedBytes"] = measured
+    else:
+        raise ValueError("Expanded-byte report did not reach a fixed point")
     expanded = directory_bytes(destination)
     if expanded >= limit:
         raise ValueError(f"Expanded site exceeds its hosting budget: {expanded} >= {limit}")
     print(json.dumps({"newRecordings": 20, "losslessFiles": 40,
+                      "indexedReferenceFiles": len(proof["indexedReferences"]),
                       "retainedPriorFiles": proof["preservedPriorFiles"], "expandedBytes": expanded,
                       "headroomBytes": limit - expanded, "allConvertedPcmSamplesIdentical": True}))
     return proof
@@ -137,9 +173,10 @@ def main() -> None:
     parser.add_argument("rendered", type=Path)
     parser.add_argument("destination", type=Path)
     parser.add_argument("--ffmpeg", default="ffmpeg")
+    parser.add_argument("--ffprobe", default="ffprobe")
     parser.add_argument("--limit-bytes", type=int, default=256 * 1024 * 1024)
     args = parser.parse_args()
-    package(args.current, args.rendered, args.destination, args.ffmpeg, args.limit_bytes)
+    package(args.current, args.rendered, args.destination, args.ffmpeg, args.limit_bytes, args.ffprobe)
 
 
 if __name__ == "__main__":
