@@ -9,7 +9,7 @@ package com.snipsnap.shell
  * which changes after a USB permission grant). So the store keys on that.
  *
  * When several controllers are connected the most recently connected one wins
- * (device lists arrive in connection order), because that is the one the
+ * (device lists arrive in the order each `openDevice` completes), because that is the one the
  * player has just reached for. SnipSnap's own virtual port
  * (Transport.VIRTUAL) never stores or restores: another app's notes follow
  * whatever PLAY shows, they are not a controller to remember.

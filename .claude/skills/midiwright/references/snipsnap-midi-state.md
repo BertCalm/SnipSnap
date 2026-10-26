@@ -102,13 +102,15 @@ S1 to S3 are answered; master-side clock out needs S1 and S2.
    `NativePads.noteOn` has no offset parameter and `jni.cpp` leaves it 0.
 6. **The beat is on the display clock.** `BeatPlayer` converts wall time to steps at frame
    rate with a 100 ms clamp; notes can arrive batched and late. Not a foundation for sync.
-7. **Pitch bend, aftertouch and program change are dropped** in `MidiWire` by design. Any
-   expression work extends the event set there first (and its hostile-input tests).
+7. ~~**Pitch bend, aftertouch and program change are dropped** in `MidiWire` by design.~~ Done for
+   pitch bend, channel pressure and poly pressure: they are `Event.Expression` (`7bb2f82e5`).
+   Program change is still dropped. Any further expression work extends the event set there
+   first (and its hostile-input tests).
 8. **No foreground service that holds a device** (the one service is typed
    `microphone|mediaProjection`), so a long session with a BLE device would depend on the
    screen staying on. `connectedDevice` is the honest type for holding one; `mediaPlayback`
    only if the app ever plays in the background.
-9. ~~**No diagnostics screen**; the `MidiInput` logcat tag is the only window.~~ Mostly done on 2026-10-24: `MidiScreen` behind the gear lists endpoints with port names, monitors every delivery's raw bytes (`MidiMonitor`, which reads bend, pressure and SysEx for people while `MidiWire` still drops them for playing), and copies a `MidiReport`. No `latencyMillis` there yet; unrun on a phone.
+9. ~~**No diagnostics screen**; the `MidiInput` logcat tag is the only window.~~ Mostly done on 2026-10-24: `MidiScreen` behind the gear lists endpoints with port names, monitors every delivery's raw bytes (`MidiMonitor`, which reads SysEx and program change for people while `MidiWire` skips SysEx and drops program change for playing), and copies a `MidiReport`. No `latencyMillis` there yet; unrun on a phone.
 10. **The loop grid has no front door**; giving it a transport is work on a screen users
     cannot reach until that changes.
 11. **No ns-to-frame mapping.** The stamp from gap 1 and the offset from gap 5 are not yet

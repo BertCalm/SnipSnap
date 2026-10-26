@@ -139,8 +139,8 @@ One button below the device list: `Copy.MIDI_CLOCK_CHECK` ("CLOCK CHECK"). On ta
    `Copy.MIDI_CLOCK_ROUTE_CHANGED` ("THE AUDIO ROUTE CHANGED. RUN IT AGAIN.").
 4. `close()` the engine. Also close it in the screen's `onDispose` if the check is still running.
 5. Show the line from `ClockProbe.describe(result)`. If `isShared()` was true, add
-   `Copy.MIDI_CLOCK_SHARED` ("SHARED STREAM: SOMETHING ELSE HELD THE AUDIO. RUN IT WITH NOTHING
-   ELSE PLAYING."): a shared stream may not be the configuration clock out would get. The check
+   `Copy.MIDI_CLOCK_SHARED` ("SHARED STREAM: ANOTHER STREAM WAS PLAYING, MAYBE SNIPSNAP'S OWN
+   BEAT. STOP EVERYTHING AND RUN IT AGAIN."): a shared stream may not be the configuration clock out would get. The check
    does not refuse to run.
 6. Add a CLOCK section to `MidiReport.text` when a check has run: the line, the counts,
    `startupGapMs`, `longestStallMs`, `stallAtMs`, `sampleRate()`, `isShared()`, `framesPerBurst()`, `audioApi()` as a word,
@@ -184,8 +184,9 @@ REPORT. Say that the bench's September pause is lifted for S1 only, at the owner
 3. **The engine opens only for the check.** The MIDI screen ran no audio on purpose; a probe
    that left a stream open would change what other screens measure.
 4. **The risky decision** is the stall threshold. One burst of movement while 100 ms of audio
-   is written is a guess at "sitting still". The raw counts in the report let the owner, or a
-   later session, re-read a run with another threshold without running it again.
+   is written is a guess at "sitting still". The report's BURST USED and POSITION UPDATES EVERY
+   lines let the owner, or a later session, re-read a run with another threshold: the first
+   says what "one burst" was, the second whether the position is coarse or stalled.
 
 ## 6. As built (2026-10-26)
 
@@ -214,6 +215,16 @@ is a host test or a compile; nothing was run on a phone.
   a route change (`needsRestart()`), stop on leaving the screen, a shared-stream warning, and
   a CLOCK section in COPY REPORT. Proof: `MidiReportTest`, 11 `@Test`; `PersonalityTest`;
   `:app:compileDebugKotlin`.
+- `fe3d726eb`, `3c4e65eb7` and the docs commit after them: **final-review fixes.**
+  `RATE_WRONG` joins the verdicts between STALLED and SLOW_START: with `MIN_TRACKED_MS` run
+  after the first movement, a missing rate (the hardware timestamps spanned under 2 s or did
+  not advance) or one over `RATE_LIMIT_PPM = 1000` leads with "DON'T TRUST THIS CLOCK", never
+  TRACKED. `Result` also carries the timestamp age against the wall clock (printed, not
+  judged), the burst used, the median spacing between position updates and a `neverMoved`
+  flag; COPY REPORT prints TIMESTAMP AGE, BURST USED and POSITION UPDATES EVERY. The screen
+  reads the output route again after the run and returns RouteChanged if it moved (no
+  auto-retry), and counts `TYPE_BLE_HEADSET` as Bluetooth. Proof: `ClockProbeTest` (30
+  `@Test`), `MidiReportTest`; `:app:compileDebugKotlin`.
 
 **What changed against the spec.**
 
@@ -236,6 +247,7 @@ is a host test or a compile; nothing was run on a phone.
   start a stream. The tests prove the not-started case only.
 - Nothing was run on a phone. The thresholds are proposals.
 - A phone whose timestamp updates come 100 ms or more apart can read STALLED under the stall
-  rule. The report's raw counts allow a re-read; the rule was not softened without data.
+  rule. The report's POSITION UPDATES EVERY line tells coarse from stalled; the rule was not
+  softened without data.
 
 **Measured on device:** nothing.
