@@ -54,8 +54,7 @@ it is done. The gate column names what has to be true first; S1 to S4 are
 | 13 | **One transport.** ORBIT's render cursor and BEAT's display clock migrate onto the frame mapping | `OrbitEngine.kt`, `BeatPlayer.kt` | `BeatClockTest` pinned; a drift row between the two streams | **S1, S3** |
 | 14 | **Clock in, follower.** A PLL in `:kit` with jitter and stall fixtures, holdover as its own mechanism | `:kit`, `:app` | fixtures; **S3, S4** on hardware | step 13 |
 
-Beyond these sit the expression and sequencing items (pitch bend and aftertouch in the
-parser, MPE, isomorphic grids, per-step probability and conditions, sensors, Scala), and
+Beyond these sit the expression and sequencing items (MPE, isomorphic grids, per-step probability and conditions, sensors, Scala), and
 none of them is blocked except by the rows above.
 
 ## The gates that are not code
