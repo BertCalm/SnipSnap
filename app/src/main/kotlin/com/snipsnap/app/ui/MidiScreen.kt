@@ -339,6 +339,10 @@ private suspend fun runClockCheck(context: Context, hold: ClockHold): ClockOutco
             samples += s
             if (s.wallNanos - startNanos >= CLOCK_RUN_NANOS) break
         }
+        // A route change that Android made without asking the stream to restart (a quiet
+        // re-route) shows only in the device list: if it moved, the run spans two outputs.
+        // No automatic retry; the owner is told to run it again.
+        if (outputRoute(context) != route) return ClockOutcome.RouteChanged
         val rate = engine.sampleRate()
         val result = ClockProbe.analyze(samples, rate)
         val shared = engine.isShared()
@@ -368,7 +372,8 @@ private fun outputRoute(context: Context): MidiReport.Route {
     val am = context.getSystemService(AudioManager::class.java) ?: return MidiReport.Route.SPEAKER
     val types = am.getDevices(AudioManager.GET_DEVICES_OUTPUTS).map { it.type }.toSet()
     return when {
-        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP in types -> MidiReport.Route.BLUETOOTH
+        AudioDeviceInfo.TYPE_BLUETOOTH_A2DP in types ||
+            (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && AudioDeviceInfo.TYPE_BLE_HEADSET in types) -> MidiReport.Route.BLUETOOTH
         AudioDeviceInfo.TYPE_WIRED_HEADPHONES in types || AudioDeviceInfo.TYPE_WIRED_HEADSET in types -> MidiReport.Route.WIRED
         AudioDeviceInfo.TYPE_USB_HEADSET in types || AudioDeviceInfo.TYPE_USB_DEVICE in types -> MidiReport.Route.USB
         else -> MidiReport.Route.SPEAKER
