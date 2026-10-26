@@ -186,3 +186,11 @@ Landed in `6967038ec` to `9c4a7cda4`: steps 4 and 9 of the table above (MIDI out
 published virtual port). The per-commit record, the proof for each and what was left undone
 are in [`MIDI_OUT_SPEC_2026_10.md`](MIDI_OUT_SPEC_2026_10.md) section 13. Nothing was heard on
 a phone.
+
+## As built: batch C (2026-10-26)
+
+Landed in `7bb2f82e5` to `924979517`: bend and pressure on the wire, the pad map per
+controller, and a CLOCK CHECK on the MIDI screen that answers bench S1. The record, the proof
+and what was left undone are in [`MIDI_CLOCK_PROBE_SPEC_2026_10.md`](MIDI_CLOCK_PROBE_SPEC_2026_10.md)
+section 6 and [`MIDI_CONTROLLER_PLAN_2026_10.md`](MIDI_CONTROLLER_PLAN_2026_10.md) steps 2 and 3.
+Nothing was measured on a phone.

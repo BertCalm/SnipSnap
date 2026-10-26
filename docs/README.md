@@ -40,6 +40,8 @@ is the current survey of the open work and holds the "As built" records of batch
 so trust it first for what the tree has now.
 [`MIDI_CONTROLLER_PLAN_2026_10.md`](MIDI_CONTROLLER_PLAN_2026_10.md) plans full
 support for one keyboard controller (the MiniLab 3) as the archetype for all of them.
+[`MIDI_CLOCK_PROBE_SPEC_2026_10.md`](MIDI_CLOCK_PROBE_SPEC_2026_10.md) specifies the CLOCK CHECK
+that answers bench S1, with its "As built" in section 6.
 
 **Formats.** [`MPC3_FORMAT.md`](MPC3_FORMAT.md) is the native container,
 and it keeps corpus facts separate from inferences. [`MPC_EXPORT.md`](MPC_EXPORT.md)

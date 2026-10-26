@@ -186,3 +186,56 @@ REPORT. Say that the bench's September pause is lifted for S1 only, at the owner
 4. **The risky decision** is the stall threshold. One burst of movement while 100 ms of audio
    is written is a guess at "sitting still". The raw counts in the report let the owner, or a
    later session, re-read a run with another threshold without running it again.
+
+## 6. As built (2026-10-26)
+
+Landed in `7bb2f82e5` to `924979517`. Proof for each
+is a host test or a compile; nothing was run on a phone.
+
+- `7bb2f82e5` **Bend and pressure on the wire.** `MidiWire` reads pitch bend (LSB first,
+  -8192..8191), channel pressure and poly pressure as `Event.Expression`. `reachesScreens()`
+  keeps them, and real-time bytes, off the main thread, so a pressure pad does not post one
+  lambda per byte until something plays them. `scripts/wire_fixtures.py` extended. Proof:
+  `MidiWireTest`, 30 `@Test`.
+- `dbd4c8087` **Pad map per controller.** `MidiPadMaps` in `:shell`. PLAY restores the map
+  remembered for the most recently connected controller (panic first, so a note held under
+  the old map cannot stick), and saves it per connected controller when the map chip is
+  tapped. SNIPSNAP IN never stores. Proof: `MidiPadMapsTest`, 8 `@Test`; `:app` compiled.
+- `bc7f750b2` **The native read.** `PadEngine::hardwarePosition` (Oboe
+  `getTimestamp(CLOCK_MONOTONIC)`, UI thread only, never from the callback), `framesPerBurst`
+  and `audioApi`, with JNI and Kotlin. Host tests cover the not-started case. The host
+  `stub/jni.h` gained `jlongArray`. Proof: `engine_tests.cpp` and `jni_tests.cpp` under ctest.
+- `3f856ed1a`, `a0e5bdf42`, `3a684ae6d` **The analysis.** `ClockProbe.analyze` and
+  `describe`, with the verdicts UNAVAILABLE, never-moved STALLED, TOO_SHORT, STALLED,
+  SLOW_START and TRACKED. The start-up gap and later stalls are measured apart. The rate is
+  fitted on the hardware's own timestamps. The proposed thresholds are named constants.
+  Proof: `ClockProbeTest`, 23 `@Test`.
+- `924979517` **The screen.** CLOCK CHECK on the MIDI screen: 6 s, a click a second, abort on
+  a route change (`needsRestart()`), stop on leaving the screen, a shared-stream warning, and
+  a CLOCK section in COPY REPORT. Proof: `MidiReportTest`, 11 `@Test`; `PersonalityTest`;
+  `:app:compileDebugKotlin`.
+
+**What changed against the spec.**
+
+- A position that never moves while at least `STALL_FLOOR_MS` of audio is written is
+  STALLED (`startupGapMs` null, no rate or lag), not TOO_SHORT. The spec's order would have
+  told the owner to run again on the worst result S1 can find. Never moved with less audio
+  stays TOO_SHORT.
+- `BURST_FLOOR_MS = 10`: the inferred burst is never less than 10 ms of audio, so one odd
+  tiny step cannot set a threshold a creeping stall could beat.
+- The rate sentence names its sign: RATE n PPM FAST or SLOW. Positive means the hardware
+  counts more frames per second than the stream's rate.
+- A lag below zero is reported as AHEAD, not BEHIND.
+- A slow start is named in the STALLED line when a later stall also happened.
+- The probe stops on `ON_STOP` as well as on leaving the screen, so a backgrounded app does
+  not keep a stream open.
+
+**Disclosed, not fixed.**
+
+- The success path of `hardwarePosition` cannot be tested on the host: the harness cannot
+  start a stream. The tests prove the not-started case only.
+- Nothing was run on a phone. The thresholds are proposals.
+- A phone whose timestamp updates come 100 ms or more apart can read STALLED under the stall
+  rule. The report's raw counts allow a re-read; the rule was not softened without data.
+
+**Measured on device:** nothing.

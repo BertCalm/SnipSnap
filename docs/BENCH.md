@@ -451,6 +451,16 @@ avoids. The streams a transport would actually use are `AndroidAudioSink`
 (`AudioTrack`) and `PadEngine` (Oboe), and **neither is one of those two
 voices.** Any probe has to reach the right stream, not the convenient one.
 
+**How, now.** Open SETUP · HELP · MIDI and tap CLOCK CHECK. It opens the pad engine's
+stream, plays a click a second for six seconds and reads the position the hardware reports,
+then prints one line. Run it once on the speaker and once on wired or Bluetooth headphones,
+with nothing else playing. Tap COPY REPORT after each and paste the two lines that matter on
+the `→` line below: the answer, and the SAMPLES line under it. The bench's September pause is
+lifted for S1 only, at the owner's request (2026-10-26); S2 to S4 stay waiting. Phones whose
+timestamp updates come 100 ms or more apart (some Bluetooth routes) can read STALLED under
+the probe's rule; the report's raw counts let the run be re-read.
+Spec: [`MIDI_CLOCK_PROBE_SPEC_2026_10.md`](MIDI_CLOCK_PROBE_SPEC_2026_10.md).
+
 →
 
 ### S2 · What is this phone's output-side delay?
