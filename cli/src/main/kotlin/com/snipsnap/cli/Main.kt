@@ -97,6 +97,7 @@ object Cli {
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
         |                        --instrument [--release .02..3] exports C3..C5 held keys)
         |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
+        |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
         |                        --instrument [--release S] [--velocity 0..1] makes

@@ -2,6 +2,10 @@
 
 **Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
 
+**Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
+voice, its approved Python direction, native port and remaining listening
+checks. It distinguishes saved excitation strength from MPC playback gain.
+
 **Tidal.** [`TIDAL.md`](TIDAL.md) records the approved model-2 source direction,
 finite PAIR/STREAM editor, factory presets, dry starter and saved-recipe policies.
 [`TIDAL_PERFORMANCE.md`](TIDAL_PERFORMANCE.md) records render-only measurements,
@@ -92,7 +96,9 @@ replayable. Its
 neighbor interaction with fixed detuning and independent motion. HOLD always
 sets a finite duration. [The held RIBBON instrument](FLOCK_RIBBON_INSTRUMENT.md)
 adds explicit saved playback and release through the existing phone/MPC instrument
-path. Phone/MPC hardware checks remain open.
+path. [Optional RIBBON touch layers](FLOCK_RIBBON_TOUCH.md) add soft, medium and
+hard source disturbances to each root through the same instrument player. Phone/MPC
+hardware checks remain open.
 The separate RIBBON sustain study compares long continuous renders with captured
 roughly six-second loops at three FLOW settings, without changing the finite presets.
 

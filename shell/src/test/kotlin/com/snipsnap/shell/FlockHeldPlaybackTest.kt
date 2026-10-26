@@ -5,6 +5,7 @@ import com.snipsnap.synth.Flock
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.FlockVoice
+import com.snipsnap.synth.FlockTouchKeys
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -92,4 +93,46 @@ class FlockHeldPlaybackTest {
         assertTrue(released.takeLast(rate / 50).all { it == 0f }, "the captured voice outlived its native release")
         assertTrue(engine.activeNotes.isEmpty())
     }
+
+    @Test
+    fun `three real touch performances each use their own captured loop and release from the played phase`() {
+        val patch = FlockPatch("RIBBON TOUCH", FlockVoice.RIBBON, Flock.defaults(FlockVoice.RIBBON),
+            midi = root, seed = 42001L, playback = FlockPlayback.HELD, releaseSeconds = .3f)
+        val spec = FlockPadMaker.Spec(patch, touchLayers = true)
+        val notes = FlockPadMaker.renderLayers(spec, root)
+        val layers = notes.mapIndexed { i, note ->
+            val window = FlockTouchKeys.VELOCITY_WINDOWS[i]
+            InstrumentStore.Layer("touch$i.wav", note.snip.frameCount.toLong(), note.loopStartFrame,
+                window.first, window.last)
+        }
+        val hard = layers.last()
+        val instrument = InstrumentStore.Instrument(patch.name, patch.releaseSeconds,
+            listOf(InstrumentStore.Zone(root, root, root, hard.sample, hard.frameCount, hard.loopStartFrame, layers)))
+        val pcm = layers.mapIndexed { i, layer -> layer.sample to notes[i].snip.samples }.toMap()
+        for ((i, layer) in layers.withIndex()) {
+            val velocity = ((layer.velStart + layer.velEnd) / 2) / 127f
+            val hit = requireNotNull(KeyHit.resolve(instrument, root, velocity) { pcm[it]?.size?.toLong() })
+            assertEquals(layer.sample, hit.sampleFile)
+            val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, rate, pcm), rate)
+            assertTrue(player.noteOn(root, velocity))
+            val heldFrames = notes[i].snip.frameCount + 257
+            val held = render(player, heldFrames)
+            for (frame in notes[i].snip.frameCount - 2 until heldFrames) {
+                val sourceFrame = if (frame < notes[i].snip.frameCount) frame
+                    else notes[i].loopStartFrame.toInt() + frame - notes[i].snip.frameCount
+                assertEquals(notes[i].snip.samples[sourceFrame] * hit.gain, held[frame * 2], 1e-7f,
+                    "layer $i must wrap at its own source endpoint")
+            }
+            player.noteOff(root)
+            val released = render(player, ((patch.releaseSeconds + .03f) * rate).roundToInt())
+            assertTrue(released.take(rate / 10).any { abs(it) > 1e-6f })
+            assertTrue(released.takeLast(rate / 50).all { it == 0f })
+            assertTrue(player.activeNotes.isEmpty())
+        }
+        val preview = FlockPadMaker.preview(spec)
+        assertEquals(2, preview.channels, "touch preview uses the actual stereo reference player")
+        assertTrue(preview.samples.all { it.isFinite() })
+        assertTrue(preview.samples.takeLast(rate / 50).all { it == 0f })
+    }
+
 }

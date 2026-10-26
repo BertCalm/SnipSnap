@@ -250,6 +250,11 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
 
+UPRIGHT adds a finger-plucked bass voice inside PLUCK, spanning E1–E3.
+ROUND and MUTED are two DAMP settings of the same string, with TOUCH, WOOD
+and saved excitation strength. Its sixteen-pad starter and native audition
+use complete replayable recipes. See [UPRIGHT](docs/UPRIGHT.md).
+
 VELVET is subtractive, the playability king — a naive
 saw/pulse unison pair over a sub, into a resonant SVF swept by its own
 envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance
@@ -376,7 +381,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 52 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 53 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six

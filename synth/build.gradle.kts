@@ -2,6 +2,34 @@ plugins {
     kotlin("jvm")
 }
 
+/** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
+tasks.register<JavaExec>("generateUprightAudition") {
+    group = "distribution"
+    description = "Render UPRIGHT native/matched WAVs, exact recipes, measurements and a listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("uprightReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("uprightReplayOutput").get(),
+            providers.gradleProperty("uprightReplayMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("uprightOutput").orNull ?: "${rootDir}/testkit/upright-audition")
+    }
+}
+
+/** The same finite bass voice on sixteen editable pads in both MPC formats. */
+tasks.register<JavaExec>("generateUprightKit") {
+    group = "distribution"
+    description = "Export sixteen UPRIGHT pads, complete recipes, MPC 3 track and MPC 2 program."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
 tasks.register<JavaExec>("generateCairnAudition") {
     group = "distribution"
@@ -1784,6 +1812,19 @@ tasks.register<JavaExec>("generateSkitterQuartetAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/skitter-quartet")
     if (project.hasProperty("skitterR6References")) args("--references=${project.property("skitterR6References")}")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
+/** Six R7/R8 comparisons with complete finite notes and explicit source provenance. */
+tasks.register<JavaExec>("generateSkitterDepthAudition") {
+    group = "distribution"
+    description = "Render six R7/R8 voice pairs. Requires -PskitterProofSource=<full Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterDepthAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-depth")
     if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }

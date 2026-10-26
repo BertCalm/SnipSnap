@@ -150,6 +150,17 @@ tasks.register<JavaExec>("generateFlockHeldInstrument") {
     args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
 }
 
+/** Render independently excited soft, middle and hard RIBBON keygroup layers. */
+tasks.register<JavaExec>("generateFlockVelocityInstrument") {
+    group = "distribution"
+    description = "Export touch-layer RIBBON for SnipSnap/MPC with PCM24 readback, reference clips, source evidence and download ZIP parts."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FlockVelocityInstrumentGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockVelocityOutput").orNull ?: "${rootDir}/testkit/flock-velocity-instrument")
+}
+
 /** Three provisional model-3 OHM studies through the production keygroup handoff. */
 tasks.register<JavaExec>("generateOhmExpandedHandoff") {
     group = "distribution"
