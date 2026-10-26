@@ -1,5 +1,49 @@
 # Rime — revised finite listening prototype
 
+## Revision 4 — refine the return of ANGLE
+
+The owner preferred model 3's direction and contact spacing. This revision keeps
+its entire first half-turn, its rounded/open anchors, and all three starter
+settings sample-exact. It addresses the weaker stretch of the return around
+270°, especially in LOOP. The characteristic gesture remains rounded contour →
+intermediate edge colours → open contour, with the played root retained.
+
+Above 180°, model 4 maps the normalized return position `t` to a contact span of
+`.10 * t^1.75` root periods. The first half retains the model-3 spacing law.
+This gives the middle of the return more contact separation without immediately
+opening the full edge after 180°. The root bypass, body, unfolding, defaults and
+output stage remain as before. The exponent is a macro-travel design choice,
+not a change to the Koch geometry or a new physical simulation.
+
+At 270°, the Kotlin probe's fine-energy share in the .43–.63-second window rises
+from 1.27% to 3.21% in LOOP, 36.59% to 58.57% in GLINT, and 2.38% to 6.01% in
+VESSEL. A 17-position JVM sweep finds lower adjacent-step variation in LOOP and
+GLINT. VESSEL's variation increases, with larger colour steps early in the return;
+uniform perceptual spacing is not claimed. The 24 focused DSP, replay, seam,
+determinism and CLI checks pass. Owner listening remains the acceptance test.
+
+Models 3 and 4 use the same friction seed convention. The table-cache key now
+includes the aperture law, so older recipes cannot reuse the revised readout.
+Published-WAV fixtures cover the model-3 starters, rounded anchors and 270°
+positions. A dense angle probe also exposed a floating-point wrap just below
+phase zero; periodic table reads now treat a fraction rounded to one as sample
+zero. Ordinary table reads and the previous published PCM remain unchanged.
+
+The full audition has 161 clips: nine current ANGLE positions per voice, the
+earlier comparisons, and nine model-3 return positions. “Play return” follows
+180°, 225°, 270°, 315° and 360°; “Previous return” uses the original middle
+positions and the shared exact anchors. The default comparison voice is GLINT.
+
+Why it is built this way:
+
+- The preferred anchors keep the tonal contrast the owner liked.
+- Earlier contact separation gives the weaker middle of the return more range.
+- A shaped return avoids exposing all the edge in the first small movement.
+- Versioned tables and a fixed noise stream preserve meaningful comparisons.
+
+Owner preference establishes model 3 as the basis. Listening acceptance of this
+refinement is pending; HOLD, phone integration and the remaining voices stay deferred.
+
 ## Revision 3 — ANGLE has a finite pickup aperture
 
 The owner still could not hear a useful ANGLE change. Rotating a point projection
@@ -49,7 +93,7 @@ Why it is built this way:
 - Cached readouts keep the stronger pickup from adding work inside the sample loop.
 - Versioned replay preserves earlier listening evidence while the control changes.
 
-Owner listening of model 3 remains pending. Earlier revision measurements below
+The owner preferred this new direction. Earlier revision measurements below
 refer to model 2 unless explicitly labeled model 1.
 
 ## Revision 2 — BODY and LOOP development

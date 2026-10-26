@@ -1,7 +1,7 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
 const player = $('player');
-let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null, buildId = '', model = 3;
+let library = [], byId = new Map(), current = null, mode = 'matched', queue = [], nextTimer = null, geometry = null, buildId = '', model = 4;
 const assetURL = (url) => url + (url.includes('?')?'&':'?') + 'r=' + encodeURIComponent(buildId);
 const voiceTitles = {LOOP:'Round Seed',GLINT:'Fine Frost',VESSEL:'Open Vessel'};
 const controlText = {
@@ -37,11 +37,12 @@ function renderSweeps(voice='GLINT') {
   }).join('');
   updateButtons();
 }
-function renderRevision(voice='LOOP') {
+function renderRevision(voice='GLINT') {
   const prefix=voice.toLowerCase();
   const steps=(name,values,labels,stem=prefix)=>values.map((v,i)=>button(byId.get(`${stem}-${name}-${v}`),labels[i],'play-button revision-play')).join('');
   $('revision-comparisons').innerHTML=`
-    <article class="revision-row angle-comparison"><div><strong>ANGLE / ${voice}</strong><p>Rounded contour → more fine edge.</p></div><div class="revision-buttons angle-pair">${steps('angle',[50,0],['180° · Rounded','0° · Open'])}<button type="button" class="play-button" data-sequence="${prefix}-angle-50,${prefix}-angle-0,${prefix}-angle-50,${prefix}-angle-0">Alternate pair ↗</button></div><div class="previous-clip"><button type="button" class="play-button previous-play" data-sequence="previous-${prefix}-angle-50,previous-${prefix}-angle-0,previous-${prefix}-angle-50,previous-${prefix}-angle-0">Previous pair ↗</button></div></article>
+    <article class="revision-row angle-comparison"><div><strong>ANGLE / ${voice}</strong><p>The rounded/open contrast you preferred.</p></div><div class="revision-buttons angle-pair">${steps('angle',[50,0],['180° · Rounded','0° · Open'])}<button type="button" class="play-button" data-sequence="${prefix}-angle-50,${prefix}-angle-0,${prefix}-angle-50,${prefix}-angle-0">Alternate pair ↗</button></div><div class="previous-clip"><button type="button" class="play-button previous-play" data-sequence="previous-${prefix}-angle-50,previous-${prefix}-angle-0,previous-${prefix}-angle-50,previous-${prefix}-angle-0">Original pair ↗</button></div></article>
+    <article class="revision-row angle-return-comparison"><div><strong>ANGLE / RETURN</strong><p>180° → 225° → 270° → 315° → 360°</p></div><div class="revision-buttons angle-travel">${steps('angle',[63,75,88],['225°','270°','315°'])}<button type="button" class="play-button" data-sequence="${prefix}-angle-50,${prefix}-angle-63,${prefix}-angle-75,${prefix}-angle-88,${prefix}-angle-100">Play return ↗</button></div><div class="previous-clip"><button type="button" class="play-button previous-play" data-sequence="${prefix}-angle-50,model3-${prefix}-angle-63,model3-${prefix}-angle-75,model3-${prefix}-angle-88,${prefix}-angle-100">Previous return ↗</button></div></article>
     <article class="revision-row"><div><strong>BODY / ${voice}</strong><p>Direct contour → a larger resonating body.</p></div><div class="revision-buttons">${steps('body',[0,50,100],['0%','50%','100%'])}</div><div class="previous-clip">${button(byId.get(`legacy-${prefix}-body-100`),'Previous 100%','play-button previous-play')}</div></article>
     <article class="revision-row"><div><strong>UNFOLD / LOOP</strong><p>Detail at onset → detail arriving within the note.</p></div><div class="revision-buttons">${steps('unfold',[0,50,100],['0%','50%','100%'],'loop')}</div><div class="previous-clip">${button(byId.get('legacy-loop-unfold-100'),'Previous 100%','play-button previous-play')}</div></article>`;
   updateButtons();

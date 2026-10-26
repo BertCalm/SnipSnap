@@ -75,7 +75,11 @@ internal object RimeContour {
     class Band(val x: FloatArray, val y: FloatArray, val dx: FloatArray, val dy: FloatArray) {
         fun read(table: FloatArray, phase: Double): Double {
             val p = (phase - floor(phase)) * table.size
-            val i = p.toInt(); val f = p - i
+            val i = p.toInt()
+            // A tiny negative phase can round its wrapped fraction to exactly
+            // one. That is the first sample of this periodic table, not N.
+            if (i == table.size) return table[0].toDouble()
+            val f = p - i
             return table[i] + f * (table[(i + 1) % table.size] - table[i])
         }
     }
@@ -85,17 +89,17 @@ internal object RimeContour {
     const val TABLE_SIZE = 8192
     const val BANDWIDTH = 18000.0
 
-    private data class TableKey(val hz: Double, val detail: Double, val edge: Double, val apertureAngle: Double?)
+    private data class TableKey(val hz: Double, val detail: Double, val edge: Double, val apertureAngle: Double?, val apertureLaw: Int)
     private val preparedCache = object : LinkedHashMap<TableKey, Prepared>(12, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<TableKey, Prepared>?): Boolean = size > 12
     }
 
     /** At most twelve immutable banks, about 14 MiB at the maximum band count. */
-    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null): Prepared {
-        val key = TableKey(hz, detail, edge, apertureAngle)
+    @Synchronized fun prepare(hz: Double, detail: Double, edge: Double, apertureAngle: Double? = null, apertureLaw: Int = 3): Prepared {
+        val key = TableKey(hz, detail, edge, apertureAngle, if (apertureAngle == null) 0 else apertureLaw)
         return preparedCache.getOrPut(key) {
             if (apertureAngle == null) build(hz, detail, edge)
-            else aperture(prepare(hz, detail, edge), apertureAngle)
+            else aperture(prepare(hz, detail, edge), apertureAngle, apertureLaw)
         }
     }
 
@@ -108,8 +112,11 @@ internal object RimeContour {
      * Bake the extra contact into the cached tables, with no extra per-sample reads.
      * Unmodified and aperture banks share the same twelve-entry memory bound.
      */
-    private fun aperture(source: Prepared, angle: Double): Prepared {
-        val span = .10 * .5 * (1 + cos(angle)) * (1 + .65 * sin(angle))
+    private fun aperture(source: Prepared, angle: Double, law: Int): Prepared {
+        // Retain the preferred open/rounded anchors and the complete first half
+        // of the turn. The return uses more of the contact spacing before 270°.
+        val span = if (law >= 4 && angle > PI) .10 * (angle / PI - 1).pow(1.75)
+            else .10 * .5 * (1 + cos(angle)) * (1 + .65 * sin(angle))
         // Broad, low-register contours need more contact sensitivity. Ease it back
         // over the upper octave so a few bright modes cannot mask the root.
         val readout = .5 + .15 * smooth((source.safeMaximum - 18) / 18.0)

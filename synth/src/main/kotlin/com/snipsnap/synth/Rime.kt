@@ -8,9 +8,9 @@ import kotlin.math.*
 
 enum class RimeVoice { LOOP, GLINT, VESSEL }
 
-/** Finite contour instrument. Model 3 gives ANGLE a finite contour pickup aperture. */
+/** Finite contour instrument. Model 4 spreads ANGLE's return travel while retaining model-3 anchors. */
 object Rime {
-    const val MODEL_VERSION = 3
+    const val MODEL_VERSION = 4
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
@@ -87,13 +87,15 @@ object Rime {
         val ca = cos(angle); val sa = sin(angle)
         val cr = cos(PI / 6); val sr = sin(PI / 6)
         val source = RimeContour.prepare(hz, m.getValue("DETAIL").toDouble(), edge,
-            apertureAngle = if (model >= 3) angle else null)
+            apertureAngle = if (model >= 3) angle else null, apertureLaw = max(3, model))
         val resonator = RimeBody(voice, hz, body, rate)
         val release = .06 + .12 * body
         val duration = min(8.0, gateSeconds + release + max(.25, resonator.t60 * 1.25))
         val frames = (duration * Dsp.RATE).roundToInt()
         val raw = FloatArray(frames * options.oversample)
-        val noise = Dsp.Noise(Dsp.seedFor("RIME", model, seed, midi, "friction"))
+        // Model 4 only retunes knob travel. Keep the established friction stream
+        // so its accepted anchors and all three starter sounds stay sample-exact.
+        val noise = Dsp.Noise(Dsp.seedFor("RIME", min(model, 3), seed, midi, "friction"))
         var rough = 0.0
         val noiseAlpha = 1 - exp(-2 * PI * 12000 / rate)
         val contactGain = (.035 + 1.05 * edge.pow(2)) * (.35 + .65 * velocity)

@@ -14,6 +14,7 @@ object RimeAuditionGenerator {
     private const val RAW_GAIN = .25f
     private const val MATCHED_TARGET = .10f
     private val steps = listOf(0f,.25f,.5f,.75f,1f)
+    private val angleSteps = (0..8).map { it / 8f }
     private data class Case(val id:String,val section:String,val title:String,val description:String,
         val patch:RimePatch,val options:Rime.Options=Rime.Options(),val macro:String?=null,val value:Float?=null,val group:String?=null)
 
@@ -67,10 +68,10 @@ object RimeAuditionGenerator {
         val manifest=linkedMapOf("schema" to 1,"engine" to "RIME","model" to Rime.MODEL_VERSION,
             "generatedAt" to Instant.now().toString(),"sourceRevision" to sourceRevision(),"sampleRate" to Dsp.RATE,
             "oversample" to 4,"rawExportGain" to RAW_GAIN,"matchedTarget" to MATCHED_TARGET,
-            "status" to "Revision 3: ANGLE changes finite pickup spacing and overtone power. Model-1 and model-2 recipes remain reproducible. Owner listening pending. HOLD and phone integration are deferred.",
+            "status" to "Revision 4: ANGLE's return has more overtone movement around 270 degrees. Preferred model-3 anchors and starters remain sample-exact. Models 1 through 3 remain reproducible. Owner listening of the refinement pending. HOLD and phone integration are deferred.",
             "renderSeconds" to (System.nanoTime()-started)/1e9,"clips" to entries)
         File(root,"manifest.json").writeText(Json.write(json(manifest)))
-        File(root,"README.txt").writeText("RIME finite listening prototype, model ${Rime.MODEL_VERSION}\n\n44.1 kHz mono, synthesized in the SnipSnap Kotlin engine at 4x.\nRaw: one fixed gain of $RAW_GAIN for all prelevel outputs.\nMatched: shared Dsp.levelTo, loudest-200-ms RMS target $MATCHED_TARGET, peak ceiling .90.\nANGLE now combines pickup direction and finite contact spacing; compare 180 degrees (rounded) and 0 degrees (open).\nDiagnostic recipes include an ordinary RIME patch and explicit contact/reference/body switches.\nReplay a recipe: ./gradlew :synth:generateRimeAudition -PrimeReplay=/absolute/recipe.json -PrimeOutput=/absolute/output\nOrdinary patches replay through: synth RIME VOICE --patch /path/voice-patch.json --out /path/output\nHOLD is refused. Models 1 and 2 retain their original pickup behavior. No external samples or rack effects.\n")
+        File(root,"README.txt").writeText("RIME finite listening prototype, model ${Rime.MODEL_VERSION}\n\n44.1 kHz mono, synthesized in the SnipSnap Kotlin engine at 4x.\nRaw: one fixed gain of $RAW_GAIN for all prelevel outputs.\nMatched: shared Dsp.levelTo, loudest-200-ms RMS target $MATCHED_TARGET, peak ceiling .90.\nANGLE retains the preferred rounded/open positions and spreads the return from 180 to 360 degrees. The full sweep has nine positions.\nDiagnostic recipes include an ordinary RIME patch and explicit contact/reference/body switches.\nReplay a recipe: ./gradlew :synth:generateRimeAudition -PrimeReplay=/absolute/recipe.json -PrimeOutput=/absolute/output\nOrdinary patches replay through: synth RIME VOICE --patch /path/voice-patch.json --out /path/output\nHOLD is refused. Models 1 through 3 retain their original pickup behavior. No external samples or rack effects.\n")
         File(root,"downloads").mkdirs()
         zip(File(root,"downloads/rime-recipes.zip"),root,listOf(File(root,"recipes"),File(root,"README.txt"),File(root,"manifest.json"),File(root,"geometry.json")))
         zip(File(root,"downloads/rime-first-listen.zip"),root,entries.filter{it["section"]=="start"||it["section"]=="phrases"}.flatMap {
@@ -89,7 +90,7 @@ object RimeAuditionGenerator {
                 RimeVoice.GLINT->"A bright key whose fine contour pressure adds a serrated edge."
                 RimeVoice.VESSEL->"A slower reveal through a larger, longer-ringing body."
             },p))
-            for(macro in Rime.TIMBRAL) for(value in if(quick)listOf(0f,1f)else steps) {
+            for(macro in Rime.TIMBRAL) for(value in if(quick)listOf(0f,1f)else if(macro=="ANGLE")angleSteps else steps) {
                 val id="$voice-${macro.lowercase()}-${(value*100).roundToInt()}"
                 val title = if (macro == "ANGLE") "ANGLE ${(value*360).roundToInt()}°" else "$macro ${(value*100).roundToInt()}%"
                 add(Case(id,"controls",title,"One control changes; note, velocity, seed and all other controls stay fixed.",
@@ -108,6 +109,13 @@ object RimeAuditionGenerator {
             }
         }
         if(!quick) {
+            for (voice in RimeVoice.entries) for (value in listOf(.625f, .75f, .875f)) {
+                val p = RimePatch("Previous ${voice.name} return", voice,
+                    Rime.defaults(voice, 3) + ("ANGLE" to value), model = 3)
+                add(Case("model3-${voice.name.lowercase()}-angle-${(value*100).roundToInt()}","revision",
+                    "Previous return ${(value*360).roundToInt()}°",
+                    "The preferred model-3 pickup before its return travel was redistributed.",p))
+            }
             for (voice in RimeVoice.entries) for (value in listOf(0f, .5f)) {
                 val p = RimePatch("Previous ${voice.name} ANGLE", voice,
                     Rime.defaults(voice, 2) + ("ANGLE" to value), model = 2)

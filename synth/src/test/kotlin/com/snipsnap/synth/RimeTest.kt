@@ -12,6 +12,66 @@ import kotlin.math.*
 import kotlin.test.*
 
 class RimeTest {
+    @Test fun `periodic table reads wrap safely just below zero and at whole turns`() {
+        val table = floatArrayOf(1f, 2f, 3f, 4f)
+        val band = RimeContour.Band(table, table, table, table)
+        for (phase in listOf(-1e-20, -1.0, 0.0, 1.0, 2.0)) assertEquals(1.0, band.read(table, phase))
+        assertEquals(1.0, band.read(table, -1e-8), 1e-6)
+    }
+
+    @Test fun `model three published starters rounded anchors and return positions stay exact`() {
+        fun resource(name: String) = requireNotNull(javaClass.getResourceAsStream("/rime-model3/$name")).bufferedReader().use { it.readText() }
+        for ((id, expected) in Json.parse(resource("matched-pcm-sha256.json")).obj()) {
+            val original = RimePatch.fromJsonText(resource("${id.substringBefore('-')}-patch.json"))
+            assertEquals(3, original.model)
+            val patch = when {
+                id.endsWith("angle-50") -> original.copy(macros = original.macros + ("ANGLE" to .5f))
+                id.endsWith("angle-75") -> original.copy(macros = original.macros + ("ANGLE" to .75f))
+                else -> original
+            }
+            val native = patch.render().samples
+            Dsp.levelTo(native, Dsp.RATE, .10f, ceiling = .9f)
+            val wav = ByteArrayOutputStream().also { WavWriter.write(it, Snip(native, 1, Dsp.RATE)) }.toByteArray()
+            val hash = MessageDigest.getInstance("SHA-256").digest(wav).joinToString("") { "%02x".format(it) }
+            assertEquals(expected.str(), hash, "$id must retain the preferred model-3 renderer")
+        }
+    }
+
+    @Test fun `model four preserves the preferred first half and all three starters sample exactly`() {
+        for (voice in RimeVoice.entries) {
+            val original = RimePresets.forVoice(voice).single().copy(model = 3)
+            assertContentEquals(original.render().samples, original.copy(model = 4).render().samples, "$voice starter")
+            for (angle in listOf(0f, .25f, .5f, 1f)) {
+                val patch = original.copy(macros = original.macros + ("ANGLE" to angle))
+                assertContentEquals(patch.render().samples, patch.copy(model = 4).render().samples, "$voice at $angle")
+            }
+        }
+    }
+
+    @Test fun `angle return gives the weak middle more overtone range and stays continuous at anchors`() {
+        for (voice in RimeVoice.entries) {
+            val p = RimePresets.forVoice(voice).single()
+            fun at(angle: Float, model: Int = 4, gate: Float = p.gateSeconds) =
+                p.copy(macros = p.macros + ("ANGLE" to angle), gateSeconds = gate, model = model).render().samples
+            val old = at(.75f, 3)
+            val middle = at(.75f)
+            val hz = Keys.midiHz(p.midi).toDouble()
+            val before = RimeControlMeasure.fineShare(old, hz, .43)
+            val after = RimeControlMeasure.fineShare(middle, hz, .43)
+            println("RIME $voice return 270° fine power $before -> $after")
+            assertTrue(after > .02 && after > 1.5 * before, "$voice return still crowds the rounded position: $before -> $after")
+            for (neighbor in listOf(.625f, .875f)) {
+                val distance = RimeControlMeasure.distance(middle, at(neighbor), p.gateSeconds.toDouble())
+                assertTrue(distance > .04, "$voice return positions need distinct spectra: $distance")
+            }
+            for ((left, right) in listOf(.4999f to .5001f, .9999f to .0001f)) {
+                val a = at(left, gate = .25f); val b = at(right, gate = .25f)
+                val relative = sqrt(a.indices.sumOf { (a[it] - b[it].toDouble()).pow(2) } / a.sumOf { it.toDouble().pow(2) })
+                assertTrue(relative < .02, "$voice ANGLE jumps across $left/$right: $relative")
+            }
+        }
+    }
+
     @Test fun `model two published starters and angle comparisons keep their exact PCM`() {
         fun resource(name: String) = requireNotNull(javaClass.getResourceAsStream("/rime-model2/$name")).bufferedReader().use { it.readText() }
         val hashes = Json.parse(resource("matched-pcm-sha256.json")).obj()
