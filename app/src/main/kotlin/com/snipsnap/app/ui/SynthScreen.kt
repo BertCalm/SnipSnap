@@ -350,7 +350,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -1188,7 +1187,7 @@ fun SynthScreen(
     var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
-            val (live, bin) = withContext(Dispatchers.IO) { embouchureRestore.readShelf(shelfRoot) }
+            val (live, bin) = offMain { embouchureRestore.readShelf(shelfRoot) }
             userPresets = live
             binnedPresets = bin
             // The YOURS presets the bag named (§3.6), now that the shelf has
@@ -1257,10 +1256,10 @@ fun SynthScreen(
         val held = engine to voice
         appScope.launch {
             try {
-                val gone = withContext(Dispatchers.IO) {
+                val gone = offMain {
                     UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
                 }
-                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
                 userPresets = live
                 binnedPresets = bin
                 if (gone == null) {
@@ -1285,8 +1284,8 @@ fun SynthScreen(
         binBusy = true
         appScope.launch {
             try {
-                val back = withContext(Dispatchers.IO) { UserPresets.unforget(shelfRoot, binned) }
-                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                val back = offMain { UserPresets.unforget(shelfRoot, binned) }
+                val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
                 userPresets = live
                 binnedPresets = bin
                 // The name it actually landed under — a clash with a preset
@@ -1318,7 +1317,7 @@ fun SynthScreen(
         val patch = buildCurrentPatch(name)
         appScope.launch {
             try {
-                val (saved, all) = withContext(Dispatchers.IO) {
+                val (saved, all) = offMain {
                     val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
                     s to UserPresets.read(shelfRoot)
                 }
@@ -1398,7 +1397,7 @@ fun SynthScreen(
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val previewJob = coroutineContext[Job]
-            val rendered = runInterruptible(Dispatchers.Default) {
+            val rendered = offMainInterruptible(Dispatchers.Default) {
                 val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.CHAMBER)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
@@ -1521,7 +1520,7 @@ fun SynthScreen(
                     mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it), "rootOrigin" to "authored")
                 }
                 val tonalRoot = authoredMidi?.takeIf { cls == DrumClass.TONAL }
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         // A held Murmur source is seamless, but a one-shot pad stops
@@ -1621,7 +1620,7 @@ fun SynthScreen(
                     // corners and the rest), and App opens the screen. The
                     // SURFACE screen is not showing while SYNTH is, so nothing
                     // else writes surface.json underneath this.
-                    withContext(Dispatchers.IO) { SurfaceStore.choosePad(e.dir, slot) }
+                    offMain { SurfaceStore.choosePad(e.dir, slot) }
                     onToast(Copy.sirenToSurface(padTag(slot), name, replaced = existed))
                     onOpenSurface()
                     return@launch
@@ -1691,7 +1690,7 @@ fun SynthScreen(
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
         heldSheet.holdName = try {
-            withContext(Dispatchers.IO) { OneNote.freshName(instrumentsDir, holdBase) }
+            offMain { OneNote.freshName(instrumentsDir, holdBase) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -1763,10 +1762,10 @@ fun SynthScreen(
                 // CANCEL cancels this job; the render asks and stops.
                 val heard = if (spec is HeldSpec.Ohm) {
                     val renderJob = coroutineContext[Job]
-                    runInterruptible(Dispatchers.Default) {
+                    offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                     }
-                } else withContext(Dispatchers.Default) { spec.preview { !isActive } }
+                } else offMain(Dispatchers.Default) { spec.preview { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -1808,10 +1807,10 @@ fun SynthScreen(
                         midis.map { midi ->
                             val note = if (spec is HeldSpec.Ohm) {
                                 val renderJob = coroutineContext[Job]
-                                runInterruptible(Dispatchers.Default) {
+                                offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                                 }
-                            } else withContext(Dispatchers.Default) { spec.renderZone(midi) { !isActive } }
+                            } else offMain(Dispatchers.Default) { spec.renderZone(midi) { !isActive } }
                             withContext(Dispatchers.Main) { heldSheet.holdDone += spec.progressPerZone }
                             note
                         }
@@ -1829,7 +1828,7 @@ fun SynthScreen(
                 }
                 // Past here the write lands even under CANCEL: a package half
                 // written is worse than a whole one the player can bin.
-                val made = withContext(NonCancellable + Dispatchers.IO) {
+                val made = offMain(NonCancellable + Dispatchers.IO) {
                     val name = OneNote.freshName(instrumentsDir, base)
                     spec.export(name, notes, instrumentsDir)
                     name
@@ -1919,7 +1918,7 @@ fun SynthScreen(
         val session = droneSheet.droneSession
         val spec = droneSpec()
         if (droneSheet.droneOpen && root != null && session != null && spec != null) {
-            droneSheet.droneLabel = withContext(Dispatchers.Default) {
+            droneSheet.droneLabel = offMain(Dispatchers.Default) {
                 // cancelled reaches SirenDrone.fitCarrier's own check: a
                 // rapid run of ROOT taps must stop one computation before
                 // starting the next, not pile them up on the pool that
@@ -1945,7 +1944,7 @@ fun SynthScreen(
         if (!droneSheet.droneOpen) return@LaunchedEffect
         val spec = droneSpec() ?: return@LaunchedEffect
         if (droneSheet.droneRoot?.let { it in spec.roots } != true) droneSheet.droneRoot = spec.defaultRoot(kit?.key)
-        droneSheet.droneSession = withContext(Dispatchers.IO) {
+        droneSheet.droneSession = offMain {
             val rate = deviceSampleRate(context)
             val dir = LoopWrites.dir(context)
             runCatching { SessionStore.load(dir) }.getOrNull()?.copy(sampleRate = rate)
@@ -1961,7 +1960,7 @@ fun SynthScreen(
         droneSheet.dronePreviewing = true
         droneSheet.droneJob = appScope.launch {
             try {
-                val heard = withContext(Dispatchers.Default) {
+                val heard = offMain(Dispatchers.Default) {
                     // CANCEL (or closing the sheet) cancels this job; the
                     // render asks and stops rather than running on for seconds.
                     val once = spec.render(root, session) { !isActive }
@@ -2015,7 +2014,7 @@ fun SynthScreen(
         scope.launch {
             try {
                 val spreadJob = coroutineContext[Job]
-                val src = runInterruptible(Dispatchers.Default) {
+                val src = offMainInterruptible(Dispatchers.Default) {
                     val cancelled = { spreadJob?.isActive == false || Thread.currentThread().isInterrupted }
                     val rendered = when (patch) {
                         is ChamberPatch -> seed.chamberRenderer.render(patch, cancelled)
@@ -2063,7 +2062,7 @@ fun SynthScreen(
                 // Planned again over the kit on disk, under the lock: the
                 // panel's preview read App's copy, which a write elsewhere
                 // may have moved on since.
-                val (plan, updatedKit) = withContext(Dispatchers.IO) {
+                val (plan, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val plan = Spread.plan(model.kit, src.midi, options)

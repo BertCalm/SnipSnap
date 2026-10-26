@@ -41,10 +41,8 @@ import java.io.File
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Legacy encounters change model only through the player's explicit EXTEND action. */
 internal fun extendedOhmPatch(patch: OhmPatch): OhmPatch = if (patch.model >= 3) patch else patch.copy(
@@ -81,7 +79,7 @@ internal fun OhmControls(
         error = null
         sourceJob = scope.launch {
             try {
-                val capture = withContext(Dispatchers.IO) {
+                val capture = offMain {
                     val read = WavReader.readCapped(File(kitEntry.dir, pad.sampleFile), 2f)
                     OhmCapture.fromSnip(read.snip, (pad.displayName ?: PadBanks.tag(pad.slot)).take(64))
                 }
