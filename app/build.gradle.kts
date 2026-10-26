@@ -67,6 +67,15 @@ android {
             applicationIdSuffix = ".brassgrow"
             versionNameSuffix = "-brass-grow"
         }
+        create("strikeFx") {
+            // A separately installable listening build. CI debug signing keys
+            // are ephemeral, so replacing yesterday's audition can fail to
+            // install. A separate identity also keeps the player's shelf safe.
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".strikefx"
+            versionNameSuffix = "-strike-fx"
+            matchingFallbacks += listOf("debug")
+        }
         release {
             isMinifyEnabled = false
         }

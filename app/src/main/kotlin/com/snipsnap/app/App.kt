@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.net.Uri
 import android.os.Build
@@ -78,6 +79,7 @@ import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
+import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
 import com.snipsnap.app.ui.DoorChip
 import com.snipsnap.app.ui.GearSheet
@@ -211,9 +213,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * from `Navigation.backChip`. The tab-era screens never needed a chip —
  * a tab is left by another tab — and SETUP and HELP were tabs. The list
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
- * three labs gain `◄ MAKE` with the MAKE step, the gear's two stay here.
+ * three labs gain `◄ MAKE` with the MAKE step, the gear's three stay here.
  */
-private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -369,6 +371,14 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
+    // MIDI OUT (SETUP): the hardware switch, remembered like HAPTICS, on by
+    // default (MIDI_OUT_DEFAULT). `MidiOut.install` reads the same pref; pushing the value
+    // once here makes the two agree even if install ran before it was written.
+    var midiOutOn by remember { mutableStateOf(prefs.getBoolean(PREF_MIDI_OUT, MIDI_OUT_DEFAULT)) }
+    LaunchedEffect(Unit) { MidiOut.hardwareEnabled = midiOutOn }
+    val midiSupported = remember(context) {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)
+    }
     // The honest little message box (wave FFF): what a landing, a backup
     // or a refusal has to say beyond the dock's one line. Stays until read.
     var note by remember { mutableStateOf<LandingNote.Note?>(null) }
@@ -379,8 +389,8 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /**
      * Where each screen the app navigates by name lands in the four-place
      * shape — `docs/SCREEN_PLAN_2026_10.md` §2's table, as code. A tab-era
-     * screen is a place with a stage, or a bench on one. The gear's two
-     * (SETUP, HELP) and KEYS open as a bench over wherever you are, so Back
+     * screen is a place with a stage, or a bench on one. The gear's three
+     * (SETUP, HELP, MIDI) and KEYS open as a bench over wherever you are, so Back
      * returns there; the rest land somewhere definite.
      *
      * Exhaustive on purpose: a new [AppScreen] without a landing here does
@@ -401,6 +411,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         AppScreen.KEYS -> nav.location.copy(benches = nav.location.benches + Bench.KEYS)
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
+        AppScreen.MIDI -> nav.location.copy(benches = nav.location.benches + Bench.MIDI)
     }
 
     /**
@@ -3755,6 +3766,14 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 prefs.edit().putBoolean(PREF_HAPTICS, on).apply()
                                 if (on) haptics.tick()
                             },
+                            midiOutOn = midiOutOn,
+                            onMidiOut = { on ->
+                                midiOutOn = on
+                                prefs.edit().putBoolean(PREF_MIDI_OUT, on).apply()
+                                MidiOut.hardwareEnabled = on
+                            },
+                            midiSupported = midiSupported,
+                            midiPorts = MidiOut.ports.collectAsState().value,
                             // Finding 23: three facts the app already kept and
                             // never showed. Read straight from the same prefs
                             // EXPORT writes - one owner each, no second copy.
@@ -3955,6 +3974,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                         )
                         // The place under the gear: HELP opens its section.
                         top == Bench.HELP -> HelpScreen(cameFrom = location.place)
+                        top == Bench.MIDI -> MidiScreen()
                         top == null && location.stage == Stage.BEAT -> {
                             val songEntry = open
                             if (arrangeOpen && songEntry != null) {
@@ -4157,6 +4177,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                 GearSheet(
                     onSetup = { gearOpen = false; landOn(AppScreen.PROPERTIES) },
                     onHelp = { gearOpen = false; landOn(AppScreen.HELP) },
+                    onMidi = { gearOpen = false; landOn(AppScreen.MIDI) },
                     onDismiss = { gearOpen = false },
                 )
             }

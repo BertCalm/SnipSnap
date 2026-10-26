@@ -1,5 +1,12 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.ChamberVoice
+import com.snipsnap.synth.CausticInstrument
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
+
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
@@ -103,6 +110,12 @@ class StarterKitsTest {
      * drumClassFor, and the sixteen reach every voice.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "chamber" to OneEngine(ChamberPatch::class.java, ChamberVoice.entries.map { it.name }.toSet()) {
+            (it as ChamberPatch).let { p -> Chamber.drumClassFor(p.voice, p.macros) }
+        },
+        "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {
+            (it as CausticPatch).let { p -> CausticInstrument.drumClassFor(p.voice, p.macros, p.model) }
+        },
         "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
             (it as CircuitPatch).let { p -> Circuit.drumClassFor(p.voice, p.macros) }
         },
@@ -169,6 +182,7 @@ class StarterKitsTest {
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
                     "vent" -> 12
+                    "strike-fx" -> 4
                     else -> 16
                 }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
@@ -484,9 +498,13 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "crease", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
+        val chamber = StarterKits.byId("chamber")!!
+        assertEquals("CHAMBER", chamber.displayName)
+        assertFalse(chamber.seeded, "CHAMBER is a fixed authored kit")
+        assertEquals(KeySpec.parse("Cminpent"), chamber.key)
         val cistern = StarterKits.byId("cistern")!!
         assertEquals("CISTERN", cistern.displayName)
         assertFalse(cistern.seeded, "CISTERN is a fixed authored kit")

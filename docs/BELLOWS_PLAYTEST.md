@@ -19,6 +19,12 @@ rendering a source recipe alone includes native velocity gain and is not the exp
 
 ## Phone
 
+MAKE INSTRUMENT's preview holds C4 at velocity .65 for six seconds, then releases
+over the selected RELEASE time. It uses the exported layer's gain convention and
+the JVM sample-player reference, including the sustain loop, rather than playing
+the source buffer to its end. Compare RELEASE .10 and 1.50 seconds before making
+the instrument. The native phone player and MPC still need the checks below.
+
 The existing share/import door imports kits, not this instrument ZIP. Do not import this ZIP as an .xpn.
 Use SnipSnap's BELLOWS MAKE INSTRUMENT to create a package on the phone, or provision each sidecar
 plus matching _[TrackData]/ folder into the app shelf's Instruments/ directory with a development
@@ -50,3 +56,27 @@ Record device/model, app/firmware version, .xty or .xpm, program, note/velocity 
 for any failure. Leave these boxes unchecked until tested on the named device.
 
 Rebuild: `./gradlew :cli:generateBellowsInstruments`. Download: `testkit/bellows-audition/Bellows-phone-mpc-m2.zip`.
+
+## Sampled-instrument listening comparison
+
+Run `./gradlew :shell:generateBellowsPlaybackAudition` to render native-synthesis
+and sampled-instrument pairs. Override the destination with
+`-PbellowsPlaybackOutput=/absolute/output/directory`.
+The generator exports real PCM24 WAVs and version-2 sidecars, reloads them, and
+plays the same event schedule through `InstrumentEngine`. Its manifest records
+zone roots, velocity windows, pitch ratios, note-off times and levels. Each pair
+shares one gain; neither side is independently loudness-matched.
+
+Native synthesis renders every exact note and continuous source velocity.
+The instrument selects one of three source timbres, repitches its nearest zone
+root and applies linear host velocity once. In particular, velocity .35 rounds
+to MIDI 44 and selects the middle timbre. Listen to the soft notes, both sides of
+the velocity and pitch-zone boundaries, the held chords and the release tails.
+The JVM reference shares the phone's zone/gain/loop map, but its bus soft-clips
+where the phone's native bus hard-clamps. The comparison keeps its bus below that
+threshold. It establishes software behavior, not phone or MPC validation.
+
+The approved model-2 source remains unchanged. Low-register held BEAT has
+whole-cycle steps, and full WHEEL MOTION has a larger pitch excursion on low
+notes. These are separate listening decisions; the playback work does not remap
+either control.

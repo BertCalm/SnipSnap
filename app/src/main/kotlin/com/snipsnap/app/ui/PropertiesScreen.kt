@@ -28,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.MidiOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.pressedBevel
@@ -98,6 +99,13 @@ fun PropertiesScreen(
     /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
     hapticsOn: Boolean,
     onHaptics: (Boolean) -> Unit,
+    /** MIDI OUT: whether pads and keys also go to plugged-in hardware. ON by default (`MIDI_OUT_DEFAULT`); the app's own SNIPSNAP OUT port is published either way. */
+    midiOutOn: Boolean,
+    onMidiOut: (Boolean) -> Unit,
+    /** False on a phone with no MIDI at all: the group says so and offers no switch. */
+    midiSupported: Boolean,
+    /** Where notes go right now, one row each; `open` false is a device another app holds. */
+    midiPorts: List<MidiOut.Port>,
     exportFormatLabel: String?,
     filesWhere: String?,
     cardName: String?,
@@ -239,6 +247,55 @@ fun PropertiesScreen(
                 }
             }
             TapeText(Copy.SETUP_HAPTICS_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        }
+
+        // MIDI OUT: HAPTICS' two-up toggle again, then where the notes go. A
+        // phone with no MIDI gets the one sentence and no switch - a bevel
+        // that could not do anything would be a lie.
+        var midiOpen by rememberSaveable { mutableStateOf(false) }
+        GroupBox(
+            legend = Copy.SETUP_MIDI_OUT_HEADING,
+            summary = if (midiSupported && midiOutOn) "ON" else "OFF",
+            open = midiOpen,
+            onToggle = { midiOpen = !midiOpen },
+            scheme = scheme,
+        ) {
+            if (!midiSupported) {
+                TapeText(Copy.SETUP_MIDI_OUT_UNSUPPORTED, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+            } else {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    for (on in listOf(false, true)) {
+                        val selected = on == midiOutOn
+                        Box(
+                            Modifier
+                                .weight(1f)
+                                .height(44.dp)
+                                .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                                .semantics { this.selected = selected }
+                                .tapeClick(label = "MIDI OUT ${if (on) "ON" else "OFF"}") { if (!selected) onMidiOut(on) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            TapeText(if (on) "ON" else "OFF", TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
+                        }
+                    }
+                }
+                TapeText(Copy.SETUP_MIDI_OUT_NOTE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+                if (midiPorts.isEmpty()) {
+                    TapeText(Copy.SETUP_MIDI_OUT_NONE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+                } else {
+                    for (port in midiPorts) {
+                        TapeText(
+                            "${port.name} \u00B7 ${if (port.open) Copy.SETUP_MIDI_OUT_PORT_OK else Copy.SETUP_MIDI_OUT_PORT_BUSY}",
+                            TapeType.pixelSmall,
+                            scheme.ink2.tape,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
         }
 
         // ---- What the app already knew and never said (finding 23) ----
@@ -392,7 +449,7 @@ private const val SETUP_CARD_SUMMARY_NONE = "NONE PICKED"
 
 /** `versionName` from the app's own package, or null when the package manager will not say. */
 @Composable
-private fun rememberVersionName(): String? {
+internal fun rememberVersionName(): String? {
     val context = LocalContext.current
     return remember(context) {
         try {

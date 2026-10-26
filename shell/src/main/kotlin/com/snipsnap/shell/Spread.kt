@@ -9,7 +9,14 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.Ballast
+import com.snipsnap.synth.ApsisPatch
+import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
@@ -98,13 +105,18 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is ApsisPatch -> patch.midi.toFloat()
+        is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
+        is CausticPatch -> patch.midi.toFloat()
+        is ChamberPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }

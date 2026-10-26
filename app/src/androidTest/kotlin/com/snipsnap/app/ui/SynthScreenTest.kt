@@ -28,6 +28,8 @@ import com.snipsnap.synth.Eq
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.Ohm
 import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmExciter
+import com.snipsnap.synth.OhmOptions
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
@@ -130,6 +132,40 @@ class SynthScreenTest : ComposeScreenTest() {
         assertEquals((64 - 48) / 24f, progress("NOTE"), .0001f)
         assertEquals(.35f, progress("VELOCITY"), .0001f)
         assertEquals(.73f, progress("COMMUNE"), .0001f)
+        compose.runOnIdle {
+            assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+        }
+    }
+
+    @Test
+    fun expandedEncounterRetainsHoldSourcesAndReleaseThroughScrambleAndNavigation() {
+        val source = OhmPatch("HELD FAMILY", Ohm.defaults(3) + ("HOLD" to .6f), midi = 57,
+            velocity = .65f, seed = -905, gesture = OhmGesture.GATHER, model = 3,
+            options = OhmOptions(exciter = OhmExciter.BOW, elder = .25f, grains = .35f, freeze = .4f),
+            releaseSeconds = .8f)
+        settings["patch.OHM.STRING"] = source.toJsonText()
+        show()
+        adjust("ELDER", .7f)
+        adjust("COMMUNE", .73f)
+        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+        compose.runOnIdle {
+            assertEquals(source.model, expected.model)
+            assertEquals(source.midi, expected.midi)
+            assertEquals(source.velocity, expected.velocity)
+            assertEquals(source.seed, expected.seed)
+            assertEquals(source.gesture, expected.gesture)
+            assertEquals(source.releaseSeconds, expected.releaseSeconds)
+            assertEquals(source.options.copy(elder = .7f), expected.options)
+            assertEquals(.6f, expected.macros.getValue("HOLD"))
+            generation++
+        }
+        pump()
+        waitFor("the recreated expanded OHM editor", timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("ohm-synth-generation-$generation").fetchSemanticsNodes().size == 1
+        }
+        button("OHM EXCITER BOW").assertIsSelected()
         compose.runOnIdle {
             assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
         }

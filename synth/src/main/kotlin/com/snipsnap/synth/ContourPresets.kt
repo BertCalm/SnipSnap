@@ -13,11 +13,11 @@ object ContourPresets {
     private fun recipe(voice: ContourVoice, name: String, config: ContourConfig,
         scan: Float, offset: Float, motion: Float, filter: Float, drive: Float,
         body: Float, edge: Float, attack: Float, decay: Float, rate: Float, reso: Float, env: Float,
-        hold: Float = 0f) = ContourPatch(name, voice, ContourEngine.defaults(voice) + mapOf(
+        hold: Float = 0f, edgeResponse: ContourEdgeResponse = ContourEdgeResponse.CONTRAST) = ContourPatch(name, voice, ContourEngine.defaults(voice) + mapOf(
             "TUNE" to .5f, "SCAN" to scan, "OFFSET" to offset, "MOTION" to motion,
             "FILTER" to filter, "DRIVE" to drive, "HOLD" to hold, "BODY" to body,
             "EDGE" to edge, "ATTACK" to attack, "DECAY" to decay, "RATE" to rate,
-            "RESO" to reso, "ENV" to env), config)
+            "RESO" to reso, "ENV" to env), config.copy(edgeResponse = edgeResponse))
 
     private val presets = listOf(
         recipe(ContourVoice.BASS, "Rounded Edge", ContourConfig(
@@ -79,7 +79,8 @@ object ContourPresets {
             sustainSeconds = .7f, filterAttack = .035f, filterDecay = .65f, filterAmount = .3f,
             motionShape = ContourMotionShape.RISE, motionSeconds = 1.7f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 2f,
         ), scan = .3f, offset = .35f, motion = .35f, filter = .4f, drive = 0f,
-            body = .76f, edge = .72f, attack = .42f, decay = .58f, rate = .45f, reso = .5f, env = .6f),
+            body = .76f, edge = .72f, attack = .42f, decay = .58f, rate = .45f, reso = .5f, env = .6f,
+            edgeResponse = ContourEdgeResponse.FOREGROUND),
         recipe(ContourVoice.PLUCK, "Bright Margin", ContourConfig(
             ContourTable.ROUND_PULSE, ContourTable.COPPER,
             edgeRatio = 1f, edgeLag = .12f, relation = ContourRelation.CURVE,
@@ -91,7 +92,8 @@ object ContourPresets {
             sustainSeconds = .22f, filterAttack = .008f, filterDecay = .22f, filterAmount = .5f,
             motionShape = ContourMotionShape.FALL, motionSeconds = .65f, filterType = ContourFilterType.LOW_PASS, loopSeconds = 1.6f,
         ), scan = .4f, offset = .35f, motion = .5f, filter = .28f, drive = .01f,
-            body = .84f, edge = .62f, attack = .45f, decay = .32f, rate = .55f, reso = .5f, env = .52f),
+            body = .84f, edge = .62f, attack = .45f, decay = .32f, rate = .55f, reso = .5f, env = .52f,
+            edgeResponse = ContourEdgeResponse.FOREGROUND),
         recipe(ContourVoice.LEAD, "Twin Outline", ContourConfig(
             ContourTable.COPPER, ContourTable.ODD_EVEN,
             edgeRatio = 2f, edgeLag = .22f, relation = ContourRelation.OPPOSED,

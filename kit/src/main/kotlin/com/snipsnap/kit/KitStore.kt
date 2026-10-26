@@ -95,6 +95,7 @@ object KitStore {
             "oneShot" to JsonValue.Bool(p.oneShot),
         )
         p.colorHex?.let { entries["colorHex"] = JsonValue.Str(it) }
+        if (p.loop) entries["loop"] = JsonValue.Bool(true)
         // The shape rides only when set - null means "the
         // format's default", and defaults are never written down.
         p.attack?.let { entries["attack"] = JsonValue.Num(it.toDouble()) }
@@ -139,7 +140,7 @@ object KitStore {
                             "sample" to JsonValue.Str(l.sampleFile),
                             "velStart" to JsonValue.Num(l.velStart.toDouble()),
                             "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
-                        ),
+                        ).also { fields -> l.displayName?.let { fields["name"] = JsonValue.Str(it) } },
                     )
                 },
             )
@@ -213,6 +214,7 @@ object KitStore {
             tuneFine = p["tuneFine"]?.int() ?: 0,
             muteGroup = p["muteGroup"]?.int() ?: 0,
             oneShot = p["oneShot"]?.bool() ?: true,
+            loop = p["loop"]?.bool() ?: false,
             source = (p["source"] as? JsonValue.Obj)?.entries
                 ?.mapValues { (_, v) -> v.str() }
                 ?: emptyMap(),
@@ -226,6 +228,7 @@ object KitStore {
                     sampleFile = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
                     velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velStart"),
                     velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velEnd"),
+                    displayName = l["name"]?.str(),
                 )
             },
         )

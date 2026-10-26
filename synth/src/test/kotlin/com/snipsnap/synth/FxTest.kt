@@ -692,9 +692,9 @@ class FxTest {
     // ---------- VALVE ----------
 
     @Test
-    fun `VALVE sits after SQUASH and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
+    fun `VALVE sits after FORGE and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
-        assertEquals(names.indexOf("squash") + 1, names.indexOf("valve"), "VALVE is not right after SQUASH: $names")
+        assertEquals(names.indexOf("forge") + 1, names.indexOf("valve"), "VALVE is not right after FORGE: $names")
         assertEquals(names.indexOf("valve") + 1, names.indexOf("crunch"), "VALVE is not right before CRUNCH: $names")
 
         val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
@@ -721,10 +721,10 @@ class FxTest {
     // ---------- WAH ----------
 
     @Test
-    fun `WAH sits right after CONTOUR and before SQUASH, and an absent section keeps old recipes byte-stable`() {
+    fun `WAH sits right after CONTOUR and before COMPRESSOR, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("contour") + 1, names.indexOf("wah"), "WAH is not right after CONTOUR: $names")
-        assertEquals(names.indexOf("wah") + 1, names.indexOf("squash"), "WAH is not right before SQUASH: $names")
+        assertEquals(names.indexOf("wah") + 1, names.indexOf("compressor"), "WAH is not right before COMPRESSOR: $names")
 
         val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
         assertTrue(!without.toJsonText().contains("wah"), "no wah key unless the section is set")

@@ -14,6 +14,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.Names
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.OutputStream
 
 /**
  * The commit path: a ring snapshot in, a cleaned WAV on disk out.
@@ -257,15 +258,18 @@ object SnipStore {
         val kept = if (truncated) Snip(atRate.samples.copyOf(maxFrames), 1, atRate.sampleRate) else atRate
 
         val file = freshFile(root, nowMillis)
-        val bytes = ByteArrayOutputStream().apply { WavWriter.write(this, kept) }.toByteArray()
-        writeClaimedFile(file, bytes)
+        // The decoded audio is already in memory. Stream its encoding to the
+        // atomic temp instead of retaining a growing WAV buffer and its copy.
+        writeClaimedFile(file) { WavWriter.write(it, kept) }
         return Imported(file, kept.durationSeconds, truncated, cameInAt)
     }
 
+    private fun writeClaimedFile(file: File, bytes: ByteArray) = writeClaimedFile(file) { it.write(bytes) }
+
     /**
-     * Writes [bytes] onto [file] — a name [freshFile] already claimed via
+     * Streams [content] onto [file] — a name [freshFile] already claimed via
      * `createNewFile()`, so it exists but is empty going in. If
-     * [AtomicFile.writeBytes] itself throws (a recoverable I/O failure —
+     * [AtomicFile.write] itself throws (a recoverable I/O failure —
      * disk full is the live one, since [DIR] is never pruned), the empty
      * claim is removed rather than left behind: an empty `snip_*.wav` would
      * otherwise sit there passing [NAME]'s own filename match forever, ready
@@ -274,9 +278,9 @@ object SnipStore {
      * claim and this call (no exception to catch there) — [list] filters
      * empty files too, as the second layer for exactly that path.
      */
-    private fun writeClaimedFile(file: File, bytes: ByteArray) {
+    private fun writeClaimedFile(file: File, content: (OutputStream) -> Unit) {
         try {
-            AtomicFile.writeBytes(file, bytes)
+            AtomicFile.write(file, content)
         } catch (e: Exception) {
             file.delete()
             throw e

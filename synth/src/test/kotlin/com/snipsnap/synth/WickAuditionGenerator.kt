@@ -18,7 +18,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * WICK listening evidence: PLUCK, WOOD, BUBBLE and BREATH from the actual JVM engine.
+ * WICK listening evidence: PLUCK, WOOD, BUBBLE, BREATH and FLICKER from the actual JVM engine.
  * Native, prelevel raw and matched audio have separate files; diagnostic options
  * have explicit replay recipes rather than masquerading as ordinary patches.
  * A failed held convergence remains visible in the manifest and fails the task.
@@ -94,7 +94,7 @@ object WickAuditionGenerator {
                 metrics["matchedPeak"] = matched.peak()
                 metrics["rawExportGain"] = RAW_EXPORT_GAIN
                 metrics["eventCount"] = probe.diagnostics.events.size
-                if (case.groupId == "bubble-tone" || case.groupId == "breath-sustain") {
+                if (case.groupId in setOf("bubble-tone", "breath-sustain", "flicker-register")) {
                     metrics["toneWindows"] = toneWindows(probe.raw, matched.samples, case.midi)
                     metrics["toneWindowMeasurement"] = "Fixed post-onset time windows: raw RMS, matched RMS, and coherent power at the requested root. The coherent share is a sinusoidal projection of the raw samples, with no pitch search; short-window energy and root share support comparison but do not establish pitch audibility."
                 }
@@ -278,15 +278,17 @@ object WickAuditionGenerator {
             "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native single-note PCM24 files are the engine's normal dry output. Native musical-pattern PCM24 files instead apply one fixed 0.25 assembly gain to the sum of unlevelled raw note renders, preserving the source velocity response without per-hit leveling. Matched PCM16 files use the shared 0.03 loudest-200-ms loudness target on the complete clip.",
             "holdNote" to "HOLD uses periodic source timing and periodic-state convergence. A causal-schedule-replay strategy is explicitly reported when used. The seam-context WAV holds an independently generated preceding period and current period, at the matched export gain; it is not a duplicated loop.",
             "pcmSeamNote" to "Exported PCM16 seam error is the squared difference between independently generated preceding/current final 256-frame windows, divided by preceding-window energy. If both windows are exactly zero, error is 0 and silentBoundary=true; a zero-energy reference with a nonzero difference fails. The actual loop join is screened separately: absolute wrap step divided by local derivative RMS plus one PCM16 unit must be at most 8. This numerical screening does not replace listening.",
-            "scope" to "Four-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "scope" to "Five-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
             "patternNote" to "Musical phrases share an exact eight-note score at 100 BPM. Native pattern WAVs use one fixed 0.25 assembly gain applied to the sum of probe.raw note renders; they bypass the engine's per-note loudness scaling so its velocity response survives. Raw files apply the same common 0.5 export gain as other clips. Only completed phrases are loudness matched. Complete note tails ring out after the two-bar score. Each note resets the engine state, while its own FEED and cascade can add articulations between scored onsets.",
             "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. BREATH's late swell can place its first near-peak late in that window: when no 20 dB decay is observed, the classifier reports only the remaining window as decay time and may label a sustained low note KICK or TOM. BREATH also reports onsetEnvelopePeakSeconds, onset20dBCrossingObserved, onsetPostPeakMinimumRatio and onsetDecayCensored using the same 1024-frame peak windows and 256-frame hop. The original classifier result is retained. Neither classifier is a substitute for requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
                 "Does the revised BUBBLE response make the underlying note clearer than the earlier pops at the same controls?",
                 "Does one spark audibly start a chain of gate openings?", "Does disconnecting the cascade remove later articulations?",
                 "Does rapid feeding reveal depletion and recovery memory?", "Does gain-only gating lose the changing brightness of the low-pass gates?",
-                "Do all four voices remain useful pitched samples?", "Does BREATH keep a clear note through its soft overlapping openings?",
+                "Do all five voices remain useful pitched samples?", "Does BREATH keep a clear note through its soft overlapping openings?",
                 "Does BREATH contrast usefully with the accepted PLUCK, WOOD and revised BUBBLE voices?",
+                "Does FLICKER reveal brief metallic openings while retaining a clear requested note?",
+                "Does FLICKER add a useful bright articulation beside the four accepted voices?",
                 "Do the same musical notes and soft/strong velocities retain each voice's character?", "Do held patterns repeat without audible clicks or stutters?",
             ),
             "summary" to summary, "higherRateReferences" to higherRateReferences, "groups" to groups, "entries" to entries,
@@ -365,10 +367,11 @@ object WickAuditionGenerator {
                 (when (voice) {
                     WickVoice.BUBBLE -> "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. "
                     WickVoice.BREATH -> "Soft gate openings overlap around the requested note. Listen for a stable pitched body and a gradual release. "
+                    WickVoice.FLICKER -> "Listen for brief bright metallic openings with a clear pitched body underneath. "
                     else -> ""
                 }) +
                 "The same initial excitation and release network used by every normal patch.",
-            "defaults", voice, "defaults", "Start here · four dry voices",
+            "defaults", voice, "defaults", "Start here · five dry voices",
         ))
         val toneControls = linkedMapOf("SPARK" to .40f, "FEED" to .25f, "CASCADE" to .70f, "TIMBRE" to .45f, "RECOVERY" to .50f, "HOLD" to 0f)
         for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
@@ -428,6 +431,27 @@ object WickAuditionGenerator {
             "BREATH defaults at MIDI $midi, velocity 1. Compare the soft rise, pitched body, overlapping answers and finite ring-out across C3, C4 and C5. No effects or note-off envelope.",
             "sustain", WickVoice.BREATH, "breath-sustain", "BREATH · soft openings across registers", midi = midi,
         ))
+        // Explain FLICKER's brief openings at the same defaults used for its first clip.
+        for ((id, title, options) in comparisons) for (altered in listOf(false, true)) add(Case(
+            "mechanism_flicker_${id}_${if (altered) "off" else "on"}",
+            if (!altered) "FLICKER · full network" else when (id) {
+                "cascade" -> "FLICKER · cascade disconnected"
+                "depletion" -> "FLICKER · constant availability"
+                else -> "FLICKER · gain-only gates"
+            },
+            when (id) {
+                "cascade" -> "FLICKER defaults at C4. Disconnect release transmission to compare the bright answering flashes with the initial pitched body."
+                "depletion" -> "FLICKER defaults at C4. Keep availability constant to compare the strength and spacing of successive openings."
+                else -> "FLICKER defaults at C4. Remove the low-pass gate's opening-to-brightness coupling to compare each flash's changing tone."
+            }, "comparison", WickVoice.FLICKER, "flicker-mechanism-$id", "FLICKER · $title",
+            options = if (altered) options else Wick.Options(), comparison = "flicker-$id",
+            variant = if (altered) "ablated" else "full",
+        ))
+        for (midi in listOf(48, 60, 72)) add(Case(
+            "flicker_register_$midi", "FLICKER · ${note(midi)} metallic openings",
+            "FLICKER defaults at MIDI $midi, velocity 1. Compare the bright openings, underlying requested note and answering chain across C3, C4 and C5. No effects.",
+            "register", WickVoice.FLICKER, "flicker-register", "FLICKER · bright openings across registers", midi = midi,
+        ))
         for (voice in WickVoice.entries) for (macro in timbral) for (value in if (quick) listOf(0f, 1f) else steps) add(Case(
             "sweep_${voice.name.lowercase()}_${macro.lowercase()}_${tag(value)}", "$macro ${(value * 100).toInt()}%",
             "${voice.name}: only $macro changes. All companion controls retain this voice's defaults; finite sample, loudness matched.",
@@ -445,6 +469,12 @@ object WickAuditionGenerator {
             "BREATH HOLD: one recurrent period. Only $macro changes; companion controls retain BREATH defaults. Repeat compares the continuity of soft openings after convergence.",
             "held-sweep", WickVoice.BREATH, "held-sweep-breath-${macro.lowercase()}", "BREATH HOLD · $macro",
             Wick.defaults(WickVoice.BREATH) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
+        ))
+        if (!quick) for (macro in listOf("FEED", "RECOVERY")) for (value in steps) add(Case(
+            "held_sweep_flicker_${macro.lowercase()}_${tag(value)}", "Held $macro ${(value * 100).toInt()}%",
+            "FLICKER HOLD: one recurrent period. Only $macro changes; companion controls retain FLICKER defaults. Repeat compares the metallic openings after convergence.",
+            "held-sweep", WickVoice.FLICKER, "held-sweep-flicker-${macro.lowercase()}", "FLICKER HOLD · $macro",
+            Wick.defaults(WickVoice.FLICKER) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
         ))
         for (voice in WickVoice.entries) for ((id, title, controls) in listOf(
             Triple("default", "Default held pattern", emptyMap()),
@@ -476,14 +506,15 @@ object WickAuditionGenerator {
     private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
         "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
     } else when (case.kind) {
-        "defaults" -> "Listen first to the four dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD and revised BUBBLE recipes remain available alongside BREATH. Every clip uses its saved pitch, velocity and six controls."
+        "defaults" -> "Listen first to the five dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
+        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD, BREATH and revised BUBBLE recipes remain available alongside FLICKER. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."
         "hold" -> "Default, minimum feed, dense slow recovery and disconnected transmission. These files contain one held period; turn on repeat to audition the wrap."
         "range" -> "C1, C3 and C6, each at 25%, 65% and 100% velocity. Both native and matched playback are available."
         "sustain" -> "BREATH defaults at C3, C4 and C5. Listen for a soft rise, a clear note through successive openings, and a gradual finite release. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
+        "register" -> "FLICKER defaults at C3, C4 and C5. Listen for brief metallic openings and a clear underlying note. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
         else -> "Four corners of the interaction, with companion controls at BUBBLE defaults."
     }
 

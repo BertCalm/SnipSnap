@@ -298,7 +298,7 @@ object Caustic {
     }
 
     /** Model2 changes the resonant instrument, while preserving the model1 reference above. */
-    private data class RichProfile(
+    internal data class RichProfile(
         val character: Character,
         val decay: Double,
         val attack: Double,

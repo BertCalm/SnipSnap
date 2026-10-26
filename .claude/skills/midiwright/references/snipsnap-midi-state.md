@@ -2,7 +2,8 @@
 
 Everything here was read from `github.com/BertCalm/SnipSnap` at commit `b429ec2` on
 2026-10-22, then updated the same day by the pull request that landed roadmap steps 1 and 2
-(the timestamp kept, `PadCommand.frameOffset`); those rows say so. The tree moves fast. Treat each line as "true on that day, re-grep before you
+(the timestamp kept, `PadCommand.frameOffset`), and again on 2026-10-23 at `e7cfc0072` by MIDI
+batch A (real-time events, the frame counter, the device fingerprint, the stop-drop guard), and at `9c4a7cda4` by MIDI batch B (MIDI out and the published virtual port); those rows say so. The tree moves fast. Treat each line as "true on that day, re-grep before you
 lean on it." Where a line says VERIFY, a grep is cheap and a wrong API name in a spec is
 expensive: `docs/MIDI_SYNC.md` records 39 corrections to one design document, and most were
 a confidently named method, interface or bench row that did not exist.
@@ -31,16 +32,18 @@ say so and call luthier.
 
 | Piece | Where | What it does | Verified detail |
 |---|---|---|---|
-| `MidiInput` | `app/src/main/kotlin/com/snipsnap/app/MidiInput.kt` (209 lines) | Opens every MIDI device's output ports, parses on the service thread, posts typed events to the main thread | `FEATURE_MIDI` check; API 33+ uses `registerDeviceCallback(TRANSPORT_MIDI_BYTE_STREAM, executor, cb)` and `getDevicesForTransport`, older uses the deprecated pair; `openDevice` async with a main-thread `Handler`; one `MidiWire` per port; `Receiver.onSend` passes its `timestamp` into `MidiWire.feed` and posts the stamped events to the main thread (steps 1 and 2 PR; before it the stamp was dropped); `onDeviceRemoved` lets every note go before the shorter device list is announced; `close()` is idempotent and closes the Java `MidiDevice` |
-| `MidiWire` | `kit/src/main/kotlin/com/snipsnap/kit/MidiWire.kt` (163 lines) | Stateful MIDI 1.0 byte-stream parser | Handles split messages, running status, real-time bytes mid-message, SysEx skipped byte by byte with status-byte termination; `feed(bytes, offset, count, timestampNanos)` emits `NoteOn(channel, note, velocity 0..1, timestampNanos)`, `NoteOff`, `Control`, each stamped with the delivery that completed it (0 when the caller gave none); pitch bend, aftertouch and program change are length-honoured and dropped; velocity 0 is note-off; tested by `MidiWireTest` |
+| `MidiInput` | `app/src/main/kotlin/com/snipsnap/app/MidiInput.kt` (330 lines) | Opens every MIDI device's output ports (output ports only; the input ports are `MidiOut`'s), parses on the service thread, posts typed events to the main thread | `FEATURE_MIDI` check; API 33+ uses `registerDeviceCallback(TRANSPORT_MIDI_BYTE_STREAM, executor, cb)` and `getDevicesForTransport`, older uses the deprecated pair; `openDevice` async with a main-thread `Handler`; one `MidiWire` per port; `Receiver.onSend` passes its `timestamp` into `MidiWire.feed` and posts the stamped events to the main thread (steps 1 and 2 PR; before it the stamp was dropped); `onDeviceRemoved` lets every note go before the shorter device list is announced; `onDevicesChanged(List<MidiDeviceId>)` carries a `MidiFingerprint` (transport, vendor and product ids, port counts, name hash; `shell/.../MidiFingerprint.kt`) beside each name, `MidiInput.devices` and `Opened.id` expose it, and no Bluetooth address is read (`bd95b1baa`); `close()` is idempotent and closes the Java `MidiDevice`. Batch B (`25ff062fe` to `3cbc0f4ce`): `closeDevice` sends All Notes Off (which now goes only where a note is outstanding); the final-review fixes (`ed43e2068`) moved input-port opening out to `MidiOut`, so a device is open twice in the process, one handle per direction; the app's own device is skipped by `TYPE_VIRTUAL` plus the manufacturer and product constants, not a hidden key (`cf53ea014`); `devices` also lists the virtual device while another app holds it, through `VirtualMidi` |
+| `MidiOut` | `app/src/main/kotlin/com/snipsnap/app/MidiOut.kt` | Where the app's notes leave: one `HandlerThread("midi-out")`, a destination list, `hardwareEnabled` (default false, pref `midi.out`), a `ports` `StateFlow` for SETUP | Added in `25ff062fe`; encodes on main with `MidiBytes` (`kit/.../MidiBytes.kt`, `6967038ec`, `MidiBytesTest` 7 cases), `send` only on the out thread, any `Exception` from a destination drops it once (`e82b0468a`), `install` is idempotent and, for the life of the process, opens every non-SnipSnap device's input ports through its own `DeviceCallback` (destination ids carry `info.id`; a refused port is reported and cleared with its device, `e82b0468a`); `drumOn`/`drumOff` wrap channel 10 (`MidiGroove.DRUM_CHANNEL`), `keysOn`/`keysOff` channel 1, `drumOnGated` schedules a cancellable off on the out thread; it records outstanding notes, and `allNotesOff` sends CC 123 only on channels that have one, so an echo dies after one round; callers are touch and the sequencer only, never a received note; `MidiPads.noteForSlot` is the outgoing side of the pad map (`02ac5beba`, null for `IN_ORDER` slots 93 to 128); spec `docs/MIDI_OUT_SPEC_2026_10.md` section 13; compiled and read, bench rows M1 to M6 unrun |
+| `SnipSnapMidiService`, `VirtualMidi` | `app/src/main/kotlin/com/snipsnap/app/SnipSnapMidiService.kt`, `VirtualMidi.kt`, `res/xml/midi_device_info.xml`, the manifest | SnipSnap as a MIDI device other apps open: input port "SnipSnap In", output port "SnipSnap Out" | Added in `3cbc0f4ce`; the service's `MidiOut` destination is added with `hardware = false` (sends whatever the switch says); `VirtualMidi` is the main-thread seam to `MidiInput`; manufacturer and product strings are equal in the XML and in `MidiOut.kt`, checked by eye only; the `tags` attribute is untested; not opened by another app yet |
+| `MidiWire` | `kit/src/main/kotlin/com/snipsnap/kit/MidiWire.kt` (232 lines) | Stateful MIDI 1.0 byte-stream parser | Handles split messages, running status, real-time bytes mid-message, SysEx skipped byte by byte with status-byte termination; `feed(bytes, offset, count, timestampNanos)` emits `Event.Channel` (`NoteOn(channel, note, velocity 0..1, timestampNanos)`, `NoteOff`, `Control`) and `Event.RealTime` (`Clock`, `Start`, `Continue`, `Stop`, stamp only; `0xF8`, `0xFA` to `0xFC`; `0xF9`, `0xFD` to `0xFF` still dropped; `f95cd75c9`), each stamped with the delivery that completed it (0 when the caller gave none); pitch bend, aftertouch and program change are length-honoured and dropped; velocity 0 is note-off; tested by `MidiWireTest` (24 cases); `MidiKeys` and `MidiPads` ignore `RealTime` |
 | `MidiGroove` | `kit/src/main/kotlin/com/snipsnap/kit/MidiGroove.kt` (262 lines) | Standard MIDI File read and write for grooves | `write(clip: Mpc3Clip, bpm)`, `read(bytes, name): Imported(clip, bpm?)`; tested by `MidiGrooveTest` |
 | `MidiKeys` | `shell/src/main/kotlin/com/snipsnap/shell/MidiKeys.kt` | KEYS's rules for a MIDI note | Keyboard velocity used as is (no touch-Y floor); sustain pedal (CC 64) holds let-go notes; CC 120 and 123 are panic and clear the pedal; every channel listened to; `Voice { noteOn, noteOff, allOff }` |
 | `MidiPads` | `shell/src/main/kotlin/com/snipsnap/shell/MidiPads.kt` | PLAY's rule for which pad a note hits | Two maps: `MPC` (note 36 is A02, the exported kit's own answer) and `IN_ORDER` (C1 on A01, a semitone a pad); `IN_ORDER_FIRST_NOTE = 36` |
 | `PadHit` | `shell/src/main/kotlin/com/snipsnap/shell/PadHit.kt` | Pad semantics resolved on the JVM | `velocityAt(y, height, floor = SOFTEST)` top-of-pad softest, `SOFTEST = 0.20f`, `CENTER` for TalkBack clicks, `midiVelocity(v) = round(v * 127)`, `resolve(pad, velocity, hitIndex)` to a native `Hit` |
 | `KeyHit` | `shell/src/main/kotlin/com/snipsnap/shell/KeyHit.kt` | Keygroup semantics (zone, speed, loop, release) for one key press | Native voice only hears "this sample, from here, looping back to there, at this gain and speed" |
 | `VoiceAllocator` | `shell/src/main/kotlin/com/snipsnap/shell/VoiceAllocator.kt` | Choke, steal and note-off decisions behind an interface | Eight voices on KEYS, a ninth steals the oldest (`app/README.md`) |
-| `PadEngine` (JVM) | `app/src/main/kotlin/com/snipsnap/app/PadEngine.kt` | The Kotlin face of the native pad player | `hit(pad, velocity, voiceId, swap)`, `hitLayers(...)`, `allOff(fadeMs)`; no `noteOn` |
-| `PadEngine` (C++) | `app/src/main/cpp/PadEngine.{h,cpp}` | Up to `kMaxVoices` sample players mixed to stereo | `PadCommand { NoteOn, Stop, AllOff, SetGain }` with sample, start, end, loopStart, gains, pitch, reverse, fadeMs, `frameOffset`, generation; `onAudioReady` takes the ring into a held set (`held_`, 256 deep, audio thread only) and renders the block in pieces, applying each command on the frame its `frameOffset` names, an offset past the block carrying into the next; the JNI entry points in `jni.cpp` still leave `frameOffset` at 0, so nothing on the Kotlin side schedules ahead yet (roadmap step 3 computes one from a timestamp) |
+| `PadEngine` (JVM) | `app/src/main/kotlin/com/snipsnap/app/PadEngine.kt` | The Kotlin face of the native pad player | `hit(pad, velocity, voiceId, swap)`, `hitLayers(...)`, `stop(...)` and `allOff(fadeMs)` return `Boolean` (false: the ring refused it, kept and retried from `drainEnded()`; a kept all-off supersedes kept stops; `27d059a65`, `e7cfc0072`), `framesRendered()`; no `noteOn` |
+| `PadEngine` (C++) | `app/src/main/cpp/PadEngine.{h,cpp}` | Up to `kMaxVoices` sample players mixed to stereo | `PadCommand { NoteOn, Stop, AllOff, SetGain }` with sample, start, end, loopStart, gains, pitch, reverse, fadeMs, `frameOffset`, generation; `onAudioReady` takes the ring into a held set (`held_`, 256 deep, audio thread only) and renders the block in pieces, applying each command on the frame its `frameOffset` names, an offset past the block carrying into the next; the JNI entry points in `jni.cpp` still leave `frameOffset` at 0, so nothing on the Kotlin side schedules ahead yet (roadmap step 3 computes one from a timestamp); `std::atomic<int64_t> framesRendered_` counts frames per callback, never reset, read by `framesRendered()` (`aa2583bf9`); `jni.cpp` `stopVoice` and `allOff` return `jboolean` from `pushCommand` |
 | `SpscRing<T, N>` | `app/src/main/cpp/SpscRing.h` | Single-producer single-consumer ring, UI pushes, callback pops, lock-free, heap-free | Power-of-two capacity, acquire/release atomics, **drops on full** (right for control values, wrong for note-offs unless the consumer drains fast) |
 | `openStereoFloatOutput` | `app/src/main/cpp/OboeOutput.h` | The one way the app opens an output | Float stereo, `LowLatency`, `Exclusive` then `Shared` on refusal, buffer at two bursts, `Usage::Media`, `ContentType::Music`; `latencyMillisOf` is UI-thread only (Oboe's pre-R warning) |
 | `NativePads`, `NativeSurface` | `app/src/main/kotlin/com/snipsnap/app/NativePads.kt`, `NativeSurface.kt` | JNI bridges | Both expose `latencyMillis(handle)`, `isShared`, `needsRestart`; the surface takes `control(...)`, `setCorner(...)`, `setGrain(...)` |
@@ -60,7 +63,7 @@ say so and call luthier.
 | ORBIT, `OrbitEngine` | frames written to the sink | `AtomicLong frame` | `position()`, a render cursor that leads the hardware by the sink's buffering |
 | Loop grid, `LoopEngine` | intervals written to the sink | `AtomicInteger interval` | `position()`, one interval's resolution |
 | BEAT and GROOVE, `BeatPlayer` | wall time since play started | `withFrameNanos` loop | Compose state; the loop moved out of `GrooveScreen` into `BeatPlayer` after MIDI_SYNC.md was written, so that document's `GrooveScreen` greps are stale while its finding stands |
-| PLAY and pads, `PadEngine` | nothing | none | nothing |
+| PLAY and pads, `PadEngine` | frames rendered | `std::atomic<int64_t> framesRendered_` | `framesRendered()`; nothing reads it yet, and no `getTimestamp` fit maps it to nanoseconds |
 
 There is no hardware-referenced transport shared among them, two separate output streams
 (the `:loop` `AudioTrack` path and the Oboe path), and round-trip latency is measured
@@ -88,10 +91,10 @@ S1 to S3 are answered; master-side clock out needs S1 and S2.
 1. ~~Timestamps are discarded at `MidiInput.Receiver.onSend`.~~ Done: every `MidiWire.Event`
    carries `timestampNanos`. Nothing yet *reads* it: `MidiKeys` and `MidiPads` hand the
    note on without its stamp, and the engine has no ns-to-frame mapping (gap 11).
-2. **No MIDI output.** No `MidiInputPort` is ever opened; nothing can send a note, a clock
-   tick or an LED colour.
-3. **No virtual port.** No `MidiDeviceService`; other apps cannot play SnipSnap or be played
-   by it.
+2. ~~**No MIDI output.** No `MidiInputPort` is ever opened; nothing can send a note, a clock
+   tick or an LED colour.~~ Done for notes (`6967038ec` to `9c4a7cda4`, `MidiOut`): pads and keys send; clock ticks and LED colours do not yet; the loopback row is unrun.
+3. ~~**No virtual port.** No `MidiDeviceService`; other apps cannot play SnipSnap or be played
+   by it.~~ Done in `3cbc0f4ce` (`SnipSnapMidiService`); no other app has opened it yet.
 4. **No BLE.** No scan, no `openBluetoothDevice`, no Bluetooth permissions in the manifest.
 5. ~~Commands land on block boundaries.~~ Done in the engine: `PadCommand.frameOffset` is
    honoured mid-block (host test places a note at frame 37). Not yet reachable from Kotlin:
@@ -104,12 +107,18 @@ S1 to S3 are answered; master-side clock out needs S1 and S2.
    `microphone|mediaProjection`), so a long session with a BLE device would depend on the
    screen staying on. `connectedDevice` is the honest type for holding one; `mediaPlayback`
    only if the app ever plays in the background.
-9. **No diagnostics screen**; the `MidiInput` logcat tag is the only window.
+9. ~~**No diagnostics screen**; the `MidiInput` logcat tag is the only window.~~ Mostly done on 2026-10-24: `MidiScreen` behind the gear lists endpoints with port names, monitors every delivery's raw bytes (`MidiMonitor`, which reads bend, pressure and SysEx for people while `MidiWire` still drops them for playing), and copies a `MidiReport`. No `latencyMillis` there yet; unrun on a phone.
 10. **The loop grid has no front door**; giving it a transport is work on a screen users
     cannot reach until that changes.
 11. **No ns-to-frame mapping.** The stamp from gap 1 and the offset from gap 5 are not yet
     joined: the engine has no absolute frame counter and no smoothed `getTimestamp` fit, so
     a timestamp cannot become a `frameOffset`. Roadmap P0.3; waits on bench S1.
+    ~~...the engine has no absolute frame counter...~~ Counter done (`aa2583bf9`): `framesRendered`
+    exists; the `getTimestamp` fit and the Kotlin `frameOffset` remain open.
+12. ~~Real-time bytes `0xF8` to `0xFC` are dropped.~~ Done: `Event.RealTime` (`f95cd75c9`).
+13. ~~A device has no identity but its display name.~~ Done: `MidiFingerprint` (`bd95b1baa`).
+14. ~~A refused stop is a stuck pad until PANIC.~~ Done: kept and retried at screen rate
+    (`27d059a65`, `e7cfc0072`); compiled and read, the 64-pad roll row is unrun.
 
 ## 6. Where new MIDI work lands
 
@@ -135,7 +144,7 @@ grep -rn "commands_.pop" app/src/main/cpp/PadEngine.cpp
 grep -rn "withFrameNanos\|STEP_MAX_NANOS" app/src/main/kotlin shell/src/main/kotlin
 grep -rn "openInputPort\|MidiDeviceService\|openBluetoothDevice\|BLUETOOTH" app/src/main
 grep -rn "foregroundServiceType" app/src/main/AndroidManifest.xml
-grep -rn "sealed interface Event" -A 12 kit/src/main/kotlin/com/snipsnap/kit/MidiWire.kt
+grep -rn "sealed interface Event" -A 30 kit/src/main/kotlin/com/snipsnap/kit/MidiWire.kt
 grep -rn "S1\|S2\|S3\|S4" docs/BENCH.md | head
 ```
 

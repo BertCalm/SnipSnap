@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -46,6 +47,7 @@ internal fun FullscreenPlayGrid(
     kit: Kit,
     glow: Map<Int, Animatable<Float, AnimationVector1D>>,
     status: String,
+    strike: StrikeState,
     onHit: (Int, Float, Long) -> Unit,
     onRelease: (Int, Long) -> Unit,
     onExit: () -> Unit,
@@ -70,13 +72,11 @@ internal fun FullscreenPlayGrid(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            TapeText(
-                status,
-                TapeType.lcdSmall,
-                scheme.amber.tape,
-                Modifier.padding(horizontal = 8.dp),
-            )
+            Column(Modifier.weight(1f).padding(end = 8.dp)) {
+                TapeText(kit.name, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 1)
+                TapeText(status, TapeType.pixelSmall, scheme.amber.tape, maxLines = 1)
+            }
+            StrikeControls(strike, Modifier.width(312.dp).padding(end = 8.dp))
             Box(
                 Modifier
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -89,6 +89,9 @@ internal fun FullscreenPlayGrid(
             }
         }
 
-        BankRow(kit, glow, onHit, onRelease, Modifier.weight(1f).fillMaxWidth())
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
+        StrikePadArea(strike, Modifier.weight(1f).fillMaxWidth()) {
+            BankRow(kit, glow, onHit, onRelease, Modifier.fillMaxSize())
+        }
     }
 }

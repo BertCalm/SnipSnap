@@ -51,10 +51,16 @@ data class ArrangedPad(
      * other source) is the class colour, unchanged.
      */
     val colorHex: String? = null,
+    /** Optional names for every velocity zone, soft variants first and the main sample last. */
+    val layerNames: List<String> = emptyList(),
 ) {
     init {
         require(softVariants.size <= 3) { "at most 3 soft variants (4 zones total)" }
         require(takes.isEmpty() || softVariants.isEmpty()) { "a chain pad is single-zone: takes or soft variants, not both" }
+        require(layerNames.isEmpty() || (softVariants.isNotEmpty() && layerNames.size == softVariants.size + 1)) {
+            "layer names must describe every velocity zone"
+        }
+        require(layerNames.all { it.isNotBlank() }) { "layer names must not be blank" }
     }
 }
 
@@ -137,10 +143,12 @@ object KitAssembler {
                             file,
                             velStart = if (v == 0) 1 else 128 * v / zoneCount,
                             velEnd = 128 * (v + 1) / zoneCount - 1,
+                            displayName = pad.layerNames.getOrNull(v),
                         ),
                     )
                 }
-                add(KitLayer("$stem.wav", velStart = 128 * pad.softVariants.size / zoneCount, velEnd = 127))
+                add(KitLayer("$stem.wav", velStart = 128 * pad.softVariants.size / zoneCount, velEnd = 127,
+                    displayName = pad.layerNames.lastOrNull()))
             }
 
             pads += KitPad(

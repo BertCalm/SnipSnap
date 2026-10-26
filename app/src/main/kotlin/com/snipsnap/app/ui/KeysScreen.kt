@@ -38,6 +38,7 @@ import com.snipsnap.app.AudioFocus
 import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -48,6 +49,7 @@ import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
@@ -101,7 +103,10 @@ fun KeysScreen(
         MidiKeys(object : MidiKeys.Voice {
             override fun noteOn(note: Int, velocity: Float) { player.noteOn(note, velocity) }
             override fun noteOff(note: Int) = player.noteOff(note)
-            override fun allOff() = player.allOff()
+            // Every local silence is mirrored on the wire (the one funnel for
+            // midiKeys.allOff()): a local silence that is not mirrored leaves a
+            // receiver holding a note whose off will name a different key.
+            override fun allOff() { player.allOff(); MidiOut.allNotesOff() }
         })
     }
     fun silence() = midiKeys.allOff()
@@ -110,13 +115,13 @@ fun KeysScreen(
     // keyboard is opened and closed with the lifecycle, below, beside the
     // audio focus: a note arriving while the app is backgrounded would
     // otherwise restart the stream ON_STOP had just silenced.
-    var midiDevices by remember(player) { mutableStateOf<List<String>>(emptyList()) }
+    var midiDevices by remember(player) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     var midiSupported by remember(player) { mutableStateOf(false) }
     val midi = remember(player) { MidiInput(context) }
     val midiListener = remember(player) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = midiKeys.handle(event)
-            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
             override fun onDeviceRemoved() = midiKeys.allOff()
         }
@@ -165,6 +170,8 @@ fun KeysScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen with a key down: its release never comes.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -214,8 +221,10 @@ fun KeysScreen(
                         KeyPad(
                             label = note?.let { KeysLayout.label(it) } ?: "—",
                             enabled = covered,
-                            onPress = { v -> note?.let { player.noteOn(it, v) } },
-                            onRelease = { note?.let { player.noteOff(it) } },
+                            // Touch only: these go out over MIDI on the keys channel, and only for a note that sounded locally.
+                            // The MidiKeys.Voice above is MIDI in and stays silent.
+                            onPress = { v -> note?.let { if (player.noteOn(it, v)) MidiOut.keysOn(it, v, System.nanoTime()) } },
+                            onRelease = { note?.let { player.noteOff(it); MidiOut.keysOff(it, System.nanoTime()) } },
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -235,9 +244,9 @@ fun KeysScreen(
 }
 
 /** The words under the grid: the connected keyboard by name, or the invitation. */
-internal fun midiLine(devices: List<String>): String =
+internal fun midiLine(devices: List<MidiDeviceId>): String =
     if (devices.isEmpty()) NO_MIDI_DEVICE
-    else "MIDI · " + devices.joinToString(" + ") { it.uppercase(java.util.Locale.ROOT) }
+    else "MIDI · " + devices.joinToString(" + ") { it.name.uppercase(java.util.Locale.ROOT) }
 
 /** Nothing plugged in: say what would work, in the words the USB cable is sold under. */
 internal const val NO_MIDI_DEVICE = "NO MIDI KEYBOARD · PLUG ONE IN OVER USB"

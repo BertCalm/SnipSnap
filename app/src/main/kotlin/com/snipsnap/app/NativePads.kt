@@ -40,9 +40,10 @@ object NativePads {
         gainsL: FloatArray, gainsR: FloatArray, pitch: Double, reverses: BooleanArray,
     ): Boolean
     external fun setVoiceGain(handle: Long, voiceId: Int, gainL: Float, gainR: Float, glideMs: Float)
-    external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float)
-    external fun allOff(handle: Long, fadeMs: Float)
+    external fun stopVoice(handle: Long, voiceId: Int, fadeMs: Float): Boolean
+    external fun allOff(handle: Long, fadeMs: Float): Boolean
     external fun drainEnded(handle: Long): IntArray
+    external fun framesRendered(handle: Long): Long
 
     /**
      * The resample tap, the same four calls `NativeSurface` has. [armPrint]
