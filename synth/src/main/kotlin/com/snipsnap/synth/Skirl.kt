@@ -10,7 +10,7 @@ import kotlin.random.Random
 enum class SkirlVoice { ROLL, WHIRR }
 
 /**
- * SKIRL model 1: knock -> flutter -> whirr -> bounded shudder -> pitched decay.
+ * SKIRL: knock -> flutter -> whirr -> bounded shudder -> pitched decay.
  *
  * A constraint-eliminated ideal cylinder supplies contact and body-frame rim
  * phases, reaction forces and negative resistance work. A one-way acoustic
@@ -26,11 +26,15 @@ enum class SkirlVoice { ROLL, WHIRR }
  *
  * Geometry, resistance, friction and acoustic material tables are design
  * choices. The owner liked the Python audition; this Kotlin port awaits its
- * own listen. HOLD is reserved and nonzero values are refused in model 1.
+ * own listen. Model 2 adds an authored acoustic capture for HOLD. The finite
+ * motion and its seed remain model 1; the capture is externally replenished,
+ * not a claim that the dissipative disk continues forever.
  */
 object Skirl {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    const val LEGACY_MODEL_VERSION = 1
+    const val HOLD_LOOP = SkirlHold.LOOP_THRESHOLD
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 36
     const val MIDI_MAX = 84
@@ -56,8 +60,9 @@ object Skirl {
             macros[key]?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: default
         }
 
-    private fun requireFiniteGesture(macros: Map<String, Float>) {
-        require(macros.getValue("HOLD") == 0f) {
+    private fun requireModel(model: Int, macros: Map<String, Float>) {
+        require(model in LEGACY_MODEL_VERSION..MODEL_VERSION) { "unsupported skirl model $model" }
+        require(model != LEGACY_MODEL_VERSION || macros.getValue("HOLD") == 0f) {
             "SKIRL model 1 is a finite rolling gesture; HOLD must be 0."
         }
     }
@@ -66,8 +71,11 @@ object Skirl {
         temperature: Float = .35f, near: Patch? = null): Map<String, Float> =
         Dsp.scrambleNear(settled(voice, if (near is SkirlPatch) near.macros else emptyMap()),
             temperature.takeIf { it.isFinite() } ?: .35f, random).toMutableMap().also {
-            it["HOLD"] = 0f
+            it["HOLD"] = if (near is SkirlPatch && near.model == LEGACY_MODEL_VERSION) 0f
+                else it.getValue("HOLD").coerceAtMost(.95f)
         }
+
+    fun isLoop(hold: Float): Boolean = SkirlHold.isLoop(hold)
 
     fun midiFor(@Suppress("UNUSED_PARAMETER") voice: SkirlVoice,
         tune: Float, midi: Int = DEFAULT_MIDI): Int {
@@ -82,8 +90,7 @@ object Skirl {
 
     /** Finite pitched intent overrides the generic classifier's duration-based LOOP bucket. */
     fun drumClassFor(voice: SkirlVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
-        requireFiniteGesture(settled(voice, macros))
-        return DrumClass.TONAL
+        return if (isLoop(settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
     }
 
     /**
@@ -94,7 +101,6 @@ object Skirl {
     internal fun parametersFor(voice: SkirlVoice,
         macros: Map<String, Float> = emptyMap()): SkirlDynamics.Parameters {
         val m = settled(voice, macros)
-        requireFiniteGesture(m)
         val lean = m.getValue("LEAN").toDouble()
         val brake = m.getValue("BRAKE").toDouble()
         val collapse = m.getValue("COLLAPSE").toDouble()
@@ -126,15 +132,36 @@ object Skirl {
         val preparationNanos: Long,
         val synthesisNanos: Long,
         val outputNanos: Long,
+        val hold: SkirlHold.Diagnostics? = null,
+        val loopStartFrame: Int = 0,
+        /** Actual independently conditioned preceding cycle, before leveling. */
+        val previousCycle: FloatArray = FloatArray(0),
     )
 
     fun render(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Snip =
-        play(voice, macros, midi, velocity, record = false).snip
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, model: Int = MODEL_VERSION): Snip =
+        play(voice, macros, midi, velocity, record = false, model = model).snip
+
+    /** A loop-only pad render. HOLD's top step has no terminal shudder or tail fade. */
+    fun renderLoop(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): FloatArray =
+        render(voice, macros + ("HOLD" to 1f), midi, velocity).samples
+
+    /** Attack plus an acoustic sustain loop, in the existing MPC key-note shape. */
+    fun renderHeld(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): KeyNote {
+        val probe = play(voice, macros + ("HOLD" to 1f), midi, velocity,
+            record = false, retainAttack = true)
+        return KeyNote(probe.snip, probe.loopStartFrame.toLong())
+    }
 
     internal fun inspect(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, model: Int = MODEL_VERSION): Probe =
+        play(voice, macros, midi, velocity, record = true, model = model)
+
+    internal fun inspectHeld(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
         midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Probe =
-        play(voice, macros, midi, velocity, record = true)
+        play(voice, macros + ("HOLD" to 1f), midi, velocity, record = true, retainAttack = true)
 
     /** A diagnosed research fixture; physical overrides are never production patch fields. */
     internal fun inspectReference(voice: SkirlVoice, physical: SkirlDynamics.Parameters,
@@ -146,12 +173,13 @@ object Skirl {
     }
 
     private fun play(voice: SkirlVoice, macros: Map<String, Float>, midi: Int,
-        velocity: Float, record: Boolean, physical: SkirlDynamics.Parameters? = null): Probe {
+        velocity: Float, record: Boolean, physical: SkirlDynamics.Parameters? = null,
+        model: Int = MODEL_VERSION, retainAttack: Boolean = false): Probe {
         stopIfInterrupted()
         require(midi in MIDI_MIN..MIDI_MAX) { "SKIRL MIDI must be in $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SKIRL velocity must be finite and in 0..1" }
         val m = settled(voice, macros)
-        requireFiniteGesture(m)
+        requireModel(model, m)
         val began = System.nanoTime()
         val trace = SkirlDynamics.trace(physical ?: parametersFor(voice, m))
         check(physical != null || trace.exit == SkirlDynamics.Exit.TERMINAL) {
@@ -162,22 +190,54 @@ object Skirl {
         // One seeded periodic rim map fixes acoustic polarity at contact points.
         // Transposing or touching material does not rotate that surface or
         // invent a new mechanical contact history.
-        val seed = Dsp.seedFor("SKIRL", MODEL_VERSION, voice.name)
+        val seed = Dsp.seedFor("SKIRL", LEGACY_MODEL_VERSION, voice.name)
+        val hz = frequencyFor(voice, m.getValue("TUNE"), midi).toDouble()
         val result = SkirlAcoustics.render(trace,
-            frequencyFor(voice, m.getValue("TUNE"), midi).toDouble(),
+            hz,
             m.getValue("EDGE"), m.getValue("PLATE"), m.getValue("COLLAPSE"), velocity,
             seed, fineTexture = true, signedTexture = true)
         check(result.raw.all { it.isFinite() }) { "SKIRL acoustic state became nonfinite" }
+        val plan = if (m.getValue("HOLD") > 0f) SkirlHold.plan(result.raw, trace,
+            result.diagnostics, hz, m.getValue("HOLD")) else null
         val synthesized = System.nanoTime()
         stopIfInterrupted()
-        val out = condition(result.raw)
+        val conditioned = condition(plan?.raw ?: result.raw)
+        var previous = FloatArray(0)
+        var hold = plan?.diagnostics
+        val looping = plan != null && plan.loopStart > 0
+        val out = if (looping) {
+            val marker = plan!!.loopStart
+            val length = plan.loopEnd - marker
+            previous = conditioned.copyOfRange(marker - length, marker)
+            val current = conditioned.copyOfRange(marker, plan.loopEnd)
+            val seam = if (current.all { it == 0f } && previous.all { it == 0f }) 0.0 else
+                Keys.seamError(conditioned.copyOf(plan.loopEnd), marker)
+            val difference = SkirlHold.cycleDifference(previous, current)
+            check(seam < Keys.MAX_SEAM_ERROR && difference < Keys.MAX_SEAM_ERROR) {
+                "SKIRL capture filters did not settle: seam $seam, cycle $difference"
+            }
+            hold = hold!!.copy(seamError = seam, cycleDifference = difference)
+            if (retainAttack) conditioned.copyOf(plan.loopEnd) else current
+        } else conditioned
         val raw = if (record) out.copyOf() else FloatArray(0)
-        Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
-        Dsp.fadeTail(out)
+        if (looping && retainAttack) {
+            // Choose gain from the steady loop, then apply the same gain to
+            // the attack. A peak ceiling may lower the entire note together.
+            val current = conditioned.copyOfRange(plan!!.loopStart, plan.loopEnd)
+            val index = current.indices.maxByOrNull { kotlin.math.abs(current[it]) } ?: 0
+            val before = current[index]
+            Dsp.levelTo(current, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+            val gain = if (before == 0f) 1f else current[index] / before
+            for (i in out.indices) out[i] *= gain
+            Dsp.limitPeak(out, .99f)
+        } else Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        if (!looping) Dsp.fadeTail(out)
         stopIfInterrupted()
         return Probe(Snip(out, channels = 1, sampleRate = RATE), raw, trace,
             result.diagnostics, prepared - began, synthesized - prepared,
-            System.nanoTime() - synthesized)
+            System.nanoTime() - synthesized, hold,
+            if (looping && retainAttack) plan!!.loopStart else 0,
+            if (record) previous else FloatArray(0))
     }
 
     private fun condition(raw: FloatArray): FloatArray {

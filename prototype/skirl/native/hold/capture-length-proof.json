@@ -1,0 +1,1249 @@
+{
+  "decision": "Retain original 0.6-second capture policy for both voices. No production DSP change was made by this experiment.",
+  "reason": "Longer ROLL captures improve the strongest periodic spectral-line offset at C2 but trade phase-window detector refusals into another low note. No candidate was a clear improvement across the bounded transition matrix.",
+  "measuredAtUtc": "2026-10-26",
+  "sourceBaseCommit": "4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778",
+  "productionSourceSha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "aaf7886be6c8515f4e944ed09d8a66c13211ddf6b0b9951d72eb3f247e8358eb",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlHold.kt": "aa5c393b8a9bb553f2e09a2a1f1085f5afa75e56029e0431bb77034e48ac01cc",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlAcoustics.kt": "e889018c1a5cfc8e0d522186c26bc625043a90f2c21555799249bb581187d386",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "c290c43c958106f847873eb4f01cd6ede23050bdcc28259f02af0e440e4a19a9"
+  },
+  "method": "One-file scratch Kotlin overlays, compiled with K2JVMCompiler 2.0.21 targeting JVM 17, loaded before the real compiled production classes. Public Skirl APIs ran the actual 4x capture and shared output conditioning. No production source file was edited.",
+  "candidates": {
+    "base06": "Original min(.60, .30 * rollingDuration) target; unchanged production code.",
+    "hop09": "Both voices: min(.90, .60 * rollingDuration).",
+    "hop12": "Both voices: min(1.20, .60 * rollingDuration).",
+    "rollnote09": "ROLL only: min(.90, .60 * max(1, 130.8/hz), .60 * rollingDuration); WHIRR original. Scratch voice identification uses disjoint calibrated launch-angle domains, not a proposed production API.",
+    "rollnote12": "ROLL only: min(1.20, .60 * max(1, 130.8/hz), .60 * rollingDuration); WHIRR original. Same scratch voice identification.",
+    "quantization": "The 130.8 Hz reference is the scratch approximation to Keys.midiHz(48). Every tested hop rounds to the same note-cycle count as the exact reference. These were research candidates, not shipped macro mappings."
+  },
+  "detectorRefusalExplanation": {
+    "code": "audio/src/main/kotlin/com/snipsnap/audio/Pitch.kt:70",
+    "rule": "The smallest interior autocorrelation peak must exceed 0.85 times the global maximum. A smooth low note can have its global maximum at the shortest-lag endpoint, which is not a fundamental-period peak.",
+    "whirrC2SoftAt025Seconds": {
+      "rootPeakCorrelation": 0.7828819997643268,
+      "shortLagMaximum": 0.9396107513610525,
+      "rootShareOfMaximum": 0.8331982138670724,
+      "requiredShare": 0.85,
+      "candidateParabolicRootHz": 65.4078669347331,
+      "candidateParabolicRootCents": 0.0390572952531123
+    },
+    "interpretation": "The failing window has substantial near-root periodic content. The constrained known-target peak is diagnostic, not a replacement for the actual detector or evidence of perceived pitch."
+  },
+  "fixedStartWindows": {
+    "countPerRender": 12,
+    "startsSeconds": "0.00 through 0.55 in 0.05 increments",
+    "lengthSeconds": 0.3,
+    "rows": [
+      {
+        "variant": "base06",
+        "voice": "roll",
+        "cycleSeconds": 0.596281179138322,
+        "strongestPeriodicHz": 63.72832369942196,
+        "strongestPeriodicCents": -44.996286994966674,
+        "strongestPowerShare": 0.47331893121538837,
+        "carrierPowerShare": 0.19119738500434733,
+        "fixedPhaseNulls": [
+          0.55
+        ],
+        "fixedPhaseWorstDetectedCents": 24.053696339,
+        "wrapStepRatio": 0.3838383838383838,
+        "wrapSlopeRatio": 0.75,
+        "wrapLevelRatio": 0.9136291721038753,
+        "productionPcm16Sha256": "65e07d725b65bb1ca99ec603660b4a3a29b01de09de5c28cb6a3b85159c45525"
+      },
+      {
+        "variant": "base06",
+        "voice": "whirr",
+        "cycleSeconds": 0.596281179138322,
+        "strongestPeriodicHz": 65.40538484940676,
+        "strongestPeriodicCents": -0.026640492571247995,
+        "strongestPowerShare": 0.43705834104175967,
+        "carrierPowerShare": 0.43705834104175967,
+        "fixedPhaseNulls": [
+          0.25,
+          0.3,
+          0.35,
+          0.4,
+          0.45
+        ],
+        "fixedPhaseWorstDetectedCents": 7.430109064,
+        "wrapStepRatio": 0.023474178403755867,
+        "wrapSlopeRatio": 0.4,
+        "wrapLevelRatio": 0.8141239765925014,
+        "productionPcm16Sha256": "5c3ad0995b9dba62977f56a5e027cd82808d77d9cdc700d86eade02e719a6adc"
+      },
+      {
+        "variant": "hop09",
+        "voice": "roll",
+        "cycleSeconds": 0.902063492063492,
+        "strongestPeriodicHz": 64.29702621854653,
+        "strongestPeriodicCents": -29.615526208531172,
+        "strongestPowerShare": 0.35739070322104977,
+        "carrierPowerShare": 0.13421972901886967,
+        "fixedPhaseNulls": [],
+        "fixedPhaseWorstDetectedCents": 22.3426909,
+        "wrapStepRatio": 0.26294820717131473,
+        "wrapSlopeRatio": 0.4,
+        "wrapLevelRatio": 1.025106578052534,
+        "productionPcm16Sha256": "6acac73828ef1a32f740b0883e3fa6f4da945b4731f506a7011a7376b39012b2"
+      },
+      {
+        "variant": "hop09",
+        "voice": "whirr",
+        "cycleSeconds": 0.902063492063492,
+        "strongestPeriodicHz": 64.29702621854653,
+        "strongestPeriodicCents": -29.615526208531172,
+        "strongestPowerShare": 0.3040950659891534,
+        "carrierPowerShare": 0.24217982282271636,
+        "fixedPhaseNulls": [
+          0.25,
+          0.3,
+          0.35,
+          0.4,
+          0.45,
+          0.55
+        ],
+        "fixedPhaseWorstDetectedCents": 41.200739415,
+        "wrapStepRatio": 0.6265060240963856,
+        "wrapSlopeRatio": 0.0,
+        "wrapLevelRatio": 0.9131570970493014,
+        "productionPcm16Sha256": "26b6acd72e297fabcafd3a1fc01998a39212bd8d5c7a62e92365c42631e30af4"
+      },
+      {
+        "variant": "hop12",
+        "voice": "roll",
+        "cycleSeconds": 1.1925396825396826,
+        "strongestPeriodicHz": 64.56808199121522,
+        "strongestPeriodicCents": -22.332535779005756,
+        "strongestPowerShare": 0.2301744333573093,
+        "carrierPowerShare": 0.16405497976521718,
+        "fixedPhaseNulls": [],
+        "fixedPhaseWorstDetectedCents": 22.3426909,
+        "wrapStepRatio": 0.18493150684931506,
+        "wrapSlopeRatio": 0.25,
+        "wrapLevelRatio": 0.7600122484933491,
+        "productionPcm16Sha256": "7cbe3607984c6732511eacd673286e6b30ca72de493c22ad2164af2f863fdb16"
+      },
+      {
+        "variant": "hop12",
+        "voice": "whirr",
+        "cycleSeconds": 1.1925396825396826,
+        "strongestPeriodicHz": 66.24517502994809,
+        "strongestPeriodicCents": 22.06051319963626,
+        "strongestPowerShare": 0.23853161058456268,
+        "carrierPowerShare": 0.236124547515851,
+        "fixedPhaseNulls": [
+          0.25,
+          0.3,
+          0.35,
+          0.4,
+          0.45,
+          0.55
+        ],
+        "fixedPhaseWorstDetectedCents": 41.200739415,
+        "wrapStepRatio": 0.9594594594594594,
+        "wrapSlopeRatio": 0.75,
+        "wrapLevelRatio": 1.0667456695547426,
+        "productionPcm16Sha256": "e6d169aa5a017de6ee173b25a6b9de9c288b81da23dde45998b92f50eaa60ad2"
+      }
+    ]
+  },
+  "normalizedCycleWindows": {
+    "countPerRender": 12,
+    "starts": "i * actualCycleSeconds / 12, i=0..11; log start display rounds to two decimals",
+    "lengthSeconds": 0.3,
+    "rows": [
+      {
+        "variant": "base06",
+        "voice": "ROLL",
+        "nullPhases": [
+          0.55
+        ],
+        "worstDetectedCents": 23.545539496,
+        "minDetectedConfidence": 0.847572982,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.114929199,
+            "cents": -7.731916795,
+            "confidence": 0.861026287
+          },
+          {
+            "phase": 0.05,
+            "hz": 65.250411987,
+            "cents": -4.1335294,
+            "confidence": 0.898617148
+          },
+          {
+            "phase": 0.1,
+            "hz": 65.202484131,
+            "cents": -5.405625968,
+            "confidence": 0.896315694
+          },
+          {
+            "phase": 0.15,
+            "hz": 65.353210449,
+            "cents": -1.4082109,
+            "confidence": 0.894584954
+          },
+          {
+            "phase": 0.2,
+            "hz": 65.186508179,
+            "cents": -5.829865959,
+            "confidence": 0.861065269
+          },
+          {
+            "phase": 0.25,
+            "hz": 65.344108582,
+            "cents": -1.649339997,
+            "confidence": 0.847572982
+          },
+          {
+            "phase": 0.3,
+            "hz": 64.522857666,
+            "cents": -23.545539496,
+            "confidence": 0.852258801
+          },
+          {
+            "phase": 0.35,
+            "hz": 64.751548767,
+            "cents": -17.420301797,
+            "confidence": 0.917028785
+          },
+          {
+            "phase": 0.4,
+            "hz": 64.546226501,
+            "cents": -22.918636093,
+            "confidence": 0.920660377
+          },
+          {
+            "phase": 0.45,
+            "hz": 64.583648682,
+            "cents": -21.91520363,
+            "confidence": 0.87121439
+          },
+          {
+            "phase": 0.5,
+            "hz": 64.688919067,
+            "cents": -19.095615227,
+            "confidence": 0.871295154
+          },
+          {
+            "phase": 0.55,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          }
+        ]
+      },
+      {
+        "variant": "base06",
+        "voice": "WHIRR",
+        "nullPhases": [
+          0.25,
+          0.35,
+          0.4,
+          0.45
+        ],
+        "worstDetectedCents": 10.288032879,
+        "minDetectedConfidence": 0.797124743,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.346214294,
+            "cents": -1.593551905,
+            "confidence": 0.920406699
+          },
+          {
+            "phase": 0.05,
+            "hz": 65.130989075,
+            "cents": -7.304979755,
+            "confidence": 0.916030526
+          },
+          {
+            "phase": 0.1,
+            "hz": 65.176895142,
+            "cents": -6.085189413,
+            "confidence": 0.908600986
+          },
+          {
+            "phase": 0.15,
+            "hz": 65.233001709,
+            "cents": -4.595523242,
+            "confidence": 0.861530542
+          },
+          {
+            "phase": 0.2,
+            "hz": 65.343353271,
+            "cents": -1.669351381,
+            "confidence": 0.849219203
+          },
+          {
+            "phase": 0.25,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.3,
+            "hz": 65.018859863,
+            "cents": -10.288032879,
+            "confidence": 0.797124743
+          },
+          {
+            "phase": 0.35,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.4,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.45,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.5,
+            "hz": 65.326713562,
+            "cents": -2.110266924,
+            "confidence": 0.865108728
+          },
+          {
+            "phase": 0.55,
+            "hz": 65.32484436,
+            "cents": -2.159803656,
+            "confidence": 0.892703831
+          }
+        ]
+      },
+      {
+        "variant": "hop09",
+        "voice": "ROLL",
+        "nullPhases": [],
+        "worstDetectedCents": 20.669547388,
+        "minDetectedConfidence": 0.793127835,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.260543823,
+            "cents": -3.864730826,
+            "confidence": 0.854881287
+          },
+          {
+            "phase": 0.08,
+            "hz": 65.239295959,
+            "cents": -4.428486699,
+            "confidence": 0.897527039
+          },
+          {
+            "phase": 0.15,
+            "hz": 65.302398682,
+            "cents": -2.754759543,
+            "confidence": 0.894444883
+          },
+          {
+            "phase": 0.23,
+            "hz": 65.133575439,
+            "cents": -7.236233466,
+            "confidence": 0.857275426
+          },
+          {
+            "phase": 0.3,
+            "hz": 64.697799683,
+            "cents": -18.857964506,
+            "confidence": 0.853044629
+          },
+          {
+            "phase": 0.38,
+            "hz": 64.890441895,
+            "cents": -13.710753646,
+            "confidence": 0.925279915
+          },
+          {
+            "phase": 0.45,
+            "hz": 64.630134583,
+            "cents": -20.669547388,
+            "confidence": 0.902029037
+          },
+          {
+            "phase": 0.53,
+            "hz": 64.977836609,
+            "cents": -11.380689218,
+            "confidence": 0.835217357
+          },
+          {
+            "phase": 0.6,
+            "hz": 65.589538574,
+            "cents": 4.840928423,
+            "confidence": 0.793127835
+          },
+          {
+            "phase": 0.68,
+            "hz": 65.454093933,
+            "cents": 1.262174485,
+            "confidence": 0.84321475
+          },
+          {
+            "phase": 0.75,
+            "hz": 65.660812378,
+            "cents": 6.721177078,
+            "confidence": 0.7932809
+          },
+          {
+            "phase": 0.83,
+            "hz": 64.998695374,
+            "cents": -10.825028848,
+            "confidence": 0.839674175
+          }
+        ]
+      },
+      {
+        "variant": "hop09",
+        "voice": "WHIRR",
+        "nullPhases": [
+          0.3,
+          0.38,
+          0.45,
+          0.6,
+          0.75
+        ],
+        "worstDetectedCents": 37.635990198,
+        "minDetectedConfidence": 0.790497124,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.162117004,
+            "cents": -6.477772017,
+            "confidence": 0.913926959
+          },
+          {
+            "phase": 0.08,
+            "hz": 65.186500549,
+            "cents": -5.830068582,
+            "confidence": 0.929144144
+          },
+          {
+            "phase": 0.15,
+            "hz": 65.249893188,
+            "cents": -4.147294306,
+            "confidence": 0.860792398
+          },
+          {
+            "phase": 0.23,
+            "hz": 65.159629822,
+            "cents": -6.54385301,
+            "confidence": 0.823816419
+          },
+          {
+            "phase": 0.3,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.38,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.45,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.53,
+            "hz": 63.999839783,
+            "cents": -37.635990198,
+            "confidence": 0.790497124
+          },
+          {
+            "phase": 0.6,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.68,
+            "hz": 64.517051697,
+            "cents": -23.701328379,
+            "confidence": 0.816559315
+          },
+          {
+            "phase": 0.75,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.83,
+            "hz": 65.208618164,
+            "cents": -5.242764878,
+            "confidence": 0.885367393
+          }
+        ]
+      },
+      {
+        "variant": "hop12",
+        "voice": "ROLL",
+        "nullPhases": [
+          1.09
+        ],
+        "worstDetectedCents": 23.578702315,
+        "minDetectedConfidence": 0.785563409,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.560928345,
+            "cents": 4.08559746,
+            "confidence": 0.864847958
+          },
+          {
+            "phase": 0.1,
+            "hz": 65.213424683,
+            "cents": -5.11516055,
+            "confidence": 0.89746213
+          },
+          {
+            "phase": 0.2,
+            "hz": 65.186508179,
+            "cents": -5.829865959,
+            "confidence": 0.861065269
+          },
+          {
+            "phase": 0.3,
+            "hz": 64.521621704,
+            "cents": -23.578702315,
+            "confidence": 0.852281332
+          },
+          {
+            "phase": 0.4,
+            "hz": 64.577842712,
+            "cents": -22.070845866,
+            "confidence": 0.904082298
+          },
+          {
+            "phase": 0.5,
+            "hz": 64.810386658,
+            "cents": -15.847892952,
+            "confidence": 0.863027573
+          },
+          {
+            "phase": 0.6,
+            "hz": 65.688026428,
+            "cents": 7.438562806,
+            "confidence": 0.812138021
+          },
+          {
+            "phase": 0.7,
+            "hz": 65.947776794,
+            "cents": 14.270887308,
+            "confidence": 0.865076959
+          },
+          {
+            "phase": 0.8,
+            "hz": 65.637557983,
+            "cents": 6.107935651,
+            "confidence": 0.88375634
+          },
+          {
+            "phase": 0.89,
+            "hz": 65.478027344,
+            "cents": 1.895087715,
+            "confidence": 0.860272169
+          },
+          {
+            "phase": 0.99,
+            "hz": 65.942016602,
+            "cents": 14.119666478,
+            "confidence": 0.785563409
+          },
+          {
+            "phase": 1.09,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          }
+        ]
+      },
+      {
+        "variant": "hop12",
+        "voice": "WHIRR",
+        "nullPhases": [
+          0.4,
+          0.8
+        ],
+        "worstDetectedCents": 39.8955676,
+        "minDetectedConfidence": 0.778367102,
+        "phases": [
+          {
+            "phase": 0.0,
+            "hz": 65.708854675,
+            "cents": 7.987412527,
+            "confidence": 0.912903845
+          },
+          {
+            "phase": 0.1,
+            "hz": 65.203147888,
+            "cents": -5.3880022,
+            "confidence": 0.906917095
+          },
+          {
+            "phase": 0.2,
+            "hz": 65.343353271,
+            "cents": -1.669351381,
+            "confidence": 0.849219203
+          },
+          {
+            "phase": 0.3,
+            "hz": 65.017684937,
+            "cents": -10.319317519,
+            "confidence": 0.7971403
+          },
+          {
+            "phase": 0.4,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.5,
+            "hz": 63.916362762,
+            "cents": -39.8955676,
+            "confidence": 0.812493622
+          },
+          {
+            "phase": 0.6,
+            "hz": 64.227371216,
+            "cents": -31.492043455,
+            "confidence": 0.778367102
+          },
+          {
+            "phase": 0.7,
+            "hz": 64.652740479,
+            "cents": -20.064113803,
+            "confidence": 0.79813087
+          },
+          {
+            "phase": 0.8,
+            "hz": null,
+            "cents": null,
+            "confidence": null
+          },
+          {
+            "phase": 0.89,
+            "hz": 65.164657593,
+            "cents": -6.410274711,
+            "confidence": 0.825895786
+          },
+          {
+            "phase": 0.99,
+            "hz": 65.538909912,
+            "cents": 3.504070265,
+            "confidence": 0.8994295
+          },
+          {
+            "phase": 1.09,
+            "hz": 65.645080566,
+            "cents": 6.306337389,
+            "confidence": 0.913476467
+          }
+        ]
+      }
+    ]
+  },
+  "transitionMatrix": {
+    "renderCases": 30,
+    "pitchWindows": 360,
+    "voice": "ROLL",
+    "midis": [
+      36,
+      40,
+      44,
+      47,
+      48
+    ],
+    "velocities": [
+      0.25,
+      1.0
+    ],
+    "starts": "i * actualCycleSeconds / 12, i=0..11",
+    "lengthSeconds": 0.3,
+    "rows": [
+      {
+        "variant": "base06",
+        "midi": 36,
+        "velocity": 0.25,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 1,
+        "nullPhases": [
+          0.55
+        ],
+        "worstDetectedCents": 23.545539496,
+        "minDetectedConfidence": 0.847572982,
+        "strongestPeriodicHz": 63.72832369942196,
+        "strongestPeriodicCents": -44.996286994966674,
+        "finiteFloatSha256": "44370c1e1f68b9269b1a7ee941c0d151c754cccc013a47520c21e1f92cabe564",
+        "health": "ROLL_36_0.25 HEALTH frames=26296 dc=4.91277570820e-09 peak=0.763188064098 loudness=0.183399990201 hash=0f66d63e22284b926d92a9d8c674bd3f0ac4f4f9cd8c88b58dbea6d683d2d1f0",
+        "diagnostics": "ROLL_36_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "65e07d725b65bb1ca99ec603660b4a3a29b01de09de5c28cb6a3b85159c45525",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 36,
+        "velocity": 1.0,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 1,
+        "nullPhases": [
+          0.55
+        ],
+        "worstDetectedCents": 21.283370334,
+        "minDetectedConfidence": 0.846866965,
+        "strongestPeriodicHz": 63.72832369942196,
+        "strongestPeriodicCents": -44.996286994966674,
+        "finiteFloatSha256": "8089436408d95d1e37fa721a1d484e3a291d20ec72485e291d23f7ae9e717914",
+        "health": "ROLL_36_1.0 HEALTH frames=26296 dc=-2.35844235464e-09 peak=0.771725952625 loudness=0.183399990201 hash=13855258820f4ba990f3d53e6e9a93a3fd2f52ac9d6cb65c738a49aa55688597",
+        "diagnostics": "ROLL_36_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "b9556fbb9c93ea1d4728f3feeb5ae78eb7b32032636db120d4995c17f365b06d",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 40,
+        "velocity": 0.25,
+        "cycleSeconds": 0.5946031746031746,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 28.836798398,
+        "minDetectedConfidence": 0.798963487,
+        "strongestPeriodicHz": 82.40790176187934,
+        "strongestPeriodicCents": 0.021271546572950866,
+        "finiteFloatSha256": "59a39a45c396abc3a0d298291d408d314aedb9e032bcc64fbc3cd382093e722e",
+        "health": "ROLL_40_0.25 HEALTH frames=26222 dc=1.98407446728e-09 peak=0.764138221741 loudness=0.183400020003 hash=81328e6a8ba0c430d5937e9ad352513db570cb9dba1ed82de84cb222fdd953db",
+        "diagnostics": "ROLL_40_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5946031746031746, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "1403dd26844862eea79b443aa27d003c730a25951913f11fd1ecb923d04b24b9",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 40,
+        "velocity": 1.0,
+        "cycleSeconds": 0.5946031746031746,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 27.06732472,
+        "minDetectedConfidence": 0.806486785,
+        "strongestPeriodicHz": 82.40790176187934,
+        "strongestPeriodicCents": 0.021271546572950866,
+        "finiteFloatSha256": "daf80b19e43c4b6c8015c1ce7a84e3adb4e2d4b971adbd1d064da155dfe5d0f5",
+        "health": "ROLL_40_1.0 HEALTH frames=26222 dc=2.61782313587e-09 peak=0.747293293476 loudness=0.183400005102 hash=264ff64f603c54a0bb547b64410c1b760c06527e5ccf2fecdb29d5991333eb77",
+        "diagnostics": "ROLL_40_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5946031746031746, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "61958fcd74879c892d2e24fb61fec51bc49a32f1c585c3c0c4fa60b7a673bd59",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 44,
+        "velocity": 0.25,
+        "cycleSeconds": 0.5971428571428572,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 14.95883835,
+        "minDetectedConfidence": 0.886115491,
+        "strongestPeriodicHz": 103.82775119617224,
+        "strongestPeriodicCents": 0.026291936393892285,
+        "finiteFloatSha256": "b2a6d928b6a4fc3ab7682f8f8fcb8be77190ec78b153a4a9ffbec7e9fc1b00d5",
+        "health": "ROLL_44_0.25 HEALTH frames=26334 dc=1.16233472965e-09 peak=0.558869063854 loudness=0.183400005102 hash=707672be2a07fed1366ab4eb67e7719379aa5d26ddd353b179eef875dd57053a",
+        "diagnostics": "ROLL_44_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5971428571428572, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "2a478f43013d0cdd08dff57e46657dd05d4ec558e3e8efb32240f3f6a9a2378e",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 44,
+        "velocity": 1.0,
+        "cycleSeconds": 0.5971428571428572,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 11.784567441,
+        "minDetectedConfidence": 0.885076582,
+        "strongestPeriodicHz": 103.82775119617224,
+        "strongestPeriodicCents": 0.026291936393892285,
+        "finiteFloatSha256": "6257e0084499715c3596d1121c2abfdb91d28e2a8a7be94839d91405012eba1d",
+        "health": "ROLL_44_1.0 HEALTH frames=26334 dc=-6.25383083159e-10 peak=0.565103232861 loudness=0.183399990201 hash=b438a6d3b845cf006f972c254d94b1b9533471b0fb34fcf1650e21b427d0125a",
+        "diagnostics": "ROLL_44_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5971428571428572, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "5062efcc0ce74eb65ba157307ba86c35a9971ca431495c61843f1eee6f9a73dc",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 47,
+        "velocity": 0.25,
+        "cycleSeconds": 0.5993424036281179,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 14.366363113,
+        "minDetectedConfidence": 0.840883493,
+        "strongestPeriodicHz": 123.46865423177329,
+        "strongestPeriodicCents": -0.030441884261956317,
+        "finiteFloatSha256": "d437affeeee9be321aea50d57691947cbf28c7a26b5dfa0444476822a22ed325",
+        "health": "ROLL_47_0.25 HEALTH frames=26431 dc=2.95544547833e-09 peak=0.562228262424 loudness=0.183399990201 hash=67a48ca6c5418cfcc87b0223d7ee6417955099fa701bccf416f0734c20f97c95",
+        "diagnostics": "ROLL_47_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5993424036281179, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "0917a65809979bbab8957718eeb67113c05639e38b612e672252e4625fd86afb",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 47,
+        "velocity": 1.0,
+        "cycleSeconds": 0.5993424036281179,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 11.532665031,
+        "minDetectedConfidence": 0.845112562,
+        "strongestPeriodicHz": 123.46865423177329,
+        "strongestPeriodicCents": -0.030441884261956317,
+        "finiteFloatSha256": "5a3b72b961683ff6408dc5638bf49055e2ccaf5cb52dba83a3dab9207f984f15",
+        "health": "ROLL_47_1.0 HEALTH frames=26431 dc=-4.29064990567e-11 peak=0.561714947224 loudness=0.183400005102 hash=d5dafd40ce198cdcc313aacda219bf310925a7ec548eb230b392633a04d86ef5",
+        "diagnostics": "ROLL_47_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.5993424036281179, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "2fc64087fd54c097446bc44054c0c6404cd7896a1e7dd1ea9afd95e1296b5bb0",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 48,
+        "velocity": 0.25,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 10.121258725,
+        "minDetectedConfidence": 0.807960391,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "b067f83ca4324b716b0660fe755910e9290fe8ba341b628684cb1306e06b0676",
+        "health": "ROLL_48_0.25 HEALTH frames=26296 dc=-5.50304449678e-10 peak=0.556733012199 loudness=0.183400005102 hash=cb5dad37c81e0a4bd93d6e51e8d03c521b83ecc14196123136d936b7d06c0c8b",
+        "diagnostics": "ROLL_48_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "f8165996be98fa455090ccd3f020c2a16df9b84500b1bcbd353e058bd446e786",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "base06",
+        "midi": 48,
+        "velocity": 1.0,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 6.14010914,
+        "minDetectedConfidence": 0.820651829,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "health": "ROLL_48_1.0 HEALTH frames=26296 dc=3.89184597742e-11 peak=0.541624665260 loudness=0.183400005102 hash=f5fa04edb34977c52c18e4e68e24ebeb41a74baab6def42af43a37329ab864d3",
+        "diagnostics": "ROLL_48_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "7827fff3c3fc2a141d851b7483a8bbc1915079a87562c2a9974020d13477cb88",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 36,
+        "velocity": 0.25,
+        "cycleSeconds": 0.902063492063492,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 20.669547388,
+        "minDetectedConfidence": 0.793127835,
+        "strongestPeriodicHz": 64.29702621854653,
+        "strongestPeriodicCents": -29.615526208531172,
+        "finiteFloatSha256": "44370c1e1f68b9269b1a7ee941c0d151c754cccc013a47520c21e1f92cabe564",
+        "health": "ROLL_36_0.25 HEALTH frames=39781 dc=9.58898478665e-10 peak=0.745581507683 loudness=0.183399990201 hash=dc50f9948a2f8e1c8bdf0b5f6cf0feb75478a45be683e310cbdcbde058843023",
+        "diagnostics": "ROLL_36_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.902063492063492, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "6acac73828ef1a32f740b0883e3fa6f4da945b4731f506a7011a7376b39012b2",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 36,
+        "velocity": 1.0,
+        "cycleSeconds": 0.902063492063492,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 18.55155756,
+        "minDetectedConfidence": 0.793759465,
+        "strongestPeriodicHz": 64.29702621854653,
+        "strongestPeriodicCents": -29.615526208531172,
+        "finiteFloatSha256": "8089436408d95d1e37fa721a1d484e3a291d20ec72485e291d23f7ae9e717914",
+        "health": "ROLL_36_1.0 HEALTH frames=39781 dc=-1.62529367264e-09 peak=0.749983310699 loudness=0.183400005102 hash=4b4781712d233b6da7419f216ac5b5b93759063f4c4f927111b0f9de8617d5c0",
+        "diagnostics": "ROLL_36_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.902063492063492, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "6afdc511565d360386375a1abd84c669638c6793207d5a22bf57b0d949a86704",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 40,
+        "velocity": 0.25,
+        "cycleSeconds": 0.8979818594104308,
+        "nullCount": 1,
+        "nullPhases": [
+          0.75
+        ],
+        "worstDetectedCents": 18.28197136,
+        "minDetectedConfidence": 0.772549868,
+        "strongestPeriodicHz": 81.2934016817757,
+        "strongestPeriodicCents": -23.552032479634207,
+        "finiteFloatSha256": "59a39a45c396abc3a0d298291d408d314aedb9e032bcc64fbc3cd382093e722e",
+        "health": "ROLL_40_0.25 HEALTH frames=39601 dc=2.64882816118e-10 peak=0.586667120457 loudness=0.183400005102 hash=b3c8db205bcd062bdc9dbd39e146fb33ce8f6b98315846276949d82fce7a1196",
+        "diagnostics": "ROLL_40_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.8979818594104308, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "3d94ee548684b397d1fed6edef39a1c033006044aef91ab6641600767721242e",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 40,
+        "velocity": 1.0,
+        "cycleSeconds": 0.8979818594104308,
+        "nullCount": 1,
+        "nullPhases": [
+          0.75
+        ],
+        "worstDetectedCents": 13.902967576,
+        "minDetectedConfidence": 0.774662495,
+        "strongestPeriodicHz": 81.2934016817757,
+        "strongestPeriodicCents": -23.552032479634207,
+        "finiteFloatSha256": "daf80b19e43c4b6c8015c1ce7a84e3adb4e2d4b971adbd1d064da155dfe5d0f5",
+        "health": "ROLL_40_1.0 HEALTH frames=39601 dc=-1.55329577960e-09 peak=0.586142897606 loudness=0.183400005102 hash=c1606937467bc599a62f83f76d3f820ceb180312808267a88937d3e9a7fee3ea",
+        "diagnostics": "ROLL_40_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.8979818594104308, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "0562fd272ce1ab6193111213faeeb12bc258f5620e096727d40210e651c25e85",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 44,
+        "velocity": 0.25,
+        "cycleSeconds": 0.7512471655328798,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 17.23402016,
+        "minDetectedConfidence": 0.816692352,
+        "strongestPeriodicHz": 103.827346815575,
+        "strongestPeriodicCents": 0.01954924174865996,
+        "finiteFloatSha256": "b2a6d928b6a4fc3ab7682f8f8fcb8be77190ec78b153a4a9ffbec7e9fc1b00d5",
+        "health": "ROLL_44_0.25 HEALTH frames=33130 dc=-4.00048944945e-10 peak=0.543412506580 loudness=0.183400005102 hash=711c4b91aa3a1afb299a8774955b70ee8444f3c572e9677daae4df3836ea4188",
+        "diagnostics": "ROLL_44_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.7512471655328798, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "4ac9f99e77d25a6c0d6e3c0c71b889aabcc3f1eca022fb85acc716b1a35cddda",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 44,
+        "velocity": 1.0,
+        "cycleSeconds": 0.7512471655328798,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 15.39141826,
+        "minDetectedConfidence": 0.816038191,
+        "strongestPeriodicHz": 103.827346815575,
+        "strongestPeriodicCents": 0.01954924174865996,
+        "finiteFloatSha256": "6257e0084499715c3596d1121c2abfdb91d28e2a8a7be94839d91405012eba1d",
+        "health": "ROLL_44_1.0 HEALTH frames=33130 dc=-5.81078827836e-10 peak=0.549072444439 loudness=0.183400005102 hash=06774e5827c6eb3840c4f2fda84f3d54a046efce5f550bac296e3b64ae958920",
+        "diagnostics": "ROLL_44_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.7512471655328798, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "73428b9bb24a77599215d2a7cc06d49016390627f2d47dcae3cca2153915b665",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 47,
+        "velocity": 0.25,
+        "cycleSeconds": 0.6317233560090703,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 11.537618769,
+        "minDetectedConfidence": 0.818270981,
+        "strongestPeriodicHz": 123.47176854876342,
+        "strongestPeriodicCents": 0.013225422633270293,
+        "finiteFloatSha256": "d437affeeee9be321aea50d57691947cbf28c7a26b5dfa0444476822a22ed325",
+        "health": "ROLL_47_0.25 HEALTH frames=27859 dc=1.11082732950e-09 peak=0.562228322029 loudness=0.183400005102 hash=119315b9810007d0a09a631fa532933c265846c7617898b0efbc3093b9407877",
+        "diagnostics": "ROLL_47_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.6317233560090703, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "10c6d3d35f0d08198b50ebc068b9e6bdd375e685b4b8b8dfbb0fd2753e098b2b",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 47,
+        "velocity": 1.0,
+        "cycleSeconds": 0.6317233560090703,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 10.80978665,
+        "minDetectedConfidence": 0.831512392,
+        "strongestPeriodicHz": 123.47176854876342,
+        "strongestPeriodicCents": 0.013225422633270293,
+        "finiteFloatSha256": "5a3b72b961683ff6408dc5638bf49055e2ccaf5cb52dba83a3dab9207f984f15",
+        "health": "ROLL_47_1.0 HEALTH frames=27859 dc=1.26011938796e-09 peak=0.561714947224 loudness=0.183400005102 hash=f3b3c7f9550d55647172a54bd116dad3097b54bf8983657058c4d171e23e30a8",
+        "diagnostics": "ROLL_47_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.6317233560090703, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "1ecdd3ecf4d73034653be705aa42409f6bc9a079f7cad269795ea7312f42141e",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 48,
+        "velocity": 0.25,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 10.121258725,
+        "minDetectedConfidence": 0.807960391,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "b067f83ca4324b716b0660fe755910e9290fe8ba341b628684cb1306e06b0676",
+        "health": "ROLL_48_0.25 HEALTH frames=26296 dc=-5.50304449678e-10 peak=0.556733012199 loudness=0.183400005102 hash=cb5dad37c81e0a4bd93d6e51e8d03c521b83ecc14196123136d936b7d06c0c8b",
+        "diagnostics": "ROLL_48_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "f8165996be98fa455090ccd3f020c2a16df9b84500b1bcbd353e058bd446e786",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote09",
+        "midi": 48,
+        "velocity": 1.0,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 6.14010914,
+        "minDetectedConfidence": 0.820651829,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "health": "ROLL_48_1.0 HEALTH frames=26296 dc=3.89184597742e-11 peak=0.541624665260 loudness=0.183400005102 hash=f5fa04edb34977c52c18e4e68e24ebeb41a74baab6def42af43a37329ab864d3",
+        "diagnostics": "ROLL_48_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "7827fff3c3fc2a141d851b7483a8bbc1915079a87562c2a9974020d13477cb88",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 36,
+        "velocity": 0.25,
+        "cycleSeconds": 1.1925396825396826,
+        "nullCount": 1,
+        "nullPhases": [
+          1.09
+        ],
+        "worstDetectedCents": 23.578702315,
+        "minDetectedConfidence": 0.785563409,
+        "strongestPeriodicHz": 64.56808199121522,
+        "strongestPeriodicCents": -22.332535779005756,
+        "finiteFloatSha256": "44370c1e1f68b9269b1a7ee941c0d151c754cccc013a47520c21e1f92cabe564",
+        "health": "ROLL_36_0.25 HEALTH frames=52591 dc=-2.04567029205e-10 peak=0.745581507683 loudness=0.183399990201 hash=df58586a8143260956a726d37c0aac080fb472c8976198e0cd2e266a0c939ab3",
+        "diagnostics": "ROLL_36_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=1.1925396825396826, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "7cbe3607984c6732511eacd673286e6b30ca72de493c22ad2164af2f863fdb16",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 36,
+        "velocity": 1.0,
+        "cycleSeconds": 1.1925396825396826,
+        "nullCount": 1,
+        "nullPhases": [
+          1.09
+        ],
+        "worstDetectedCents": 20.772347048,
+        "minDetectedConfidence": 0.790774643,
+        "strongestPeriodicHz": 64.56808199121522,
+        "strongestPeriodicCents": -22.332535779005756,
+        "finiteFloatSha256": "8089436408d95d1e37fa721a1d484e3a291d20ec72485e291d23f7ae9e717914",
+        "health": "ROLL_36_1.0 HEALTH frames=52591 dc=3.91266686439e-09 peak=0.749983310699 loudness=0.183400005102 hash=d06485230e5b4e6eaef05c03cf94df6f2fb2317a3bf4bab6f5b47935bcdca653",
+        "diagnostics": "ROLL_36_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=1.1925396825396826, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "cdc08ffef34f0e62977eb844cb949bb0a4a483068e58d3b9f560c76c4ca1def7",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 40,
+        "velocity": 0.25,
+        "cycleSeconds": 0.946530612244898,
+        "nullCount": 1,
+        "nullPhases": [
+          0.79
+        ],
+        "worstDetectedCents": 22.287735752,
+        "minDetectedConfidence": 0.776410758,
+        "strongestPeriodicHz": 81.34971970677016,
+        "strongestPeriodicCents": -22.353092302994884,
+        "finiteFloatSha256": "59a39a45c396abc3a0d298291d408d314aedb9e032bcc64fbc3cd382093e722e",
+        "health": "ROLL_40_0.25 HEALTH frames=41742 dc=2.20510979915e-10 peak=0.586667180061 loudness=0.183400020003 hash=f718d2f0342b0b62008a98b056c3ce8b52374b7b49ccd539c28933e48be59933",
+        "diagnostics": "ROLL_40_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.946530612244898, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "8dc97f0426ab3ed841419bf743364b940137d758e523568e943da3f78a8c5877",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 40,
+        "velocity": 1.0,
+        "cycleSeconds": 0.946530612244898,
+        "nullCount": 1,
+        "nullPhases": [
+          0.79
+        ],
+        "worstDetectedCents": 19.559189695,
+        "minDetectedConfidence": 0.778159142,
+        "strongestPeriodicHz": 81.34971970677016,
+        "strongestPeriodicCents": -22.353092302994884,
+        "finiteFloatSha256": "daf80b19e43c4b6c8015c1ce7a84e3adb4e2d4b971adbd1d064da155dfe5d0f5",
+        "health": "ROLL_40_1.0 HEALTH frames=41742 dc=-7.23040444057e-10 peak=0.586142957211 loudness=0.183400005102 hash=7d1dcf8db67a77f96e2fd6111dcd6d00a513e0b5f271ba49d398840fcaefb1f8",
+        "diagnostics": "ROLL_40_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.946530612244898, overlapSeconds=0.12133786848072563, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "8ce716f9f7fd66264498c90a355a7bd8dd11d3f0f4d03a2396bc891b77a5729c",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 44,
+        "velocity": 0.25,
+        "cycleSeconds": 0.7512471655328798,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 17.23402016,
+        "minDetectedConfidence": 0.816692352,
+        "strongestPeriodicHz": 103.827346815575,
+        "strongestPeriodicCents": 0.01954924174865996,
+        "finiteFloatSha256": "b2a6d928b6a4fc3ab7682f8f8fcb8be77190ec78b153a4a9ffbec7e9fc1b00d5",
+        "health": "ROLL_44_0.25 HEALTH frames=33130 dc=-4.00048944945e-10 peak=0.543412506580 loudness=0.183400005102 hash=711c4b91aa3a1afb299a8774955b70ee8444f3c572e9677daae4df3836ea4188",
+        "diagnostics": "ROLL_44_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.7512471655328798, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "4ac9f99e77d25a6c0d6e3c0c71b889aabcc3f1eca022fb85acc716b1a35cddda",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 44,
+        "velocity": 1.0,
+        "cycleSeconds": 0.7512471655328798,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 15.39141826,
+        "minDetectedConfidence": 0.816038191,
+        "strongestPeriodicHz": 103.827346815575,
+        "strongestPeriodicCents": 0.01954924174865996,
+        "finiteFloatSha256": "6257e0084499715c3596d1121c2abfdb91d28e2a8a7be94839d91405012eba1d",
+        "health": "ROLL_44_1.0 HEALTH frames=33130 dc=-5.81078827836e-10 peak=0.549072444439 loudness=0.183400005102 hash=06774e5827c6eb3840c4f2fda84f3d54a046efce5f550bac296e3b64ae958920",
+        "diagnostics": "ROLL_44_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.7512471655328798, overlapSeconds=0.115578231292517, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "73428b9bb24a77599215d2a7cc06d49016390627f2d47dcae3cca2153915b665",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 47,
+        "velocity": 0.25,
+        "cycleSeconds": 0.6317233560090703,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 11.537618769,
+        "minDetectedConfidence": 0.818270981,
+        "strongestPeriodicHz": 123.47176854876342,
+        "strongestPeriodicCents": 0.013225422633270293,
+        "finiteFloatSha256": "d437affeeee9be321aea50d57691947cbf28c7a26b5dfa0444476822a22ed325",
+        "health": "ROLL_47_0.25 HEALTH frames=27859 dc=1.11082732950e-09 peak=0.562228322029 loudness=0.183400005102 hash=119315b9810007d0a09a631fa532933c265846c7617898b0efbc3093b9407877",
+        "diagnostics": "ROLL_47_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.6317233560090703, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "10c6d3d35f0d08198b50ebc068b9e6bdd375e685b4b8b8dfbb0fd2753e098b2b",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 47,
+        "velocity": 1.0,
+        "cycleSeconds": 0.6317233560090703,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 10.80978665,
+        "minDetectedConfidence": 0.831512392,
+        "strongestPeriodicHz": 123.47176854876342,
+        "strongestPeriodicCents": 0.013225422633270293,
+        "finiteFloatSha256": "5a3b72b961683ff6408dc5638bf49055e2ccaf5cb52dba83a3dab9207f984f15",
+        "health": "ROLL_47_1.0 HEALTH frames=27859 dc=1.26011938796e-09 peak=0.561714947224 loudness=0.183400005102 hash=f3b3c7f9550d55647172a54bd116dad3097b54bf8983657058c4d171e23e30a8",
+        "diagnostics": "ROLL_47_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.6317233560090703, overlapSeconds=0.12149659863945578, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "1ecdd3ecf4d73034653be705aa42409f6bc9a079f7cad269795ea7312f42141e",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 48,
+        "velocity": 0.25,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 10.121258725,
+        "minDetectedConfidence": 0.807960391,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "b067f83ca4324b716b0660fe755910e9290fe8ba341b628684cb1306e06b0676",
+        "health": "ROLL_48_0.25 HEALTH frames=26296 dc=-5.50304449678e-10 peak=0.556733012199 loudness=0.183400005102 hash=cb5dad37c81e0a4bd93d6e51e8d03c521b83ecc14196123136d936b7d06c0c8b",
+        "diagnostics": "ROLL_48_0.25 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "f8165996be98fa455090ccd3f020c2a16df9b84500b1bcbd353e058bd446e786",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      },
+      {
+        "variant": "rollnote12",
+        "midi": 48,
+        "velocity": 1.0,
+        "cycleSeconds": 0.596281179138322,
+        "nullCount": 0,
+        "nullPhases": [],
+        "worstDetectedCents": 6.14010914,
+        "minDetectedConfidence": 0.820651829,
+        "strongestPeriodicHz": 129.1337085488287,
+        "strongestPeriodicCents": -22.365454293387817,
+        "finiteFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "health": "ROLL_48_1.0 HEALTH frames=26296 dc=3.89184597742e-11 peak=0.541624665260 loudness=0.183400005102 hash=f5fa04edb34977c52c18e4e68e24ebeb41a74baab6def42af43a37329ab864d3",
+        "diagnostics": "ROLL_48_1.0 DIAGNOSTICS Diagnostics(captureStartSeconds=1.0726303854875283, cycleSeconds=0.596281179138322, overlapSeconds=0.12231292517006803, insertedCycles=0, insertedSeconds=0.0, originalRollingSeconds=3.2203155677616597, seamError=0.0, cycleDifference=0.0)",
+        "productionPcm16Sha256": "7827fff3c3fc2a141d851b7483a8bbc1915079a87562c2a9974020d13477cb88",
+        "finiteMatchesBaselineExactly": true,
+        "independentSeamAndCycleDifferenceZero": true
+      }
+    ]
+  },
+  "finiteParity": "All 30 transition renders produced HOLD=0 Float-bit SHA256 identical to their baseline recipe. Only HOLD construction was overlaid.",
+  "evidenceLimits": [
+    "Linux JVM and Python PCM16 measurements, not Android hardware.",
+    "No owner listening judgment was obtained for these alternatives.",
+    "Strongest Fourier-series line is a spectral metric, not by itself the perceived or unconstrained detected fundamental.",
+    "Detector nulls are reported explicitly; no acceptance window or detector threshold was moved to hide them.",
+    "This bounded test does not cover every macro combination.",
+    "The alternatives were rejected and do not change production HOLD."
+  ]
+}

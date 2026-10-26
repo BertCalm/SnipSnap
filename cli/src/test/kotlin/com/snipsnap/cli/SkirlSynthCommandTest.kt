@@ -1,6 +1,8 @@
 package com.snipsnap.cli
 
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.audio.WavReader
+import com.snipsnap.audio.SmplChunk
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.synth.Presets
@@ -62,7 +64,7 @@ class SkirlSynthCommandTest {
     }
 
     @Test
-    fun `invalid performance and unavailable HOLD fail before creating output`() {
+    fun `invalid performance and legacy HOLD fail before creating output`() {
         val directory = createTempDirectory("skirl-cli-invalid").toFile()
         val destination = File(directory, "not-created")
         try {
@@ -80,11 +82,40 @@ class SkirlSynthCommandTest {
                 assertFalse(destination.exists(), "invalid input must not create an audition directory")
             }
             val held = SkirlPresets.forVoice(SkirlVoice.ROLL).first().toJsonValue().entries.toMutableMap()
+            held["model"] = JsonValue.Num(1.0)
             held["macros"] = JsonValue.Obj(mapOf("HOLD" to JsonValue.Num(1.0)))
             val source = File(directory, "held.json").also { it.writeText(Json.write(JsonValue.Obj(held))) }
             assertEquals(2, Cli.run(arrayOf("synth", "SKIRL", "ROLL", "--patch", source.path, "--out", destination.path),
                 PrintStream(ByteArrayOutputStream()), PrintStream(ByteArrayOutputStream())))
             assertFalse(destination.exists())
+        } finally {
+            directory.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `saved acoustic HOLD renders through CLI and retains model two`() {
+        val directory = createTempDirectory("skirl-cli-hold").toFile()
+        try {
+            val patch = SkirlPatch("Captured whirr", SkirlVoice.WHIRR,
+                Skirl.defaults(SkirlVoice.WHIRR) + mapOf("HOLD" to 1f, "TUNE" to .75f),
+                midi = 57, velocity = .4f)
+            val source = File(directory, "held.json").also { it.writeText(patch.toJsonText()) }
+            val destination = File(directory, "wav")
+            assertEquals(0, SynthCommand.run(listOf("SKIRL", "WHIRR", "--patch", source.path,
+                "--out", destination.path), PrintStream(ByteArrayOutputStream())))
+            assertEquals(patch, SkirlPatch.fromJsonText(
+                requireNotNull(destination.listFiles { it.extension == "patch" }).single().readText()))
+            val rendered = patch.render()
+            val sampler = SmplChunk(Skirl.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi),
+                SmplChunk.Loop(0, rendered.frameCount.toLong()))
+            val encoded = ByteArrayOutputStream().also { WavWriter.write(it, rendered, smpl = sampler) }.toByteArray()
+            val wav = requireNotNull(destination.listFiles { it.extension == "wav" }).single()
+            assertEquals(sampler, WavReader.readSmpl(wav))
+            assertEquals(63, WavReader.readSmpl(wav)?.rootNote,
+                "the sampler root must include TUNE relative to the authored MIDI note")
+            assertContentEquals(encoded,
+                wav.readBytes())
         } finally {
             directory.deleteRecursively()
         }

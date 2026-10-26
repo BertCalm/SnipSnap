@@ -370,3 +370,5 @@ testkit/fade-law-audition/
 
 # SKIRL's native WAVs, recipes and measurements regenerate from its audition task.
 testkit/skirl-audition/
+testkit/skirl-hold-audition/
+testkit/skirl-performance/

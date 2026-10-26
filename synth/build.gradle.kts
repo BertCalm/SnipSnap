@@ -1584,3 +1584,14 @@ tasks.register<JavaExec>("generateCausticAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
+
+/** A bounded model-2 HOLD study, preserving the original finite listening pack. */
+tasks.register<JavaExec>("generateSkirlHoldAudition") {
+    group = "distribution"
+    description = "Render SKIRL finite, extended and held-loop comparisons, exact recipes, diagnostics and an offline listening ZIP."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkirlHoldAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("skirlHoldOutput").orNull ?: "${rootDir}/testkit/skirl-hold-audition")
+}

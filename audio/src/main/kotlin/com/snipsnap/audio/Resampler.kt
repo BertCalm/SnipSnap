@@ -172,8 +172,39 @@ object Resampler {
         val samples = snip.samples
         val half = halfTapsFor(cutoff)
         val weights = DoubleArray(2 * half) { k -> kernel((half - 1 - k).toDouble(), cutoff, half) }
+        // Every interior output has the complete, identical kernel. Sum its
+        // normalization once in the historical order; only edge outputs need
+        // bounds checks and a truncated normalization for every tap.
+        var fullNorm = 0.0
+        for (w in weights) fullNorm += w
         for (o in 0 until dstFrames) {
             val lo = o * step - half + 1
+            if (lo >= 0 && lo <= srcFrames - weights.size) {
+                for (c in 0 until channels) {
+                    var acc = 0.0
+                    if (channels == 1) {
+                        // Four consecutive additions retain the exact tap
+                        // order while reducing index/loop work in mono synths.
+                        var k = 0
+                        while (k + 3 < weights.size) {
+                            acc += samples[lo + k] * weights[k]
+                            acc += samples[lo + k + 1] * weights[k + 1]
+                            acc += samples[lo + k + 2] * weights[k + 2]
+                            acc += samples[lo + k + 3] * weights[k + 3]
+                            k += 4
+                        }
+                        while (k < weights.size) {
+                            acc += samples[lo + k] * weights[k]
+                            k++
+                        }
+                    } else {
+                        for (k in weights.indices)
+                            acc += samples[(lo + k) * channels + c] * weights[k]
+                    }
+                    out[o * channels + c] = if (fullNorm != 0.0) (acc / fullNorm).toFloat() else 0f
+                }
+                continue
+            }
             for (c in 0 until channels) {
                 var acc = 0.0
                 var norm = 0.0

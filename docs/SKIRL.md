@@ -1,8 +1,9 @@
-# Skirl: finite rolling-disk prototype
+# Skirl: rolling-disk prototype
 
 The characteristic gesture is **knock → flutter → whirr → shudder → ringing stillness**.
-Model 1 provides two finite voices, ROLL and WHIRR, from solved rigid-disk motion into
-note-tuned disk and support modes. The owner responded positively to both Python auditions.
+ROLL and WHIRR turn solved rigid-disk motion into note-tuned disk and support modes.
+Model 1 provides the finite gesture; model 2 adds an authored acoustic HOLD.
+The owner responded positively to both Python auditions.
 The Kotlin render awaits its own listening review.
 
 ROLL opens at a larger inclination with coarser contacts. WHIRR starts shallower and reaches
@@ -31,9 +32,27 @@ Contact-width endpoints are note-aware: `soft=min(.006,.75/hz)` and
 spectral lobe at high notes while retaining EDGE and touch response. Mechanical motion
 and measured contact-event timing are unchanged.
 
-HOLD must be zero; any nonzero value is refused. The two `SkirlPresets` recipes remain
-outside the factory roster. The phone picker, starter kit, held instrument, four additional
-handoff voices and 36-preset library are deferred.
+HOLD defaults to zero. Below `.99`, it adds zero through six captured cycles, selected
+by `round(6*HOLD/.99)`, before the original shudder and ringing tail resume. A cycle
+is approximately `.56–.61 s` in the calibrated domain, aligned to a whole number of
+the requested note's periods. The small interval near zero still selects zero extra
+cycles. At `.99` and above, `render` returns one repeating acoustic cycle and declares
+LOOP. `renderHeld` returns the original attack plus the settled capture with a nonzero
+`KeyNote.loopStartFrame`, ready for the existing sampler-loop export shape. It does not
+add a new keygroup/export command or phone picker entry.
+
+The held gesture is **knock → rolling texture → captured sustain → repeat**. It is an
+authored, externally replenished acoustic capture. The dissipative mechanical trajectory
+still ends, and its finite work ledger funds only the original gesture. It does not
+fund repeated captured sound. Intermediate HOLD returns to that original finite runout;
+the loop's top step has no terminal shudder or tail fade.
+
+Saved patches now default to model 2. Explicit model-1 patches remain supported, retain
+their finite seed and sound, and still refuse every nonzero HOLD, including tiny positive
+JSON numbers before Float conversion. Model, MIDI and velocity remain required replay
+fields. The two `SkirlPresets` recipes remain outside the factory roster. The phone
+picker, starter kit, reviewed held presets, four additional handoff voices and 36-preset
+library are deferred.
 
 The older independent 8–35° launch / 7–1° exit ranges contain rolling failures. Revised
 terminal bands explicitly depend on launch. Production rendering refuses any incomplete
@@ -66,6 +85,19 @@ readout against the heard positive-texture Python version; they are not waveform
 tests. Extract the ZIP and open `index.html` directly in a browser: its manifest is
 embedded, so it needs no local server.
 
+Generate the separate model-2 HOLD pack without overwriting the earlier finite audition:
+
+```sh
+./gradlew --no-daemon :synth:generateSkirlHoldAudition
+```
+
+It writes `testkit/skirl-hold-audition/`, with finite/extended/loop comparisons, attack-plus-
+loop exports, eight-pass listening montages, exact recipes, sampler-loop metadata,
+independent preceding-cycle diagnostics, common-gain WAVs and an offline listening ZIP.
+CLI replay of a top-step HOLD patch also embeds its tuned MIDI root and full-cycle
+forward loop in the WAV's existing RIFF `smpl` metadata. Finite CLI WAVs keep their
+earlier metadata-free encoding.
+
 ## Mechanics and sound
 
 `SkirlDynamics` eliminates contact height and no-slip velocity from Newton–Euler dynamics.
@@ -88,6 +120,17 @@ by remaining mechanical energy. Cancellation can reduce measured rolling-source 
 the 5% rule does not compare the shudder against that smaller measured value. REST supplies
 no contact excitation; six disk and five support modes decay freely. Source units are a
 proxy, not radiated joules.
+
+`SkirlHold` captures the already-rendered modal signal at 4×, anchored near a real coarse
+contact in the middle of the solved runout. A smooth unity-sum overlap blends the actual
+continuation back into the excerpt's start. It neither adds a new event clock nor retunes
+the physical solver. Boundaries are planned in output frames before multiplying by four,
+so every cycle keeps the same decimator phase. The normal house output chain conditions
+consecutive captures continuously. Two independently conditioned consecutive cycles must
+pass both the 256-frame seam metric and a whole-cycle difference bound of `1e-3`. A true
+following cycle supplies sinc lookahead and is discarded after conditioning. No closing
+samples are copied to manufacture a zero seam. Silent velocity-zero loops explicitly
+report zero difference rather than divide by zero.
 
 ## Evidence and remaining work
 
@@ -114,18 +157,55 @@ root error 18.342 cents and minimum confidence .7974. All 106 production WAVs ma
 a separate JVM preflight byte-for-byte. The selected offline listening ZIP contains
 eight native cases and two matched Python/Kotlin comparisons (9.18 MB).
 
-Standalone default C3, full-velocity render timings in this Linux JVM:
+Historical model-1 default C3, full-velocity render timings in the earlier Linux JVM:
 
 | Voice | Cleared mechanics cache, JVM warm | Warm median, seven renders | Warm range |
 |---|---:|---:|---:|
 | ROLL | 195.81 ms | 148.85 ms | 136.51–156.17 ms |
 | WHIRR | 181.96 ms | 160.73 ms | 152.94–176.69 ms |
 
-Both voices miss the proposed 50 ms warm target. The twelve-entry mechanics cache
+Those measurements preceded the performance changes. The twelve-entry mechanics cache
 excludes pitch, EDGE, PLATE and acoustic velocity; synthesis and output conditioning
-run every time. Phone latency and Kotlin owner listening remain open. Exact benchmark,
+run every time. The current optimization skips filtering samples already defined as
+silent REST and avoids repeated normalization/bounds work inside the exact power-of-two
+resampler. The measured comparison and portable reproduction drivers are under
+[`native/performance`](../prototype/skirl/native/performance/README.md). See that report
+for current JVM costs against the proposed 50 ms warm target. HOLD still renders the
+finite modal signal before capturing it, so it does not turn synthesis into a cached
+sample lookup. Phone latency and Kotlin owner listening remain open. An opt-in device
+diagnostic and exact procedure are in [`SKIRL_ANDROID_BENCHMARK.md`](SKIRL_ANDROID_BENCHMARK.md).
+The harness has not been Android-built or run here because this environment has no SDK
+or device. Exact historical benchmark,
 source hashes, gate counts and artifact checks are under
 [`prototype/skirl/native`](../prototype/skirl/native/README.md).
+
+In three paired, warmed runs on the same current container, the median of run medians
+improved from `140.73` to `109.80 ms` for ROLL and from `151.80` to `126.27 ms` for WHIRR
+(22.0% and 16.8% less time). Each run discarded five warmups and measured fifteen renders
+per voice. Unrelated host scheduling is uncontrolled, and both still miss 50 ms. These
+are finite default C3 renders, not HOLD or phone timings. All 106 frozen finite fixtures
+retain identical production Float arrays, conditioned prelevel arrays and acoustic
+diagnostics; model-2 HOLD-zero also retains the old finite seed.
+
+The initial HOLD gate checked 36 register/material/touch cases at a fixed `.10–.40 s`
+window: worst root error `19.114 cents`, minimum confidence `.8387`, maximum absolute
+DC `7.1e-9`. This is a windowed measurement, not proof of an unvarying perceived pitch.
+Both actual preceding-cycle seam and whole-cycle difference settled to zero in Float;
+a deliberate disturbance fails both unchanged thresholds. Loop joins also pass separate
+local step, slope and RMS-dip guards. The pack records additional fixed-window and full-
+cycle estimates, including refused estimates, rather than treating one passed window as
+universal detection. Native listening remains necessary to judge the captured modulation.
+
+In the final 18-clip pack, 35 of 36 fixed-window estimates and all 12 whole-loop estimates
+returned a root. A 24-window phase sweep of soft C2 captures returned 18 estimates;
+the other six are explicitly recorded as absent. Returned phase estimates stayed within
+`24.054 cents`; whole-loop estimates stayed within `15.204 cents`. WHIRR's refused late
+windows retain a substantial near-root autocorrelation peak, but it falls below the
+detector's relative threshold. This is a measurement limitation and an audible texture
+to judge, not grounds to claim an invariant pitch at every instant. Bounded `.9 s` and
+`1.2 s` capture experiments improved some notes and worsened others, so the original
+capture remains. Detailed alternatives and waveform hashes are in
+[`native/hold`](../prototype/skirl/native/hold/README.md).
 
 Portable sources, reports and exact feedback are under
 [`prototype/skirl`](../prototype/skirl/README.md). The
@@ -136,4 +216,7 @@ limits, integration and the source handoff.
 
 - Separate motion and pitched modes let agitation rise while the requested note survives.
 - A shared input budget preserves a restrained finish when contacts overlap and accelerate.
-- Two voices and refused HOLD keep the first Kotlin review focused on the finite gesture.
+- HOLD captures the rolling timbre and lets the finite ending return at intermediate settings.
+- Separate model and capture ledgers keep repeated sound from masquerading as passive mechanics.
+- Consecutive filtered cycles and real lookahead protect the sampler join without copied seam samples.
+- Exact resampling and silent-tail work removal speed rendering while preserving older finite audio.

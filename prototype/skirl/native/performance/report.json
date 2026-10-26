@@ -1,0 +1,1166 @@
+{
+  "format": "skirl-finite-performance-comparison",
+  "version": 1,
+  "measuredOn": "2026-10-26",
+  "baselineRevision": "4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778",
+  "candidate": "Model2 working tree after final combined focused Gradle build, with model1 explicitly requested for finite replay",
+  "method": {
+    "render": "Skirl.render",
+    "voices": [
+      "ROLL",
+      "WHIRR"
+    ],
+    "midi": 48,
+    "velocity": 1,
+    "hold": 0,
+    "requestedModel": 1,
+    "pairs": 3,
+    "jvmWarmupRendersPerVoice": 5,
+    "warmRepeatsPerVoicePerRun": 15,
+    "heap": "2g",
+    "baselineThenCandidateEachPair": true,
+    "deliberatelyCompetingBenchmarksOrTests": false,
+    "java": "21.0.12.1",
+    "os": "Linux",
+    "availableProcessors": 4,
+    "cache": "physical trace warm; no final-audio memoization",
+    "limitation": "Desktop/container JVM. Unrelated host load and scheduling uncontrolled. No Android or cold-process measurement. Inspection stages are separate renders, not median components."
+  },
+  "summary": {
+    "ROLL": {
+      "baselineRunMediansMillis": [
+        143.168803,
+        137.417692,
+        140.726699
+      ],
+      "candidateRunMediansMillis": [
+        109.802201,
+        103.509458,
+        111.269474
+      ],
+      "baselineMedianOfRunMediansMillis": 140.726699,
+      "candidateMedianOfRunMediansMillis": 109.802201,
+      "reductionPercent": 21.974862069350465,
+      "warmTargetMillis": 50,
+      "warmTargetMet": false
+    },
+    "WHIRR": {
+      "baselineRunMediansMillis": [
+        151.802927,
+        144.233594,
+        162.319445
+      ],
+      "candidateRunMediansMillis": [
+        119.763683,
+        139.300129,
+        126.265307
+      ],
+      "baselineMedianOfRunMediansMillis": 151.802927,
+      "candidateMedianOfRunMediansMillis": 126.265307,
+      "reductionPercent": 16.82287720315169,
+      "warmTargetMillis": 50,
+      "warmTargetMet": false
+    }
+  },
+  "pairedRuns": [
+    {
+      "pair": 1,
+      "baseline": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              133.161659,
+              134.309947,
+              136.591278,
+              138.703671,
+              138.978023,
+              140.968378,
+              140.982629,
+              143.168803,
+              143.370737,
+              143.713876,
+              154.591095,
+              156.879863,
+              160.802913,
+              161.936967,
+              168.965615
+            ],
+            "warmMedianMillis": 143.168803,
+            "separateInspectMillis": {
+              "preparation": 0.072487,
+              "synthesis": 77.469282,
+              "output": 57.754854
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              146.737264,
+              146.773787,
+              147.141107,
+              148.155948,
+              148.666939,
+              149.640339,
+              149.902915,
+              151.802927,
+              153.196234,
+              153.435495,
+              155.494491,
+              164.069505,
+              166.36277,
+              173.334495,
+              176.249728
+            ],
+            "warmMedianMillis": 151.802927,
+            "separateInspectMillis": {
+              "preparation": 0.0684,
+              "synthesis": 90.36088,
+              "output": 65.297271
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      },
+      "candidate": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              94.072056,
+              94.89133,
+              95.29734,
+              96.035333,
+              97.152258,
+              98.47766,
+              99.79402,
+              109.802201,
+              110.066242,
+              111.460146,
+              111.564842,
+              114.782218,
+              118.97814,
+              121.539094,
+              132.985774
+            ],
+            "warmMedianMillis": 109.802201,
+            "separateInspectMillis": {
+              "preparation": 0.271302,
+              "synthesis": 59.579178,
+              "output": 39.068218
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              115.102583,
+              117.272589,
+              118.18762,
+              118.615309,
+              118.741823,
+              119.209291,
+              119.61087,
+              119.763683,
+              119.973942,
+              120.854834,
+              121.020978,
+              121.036602,
+              123.989655,
+              124.884399,
+              128.120663
+            ],
+            "warmMedianMillis": 119.763683,
+            "separateInspectMillis": {
+              "preparation": 0.126966,
+              "synthesis": 83.788912,
+              "output": 46.200709
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      }
+    },
+    {
+      "pair": 2,
+      "baseline": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              121.612476,
+              126.167911,
+              126.728727,
+              126.845821,
+              127.567242,
+              130.572775,
+              134.342671,
+              137.417692,
+              137.899701,
+              139.874898,
+              144.136532,
+              144.810324,
+              145.014556,
+              147.329502,
+              149.908118
+            ],
+            "warmMedianMillis": 137.417692,
+            "separateInspectMillis": {
+              "preparation": 0.04716,
+              "synthesis": 77.930985,
+              "output": 51.049292
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              140.679053,
+              140.984513,
+              141.541261,
+              142.148425,
+              142.917267,
+              143.78831,
+              143.841618,
+              144.233594,
+              148.73443,
+              149.921017,
+              150.434193,
+              150.474862,
+              154.604161,
+              156.528814,
+              156.573761
+            ],
+            "warmMedianMillis": 144.233594,
+            "separateInspectMillis": {
+              "preparation": 0.065536,
+              "synthesis": 92.08373,
+              "output": 62.939538
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      },
+      "candidate": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              94.78083,
+              95.371251,
+              96.839396,
+              97.917287,
+              98.249347,
+              98.832807,
+              103.032354,
+              103.509458,
+              104.335645,
+              109.994634,
+              110.576952,
+              111.76086,
+              112.333476,
+              117.776064,
+              124.947725
+            ],
+            "warmMedianMillis": 103.509458,
+            "separateInspectMillis": {
+              "preparation": 0.064616,
+              "synthesis": 62.031254,
+              "output": 38.688877
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              117.567746,
+              117.668816,
+              117.798988,
+              119.645032,
+              120.625559,
+              128.309172,
+              134.592398,
+              139.300129,
+              139.820126,
+              145.091313,
+              146.579333,
+              151.581739,
+              155.897274,
+              157.574752,
+              168.683095
+            ],
+            "warmMedianMillis": 139.300129,
+            "separateInspectMillis": {
+              "preparation": 0.066217,
+              "synthesis": 80.944404,
+              "output": 49.157725
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      }
+    },
+    {
+      "pair": 3,
+      "baseline": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              125.912581,
+              126.456819,
+              126.87949,
+              133.091671,
+              136.26499,
+              137.381388,
+              138.85331,
+              140.726699,
+              140.932312,
+              141.073248,
+              142.229465,
+              143.978274,
+              145.023908,
+              146.205553,
+              150.871894
+            ],
+            "warmMedianMillis": 140.726699,
+            "separateInspectMillis": {
+              "preparation": 0.06111,
+              "synthesis": 79.787135,
+              "output": 66.344048
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              156.120339,
+              157.211412,
+              157.339268,
+              157.817279,
+              159.025774,
+              159.490907,
+              160.532827,
+              162.319445,
+              162.660977,
+              164.284405,
+              164.734916,
+              168.229088,
+              169.827231,
+              181.618184,
+              197.804195
+            ],
+            "warmMedianMillis": 162.319445,
+            "separateInspectMillis": {
+              "preparation": 0.071294,
+              "synthesis": 109.57047,
+              "output": 76.786895
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      },
+      "candidate": {
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "voices": {
+          "ROLL": {
+            "warmMillis": [
+              102.389352,
+              103.840948,
+              108.853857,
+              109.604439,
+              110.30515,
+              110.578392,
+              111.125916,
+              111.269474,
+              111.422787,
+              113.123743,
+              113.134158,
+              113.948334,
+              114.551031,
+              117.578069,
+              131.088227
+            ],
+            "warmMedianMillis": 111.269474,
+            "separateInspectMillis": {
+              "preparation": 0.060799,
+              "synthesis": 72.317948,
+              "output": 44.094143
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          },
+          "WHIRR": {
+            "warmMillis": [
+              116.157206,
+              117.567683,
+              119.632067,
+              124.273407,
+              124.919891,
+              125.456103,
+              126.16311,
+              126.265307,
+              127.137894,
+              129.931901,
+              129.976555,
+              134.52324,
+              142.533529,
+              145.056959,
+              152.504795
+            ],
+            "warmMedianMillis": 126.265307,
+            "separateInspectMillis": {
+              "preparation": 0.063391,
+              "synthesis": 71.241408,
+              "output": 45.221354
+            },
+            "warmTargetMillis": 50,
+            "warmTargetMet": false
+          }
+        }
+      }
+    }
+  ],
+  "parity": {
+    "caseCount": 106,
+    "allCasesPresent": true,
+    "exactProductionFloatBits": true,
+    "exactPrelevelFloatBits": true,
+    "exactAcousticDiagnostics": true,
+    "exactFrameCounts": true,
+    "maxSampleDifference": 0,
+    "floatHashEncoding": "little-endian IEEE-754 float32, no quantization",
+    "diagnosticHashEncoding": "complete SkirlAcoustics.Diagnostics.toString(), UTF-8",
+    "casesSha256": "13980d5a0a9c9b9a38a50c680c47d6fb172c93cc6401fab27e1d87c70a0a889c",
+    "baselineCompleteOutputSha256": "c665ffd6d2b8853d4fe6e4aa700305f9a21fc0ec6a0e28bbc9c95cf67bb7636d",
+    "candidateCompleteOutputSha256": "c665ffd6d2b8853d4fe6e4aa700305f9a21fc0ec6a0e28bbc9c95cf67bb7636d",
+    "totalProductionFramesCompared": 27551731,
+    "cases": {
+      "roll-default": {
+        "frames": 239036,
+        "productionFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "prelevelFloatSha256": "4d0a9dda53293b17f141c32c582c35429299ea56abaca144726e46b71bb4827e",
+        "acousticDiagnosticsSha256": "2be56f74878d83cea2dc4502074567578f8d8fed655418e157ae4b91491698f5"
+      },
+      "roll-note-36": {
+        "frames": 239036,
+        "productionFloatSha256": "8089436408d95d1e37fa721a1d484e3a291d20ec72485e291d23f7ae9e717914",
+        "prelevelFloatSha256": "0ce4446a5ec96f78bf26d4e33feeda1b1f1f9e37e752a2174d14cf1bb0b49f31",
+        "acousticDiagnosticsSha256": "8423d7243fc9ce2036fe65d56586ff963e4c0b4d3ace36f969b5bf2c203acd65"
+      },
+      "roll-note-60": {
+        "frames": 239036,
+        "productionFloatSha256": "b747e1ee7de68596bac3ea8795af45b6b62896266ba9b7a3a7ea83fe91cc9ae1",
+        "prelevelFloatSha256": "95da1568bc7bdb3c8940ee80c3537598a6688c839d9db6b47a64bfb8758cbeb8",
+        "acousticDiagnosticsSha256": "72ebe1878ecaa4b71410b84feef56f73d86c44e14f4265b799e8ce014e3bcef5"
+      },
+      "roll-note-72": {
+        "frames": 239036,
+        "productionFloatSha256": "1e155dfe36cb8b75cb884fb3ab689d3fcd168ceda519291ab6513d1619219341",
+        "prelevelFloatSha256": "15e788d46b708a6615534e755fafe7342f631728fdc040efa7a1bdd5a0e6424d",
+        "acousticDiagnosticsSha256": "951c4377a45a5e120c08abcf34bc8a95b94b8b1693269cd5af7c6396a21dc06c"
+      },
+      "roll-velocity-25": {
+        "frames": 239036,
+        "productionFloatSha256": "b067f83ca4324b716b0660fe755910e9290fe8ba341b628684cb1306e06b0676",
+        "prelevelFloatSha256": "ecf8fcd5ff7372cb1f1ebddba2e63202e85f02bd512652ab4275078fc6194a6b",
+        "acousticDiagnosticsSha256": "51d31b25601f957ed7b40babad7f6775f7b47e7b5848ab66e32e4f68b6f9ad56"
+      },
+      "roll-velocity-60": {
+        "frames": 239036,
+        "productionFloatSha256": "cca81223b96fde552ed5dac1faf087d0bcab86e3abd84064b0a7c55cc6a8cd3a",
+        "prelevelFloatSha256": "bca6fbc9354f0920cc8568cd5df1895f1d1a3ffd8729caee1c7e3518c011bf28",
+        "acousticDiagnosticsSha256": "12ca1cfefd95ab675b27123760691174dbb69c3f8ac6f952362e06f0b35078e4"
+      },
+      "roll-rough-corner": {
+        "frames": 239036,
+        "productionFloatSha256": "f876f1a39f4882e66ca6e9db1f7fb999447906a45f029224a5d4341251120078",
+        "prelevelFloatSha256": "3642b82dcb9370387b3ebe3ebcf88597396c894fed6e238d7b4d903900021eef",
+        "acousticDiagnosticsSha256": "daca45971539fe2b471a7f88c2cbd112d4e6c37c764e576d2601de9344cba070"
+      },
+      "roll-tune-0": {
+        "frames": 239036,
+        "productionFloatSha256": "8089436408d95d1e37fa721a1d484e3a291d20ec72485e291d23f7ae9e717914",
+        "prelevelFloatSha256": "0ce4446a5ec96f78bf26d4e33feeda1b1f1f9e37e752a2174d14cf1bb0b49f31",
+        "acousticDiagnosticsSha256": "8423d7243fc9ce2036fe65d56586ff963e4c0b4d3ace36f969b5bf2c203acd65"
+      },
+      "roll-tune-25": {
+        "frames": 239036,
+        "productionFloatSha256": "180b445e8f1a613ab0628fd9f89df1d7a9d75d0021ec1915dba94529c49bc7b1",
+        "prelevelFloatSha256": "cd2586205c2cac6727e645690105fe2f57d4083f796880cd27e53703201c5f18",
+        "acousticDiagnosticsSha256": "8423d7243fc9ce2036fe65d56586ff963e4c0b4d3ace36f969b5bf2c203acd65"
+      },
+      "roll-tune-50": {
+        "frames": 239036,
+        "productionFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "prelevelFloatSha256": "4d0a9dda53293b17f141c32c582c35429299ea56abaca144726e46b71bb4827e",
+        "acousticDiagnosticsSha256": "2be56f74878d83cea2dc4502074567578f8d8fed655418e157ae4b91491698f5"
+      },
+      "roll-tune-75": {
+        "frames": 239036,
+        "productionFloatSha256": "f31d112d5845156f4170090b24d0c444e79598fe09230aa0f34e242fbeb70145",
+        "prelevelFloatSha256": "4fcdfa2dff9ef3029d19954b48c6cb6aba83dc491b047b1cab7f01f4f64dcfa1",
+        "acousticDiagnosticsSha256": "c4b79ce6d8e26f449c3c802cf1df11ce6030cd0fb6a92d8b6025ceade99b1783"
+      },
+      "roll-tune-100": {
+        "frames": 239036,
+        "productionFloatSha256": "b747e1ee7de68596bac3ea8795af45b6b62896266ba9b7a3a7ea83fe91cc9ae1",
+        "prelevelFloatSha256": "95da1568bc7bdb3c8940ee80c3537598a6688c839d9db6b47a64bfb8758cbeb8",
+        "acousticDiagnosticsSha256": "72ebe1878ecaa4b71410b84feef56f73d86c44e14f4265b799e8ce014e3bcef5"
+      },
+      "roll-lean-0": {
+        "frames": 223281,
+        "productionFloatSha256": "c1b70d64d7196d1b5419197a09bcc901a0c073101408d43a94ecdfb129da60eb",
+        "prelevelFloatSha256": "d3605dc5e838e6f368f0687adce018d231468b333040ae07122c7fcd85da0869",
+        "acousticDiagnosticsSha256": "011a60c8c149e22bc0f50d24ef3624f14370fb9d1c54a92121967870e41303c3"
+      },
+      "roll-lean-25": {
+        "frames": 230532,
+        "productionFloatSha256": "0b8f0047b1e16b62a44b2e5771fa3ee058ea0d54788ff0eafa7d6d747d8d439e",
+        "prelevelFloatSha256": "2e92760d5bdd0f87b4be95a8d8c6011bf77424056370d532602534aca19c4780",
+        "acousticDiagnosticsSha256": "54f6f1813f961d26d942137c95c9dc055afed304c82324869ce6164628bd8b44"
+      },
+      "roll-lean-50": {
+        "frames": 237621,
+        "productionFloatSha256": "aa73ee962cc4a56770c748cbee571b6ebe78257f07a0e82ea77e2ede43e35911",
+        "prelevelFloatSha256": "9014549e3dac3fe7dc51aaa446ea57a345890280fa1fa643b0ec57f411ff0b35",
+        "acousticDiagnosticsSha256": "a0907006a3e82929ffd091f40ff5222aab8cd7395c0f36a994bee75f02a1f20f"
+      },
+      "roll-lean-75": {
+        "frames": 247519,
+        "productionFloatSha256": "12aec2f131ef8c81b3dab714326ee6f6c20fae7b2e9beab247e49843a65f9c2c",
+        "prelevelFloatSha256": "dcfb471b5f87ada24910ab12b39641235eb4001b594fe9c5254eeadce56fe05e",
+        "acousticDiagnosticsSha256": "a24bc6237a1892b8e5f7423b193aa7ff6fd31bac67541f612de9c9cf61ce1777"
+      },
+      "roll-lean-100": {
+        "frames": 254403,
+        "productionFloatSha256": "d9c590ad5a61e5e4ddb747ec476c0a4247ea667cc9a78e671a9b2ac0b719d9da",
+        "prelevelFloatSha256": "8cb258e8e41cf18c3c7e56bc6ee226380e7b07a071b9bf7d500e111433f68ccf",
+        "acousticDiagnosticsSha256": "2189ec6d240fded58239f3a778a514d1089d9f268444407cedc4cf55ac70d12c"
+      },
+      "roll-brake-0": {
+        "frames": 278200,
+        "productionFloatSha256": "55689adda17a859cf096bb1f6168fbe35802049f0f63c8a3e7f01acd98083d13",
+        "prelevelFloatSha256": "70266f32f9f7ccd1db544573cf12c9e0723dcee7b050ab787389877d0d3419db",
+        "acousticDiagnosticsSha256": "2f732ecd442ca4f79a107c9797d821f2ca3a4f8a633f89677d9289c6e40d1ec0"
+      },
+      "roll-brake-25": {
+        "frames": 253821,
+        "productionFloatSha256": "e82dc5046590e053106f73fc39ae76c0f391aa0c97db699663d3f8757ac4c2bf",
+        "prelevelFloatSha256": "85ca86576674ef3e2d1952f4420d475f31a81e1652a7a41d6e993268ca9a60ab",
+        "acousticDiagnosticsSha256": "f49fdf29d4b0f37b3803bfd1803f282f024e6a190573406d83e56468a7cf65de"
+      },
+      "roll-brake-50": {
+        "frames": 232527,
+        "productionFloatSha256": "cd9b70959b9a81c6d19687bb130697ecc3339e6780066888fd3bf36ffc1f12e4",
+        "prelevelFloatSha256": "1aeb81757f61adf7ac429686afe6d43aa82b661c0d3e88c3ed9fa55e1977cc71",
+        "acousticDiagnosticsSha256": "3b2cd34b747767162087f39b66201e8c28586e5133aa3a3a884d0e51513c1fd7"
+      },
+      "roll-brake-75": {
+        "frames": 216668,
+        "productionFloatSha256": "40d0cdbd992e89e73a822bab6fd7d7733f7ec6b6398669ac8ffa00bad7edac5b",
+        "prelevelFloatSha256": "e8afde4f2f3ee465f5ac198d9c51d3afcfdbc9de6880f07b9b56855c53bc0a1a",
+        "acousticDiagnosticsSha256": "b21d06d922b9ec408c2e623829a31e5de5ece57e29aab351b80806da915e512f"
+      },
+      "roll-brake-100": {
+        "frames": 204616,
+        "productionFloatSha256": "c6c914df6e5c75ad974c4f5e3cecd1649b2c730a0d9215aa19ce022a8ae8cdaf",
+        "prelevelFloatSha256": "89c21acd4077240f1f2e5aa1333b37bdf91b9f0c64c82811116e470d3afefd4b",
+        "acousticDiagnosticsSha256": "9deba696a90e5e4bb2e862a7ec716bf65978637789e7b1b2acb7293fb5b87279"
+      },
+      "roll-edge-0": {
+        "frames": 239036,
+        "productionFloatSha256": "18405b85b5140f478cc72aae1ce5aa14574c5f45feb250f4b7ae031865a87d71",
+        "prelevelFloatSha256": "e5cbc63b2a32c2058624858360f2b5384501fe70a479913fb941b4ac12d9efe9",
+        "acousticDiagnosticsSha256": "4c174f5ac8c8c5f7187baab620b59b457bb103260e44c5b4dbef875466c337f1"
+      },
+      "roll-edge-25": {
+        "frames": 239036,
+        "productionFloatSha256": "d6e37de78e045af74065ddbb67111dd6d840bc61c580a4a4d0a356bfe3f1abe4",
+        "prelevelFloatSha256": "1650cb86fa403fa5e5f2df23a019b7269fade134a5b5d16d32c4da4950aaf824",
+        "acousticDiagnosticsSha256": "89af0381bff55bbcb4262666721b01d021fc38f4374e808c3153edbc02d93709"
+      },
+      "roll-edge-50": {
+        "frames": 239036,
+        "productionFloatSha256": "570c6f90a89003f693636a89b7c26114dd388b2b9a3ae424453a3b68b314b27e",
+        "prelevelFloatSha256": "37de459fbdaf0069be9d85423962770388c471bf681efa9aa790247f9df43d2b",
+        "acousticDiagnosticsSha256": "0bbe7337de3c4afb2ec501ece7c2d3386e3ce1130730d0f749133db62679de34"
+      },
+      "roll-edge-75": {
+        "frames": 239036,
+        "productionFloatSha256": "24cd66965725c92840935f3e1f8c0bc59e9855ac7be5709c9c2915907b374e7c",
+        "prelevelFloatSha256": "c859cfce364ad270de396b1d182bb64c45807cacdb77b11458f5f45daae07961",
+        "acousticDiagnosticsSha256": "ed5eb8ddaf356cb91997ccae91ae906a5a4bdfe7575173598ea49754b158f47d"
+      },
+      "roll-edge-100": {
+        "frames": 239036,
+        "productionFloatSha256": "7bba6b1379672a8a18f463675f753a1f45f2136136fd2d24b1f8df8b29ad2844",
+        "prelevelFloatSha256": "b50dac641e3417de09d3c27235ed3fad88b9f3f5853d50f1e9d16d5e78a24016",
+        "acousticDiagnosticsSha256": "daca45971539fe2b471a7f88c2cbd112d4e6c37c764e576d2601de9344cba070"
+      },
+      "roll-plate-0": {
+        "frames": 239036,
+        "productionFloatSha256": "523a672583378bb8355511691eadb18771be0304122719332bf718aad9bd7ea0",
+        "prelevelFloatSha256": "f8fbbcd73330c7e4081b51d891a73b1f24a588eb0ce3271cc85f37cda2aa8237",
+        "acousticDiagnosticsSha256": "2be56f74878d83cea2dc4502074567578f8d8fed655418e157ae4b91491698f5"
+      },
+      "roll-plate-25": {
+        "frames": 239036,
+        "productionFloatSha256": "168fe0966b83d309d4e0db8a90a9f8f52f14dd6b3f259479242204d27007a8a4",
+        "prelevelFloatSha256": "282903593fce88aeccad6a3a4dbedd514146ec07b6a1a78deda130cb09e0274d",
+        "acousticDiagnosticsSha256": "2be56f74878d83cea2dc4502074567578f8d8fed655418e157ae4b91491698f5"
+      },
+      "roll-plate-50": {
+        "frames": 239036,
+        "productionFloatSha256": "6518d6ec119013928d48e05df408f9be32fad5e5192a100b5194ab678b163f88",
+        "prelevelFloatSha256": "4d0a9dda53293b17f141c32c582c35429299ea56abaca144726e46b71bb4827e",
+        "acousticDiagnosticsSha256": "2be56f74878d83cea2dc4502074567578f8d8fed655418e157ae4b91491698f5"
+      },
+      "roll-plate-75": {
+        "frames": 253741,
+        "productionFloatSha256": "7320032425df483a004284e387b283b7dadf236c0633074aff2ae2f239e86f1e",
+        "prelevelFloatSha256": "33bcdf52b210470c595dcae76e0fd3cd75247b88c93acce8e9ecc6023c660bad",
+        "acousticDiagnosticsSha256": "e06b188e1725d6fff73c22faf45610b7b10d0393d8ab664ecec71d05f12f7902"
+      },
+      "roll-plate-100": {
+        "frames": 296366,
+        "productionFloatSha256": "f99c02c82b3d01ec07937467ef6913f321ca9cf1d124760363e0da2f46e9d648",
+        "prelevelFloatSha256": "c5ffc7ccc1b7053c5f1fab1fd0612669a4062672f7caa24e160ada6b5fde868b",
+        "acousticDiagnosticsSha256": "019a2c7ca2552fe675df636506edc97b526535e9171446711a586dcb381e93ae"
+      },
+      "roll-collapse-0": {
+        "frames": 224085,
+        "productionFloatSha256": "94d3341cc1e0d162f23a315bbddc7dd66138f03c8bfb24d9bac3a9c11080f80c",
+        "prelevelFloatSha256": "4ad7916f07c884c12f1d11b22c0c0f090f98f86b4527c597e4415b4845110b49",
+        "acousticDiagnosticsSha256": "4201f542eafdf391f6d852d3d364fcfdfa3e1134f0f6726893b102fde1263f41"
+      },
+      "roll-collapse-25": {
+        "frames": 229446,
+        "productionFloatSha256": "f30c93376eb00843c32bf60e10ee0303b762ae9b29ae34d7b9f51a864089d056",
+        "prelevelFloatSha256": "26cadc20bfc9751f4c9dac1ac525f6f31d7070e297f05b15bc7e151715114128",
+        "acousticDiagnosticsSha256": "3952c8674da6469d3922239f4a4813444832a3a0caf22b42402bf86ddc9cddda"
+      },
+      "roll-collapse-50": {
+        "frames": 237654,
+        "productionFloatSha256": "4d6b7245f5192528b1e91aaa58487040c659a6881086a842c6ad34a0d992adb9",
+        "prelevelFloatSha256": "3e4afa937936751f4aec12e5b5af258c2327c7abb5f6b1e191a83fc928de5ccc",
+        "acousticDiagnosticsSha256": "a8af6b53499400a61d7c0347ce74ce717aee31e486aaa053a7c7903f4a180fec"
+      },
+      "roll-collapse-75": {
+        "frames": 242834,
+        "productionFloatSha256": "9573b2b96c92f5ee70623c38b54497ddb2677a731442476575e02bc5f5abfbf9",
+        "prelevelFloatSha256": "18b72fb2772dd7b4e4137191d92efd0fae36ae6f39a7749de182f6a058baa2c9",
+        "acousticDiagnosticsSha256": "895492d01d759618ed035e0c821e5795dcc5dbb2f79661f30a4ab1bb1a2d1edf"
+      },
+      "roll-collapse-100": {
+        "frames": 247986,
+        "productionFloatSha256": "6cd0e16ce653aa9125c47f6f5a59e564198f541288a21deae74699cbf96497cd",
+        "prelevelFloatSha256": "1de2d5008706ea030a761ff2c8c8ad1ed86f19777cc0e3b0fba9e149f9c1910c",
+        "acousticDiagnosticsSha256": "2a11ce3426441d93c17fa242fa403bd37b2baa8708866438a4d730489aa3304b"
+      },
+      "roll-lean0-brake0": {
+        "frames": 258260,
+        "productionFloatSha256": "4d910d82fc6d1cf3464747ae955ada364fdda15809cbf9159fb415b6271f3240",
+        "prelevelFloatSha256": "36349f88cbf6eb112a431e09a85e2332176505a90176e1a1ce10395fe282dea9",
+        "acousticDiagnosticsSha256": "538447dcdfbbe8c5af90d9d0b73306194df00bb69fadaf7b9858c000386e0eb2"
+      },
+      "roll-lean0-brake1": {
+        "frames": 192649,
+        "productionFloatSha256": "002a110f98ab79a762660d4dc2b51f512868fddc7fb86f8a9e2f723ad70878f8",
+        "prelevelFloatSha256": "5d719d0e06bdbb3b82c01472409f9662b470c278bd2d59f3501305ca320270ec",
+        "acousticDiagnosticsSha256": "fee7908ccc5cfb72d41694a83c297c59e518e580b3920cbb45dd5b3794d8fedf"
+      },
+      "roll-lean1-brake0": {
+        "frames": 294094,
+        "productionFloatSha256": "4f30d0baa8e81b1b060402b04ad30d714b8a394bc9e30be0f8dd58634626a5a5",
+        "prelevelFloatSha256": "a9e3506127f54291dffb58758e9344b85a05479b7db4829c186d3fc0ae9a4083",
+        "acousticDiagnosticsSha256": "e4613b0d102023a563d93068308b9854530fe745e5b1de841e6acaefc06cfe67"
+      },
+      "roll-lean1-brake1": {
+        "frames": 217015,
+        "productionFloatSha256": "612e0d9d794b562f61c9bcb541007e8d5e7311b5caae0189ccff563ba682d96c",
+        "prelevelFloatSha256": "3e77297c2ed305c63d3af7fe8835f1f911174f2d4c3d412c2e8c216b999ae8d8",
+        "acousticDiagnosticsSha256": "1a9c93b4053dbd8000ce489aff91bb959273bde0251af79251421abfabe0bbed"
+      },
+      "roll-edge0-collapse0": {
+        "frames": 224085,
+        "productionFloatSha256": "298f4ca121138e8340b43f18a817f8bde8cdd97b02e4a679c233b7e9485117cb",
+        "prelevelFloatSha256": "4b863b2ceb719ac52054a58826af902221d9d04c685a984887327ffa4da4e9a6",
+        "acousticDiagnosticsSha256": "476e698fffcfd4b865431170eb83a241a0e0e95f6421469b26a1ac9382725b22"
+      },
+      "roll-edge0-collapse1": {
+        "frames": 247986,
+        "productionFloatSha256": "5b937594a507dbd5ed4171ccea08a152215f926a1ec14c7a0312a4f0afae0f32",
+        "prelevelFloatSha256": "a87da4f9b2fee4c85c2a61d312d7384d97a2ce9b82dd1f6f0350a5d5a86133d7",
+        "acousticDiagnosticsSha256": "793131411bf0a79d118062e32f52129b74f86373959185a898827f20e5884797"
+      },
+      "roll-edge1-collapse0": {
+        "frames": 224085,
+        "productionFloatSha256": "5a5049414ebfdf812046822764374f5a174ded5e6077681a6687611d73e7c0ca",
+        "prelevelFloatSha256": "66df2b83378a3282cc8f3181139a81a0c9a76ac95f69e5b4aa9d53ce5f7edfe9",
+        "acousticDiagnosticsSha256": "65c46b6503721153ef994b23db17acc231d6bb797aa67b87d892d112b35dab46"
+      },
+      "roll-edge1-collapse1": {
+        "frames": 247986,
+        "productionFloatSha256": "d7bbd835b5f897e5e7132bfcb014a12b1bca24d0e5e0cf56da240bd30c2b427b",
+        "prelevelFloatSha256": "ec2dff18336ed01d01ee39e78fc73ae2018f790d07faf6935a44170e2e3ca238",
+        "acousticDiagnosticsSha256": "ed557317d37681c2d94e96881476fa495a6284e99207bf777239993067efb288"
+      },
+      "roll-brake0-collapse0": {
+        "frames": 258791,
+        "productionFloatSha256": "f3e14a0fceb884d46a474a809dae283f59400bf2f7a904f2e97f8f93c53d261a",
+        "prelevelFloatSha256": "b8e999a8f9cb6ef050b0b3e9e418fd1fd579c3c99ff9184ade6b37e4b29daf59",
+        "acousticDiagnosticsSha256": "9ab4abe878dea092bd30bcf02bdba597a580ef833a3b1ff243f59df170d863cf"
+      },
+      "roll-brake0-collapse1": {
+        "frames": 288182,
+        "productionFloatSha256": "6682783ada28bccfc32f58772c6edb2dac51770884b1c75dd0259434e10e278b",
+        "prelevelFloatSha256": "d4891031316819124cd068a7249ed407f61261224008a4d01ddc21c93226dc09",
+        "acousticDiagnosticsSha256": "fab8aa364b423f75302114e34aa6e9ab92e1c94de14297003a7de2b45d3cc67c"
+      },
+      "roll-brake1-collapse0": {
+        "frames": 194088,
+        "productionFloatSha256": "ec3020b6a85ef42ee72af497c1e2fd6dab74f147c703d7fbe9d0fec4818165aa",
+        "prelevelFloatSha256": "0d2dba07c0c8b2ed40d79cdea30ba39c4826eff287c25bfe59fa9a067dc1f9d2",
+        "acousticDiagnosticsSha256": "f2e282ca669632fd1fc8617ff4d25c5dbbe50ca2830f27f15a29c42667e612f2"
+      },
+      "roll-brake1-collapse1": {
+        "frames": 212831,
+        "productionFloatSha256": "7de2f2ed59ca478fcf3c3a0e8e68963490ff02afd69bbd65f248c8efad3817d1",
+        "prelevelFloatSha256": "ec63f512f24d13f02b8a33943207b41e9b6c4a22ffda21cb8029f7518794a4c4",
+        "acousticDiagnosticsSha256": "7103eeca986dfaa8a9f1f7f7b2599a7e47583e56659b60e33219121d49ccadfa"
+      },
+      "roll-edge0-plate0": {
+        "frames": 239036,
+        "productionFloatSha256": "9702db3091beb5a506920fcdbe7de632ad764901f8594642ad13348aa31054d1",
+        "prelevelFloatSha256": "b09eb854ce2ee0e8503fd63e2b24af848dcf538caa0a14a2bfdc449035f56474",
+        "acousticDiagnosticsSha256": "4c174f5ac8c8c5f7187baab620b59b457bb103260e44c5b4dbef875466c337f1"
+      },
+      "roll-edge0-plate1": {
+        "frames": 296366,
+        "productionFloatSha256": "b87071f6813dfb07bd7e16e4c9c3b4731bdc75676b3e4a61109937a2192a0883",
+        "prelevelFloatSha256": "74be77a07c5fe023f42764de170b78f073bddddf65ccf4a3af70c4f18479d639",
+        "acousticDiagnosticsSha256": "d7dd2ef02bcdd256d4dc45e442fd51d04b5e639a0aa4632007b9f2876a1ba84d"
+      },
+      "roll-edge1-plate0": {
+        "frames": 239036,
+        "productionFloatSha256": "f876f1a39f4882e66ca6e9db1f7fb999447906a45f029224a5d4341251120078",
+        "prelevelFloatSha256": "3642b82dcb9370387b3ebe3ebcf88597396c894fed6e238d7b4d903900021eef",
+        "acousticDiagnosticsSha256": "daca45971539fe2b471a7f88c2cbd112d4e6c37c764e576d2601de9344cba070"
+      },
+      "roll-edge1-plate1": {
+        "frames": 296366,
+        "productionFloatSha256": "69da9cd6ae6225247905f1d1a9110fab035f881edccefaabbeec8fe6fa3266fb",
+        "prelevelFloatSha256": "c03c4628246ba84db8f4babbe876a16c4a4bc368aa79452a20e1d8ef1f2755ca",
+        "acousticDiagnosticsSha256": "98d19e813319a49e44d081b3a516152bdba4180323677afa7229d7446b8b34da"
+      },
+      "whirr-default": {
+        "frames": 282743,
+        "productionFloatSha256": "89d3a8c10d64244990987b04e4e8953c11ab5fea7049a39323fce1221cf81f67",
+        "prelevelFloatSha256": "21d2fc75b5e58aa30c9212b8741f582b615cf37a82890bc266d6d05385044066",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-note-36": {
+        "frames": 282743,
+        "productionFloatSha256": "5f0f4a0d54319982f960d3768529c01581d8b7b076ae8e7c93035a426a860091",
+        "prelevelFloatSha256": "4cba16544454fd318f33b14099024c4bfefe2f6092b104501f32caf7cf02a346",
+        "acousticDiagnosticsSha256": "21c507f5d17332f5c20ae8687a672ea10dba38ed870844244406dfb8186caebb"
+      },
+      "whirr-note-60": {
+        "frames": 282743,
+        "productionFloatSha256": "3c2625092f703acf0f4dc73b9a434161df83772a94555c1344903f4437db3f27",
+        "prelevelFloatSha256": "8d559be1d06cda6e10d09b93760d639904062f9f4d5bd1080242106555dcb548",
+        "acousticDiagnosticsSha256": "2f7730109d7b3c3a3e1f1337c87c2bc2e97cccf4ad24e44ae645036045bce5d6"
+      },
+      "whirr-note-72": {
+        "frames": 282743,
+        "productionFloatSha256": "8c881abc4c44ff8655ed362ba478d180779f1e56240d266bd07a2e89f364a692",
+        "prelevelFloatSha256": "a31b52b52197c844f02e51c2a1d39b65b1503aa8e18aafa04ed44a8462f846e2",
+        "acousticDiagnosticsSha256": "fd57700f0aefdce6949e4b4b6bce8f519fc19a027558b1b6ca6a97346f36343c"
+      },
+      "whirr-velocity-25": {
+        "frames": 282743,
+        "productionFloatSha256": "eca0f3287129e4df6b043945dfd3c28fd292b010f98502ce16c6ef094ba5e478",
+        "prelevelFloatSha256": "dd2f70db303717bd01dbacb7760f1b372895549dc5161e941c96d6e76e9c67da",
+        "acousticDiagnosticsSha256": "2f0b73b29a3c45d26f7d6eb603506dfd9698684cd9b1475063bc2ce75e29cfab"
+      },
+      "whirr-velocity-60": {
+        "frames": 282743,
+        "productionFloatSha256": "0b7ff7afc46048b4976d003af27e85e00a00f3d57ca4c413ea53305d391d99fa",
+        "prelevelFloatSha256": "bb6a0c17b7539d490a4351b83d08980a58d7ef41455caffa559cc25df7eab25b",
+        "acousticDiagnosticsSha256": "e9dc1ea3b50e15d1f5b5326ed8ed1f759c4dad6c4e5e6d5f5f59e542bed16873"
+      },
+      "whirr-rough-corner": {
+        "frames": 282743,
+        "productionFloatSha256": "6bd74e5caa55dbfb85e4551e6ed8fc86639e2760d44aeade3434ab4132fd561d",
+        "prelevelFloatSha256": "9a7a2c97e9fea3ed470578e59eecb8f1986ea927e4998bbd3fe8428affae92e6",
+        "acousticDiagnosticsSha256": "94f1799217ea795213972599eb80fd5e3bc715664179713af1620466d3ddbd47"
+      },
+      "whirr-tune-0": {
+        "frames": 282743,
+        "productionFloatSha256": "5f0f4a0d54319982f960d3768529c01581d8b7b076ae8e7c93035a426a860091",
+        "prelevelFloatSha256": "4cba16544454fd318f33b14099024c4bfefe2f6092b104501f32caf7cf02a346",
+        "acousticDiagnosticsSha256": "21c507f5d17332f5c20ae8687a672ea10dba38ed870844244406dfb8186caebb"
+      },
+      "whirr-tune-25": {
+        "frames": 282743,
+        "productionFloatSha256": "7576d053f9c993dc13a5111b3e8b5d9ba4b11812a9053cd4e04777925138e6a7",
+        "prelevelFloatSha256": "56674048977b2f26756795372f0e9f9fd4da041483235b39b4935fa41941c317",
+        "acousticDiagnosticsSha256": "21c507f5d17332f5c20ae8687a672ea10dba38ed870844244406dfb8186caebb"
+      },
+      "whirr-tune-50": {
+        "frames": 282743,
+        "productionFloatSha256": "89d3a8c10d64244990987b04e4e8953c11ab5fea7049a39323fce1221cf81f67",
+        "prelevelFloatSha256": "21d2fc75b5e58aa30c9212b8741f582b615cf37a82890bc266d6d05385044066",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-tune-75": {
+        "frames": 282743,
+        "productionFloatSha256": "7266b06142a43ac6fd31d00490667a5bd9b8dfb05ae3ebfc7b1c354fc79632c6",
+        "prelevelFloatSha256": "f8b881000f4fec08194edb558a7ec65fb09f0acc5e813cab639708b93a12ca9a",
+        "acousticDiagnosticsSha256": "16e1ba14970074f88d2cb1f78b9d2d6795074f962eb3bc8e274880b6c7890aee"
+      },
+      "whirr-tune-100": {
+        "frames": 282743,
+        "productionFloatSha256": "3c2625092f703acf0f4dc73b9a434161df83772a94555c1344903f4437db3f27",
+        "prelevelFloatSha256": "8d559be1d06cda6e10d09b93760d639904062f9f4d5bd1080242106555dcb548",
+        "acousticDiagnosticsSha256": "2f7730109d7b3c3a3e1f1337c87c2bc2e97cccf4ad24e44ae645036045bce5d6"
+      },
+      "whirr-lean-0": {
+        "frames": 282743,
+        "productionFloatSha256": "89d3a8c10d64244990987b04e4e8953c11ab5fea7049a39323fce1221cf81f67",
+        "prelevelFloatSha256": "21d2fc75b5e58aa30c9212b8741f582b615cf37a82890bc266d6d05385044066",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-lean-25": {
+        "frames": 287967,
+        "productionFloatSha256": "6ce2f8191e65703eb854b51492c389ff73ecc6adeb8712a69904bc9ffd86bf43",
+        "prelevelFloatSha256": "809d5876dcbb6eab8c5d88528936c9577fed1a9524537d2262a9269ce23fcc4e",
+        "acousticDiagnosticsSha256": "3cead89214615f441b98cb61b0630c4ea5c188a37fe572e9cd68022c361b2d7b"
+      },
+      "whirr-lean-50": {
+        "frames": 291869,
+        "productionFloatSha256": "2b000d431f620bfc4b00c943b554319817d4faf17e5c4994d6b9bd53d5e777c2",
+        "prelevelFloatSha256": "3d21394cdb31c661d90b18046bf5df17a688bcfb9a10f77f6c36efa000f2e19c",
+        "acousticDiagnosticsSha256": "4be3af99b21f720ff2167769b626e2cfcad52c24ca863ec9108c88d347bc695b"
+      },
+      "whirr-lean-75": {
+        "frames": 299093,
+        "productionFloatSha256": "a4f61d24f2c6d2ef3fb96795aff68d979e8eb976dca8ce3b3ba36cf50c0771c7",
+        "prelevelFloatSha256": "716788e861291182375d373873d3ab137956d3d8a4f0db69083bbb6053214ab6",
+        "acousticDiagnosticsSha256": "bdf49911843991c7d2858c0983f117bb3f1c01a7c026ffdef4a4ee82d1834820"
+      },
+      "whirr-lean-100": {
+        "frames": 303380,
+        "productionFloatSha256": "d4465fce40b2392c02b9dddcb5fcd0c7693941ef1b80a672b82203b3ae9a51ed",
+        "prelevelFloatSha256": "7fef8e1ef8329261b0b5a365b5393aa2d953f1e141488afabf3f798f9b5e89ce",
+        "acousticDiagnosticsSha256": "51dd9efe4f9e6cb30771c23bf135a43d088afc24411b3f74c259bed5203881cb"
+      },
+      "whirr-brake-0": {
+        "frames": 301455,
+        "productionFloatSha256": "75718f6d309d6c2ef0a9bbccad75723f325c81b42a33986d43d4d8b3e1a43898",
+        "prelevelFloatSha256": "ce1169dc67f31efb6798d19420140e344323bc21de895dc6e7dfa59213f6aa0c",
+        "acousticDiagnosticsSha256": "94c201ba7d7acbefb030b69a542a52ecfc89270195bbf4c4031acc303e534c78"
+      },
+      "whirr-brake-25": {
+        "frames": 277348,
+        "productionFloatSha256": "fea612a098efbe4fb542163cb8e4f4243bfb30c7ac11885b86cbcf34159a6273",
+        "prelevelFloatSha256": "8a23514a97dff7fffa700e9a8d4177d7898e98053d7d8c2e2f97de9b6a04cca4",
+        "acousticDiagnosticsSha256": "7fe6092f451c715e6dd6be0e27a445f2793fe35aa74c82a9c243f06ce41d17eb"
+      },
+      "whirr-brake-50": {
+        "frames": 258793,
+        "productionFloatSha256": "a5dc9b84dde0fb38cd3ba83046b8bc283ded6c6d4c09926392a4758913e72b07",
+        "prelevelFloatSha256": "c987f269336d683cec0616ed08592d3420222f67159827ed3138ef4b1bdb385d",
+        "acousticDiagnosticsSha256": "91b459d650491165558fe66578e7659a466994496d25a551214061ae66071832"
+      },
+      "whirr-brake-75": {
+        "frames": 243444,
+        "productionFloatSha256": "245a70481379060b061fd377cd53b8802d4ced7588efdb0e07e6aaa05f325cb0",
+        "prelevelFloatSha256": "8715730119ac6e50fb6c61223fda839fbc38a133c1c6eca5c8e39161e7565d8d",
+        "acousticDiagnosticsSha256": "a2d0a4441f75264f30797568208368a7e8bbe4ae12815b4cc7cfaae799bfd6e4"
+      },
+      "whirr-brake-100": {
+        "frames": 230953,
+        "productionFloatSha256": "b8ab85d81ccb355a6927f864fff6b87b197b9dd9c3b323d9464c3f9e8aedcb18",
+        "prelevelFloatSha256": "142834fce6951be57ce023d51ca086dfe27c42449c48249548600239fda423e2",
+        "acousticDiagnosticsSha256": "b80390dfd569248c39c0ddc9b7c6e5514b1c424741fcd7b05bb23591973670a6"
+      },
+      "whirr-edge-0": {
+        "frames": 282743,
+        "productionFloatSha256": "9a233a7748a3d72ddfe9e8653cd7cef448a46638bcdfd3ba9fedeababaa4cfef",
+        "prelevelFloatSha256": "bc1f037d97fa039c6592ccb966aacfaaa10105f6ff9bf3db45a509016949f18a",
+        "acousticDiagnosticsSha256": "c10f86b68a2b48c0f389aa47ec2b5e696347a0a4b80c321049502d0d7b9be585"
+      },
+      "whirr-edge-25": {
+        "frames": 282743,
+        "productionFloatSha256": "82a72e278b8561f8c30fe001bf0fd20b35930a90cc2b3bf82619df1a342d155c",
+        "prelevelFloatSha256": "7ea97ed11b7c2e6be9cce0dc8d4fbc12f9b7f501bfab72c77c7dcd8f65e683c2",
+        "acousticDiagnosticsSha256": "1bfcb8dbeecae19d423186e6f701ab886dd383136d6613c23d1aab47996e02f5"
+      },
+      "whirr-edge-50": {
+        "frames": 282743,
+        "productionFloatSha256": "1a31d235b42966c6715d1d96b667d73ad01b53ee5cb00a8b38ee5072fda52959",
+        "prelevelFloatSha256": "a02be88b13b7b40e5d26bf930a182caadf29d09f34a71e59d05b8046ebe0227c",
+        "acousticDiagnosticsSha256": "b739a5397783342226ede88315a03abfe5309c0c036bcc745e824aa16960d123"
+      },
+      "whirr-edge-75": {
+        "frames": 282743,
+        "productionFloatSha256": "42b5172b6704cdeb94177d5495a2cf9932eda92013f426a89237d90ef04cb064",
+        "prelevelFloatSha256": "8efa2166c6629a882f087c8da47f77df4d82f9cf0575b00210552d2668371180",
+        "acousticDiagnosticsSha256": "7c0ffe2c0791d8bd74c5ffa70a8b9f2772b3aae15fce86dbc29781610d7448dd"
+      },
+      "whirr-edge-100": {
+        "frames": 282743,
+        "productionFloatSha256": "722f82a05186a3e67468069eb68ac73e32b69ed4b1516f427854636cb8439fa0",
+        "prelevelFloatSha256": "e4f6c6b9e6858f28ca0856d578a31df0398e366c15a7aa3d64c1065b61ee7002",
+        "acousticDiagnosticsSha256": "94f1799217ea795213972599eb80fd5e3bc715664179713af1620466d3ddbd47"
+      },
+      "whirr-plate-0": {
+        "frames": 282743,
+        "productionFloatSha256": "d01b8982d2be8c98f3bd4fe6688c0f4496c8e6aecaf9caaa7e5c01ff9c559ea6",
+        "prelevelFloatSha256": "0ef8f6980a44986d8088a9bfa542b7f6af3f692147538567a49cffad8c7af8af",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-plate-25": {
+        "frames": 282743,
+        "productionFloatSha256": "94a4257ea4dfb4506f837b74621d37c35ea63d19cfe63e83dffe3e4128e1669f",
+        "prelevelFloatSha256": "8c19b2e24b7b6cee6fc9e9ed860423ef3c3e046b6db4d7bc0172462b2954910d",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-plate-50": {
+        "frames": 282743,
+        "productionFloatSha256": "89d3a8c10d64244990987b04e4e8953c11ab5fea7049a39323fce1221cf81f67",
+        "prelevelFloatSha256": "21d2fc75b5e58aa30c9212b8741f582b615cf37a82890bc266d6d05385044066",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-plate-75": {
+        "frames": 297448,
+        "productionFloatSha256": "55002169538d9e8097c241653e997b506578580cfcd6b55a9d19d655e5d6b5e8",
+        "prelevelFloatSha256": "680efe42f0437afecf60b69c7cfef72a0b68756347a6f4014635850d1574ffd4",
+        "acousticDiagnosticsSha256": "8da65ef411da70d1533f376a8ccd3cc4c8bf453a88d3f1ff4d7a2af3962c3e17"
+      },
+      "whirr-plate-100": {
+        "frames": 340073,
+        "productionFloatSha256": "34df4c1094b139a20c2a53eae53c649701efea93add2a753c4597f35dc6cd0a3",
+        "prelevelFloatSha256": "b20993f95575667b367ede10a02797588bd2d6a3b4bb11b9be7c2267d1e9ba19",
+        "acousticDiagnosticsSha256": "09eb2dd0270c6f35bd66b224879011c1aa7b63aec9d7cbf3f00ba20773c27d67"
+      },
+      "whirr-collapse-0": {
+        "frames": 235434,
+        "productionFloatSha256": "dee019a0d1e76b795f099a2342a9812d76e2ff43825d0e9f898ad0838bd5b9be",
+        "prelevelFloatSha256": "22f2172316a0cf6835b87b81ae91ec998b4787bea0a8cd662712db8b4d9d9f6b",
+        "acousticDiagnosticsSha256": "e6e20dd226fdc43c6ec7c0e3507c4b6b7110d43a14dcaa3a366110182307faeb"
+      },
+      "whirr-collapse-25": {
+        "frames": 245901,
+        "productionFloatSha256": "b85953ac5952dac6266705a1f42881a73eac741451f012c36c6ecb1f89e18757",
+        "prelevelFloatSha256": "c8d05f4e95251a6ef503d4fe09732e1cfc47554702b4386f09d2b20dfc679221",
+        "acousticDiagnosticsSha256": "dbec2662047df9a76d6d4cbed41e9f510dae9ca1857ef928a424800a8defdbc4"
+      },
+      "whirr-collapse-50": {
+        "frames": 258039,
+        "productionFloatSha256": "8edbceaebab8a7b37bf958696084afb7efd4eb324297996175639b26b725d8c1",
+        "prelevelFloatSha256": "0a846e27f74fbff976a4fecab34c7c1e544df8cc6a05985fe30fdebd0f4434fc",
+        "acousticDiagnosticsSha256": "6779b4ba18e61ea04b9f8efa03a3b7c9d5944db113b71795d3532ddf63a77f17"
+      },
+      "whirr-collapse-75": {
+        "frames": 269712,
+        "productionFloatSha256": "62fb51d4426cb31f34bcaa72ab3383fa9d909fd5865ef0ce635f547ae2c83e6b",
+        "prelevelFloatSha256": "bc2f732a78cede437928bd3eca21091920bfdd58bbefe6a4747063ef02a1cae0",
+        "acousticDiagnosticsSha256": "4c05ffb6d7fac009b3b7d695779fa095965d65d7f21e9e5e08e9740cd092f04d"
+      },
+      "whirr-collapse-100": {
+        "frames": 282743,
+        "productionFloatSha256": "89d3a8c10d64244990987b04e4e8953c11ab5fea7049a39323fce1221cf81f67",
+        "prelevelFloatSha256": "21d2fc75b5e58aa30c9212b8741f582b615cf37a82890bc266d6d05385044066",
+        "acousticDiagnosticsSha256": "3cfa2c7dae2a92583ea6aa21a1b03e468decf895d153223e1684a03585c9e46d"
+      },
+      "whirr-lean0-brake0": {
+        "frames": 301455,
+        "productionFloatSha256": "75718f6d309d6c2ef0a9bbccad75723f325c81b42a33986d43d4d8b3e1a43898",
+        "prelevelFloatSha256": "ce1169dc67f31efb6798d19420140e344323bc21de895dc6e7dfa59213f6aa0c",
+        "acousticDiagnosticsSha256": "94c201ba7d7acbefb030b69a542a52ecfc89270195bbf4c4031acc303e534c78"
+      },
+      "whirr-lean0-brake1": {
+        "frames": 230953,
+        "productionFloatSha256": "b8ab85d81ccb355a6927f864fff6b87b197b9dd9c3b323d9464c3f9e8aedcb18",
+        "prelevelFloatSha256": "142834fce6951be57ce023d51ca086dfe27c42449c48249548600239fda423e2",
+        "acousticDiagnosticsSha256": "b80390dfd569248c39c0ddc9b7c6e5514b1c424741fcd7b05bb23591973670a6"
+      },
+      "whirr-lean1-brake0": {
+        "frames": 326037,
+        "productionFloatSha256": "1af5dd2d0e5ad815241e7264d1dca28db75348fbebcd65e07b1d4f8312921b1a",
+        "prelevelFloatSha256": "082f728f0caf58420d27e8769982d5eccfd1f30d4e4a3c8e10a981c779c60221",
+        "acousticDiagnosticsSha256": "229235c77ca8af5491868aba3421aeb9bc37ff7d832d0a63573ab5a50592cdaf"
+      },
+      "whirr-lean1-brake1": {
+        "frames": 247644,
+        "productionFloatSha256": "d6d7e39e4ff65d8feaa82ececdd5955885dec41caf33985ae2230efdc0d51fb7",
+        "prelevelFloatSha256": "e26f16ebf1275505a9c0be7b2076abf367600d7bf4244a7306ccc17d8e060e00",
+        "acousticDiagnosticsSha256": "12d4d12aea020723f36e18b1b00fe7ea58eb63097670145f071c1639429dedac"
+      },
+      "whirr-edge0-collapse0": {
+        "frames": 235434,
+        "productionFloatSha256": "45ef94938ebb3d92a4ff8f4080fbaa731a3f7e3fc4ad6c9224e78720b4eda1a3",
+        "prelevelFloatSha256": "660a4201151c786466f39d09240d54405c34e6372a14c4b5a1b7372e45def6eb",
+        "acousticDiagnosticsSha256": "2bebd04ab4117d99f7b7bc6d48010c2130089ca2e983f310d5d2487851ab7969"
+      },
+      "whirr-edge0-collapse1": {
+        "frames": 282743,
+        "productionFloatSha256": "9a233a7748a3d72ddfe9e8653cd7cef448a46638bcdfd3ba9fedeababaa4cfef",
+        "prelevelFloatSha256": "bc1f037d97fa039c6592ccb966aacfaaa10105f6ff9bf3db45a509016949f18a",
+        "acousticDiagnosticsSha256": "c10f86b68a2b48c0f389aa47ec2b5e696347a0a4b80c321049502d0d7b9be585"
+      },
+      "whirr-edge1-collapse0": {
+        "frames": 235434,
+        "productionFloatSha256": "2fb36fd0094faa8e1d15f228e3c1f8aa1918a0a236ad88594458321501c3535a",
+        "prelevelFloatSha256": "54f5b8fe4f92316e4d4268abaeb66cb8b1228e1d0c120bf5072d0707a799baab",
+        "acousticDiagnosticsSha256": "551e8a26c5ac4ea23064bb2e9af66a7b259eb3f0cf5b34f5a25d18d72fd00e70"
+      },
+      "whirr-edge1-collapse1": {
+        "frames": 282743,
+        "productionFloatSha256": "722f82a05186a3e67468069eb68ac73e32b69ed4b1516f427854636cb8439fa0",
+        "prelevelFloatSha256": "e4f6c6b9e6858f28ca0856d578a31df0398e366c15a7aa3d64c1065b61ee7002",
+        "acousticDiagnosticsSha256": "94f1799217ea795213972599eb80fd5e3bc715664179713af1620466d3ddbd47"
+      },
+      "whirr-brake0-collapse0": {
+        "frames": 249275,
+        "productionFloatSha256": "bae145e3a0a477e17bab05936eebb2a09a3ecc0b68a787f8ce6a1430fb1a8a40",
+        "prelevelFloatSha256": "5a5bd3de58dfb30b82d57ac6ce74e9bb1e8db35ec4b58dd5411735f95b4df4c9",
+        "acousticDiagnosticsSha256": "50ccc0595b917c4da7ce61a25da45c04c41b389a933cfbbb77107d2c55f84bee"
+      },
+      "whirr-brake0-collapse1": {
+        "frames": 301455,
+        "productionFloatSha256": "75718f6d309d6c2ef0a9bbccad75723f325c81b42a33986d43d4d8b3e1a43898",
+        "prelevelFloatSha256": "ce1169dc67f31efb6798d19420140e344323bc21de895dc6e7dfa59213f6aa0c",
+        "acousticDiagnosticsSha256": "94c201ba7d7acbefb030b69a542a52ecfc89270195bbf4c4031acc303e534c78"
+      },
+      "whirr-brake1-collapse0": {
+        "frames": 197842,
+        "productionFloatSha256": "6b92fa2c610c8952c4380ae8206f6b6ae3b4343cf18be9ff1ff6dd8c2c363a6c",
+        "prelevelFloatSha256": "8fb7ac0897c79151e2471a0e5cddc70d80c4f34c53aef7244691acf721ccfe02",
+        "acousticDiagnosticsSha256": "eb58795f04befc022f3bb1deeee4b1700f50b39e45be4a84812ccda6dc1e7743"
+      },
+      "whirr-brake1-collapse1": {
+        "frames": 230953,
+        "productionFloatSha256": "b8ab85d81ccb355a6927f864fff6b87b197b9dd9c3b323d9464c3f9e8aedcb18",
+        "prelevelFloatSha256": "142834fce6951be57ce023d51ca086dfe27c42449c48249548600239fda423e2",
+        "acousticDiagnosticsSha256": "b80390dfd569248c39c0ddc9b7c6e5514b1c424741fcd7b05bb23591973670a6"
+      },
+      "whirr-edge0-plate0": {
+        "frames": 282743,
+        "productionFloatSha256": "81c066cf125099d3bf19364e31c2588d6d59bac30320c2ebac6d5922e266594c",
+        "prelevelFloatSha256": "deaec1b996f020372dd98c9cadcd09f7bc23396ed587d60476c2ed549367275d",
+        "acousticDiagnosticsSha256": "c10f86b68a2b48c0f389aa47ec2b5e696347a0a4b80c321049502d0d7b9be585"
+      },
+      "whirr-edge0-plate1": {
+        "frames": 340073,
+        "productionFloatSha256": "8bde4fc9be31bd6653012001487938861ce763d17abed3c049a85425184d2841",
+        "prelevelFloatSha256": "db9963dcf352f449ee802bb80703047cc475d3cca048edf166a84738ad90527b",
+        "acousticDiagnosticsSha256": "80700421f49de8222863488dbe60a31bb2b70a1b72d79271fcd5b608bf1cd75d"
+      },
+      "whirr-edge1-plate0": {
+        "frames": 282743,
+        "productionFloatSha256": "6bd74e5caa55dbfb85e4551e6ed8fc86639e2760d44aeade3434ab4132fd561d",
+        "prelevelFloatSha256": "9a7a2c97e9fea3ed470578e59eecb8f1986ea927e4998bbd3fe8428affae92e6",
+        "acousticDiagnosticsSha256": "94f1799217ea795213972599eb80fd5e3bc715664179713af1620466d3ddbd47"
+      },
+      "whirr-edge1-plate1": {
+        "frames": 340073,
+        "productionFloatSha256": "11c74286a4b11c572c2b373a5c57be9c6f1d84af18e4b40cb1d81804b5d9ac56",
+        "prelevelFloatSha256": "91d46fa85f2a36f90351360d8eac55900c0561d6d7d1b8fec70fd6165cf80176",
+        "acousticDiagnosticsSha256": "1c398e6fde9b697722a86a17b98b6901d826ec9c146f6d5629ac301802f7b4cf"
+      }
+    }
+  },
+  "focusedSharedTest": {
+    "class": "ResamplerTest",
+    "tests": 16,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "exitCode": 0,
+    "additionalCaseCombinations": 42,
+    "note": "Tiny/edge/interior mono/stereo, steps2/4/8; existing odd4001frame fast/general bit parity retained. Final combined gate reran this class with final unroll."
+  },
+  "profiling": {
+    "method": "JFR profile settings, exploratory original baseline JVM; execution-sample top frames, not an exact time allocation",
+    "topFrameCounts": {
+      "com.snipsnap.synth.Dsp$TptSvf.lowPassInPlace(float[], float, float)": 358,
+      "com.snipsnap.audio.Resampler.decimateByPowerOfTwo(Snip, int, double, int, float[])": 244,
+      "com.snipsnap.synth.Modes.ring(float[], float, List, int)": 235,
+      "com.snipsnap.synth.SkirlAcoustics.energy(double[][], int)": 27,
+      "com.snipsnap.synth.SkirlAcoustics.render(SkirlDynamics$Trace, double, float, float, float, float, int, boolean, int, boolean)": 24,
+      "com.snipsnap.audio.Loudness.of(float[], int, int)": 10,
+      "com.snipsnap.synth.SkirlAcoustics.sources(SkirlDynamics$Trace, float, float, float, float, int, boolean, int, boolean, Double)": 8,
+      "com.snipsnap.synth.Skirl.condition(float[])": 8,
+      "com.snipsnap.synth.Skirl.play(SkirlVoice, Map, int, float, boolean, SkirlDynamics$Parameters)": 6,
+      "com.snipsnap.synth.SkirlAcoustics.addBudgetedPulse(double[][], double[], int, double, double, double, int)": 6,
+      "com.snipsnap.synth.SkirlAcoustics.energy(float[], float[], int)": 6,
+      "com.snipsnap.synth.Dsp.scaleFinite(float[], float)": 3,
+      "com.snipsnap.synth.SkirlDynamics.solve$synth(SkirlDynamics$Parameters)": 2,
+      "com.snipsnap.synth.Dsp.finitePeak$synth(float[])": 2,
+      "sun.security.provider.SHA2.implCompress0(byte[], int)": 2,
+      "java.lang.FdLibm$Atan.compute(double)": 2,
+      "com.snipsnap.synth.SkirlAcoustics.sources$add$9(double[], SkirlDynamics$Trace, SkirlAcoustics$RimPolarity, double[][], double[], double[], int, Ref$DoubleRef, ArrayList, double, double, int)": 1,
+      "kotlin.collections.CollectionsKt__CollectionsKt.listOf(Object[])": 1,
+      "com.snipsnap.synth.SkirlAcoustics.contactEvents$add(double, double[], double[], ArrayList, int, long)": 1
+    }
+  },
+  "unrollComponentExperiment": {
+    "inputFrames": 1000003,
+    "inputRate": 176400,
+    "channels": 1,
+    "targetRate": 44100,
+    "stages": [
+      88200,
+      44100
+    ],
+    "warmups": 10,
+    "repeats": 31,
+    "interiorOnlyRunMediansMillis": [
+      22.912107,
+      22.369131,
+      24.870658
+    ],
+    "unrolledRunMediansMillis": [
+      16.954179,
+      16.123917,
+      17.838608
+    ],
+    "allSixOutputFloatSha256": "30012447c98a9d6746618db7fb0c382d0de83407368b59b27315f842a89e8efc",
+    "limitation": "Earlier component experiment; scheduling uncontrolled and separate from complete engine comparison."
+  },
+  "sourceSha256": {
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "c290c43c958106f847873eb4f01cd6ede23050bdcc28259f02af0e440e4a19a9",
+    "audio/src/test/kotlin/com/snipsnap/audio/ResamplerTest.kt": "4ac6b041d8013ba87d79488b0c08a8a234b2ffbf999bbe05364252d45b476cfc",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlAcoustics.kt": "e889018c1a5cfc8e0d522186c26bc625043a90f2c21555799249bb581187d386",
+    "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "aaf7886be6c8515f4e944ed09d8a66c13211ddf6b0b9951d72eb3f247e8358eb"
+  },
+  "measuredClassSha256": {
+    "audio/build/classes/kotlin/main/com/snipsnap/audio/Resampler.class": "308db5ca39c4d049d076b21cf33c2283b7e581060dcc0acf47d7d74b1dc7c214",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics.class": "45fa252f52840fde663b59852d12f6972b436ec97398058889da1e4d0177564c",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "f007097c77463cf213747eb88e16e69cd63c2d5bdd697def24eeb4e2c33cef11"
+  },
+  "baselineJarSha256": {
+    "annotations-13.0.jar": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
+    "audio.jar": "d2cc1eac4ea1129fcb1c8f183d2762f38ad8a4099922a3916a4ce44b449ac50f",
+    "cli.jar": "36e9354f75f32f4b877c0eb9b785e2a801fdb8e5b0da5c9c859bedc3bb0a1830",
+    "json.jar": "a367a4a1f935477c44fb120b3853bff8db8bd03d6916fb33784e329ba6cb8a70",
+    "kit.jar": "489543b34dd1911c78f16b4e4328faeb5c129ad1213b7939c0f67544a0680769",
+    "kotlin-stdlib-2.0.21.jar": "f31cc53f105a7e48c093683bbd5437561d1233920513774b470805641bedbc09",
+    "loop.jar": "085375a71789a3aadb93a6b9be4c5d36642c8675b16725841e759ddc95063760",
+    "mpc3.jar": "89490ff897961cbc0cc70527be75950df7f8d4d11d854c884b56762a09b4ca80",
+    "shell.jar": "77c6ff262fe5bc791649f3f97d0aa387ef91cfa1ae4e88842b8c8b2aaca4182f",
+    "synth.jar": "8c40db14f8ebe3329003a489ca1b2f43ac015ce74168e8d9d7eea5b042650334",
+    "xpm.jar": "0b0ae8d3d7acc05abd5f233a4cbd556b0e91ba861ecfb625bcb6f1537405b79e"
+  },
+  "heard": "No new listening claim; this pass preserves all106 prior finite float waveforms."
+}

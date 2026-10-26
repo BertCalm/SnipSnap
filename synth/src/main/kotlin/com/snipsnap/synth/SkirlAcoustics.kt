@@ -257,7 +257,11 @@ internal object SkirlAcoustics {
         val decayScale = 2.0.pow(2.0 * (plateValue - .5))
         val tail = max(2.0, 1.65 * decayScale)
         val frames = ceil((restTime + tail) * rate).toInt()
-        val routes = Array(2) { DoubleArray(frames) }
+        val restFrame = (restTime * rate).roundToInt()
+        // REST is forced to zero after the causal input filters. Their later
+        // state cannot affect an earlier sample, so do not allocate or filter
+        // the discarded free-decay tail. Modal output still retains that tail.
+        val routes = Array(2) { DoubleArray(restFrame) }
         val polarity = if (signedTexture) RimPolarity(seed) else null
         // The audition supplies the energy/hardness law. A softer touch spends
         // less acoustic work and widens the note-aware contact below; the
@@ -336,28 +340,25 @@ internal object SkirlAcoustics {
             }
         }
         val beforeFilter = energy(routes, rate)
-        val disk = FloatArray(frames) { routes[0][it].toFloat() }
-        val support = FloatArray(frames) { routes[1][it].toFloat() }
+        val diskInput = FloatArray(restFrame) { routes[0][it].toFloat() }
+        val supportInput = FloatArray(restFrame) { routes[1][it].toFloat() }
         // Sixth-order 8 kHz Butterworth input filtering, using the house's
         // fixed-coefficient TPT sections. Oversampling alone is insufficient.
-        for (route in listOf(disk, support)) {
+        for (route in listOf(diskInput, supportInput)) {
             for (damping in floatArrayOf(1.9318517f, 1.4142136f, .5176381f)) {
                 interrupted()
                 Dsp.TptSvf(rate).lowPassInPlace(route, 8000f, damping)
             }
-            val restFrame = (restTime * rate).roundToInt()
             val withdrawal = min((.010 * rate).roundToInt(), restFrame)
             for (i in 0 until withdrawal) route[restFrame - withdrawal + i] *=
                 (1.0 - i.toDouble() / (withdrawal - 1).coerceAtLeast(1)).toFloat()
-            route.fill(0f, restFrame, route.size)
         }
-        var restPeak = 0f
-        val restFrame = (restTime * rate).roundToInt()
-        for (i in restFrame until frames) restPeak = max(restPeak, max(abs(disk[i]), abs(support[i])))
+        val disk = diskInput.copyOf(frames)
+        val support = supportInput.copyOf(frames)
         val diagnostics = Diagnostics(onset, if (success) terminalDuration else 0.0,
             if (success) 0.0 else terminalDuration, restTime, frames.toDouble() / rate,
             trace.resistanceWork.last(), assigned, rollingEnergy, remaining, terminalBudget,
-            beforeFilter - rollingEnergy, beforeFilter, energy(disk, support, rate), restPeak,
+            beforeFilter - rollingEnergy, beforeFilter, energy(diskInput, supportInput, rate), 0f,
             fineTexture, seed, rolling.toList(), terminal.toList(), signedTexture, width)
         check(diagnostics.combinedBudgetSatisfied) { "SKIRL contact input exceeded its work proxy" }
         return Sources(disk, support, diagnostics)

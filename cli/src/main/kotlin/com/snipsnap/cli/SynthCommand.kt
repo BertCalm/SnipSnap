@@ -2,6 +2,7 @@ package com.snipsnap.cli
 
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
@@ -536,7 +537,11 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
-            FileOutputStream(file).buffered().use { WavWriter.write(it, snip) }
+            val sampler = if (patch is SkirlPatch && Skirl.isLoop(patch.macros["HOLD"] ?: 0f)) {
+                SmplChunk(Skirl.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi),
+                    SmplChunk.Loop(0, snip.frameCount.toLong()))
+            } else null
+            FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
             if (patch is ObbligatoPatch || patch is TidalPatch || patch is SkirlPatch) File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"

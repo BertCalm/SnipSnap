@@ -59,7 +59,7 @@ class SkirlPatchTest {
         for (bad in listOf(35.0, 85.0, 60.25, Double.NaN)) {
             assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("midi", JsonValue.Num(bad))) }
         }
-        for (bad in listOf(0.0, 1.5, 2.0)) {
+        for (bad in listOf(0.0, 1.5, 3.0)) {
             assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("model", JsonValue.Num(bad))) }
         }
         for (bad in listOf(-.000000001, 1.000000001, Double.NaN)) {
@@ -70,12 +70,31 @@ class SkirlPatchTest {
         }
         assertFailsWith<IllegalArgumentException> { patch.copy(name = " ") }
         assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("UNKNOWN" to .5f)) }
-        assertFailsWith<IllegalArgumentException> { patch.copy(macros = mapOf("HOLD" to .01f)) }
+        val legacy = patch.copy(model = Skirl.LEGACY_MODEL_VERSION)
+        assertFailsWith<IllegalArgumentException> { legacy.copy(macros = mapOf("HOLD" to .01f)) }
         assertFailsWith<JsonException> {
-            SkirlPatch.fromJsonValue(changed("macros", JsonValue.Obj(mapOf("HOLD" to JsonValue.Num(1e-100)))))
+            SkirlPatch.fromJsonValue(JsonValue.Obj(legacy.toJsonValue().entries +
+                ("macros" to JsonValue.Obj(mapOf("HOLD" to JsonValue.Num(1e-100))))))
         }
         assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("engine", JsonValue.Str("PITCHWHEEL"))) }
         assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("voice", JsonValue.Str("SCRAPE"))) }
+    }
+
+    @Test
+    fun `model one replay keeps its finite surface and model two saves the acoustic hold`() {
+        for (voice in SkirlVoice.entries) {
+            val legacy = authored(voice).copy(model = 1)
+            assertEquals(legacy, Patches.fromJsonText(legacy.toJsonText()))
+            assertContentEquals(legacy.render().samples, legacy.copy(model = 2).render().samples)
+            for (hold in listOf(.5f, 1f)) {
+                val captured = authored(voice).copy(macros = authored(voice).macros + ("HOLD" to hold))
+                val restored = assertIs<SkirlPatch>(Patches.fromJsonText(captured.toJsonText()))
+                assertEquals(captured, restored)
+                assertContentEquals(captured.render().samples, restored.render().samples)
+                assertContentEquals(captured.copy(velocity = .25f).render().samples,
+                    Velocity.atVelocity(captured, .25f).samples)
+            }
+        }
     }
 
     @Test

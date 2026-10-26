@@ -5,9 +5,9 @@ import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
 /**
- * A replayable finite rolling gesture. The saved model, root and velocity pin
+ * A replayable rolling gesture. The saved model, root and velocity pin
  * the render and its derived seed context; TUNE adjusts the saved root.
- * HOLD remains refused while this prototype has no validated loop construction.
+ * Model 1 retains its finite-only contract; model 2 adds acoustic capture HOLD.
  */
 data class SkirlPatch(
     override val name: String,
@@ -23,13 +23,15 @@ data class SkirlPatch(
             "SKIRL midi must be ${Skirl.MIDI_MIN}..${Skirl.MIDI_MAX}"
         }
         require(velocity.isFinite() && velocity in 0f..1f) { "SKIRL velocity must be 0..1" }
-        require(model == Skirl.MODEL_VERSION) { "unsupported skirl model $model" }
-        require((macros["HOLD"] ?: 0f) == 0f) { "SKIRL finite prototype requires HOLD 0" }
+        require(model in Skirl.LEGACY_MODEL_VERSION..Skirl.MODEL_VERSION) { "unsupported skirl model $model" }
+        require(model != Skirl.LEGACY_MODEL_VERSION || (macros["HOLD"] ?: 0f) == 0f) {
+            "SKIRL model 1 requires HOLD 0"
+        }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Skirl.render(voice, macros, midi, velocity)
+    override fun render() = Skirl.render(voice, macros, midi, velocity, model)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(
@@ -49,7 +51,8 @@ data class SkirlPatch(
             fun required(key: String): JsonValue = obj[key]?.takeUnless { it is JsonValue.Null }
                 ?: throw JsonException("SKIRL patch has no $key")
             val model = required("model").int()
-            if (model != Skirl.MODEL_VERSION) throw JsonException("unsupported skirl model $model")
+            if (model !in Skirl.LEGACY_MODEL_VERSION..Skirl.MODEL_VERSION)
+                throw JsonException("unsupported skirl model $model")
             val midi = required("midi").int()
             val velocity = required("velocity").num()
             if (!velocity.isFinite() || velocity !in 0.0..1.0) throw JsonException("SKIRL velocity must be 0..1")
@@ -59,7 +62,8 @@ data class SkirlPatch(
             if (rawMacros is JsonValue.Obj) for ((key, raw) in rawMacros.entries) {
                 val number = raw.num()
                 if (!number.isFinite() || number !in 0.0..1.0) throw JsonException("SKIRL $key must be 0..1")
-                if (key == "HOLD" && number != 0.0) throw JsonException("SKIRL finite prototype requires HOLD 0")
+                if (model == Skirl.LEGACY_MODEL_VERSION && key == "HOLD" && number != 0.0)
+                    throw JsonException("SKIRL model 1 requires HOLD 0")
             }
             Patches.decode(value, ENGINE, { name -> SkirlVoice.entries.firstOrNull { it.name == name } }) { name, voice, macros ->
                 SkirlPatch(name, voice, macros, midi, velocity.toFloat(), model)

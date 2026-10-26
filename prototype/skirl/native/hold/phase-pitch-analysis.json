@@ -1,0 +1,428 @@
+{
+  "measurement": "Python NumPy/SciPy analysis of delivered PCM16, not JVM Pitch.detect.",
+  "interpretation": "Known-target local-peak lookup diagnoses refusal; it is not an unconstrained pitch estimate or listening acceptance.",
+  "voices": [
+    {
+      "voice": "roll",
+      "wav": "production/roll-low-soft-loop.wav",
+      "wavSha256": "48c264f25b327aec686c1bf44f8c731bc735e5837c1a1fd7ad73f2311323de21",
+      "midi": 36,
+      "velocity": 0.25,
+      "frames": 26296,
+      "rate": 44100,
+      "targetHz": 65.40639132514966,
+      "cycleSeconds": 0.596281179138322,
+      "targetNearestPeriodicLineHz": 65.40538484940676,
+      "targetNearestPeriodicLineCents": -0.026640492571247995,
+      "targetNearestPeriodicLinePowerShare": 0.19119738500434738,
+      "powerShare50To85Hz": 0.9413798187360923,
+      "strongestPeriodicLines": [
+        {
+          "bin": 38,
+          "hz": 63.72832369942196,
+          "centsFromTarget": -44.996286994966674,
+          "totalPowerShare": 0.47331893121538854
+        },
+        {
+          "bin": 39,
+          "hz": 65.40538484940676,
+          "centsFromTarget": -0.026640492571247995,
+          "totalPowerShare": 0.19119738500434738
+        },
+        {
+          "bin": 40,
+          "hz": 67.08244599939154,
+          "centsFromTarget": 43.80441073756538,
+          "totalPowerShare": 0.12579460275559298
+        },
+        {
+          "bin": 37,
+          "hz": 62.051262549437176,
+          "centsFromTarget": -91.16526437252953,
+          "totalPowerShare": 0.050518595512595695
+        },
+        {
+          "bin": 41,
+          "hz": 68.75950714937633,
+          "centsFromTarget": 86.55310241443136,
+          "totalPowerShare": 0.022908175958286467
+        },
+        {
+          "bin": 33,
+          "hz": 55.34301794949802,
+          "centsFromTarget": -289.23635989712517,
+          "totalPowerShare": 0.012846449653327461
+        },
+        {
+          "bin": 36,
+          "hz": 60.37420139945239,
+          "centsFromTarget": -138.59930139649444,
+          "totalPowerShare": 0.011511966851365686
+        },
+        {
+          "bin": 35,
+          "hz": 58.697140249467594,
+          "centsFromTarget": -187.36968279330972,
+          "totalPowerShare": 0.01030786763661465
+        },
+        {
+          "bin": 77,
+          "hz": 129.1337085488287,
+          "centsFromTarget": 1177.6345457066122,
+          "totalPowerShare": 0.007962535037806693
+        },
+        {
+          "bin": 44,
+          "hz": 73.79069059933069,
+          "centsFromTarget": 208.8086392374873,
+          "totalPowerShare": 0.0075548682917263585
+        }
+      ],
+      "phaseWindows": [
+        {
+          "phaseSeconds": 0.0,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9341444875631167,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.1149271153902,
+          "diagnosticRootCandidateCents": -7.731972198736598,
+          "rootPeakCorrelation": 0.8610264699152141,
+          "rootPeakShareOfMaximum": 0.9217272931314469,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.05,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9339680461598473,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.24431079284695,
+          "diagnosticRootCandidateCents": -4.295414806226608,
+          "rootPeakCorrelation": 0.8992149666923822,
+          "rootPeakShareOfMaximum": 0.9627898624472672,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.1,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9353204126998287,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.19750628577583,
+          "diagnosticRootCandidateCents": -5.53780105296116,
+          "rootPeakCorrelation": 0.8964648463912037,
+          "rootPeakShareOfMaximum": 0.958457480686787,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.15000000000000002,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9341693852548698,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.328054169767,
+          "diagnosticRootCandidateCents": -2.0747396208175295,
+          "rootPeakCorrelation": 0.8943166611771627,
+          "rootPeakShareOfMaximum": 0.9573388673331078,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.2,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9367839652457839,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.19680697653347,
+          "diagnosticRootCandidateCents": -5.556370389935041,
+          "rootPeakCorrelation": 0.8629807398531225,
+          "rootPeakShareOfMaximum": 0.9212163869891842,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.25,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9307422927562663,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.43113687061845,
+          "diagnosticRootCandidateCents": 0.6548630500725756,
+          "rootPeakCorrelation": 0.8453434621707532,
+          "rootPeakShareOfMaximum": 0.9082465347818072,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.30000000000000004,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9345423896646676,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.67718179825198,
+          "diagnosticRootCandidateCents": -19.40976182176133,
+          "rootPeakCorrelation": 0.8522395575630252,
+          "rootPeakShareOfMaximum": 0.9119324783853043,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.35000000000000003,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9381095189466316,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.75340467957474,
+          "diagnosticRootCandidateCents": -17.370681781871326,
+          "rootPeakCorrelation": 0.9181359039668322,
+          "rootPeakShareOfMaximum": 0.9787086533326865,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.4,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9391942723914849,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.5039182092149,
+          "diagnosticRootCandidateCents": -24.053784897230685,
+          "rootPeakCorrelation": 0.9199877717392783,
+          "rootPeakShareOfMaximum": 0.9795500236566597,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.45,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9357243712471103,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.57892941979541,
+          "diagnosticRootCandidateCents": -22.04171313368349,
+          "rootPeakCorrelation": 0.8706105595333423,
+          "rootPeakShareOfMaximum": 0.9304134703395768,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.5,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9300515514547022,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.73568380349458,
+          "diagnosticRootCandidateCents": -17.844528414049897,
+          "rootPeakCorrelation": 0.8654612160434574,
+          "rootPeakShareOfMaximum": 0.9305518760651295,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.55,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.932860920896329,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.60345613913009,
+          "diagnosticRootCandidateCents": -21.38432486901294,
+          "rootPeakCorrelation": 0.7864138733529203,
+          "rootPeakShareOfMaximum": 0.843012989114501,
+          "passesDetectorRelativePeakGate": false
+        }
+      ]
+    },
+    {
+      "voice": "whirr",
+      "wav": "production/whirr-low-soft-loop.wav",
+      "wavSha256": "2dfc602e9a7278eed0dfe154afb3d21175b564bd0fe8fd21f9306260406568e5",
+      "midi": 36,
+      "velocity": 0.25,
+      "frames": 26296,
+      "rate": 44100,
+      "targetHz": 65.40639132514966,
+      "cycleSeconds": 0.596281179138322,
+      "targetNearestPeriodicLineHz": 65.40538484940676,
+      "targetNearestPeriodicLineCents": -0.026640492571247995,
+      "targetNearestPeriodicLinePowerShare": 0.43705834104175983,
+      "powerShare50To85Hz": 0.9483303917299997,
+      "strongestPeriodicLines": [
+        {
+          "bin": 39,
+          "hz": 65.40538484940676,
+          "centsFromTarget": -0.026640492571247995,
+          "totalPowerShare": 0.43705834104175983
+        },
+        {
+          "bin": 38,
+          "hz": 63.72832369942196,
+          "centsFromTarget": -44.996286994966674,
+          "totalPowerShare": 0.25338428090764187
+        },
+        {
+          "bin": 40,
+          "hz": 67.08244599939154,
+          "centsFromTarget": 43.80441073756538,
+          "totalPowerShare": 0.09652011396851086
+        },
+        {
+          "bin": 35,
+          "hz": 58.697140249467594,
+          "centsFromTarget": -187.36968279330972,
+          "totalPowerShare": 0.033625141249465675
+        },
+        {
+          "bin": 41,
+          "hz": 68.75950714937633,
+          "centsFromTarget": 86.55310241443136,
+          "totalPowerShare": 0.03325228981572608
+        },
+        {
+          "bin": 34,
+          "hz": 57.02007909948281,
+          "centsFromTarget": -237.55389362686222,
+          "totalPowerShare": 0.02207959781822741
+        },
+        {
+          "bin": 37,
+          "hz": 62.051262549437176,
+          "centsFromTarget": -91.16526437252953,
+          "totalPowerShare": 0.011481939581099916
+        },
+        {
+          "bin": 45,
+          "hz": 75.46775174931548,
+          "centsFromTarget": 247.71441246834024,
+          "totalPowerShare": 0.010638950884316063
+        },
+        {
+          "bin": 77,
+          "hz": 129.1337085488287,
+          "centsFromTarget": 1177.6345457066122,
+          "totalPowerShare": 0.007835867770780932
+        },
+        {
+          "bin": 32,
+          "hz": 53.66595679951323,
+          "centsFromTarget": -342.50930312726933,
+          "totalPowerShare": 0.0072503215277162905
+        }
+      ],
+      "phaseWindows": [
+        {
+          "phaseSeconds": 0.0,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9364208074639437,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.34621665924602,
+          "diagnosticRootCandidateCents": -1.5934892537039955,
+          "rootPeakCorrelation": 0.9204064906988224,
+          "rootPeakShareOfMaximum": 0.9828983757756388,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.05,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9391021789014672,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.12628458688908,
+          "diagnosticRootCandidateCents": -7.430033339860661,
+          "rootPeakCorrelation": 0.9161311868231886,
+          "rootPeakShareOfMaximum": 0.9755394113714555,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.1,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9385239585691948,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.15988369329622,
+          "diagnosticRootCandidateCents": -6.537107880656638,
+          "rootPeakCorrelation": 0.9083326264969084,
+          "rootPeakShareOfMaximum": 0.9678310481084427,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.15000000000000002,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9394017684149905,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.24408363702562,
+          "diagnosticRootCandidateCents": -4.301442313792013,
+          "rootPeakCorrelation": 0.8608892629725693,
+          "rootPeakShareOfMaximum": 0.9164228681675874,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.2,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9332503435986546,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.44094296663978,
+          "diagnosticRootCandidateCents": 0.9143018451682822,
+          "rootPeakCorrelation": 0.8436356945731227,
+          "rootPeakShareOfMaximum": 0.9039757663737108,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.25,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9396107513610525,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.4078669347331,
+          "diagnosticRootCandidateCents": 0.0390572952531123,
+          "rootPeakCorrelation": 0.7828819997643268,
+          "rootPeakShareOfMaximum": 0.8331982138670724,
+          "passesDetectorRelativePeakGate": false
+        },
+        {
+          "phaseSeconds": 0.30000000000000004,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9330201240674968,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.15123720700707,
+          "diagnosticRootCandidateCents": -6.766851764173426,
+          "rootPeakCorrelation": 0.7886514506707895,
+          "rootPeakShareOfMaximum": 0.8452673531120285,
+          "passesDetectorRelativePeakGate": false
+        },
+        {
+          "phaseSeconds": 0.35000000000000003,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9312533933860798,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 64.89687385891037,
+          "diagnosticRootCandidateCents": -13.539161596336829,
+          "rootPeakCorrelation": 0.6880702240106261,
+          "rootPeakShareOfMaximum": 0.738864662290004,
+          "passesDetectorRelativePeakGate": false
+        },
+        {
+          "phaseSeconds": 0.4,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9280278027595132,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.11656293738177,
+          "diagnosticRootCandidateCents": -7.688480555831926,
+          "rootPeakCorrelation": 0.6973430771373157,
+          "rootPeakShareOfMaximum": 0.7514247688094571,
+          "passesDetectorRelativePeakGate": false
+        },
+        {
+          "phaseSeconds": 0.45,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9233627342088508,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.3657825485935,
+          "diagnosticRootCandidateCents": -1.0752027261181973,
+          "rootPeakCorrelation": 0.7792585782338489,
+          "rootPeakShareOfMaximum": 0.8439354864169689,
+          "passesDetectorRelativePeakGate": false
+        },
+        {
+          "phaseSeconds": 0.5,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.9354909141336959,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.13959282909626,
+          "diagnosticRootCandidateCents": -7.076300150794162,
+          "rootPeakCorrelation": 0.8570655618160139,
+          "rootPeakShareOfMaximum": 0.9161666338680508,
+          "passesDetectorRelativePeakGate": true
+        },
+        {
+          "phaseSeconds": 0.55,
+          "windowSeconds": 0.3,
+          "globalCorrelationMaximum": 0.930729671245126,
+          "globalMaximumLag": 36,
+          "diagnosticRootCandidateHz": 65.40112638435953,
+          "diagnosticRootCandidateCents": -0.1393627052437236,
+          "rootPeakCorrelation": 0.8910764725187388,
+          "rootPeakShareOfMaximum": 0.9573955790263575,
+          "passesDetectorRelativePeakGate": true
+        }
+      ]
+    }
+  ]
+}

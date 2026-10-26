@@ -174,6 +174,27 @@ class ResamplerTest {
     }
 
     @Test
+    fun `power of two interior optimization preserves tiny edges and wider kernels to the bit`() {
+        // Tiny buffers never reach the interior branch. Larger odd buffers
+        // exercise both joins; 8:1 also uses the widened 128-tap kernel.
+        var state = 97451
+        fun noise(): Float {
+            state = state * 1103515245 + 12345
+            return ((state ushr 8) and 0xffff) / 32768f - 1f
+        }
+        for (step in listOf(2, 4, 8)) for (channels in listOf(1, 2)) {
+            for (frames in listOf(1, 3, 15, 32, 65, 257, 1_025)) {
+                val input = Snip(FloatArray(frames * channels) { noise() }, channels, 176_400)
+                val fast = Resampler.resample(input, 176_400 / step)
+                val general = Resampler.resample(input, 176_400 / step, powerOfTwoFastPath = false)
+                assertEquals(general.frameCount, fast.frameCount, "$frames frames, $step:1, $channels ch")
+                assertTrue(fast.samples.contentEquals(general.samples),
+                    "$frames frames, $step:1, $channels ch: samples differ")
+            }
+        }
+    }
+
+    @Test
     fun `kernel half width is historical at half rate and widens below it`() {
         assertEquals(16, Resampler.halfTapsFor(1.0))
         assertEquals(16, Resampler.halfTapsFor(0.5))

@@ -1,0 +1,106 @@
+{
+  "exitCode": 0,
+  "holdTests": {
+    "name": "com.snipsnap.synth.SkirlHoldTest",
+    "tests": "7",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-10-26T17:49:26.730Z",
+    "hostname": "bbaf97685ef6",
+    "time": "10.648"
+  },
+  "matrixCases": 36,
+  "worstCents": 19.11388587081301,
+  "minConfidence": 0.838712,
+  "maxSeam": 0.0,
+  "maxCycleDifference": 0.0,
+  "maxDc": 7.06822915918704e-09,
+  "minLoudness": 0.18339999,
+  "maxPeak": 0.7754684,
+  "maxWrapStepRatio": 0.8936240498571366,
+  "maxWrapSlopeRatio": 1.8036963169791251,
+  "minWrapLevelRatio": 0.40524358959620177,
+  "mutationLine": "SKIRL HOLD disturbed previous cycle: difference=0.47523092340849127 seam=0.9262967446515261",
+  "focusedTests": {
+    "audio:com.snipsnap.audio.ResamplerTest": {
+      "tests": "16",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "synth:com.snipsnap.synth.SkirlHoldTest": {
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "cli:com.snipsnap.cli.SkirlSynthCommandTest": {
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    "shell:com.snipsnap.shell.SkirlRecipeIntegrationTest": {
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  },
+  "measuredAtUtc": "2026-10-26T17:49:26.730Z",
+  "sourceBaseCommit": "4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778",
+  "command": "./gradlew -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 --offline --no-daemon --max-workers=2 :audio:test --tests '*ResamplerTest' :synth:test --tests '*SkirlHoldTest' :synth:generateSkirlHoldAudition :cli:test --tests '*Skirl*Test' :shell:test --tests '*Skirl*Test'",
+  "thresholds": {
+    "pitchAbsoluteCents": 50,
+    "confidenceMinimum": 0.3,
+    "seamAndCycleDifferenceMaximum": 0.001,
+    "dcMaximum": 0.005,
+    "wrapStepRatioMaximum": 1.1,
+    "wrapSlopeRatioMaximum": 2.2,
+    "wrapLevelRatioMinimum": 0.25
+  },
+  "matrix": {
+    "defaultVoices": 2,
+    "defaultMidis": [
+      36,
+      48,
+      60,
+      72,
+      84
+    ],
+    "defaultVelocities": [
+      0.25,
+      1.0
+    ],
+    "cornerVoices": 2,
+    "cornerMidis": [
+      36,
+      84
+    ],
+    "cornerVelocity": 0.65,
+    "cornerEdgeValues": [
+      0,
+      1
+    ],
+    "cornerPlateValues": [
+      0,
+      1
+    ]
+  },
+  "meaning": {
+    "seam": "Keys.seamError against independently conditioned actual preceding cycle; no copied output or final closure repair.",
+    "cycleDifference": "Sum-squared difference over whole independent cycles divided by preceding-cycle energy.",
+    "wrapStepRatio": "Boundary sample step / largest neighboring waveform sample step.",
+    "wrapSlopeRatio": "Boundary slope difference / largest neighboring waveform second difference.",
+    "wrapLevelRatio": "RMS across two 50 ms wrap-adjacent windows / larger immediately neighboring 50 ms RMS window.",
+    "capture": "Authored periodic acoustic capture of finite 4x modal output, followed by continuous house conditioning. Not a perpetually rolling mechanical solution.",
+    "mutation": "A 256-frame perturbation at ten times the unmodified preceding-cycle RMS makes both probes fail the unchanged 1e-3 bound."
+  },
+  "limits": [
+    "Kotlin Linux JVM evidence, not Android hardware.",
+    "Owner listening review pending for new HOLD.",
+    "An actual rendered-audio classifier exclusion was added after this focused run; the final complete JVM gate must verify it.",
+    "Full JVM gate is recorded separately by the integrating session."
+  ]
+}

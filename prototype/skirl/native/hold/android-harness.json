@@ -1,0 +1,123 @@
+{
+  "schema": 1,
+  "measuredAtUtc": "2026-10-26T18:08:16.106760+00:00",
+  "check": "Kotlin syntax and production JVM API compilation of Android instrumentation benchmark against final model-2 classes",
+  "result": "passed",
+  "compilerExitCode": 0,
+  "engineModels": {
+    "current": 2,
+    "legacy": 1
+  },
+  "androidCompilationPerformed": false,
+  "deviceRunPerformed": false,
+  "phonePerformanceMeasured": false,
+  "compiler": {
+    "artifact": "org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21",
+    "jarSha256": "9fa8cdd1de0dccffe154c997d423ec6b5f53cd6d9177e3a77a9b0de03fb1bc81",
+    "jvmTarget": "17",
+    "javaRuntime": "openjdk version \"21.0.12.1\" 2026-08-18"
+  },
+  "compileInputs": {
+    "source": "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt",
+    "productionModuleClassDirectories": [
+      "synth/build/classes/kotlin/main",
+      "json/build/classes/kotlin/main",
+      "audio/build/classes/kotlin/main"
+    ],
+    "supportingJars": [
+      {
+        "artifact": "kotlin-stdlib-2.0.21.jar",
+        "sha256": "f31cc53f105a7e48c093683bbd5437561d1233920513774b470805641bedbc09"
+      },
+      {
+        "artifact": "junit-4.13.2.jar",
+        "sha256": "8e495b634469d64fb8acfa3495a065cbacc8a0fff55ce1e31007be4c16dc57d3"
+      }
+    ],
+    "androidBindingStubs": [
+      {
+        "filename": "AndroidJUnit4.kt",
+        "sha256": "67082aa4187b7612e99f32239149e79929774af6c0962196a731b35109a2f40f"
+      },
+      {
+        "filename": "Build.kt",
+        "sha256": "99210c488ea4fc2c5866cc1d17d2d6839fb57e2012809b5a1ff4bf99c8d710ed"
+      },
+      {
+        "filename": "Bundle.kt",
+        "sha256": "262362dbc7255543a7771f6ab3bb8d9af217f2e6e8c8f217b89029dd769f80a9"
+      },
+      {
+        "filename": "Context.kt",
+        "sha256": "03aefd4aeb8ed8763c80cebcda1a56d770d856c41512286a3ae791a678012081"
+      },
+      {
+        "filename": "Instrumentation.kt",
+        "sha256": "de9624ec1fa783215c0d128000ce3ede18b35cf82608b232db4ceb8c2f2b82b0"
+      },
+      {
+        "filename": "InstrumentationRegistry.kt",
+        "sha256": "1c0dfd70762a9d6e6440219ae8f764bee056024ff4c3fb72a45a0711cb053a6e"
+      },
+      {
+        "filename": "Log.kt",
+        "sha256": "d9bef1b203ec4e7cfe515061ee7cae2d333c7bce7fdee8e460e8554c00ec43e6"
+      },
+      {
+        "filename": "PowerManager.kt",
+        "sha256": "39758069009a5bec4879a170c2ce6fa57b24c20b3921e35ecf73371cd5a6284a"
+      }
+    ],
+    "productionApiClassSha256": {
+      "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "f007097c77463cf213747eb88e16e69cd63c2d5bdd697def24eeb4e2c33cef11",
+      "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch.class": "4369ee783c3a7b62c5e26521fbfaa1be129927f62c08f60e3e93586be59279ec",
+      "json/build/classes/kotlin/main/com/snipsnap/json/JsonValue.class": "a4f97950d879e691e158ae7d6154de8b6747f4132d047d6782682708b204fee1",
+      "json/build/classes/kotlin/main/com/snipsnap/json/Json.class": "5d1f50f7207e6d36e94712dc95a08e229307aac57f4636d0a30fa1a9a7b3d551",
+      "audio/build/classes/kotlin/main/com/snipsnap/audio/Snip.class": "f4fa5da26e18cccb1bc4b6d7b93b5e374706212887f80eb0a91749c2aebf7719"
+    },
+    "sourceSha256": {
+      "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt": "dd388365a3e35d1bfabf8956475b1d0138e2bd9232ca909004af521466881d2b",
+      "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "aaf7886be6c8515f4e944ed09d8a66c13211ddf6b0b9951d72eb3f247e8358eb",
+      "synth/src/main/kotlin/com/snipsnap/synth/SkirlPatch.kt": "43f231d98c3f490afb595694577a5e4fefc3947596077489a4a3a5e153b2e080",
+      "docs/SKIRL_ANDROID_BENCHMARK.md": "3be93739c036ed730f0ae1b12436fc927de26eaaea6fb3002e58bb25453bf01e",
+      "app/build.gradle.kts": "3993fe280bb48b86b3ed6b4d9bda3971c2dcc230bbafdb466f963d81f823f5f1"
+    },
+    "inputsUnchangedDuringCompile": true
+  },
+  "sanitizedCompilerInvocation": [
+    "java",
+    "-cp",
+    "<Gradle8.14.3-distribution-lib>/*",
+    "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler",
+    "-no-stdlib",
+    "-no-reflect",
+    "-jvm-target",
+    "17",
+    "-classpath",
+    "kotlin-stdlib-2.0.21.jar:junit-4.13.2.jar:synth/build/classes/kotlin/main:json/build/classes/kotlin/main:audio/build/classes/kotlin/main",
+    "-d",
+    "<scratch>/harness-final-model2.jar",
+    "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt",
+    "<scratch>/{AndroidJUnit4,Build,Bundle,Context,Instrumentation,InstrumentationRegistry,Log,PowerManager}.kt"
+  ],
+  "output": {
+    "archive": "/workspace/scratch/skirl-android-harness-compile/harness-final-model2.jar",
+    "sha256": "282533e896827e27d358ed44a81ab4dd6751de897c6d38ecdad196cf265f3732",
+    "bytes": 22096,
+    "compileLog": "/workspace/scratch/skirl-android-harness-compile/final-model2-compile.log"
+  },
+  "verifiedAndroidBuildConfiguration": {
+    "baseApplicationId": "com.snipsnap.app",
+    "debugApplicationIdSuffix": ".brassgrow",
+    "debugApplicationId": "com.snipsnap.app.brassgrow",
+    "minSdk": 29,
+    "instrumentationRunner": "androidx.test.runner.AndroidJUnitRunner"
+  },
+  "limitations": [
+    "No Android SDK, adb, emulator or attached physical phone is available in this environment.",
+    "Android/AndroidX bindings were local compile-only stubs, not SDK classes. They establish Kotlin syntax and production API compatibility only; Android compilation, packaging and runtime behavior remain unverified.",
+    "This check did not execute the benchmark or measure render speed. A future report must identify whether its selected device is a real phone.",
+    "All compiler output was written under scratch. No Gradle task, build configuration or Kotlin source was changed by this check.",
+    "Source-tree hash records pin the inspected worktree inputs; an eventual Git commit is recorded separately by the parent milestone evidence."
+  ]
+}

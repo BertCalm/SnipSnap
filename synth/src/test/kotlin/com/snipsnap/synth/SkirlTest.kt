@@ -289,14 +289,11 @@ class SkirlTest {
                 assertEquals(a, Skirl.scramble(voice, Random(seed), temperature = .8f))
                 assertEquals(specs.map { it.name }.toSet(), a.keys)
                 assertTrue(a.values.all { it.isFinite() && it in 0f..1f })
-                assertEquals(0f, a.getValue("HOLD"))
+                assertTrue(a.getValue("HOLD") <= .95f)
             }
             for (hold in listOf(.001f, .5f, .99f, 1f)) {
                 assertFailsWith<IllegalArgumentException>("$voice HOLD $hold") {
-                    Skirl.render(voice, mapOf("HOLD" to hold))
-                }
-                assertFailsWith<IllegalArgumentException> {
-                    Skirl.drumClassFor(voice, mapOf("HOLD" to hold))
+                    Skirl.render(voice, mapOf("HOLD" to hold), model = Skirl.LEGACY_MODEL_VERSION)
                 }
             }
             assertEquals(48, Skirl.midiFor(voice, .5f))

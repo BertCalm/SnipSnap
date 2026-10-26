@@ -6,7 +6,8 @@ Status: two finite Kotlin voices verified by 5,994 JVM tests and a 106-case nati
 audition. Warm defaults miss the 50 ms target; Kotlin owner listening and phone latency
 remain open. Source handoff: **Skirl Engine Engineering Specification
 v1.0, 20 October 2026**, supplied by the owner. This records the smaller authorized milestone.
-The handoff's full voice/preset/HOLD scope remains future work.
+The handoff's full voice/preset scope remains future work. Model-2 acoustic HOLD and
+exact render optimizations are recorded in the [26 October extension](2026-10-26-skirl-hold-and-performance.md).
 
 Repository context: initial review `4e36a2bf8cf8bfb07dba35379558b54429b5d73d`; Kotlin baseline
 `91384fa189a68c4993c8e359af6b748412bf95c3`. APIs below were checked in the working tree.
