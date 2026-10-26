@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
     fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
         val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
             midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,

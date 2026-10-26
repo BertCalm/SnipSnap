@@ -2,6 +2,28 @@ plugins {
     kotlin("jvm")
 }
 
+/** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
+tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
+    group = "distribution"
+    description = "Compare previous and gentler OBBLIGATO Fight single notes, melodies and actual source taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMusicalOutput").orNull ?: "${rootDir}/testkit/obbligato-musical-audition")
+}
+
+/** An opt-in listening comparison; the accepted model-five kit remains unchanged. */
+tasks.register<JavaExec>("generateObbligatoResponsiveAudition") {
+    group = "distribution"
+    description = "Compare accepted OBBLIGATO model 5 with responsive model 6 and causal source interventions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoResponsiveAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoResponsiveOutput").orNull ?: "${rootDir}/testkit/obbligato-responsive-audition")
+}
+
 /** LATTICE source proof, native instrument phrases, periodic HOLD and MPC starter. */
 tasks.register<JavaExec>("generateLatticeAudition") {
     group = "distribution"
