@@ -213,7 +213,7 @@ import kotlin.random.Random
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  * TIDAL offers finite PAIR/STREAM encounter prototypes with native note/velocity,
  * exact 64-bit --seed, versioned models, and complete --patch replay. HOLD reconstruction is deferred.
- * TRIO accepts `--tempo 60..200 --beats 1..4`; the finite gesture must fit within two seconds.
+ * TRIO accepts `--tempo 60..200 --beats 1..4`; the beat grid must fit within two seconds; answers may continue after it.
  * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
  */
 object SynthCommand {
@@ -600,7 +600,7 @@ object SynthCommand {
                 val tempo = tempoOverride ?: withNote.config.tempoBpm
                 val beats = beatsOverride ?: withNote.config.beats
                 if (beats * 60f / tempo > 2f) {
-                    throw CliError("TRIO's $beats beats at $tempo BPM exceed the two-second gesture window; raise --tempo or lower --beats")
+                    throw CliError("TRIO's $beats beats at $tempo BPM exceed the two-second beat-grid window; raise --tempo or lower --beats")
                 }
                 withNote.copy(config = withNote.config.copy(tempoBpm = tempo, beats = beats))
             } else if (withNote is OrphicaPatch && orphicaSeedOverride != null) {
