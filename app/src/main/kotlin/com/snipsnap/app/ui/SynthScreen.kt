@@ -3729,9 +3729,10 @@ private fun PresetNameDialog(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.55f))
             .imePadding()
-            // No descendant text of its own — labelled with the same
-            // word the visible CANCEL button below uses.
-            .tapeClick(label = "CANCEL", onClick = onCancel),
+            // A merging clickable here swallows the field's SetText action,
+            // so the name cannot be typed. The CANCEL button below is the
+            // named control; this scrim only catches the dim tap.
+            .pointerInput(onCancel) { detectTapGestures { onCancel() } },
         contentAlignment = Alignment.TopCenter,
     ) {
         Column(
