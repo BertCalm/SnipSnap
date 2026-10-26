@@ -1585,7 +1585,7 @@ tasks.register<JavaExec>("generateCausticAudition") {
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
 
-/** A bounded model-2 HOLD study, preserving the original finite listening pack. */
+/** A versioned HOLD study, preserving the original finite listening pack. */
 tasks.register<JavaExec>("generateSkirlHoldAudition") {
     group = "distribution"
     description = "Render SKIRL finite, extended and held-loop comparisons, exact recipes, diagnostics and an offline listening ZIP."
@@ -1594,4 +1594,5 @@ tasks.register<JavaExec>("generateSkirlHoldAudition") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args(providers.gradleProperty("skirlHoldOutput").orNull ?: "${rootDir}/testkit/skirl-hold-audition")
+    providers.gradleProperty("skirlHoldModel").orNull?.let { systemProperty("skirl.hold.model", it) }
 }

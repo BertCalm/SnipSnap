@@ -1,4 +1,4 @@
-# Skirl model 2: acoustic HOLD and exact render optimizations
+# Skirl: acoustic HOLD and exact render optimizations
 
 Ground truth: SnipSnap commit `4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778`.
 This extends the [finite design](2026-10-23-skirl-engine-design.md). Luthier's REVIEW
@@ -53,7 +53,7 @@ only by mechanical inputs, independent of MIDI, material and touch.
 |---|---|---|---|
 | 0 | Original finite path | TONAL | Independent 106-case model-1 bit parity |
 | 0..`.99`, exclusive | `round(6*HOLD/.99)` extra captured cycles, then original ending | TONAL | Stepped frame counts and restored conditioned tail |
-| `.99`..1 | One closed capture in `render`; original attack plus a nonzero loop marker in `renderHeld` | LOOP | Real preceding filtered cycle, whole-cycle convergence, pitch, wrap step/slope/dip |
+| `.99`..1 | A closed multi-capture span in current `render`; original attack plus a nonzero loop marker in `renderHeld` | LOOP | Real preceding filtered span, whole-span convergence, pitch, wrap step/slope/dip |
 
 A capture spans about `.56–.61 s` in the calibrated domain, rounded to output frames near
 a whole number of root periods. Its approximately `.12 s` unity-sum overlap closes the
@@ -61,7 +61,15 @@ actual continuation into its beginning. Maximum finite extension is six such cyc
 about `3.6 s`; tiny HOLD settings select zero extra cycles. This is intentionally stepped.
 The overlap and capture lengths are authored design constants, not measured disk properties.
 
-Model 2 is the default saved model. Explicit model 1 remains supported and refuses nonzero
+Model 3 is the default saved model. Its export retains at least three real captures,
+strictly longer than the classifier's private 1.5-second LOOP threshold. The generic
+classifier filed 14 of the 36 short model-2 cores as KICK/TOM because of their bass decay,
+despite their pitched root and closed seam. The shared classifier is unchanged. Published
+model-2 audio and held markers remain byte-exact; model 2 keeps its original preparation
+and short cut. The current span has independent preceding/current blocks and real
+lookahead, not repeated normalized output or silent padding.
+
+Explicit model 1 remains supported and refuses nonzero
 HOLD before JSON Float conversion. Its seed stays pinned to 1, including model-2 HOLD-zero
 renders. `SkirlPatch.render` forwards its saved model. Required model/MIDI/velocity fields
 remain strict. Velocity dispatch, recipe edits and CLI replay retain them. `renderHeld`
@@ -70,10 +78,11 @@ uses the existing `KeyNote` type; this milestone adds no app picker or keygroup 
 ## Numerical and render constraints
 
 The capture stays at the existing 4× internal rate. Planning boundaries in output frames
-keeps the decimator phase fixed. Continuous conditioning includes a complete following
+keeps the decimator phase fixed. Model 3 conditions two settling captures, a genuine
+preceding span, the exported span and a complete following
 cycle beyond the exported cut, so sinc lookahead never substitutes silence at a loop end.
-Neither the exported closing samples nor the preceding diagnostic cycle are copied after
-conditioning. Both 256-frame seam error and normalized whole-cycle difference must be
+Neither the exported closing samples nor the preceding diagnostic span are copied after
+conditioning. Both 256-frame seam error and normalized whole-span difference must be
 below `Keys.MAX_SEAM_ERROR` (`1e-3`); a silent loop reports zero by explicit convention.
 
 Level comes from the steady cycle for a held key note and is applied to the whole note;
@@ -96,9 +105,13 @@ reproduction commands are under `prototype/skirl/native/performance/`.
 - Measured: 36 held register/material/touch cases stay within `19.114 cents`, confidence
   at least `.8387`, absolute DC below `7.1e-9`, and pass independent cycle and wrap guards.
   A disturbed preceding cycle fails both unchanged `1e-3` error limits.
+- Measured: the isolated model-3 proof passes all 15 changed test methods, including
+  genuine span convergence, 36 actual LOOP classifications and 12 frozen model-2 Float
+  hashes/held markers. Normal Gradle validation is recorded separately; a LOOP duration
+  classification does not substitute for the independent pitch and sound checks.
 - Measured: the final pack retains one refused estimate among 36 fixed windows and six
-  refused estimates among 24 soft-C2 phase windows. All 12 whole-loop estimates return
-  a root within `15.204 cents`; returned phase estimates stay within `24.054 cents`.
+  refused estimates among 24 soft-C2 phase windows. All 12 primitive-cycle estimates return
+  a root within `15.204 cents`; full-export span estimates stay within `22.229 cents`; returned phase estimates stay within `24.054 cents`.
   The refused WHIRR windows retain a root-local peak below the detector's relative gate.
   These results qualify the first-window matrix rather than promise invariant pitch.
 - Verified: the audition independently replays saved render methods and checks WAV root/

@@ -1,0 +1,9 @@
+import org.gradle.api.tasks.testing.Test
+
+// Four isolated synth test JVMs use the four available cores after host tests
+// finish. Assertions and each task's existing heap limits remain unchanged.
+gradle.projectsEvaluated {
+    gradle.rootProject.project(":synth").tasks.withType(Test).configureEach {
+        maxParallelForks = 4
+    }
+}

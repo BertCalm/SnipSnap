@@ -5,6 +5,7 @@ import java.nio.file.*;
 
 public class ParitySkirl {
   public static void main(String[] args)throws Exception {
+    BenchSkirl.requestedModel=args.length>1?Integer.parseInt(args[1]):1;
     for(String row:Files.readAllLines(Path.of(args[0]))) {
       String[] p=row.split("\\t");
       Map<String,Float> macros=new LinkedHashMap<>();

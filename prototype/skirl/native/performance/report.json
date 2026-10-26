@@ -3,7 +3,7 @@
   "version": 1,
   "measuredOn": "2026-10-26",
   "baselineRevision": "4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778",
-  "candidate": "Model2 working tree after final combined focused Gradle build, with model1 explicitly requested for finite replay",
+  "candidate": "Model3 current finite path, explicitly requested against archived model1; all106HOLD0cases",
   "method": {
     "render": "Skirl.render",
     "voices": [
@@ -13,7 +13,6 @@
     "midi": 48,
     "velocity": 1,
     "hold": 0,
-    "requestedModel": 1,
     "pairs": 3,
     "jvmWarmupRendersPerVoice": 5,
     "warmRepeatsPerVoicePerRun": 15,
@@ -24,40 +23,45 @@
     "os": "Linux",
     "availableProcessors": 4,
     "cache": "physical trace warm; no final-audio memoization",
-    "limitation": "Desktop/container JVM. Unrelated host load and scheduling uncontrolled. No Android or cold-process measurement. Inspection stages are separate renders, not median components."
+    "limitation": "Desktop/container JVM. Unrelated host load and scheduling uncontrolled. No Android or cold-process measurement. Inspection stages are separate renders, not median components.",
+    "baselineRequestedModel": 1,
+    "candidateRequestedModel": 3,
+    "candidateDeclaredCurrentModel": 3,
+    "candidateClasspath": "Current compiled synth/audio main directories before frozen baseline dependency jars",
+    "measurementSourcesAndClassesUnchangedThroughout": true
   },
   "summary": {
     "ROLL": {
       "baselineRunMediansMillis": [
-        143.168803,
-        137.417692,
-        140.726699
+        135.539737,
+        144.09411,
+        134.536318
       ],
       "candidateRunMediansMillis": [
-        109.802201,
-        103.509458,
-        111.269474
+        105.329711,
+        105.187883,
+        109.912713
       ],
-      "baselineMedianOfRunMediansMillis": 140.726699,
-      "candidateMedianOfRunMediansMillis": 109.802201,
-      "reductionPercent": 21.974862069350465,
+      "baselineMedianOfRunMediansMillis": 135.539737,
+      "candidateMedianOfRunMediansMillis": 105.329711,
+      "reductionPercent": 22.288685715835495,
       "warmTargetMillis": 50,
       "warmTargetMet": false
     },
     "WHIRR": {
       "baselineRunMediansMillis": [
-        151.802927,
-        144.233594,
-        162.319445
+        153.727077,
+        151.765539,
+        160.443187
       ],
       "candidateRunMediansMillis": [
-        119.763683,
-        139.300129,
-        126.265307
+        134.732333,
+        122.68233,
+        127.538995
       ],
-      "baselineMedianOfRunMediansMillis": 151.802927,
-      "candidateMedianOfRunMediansMillis": 126.265307,
-      "reductionPercent": 16.82287720315169,
+      "baselineMedianOfRunMediansMillis": 153.727077,
+      "candidateMedianOfRunMediansMillis": 127.538995,
+      "reductionPercent": 17.03543872105238,
       "warmTargetMillis": 50,
       "warmTargetMet": false
     }
@@ -70,54 +74,54 @@
         "voices": {
           "ROLL": {
             "warmMillis": [
-              133.161659,
-              134.309947,
-              136.591278,
-              138.703671,
-              138.978023,
-              140.968378,
-              140.982629,
-              143.168803,
-              143.370737,
-              143.713876,
-              154.591095,
-              156.879863,
-              160.802913,
-              161.936967,
-              168.965615
+              123.712273,
+              128.075309,
+              129.737726,
+              130.243538,
+              130.441538,
+              131.93701,
+              132.672689,
+              135.539737,
+              139.352783,
+              139.988144,
+              141.452201,
+              144.951086,
+              145.279992,
+              147.526326,
+              147.732388
             ],
-            "warmMedianMillis": 143.168803,
+            "warmMedianMillis": 135.539737,
             "separateInspectMillis": {
-              "preparation": 0.072487,
-              "synthesis": 77.469282,
-              "output": 57.754854
+              "preparation": 0.04083,
+              "synthesis": 73.432168,
+              "output": 61.63323
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              146.737264,
-              146.773787,
-              147.141107,
-              148.155948,
-              148.666939,
-              149.640339,
-              149.902915,
-              151.802927,
-              153.196234,
-              153.435495,
-              155.494491,
-              164.069505,
-              166.36277,
-              173.334495,
-              176.249728
+              148.699486,
+              148.912504,
+              150.467214,
+              151.640378,
+              151.702929,
+              151.72649,
+              152.67438,
+              153.727077,
+              153.99452,
+              154.738579,
+              161.603189,
+              162.683598,
+              165.454469,
+              173.781938,
+              175.336388
             ],
-            "warmMedianMillis": 151.802927,
+            "warmMedianMillis": 153.727077,
             "separateInspectMillis": {
-              "preparation": 0.0684,
-              "synthesis": 90.36088,
-              "output": 65.297271
+              "preparation": 0.032839,
+              "synthesis": 87.741141,
+              "output": 65.397151
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -125,58 +129,58 @@
         }
       },
       "candidate": {
-        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=3 warmup=5 repeats=15",
         "voices": {
           "ROLL": {
             "warmMillis": [
-              94.072056,
-              94.89133,
-              95.29734,
-              96.035333,
-              97.152258,
-              98.47766,
-              99.79402,
-              109.802201,
-              110.066242,
-              111.460146,
-              111.564842,
-              114.782218,
-              118.97814,
-              121.539094,
-              132.985774
+              99.00765,
+              99.488957,
+              100.448535,
+              102.131065,
+              104.479983,
+              104.551979,
+              104.917876,
+              105.329711,
+              105.900418,
+              107.432366,
+              110.49961,
+              111.567056,
+              111.826518,
+              117.780592,
+              118.280787
             ],
-            "warmMedianMillis": 109.802201,
+            "warmMedianMillis": 105.329711,
             "separateInspectMillis": {
-              "preparation": 0.271302,
-              "synthesis": 59.579178,
-              "output": 39.068218
+              "preparation": 0.053658,
+              "synthesis": 75.719514,
+              "output": 45.172372
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              115.102583,
-              117.272589,
-              118.18762,
-              118.615309,
-              118.741823,
-              119.209291,
-              119.61087,
-              119.763683,
-              119.973942,
-              120.854834,
-              121.020978,
-              121.036602,
-              123.989655,
-              124.884399,
-              128.120663
+              120.974826,
+              122.992989,
+              127.434491,
+              128.079546,
+              128.703041,
+              131.646832,
+              132.932114,
+              134.732333,
+              135.89196,
+              135.999629,
+              138.118564,
+              138.145412,
+              143.779195,
+              144.251671,
+              161.770969
             ],
-            "warmMedianMillis": 119.763683,
+            "warmMedianMillis": 134.732333,
             "separateInspectMillis": {
-              "preparation": 0.126966,
-              "synthesis": 83.788912,
-              "output": 46.200709
+              "preparation": 0.1041,
+              "synthesis": 77.750671,
+              "output": 45.268863
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -191,54 +195,54 @@
         "voices": {
           "ROLL": {
             "warmMillis": [
-              121.612476,
-              126.167911,
-              126.728727,
-              126.845821,
-              127.567242,
-              130.572775,
-              134.342671,
-              137.417692,
-              137.899701,
-              139.874898,
-              144.136532,
-              144.810324,
-              145.014556,
-              147.329502,
-              149.908118
+              133.833485,
+              136.044847,
+              138.33788,
+              139.782697,
+              141.526384,
+              143.250904,
+              143.935107,
+              144.09411,
+              145.355469,
+              146.402635,
+              147.641091,
+              147.834148,
+              151.072934,
+              153.813797,
+              154.874307
             ],
-            "warmMedianMillis": 137.417692,
+            "warmMedianMillis": 144.09411,
             "separateInspectMillis": {
-              "preparation": 0.04716,
-              "synthesis": 77.930985,
-              "output": 51.049292
+              "preparation": 0.053679,
+              "synthesis": 70.053953,
+              "output": 53.586575
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              140.679053,
-              140.984513,
-              141.541261,
-              142.148425,
-              142.917267,
-              143.78831,
-              143.841618,
-              144.233594,
-              148.73443,
-              149.921017,
-              150.434193,
-              150.474862,
-              154.604161,
-              156.528814,
-              156.573761
+              147.808302,
+              149.118081,
+              149.541742,
+              150.118537,
+              150.304761,
+              151.211187,
+              151.528362,
+              151.765539,
+              152.090545,
+              152.499335,
+              152.603236,
+              154.033544,
+              157.189036,
+              157.263795,
+              171.353271
             ],
-            "warmMedianMillis": 144.233594,
+            "warmMedianMillis": 151.765539,
             "separateInspectMillis": {
-              "preparation": 0.065536,
-              "synthesis": 92.08373,
-              "output": 62.939538
+              "preparation": 0.069552,
+              "synthesis": 108.14192,
+              "output": 73.147453
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -246,58 +250,58 @@
         }
       },
       "candidate": {
-        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=3 warmup=5 repeats=15",
         "voices": {
           "ROLL": {
             "warmMillis": [
-              94.78083,
-              95.371251,
-              96.839396,
-              97.917287,
-              98.249347,
-              98.832807,
-              103.032354,
-              103.509458,
-              104.335645,
-              109.994634,
-              110.576952,
-              111.76086,
-              112.333476,
-              117.776064,
-              124.947725
+              97.252296,
+              98.526293,
+              101.613757,
+              102.825972,
+              103.090335,
+              103.734174,
+              104.246683,
+              105.187883,
+              105.209944,
+              106.299301,
+              109.812328,
+              114.415817,
+              115.035119,
+              121.729572,
+              143.167915
             ],
-            "warmMedianMillis": 103.509458,
+            "warmMedianMillis": 105.187883,
             "separateInspectMillis": {
-              "preparation": 0.064616,
-              "synthesis": 62.031254,
-              "output": 38.688877
+              "preparation": 0.063322,
+              "synthesis": 63.663549,
+              "output": 42.396261
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              117.567746,
-              117.668816,
-              117.798988,
-              119.645032,
-              120.625559,
-              128.309172,
-              134.592398,
-              139.300129,
-              139.820126,
-              145.091313,
-              146.579333,
-              151.581739,
-              155.897274,
-              157.574752,
-              168.683095
+              114.277369,
+              120.732301,
+              121.134021,
+              121.565664,
+              121.860446,
+              122.186094,
+              122.237949,
+              122.68233,
+              122.714488,
+              123.001228,
+              123.86211,
+              126.349666,
+              127.405445,
+              127.981043,
+              133.61757
             ],
-            "warmMedianMillis": 139.300129,
+            "warmMedianMillis": 122.68233,
             "separateInspectMillis": {
-              "preparation": 0.066217,
-              "synthesis": 80.944404,
-              "output": 49.157725
+              "preparation": 0.069251,
+              "synthesis": 74.302961,
+              "output": 47.569332
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -312,54 +316,54 @@
         "voices": {
           "ROLL": {
             "warmMillis": [
-              125.912581,
-              126.456819,
-              126.87949,
-              133.091671,
-              136.26499,
-              137.381388,
-              138.85331,
-              140.726699,
-              140.932312,
-              141.073248,
-              142.229465,
-              143.978274,
-              145.023908,
-              146.205553,
-              150.871894
+              123.88979,
+              130.52019,
+              131.172907,
+              131.220066,
+              131.943626,
+              132.117361,
+              132.891225,
+              134.536318,
+              135.394476,
+              135.55434,
+              135.738089,
+              137.707565,
+              139.686227,
+              143.239946,
+              145.556007
             ],
-            "warmMedianMillis": 140.726699,
+            "warmMedianMillis": 134.536318,
             "separateInspectMillis": {
-              "preparation": 0.06111,
-              "synthesis": 79.787135,
-              "output": 66.344048
+              "preparation": 0.035362,
+              "synthesis": 74.694976,
+              "output": 56.765262
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              156.120339,
-              157.211412,
-              157.339268,
-              157.817279,
-              159.025774,
-              159.490907,
-              160.532827,
-              162.319445,
-              162.660977,
-              164.284405,
-              164.734916,
-              168.229088,
-              169.827231,
-              181.618184,
-              197.804195
+              149.240477,
+              150.020644,
+              152.178524,
+              152.874246,
+              153.015413,
+              153.227325,
+              155.086252,
+              160.443187,
+              160.707495,
+              160.868552,
+              161.53435,
+              165.347636,
+              166.412793,
+              169.451637,
+              190.635397
             ],
-            "warmMedianMillis": 162.319445,
+            "warmMedianMillis": 160.443187,
             "separateInspectMillis": {
-              "preparation": 0.071294,
-              "synthesis": 109.57047,
-              "output": 76.786895
+              "preparation": 0.035823,
+              "synthesis": 86.807049,
+              "output": 65.609555
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -367,58 +371,58 @@
         }
       },
       "candidate": {
-        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=1 warmup=5 repeats=15",
+        "configuration": "CONFIG java=21.0.12.1 os=Linux processors=4 requestedModel=3 warmup=5 repeats=15",
         "voices": {
           "ROLL": {
             "warmMillis": [
-              102.389352,
-              103.840948,
-              108.853857,
-              109.604439,
-              110.30515,
-              110.578392,
-              111.125916,
-              111.269474,
-              111.422787,
-              113.123743,
-              113.134158,
-              113.948334,
-              114.551031,
-              117.578069,
-              131.088227
+              99.452106,
+              100.6076,
+              103.052929,
+              103.345088,
+              105.65058,
+              105.734553,
+              105.900775,
+              109.912713,
+              111.124881,
+              111.979658,
+              129.266306,
+              130.83824,
+              136.949538,
+              139.20564,
+              151.467164
             ],
-            "warmMedianMillis": 111.269474,
+            "warmMedianMillis": 109.912713,
             "separateInspectMillis": {
-              "preparation": 0.060799,
-              "synthesis": 72.317948,
-              "output": 44.094143
+              "preparation": 0.058166,
+              "synthesis": 62.099311,
+              "output": 38.650748
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
           },
           "WHIRR": {
             "warmMillis": [
-              116.157206,
-              117.567683,
-              119.632067,
-              124.273407,
-              124.919891,
-              125.456103,
-              126.16311,
-              126.265307,
-              127.137894,
-              129.931901,
-              129.976555,
-              134.52324,
-              142.533529,
-              145.056959,
-              152.504795
+              114.435188,
+              115.922452,
+              116.871183,
+              117.953721,
+              120.76806,
+              123.232986,
+              127.533966,
+              127.538995,
+              129.153894,
+              129.521133,
+              130.093573,
+              133.202634,
+              134.71945,
+              135.515251,
+              137.411996
             ],
-            "warmMedianMillis": 126.265307,
+            "warmMedianMillis": 127.538995,
             "separateInspectMillis": {
-              "preparation": 0.063391,
-              "synthesis": 71.241408,
-              "output": 45.221354
+              "preparation": 0.105094,
+              "synthesis": 79.397332,
+              "output": 49.185745
             },
             "warmTargetMillis": 50,
             "warmTargetMet": false
@@ -1078,7 +1082,8 @@
         "prelevelFloatSha256": "91d46fa85f2a36f90351360d8eac55900c0561d6d7d1b8fec70fd6165cf80176",
         "acousticDiagnosticsSha256": "1c398e6fde9b697722a86a17b98b6901d826ec9c146f6d5629ac301802f7b4cf"
       }
-    }
+    },
+    "comparison": "Original unversioned model1 versus explicitly requested current model3, HOLD0"
   },
   "focusedSharedTest": {
     "class": "ResamplerTest",
@@ -1088,7 +1093,7 @@
     "skipped": 0,
     "exitCode": 0,
     "additionalCaseCombinations": 42,
-    "note": "Tiny/edge/interior mono/stereo, steps2/4/8; existing odd4001frame fast/general bit parity retained. Final combined gate reran this class with final unroll."
+    "note": "Resampler is unchanged from the successful final-unroll focused16test run recorded in report-model2.json; model3 finite replay is newly measured here. The final full-repository gate is recorded with the model3 milestone."
   },
   "profiling": {
     "method": "JFR profile settings, exploratory original baseline JVM; execution-sample top frames, not an exact time allocation",
@@ -1139,15 +1144,46 @@
     "limitation": "Earlier component experiment; scheduling uncontrolled and separate from complete engine comparison."
   },
   "sourceSha256": {
-    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "c290c43c958106f847873eb4f01cd6ede23050bdcc28259f02af0e440e4a19a9",
-    "audio/src/test/kotlin/com/snipsnap/audio/ResamplerTest.kt": "4ac6b041d8013ba87d79488b0c08a8a234b2ffbf999bbe05364252d45b476cfc",
+    "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "3006978436f46be7d77db6ad8d36f01a958beac0480e519d9cf1a4461784a4d4",
     "synth/src/main/kotlin/com/snipsnap/synth/SkirlAcoustics.kt": "e889018c1a5cfc8e0d522186c26bc625043a90f2c21555799249bb581187d386",
-    "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "aaf7886be6c8515f4e944ed09d8a66c13211ddf6b0b9951d72eb3f247e8358eb"
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlDynamics.kt": "d0bf081b17c1075229b9b8ae9cab0ebd78f9625d5a659bf0d94992e65b734802",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlHold.kt": "5fb391e15ec1889d2254efc7275941ec38ca0a468e2bc83b8bc6ca6d0530e5f0",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlPatch.kt": "e267ed92486db27c86551f2c4e58cead92f7120f93a608fedaf79d6daa3f20fe",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlPresets.kt": "bf0e29b4d73f11735a6cde59b238ee51fdf95ebff32a1f1f2e25ae3a752d67e1",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "c290c43c958106f847873eb4f01cd6ede23050bdcc28259f02af0e440e4a19a9",
+    "audio/src/test/kotlin/com/snipsnap/audio/ResamplerTest.kt": "4ac6b041d8013ba87d79488b0c08a8a234b2ffbf999bbe05364252d45b476cfc"
   },
   "measuredClassSha256": {
-    "audio/build/classes/kotlin/main/com/snipsnap/audio/Resampler.class": "308db5ca39c4d049d076b21cf33c2283b7e581060dcc0acf47d7d74b1dc7c214",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl$Probe.class": "755caf0b98e0611db0322e14f26c773305aa98ea7be341f15b220553edcdcb96",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl$WhenMappings.class": "23e4e81b59b833feadcc5ccad20eae8100ada4949e82c4a2792a7df113c048f4",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "2296767dc9ee4031dca5248113036da1b5525b8045247731b3e2a2c40cd4a41f",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$BudgetUse.class": "a8b77da1d02badc1ac309cc31aacfea7f86486f6dce447f7ba8169ca004ca872",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$Diagnostics.class": "bfeed27518c020e87aae5ca9115af035f9e7984746e69d2bf9b913cb2ec33a6c",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$Event.class": "20956ec1b3f35c5eca6336ca8797ab05d6539e367d2b81f18334e57d912a1eb5",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$Result.class": "a84d03c913a5f67884bcc7fbb851f4fa5d369b09486cccde7a381fa9cd339165",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$RimPolarity.class": "3b0e902e973cb841b27b291fe058e0b90114034dd77180f6f3dabb5fff14da0c",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics$Sources.class": "b8037b2f957d79940ed1360db67ecf88eeb0ef38db63bd294acddc6744c1330c",
     "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlAcoustics.class": "45fa252f52840fde663b59852d12f6972b436ec97398058889da1e4d0177564c",
-    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "f007097c77463cf213747eb88e16e69cd63c2d5bdd697def24eeb4e2c33cef11"
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Diagnostics.class": "0fe80dfa6a184dbced8704aff9112cffd9b067907f654684c868e6f39ee36c9b",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Exit.class": "5f13e958ab45d3b5e6e8d9bd4e6b61697ea6490b5937a3f8227de93d1aa04bc8",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Parameters.class": "16967ce3bf7930bc9f7b2b5062efe114321554c4075d521f40f9f15e4d28f4d1",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Readout.class": "7ee124dd705e8906843ddf71a0e5f977ac1ce6eea85d0350b1b50747b654ba46",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Reason.class": "689e2534c622bc83329ba1c7378e467d5b960214f98ff3d15c373caf7b8c27f0",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$SolverLimit.class": "8970ea03caf6c79f5b0d11a901b5d753810e4c2b34f19f70001605ad080cd409",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Stepper.class": "035fb54047f21574f2b87d38cba234c4ad7b4fdd33d0b7450e2e621b4bfb09c9",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$Trace.class": "0a424de0bfede1a86a991caf87f1ff6e2e0f12aa02ff9c12135c36cfafa63d3b",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$TraceBuilder.class": "d885659ef6b9695685f8e7f4966a8b438bc8e1cca749858bef934e0ebc285c97",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$WhenMappings.class": "6dccac24ae5e3537dbe9e5dfae5f3d4dbf9fcd786fd4c6c8a8ff57d0d1db7526",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics$cache$1.class": "af9b318f3de6b7f489aa30854c2291bc93b50fe5f020ad81334e9c0f063d4b35",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlDynamics.class": "fc6def846dffa9da569b5d3357f45bdfc62baae9570f3f151ff6b89c67ef6a77",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlHold$Diagnostics.class": "552e99196333d8fa60b13650193bf83bd1860c0bfbb15b9516fdc44b0cb754bc",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlHold$Plan.class": "3fbe70d8427ae3791487d84074fa8d003d8b9fa79e0e81d9f0c8ba95015e5763",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlHold.class": "5af0eff0fefd53b209da491bb1749fc325209005e9b5501307fdbbf5a300fc26",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch$Companion.class": "a00be467b3218173b59edc6cc15e9f85c4a538f61e4e92a3169d3696d4cbb784",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch.class": "7751eb1374cf78b2f6753ae71a9c3363f90f46e3d11c893f802fe37662b8369d",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPresets.class": "7a6c7781c109ae04913aa02c348f2b160a525991f1762da3d75624af978b7926",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlVoice.class": "1d50d248a41e384d4504a31cb3fb5820799665c9f415fc85519389094293b3f4",
+    "audio/build/classes/kotlin/main/com/snipsnap/audio/Resampler.class": "308db5ca39c4d049d076b21cf33c2283b7e581060dcc0acf47d7d74b1dc7c214"
   },
   "baselineJarSha256": {
     "annotations-13.0.jar": "ace2a10dc8e2d5fd34925ecac03e4988b2c0f851650c94b8cef49ba1bd111478",
@@ -1162,5 +1198,18 @@
     "synth.jar": "8c40db14f8ebe3329003a489ca1b2f43ac015ce74168e8d9d7eea5b042650334",
     "xpm.jar": "0b0ae8d3d7acc05abd5f233a4cbd556b0e91ba861ecfb625bcb6f1537405b79e"
   },
-  "heard": "No new listening claim; this pass preserves all106 prior finite float waveforms."
+  "heard": "No new listening claim; model3 finite output preserves all106 original model1 float waveforms.",
+  "candidateCodeRevision": "2ce893b53e51b418f894291c681427fbc446e0d5",
+  "archivedModel2Report": {
+    "file": "report-model2.json",
+    "sha256": "866c54de7c7da2b02eedbdcacd3a6f39879acd3b8b92cf1301bd547ca5732f31",
+    "note": "Original model2 measurement retained byte-for-byte"
+  },
+  "driverSha256": {
+    "BenchSkirl.java": "6e879864e189fddb38e3de7adcf951b575a1b14bf48a8051330d454614840b8d",
+    "ParitySkirl.java": "65cc8d161ab34694fc8f7a02d48070d192adf25be118d915937e4e38fe99c0bf",
+    "BenchResampler.java": "4b8ab71aa031bdb772ec21e6e8c7551a4731438a277dfb271e7449eec0ad6ec6",
+    "run.py": "cfff0949975752da1e041e2b3ac753f589da4b4d831d760a741b183db00f175b",
+    "cases.tsv": "13980d5a0a9c9b9a38a50c680c47d6fb172c93cc6401fab27e1d87c70a0a889c"
+  }
 }

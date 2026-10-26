@@ -1070,8 +1070,9 @@ The voice selects its model, and
 `--midi`, `--velocity` and `--seed` set their note, strike energy and
 starting trajectory ([`docs/VENT.md`](docs/VENT.md)).
 SKIRL adds a two-voice rolling-disk prototype in `:synth`, with provisional ROLL/WHIRR
-CLI recipes and versioned note/velocity replay. Model 2 adds stepped acoustic HOLD and
-a repeating capture; model-1 finite patches retain their sound. Its Python auditions
+CLI recipes and versioned note/velocity replay. Stepped acoustic HOLD extends the runout;
+current model 3 exports a repeating span that files as LOOP. Earlier model-1/2 recipes
+retain their sound. Its Python auditions
 received positive feedback; Kotlin listening and phone measurements remain pending.
 No phone picker entry is included. See [`docs/SKIRL.md`](docs/SKIRL.md).
 Each file's own KDoc names its spec.

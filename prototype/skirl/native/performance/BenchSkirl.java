@@ -9,21 +9,26 @@ import java.security.*;
 
 public class BenchSkirl {
   static Method inspect, render;
+  static int requestedModel=1;
   static {
     for(Method m:Skirl.class.getDeclaredMethods()) {
       if(m.getName().startsWith("inspect$") && (m.getParameterCount()==4 || m.getParameterCount()==5))inspect=m;
       if(m.getName().equals("render") && (m.getParameterCount()==4 || m.getParameterCount()==5))render=m;
     }
   }
-  // The same driver runs against the archived model-1 jar and model-2 source.
-  // Request model 1 explicitly when that field exists, preserving saved replay.
+  // One driver bridges the archived model-1 jar and the current versioned API.
+  // The optional CLI model selects legacy replay or the current finite path.
   static Object inspect(SkirlVoice voice, Map<String,Float> macros, int midi, float velocity)throws Exception {
+    if(inspect.getParameterCount()==4 && requestedModel!=1)
+      throw new IllegalArgumentException("The archived unversioned API supports model 1 only");
     return inspect.getParameterCount()==4 ? inspect.invoke(Skirl.INSTANCE,voice,macros,midi,velocity) :
-      inspect.invoke(Skirl.INSTANCE,voice,macros,midi,velocity,1);
+      inspect.invoke(Skirl.INSTANCE,voice,macros,midi,velocity,requestedModel);
   }
   static Snip render(SkirlVoice voice, Map<String,Float> macros, int midi, float velocity)throws Exception {
+    if(render.getParameterCount()==4 && requestedModel!=1)
+      throw new IllegalArgumentException("The archived unversioned API supports model 1 only");
     return (Snip)(render.getParameterCount()==4 ? render.invoke(Skirl.INSTANCE,voice,macros,midi,velocity) :
-      render.invoke(Skirl.INSTANCE,voice,macros,midi,velocity,1));
+      render.invoke(Skirl.INSTANCE,voice,macros,midi,velocity,requestedModel));
   }
   static String digest(float[] a)throws Exception {
     MessageDigest d=MessageDigest.getInstance("SHA-256");
@@ -33,8 +38,9 @@ public class BenchSkirl {
   }
   public static void main(String[] args)throws Exception {
     int repeats=args.length>0?Integer.parseInt(args[0]):9;
+    requestedModel=args.length>1?Integer.parseInt(args[1]):1;
     System.out.println("CONFIG java="+System.getProperty("java.version")+" os="+System.getProperty("os.name")+
-      " processors="+Runtime.getRuntime().availableProcessors()+" requestedModel=1 warmup=5 repeats="+repeats);
+      " processors="+Runtime.getRuntime().availableProcessors()+" requestedModel="+requestedModel+" warmup=5 repeats="+repeats);
     for(SkirlVoice v:SkirlVoice.values()){
       for(int i=0;i<5;i++)render(v,Collections.emptyMap(),48,1f);
       double[] times=new double[repeats];

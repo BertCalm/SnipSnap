@@ -1,5 +1,7 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.SmplChunk
@@ -16,8 +18,9 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.ln
+import kotlin.math.roundToInt
 
-/** Small, dry model-2 HOLD comparison, separate from the preserved first-listen pack. */
+/** Small, dry versioned HOLD comparison, separate from the preserved first-listen pack. */
 object SkirlHoldAuditionGenerator {
     private const val RATE = Dsp.RATE
 
@@ -30,6 +33,10 @@ object SkirlHoldAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Supply one dedicated audition directory." }
+        val model = System.getProperty("skirl.hold.model")?.let {
+            it.toIntOrNull() ?: error("skirl.hold.model must be an integer")
+        } ?: Skirl.MODEL_VERSION
+        require(model in 2..Skirl.MODEL_VERSION) { "HOLD audition supports models 2..${Skirl.MODEL_VERSION}" }
         val output = File(args.firstOrNull() ?: "../testkit/skirl-hold-audition").canonicalFile
         val repo = File("..").canonicalFile
         require(generateSequence(repo) { it.parentFile }.none { it == output } &&
@@ -43,11 +50,11 @@ object SkirlHoldAuditionGenerator {
         }
         output.mkdirs()
         marker.writeText("snipsnap-skirl-hold-audition\n")
-        val results = requests().mapIndexed { index, request ->
+        val results = requests(model).mapIndexed { index, request ->
             val patch = request.patch
             val start = System.nanoTime()
             val probe = if (request.mode == "held-note")
-                Skirl.inspectHeld(patch.voice, patch.macros, patch.midi, patch.velocity)
+                Skirl.inspectHeld(patch.voice, patch.macros, patch.midi, patch.velocity, model = patch.model)
             else Skirl.inspect(patch.voice, patch.macros, patch.midi, patch.velocity, patch.model)
             val elapsed = (System.nanoTime() - start) / 1e6
             check(probe.raw.isNotEmpty() && probe.raw.all { it.isFinite() })
@@ -78,15 +85,17 @@ object SkirlHoldAuditionGenerator {
         val clips = results.map { result -> writeClip(output, result, commonGain) }
         val manifest = linkedMapOf<String, Any?>(
             "title" to "Skirl / HOLD workshop", "engine" to SkirlPatch.ENGINE,
-            "model" to Skirl.MODEL_VERSION, "generatedAt" to Instant.now().toString(),
+            "model" to model, "generatedAt" to Instant.now().toString(),
             "runtime" to mapOf("javaVersion" to System.getProperty("java.version"),
                 "osName" to System.getProperty("os.name"), "osArch" to System.getProperty("os.arch")),
             "clipCount" to clips.size, "sampleRate" to RATE, "channels" to 1,
             "commonGain" to commonGain,
             "scope" to "Two prototype voices. HOLD captures existing rolling audio; it does not extend the dissipative solver. Factory presets and phone picker remain outside this pack.",
             "controls" to "HOLD 0 keeps the finite gesture. Below .99 it adds whole captured cycles and resumes the original shudder and decay. At .99 and above it returns a loop. renderHeld retains the attack and supplies a nonzero loop marker.",
+            "loopExport" to if (model >= 3) "Model 3 exports a span of at least three genuinely conditioned captured cycles, longer than the generic classifier's 1.5 s loop threshold. Primitive capture timing and sound are retained; exportSpanSeconds is distinct from cycleSeconds."
+                else "Model 2 preserves its original single captured-cycle export and held-note marker. Short saved model-2 cores can be filed as drums by the generic duration-based classifier; this is retained for replay compatibility.",
             "evidence" to "Seam and cycle difference compare separately conditioned consecutive cycles, before leveling. Eight-wrap montages are listening aids, not independent seam proof. The finite source work budget does not fund the repeated acoustic capture.",
-            "pitchMeasurement" to "Every clip retains both fixed .10 s and .25 s starts with .30 s windows. Loop clips also report a whole-cycle estimate; the two low-soft loops retain all twelve .30 s windows at phases 0 through .55 s. A null is a detector refusal, not a measured pitch. In the audited low-soft loops, valid root-correlation peaks in some windows fall below the detector's .85-of-global-maximum gate because its short-lag endpoint is stronger. No window is moved or omitted to conceal this limitation. Independent spectral analysis is recorded separately in the repository's HOLD evidence.",
+            "pitchMeasurement" to "Every clip retains both fixed .10 s and .25 s starts with .30 s windows. Loop clips report both the complete exported-span estimate and the original primitive capture-cycle estimate; the two low-soft loops retain all twelve .30 s windows at phases 0 through .55 s. A null is a detector refusal, not a measured pitch. In the audited low-soft loops, valid root-correlation peaks in some windows fall below the detector's .85-of-global-maximum gate because its short-lag endpoint is stronger. No window is moved or omitted to conceal this limitation. Independent spectral analysis is recorded separately in the repository's HOLD evidence.",
             "level" to "Production uses engine leveling. Common-gain WAVs share one gain across all prelevel captures, preserving their relative amplitude. These are mono 44.1 kHz PCM16 exports.",
             "listening" to "Native listening approval remains open; this generator measures and exports audio but does not hear it.",
             "timing" to "inspectMillis includes probe copying and diagnostics in this JVM run. It is not a production latency benchmark and is not phone performance.",
@@ -109,7 +118,7 @@ object SkirlHoldAuditionGenerator {
         println("SKIRL HOLD: ${clips.size} clips, ${pack.length()} bytes, SHA256 ${sha256(pack)}")
     }
 
-    private fun requests(): List<Request> = buildList {
+    private fun requests(model: Int): List<Request> = buildList {
         for (voice in SkirlVoice.entries) {
             val name = voice.name.lowercase(Locale.ROOT)
             fun addCase(suffix: String, title: String, section: String = "Default comparison",
@@ -117,7 +126,7 @@ object SkirlHoldAuditionGenerator {
                 macros: Map<String, Float> = emptyMap(), mode: String = "patch") {
                 add(Request("$name-$suffix", "$voice / $title", section,
                     SkirlPatch("$voice $title", voice, Skirl.defaults(voice) + macros + ("HOLD" to hold),
-                        midi = midi, velocity = velocity), mode))
+                        midi = midi, velocity = velocity, model = model), mode))
             }
             addCase("finite", "finite runout", hold = 0f)
             addCase("extended", "HOLD .5, then runout", hold = .5f)
@@ -161,7 +170,8 @@ object SkirlHoldAuditionGenerator {
                 "$id saved patch did not replay the exported float audio"
             }
         } else {
-            val replay = Skirl.renderHeld(restored.voice, restored.macros, restored.midi, restored.velocity)
+            val replay = Skirl.renderHeld(restored.voice, restored.macros, restored.midi, restored.velocity,
+                model = restored.model)
             val expected = if (request.mode == "eight-wraps") {
                 val start = replay.loopStartFrame.toInt()
                 val cycle = replay.snip.samples.copyOfRange(start, replay.snip.samples.size)
@@ -207,6 +217,11 @@ object SkirlHoldAuditionGenerator {
         val p = result.probe
         val patch = result.request.patch
         val hold = p.hold
+        val renderedSnip = Snip(result.samples, 1, RATE)
+        val actualClass = Classifier.classify(renderedSnip).drumClass
+        check(patch.model < 3 || !Skirl.isLoop(patch.macros.getValue("HOLD")) || actualClass == DrumClass.LOOP) {
+            "${result.request.id}: current held export filed as $actualClass"
+        }
         val loop = if (result.loopStartFrame > 0)
             p.snip.samples.copyOfRange(result.loopStartFrame, p.snip.samples.size) else p.snip.samples
         val pitchSamples = if (Skirl.isLoop(patch.macros.getValue("HOLD"))) loop + loop + loop else loop
@@ -224,20 +239,26 @@ object SkirlHoldAuditionGenerator {
         val fixedWindows = listOf(.10f, .25f).map { pitchWindow(it, .30f) }
         val wholeCycle = if (Skirl.isLoop(patch.macros.getValue("HOLD")))
             pitchWindow(0f, loop.size.toFloat() / RATE) else null
+        val primitiveCycle = if (Skirl.isLoop(patch.macros.getValue("HOLD")))
+            pitchWindow(0f, (hold!!.cycleSeconds * RATE).roundToInt().toFloat() / RATE) else null
         val phaseWindows = if (result.request.id.endsWith("-low-soft-loop"))
             (0 until 12).map { pitchWindow(it * .05f, .30f) } else null
         return linkedMapOf("durationSeconds" to result.samples.size.toDouble() / RATE,
             "peak" to peak(result.samples), "dc" to result.samples.average(),
-            "loudness" to Loudness.of(Snip(result.samples, 1, RATE)),
+            "loudness" to Loudness.of(renderedSnip),
+            "declaredDrumClass" to Skirl.drumClassFor(patch.voice, patch.macros).name,
+            "actualDrumClass" to actualClass.name,
             "floatSha256" to floatHash(result.samples), "prelevelFloatSha256" to floatHash(result.raw),
             "pitchHz" to pitch?.hz, "pitchCents" to pitch?.let { 1200 * ln(it.hz / hz.toDouble()) / ln(2.0) },
             "pitchConfidence" to pitch?.confidence,
             "pitchWindowSeconds" to .25, "pitchWindowLengthSeconds" to .30,
             "fixedPitchWindows" to fixedWindows, "wholeLoopPitch" to wholeCycle,
+            "primitiveCyclePitch" to primitiveCycle,
             "lowSoftPhasePitchWindows" to phaseWindows,
             "pitchRefusalMeaning" to "No estimate from the existing detector. Nulls are retained, not replaced with the requested note. See the manifest's pitchMeasurement explanation.",
             "inspectMillis" to result.inspectMillis, "loopStartFrame" to result.loopStartFrame,
             "captureStartSeconds" to hold?.captureStartSeconds, "cycleSeconds" to hold?.cycleSeconds,
+            "exportSpanCycles" to hold?.exportSpanCycles, "exportSpanSeconds" to hold?.exportSpanSeconds,
             "overlapSeconds" to hold?.overlapSeconds, "insertedCycles" to hold?.insertedCycles,
             "insertedSeconds" to hold?.insertedSeconds, "originalRollingSeconds" to p.motion.duration,
             "originalRestStartSeconds" to p.acoustics.restStartSeconds,
@@ -291,7 +312,7 @@ object SkirlHoldAuditionGenerator {
 <p>Some short pitch windows in the low, soft loops return no detector estimate even when longer windows find the root. The detector's relative correlation gate can reject a root peak below a stronger short-lag endpoint. All fixed-window measurements and refusals remain in the diagnostics; the waveform and detector are unchanged.</p>
 <p><a href="manifest.json">Manifest and measurements</a></p><label>Voice <select id="filter"><option>Both</option><option>ROLL</option><option>WHIRR</option></select></label><div id="clips"></div><p id="status"></p>
 <script type="application/json" id="data">$embedded</script><script>
-const m=JSON.parse(document.getElementById('data').textContent),host=document.getElementById('clips'),filter=document.getElementById('filter');function node(t,s){const e=document.createElement(t);if(s!==undefined)e.textContent=s;return e}function player(a,label,path,repeat){a.append(node('label',label));const p=node('audio');p.controls=true;p.preload='none';p.loop=repeat;p.src=path;p.addEventListener('play',()=>document.querySelectorAll('audio').forEach(x=>{if(x!==p)x.pause()}));a.append(p)}function link(a,label,path){const l=node('a',label);l.href=path;a.append(l,document.createTextNode(' · '))}function draw(){host.querySelectorAll('audio').forEach(a=>a.pause());host.replaceChildren();for(const c of m.clips.filter(c=>filter.value==='Both'||c.voice===filter.value)){const a=node('article');a.append(node('h2',c.title),node('small',c.section+' · '+c.metrics.durationSeconds.toFixed(2)+' s · MIDI '+c.midi+' · touch '+c.velocity));player(a,'Production level',c.production,c.repeatPlayer);player(a,'Common gain',c.commonGain,c.repeatPlayer);const links=node('div');links.className='links';link(links,'Saved patch',c.recipe);link(links,'Exact playback method',c.playback);link(links,'Diagnostics',c.diagnostics);a.append(links);if(c.loopStartFrame>0)a.append(node('p','Loop marker: frame '+c.loopStartFrame+'. A normal audio player plays this WAV once; sampler sustain uses the recorded marker.'));host.append(a)}}filter.onchange=draw;draw();document.getElementById('status').textContent=m.clipCount+' clips. '+m.listening+' '+m.timing;
+const m=JSON.parse(document.getElementById('data').textContent),host=document.getElementById('clips'),filter=document.getElementById('filter');function node(t,s){const e=document.createElement(t);if(s!==undefined)e.textContent=s;return e}function player(a,label,path,repeat){a.append(node('label',label));const p=node('audio');p.controls=true;p.preload='none';p.loop=repeat;p.src=path;p.addEventListener('play',()=>document.querySelectorAll('audio').forEach(x=>{if(x!==p)x.pause()}));a.append(p)}function link(a,label,path){const l=node('a',label);l.href=path;a.append(l,document.createTextNode(' · '))}function draw(){host.querySelectorAll('audio').forEach(a=>a.pause());host.replaceChildren();for(const c of m.clips.filter(c=>filter.value==='Both'||c.voice===filter.value)){const a=node('article');a.append(node('h2',c.title),node('small',c.section+' · '+c.metrics.durationSeconds.toFixed(2)+' s · MIDI '+c.midi+' · touch '+c.velocity));player(a,'Production level',c.production,c.repeatPlayer);player(a,'Common gain',c.commonGain,c.repeatPlayer);const links=node('div');links.className='links';link(links,'Saved patch',c.recipe);link(links,'Exact playback method',c.playback);link(links,'Diagnostics',c.diagnostics);a.append(links);if(c.loopStartFrame>0)a.append(node('p','Loop marker: frame '+c.loopStartFrame+'. A normal audio player plays this WAV once; sampler sustain uses the recorded marker.'));host.append(a)}}filter.onchange=draw;draw();document.getElementById('status').textContent=m.clipCount+' clips · model '+m.model+'. '+m.listening+' '+m.timing;
 </script></html>"""
     }
 }

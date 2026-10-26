@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "implementationCommit": "4b00ed1dd2f2e0ed31f44c718c30ee7cdfb118f5",
+  "exitCode": 1,
+  "moduleCounts": {
+    "audio": {
+      "tests": 444,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "cli": {
+      "tests": 205,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "json": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "kit": {
+      "tests": 396,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "loop": {
+      "tests": 421,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "mpc3": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shell": {
+      "tests": 1238,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "synth": {
+      "tests": 3153,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0
+    },
+    "xpm": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "totals": {
+    "tests": 6005,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0
+  },
+  "failures": [
+    {
+      "class": "com.snipsnap.synth.SkirlHoldTest",
+      "name": "capture closes and keeps its root at the contact and material corners()",
+      "message": "org.opentest4j.AssertionFailedError: ROLL MIDI 36 velocity 0.65 {EDGE=0.0, PLATE=0.0}: actual captured audio was classified as a drum"
+    },
+    {
+      "class": "com.snipsnap.synth.SkirlHoldTest",
+      "name": "captured loops keep their root and close from C2 through C6 at soft and firm touch()",
+      "message": "org.opentest4j.AssertionFailedError: ROLL MIDI 36 velocity 0.25 {}: actual captured audio was classified as a drum"
+    }
+  ],
+  "diagnosis": "The generic classifier treats short bass-decay cores as KICK/TOM. Pitch/seam tests passed. Model3 exports genuine multi-capture spans above1.5s while preserving model2 replay.",
+  "logName": "skirl-hold-full-model2-filing.log",
+  "logSha256": "c3f8fef7e3e6f5658cb6e304b2c1010153e960ca6babb742e53cf55b9ccc860b"
+}

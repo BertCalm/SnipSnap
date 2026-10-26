@@ -70,9 +70,13 @@ def main():
     parser.add_argument("--candidate-classpath", required=True)
     parser.add_argument("--output", type=Path, default=Path("testkit/skirl-performance"))
     parser.add_argument("--repeats", type=int, default=15)
+    parser.add_argument("--baseline-model", type=int, default=1)
+    parser.add_argument("--candidate-model", type=int, default=1)
     args = parser.parse_args()
     if args.repeats < 1:
         parser.error("--repeats must be positive")
+    if min(args.baseline_model, args.candidate_model) < 1:
+        parser.error("model numbers must be positive")
     output = args.output.resolve()
     classes = output / "classes"
     classes.mkdir(parents=True, exist_ok=True)
@@ -82,10 +86,11 @@ def main():
                     *(str(HERE / name) for name in ("BenchSkirl.java", "ParitySkirl.java",
                                                     "BenchResampler.java"))], check=True)
     results = {}
-    for label, classpath in (("baseline", baseline), ("candidate", candidate)):
+    for label, classpath, model in (("baseline", baseline, args.baseline_model),
+                                     ("candidate", candidate, args.candidate_model)):
         print(f"Rendering {label} benchmark and 106 finite replay cases", flush=True)
-        run_java(classpath, classes, "BenchSkirl", [str(args.repeats)], output / f"{label}-benchmark.txt")
-        run_java(classpath, classes, "ParitySkirl", [str(HERE / "cases.tsv")], output / f"{label}-parity.tsv")
+        run_java(classpath, classes, "BenchSkirl", [str(args.repeats), str(model)], output / f"{label}-benchmark.txt")
+        run_java(classpath, classes, "ParitySkirl", [str(HERE / "cases.tsv"), str(model)], output / f"{label}-parity.tsv")
         results[label] = {"benchmark": benchmark(output / f"{label}-benchmark.txt"),
                           "cases": parity(output / f"{label}-parity.tsv")}
     expected = {line.split("\t")[0] for line in (HERE / "cases.tsv").read_text().splitlines()}
@@ -93,8 +98,10 @@ def main():
     results["caseCount"] = len(expected)
     results["allCasesPresent"] = complete
     results["exactFiniteReplay"] = complete and results["baseline"]["cases"] == results["candidate"]["cases"]
+    results["baselineModel"] = args.baseline_model
+    results["candidateModel"] = args.candidate_model
     results["limitations"] = ("Sequential JVM runs on the current machine; no Android claim. "
-        "Model 1 is requested explicitly when supported. Five JVM warmup renders, then warm-cache "
+        "The requested model is recorded for each classpath. Five JVM warmup renders, then warm-cache "
         "timings; inspection is a separate diagnostic render. No cold-process latency claim.")
     (output / "report.json").write_text(json.dumps(results, indent=2) + "\n")
     print(f"Exact finite replay: {results['exactFiniteReplay']}; report: {output / 'report.json'}", flush=True)

@@ -94,7 +94,7 @@ class SkirlSynthCommandTest {
     }
 
     @Test
-    fun `saved acoustic HOLD renders through CLI and retains model two`() {
+    fun `saved acoustic HOLD renders through CLI and retains its current model`() {
         val directory = createTempDirectory("skirl-cli-hold").toFile()
         try {
             val patch = SkirlPatch("Captured whirr", SkirlVoice.WHIRR,

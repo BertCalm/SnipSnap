@@ -1,12 +1,15 @@
 {
   "schema": 1,
-  "measuredAtUtc": "2026-10-26T18:08:16.106760+00:00",
-  "check": "Kotlin syntax and production JVM API compilation of Android instrumentation benchmark against final model-2 classes",
+  "measuredAtUtc": "2026-10-26T19:24:15.916239+00:00",
+  "check": "Kotlin syntax and production JVM API compilation of Android instrumentation benchmark against final model-3 classes",
   "result": "passed",
   "compilerExitCode": 0,
   "engineModels": {
-    "current": 2,
-    "legacy": 1
+    "current": 3,
+    "legacySupported": [
+      1,
+      2
+    ]
   },
   "androidCompilationPerformed": false,
   "deviceRunPerformed": false,
@@ -69,16 +72,16 @@
       }
     ],
     "productionApiClassSha256": {
-      "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "f007097c77463cf213747eb88e16e69cd63c2d5bdd697def24eeb4e2c33cef11",
-      "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch.class": "4369ee783c3a7b62c5e26521fbfaa1be129927f62c08f60e3e93586be59279ec",
+      "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "2296767dc9ee4031dca5248113036da1b5525b8045247731b3e2a2c40cd4a41f",
+      "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch.class": "7751eb1374cf78b2f6753ae71a9c3363f90f46e3d11c893f802fe37662b8369d",
       "json/build/classes/kotlin/main/com/snipsnap/json/JsonValue.class": "a4f97950d879e691e158ae7d6154de8b6747f4132d047d6782682708b204fee1",
       "json/build/classes/kotlin/main/com/snipsnap/json/Json.class": "5d1f50f7207e6d36e94712dc95a08e229307aac57f4636d0a30fa1a9a7b3d551",
       "audio/build/classes/kotlin/main/com/snipsnap/audio/Snip.class": "f4fa5da26e18cccb1bc4b6d7b93b5e374706212887f80eb0a91749c2aebf7719"
     },
     "sourceSha256": {
       "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt": "dd388365a3e35d1bfabf8956475b1d0138e2bd9232ca909004af521466881d2b",
-      "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "aaf7886be6c8515f4e944ed09d8a66c13211ddf6b0b9951d72eb3f247e8358eb",
-      "synth/src/main/kotlin/com/snipsnap/synth/SkirlPatch.kt": "43f231d98c3f490afb595694577a5e4fefc3947596077489a4a3a5e153b2e080",
+      "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "3006978436f46be7d77db6ad8d36f01a958beac0480e519d9cf1a4461784a4d4",
+      "synth/src/main/kotlin/com/snipsnap/synth/SkirlPatch.kt": "e267ed92486db27c86551f2c4e58cead92f7120f93a608fedaf79d6daa3f20fe",
       "docs/SKIRL_ANDROID_BENCHMARK.md": "3be93739c036ed730f0ae1b12436fc927de26eaaea6fb3002e58bb25453bf01e",
       "app/build.gradle.kts": "3993fe280bb48b86b3ed6b4d9bda3971c2dcc230bbafdb466f963d81f823f5f1"
     },
@@ -96,15 +99,15 @@
     "-classpath",
     "kotlin-stdlib-2.0.21.jar:junit-4.13.2.jar:synth/build/classes/kotlin/main:json/build/classes/kotlin/main:audio/build/classes/kotlin/main",
     "-d",
-    "<scratch>/harness-final-model2.jar",
+    "<scratch>/harness-final-model3.jar",
     "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt",
     "<scratch>/{AndroidJUnit4,Build,Bundle,Context,Instrumentation,InstrumentationRegistry,Log,PowerManager}.kt"
   ],
   "output": {
-    "archive": "/workspace/scratch/skirl-android-harness-compile/harness-final-model2.jar",
-    "sha256": "282533e896827e27d358ed44a81ab4dd6751de897c6d38ecdad196cf265f3732",
-    "bytes": 22096,
-    "compileLog": "/workspace/scratch/skirl-android-harness-compile/final-model2-compile.log"
+    "archive": "/workspace/scratch/skirl-android-harness-compile/harness-final-model3.jar",
+    "sha256": "9e2c977635681aaf4197644b3d65b000ef7d981a18e8ae4950dddeae3b8c0d8d",
+    "bytes": 22097,
+    "compileLog": "/workspace/scratch/skirl-android-harness-compile/final-model3-compile.log"
   },
   "verifiedAndroidBuildConfiguration": {
     "baseApplicationId": "com.snipsnap.app",

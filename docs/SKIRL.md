@@ -3,6 +3,7 @@
 The characteristic gesture is **knock → flutter → whirr → shudder → ringing stillness**.
 ROLL and WHIRR turn solved rigid-disk motion into note-tuned disk and support modes.
 Model 1 provides the finite gesture; model 2 adds an authored acoustic HOLD.
+Current model 3 exports several real captures so the resulting sample files as a loop.
 The owner responded positively to both Python auditions.
 The Kotlin render awaits its own listening review.
 
@@ -37,7 +38,10 @@ by `round(6*HOLD/.99)`, before the original shudder and ringing tail resume. A c
 is approximately `.56–.61 s` in the calibrated domain, aligned to a whole number of
 the requested note's periods. The small interval near zero still selects zero extra
 cycles. At `.99` and above, `render` returns one repeating acoustic cycle and declares
-LOOP. `renderHeld` returns the original attack plus the settled capture with a nonzero
+LOOP. Current exports retain at least three captures and exceed the generic classifier's
+1.5-second loop boundary, typically about `1.79 s` at the defaults. The primitive texture
+still repeats about every `.6 s`. `renderHeld` returns the original attack plus the settled
+multi-capture span with a nonzero
 `KeyNote.loopStartFrame`, ready for the existing sampler-loop export shape. It does not
 add a new keygroup/export command or phone picker entry.
 
@@ -47,7 +51,11 @@ still ends, and its finite work ledger funds only the original gesture. It does 
 fund repeated captured sound. Intermediate HOLD returns to that original finite runout;
 the loop's top step has no terminal shudder or tail fade.
 
-Saved patches now default to model 2. Explicit model-1 patches remain supported, retain
+Saved patches now default to model 3. Model 2 retains the original short capture and its
+exact audio and held markers. Its short bass files can be guessed as KICK/TOM by the
+generic classifier, which ignores sampler-loop metadata; the current longer export
+addresses that filing issue without changing the texture or the shared classifier.
+Explicit model-1 patches remain supported, retain
 their finite seed and sound, and still refuse every nonzero HOLD, including tiny positive
 JSON numbers before Float conversion. Model, MIDI and velocity remain required replay
 fields. The two `SkirlPresets` recipes remain outside the factory roster. The phone
@@ -85,7 +93,7 @@ readout against the heard positive-texture Python version; they are not waveform
 tests. Extract the ZIP and open `index.html` directly in a browser: its manifest is
 embedded, so it needs no local server.
 
-Generate the separate model-2 HOLD pack without overwriting the earlier finite audition:
+Generate the current HOLD pack without overwriting the earlier finite audition:
 
 ```sh
 ./gradlew --no-daemon :synth:generateSkirlHoldAudition
@@ -97,6 +105,13 @@ independent preceding-cycle diagnostics, common-gain WAVs and an offline listeni
 CLI replay of a top-step HOLD patch also embeds its tuned MIDI root and full-cycle
 forward loop in the WAV's existing RIFF `smpl` metadata. Finite CLI WAVs keep their
 earlier metadata-free encoding.
+
+For example, replay the saved repeating ROLL recipe after generating that pack:
+
+```sh
+./gradlew --no-daemon :cli:installDist
+cli/build/install/cli/bin/cli synth SKIRL ROLL --patch testkit/skirl-hold-audition/recipes/roll-loop.patch.json --out /tmp/skirl-held-roll
+```
 
 ## Mechanics and sound
 
@@ -126,9 +141,10 @@ contact in the middle of the solved runout. A smooth unity-sum overlap blends th
 continuation back into the excerpt's start. It neither adds a new event clock nor retunes
 the physical solver. Boundaries are planned in output frames before multiplying by four,
 so every cycle keeps the same decimator phase. The normal house output chain conditions
-consecutive captures continuously. Two independently conditioned consecutive cycles must
-pass both the 256-frame seam metric and a whole-cycle difference bound of `1e-3`. A true
-following cycle supplies sinc lookahead and is discarded after conditioning. No closing
+consecutive captures continuously. Current exports condition two settling captures,
+a genuine preceding span and the exported span, then a true following capture for sinc
+lookahead. The two independent spans must pass both the 256-frame seam metric and a
+whole-span difference bound of `1e-3`. Lookahead is discarded after conditioning. No closing
 samples are copied to manufacture a zero seam. Silent velocity-zero loops explicitly
 report zero difference rather than divide by zero.
 
@@ -180,8 +196,8 @@ source hashes, gate counts and artifact checks are under
 [`prototype/skirl/native`](../prototype/skirl/native/README.md).
 
 In three paired, warmed runs on the same current container, the median of run medians
-improved from `140.73` to `109.80 ms` for ROLL and from `151.80` to `126.27 ms` for WHIRR
-(22.0% and 16.8% less time). Each run discarded five warmups and measured fifteen renders
+improved from `135.54` to `105.33 ms` for ROLL and from `153.73` to `127.54 ms` for WHIRR
+(22.3% and 17.0% less time). Each run discarded five warmups and measured fifteen renders
 per voice. Unrelated host scheduling is uncontrolled, and both still miss 50 ms. These
 are finite default C3 renders, not HOLD or phone timings. All 106 frozen finite fixtures
 retain identical production Float arrays, conditioned prelevel arrays and acoustic
@@ -199,7 +215,8 @@ universal detection. Native listening remains necessary to judge the captured mo
 In the final 18-clip pack, 35 of 36 fixed-window estimates and all 12 whole-loop estimates
 returned a root. A 24-window phase sweep of soft C2 captures returned 18 estimates;
 the other six are explicitly recorded as absent. Returned phase estimates stayed within
-`24.054 cents`; whole-loop estimates stayed within `15.204 cents`. WHIRR's refused late
+`24.054 cents`; primitive-cycle estimates stayed within `15.204 cents`; estimates over the full exported
+span stayed within `22.229 cents`. WHIRR's refused late
 windows retain a substantial near-root autocorrelation peak, but it falls below the
 detector's relative threshold. This is a measurement limitation and an audible texture
 to judge, not grounds to claim an invariant pitch at every instant. Bounded `.9 s` and

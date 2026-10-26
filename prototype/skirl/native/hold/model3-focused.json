@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "exitCode": 0,
+  "command": "./gradlew --offline -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 --no-daemon --max-workers=4 :synth:test --tests '*Skirl*Test' :cli:test --tests '*Skirl*Test' :shell:test --tests '*Skirl*Test' :cli:installDist",
+  "moduleCounts": {
+    "synth": {
+      "tests": 40,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "cli": {
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "shell": {
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    }
+  },
+  "note": "CLI test name subsequently changed from model-two wording to current-model wording; assertion body unchanged; final full gate covers that label change."
+}
