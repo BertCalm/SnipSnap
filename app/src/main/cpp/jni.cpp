@@ -444,6 +444,27 @@ Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong handle) 
     return static_cast<jlong>(pads(handle)->framesRendered());
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv* env, jobject, jlong handle, jlongArray out) {
+    if (out == nullptr || env->GetArrayLength(out) < 2) return JNI_FALSE;
+    int64_t frame = 0;
+    int64_t nanos = 0;
+    if (!pads(handle)->hardwarePosition(&frame, &nanos)) return JNI_FALSE;
+    const jlong values[2] = {static_cast<jlong>(frame), static_cast<jlong>(nanos)};
+    env->SetLongArrayRegion(out, 0, 2, values);
+    return JNI_TRUE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->framesPerBurst());
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_audioApi(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->audioApi());
+}
+
 JNIEXPORT jintArray JNICALL
 Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv* env, jobject, jlong handle) {
     int32_t buf[256];

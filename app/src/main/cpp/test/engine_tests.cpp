@@ -280,6 +280,17 @@ TEST(pad_engine_frames_rendered_never_goes_backwards_across_stop_and_start) {
     CHECK_EQ(e.framesRendered(), before + 32);
 }
 
+TEST(pad_engine_without_a_stream_has_no_hardware_position) {
+    PadEngine e(kRate);
+    int64_t frame = 7;
+    int64_t nanos = 9;
+    CHECK(!e.hardwarePosition(&frame, &nanos));
+    CHECK_EQ(frame, int64_t{7});
+    CHECK_EQ(nanos, int64_t{9});
+    CHECK_EQ(e.framesPerBurst(), int32_t{0});
+    CHECK_EQ(e.audioApi(), int32_t{-1});
+}
+
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
     PadEngine& e = seeded();
     CHECK(e.pushCommand(noteOn(7, 0, 100, 104, 0.5f, 0.25f)));

@@ -44,6 +44,9 @@ object NativePads {
     external fun allOff(handle: Long, fadeMs: Float): Boolean
     external fun drainEnded(handle: Long): IntArray
     external fun framesRendered(handle: Long): Long
+    external fun hardwarePosition(handle: Long, out: LongArray): Boolean
+    external fun framesPerBurst(handle: Long): Int
+    external fun audioApi(handle: Long): Int
 
     /**
      * The resample tap, the same four calls `NativeSurface` has. [armPrint]

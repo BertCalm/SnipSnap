@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 #include "OboeOutput.h"
 
@@ -45,6 +46,23 @@ bool PadEngine::start() {
 
 double PadEngine::latencyMillis() const {
     return latencyMillisOf(stream_);
+}
+
+bool PadEngine::hardwarePosition(int64_t* framePosition, int64_t* timeNanos) {
+    if (!stream_ || framePosition == nullptr || timeNanos == nullptr) return false;
+    const oboe::ResultWithValue<oboe::FrameTimestamp> ts = stream_->getTimestamp(CLOCK_MONOTONIC);
+    if (ts.error() != oboe::Result::OK) return false;
+    *framePosition = ts.value().position;
+    *timeNanos = ts.value().timestamp;
+    return true;
+}
+
+int32_t PadEngine::framesPerBurst() const {
+    return stream_ ? stream_->getFramesPerBurst() : 0;
+}
+
+int32_t PadEngine::audioApi() const {
+    return stream_ ? static_cast<int32_t>(stream_->getAudioApi()) : -1;
 }
 
 void PadEngine::stop() {
