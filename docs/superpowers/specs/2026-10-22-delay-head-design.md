@@ -181,3 +181,26 @@ Built from the plan (`docs/superpowers/plans/2026-10-23-delay-head.md`), Tasks 1
 - **Disclosed, not fixed.** The head is the pad's start (five doors, in the hazards); an older build cannot read a kit that saved `echo.HEAD`.
 - **Published** 2026-10-23: the Stage 1b artifact (version 5) carries the gate. Only the 30 gate WAVs were uploaded, so the 59 files already published, and the verdicts that point at them, are untouched; the page keeps its answer store, and the gate's answers land under `verdicts/dly_*`.
 - **Heard:** nothing yet.
+
+## The gate (2026-10-24)
+
+The owner answered the gate on the page on 2026-10-24, all 15 questions (`verdicts/dly_*`, 18:37 to 18:39 UTC), and left no note. The answers, with the option each value stands for:
+
+| Question | Answer |
+|---|---|
+| Is it a delay: snare, choir, jangle, chug | yes, yes, nearly, nearly |
+| HEAD off beside it at the same level, which is the better delay: choir, jangle, chug | "Head off is better", on all three |
+| On the snare, are the repeats too loud: at 70, at 100 | "Right", "Right" |
+| Which MIX sounds right: snare, jangle | MIX 100, MIX 100 |
+| HEAD's faint repeat on the reversed snare: a problem? | "No, it is fine" |
+| The held notes' missing echo after the note ends: does it matter? | "Yes, I miss the echo after the note" |
+| Spacing (151 ms at 70, 225 ms at 100) | "Further apart" |
+| Should DELAY join the pedals? | "Yes" |
+
+The same session, a minute before, stored the first answers to the DELAY sheet (4), the plain long recipe (MIX 50, no HEAD, TIME 0.75): on the snare and the choir "Yes", "The long recipe", and at 100 "It fades out on its own"; on the jangle "No", "Neither is right" and, of the cut, "Cannot tell". With HEAD at the gate the jangle was "nearly", so the jangle has not yet been called a delay outright; the confirm asks again.
+
+**What the spec's rules make of them.** HEAD off won at the same level on every held note, so the recipe drops HEAD and HEAD stays a macro for kits and the CLI; with the earlier "head better" made against a clip 8 to 10 dB louder, the matched comparison is the one that counts, and the missing-echo answer agrees with it. MIX picked by ear on both sources is 1.0. "Further apart" moves TIME to 1.0 (206 ms at AMT 70, 350 ms at 100). DELAY joins the pedals. So the follow-up's recipe is `echo {TIME 1.0, REPEAT 0.85, TONE 0.35, MIX 1.0}`, with no HEAD: three changes at once that nobody had heard as one recipe, so a short confirm listen comes before the flip (the owner chose it in chat over building straight away).
+
+**What that recipe does at the rack's cap** (measured on the confirm clips, the peak of the 20 ms before the cut against the clip's peak): at AMT 70 the cut lands 67.7 (snare), 73.0 (choir), 57.1 (jangle) and 42.6 (chug) dB under; at AMT 100, with only about three repeats inside the one-second cap, 75.5, 35.6, 38.0 and 20.7 dB under, so on the held notes the trail is cut while it is still sounding (the owner heard a cut about 47 dB under on sheet (4) as fading out on its own, so whether these are heard is the confirm's question). Bringing the repeats closer does not help (TIME 0.9 at 100: choir 29.4, chug 21.9 dB). A prototype that fades the clip's last 300 ms instead of the rack's 10 ms puts those cuts at 70.3 (choir), 70.3 (jangle, a coincidence of the float measure: the written WAVs read 72.4 and 69.7, both near the 16-bit floor at this level) and 53.6 (chug) dB; it is test-source only, because a real version changes either the cut every pad gets when its effects would ring past one second (`FxChain.capTail`) or ECHO's own tail, its own decision.
+
+**The confirm listen** is sheet (6) of the Stage 1b page, "DELAY, as you answered it": the recipe above at 70 and 100 on the snare, the choir, the jangle and the chug, and the faded-cut prototype at 100 on the choir, the jangle and the chug (11 clips), with each pad as the kit has it for reference. It asks whether it is the DELAY on each source, whether the echo stops too abruptly at 100, and whether to put DELAY on the pedal row as it is, once the cut is gentler, or not yet. The flip (`gated` true and its re-pins, listed in the plan's "After the gate") and the recipe change land together after it.
