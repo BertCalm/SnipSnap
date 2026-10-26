@@ -4,6 +4,7 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import java.security.MessageDigest
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -59,7 +60,7 @@ class SkirlPatchTest {
         for (bad in listOf(35.0, 85.0, 60.25, Double.NaN)) {
             assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("midi", JsonValue.Num(bad))) }
         }
-        for (bad in listOf(0.0, 1.5, 3.0)) {
+        for (bad in listOf(0.0, 1.5, 4.0)) {
             assertFailsWith<JsonException> { SkirlPatch.fromJsonValue(changed("model", JsonValue.Num(bad))) }
         }
         for (bad in listOf(-.000000001, 1.000000001, Double.NaN)) {
@@ -81,11 +82,12 @@ class SkirlPatchTest {
     }
 
     @Test
-    fun `model one replay keeps its finite surface and model two saves the acoustic hold`() {
+    fun `model one keeps its finite surface while current recipes save captured HOLD`() {
         for (voice in SkirlVoice.entries) {
             val legacy = authored(voice).copy(model = 1)
             assertEquals(legacy, Patches.fromJsonText(legacy.toJsonText()))
             assertContentEquals(legacy.render().samples, legacy.copy(model = 2).render().samples)
+            assertContentEquals(legacy.render().samples, legacy.copy(model = 3).render().samples)
             for (hold in listOf(.5f, 1f)) {
                 val captured = authored(voice).copy(macros = authored(voice).macros + ("HOLD" to hold))
                 val restored = assertIs<SkirlPatch>(Patches.fromJsonText(captured.toJsonText()))
@@ -93,6 +95,56 @@ class SkirlPatchTest {
                 assertContentEquals(captured.render().samples, restored.render().samples)
                 assertContentEquals(captured.copy(velocity = .25f).render().samples,
                     Velocity.atVelocity(captured, .25f).samples)
+            }
+        }
+    }
+
+    private data class LegacyFixture(val voice: SkirlVoice, val midi: Int, val velocity: Float,
+        val hold: Float, val retainAttack: Boolean, val frames: Int, val marker: Long, val sha256: String)
+
+    private fun sampleHash(samples: FloatArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val bytes = ByteArray(4)
+        for (sample in samples) {
+            val bits = sample.toRawBits()
+            for (index in 0..3) bytes[index] = (bits ushr (24 - index * 8)).toByte()
+            digest.update(bytes)
+        }
+        return digest.digest().joinToString("") { "%02x".format(it.toInt() and 255) }
+    }
+
+    @Test
+    fun `published model two finite captures and held markers retain their frozen float bytes`() {
+        // Collected independently from immutable commit 4b00ed1, including ten
+        // published audition clips. These hashes detect a changed legacy cut,
+        // seed, filter history or helper dispatch, not just a JSON round trip.
+        val fixtures = listOf(
+            LegacyFixture(SkirlVoice.ROLL, 48, 1.0f, 0.0f, false, 239036, 0L, "bfd7bb42622a39fce8570176e2a1b288e316b95049d037e5a414d31ad6676a39"),
+            LegacyFixture(SkirlVoice.ROLL, 48, 1.0f, 0.5f, false, 317924, 0L, "053ab6a3de60fcb03a6a6ae1323bc497d9906f5f51776a4ef1b6f74548d5072b"),
+            LegacyFixture(SkirlVoice.ROLL, 48, 1.0f, 1.0f, false, 26296, 0L, "a87048e54646080b31d4d15dd9f1cc699e7f0c80abad634ef9b670e3d407ae0f"),
+            LegacyFixture(SkirlVoice.ROLL, 48, 1.0f, 1.0f, true, 152487, 126191L, "92984ef8ce2b5b64328cbdeec122572602ca0a28c1440b795018794b21228573"),
+            LegacyFixture(SkirlVoice.ROLL, 36, 0.25f, 1.0f, false, 26296, 0L, "be2a201d073c3228a523b48a0c76aaf9ab3ce870878ed3989004f5fa2dde5bde"),
+            LegacyFixture(SkirlVoice.ROLL, 36, 0.25f, 1.0f, true, 152487, 126191L, "cafbf5823a2a610dcbc40187dcbb52d6c12a55c2e91ba622e15dcde3de888a42"),
+            LegacyFixture(SkirlVoice.WHIRR, 48, 1.0f, 0.0f, false, 282743, 0L, "9fb0329adc81e2ebc05770ccb71c1a72de7dc65eb756fac569e18edbb5d15e31"),
+            LegacyFixture(SkirlVoice.WHIRR, 48, 1.0f, 0.5f, false, 361631, 0L, "616bcaca9a14b89425705df80df9f2f9228a004c8b1fdcefae64953d39b2355e"),
+            LegacyFixture(SkirlVoice.WHIRR, 48, 1.0f, 1.0f, false, 26296, 0L, "2e9e6611e6346667ec5ee43e5597f13093d0c4863e9ba7b49ea86cdcffe7b644"),
+            LegacyFixture(SkirlVoice.WHIRR, 48, 1.0f, 1.0f, true, 172433, 146137L, "3db5639ef8efa03b2c7ddc8b48cca8f3822a8a08fc7b49e58a882f41be9e78eb"),
+            LegacyFixture(SkirlVoice.WHIRR, 36, 0.25f, 1.0f, false, 26296, 0L, "d48b479895d6ea2b6327251e2e142d0cd2c2d5718b47cfa12335e0084e91cc94"),
+            LegacyFixture(SkirlVoice.WHIRR, 36, 0.25f, 1.0f, true, 172433, 146137L, "05bd9295e1de19a6cd8812e85e42e6cdf692f2dbe7593683e6dbbafbeb731a33"),
+        )
+        for (fixture in fixtures) {
+            val macros = Skirl.defaults(fixture.voice) + ("HOLD" to fixture.hold)
+            val note = if (fixture.retainAttack) Skirl.renderHeld(fixture.voice, macros,
+                fixture.midi, fixture.velocity, model = 2) else KeyNote(
+                    Skirl.render(fixture.voice, macros, fixture.midi, fixture.velocity, model = 2))
+            assertEquals(fixture.frames, note.snip.frameCount, fixture.toString())
+            assertEquals(fixture.marker, note.loopStartFrame, fixture.toString())
+            assertEquals(fixture.sha256, sampleHash(note.snip.samples), fixture.toString())
+            if (!fixture.retainAttack) {
+                val patch = SkirlPatch("Frozen capture", fixture.voice, macros,
+                    fixture.midi, fixture.velocity, model = 2)
+                assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
+                assertContentEquals(note.snip.samples, patch.render().samples)
             }
         }
     }

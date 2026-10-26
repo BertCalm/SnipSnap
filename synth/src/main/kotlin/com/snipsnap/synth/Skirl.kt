@@ -26,13 +26,14 @@ enum class SkirlVoice { ROLL, WHIRR }
  *
  * Geometry, resistance, friction and acoustic material tables are design
  * choices. The owner liked the Python audition; this Kotlin port awaits its
- * own listen. Model 2 adds an authored acoustic capture for HOLD. The finite
+ * own listen. Model 2 adds an authored acoustic capture for HOLD; model 3
+ * exports a span of real captures long enough to file as a loop. The finite
  * motion and its seed remain model 1; the capture is externally replenished,
  * not a claim that the dissipative disk continues forever.
  */
 object Skirl {
     const val RATE = Dsp.RATE
-    const val MODEL_VERSION = 2
+    const val MODEL_VERSION = 3
     const val LEGACY_MODEL_VERSION = 1
     const val HOLD_LOOP = SkirlHold.LOOP_THRESHOLD
     const val DEFAULT_MIDI = 48
@@ -134,7 +135,7 @@ object Skirl {
         val outputNanos: Long,
         val hold: SkirlHold.Diagnostics? = null,
         val loopStartFrame: Int = 0,
-        /** Actual independently conditioned preceding cycle, before leveling. */
+        /** Actual independently conditioned preceding exported span, before leveling. */
         val previousCycle: FloatArray = FloatArray(0),
     )
 
@@ -144,14 +145,14 @@ object Skirl {
 
     /** A loop-only pad render. HOLD's top step has no terminal shudder or tail fade. */
     fun renderLoop(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): FloatArray =
-        render(voice, macros + ("HOLD" to 1f), midi, velocity).samples
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, model: Int = MODEL_VERSION): FloatArray =
+        render(voice, macros + ("HOLD" to 1f), midi, velocity, model).samples
 
     /** Attack plus an acoustic sustain loop, in the existing MPC key-note shape. */
     fun renderHeld(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): KeyNote {
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, model: Int = MODEL_VERSION): KeyNote {
         val probe = play(voice, macros + ("HOLD" to 1f), midi, velocity,
-            record = false, retainAttack = true)
+            record = false, model = model, retainAttack = true)
         return KeyNote(probe.snip, probe.loopStartFrame.toLong())
     }
 
@@ -160,8 +161,9 @@ object Skirl {
         play(voice, macros, midi, velocity, record = true, model = model)
 
     internal fun inspectHeld(voice: SkirlVoice, macros: Map<String, Float> = emptyMap(),
-        midi: Int = DEFAULT_MIDI, velocity: Float = 1f): Probe =
-        play(voice, macros + ("HOLD" to 1f), midi, velocity, record = true, retainAttack = true)
+        midi: Int = DEFAULT_MIDI, velocity: Float = 1f, model: Int = MODEL_VERSION): Probe =
+        play(voice, macros + ("HOLD" to 1f), midi, velocity, record = true,
+            model = model, retainAttack = true)
 
     /** A diagnosed research fixture; physical overrides are never production patch fields. */
     internal fun inspectReference(voice: SkirlVoice, physical: SkirlDynamics.Parameters,
@@ -198,7 +200,7 @@ object Skirl {
             seed, fineTexture = true, signedTexture = true)
         check(result.raw.all { it.isFinite() }) { "SKIRL acoustic state became nonfinite" }
         val plan = if (m.getValue("HOLD") > 0f) SkirlHold.plan(result.raw, trace,
-            result.diagnostics, hz, m.getValue("HOLD")) else null
+            result.diagnostics, hz, m.getValue("HOLD"), model) else null
         val synthesized = System.nanoTime()
         stopIfInterrupted()
         val conditioned = condition(plan?.raw ?: result.raw)

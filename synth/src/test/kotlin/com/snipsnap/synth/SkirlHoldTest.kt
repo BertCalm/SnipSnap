@@ -68,10 +68,11 @@ class SkirlHoldTest {
         val s = p.snip
         assertEquals(1, s.channels, label)
         assertEquals(44_100, s.sampleRate, label)
-        val drumClasses = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
-            DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
-        assertTrue(Classifier.classify(s).drumClass !in drumClasses,
-            "$label: actual captured audio was classified as a drum")
+        assertTrue(s.durationSeconds > 1.5f, "$label: exported held span is too short to file as LOOP")
+        assertEquals(DrumClass.LOOP, Classifier.classify(s).drumClass,
+            "$label: actual captured span must file as a loop")
+        assertTrue(hold.exportSpanCycles >= 3, "$label: expected a real multi-capture span")
+        assertEquals(s.frameCount, (hold.exportSpanSeconds * Skirl.RATE).roundToInt(), label)
         assertTrue(s.samples.all { it.isFinite() }, label)
         assertTrue(s.peak() in .01f..1f, "$label: peak ${s.peak()}")
         assertTrue(abs(s.samples.average()) < .005, "$label: held DC")
@@ -183,7 +184,7 @@ class SkirlHoldTest {
     }
 
     @Test
-    fun `held key notes retain the attack and mark one independently closed final cycle`() {
+    fun `held key notes retain the attack and mark an independently closed final span`() {
         for (voice in SkirlVoice.entries) {
             val p = Skirl.inspectHeld(voice, midi = 57, velocity = .65f)
             val key = Skirl.renderHeld(voice, midi = 57, velocity = .65f)
@@ -191,6 +192,7 @@ class SkirlHoldTest {
             assertEquals(p.loopStartFrame.toLong(), key.loopStartFrame)
             assertContentEquals(p.snip.samples, key.snip.samples)
             val length = p.snip.frameCount - p.loopStartFrame
+            assertTrue(length > 1.5 * Skirl.RATE)
             assertEquals(length, p.previousCycle.size)
             assertTrue(p.loopStartFrame > length, "capture must retain the original attack")
             assertTrue(Keys.seamError(key.snip.samples, key.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)

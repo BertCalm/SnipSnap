@@ -4,6 +4,7 @@ import java.util.concurrent.CancellationException
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -18,6 +19,9 @@ import kotlin.math.roundToInt
 internal object SkirlHold {
     const val LOOP_THRESHOLD = .99f
     private const val MAX_EXTRA_CYCLES = 6
+    // Classifier's private LOOP boundary is strictly greater than 1.5 seconds.
+    // Retain complete captures, not silent padding or a different oscillator.
+    private const val LOOP_CLASS_SECONDS = 1.5
 
     data class Diagnostics(
         val captureStartSeconds: Double,
@@ -29,6 +33,8 @@ internal object SkirlHold {
         /** Measured on independently conditioned consecutive cycles, before leveling. */
         val seamError: Double = 0.0,
         val cycleDifference: Double = 0.0,
+        val exportSpanCycles: Int = 0,
+        val exportSpanSeconds: Double = 0.0,
     )
 
     data class Plan(
@@ -47,8 +53,9 @@ internal object SkirlHold {
     }
 
     fun plan(raw: FloatArray, motion: SkirlDynamics.Trace,
-        acoustics: SkirlAcoustics.Diagnostics, hz: Double, hold: Float): Plan {
+        acoustics: SkirlAcoustics.Diagnostics, hz: Double, hold: Float, model: Int): Plan {
         require(hold.isFinite() && hold in 0f..1f && hz.isFinite() && hz > 0)
+        require(model in 2..Skirl.MODEL_VERSION)
         val rate = Dsp.RATE
         val oversample = Dsp.OVERSAMPLE
         val target = min(.60, motion.duration * .30)
@@ -77,7 +84,13 @@ internal object SkirlHold {
             } else raw[begin + i]
         }
         val held = isLoop(hold)
-        val repeats = if (held) 4 else
+        // Model 2's four-cycle preparation and one-cycle cut remain exact for
+        // saved recipes. Current exports contain a genuine multi-capture span:
+        // settle -> preceding span -> kept span -> true sinc lookahead.
+        val span = if (!held) 0 else if (model == 2) 1 else
+            maxOf(3, floor(LOOP_CLASS_SECONDS * rate / hop).toInt() + 1)
+        val settling = if (model == 2) 1 else 2
+        val repeats = if (held) settling + 2 * span + 1 else
             (MAX_EXTRA_CYCLES * hold / LOOP_THRESHOLD).roundToInt()
                 .coerceIn(0, MAX_EXTRA_CYCLES)
         val prefix = begin + length
@@ -89,11 +102,12 @@ internal object SkirlHold {
             core.copyInto(result, prefix + cycle * length)
         }
         if (!held) raw.copyInto(result, prefix + repeats * length, prefix)
-        val marker = if (held) prefix / oversample + 2 * hop else 0
+        val marker = if (held) prefix / oversample + (settling + span) * hop else 0
         return Plan(result, Diagnostics(start.toDouble() / rate, hop.toDouble() / rate,
             overlap.toDouble() / rate, if (held) 0 else repeats,
-            if (held) 0.0 else repeats * hop.toDouble() / rate, motion.duration),
-            marker, if (held) marker + hop else 0)
+            if (held) 0.0 else repeats * hop.toDouble() / rate, motion.duration,
+            exportSpanCycles = span, exportSpanSeconds = span * hop.toDouble() / rate),
+            marker, if (held) marker + span * hop else 0)
         // One further true cycle remains beyond loopEnd for the sinc decimator's
         // lookahead. It is conditioned, then discarded, never zero-padded at export.
     }

@@ -7,7 +7,8 @@ import com.snipsnap.json.JsonValue
 /**
  * A replayable rolling gesture. The saved model, root and velocity pin
  * the render and its derived seed context; TUNE adjusts the saved root.
- * Model 1 retains its finite-only contract; model 2 adds acoustic capture HOLD.
+ * Model 1 retains finite-only replay; model 2 keeps the original short capture.
+ * Model 3 exports a longer held span for automatic loop filing.
  */
 data class SkirlPatch(
     override val name: String,

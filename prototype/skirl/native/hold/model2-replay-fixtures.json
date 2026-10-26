@@ -1,0 +1,264 @@
+{
+  "schema": 1,
+  "baseCommit": "4b00ed1dd2f2e0ed31f44c718c30ee7cdfb118f5",
+  "method": "Public Skirl.render with explicit model2; public renderHeld on frozen model2 classes. SHA-256 consumes Float raw bits in big-endian order, matching original listening manifest.",
+  "classSha256": {
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/Skirl.class": "f007097c77463cf213747eb88e16e69cd63c2d5bdd697def24eeb4e2c33cef11",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlHold.class": "8669eb30715ecfcce432e8b663dbcb2d8e26fa7d06a83ce396672a44b08a0544",
+    "synth/build/classes/kotlin/main/com/snipsnap/synth/SkirlPatch.class": "4369ee783c3a7b62c5e26521fbfaa1be129927f62c08f60e3e93586be59279ec"
+  },
+  "classesUnchangedDuringCollection": true,
+  "publishedClipMatches": 10,
+  "cases": [
+    {
+      "id": "roll-finite",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 0.0
+      },
+      "method": "render",
+      "frames": 239036,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "bfd7bb42622a39fce8570176e2a1b288e316b95049d037e5a414d31ad6676a39",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "roll-extended",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 0.5
+      },
+      "method": "render",
+      "frames": 317924,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "053ab6a3de60fcb03a6a6ae1323bc497d9906f5f51776a4ef1b6f74548d5072b",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "roll-loop",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 1.0
+      },
+      "method": "render",
+      "frames": 26296,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "a87048e54646080b31d4d15dd9f1cc699e7f0c80abad634ef9b670e3d407ae0f",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "roll-held-note",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 1.0
+      },
+      "method": "renderHeld",
+      "frames": 152487,
+      "loopStartFrame": 126191,
+      "productionFloatSha256BigEndian": "92984ef8ce2b5b64328cbdeec122572602ca0a28c1440b795018794b21228573",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "roll-low-soft-loop",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 36,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 1.0
+      },
+      "method": "render",
+      "frames": 26296,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "be2a201d073c3228a523b48a0c76aaf9ab3ce870878ed3989004f5fa2dde5bde",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "roll-low-soft-held-note",
+      "voice": "ROLL",
+      "model": 2,
+      "midi": 36,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0.550000011920929,
+        "BRAKE": 0.4000000059604645,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 0.6499999761581421,
+        "HOLD": 1.0
+      },
+      "method": "renderHeld",
+      "frames": 152487,
+      "loopStartFrame": 126191,
+      "productionFloatSha256BigEndian": "cafbf5823a2a610dcbc40187dcbb52d6c12a55c2e91ba622e15dcde3de888a42"
+    },
+    {
+      "id": "whirr-finite",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 0.0
+      },
+      "method": "render",
+      "frames": 282743,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "9fb0329adc81e2ebc05770ccb71c1a72de7dc65eb756fac569e18edbb5d15e31",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "whirr-extended",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 0.5
+      },
+      "method": "render",
+      "frames": 361631,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "616bcaca9a14b89425705df80df9f2f9228a004c8b1fdcefae64953d39b2355e",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "whirr-loop",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 1.0
+      },
+      "method": "render",
+      "frames": 26296,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "2e9e6611e6346667ec5ee43e5597f13093d0c4863e9ba7b49ea86cdcffe7b644",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "whirr-held-note",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 48,
+      "velocity": 1.0,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 1.0
+      },
+      "method": "renderHeld",
+      "frames": 172433,
+      "loopStartFrame": 146137,
+      "productionFloatSha256BigEndian": "3db5639ef8efa03b2c7ddc8b48cca8f3822a8a08fc7b49e58a882f41be9e78eb",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "whirr-low-soft-loop",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 36,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 1.0
+      },
+      "method": "render",
+      "frames": 26296,
+      "loopStartFrame": 0,
+      "productionFloatSha256BigEndian": "d48b479895d6ea2b6327251e2e142d0cd2c2d5718b47cfa12335e0084e91cc94",
+      "matchesPublishedPack": true
+    },
+    {
+      "id": "whirr-low-soft-held-note",
+      "voice": "WHIRR",
+      "model": 2,
+      "midi": 36,
+      "velocity": 0.25,
+      "macros": {
+        "TUNE": 0.5,
+        "LEAN": 0,
+        "BRAKE": 0.20000000298023224,
+        "EDGE": 0.4000000059604645,
+        "PLATE": 0.5,
+        "COLLAPSE": 1,
+        "HOLD": 1.0
+      },
+      "method": "renderHeld",
+      "frames": 172433,
+      "loopStartFrame": 146137,
+      "productionFloatSha256BigEndian": "05bd9295e1de19a6cd8812e85e42e6cdf692f2dbe7593683e6dbbafbeb731a33"
+    }
+  ]
+}
