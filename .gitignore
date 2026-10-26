@@ -409,6 +409,8 @@ testkit/skitter-character-r6/
 
 # Generated R7 Skitter quartet listening proof
 testkit/skitter-quartet/
+# Generated R8 Skitter internal-interaction listening proof
+testkit/skitter-depth/
 testkit/fade-law-audition/
 
 # Three-clip model-1 venue-return experiment, regenerated from testkit sources.

@@ -1701,6 +1701,19 @@ tasks.register<JavaExec>("generateSkitterQuartetAudition") {
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 
+/** Six R7/R8 comparisons with complete finite notes and explicit source provenance. */
+tasks.register<JavaExec>("generateSkitterDepthAudition") {
+    group = "distribution"
+    description = "Render six R7/R8 voice pairs. Requires -PskitterProofSource=<full Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterDepthAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-depth")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"
