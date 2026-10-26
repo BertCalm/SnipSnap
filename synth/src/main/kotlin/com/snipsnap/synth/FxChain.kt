@@ -23,7 +23,13 @@ import com.snipsnap.json.JsonValue
  * guitar board puts it (wah, compressor, drive, amp), and SQUASH, the
  * sampler's punch, still has the last word on the hit before the amp.
  *
- * valve after squash and before crunch: a compressor feeds an amp, and the
+ * forge after squash and before valve: the hit is formed once its dynamics
+ * are set (FORGE has no gain envelope of its own, so SQUASH's punch is what it
+ * coins), and the amp then colours the formed blank. Its ceiling is relative
+ * to the pad's peak, so the order against SQUASH changes what is coined, not
+ * how loud it lands.
+ *
+ * valve after forge and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
@@ -75,6 +81,7 @@ data class FxChain(
     val valve: Map<String, Float>? = null,
     val wah: Map<String, Float>? = null,
     val compressor: Map<String, Float>? = null,
+    val forge: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -204,6 +211,7 @@ data class FxChain(
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
             Section("compressor", Compressor.MACROS, { it.compressor }, { c, m -> c.copy(compressor = m) }, Compressor::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("forge", Forge.MACROS, { it.forge }, { c, m -> c.copy(forge = m) }, Forge::process),
             Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process, gains = mapOf("DRIVE" to Valve::gainFor)),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),

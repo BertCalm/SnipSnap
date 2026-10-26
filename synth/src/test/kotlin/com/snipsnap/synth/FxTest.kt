@@ -692,9 +692,9 @@ class FxTest {
     // ---------- VALVE ----------
 
     @Test
-    fun `VALVE sits after SQUASH and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
+    fun `VALVE sits after FORGE and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
-        assertEquals(names.indexOf("squash") + 1, names.indexOf("valve"), "VALVE is not right after SQUASH: $names")
+        assertEquals(names.indexOf("forge") + 1, names.indexOf("valve"), "VALVE is not right after FORGE: $names")
         assertEquals(names.indexOf("valve") + 1, names.indexOf("crunch"), "VALVE is not right before CRUNCH: $names")
 
         val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
