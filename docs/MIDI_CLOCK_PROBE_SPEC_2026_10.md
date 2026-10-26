@@ -21,7 +21,7 @@ Read at `ccfc18eb1` (2026-10-26). Every name below was found by grep unless mark
   says not to call it from a data callback before Android R. minSdk is 29, so that applies.
   Verified in `oboe/AudioStream.h:353` and `oboe/Definitions.h:871`.
 - Nothing in the app calls `getTimestamp`. `BENCH.md` S1: "Nothing displays or logs the value."
-- The MIDI screen (`ui/MidiScreen.kt`, behind SETUP · HELP · MIDI) runs no audio engine on
+- The MIDI screen (`ui/MidiScreen.kt`, behind the gear, then MIDI) runs no audio engine on
   purpose and has a COPY REPORT button that puts `MidiReport.text` on the clipboard.
 - `PadEngine.kt` (Kotlin) has `start()`, `close()`, `sampleRate()`, `isShared()`, `needsRestart()`,
   `latencyMillis()`, `framesRendered()`, `loadSnips(snips)` (which replaces the bank and clears
@@ -154,7 +154,7 @@ set with a comment.
 
 ### 2.4 The bench row (`docs/BENCH.md`)
 
-Under S1, replace the empty `→` with a "How, now" paragraph: SETUP · HELP · MIDI → CLOCK CHECK,
+Under S1, replace the empty `→` with a "How, now" paragraph: the gear, then MIDI → CLOCK CHECK,
 once on the speaker and once on wired or Bluetooth headphones; paste the two lines from COPY
 REPORT. Say that the bench's September pause is lifted for S1 only, at the owner's request.
 
@@ -249,5 +249,13 @@ is a host test or a compile; nothing was run on a phone.
 - A phone whose timestamp updates come 100 ms or more apart can read STALLED under the stall
   rule. The report's POSITION UPDATES EVERY line tells coarse from stalled; the rule was not
   softened without data.
+- A clock whose hardware timestamps are derived from its frames at the claimed rate, while the
+  hardware really runs at another rate, is self-consistent and still reads TRACKED. The
+  TIMESTAMP AGE mean and MAX lines show it: over a six-second run an 8% rate error moves the
+  age by about half a second. Nothing judges that yet; a coarse fit of position against the
+  wall clock would.
+- A run whose written-frame count stays at zero while the position moves reads TRACKED. That
+  needs a broken frame counter, a code bug, not a phone behaviour; the report would show a
+  large and growing AHEAD figure.
 
 **Measured on device:** nothing.

@@ -456,14 +456,14 @@ voices.** Any probe has to reach the right stream, not the convenient one.
 seconds and reads the position the hardware reports, then prints one line. Do this:
 
 1. Stop the beat and anything else playing.
-2. Tap the gear, then HELP, then MIDI.
+2. Tap the gear, then MIDI.
 3. Tap CLOCK CHECK and wait about six seconds for the answer line to appear.
 4. Tap COPY REPORT and paste everything from the `CLOCK CHECK` heading to the end on the `→` line below.
 5. Plug in wired or Bluetooth headphones and do steps 3 and 4 again.
 
 The bench's September pause is lifted for S1 only, at the owner's request (2026-10-26); S2
 to S4 stay waiting. A guess, not yet seen on a phone: a phone that updates its position only
-every 200 ms or so could read STALLED when it is merely coarse. The POSITION UPDATES EVERY
+every 100 ms or so could read STALLED when it is merely coarse. The POSITION UPDATES EVERY
 line in the report tells the two apart.
 Spec: [`MIDI_CLOCK_PROBE_SPEC_2026_10.md`](MIDI_CLOCK_PROBE_SPEC_2026_10.md).
 

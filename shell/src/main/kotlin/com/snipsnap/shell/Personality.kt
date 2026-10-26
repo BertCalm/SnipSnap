@@ -2785,7 +2785,7 @@ object Copy {
     const val INSTANT_KIT_BUSY = "CHOPPING…"
 
 
-    // ---- SETUP · HELP · MIDI: the CLOCK CHECK button and what it says around the run ----
+    // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----
     /** The MIDI screen's button that runs the six-second clock check (bench S1). */
     const val MIDI_CLOCK_CHECK = "CLOCK CHECK"
     /** The same button while the check runs; a tap does nothing. */
@@ -2797,7 +2797,7 @@ object Copy {
     /** The stream fell back to shared mode; it may not be what clock out would get. */
     const val MIDI_CLOCK_SHARED = "SHARED STREAM: ANOTHER STREAM WAS PLAYING, MAYBE SNIPSNAP'S OWN BEAT. STOP EVERYTHING AND RUN IT AGAIN."
 
-    // ---- SETUP · HELP · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
+    // ---- gear · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
     /** The clock check found a position that tracks. Rate and lag follow it. */
     const val CLOCK_TRACKED = "POSITION TRACKED."
     /** Every read of the playback position failed. */
