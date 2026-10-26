@@ -139,7 +139,7 @@ object KitStore {
                             "sample" to JsonValue.Str(l.sampleFile),
                             "velStart" to JsonValue.Num(l.velStart.toDouble()),
                             "velEnd" to JsonValue.Num(l.velEnd.toDouble()),
-                        ),
+                        ).also { fields -> l.displayName?.let { fields["name"] = JsonValue.Str(it) } },
                     )
                 },
             )
@@ -226,6 +226,7 @@ object KitStore {
                     sampleFile = l["sample"]?.str() ?: throw JsonException("layer has no sample"),
                     velStart = l["velStart"]?.int() ?: throw JsonException("layer has no velStart"),
                     velEnd = l["velEnd"]?.int() ?: throw JsonException("layer has no velEnd"),
+                    displayName = l["name"]?.str(),
                 )
             },
         )
