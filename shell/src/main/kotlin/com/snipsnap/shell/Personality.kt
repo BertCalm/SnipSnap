@@ -2796,6 +2796,8 @@ object Copy {
     fun clockStoodStill(ms: Long): String = "POSITION STOOD STILL $ms MS AT THE START, THEN TRACKED."
     /** The position stopped for [ms], starting [atSeconds] into the run. */
     fun clockStopped(ms: Long, atSeconds: Double): String = "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN."
+    /** The position never moved in [seconds] of playing: the clock cannot be trusted. */
+    fun clockNeverMoved(seconds: Double): String = "POSITION NEVER MOVED IN ${"%.1f".format(java.util.Locale.ROOT, seconds)} S. THIS PHONE'S CLOCK CANNOT BE TRUSTED ON THIS STREAM."
     /** How far the position's clock runs from the stream's rate. */
     fun clockRate(ppm: Long): String = "RATE OFF ${kotlin.math.abs(ppm)} PPM."
     /** Coarse: the position trails the frames written by about [ms]. */

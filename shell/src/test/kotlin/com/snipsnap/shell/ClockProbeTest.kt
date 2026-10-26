@@ -175,12 +175,28 @@ class ClockProbeTest {
     }
 
     @Test
-    fun `a position that never moves is not a divide by zero`() {
+    fun `a position that never moves while audio plays is stalled for the whole run`() {
         val frozen = (0..300).map { i -> Sample(i * stepNanos, i * 800L, 0L, hwEpochNanos) }
+        val r = ClockProbe.analyze(frozen, 48_000)
+        assertEquals(Verdict.STALLED, r.verdict)
+        assertNull(r.startupGapMs)
+        assertNull(r.rateErrorPpm)
+        assertNull(r.lagMs)
+        // first written sample is index 1, the last is index 300
+        assertNear(299 * stepNanos / 1e6, r.longestStallMs, 0.001, "longest stall")
+        assertNear(stepNanos / 1e6, r.stallAtMs, 0.001, "stall at")
+        assertEquals(Copy.clockNeverMoved(Math.round(r.longestStallMs / 100.0) / 10.0), ClockProbe.describe(r))
+    }
+
+    @Test
+    fun `a short run that never moves stays too short`() {
+        // 10 samples: 9 * 800 frames is 150 ms of audio at 48 kHz, under the floor
+        val frozen = (0..9).map { i -> Sample(i * stepNanos, i * 800L, 0L, hwEpochNanos) }
         val r = ClockProbe.analyze(frozen, 48_000)
         assertEquals(Verdict.TOO_SHORT, r.verdict)
         assertNull(r.startupGapMs)
         assertNull(r.rateErrorPpm)
+        assertEquals(Copy.CLOCK_TOO_SHORT, ClockProbe.describe(r))
     }
 
     // ---- describe: one line per verdict, built from Copy ----

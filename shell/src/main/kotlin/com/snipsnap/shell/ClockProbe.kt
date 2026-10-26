@@ -51,8 +51,13 @@ object ClockProbe {
      * step between consecutive distinct hardware positions after the first movement. A
      * position that creeps by no more than that between two reads has not really moved.
      * Choices the spec leaves open: stalls are timed on `wallNanos` (failed reads have no
-     * hardware time); the lag and rate are taken over the samples from the first movement on;
-     * a position that never moves at all is TOO_SHORT, as the spec's order gives it.
+     * hardware time); the lag and rate are taken over the samples from the first movement on.
+     *
+     * Verdict order: UNAVAILABLE, never-moved-STALLED, TOO_SHORT, STALLED, SLOW_START, TRACKED.
+     * The second is the controller's addition to the spec: a valid position that never moves
+     * while at least [STALL_FLOOR_MS] of audio is written is STALLED, with `startupGapMs` null,
+     * `longestStallMs` the span from the first written frame to the last sample, and no rate or
+     * lag. Never moved with less audio than that stays TOO_SHORT.
      */
     fun analyze(samples: List<Sample>, sampleRate: Int): Result {
         val n = samples.size
@@ -72,6 +77,14 @@ object ClockProbe {
         } else null
 
         if (move == null) {
+            // Never moved. If audio was written for a stall's worth of time, that is the worst
+            // lie S1 exists to catch, not a run to repeat.
+            val writtenFrames = samples.last().framesWritten - (if (firstWritten >= 0) samples[firstWritten].framesWritten else 0L)
+            if (firstWritten >= 0 && writtenFrames >= STALL_FLOOR_MS * sampleRate / 1000.0) {
+                val spanMs = (samples.last().wallNanos - samples[firstWritten].wallNanos) / NANOS_PER_MS
+                val at = (samples[firstWritten].wallNanos - samples[0].wallNanos) / NANOS_PER_MS
+                return Result(Verdict.STALLED, n, validSamples, null, spanMs, at, null, null)
+            }
             return Result(Verdict.TOO_SHORT, n, validSamples, null, 0.0, null, null, null)
         }
 
@@ -146,7 +159,9 @@ object ClockProbe {
     fun describe(result: Result): String = when (result.verdict) {
         Verdict.UNAVAILABLE -> Copy.CLOCK_UNAVAILABLE
         Verdict.TOO_SHORT -> Copy.CLOCK_TOO_SHORT
-        Verdict.STALLED -> listOfNotNull(
+        Verdict.STALLED -> if (result.startupGapMs == null) {
+            Copy.clockNeverMoved(Math.round(result.longestStallMs / 100.0) / 10.0)
+        } else listOfNotNull(
             Copy.clockStopped(Math.round(result.longestStallMs), Math.round((result.stallAtMs ?: 0.0) / 100.0) / 10.0),
             rateSentence(result),
         ).joinToString(" ")
