@@ -280,7 +280,9 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         activate("MAKE INSTRUMENT")
         button("TOUCH LAYERS").assertIsSelected()
         activate("MAKE")
-        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 240_000,
+        // A two-core emulator reached 24 of 27 samples at 236s while the counter
+        // was still advancing about every 28s, so 240s ends a live make.
+        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 420_000,
             diagnostic = ::instrumentRenderProgress) { instrumentUpdates.get() > 0 }
         val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
         val sidecar = dir.listFiles()!!.single { it.name.endsWith(InstrumentStore.SUFFIX) }
