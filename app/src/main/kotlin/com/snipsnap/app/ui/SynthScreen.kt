@@ -4931,27 +4931,29 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                 for (v in row) {
                     val selected = v == current
                     val color = Schemes.classColor(engine.drumClass(v)).tape
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                            .semantics { this.selected = selected }
-                            .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
-                            .padding(horizontal = 2.dp, vertical = 3.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        TapeText(
-                            chipLabel(engine, v),
-                            TapeType.pixelSmall,
-                            color,
-                            maxLines = 1,
-                        )
-                        // Reserved on every chip, not just the selected one
-                        // (blank when not selected) — so one selection
-                        // doesn't grow only its own cell and leave the row
-                        // jagged against its neighbours.
-                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                    key(v) {
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                                .semantics { this.selected = selected }
+                                .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
+                                .padding(horizontal = 2.dp, vertical = 3.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            TapeText(
+                                chipLabel(engine, v),
+                                TapeType.pixelSmall,
+                                color,
+                                maxLines = 1,
+                            )
+                            // Reserved on every chip, not just the selected one
+                            // (blank when not selected) — so one selection
+                            // doesn't grow only its own cell and leave the row
+                            // jagged against its neighbours.
+                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -5017,14 +5019,21 @@ private fun PresetList(
     onSelect: (Patch) -> Unit,
     onHold: (Patch) -> Unit,
 ) {
-    val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
-    PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    // A new voice must not reuse the previous voice's chip nodes. Positional
+    // reuse kept the old spoken names, so a later voice's preset (PRISM BASS
+    // "Hollow Rise" after the KEY openings) was absent from the tree.
+    val presets = Presets.forVoice(engine.name, voice.name)
+    key(engine, voice) {
+        PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    }
     // The player's own, under the factory row (docs/WORKSHOP.md, WS5):
     // a second strip that exists only once this voice has one, with the
     // same chips and the same highlight rule, and YOURS in the slider
     // label column below it so the two rows read as two rows. A hold on
     // one of these asks to forget it; the factory's chips have no hold.
-    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+    key(engine, voice, "YOURS") {
+        PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+    }
 }
 
 /**
@@ -5071,32 +5080,34 @@ private fun PresetStrip(
         ) {
             for (p in presets) {
                 val selected = p.name == current
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                        .semantics { this.selected = selected }
-                        .let { chip ->
-                            if (onHold == null) {
-                                chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
-                            } else {
-                                // A plain tap/long-press with no drag —
-                                // combinedClickable registers both as real
-                                // accessibility actions (KitsScreen's RoomRow).
-                                chip.combinedClickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClickLabel = "$spoken ${p.name}",
-                                    onLongClickLabel = "FORGET ${p.name}",
-                                    onLongClick = { onHold(p) },
-                                    onClick = { onSelect(p) },
-                                )
+                key(p.name) {
+                    Box(
+                        Modifier
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
+                            .let { chip ->
+                                if (onHold == null) {
+                                    chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                                } else {
+                                    // A plain tap/long-press with no drag —
+                                    // combinedClickable registers both as real
+                                    // accessibility actions (KitsScreen's RoomRow).
+                                    chip.combinedClickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClickLabel = "$spoken ${p.name}",
+                                        onLongClickLabel = "FORGET ${p.name}",
+                                        onLongClick = { onHold(p) },
+                                        onClick = { onSelect(p) },
+                                    )
+                                }
                             }
-                        }
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                    }
                 }
             }
         }
