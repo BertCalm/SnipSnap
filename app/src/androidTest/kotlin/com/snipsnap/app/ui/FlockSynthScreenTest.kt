@@ -116,11 +116,12 @@ class FlockSynthScreenTest : ComposeScreenTest() {
 
     /** The DSP follows wall time, not the manual Compose clock. Limit this local
      * long-render poll to one frame per 40 ms so it does not spin UI work against
-     * the serial capture worker on a two-core emulator. Keep the real deadline
-     * and record progress instead of giving a stalled renderer a longer wait. */
+     * the serial capture worker on a two-core emulator. A total deadline always
+     * bounds the wait; a caller may also bound time without actual progress. */
     private fun waitForBackgroundRender(
         what: String,
         timeoutMillis: Long,
+        progressTimeoutMillis: Long? = null,
         diagnostic: () -> String,
         condition: () -> Boolean,
     ) {
@@ -131,8 +132,12 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         val history = mutableListOf("0 ms: $lastProgress")
         while (!condition()) {
             val now = SystemClock.elapsedRealtime()
-            if (now - started >= timeoutMillis) {
-                throw AssertionError("waited $timeoutMillis ms and $what never came; " +
+            val timedOut = now - started >= timeoutMillis
+            val stalled = progressTimeoutMillis?.let { now - lastChangedAt >= it } == true
+            if (timedOut || stalled) {
+                val reason = if (stalled) "no progress for $progressTimeoutMillis ms"
+                    else "total deadline of $timeoutMillis ms reached"
+                throw AssertionError("$what never came after ${now - started} ms ($reason); " +
                     "last progress: $lastProgress (unchanged for ${now - lastChangedAt} ms); " +
                     "progress history: ${history.joinToString("; ")}; latest toast: ${latestToast.get()}")
             }
@@ -280,7 +285,12 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         activate("MAKE INSTRUMENT")
         button("TOUCH LAYERS").assertIsSelected()
         activate("MAKE")
-        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 240_000,
+        // Android 14 debug CI reached 24/27 at 236.159 s, completing each
+        // three-sample root in about 28.4 s. Nine roots project to about 265 s.
+        // Bound the complete bank and package write at 330 s, while 75 s with
+        // no displayed progress still fails a stalled capture promptly.
+        waitForBackgroundRender("three-layer RIBBON instrument", timeoutMillis = 330_000,
+            progressTimeoutMillis = 75_000,
             diagnostic = ::instrumentRenderProgress) { instrumentUpdates.get() > 0 }
         val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
         val sidecar = dir.listFiles()!!.single { it.name.endsWith(InstrumentStore.SUFFIX) }
