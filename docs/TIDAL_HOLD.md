@@ -28,7 +28,9 @@ The selected field lasts 3.8–4.2 seconds. The planner searches sample lengths 
 its time-varying frequency plus a constant correction of at most `0.5 / seconds`
 Hz. Thus inharmonic metal is not collapsed to root harmonics. Half-sample frequency
 integration closes the discrete phase sum. Zero-speed descriptor turns avoid a
-control reset. All oscillators keep running across the inspected cycles.
+control reset. All oscillators keep running across the inspected cycles. Complete turns are
+counted as integers alongside the fractional oscillator phase; accumulating a
+large floating phase total can otherwise falsely reject valid high-note fields.
 
 No feedback is added. Amplitudes are bounded interpolations of the finite field's
 source allocation and damped modal amplitudes. The acoustic renderer does not
@@ -59,7 +61,9 @@ precedents; neither carries Tidal's original-population encounter readout.
 JSON requires `heldModel = 1`; finite JSON remains compatible. Source model, exact
 signed Long seed, MIDI, velocity and all five encounter controls survive editing,
 saving, drafts and pad reopening. HOLD pads are gated loops of the aftermath;
-NOTE pads play the full finite performance once.
+NOTE pads play the full finite performance once. A pad loop is cyclically rotated
+to its smallest-magnitude sample before delivery, avoiding a large trigger step.
+No sample is faded or reshaped, and the instrument's opening and loop marker are unchanged.
 
 `TidalKeys.note` retains the opening before its nonzero loop marker. The shell
 maker exports seventeen three-semitone zones across MIDI 36–84, with 0.1–1.5 second

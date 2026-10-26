@@ -13,7 +13,15 @@ object TidalKeys {
 
     /** Pads audition only the aftermath; keygroups retain the encounter before their loop marker. */
     fun loop(patch: TidalPatch, cancelled: () -> Boolean = { false }): Snip =
-        TidalHeld.probe(patch, cancelled, keepAttack = false).let { Snip(it.loop, 1, Dsp.RATE) }
+        TidalHeld.probe(patch, cancelled, keepAttack = false).let { Snip(padLoop(it.loop), 1, Dsp.RATE) }
+
+    /** Rotate only: a near-zero trigger avoids a hard onset without fading any repeated sample. */
+    internal fun padLoop(samples: FloatArray): FloatArray {
+        require(samples.isNotEmpty())
+        var cut = 0
+        for (i in samples.indices) if (kotlin.math.abs(samples[i]) < kotlin.math.abs(samples[cut])) cut = i
+        return FloatArray(samples.size) { samples[(cut + it) % samples.size] }
+    }
 
     internal fun probe(patch: TidalPatch, midi: Int = patch.midi,
         cancelled: () -> Boolean = { false }): TidalHeld.Probe {

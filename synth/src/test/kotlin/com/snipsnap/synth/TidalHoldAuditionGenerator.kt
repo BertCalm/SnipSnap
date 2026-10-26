@@ -34,7 +34,8 @@ object TidalHoldAuditionGenerator {
                 WavWriter.write(it, Snip(samples, 1, Dsp.RATE))
             }
             wav("$id-note.wav", demo)
-            wav("$id-loop-x8.wav", FloatArray(probe.loop.size * 8) { probe.loop[it % probe.loop.size] })
+            val pad = TidalKeys.padLoop(probe.loop)
+            wav("$id-loop-x8.wav", FloatArray(pad.size * 8) { pad[it % pad.size] })
             File(root, "$id.patch.json").writeText(patch.toJsonText())
             fun num(x: Double) = JsonValue.Num(x)
             rows += JsonValue.Obj(linkedMapOf("id" to JsonValue.Str(id), "patch" to patch.toJsonValue(),
@@ -44,7 +45,7 @@ object TidalHoldAuditionGenerator {
                 "maxFrequencyCorrectionHz" to num(probe.maxFrequencyCorrectionHz),
                 "phaseClosureCycles" to num(probe.maxPhaseClosureCycles), "rawPeak" to num(probe.rawPeak),
                 "outputPeak" to num(note.snip.samples.maxOf { abs(it) }.toDouble()),
-                "amplitudeMotion" to num(probe.amplitudeMotion),
+                "amplitudeMotion" to num(probe.amplitudeMotion), "padEntryMagnitude" to num(abs(pad.first()).toDouble()),
                 "windowStartSeconds" to num(probe.windowStartSeconds), "windowEndSeconds" to num(probe.windowEndSeconds)))
             html.append("""<article><h2>$voice / MIDI $midi</h2><p>Encounter → hold → release</p><audio controls preload="none" src="$id-note.wav"></audio><p>Eight held cycles / no wrap fades</p><audio controls preload="none" src="$id-loop-x8.wav"></audio><p><a href="$id.patch.json" download>Recipe</a> · <a href="$id-note.wav" download>Note WAV</a> · <a href="$id-loop-x8.wav" download>Eight-cycle WAV</a></p></article>""")
             println("$id %.1f ms; seam %.3g; cycle %.3g; root %.5f cents".format(java.util.Locale.ROOT,

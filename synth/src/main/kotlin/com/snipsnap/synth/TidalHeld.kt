@@ -154,14 +154,20 @@ internal object TidalHeld {
         var rawPeak = 0.0
         var maxClosure = 0.0
         val phaseAtZero = DoubleArray(carriers)
-        val integrated = DoubleArray(carriers)
+        // Whole turns stay exact integers; a large floating phase sum can accumulate
+        // rounding error even when the actual fractional oscillator state closes.
+        val wholeTurns = IntArray(carriers)
+        val turnsAtZero = IntArray(carriers)
         val amplitude = DoubleArray(carriers); val amplitudeStep = DoubleArray(carriers)
         val frequency = DoubleArray(carriers); val frequencyStep = DoubleArray(carriers)
         val phaseContact = DoubleArray(carriers); val contactStep = DoubleArray(carriers)
         for (block in 0 until raw.size / BLOCK) {
             stop(cancelled)
             val local = Math.floorMod(block - prerollBlocks, plan.blocks)
-            if (block == prerollBlocks) integrated.copyInto(phaseAtZero)
+            if (block == prerollBlocks) {
+                phases.copyInto(phaseAtZero)
+                wholeTurns.copyInto(turnsAtZero)
+            }
             for (p in 0 until carriers) {
                 amplitude[p] = amplitudes[p][local]
                 amplitudeStep[p] = (amplitudes[p][local + 1] - amplitude[p]) / BLOCK
@@ -176,8 +182,9 @@ internal object TidalHeld {
                     sum += amplitude[p] * Tidal.osc(phases[p] + phaseContact[p])
                     val increment = frequency[p] / INTERNAL_RATE
                     phases[p] += increment
-                    phases[p] -= floor(phases[p])
-                    integrated[p] += increment
+                    val wraps = floor(phases[p])
+                    phases[p] -= wraps
+                    wholeTurns[p] += wraps.toInt()
                     amplitude[p] += amplitudeStep[p]; frequency[p] += frequencyStep[p]
                     phaseContact[p] += contactStep[p]
                 }
@@ -185,7 +192,7 @@ internal object TidalHeld {
                 rawPeak = maxOf(rawPeak, abs(sum))
             }
             if (block + 1 == prerollBlocks + plan.blocks) for (p in 0 until carriers)
-                maxClosure = maxOf(maxClosure, abs(integrated[p] - phaseAtZero[p] - turns[p]))
+                maxClosure = maxOf(maxClosure, abs((wholeTurns[p] - turnsAtZero[p] - turns[p]).toDouble() + phases[p] - phaseAtZero[p]))
         }
         check(rawPeak < .96) { "TIDAL HOLD raw allocation exceeded: $rawPeak" }
         stop(cancelled)

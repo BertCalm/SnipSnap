@@ -17,7 +17,10 @@ class TidalHeldTest {
     @Test
     fun `both populations close through continuous state across register and source models`() {
         val cases = listOf(patch(TidalVoice.PAIR, 36), patch(TidalVoice.PAIR, 84),
-            patch(TidalVoice.STREAM, 48), patch(TidalVoice.STREAM, 72), patch(TidalVoice.PAIR, 60, 1))
+            patch(TidalVoice.STREAM, 48), patch(TidalVoice.STREAM, 72), patch(TidalVoice.PAIR, 60, 1)) +
+            listOf(0f, 1f).map { corner -> patch(TidalVoice.PAIR, 84).copy(velocity = 1f, seed = Long.MAX_VALUE,
+                macros = Tidal.defaults(TidalVoice.PAIR).mapValues { corner } +
+                    mapOf("HOLD" to 1f, "TAIL" to 1f, "BIND" to 0f)) }
         for (p in cases) {
             val probe = TidalKeys.probe(p)
             assertTrue(probe.seamError < Keys.MAX_SEAM_ERROR, "$p seam ${probe.seamError}")
@@ -30,6 +33,11 @@ class TidalHeldTest {
             assertTrue(probe.loop.all { it.isFinite() && abs(it) <= 1f })
             assertTrue(abs(probe.loop.sumOf { it.toDouble() } / probe.loop.size) < .005)
             assertTrue(probe.loop.maxOf { abs(it) } > .01f)
+            val pad = TidalKeys.padLoop(probe.loop)
+            assertTrue(abs(pad.first()) < 1e-4, "held pad must not start with a hard amplitude step")
+            val entry = probe.loop.indices.first { probe.loop[it].toRawBits() == pad.first().toRawBits() }
+            assertContentEquals(probe.loop, FloatArray(pad.size) { pad[Math.floorMod(it - entry, pad.size)] },
+                "pad entry must rotate the real field, never fade or reshape its cycle")
             val note = probe.note
             assertEquals(probe.loop.size, note.snip.frameCount - note.loopStartFrame.toInt())
             assertTrue(Keys.seamError(note.snip.samples, note.loopStartFrame.toInt()) < Keys.MAX_SEAM_ERROR)
