@@ -172,20 +172,65 @@ object Resampler {
         val samples = snip.samples
         val half = halfTapsFor(cutoff)
         val weights = DoubleArray(2 * half) { k -> kernel((half - 1 - k).toDouble(), cutoff, half) }
-        for (o in 0 until dstFrames) {
-            val lo = o * step - half + 1
-            for (c in 0 until channels) {
+
+        // Almost every output has the complete kernel. Its normalization is constant,
+        // and its taps are known to lie inside the source: neither needs to be checked
+        // again for each tap/channel. Keep every multiply and the ascending sum order,
+        // including zero-weight taps (NaN * 0 must retain its existing propagation).
+        var fullNorm = 0.0
+        for (w in weights) fullNorm += w
+        val interiorStart = ((half + step - 2) / step).coerceAtMost(dstFrames)
+        val interiorEnd = if (srcFrames > half) {
+            ((srcFrames - half - 1) / step + 1).coerceIn(interiorStart, dstFrames)
+        } else interiorStart
+
+        for (o in 0 until interiorStart) {
+            decimateEdge(samples, channels, srcFrames, o, o * step - half + 1, weights, out)
+        }
+        if (channels == 1) {
+            for (o in interiorStart until interiorEnd) {
+                var source = o * step - half + 1
                 var acc = 0.0
-                var norm = 0.0
-                for (k in weights.indices) {
-                    val n = lo + k
-                    if (n < 0 || n >= srcFrames) continue
-                    val w = weights[k]
-                    acc += samples[n * channels + c] * w
-                    norm += w
-                }
-                out[o * channels + c] = if (norm != 0.0) (acc / norm).toFloat() else 0f
+                for (k in weights.indices) acc += samples[source++] * weights[k]
+                out[o] = if (fullNorm != 0.0) (acc / fullNorm).toFloat() else 0f
             }
+        } else {
+            // Snip admits mono or stereo. Interleave the independent accumulations so
+            // each weight/source index is read once without changing either sum.
+            for (o in interiorStart until interiorEnd) {
+                var source = (o * step - half + 1) * 2
+                var left = 0.0
+                var right = 0.0
+                for (k in weights.indices) {
+                    val w = weights[k]
+                    left += samples[source] * w
+                    right += samples[source + 1] * w
+                    source += 2
+                }
+                val destination = o * 2
+                out[destination] = if (fullNorm != 0.0) (left / fullNorm).toFloat() else 0f
+                out[destination + 1] = if (fullNorm != 0.0) (right / fullNorm).toFloat() else 0f
+            }
+        }
+        for (o in interiorEnd until dstFrames) {
+            decimateEdge(samples, channels, srcFrames, o, o * step - half + 1, weights, out)
+        }
+    }
+
+    /** The truncated first/last kernels keep their own normalization, in the original order. */
+    private fun decimateEdge(
+        samples: FloatArray, channels: Int, srcFrames: Int, output: Int,
+        lo: Int, weights: DoubleArray, out: FloatArray,
+    ) {
+        val start = maxOf(0, -lo)
+        // Long keeps the clipping safe even for a near-maximum mono array and negative lo.
+        val end = minOf(weights.size.toLong(), srcFrames.toLong() - lo).toInt()
+        var norm = 0.0
+        for (k in start until end) norm += weights[k]
+        for (c in 0 until channels) {
+            var acc = 0.0
+            for (k in start until end) acc += samples[(lo + k) * channels + c] * weights[k]
+            out[output * channels + c] = if (norm != 0.0) (acc / norm).toFloat() else 0f
         }
     }
 

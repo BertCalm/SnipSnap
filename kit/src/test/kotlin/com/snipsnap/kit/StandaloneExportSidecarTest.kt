@@ -36,7 +36,7 @@ class StandaloneExportSidecarTest {
         val kit = Kit("Editable Export", listOf(
             KitPad(1, names[1], "Saved kick", DrumClass.KICK, "#e8542e", level = 1f,
                 tuneCoarse = -2, source = mapOf("file" to "capture.wav", "rawSha256" to "old take"), recipe = recipe,
-                velocityLayers = listOf(KitLayer(names[0], 1, 63), KitLayer(names[1], 64, 127))),
+                velocityLayers = listOf(KitLayer(names[0], 1, 63, "DRY"), KitLayer(names[1], 64, 127, "ECHO"))),
             KitPad(3, names[2], "Saved open hat", DrumClass.HAT_OPEN, level = .8f, muteGroup = 1,
                 recipe = recipe, attack = .1f, decay = .2f, cutoff = .7f, humanize = .15f),
         ), tempoBpm = 104f, wear = WearLedger(mileage = 17.0))
@@ -52,7 +52,7 @@ class StandaloneExportSidecarTest {
                 val sample = expectedNames.getValue(pad.slot)
                 pad.copy(sampleFile = sample,
                     velocityLayers = if (pad.slot == 1) listOf(
-                        KitLayer("K_ck_soft.wav", 1, 63), KitLayer("K_ck_hard.wav", 64, 127),
+                        KitLayer("K_ck_soft.wav", 1, 63, "DRY"), KitLayer("K_ck_hard.wav", 64, 127, "ECHO"),
                     ) else emptyList(),
                     source = pad.source + ("rawSha256" to hash(File(samples, sample))),
                 )
