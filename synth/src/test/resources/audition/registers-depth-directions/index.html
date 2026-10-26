@@ -5,33 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#201c1b">
   <link rel="icon" href="data:,">
-  <title>Depth directions · SnipSnap Registers</title>
-  <meta name="description" content="Compare the current TRANSISTOR with warmer body and stronger ensemble settings, at matched listening levels.">
+  <title>Rich Ensemble · SnipSnap Registers</title>
+  <meta name="description" content="The chosen Rich Ensemble TRANSISTOR setting, with an MPC instrument and matched comparisons at three pitches.">
   <link rel="stylesheet" href="styles.css">
   <script src="app.js" defer></script>
 </head>
 <body>
   <header><a class="brand" href="../">SNIP<span>/</span>SNAP</a><a href="../?study=sustain&amp;voice=TRANSISTOR#listen">Full listening bench ↗</a></header>
   <main>
-    <p class="eyebrow">REGISTERS / TRANSISTOR / DIRECTION STUDY</p>
-    <h1>Find the depth<span>.</span></h1>
-    <p class="intro">The last sustain revision was subtle. These settings push two different directions: a warmer body, or a more active ensemble. Compare each with the current sound at the same pitch and matched listening level.</p>
+    <p class="eyebrow">REGISTERS / TRANSISTOR / CHOSEN DIRECTION</p>
+    <h1>Let the ensemble move<span>.</span></h1>
+    <p class="intro">Rich Ensemble carries stronger beating and vibrato through the held note. Start with the chosen setting, then compare it with Compact Keys and the warmer option at matched listening levels.</p>
+    <p class="instrument-download"><a href="../downloads/REGISTERS-RICH-ENSEMBLE-MPC.zip" download>Download Rich Ensemble for MPC ↓</a><span>Nine keyboard zones · C3–C5 · MPC 2 / 3</span></p>
     <section class="bench" aria-labelledby="listen-title">
       <div class="bench-top"><h2 id="listen-title">One note. Three directions.</h2><label for="note">Pitch <select id="note"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select></label></div>
       <div class="choices" role="group" aria-label="Play a direction">
-        <button type="button" data-direction="baseline" aria-pressed="true" disabled><span class="number">01 / REFERENCE</span><strong>Current</strong><span>Compact Keys · R6</span><span class="play-mark" aria-hidden="true">▶</span></button>
+        <button type="button" data-direction="baseline" aria-pressed="false" disabled><span class="number">01 / REFERENCE</span><strong>Compact Keys</strong><span>Original setting · R6</span><span class="play-mark" aria-hidden="true">▶</span></button>
         <button type="button" data-direction="body" aria-pressed="false" disabled><span class="number">02 / WEIGHT</span><strong>Warmer body</strong><span>Less upper bite · rounder balance</span><span class="play-mark" aria-hidden="true">▶</span></button>
-        <button type="button" data-direction="ensemble" aria-pressed="false" disabled><span class="number">03 / MOVEMENT</span><strong>Richer ensemble</strong><span>More beating · stronger vibrato</span><span class="play-mark" aria-hidden="true">▶</span></button>
+        <button type="button" data-direction="ensemble" aria-pressed="true" disabled><span class="number">03 / CHOSEN</span><strong>Rich Ensemble</strong><span>More beating · stronger vibrato</span><span class="play-mark" aria-hidden="true">▶</span></button>
       </div>
       <div class="player">
-        <div><p class="eyebrow">MATCHED LISTENING LEVEL</p><h3 id="selected-title">Current · C4</h3></div>
+        <div><p class="eyebrow">MATCHED LISTENING LEVEL</p><h3 id="selected-title">Rich Ensemble · C4</h3></div>
         <audio id="audio" controls preload="metadata" aria-label="Selected direction audio"></audio>
         <p class="hint">Click a direction to play it from the start. Let it sustain for a few seconds, then compare the next one.</p>
         <p id="status" role="status" aria-live="polite">Opening the comparison…</p>
         <div class="downloads"><a id="wav" download hidden>Download this WAV ↓</a><a id="recipe" download hidden>Download this setting ↓</a></div>
       </div>
     </section>
-    <section class="explanation" aria-labelledby="changes-title"><h2 id="changes-title">What to listen for</h2><div class="notes"><p><strong>Warmer body</strong> pulls back the upper registers and drive, giving more of the balance to the existing round foundation. It keeps the played note; it adds no lower octave.</p><p><strong>Richer ensemble</strong> increases the separation between the banks and their vibrato. Listen for more movement while the note holds.</p></div><p class="footnote">Both are setting variations of the current voice, presented for listening. All clips include the keyboard attack and repeated sustain. This study uses dry mono audio.</p></section>
+    <section class="explanation" aria-labelledby="changes-title"><h2 id="changes-title">What to listen for</h2><div class="notes"><p><strong>Warmer body</strong> pulls back the upper registers and drive, giving more of the balance to the existing round foundation. It keeps the played note; it adds no lower octave.</p><p><strong>Rich Ensemble</strong> is the preferred direction, now saved as a named preset. It increases the separation between the banks and their vibrato, giving more movement while the note holds.</p></div><p class="footnote">All clips include the keyboard attack and repeated sustain. The downloadable instrument uses the same setting, with a release when you lift the key. This study uses dry mono audio. Physical MPC listening remains pending.</p></section>
     <p class="footer"><a href="../?study=depth&amp;voice=TRANSISTOR#listen">Return to the accepted R5 body comparison ↗</a><span>SNIP/SNAP · LISTENING BENCH</span></p>
   </main>
 </body>

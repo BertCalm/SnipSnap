@@ -5,9 +5,9 @@
   const pitch = document.getElementById('note');
   const status = document.getElementById('status');
   const buttons = [...document.querySelectorAll('[data-direction]')];
-  const names = {baseline: 'Current', body: 'Warmer body', ensemble: 'Richer ensemble'};
+  const names = {baseline: 'Compact Keys', body: 'Warmer body', ensemble: 'Rich Ensemble'};
   let manifest;
-  let direction = 'baseline';
+  let direction = 'ensemble';
   let playToken = 0;
 
   const asset = (path) => {
@@ -50,6 +50,6 @@
     manifest = data;
     if (!Array.isArray(manifest.clips) || manifest.clips.length !== 9) throw new Error('clips');
     buttons.forEach((button) => { button.disabled = false; });
-    select('baseline');
+    select('ensemble');
   }).catch(() => { status.textContent = 'The comparison could not open. Please reload to try again.'; });
 })();

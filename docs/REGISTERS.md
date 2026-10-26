@@ -197,7 +197,18 @@ subdirectory, preserving the main pack and its listening-note identities.
 Independent PCM checks measured gain-removed sustained RMS differences of
 12.8–17.1% for Warmer body and 21.7–29.2% for Richer ensemble versus Current.
 Those measurements establish stronger waveform contrast, not perceived depth or
-preference. Both directions await owner listening; no factory setting changed.
+preference. The owner selected the richer ensemble direction. It is now the
+`Rich Ensemble` factory preset, using the exact SPREAD .65 / MOTION .32 setting
+heard in this study. It is appended after the original three TRANSISTOR presets;
+the other nine factory settings and the model-6 renderer stay the same.
+
+The direction page now opens on Rich Ensemble without autoplay and offers its
+nine-zone MPC instrument. Export it with
+`./gradlew :cli:run --args='synth REGISTERS TRANSISTOR --preset 4 --instrument --release .6 --out /path/to/output'`.
+The package preserves the keyed attack, uses the actual final held-loop region,
+and releases over .6 seconds when the key is lifted. The C3/C4/C5 instrument
+samples match the chosen audition before its repeated playback and terminal
+fade. Physical phone/MPC listening is still pending.
 
 Why it is built this way:
 
@@ -206,6 +217,8 @@ Why it is built this way:
 - Matched levels reduce loudness as a reason to choose one setting.
 - Existing renderers and the exact current reference keep this a small,
   reproducible listening decision before another model revision.
+- A named preset carries the selected sound into normal rendering and instrument
+  export while saved patches continue to reproduce their own settings.
 
 ## Playing and saving
 
@@ -218,7 +231,7 @@ note is supplied. An explicit MIDI note overrides TUNE.
 `RegistersPatch` implements the shared patch contract and also reads the original
 audition recipes. It stores the voice, complete macro values, note, velocity and
 renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE,
-MUSETTE and TRANSISTOR, nine presets, saved patches and the shared SEND TO PAD workflow.
+MUSETTE and TRANSISTOR, ten presets, saved patches and the shared SEND TO PAD workflow.
 TUNE edits change the explicit note; other edits preserve its note, velocity and
 model. Imported audition notes align the slider without changing the sound.
 

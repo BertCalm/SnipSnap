@@ -539,13 +539,14 @@ ranks, immediate keying, electronic key-click, vibrato and transistor drive.
 Its fuller body adds a rounded same-pitch foundation while retaining the opening
 click. The sustain revision keeps subtle ensemble movement in short held loops
 and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
-Nine starting settings, saved recipes, native velocity and CLI rendering share
+Ten starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=sustain&voice=TRANSISTOR#listen)
-compares accepted R5 / Revised sustain through actual keyboard attacks and loop
-wraps, and retains the body, chiff and airflow comparisons. R6 sustain movement
-awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
+opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
+preset with stronger bank motion and vibrato and a nine-zone MPC download. The
+earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of Rich Ensemble is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,

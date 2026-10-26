@@ -14,11 +14,11 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** Bolder recipe directions for listening, without changing the model or factory presets. */
+/** The selected ensemble recipe beside the original two direction-study references. */
 object RegistersDepthDirectionsAuditionGenerator {
     private const val MODEL = 6
     private const val REPEATS = 3
-    private const val REVISION = "depth-directions-1"
+    private const val REVISION = "depth-directions-2"
     private val voice = RegistersVoice.TRANSISTOR
     private data class Direction(val id: String, val label: String, val description: String,
         val changes: Map<String, Float>)
@@ -26,7 +26,7 @@ object RegistersDepthDirectionsAuditionGenerator {
         Direction("baseline", "Current Compact Keys", "The current model-6 Compact Keys recipe.", emptyMap()),
         Direction("body", "Warmer body", "Fewer upper ranks and less saturation, retaining the same root note, SPREAD and MOTION.",
             mapOf("COLOR" to .08f, "EDGE" to .10f)),
-        Direction("ensemble", "Stronger ensemble", "More side-bank movement and vibrato, retaining the current registration and saturation.",
+        Direction("ensemble", "Rich Ensemble", "The chosen setting: more side-bank movement and vibrato, retaining the current registration and saturation.",
             mapOf("SPREAD" to .65f, "MOTION" to .32f)),
     )
 
@@ -36,6 +36,11 @@ object RegistersDepthDirectionsAuditionGenerator {
         val root = File(args.firstOrNull() ?: "../testkit/registers-depth-directions").canonicalFile
         check(root.mkdirs() || root.isDirectory)
         val base = RegistersPresets.forVoice(voice).single { it.name == "Compact Keys" }.copy(model = MODEL)
+        val preferred = RegistersPresets.forVoice(voice).single { it.name == "Rich Ensemble" }
+        check(preferred.model == MODEL && preferred.midi == base.midi && preferred.velocity == base.velocity &&
+            preferred.macros == base.macros + directions.single { it.id == "ensemble" }.changes) {
+            "The named preset must retain the exact ensemble setting selected in the first direction study."
+        }
         val clips = listOf(48, 60, 72).flatMap { midi -> directions.map { render(root, base, it, midi) } }
         val groups = listOf(48, 60, 72).map { midi -> mapOf("id" to "note_$midi", "midi" to midi,
             "noteName" to noteName(midi), "clipIds" to directions.map { "${it.id}_$midi" }) }
@@ -66,15 +71,16 @@ object RegistersDepthDirectionsAuditionGenerator {
             "${it.getValue("id")}:${hashes["raw"]}:${hashes["matched"]}"
         }.toByteArray())
         writeJson(File(root, "manifest.json"), mapOf("revision" to REVISION, "model" to MODEL, "sampleRate" to Dsp.RATE,
-            "title" to "TRANSISTOR depth directions", "status" to "Recipe directions awaiting listening",
+            "title" to "TRANSISTOR Rich Ensemble", "status" to "Owner selected the richer ensemble direction",
             "voice" to voice.name, "clipCount" to clips.size, "wavCount" to clips.size * 2,
-            "audioHash" to audioHash, "factoryChanged" to false, "engineChanged" to false,
+            "audioHash" to audioHash, "factoryChanged" to true, "engineChanged" to false,
+            "preferredDirection" to "ensemble", "preferredPreset" to preferred.name,
             "sourceRevision" to git(repository, "rev-parse", "HEAD"),
             "workingTreeDirty" to (git(repository, "status", "--porcelain")?.isNotBlank() ?: true),
             "sourceFingerprints" to fingerprints, "clips" to clips, "groups" to groups,
             "directions" to directions.map { mapOf("id" to it.id, "label" to it.label,
                 "description" to it.description, "macroChanges" to it.changes) },
-            "metricNotes" to "All recipes use model 6, MIDI 48/60/72 and velocity 1. These are stronger control settings, not a new engine version. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop. Only the final 4 ms fade is audition-specific. Independent adjacent synthesis cycles prove recurrence before the playback repeats are copied. Matched files target the loudest 200 ms RMS of 0.03; loudness matching does not establish a listening verdict. Body removes upper ranks and drive; it adds no lower octave. Ensemble increases periodic side-bank motion and common vibrato. The existing factory presets and accepted R5/R6 page remain available."))
+            "metricNotes" to "All recipes use model 6, MIDI 48/60/72 and velocity 1. The owner preferred the richer ensemble direction, now also the Rich Ensemble factory preset. This adds a preset without changing engine arithmetic or existing settings. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop. Only the final 4 ms fade is audition-specific. Independent adjacent synthesis cycles prove recurrence before the playback repeats are copied. Matched files target the loudest 200 ms RMS of 0.03; loudness matching does not establish a listening verdict. Body removes upper ranks and drive; it adds no lower octave. Ensemble increases periodic side-bank motion and common vibrato. The accepted R5/R6 page remains available. Physical instrument listening is still pending."))
         for (asset in listOf("index.html", "styles.css", "app.js")) {
             val stream = javaClass.getResourceAsStream("/audition/registers-depth-directions/$asset")
                 ?: error("Missing directions UI asset: $asset")
@@ -82,10 +88,12 @@ object RegistersDepthDirectionsAuditionGenerator {
         }
         File(root, "README.txt").writeText("""
             TRANSISTOR depth directions: three current-model recipes at C3, C4 and C5.
-            No factory preset or engine model changed. All use the same MIDI and velocity.
+            Rich Ensemble is now a named factory preset after the owner preferred that
+            direction. Existing settings and engine arithmetic are unchanged.
             Compare matched playback to remove level as a deciding factor.
             Current: Compact Keys. Body: COLOR .08 / EDGE .10. Ensemble: SPREAD .65 / MOTION .32.
             Remaining controls are unchanged. Body adds no lower octave or room effect.
+            The named Rich Ensemble preset is checked against these exact ensemble macros.
             Audio is actual Keys.registersPad, through the loop marker plus three full held
             cycles, with a final 4 ms audition-only fade. It must play once in full, not loop
             from frame zero. Independent recurrence measurements are under instrumentLoop.
