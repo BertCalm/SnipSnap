@@ -338,6 +338,17 @@ tasks.register<JavaExec>("generateRegistersTransistorSustainAudition") {
     project.findProperty("registersR5Baseline")?.toString()?.let { args("--baseline=$it") }
 }
 
+/** Stronger current-model recipe options for listening before any factory change. */
+tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
+    group = "distribution"
+    description = "Compare current TRANSISTOR, warmer body and stronger ensemble at three notes without changing factory settings."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"

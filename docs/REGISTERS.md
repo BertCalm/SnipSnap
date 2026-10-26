@@ -172,8 +172,40 @@ Why it is built this way:
 - Matching the handoff clock avoids resetting the ensemble when the attack ends.
 - The shorter warmup saves repeated synthesis work while retaining independent
   evidence that the conditioned cycle really repeats.
-- Versioned arithmetic preserves accepted sounds. R6's sustained movement still
-  needs the owner's audition; phone timing and hardware listening are unmeasured.
+- Versioned arithmetic preserves accepted sounds. The owner reports that R6 sounds
+  very much the same; phone timing and hardware listening are unmeasured.
+
+## Depth direction study
+
+R6 fixed low-SPREAD continuity and reduced render work, but did not supply the
+stronger depth the owner wanted. The separate `directions/` audition compares
+current-model recipes before changing the engine or factory defaults. At C3, C4
+and C5, Current is Compact Keys; Warmer body changes COLOR to .08 and EDGE to .10;
+Richer ensemble changes SPREAD to .65 and MOTION to .32. Other controls, pitch and
+velocity stay the same. Warmer body reduces upper ranks and clipping; it does not
+add a 16-foot rank or a room effect.
+
+Run `./gradlew :synth:generateRegistersDepthDirectionsAudition` with the optional
+`-PregistersOutput=<directory>`. The nine finite audition sequences use actual
+`Keys.registersPad` attacks followed by three complete held-loop repeats and a
+4 ms final fade. The generator verifies recipe replay, independent recurrence,
+PCM24 readback and matched loudest-window RMS .03. The three Current clips are
+byte-identical to the corresponding published R6 clips in both raw and matched
+form. Publish this directory as the existing audition site's `directions/`
+subdirectory, preserving the main pack and its listening-note identities.
+
+Independent PCM checks measured gain-removed sustained RMS differences of
+12.8–17.1% for Warmer body and 21.7–29.2% for Richer ensemble versus Current.
+Those measurements establish stronger waveform contrast, not perceived depth or
+preference. Both directions await owner listening; no factory setting changed.
+
+Why it is built this way:
+
+- Two separate settings distinguish a warmer harmonic balance from ensemble
+  movement, so the next change can follow the owner's preferred direction.
+- Matched levels reduce loudness as a reason to choose one setting.
+- Existing renderers and the exact current reference keep this a small,
+  reproducible listening decision before another model revision.
 
 ## Playing and saving
 
