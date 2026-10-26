@@ -1992,15 +1992,16 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** First dry SPARK voice and ordered expression-family listening gate. */
+/** SPARK revision-two control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
-    description = "Render SPARK native/matched hits, expression families, replayable recipes, measurements and a sixteen-pad XPM kit."
+    description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ThumpSparkAuditionGenerator")
     workingDir = projectDir
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
+    providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
 }
 
 /** Retained model-one/model-two Apsis listening history. */
