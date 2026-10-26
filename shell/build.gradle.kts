@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     kotlin("jvm")
 }
@@ -203,14 +205,16 @@ tasks.register<JavaExec>("generateCreaseTouchAudition") {
     args(providers.gradleProperty("creaseTouchOutput").orNull ?: "${rootDir}/testkit/crease-touch-audition")
 }
 
-/** Render and package the three native THREAD attack/sustain keys plus an exported-file playback demo. */
+/** Render native FILAMENT attack/sustain keys plus exported-file playback demos. */
 tasks.register<JavaExec>("generateFilamentKeysAudition") {
     group = "distribution"
-    description = "Package the FILAMENT THREAD three-root held instrument and native/reference-player listening files."
+    description = "Package FILAMENT held instruments and native/reference-player listening files."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.FilamentKeysAuditionGenerator")
     workingDir = rootDir
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-thread-keys").get())
+    val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
+    val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory-keys").get(), voice)
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */

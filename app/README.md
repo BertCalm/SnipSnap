@@ -154,9 +154,9 @@ chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
 FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
 VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
-THREAD also offers MAKE INSTRUMENT: C3/C4/C5 source roots, one velocity layer,
-the real attack before its settled loop and note-off release. Other voices
-and older saved models retain their existing pad workflow. Physical phone/MPC
+THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
+one velocity layer, each voice's real onset before its settled loop and
+note-off release. Older saved models retain their existing pad workflow. Physical phone/MPC
 acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and

@@ -61,7 +61,7 @@ approved dry model-3 recipes are in the factory library, phone SYNTH picker
 and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
 replayable. Playback shares the diagnostic DSP core while skipping optional
 capture work, supports cancellation and uses a bounded dry-preview cache.
-The model-3 THREAD keygroup pilot retains actual startup before settled
+The model-3 THREAD/PULSE/CURL keygroups retain actual startup before settled
 sustain, with C3/C4/C5 roots, one velocity layer and host note-off release.
 Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and

@@ -253,8 +253,8 @@ object Filament {
 
     private fun heldNote(patch: FilamentPatch, midi: Int, cancelled: () -> Boolean,
                          continuationEvidence: Boolean): HeldNoteEvidence {
-        require(patch.voice == FilamentVoice.THREAD && patch.model == MODEL_VERSION) {
-            "FILAMENT playable keys require a model-$MODEL_VERSION THREAD recipe"
+        require(FilamentKeys.supports(patch)) {
+            "FILAMENT playable keys require a supported model-$MODEL_VERSION recipe"
         }
         return requireNotNull(synthesize(patch.voice, patch.macros + ("HOLD" to 1f), midi, patch.velocity,
             patch.config, Options(), patch.model, captureDiagnostics = false, cancelled = cancelled,
