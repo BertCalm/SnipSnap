@@ -1796,7 +1796,8 @@ fun SynthScreen(
         }
         Engine.FLOCK -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
-            if (FlockPadMaker.supports(patch)) HeldSpec.Flock(FlockPadMaker.Spec(patch)) else null
+            if (FlockPadMaker.supports(patch))
+                HeldSpec.Flock(FlockPadMaker.Spec(patch, touchLayers = heldSheet.holdFlockTouchLayers)) else null
         }
         Engine.OHM -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch
@@ -1819,11 +1820,12 @@ fun SynthScreen(
     fun previewHeld() {
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         val spec = heldSpec() ?: return
+        flockHeldPreview?.silence()
         heldSheet.holdPreviewing = true
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Flock) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -1868,7 +1870,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Flock) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3330,11 +3332,12 @@ fun SynthScreen(
                     release = spec.releaseFraction ?: heldSheet.holdRelease,
                     knobLabel = spec.knobLabel,
                     instrumentNote = spec.instrumentNote,
-                    touchLayers = if (engine == Engine.CREASE) heldSheet.holdTouchLayers else null,
+                    touchLayers = spec.touchLayers,
+                    touchLayersNote = spec.touchLayersNote,
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = flockHeldPreview,
+                    heldPreview = if (engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) flockHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -3347,7 +3350,11 @@ fun SynthScreen(
                                 .coerceIn(OhmPadMaker.RELEASE.lo, OhmPadMaker.RELEASE.hi))
                         } else heldSheet.holdRelease = fraction
                     },
-                    onTouchLayers = { heldSheet.holdTouchLayers = it },
+                    onTouchLayers = {
+                        flockHeldPreview?.silence()
+                        if (engine == Engine.FLOCK) heldSheet.holdFlockTouchLayers = it
+                        else heldSheet.holdTouchLayers = it
+                    },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
                     onCancel = ::closeHeld,
@@ -3519,7 +3526,9 @@ private class HeldSheetState {
     var holdRelease by mutableStateOf(ResinPadMaker.RELEASE.defaultFraction)
     // An instrument-building choice, separate from the saved synthesis recipe.
     var holdTouchLayers by mutableStateOf(false)
-    // Completed zones (or CREASE touch samples), of [holdTotal]; -1 when idle.
+    // FLOCK opens with physical touch enabled without changing CREASE's existing choice.
+    var holdFlockTouchLayers by mutableStateOf(true)
+    // Completed zones (or touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
     var holdTotal by mutableStateOf(0)
     var holdPreviewing by mutableStateOf(false)
@@ -3945,7 +3954,9 @@ private sealed interface HeldSpec {
     val hasAttack: Boolean
     val instrumentNote: String? get() = null
     val releaseFraction: Float? get() = null
-    /** CREASE counts its touch samples; other makers retain their existing zone count. */
+    val touchLayers: Boolean? get() = null
+    val touchLayersNote: String? get() = null
+    /** Layered makers count touch samples; other makers retain their existing zone count. */
     val progressPerZone: Int get() = 1
 
     /** The seconds line under the sliders — each implementation reads its own [ResinPadMaker.Spec]/[SirenPadMaker.Spec]/[GlintPadMaker.Spec]/[RegistersPadMaker.Spec]/[OpenSkyPadMaker.Spec], never the raw stepper fractions again. */
@@ -4017,6 +4028,7 @@ private sealed interface HeldSpec {
         override val zoneMidis get() = CreasePadMaker.zoneMidis(spec)
         override val hasAttack get() = false
         override val progressPerZone get() = spec.layerCount
+        override val touchLayers get() = spec.touchLayers
         override val knobLabel get() = "RELEASE ${CreasePadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
             "KEEPS THE PRESSURE ATTACK AND MOVING SUSTAIN. SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE."
@@ -4052,14 +4064,19 @@ private sealed interface HeldSpec {
     class Flock(private val spec: FlockPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = FlockPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
+        override val progressPerZone get() = spec.layerCount
+        override val touchLayers get() = spec.touchLayers
+        override val touchLayersNote get() =
+            "ON: SOFT, MID AND HARD TOUCH CHANGE FLOCK MOTION. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
         override val releaseFraction get() = FlockPadMaker.RELEASE.fraction(spec.releaseSeconds)
         override val knobLabel get() = "RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() =
-            "DRY RIBBON · KEEPS THE ATTACK, THEN REPEATS CAPTURED MOTION UNTIL NOTE-OFF."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(FlockPadMaker.renderZone(spec, midi, cancelled))
+        override val instrumentNote get() = if (spec.touchLayers)
+            "DRY RIBBON · SOFT, MID AND HARD TOUCH CHANGE THE FLOCK'S DISTURBANCE. PREVIEW PLAYS ALL THREE; LIFT A KEY TO RELEASE."
+        else "DRY RIBBON · KEEPS THE ATTACK, THEN REPEATS CAPTURED MOTION UNTIL NOTE-OFF. KEY TOUCH CHANGES VOLUME."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = FlockPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            FlockPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            FlockPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Ohm(private val spec: OhmPadMaker.Spec) : HeldSpec {
@@ -4103,7 +4120,7 @@ private sealed interface HeldSpec {
  * scrim, raised bevel, CANCEL beside the real buttons - over the knobs a
  * held note has that a one-shot never needed. [hasAttack] hides ATTACK's
  * slider for an engine with none to dial (SIREN, GLINT, REGISTERS, OPENSKY HALO); RELEASE always shows,
- * and [knobLabel] spells out whichever of the two apply in seconds. CREASE's
+ * and [knobLabel] spells out whichever of the two apply in seconds. The
  * optional touch-layer button leaves the saved recipe alone. While
  * MAKE runs the knobs give way to [HeldProgress], a bar that fills as each
  * zone lands and the line counting them; PREVIEW's one zone says
@@ -4120,6 +4137,7 @@ private fun HeldInstrumentSheet(
     knobLabel: String,
     instrumentNote: String?,
     touchLayers: Boolean?,
+    touchLayersNote: String?,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -4179,7 +4197,7 @@ private fun HeldInstrumentSheet(
                         modifier = Modifier.fillMaxWidth().semantics { selected = touchLayers },
                     ) { onTouchLayers(!touchLayers) }
                     TapeText(
-                        "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
+                        touchLayersNote ?: "ON: SOFT, MID AND HARD TOUCH CHANGE PRESSURE AND TONE. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 5,
                     )
                 }

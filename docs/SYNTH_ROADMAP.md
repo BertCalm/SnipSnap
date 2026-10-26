@@ -511,7 +511,11 @@ RIBBON now also offers explicit saved HELD playback, separate from finite HOLD.
 It captures a two-second opening and roughly six-second body, supplies native
 press/release audition, and makes a nine-root phone/MPC keygroup instrument with
 saved release and source recipe. See
-[FLOCK_RIBBON_INSTRUMENT.md](FLOCK_RIBBON_INSTRUMENT.md). Live interaction between
+[FLOCK_RIBBON_INSTRUMENT.md](FLOCK_RIBBON_INSTRUMENT.md). Optional
+[touch layers](FLOCK_RIBBON_TOUCH.md) render soft, medium and hard source disturbances
+at each root, match their sustain levels and select them through the existing
+phone/MPC velocity windows. MAKE defaults this option on; `--instrument --touch`
+enables it in the CLI. Single-layer exports remain available. Live interaction between
 separately rendered notes remains outside this sample-based path. Phone playback,
 target render latency and MPC hardware checks remain open.
 
