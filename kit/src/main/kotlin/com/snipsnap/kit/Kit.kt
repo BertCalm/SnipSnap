@@ -14,9 +14,12 @@ data class KitLayer(
     val sampleFile: String,
     val velStart: Int,
     val velEnd: Int,
+    /** Optional listening label, stored in SnipSnap's sidecar, not an MPC parameter. */
+    val displayName: String? = null,
 ) {
     init {
         require(sampleFile.isNotBlank()) { "layer sampleFile must not be blank" }
+        require(displayName == null || displayName.isNotBlank()) { "layer displayName must not be blank" }
         require('/' !in sampleFile && '\\' !in sampleFile) { "layer sampleFile must be a bare filename" }
         require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
             "bad velocity window $velStart..$velEnd"

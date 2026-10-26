@@ -69,7 +69,7 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (51 starters including CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (52 starters including STRIKE FX, CIRCUIT,
 THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC and CHAMBER,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
@@ -295,10 +295,12 @@ logcat tag to grab when something is wrong.
   swapping kits mid-roll should go silent rather than crash. "NO STREAM"
   in the header means the device refused every open; check logcat's
   `PadEngine` line.
-- **STRIKE thumb strip**: the [first-pass guide](../docs/STRIKE_STRIP.md)
+- **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
   covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
   optional volume link in PADS and FULL. Check the interaction on a phone;
-  this pass selects existing layers, without generating new FX layers.
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  The LAST row highlights the layer actually triggered; moving the strip
+  changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
   grid — same engine PLAY uses, so it should feel just as tight. A closed hat should still cut a
   ringing open one (the mute group chokes here too); tapping the same

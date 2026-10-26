@@ -226,8 +226,9 @@ object KitExporter {
                 .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
             pad.copy(
                 sampleFile = sampleFile,
-                velocityLayers = slot.velocityLayers.orEmpty().map { layer ->
-                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd)
+                velocityLayers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
+                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
+                        displayName = pad.velocityLayers.getOrNull(index)?.displayName)
                 },
                 // Printed boards and Aquarium pads depend on immutable source
                 // snapshots outside the live WAV set. Flat MPC exports carry
