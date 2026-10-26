@@ -62,10 +62,10 @@ android {
 
     buildTypes {
         debug {
-            // The experimental audition installs beside the normal app and
-            // keeps its shelf and preferences independent.
+            // Keep the established development package so updates retain its shelf.
+            // The launcher label describes the whole development app, not one voice.
             applicationIdSuffix = ".brassgrow"
-            versionNameSuffix = "-brass-grow"
+            versionNameSuffix = "-development"
         }
         create("strikeFx") {
             // A separately installable listening build. CI debug signing keys

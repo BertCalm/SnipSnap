@@ -86,7 +86,10 @@ reinterpret a saved held patch. Release survives switching back to finite mode.
 Saved patch velocity changes the source disturbance and amplitude. Keyboard or
 pad touch velocity in this first exported instrument applies playback gain to one
 sample layer; it does not run a fresh flock or select a physically distinct layer.
-New source performances require editing the saved patch velocity or seed.
+New source performances require editing the saved patch velocity or seed in the
+single-layer instrument. The later optional [touch-layer builder](FLOCK_RIBBON_TOUCH.md)
+captures three source disturbances and selects them by key touch; this document
+records the original single-layer handoff.
 
 ## Instrument and app contract
 

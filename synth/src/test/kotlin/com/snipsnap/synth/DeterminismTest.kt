@@ -21,6 +21,16 @@ class DeterminismTest {
     }
 
     @Test
+    fun `UPRIGHT preserves the saved excitation and both damping endpoints`() {
+        for (damp in listOf(.18f, 1f)) {
+            val patch = PluckPatch("Upright canary", PluckVoice.UPRIGHT,
+                Pluck.defaults(PluckVoice.UPRIGHT) + ("DAMP" to damp), velocity = .65f)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples)
+        }
+    }
+
+    @Test
     fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {
         for (voice in TidalVoice.entries) {
             val patch = TidalPresets.forVoice(voice).first().copy(

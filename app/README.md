@@ -69,8 +69,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (52 starters including STRIKE FX, CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (53 starters including STRIKE FX, CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -177,7 +177,12 @@ SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
 saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
 nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
 retaining the editable held recipe. HOLD stays finite. See the
-[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). Phone playback
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). FLOCK MAKE also offers
+TOUCH LAYERS, initially on: soft, medium and hard touches select three distinct
+source disturbances per root. Its preview plays all three through the reference
+player; the main hold audition retains the saved anchor. The exported instrument
+keyboard uses touch position to select a layer. See the
+[touch-layer design](../docs/FLOCK_RIBBON_TOUCH.md). Phone playback
 remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available

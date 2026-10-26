@@ -24,7 +24,7 @@ import kotlin.random.Random
  * TUNE snaps to semitones across two octaves from the voice's root: pads get
  * notes, not frequencies, which is what makes a pluck kit playable as music.
  */
-enum class PluckVoice { NYLON, HARP, KOTO, BANJO, SITAR }
+enum class PluckVoice { NYLON, HARP, KOTO, BANJO, SITAR, UPRIGHT }
 
 object Pluck {
 
@@ -101,6 +101,7 @@ object Pluck {
      * second playing string to detune; DOUBLE 1 is a deliberate drone.
      */
     fun macrosFor(voice: PluckVoice): List<MacroSpec> = when (voice) {
+        PluckVoice.UPRIGHT -> UprightBass.macrosFor()
         PluckVoice.NYLON -> listOf(
             MacroSpec("TUNE", 0.4f), MacroSpec("DAMP", 0.45f), MacroSpec("PICK", 0.4f),
             MacroSpec("STRIKE", 0.75f), MacroSpec("BODY", 0.30f), MacroSpec("DOUBLE", 0.15f),
@@ -163,6 +164,7 @@ object Pluck {
     }
 
     private fun rootFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.UPRIGHT -> UprightBass.frequencyFor(0f)
         PluckVoice.NYLON -> 110f
         PluckVoice.HARP -> 165f
         PluckVoice.KOTO -> 147f
@@ -172,7 +174,8 @@ object Pluck {
 
     /** The snapped note frequency the TUNE macro lands on for [voice]. */
     fun frequencyFor(voice: PluckVoice, tune: Float): Float =
-        frequencyFor(voice, Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES))
+        if (voice == PluckVoice.UPRIGHT) UprightBass.frequencyFor(tune)
+        else frequencyFor(voice, Math.round(tune.coerceIn(0f, 1f) * TUNE_SEMITONES))
 
     /**
      * The frequency [semitone] steps above [voice]'s root - the engine's own
@@ -180,7 +183,8 @@ object Pluck {
      * second copy of the same formula.
      */
     internal fun frequencyFor(voice: PluckVoice, semitone: Int): Float =
-        rootFor(voice) * 2f.pow(semitone / 12f)
+        if (voice == PluckVoice.UPRIGHT) UprightBass.frequencyFor(semitone / TUNE_SEMITONES.toFloat())
+        else rootFor(voice) * 2f.pow(semitone / 12f)
 
     /**
      * The raw synth loop, at whatever [rate] the caller wants - split out of
@@ -206,6 +210,11 @@ object Pluck {
         sympatheticOverride: Sympathetic? = null,
         sympatheticSoloOverride: Boolean = false,
     ): FloatArray {
+        // The new bass has its own initialized-string model. Branch before the
+        // legacy PICK/STRIKE/DOUBLE path so existing saved voices keep their PCM.
+        if (voice == PluckVoice.UPRIGHT) {
+            return UprightBass.raw(frequencyFor(voice, macros["TUNE"] ?: UprightBass.DEFAULT_TUNE), macros, rate, velocity)
+        }
         val m = defaults(voice).toMutableMap()
         for ((k, v) in macros) if (m.containsKey(k)) m[k] = v.coerceIn(0f, 1f)
 
@@ -226,6 +235,7 @@ object Pluck {
         val pickHi: Float
         val ring: Float
         when (voice) {
+            PluckVoice.UPRIGHT -> error("UPRIGHT uses its isolated string renderer")
             PluckVoice.NYLON -> { loopHz = 3400f; pickLo = 1200f; pickHi = 6000f; ring = 1.1f }
             PluckVoice.HARP -> { loopHz = 5200f; pickLo = 1800f; pickHi = 9000f; ring = 1.3f }
             PluckVoice.KOTO -> { loopHz = 4200f; pickLo = 1500f; pickHi = 8000f; ring = 1.0f }
@@ -302,8 +312,9 @@ object Pluck {
     }
 
     /**
-     * [velocity] is a render parameter, not a macro - no knob, no preset,
-     * no recipe carries it; only the jawari reads it today.
+     * [velocity] is a render parameter, never a macro. Legacy patches do
+     * not store it; only their jawari reads it. UPRIGHT patches save the
+     * excitation strength so a soft note can be regenerated exactly.
      */
     fun render(voice: PluckVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
         renderWith(voice, macros, velocity)
@@ -322,6 +333,7 @@ object Pluck {
      * range, same as every other engine.
      */
     internal fun renderWith(voice: PluckVoice, macros: Map<String, Float>, velocity: Float = 1f, stiffness: Float? = null, jawari: Float? = null, sympathetic: Sympathetic? = null, sympatheticSolo: Boolean = false): Snip {
+        if (voice == PluckVoice.UPRIGHT) return UprightBass.render(macros, velocity)
         val renderRate = RATE * Dsp.OVERSAMPLE
         val raw = synthesize(voice, macros, renderRate, velocity = velocity, stiffnessOverride = stiffness, jawariOverride = jawari, sympatheticOverride = sympathetic, sympatheticSoloOverride = sympatheticSolo)
         val out = Dsp.decimate(raw, RATE)
@@ -357,6 +369,7 @@ object Pluck {
     internal const val SITAR_STIFFNESS = SITAR_STIFFNESS_HIGH
 
     internal fun stiffnessFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.UPRIGHT -> 0f
         PluckVoice.SITAR -> SITAR_STIFFNESS
         PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
     }
@@ -422,6 +435,7 @@ object Pluck {
     internal const val SITAR_WRAP_MAX = 0.03f
 
     internal fun jawariFor(voice: PluckVoice): Float = when (voice) {
+        PluckVoice.UPRIGHT -> 0f
         PluckVoice.SITAR -> SITAR_JAWARI
         PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO -> 0f
     }
@@ -437,6 +451,9 @@ object Pluck {
      * a shape body under an explicit exception (see below).
      */
     internal fun bodyFor(voice: PluckVoice): List<Modes.Mode> = when (voice) {
+        // UPRIGHT's one-way bandpass readout lives in UprightBass, not this
+        // modal/body table used by the original five PLUCK voices.
+        PluckVoice.UPRIGHT -> emptyList()
         // Classical guitar - research note section 5.1 (Christensen & Vistisen
         // 1980; Jansson 2002; Su et al. 2024; Richardson via Woodhouse). The
         // 127 Hz Helmholtz antiresonance is deliberately absent: the source

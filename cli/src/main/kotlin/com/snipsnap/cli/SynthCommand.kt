@@ -62,6 +62,9 @@ import com.snipsnap.synth.OrphicaPatch
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.Pluck
+import com.snipsnap.synth.PluckPatch
+import com.snipsnap.synth.PluckVoice
 import com.snipsnap.synth.Presets
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -203,8 +206,9 @@ import kotlin.random.Random
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
  * for their finite performances. FLOCK also replays `--patch <json>`; RIBBON
- * becomes a captured-sustain instrument with `--instrument [--release S]`,
- * retaining its exact model, seed and saved note/velocity.
+ * becomes a captured-sustain instrument with `--instrument [--release S] [--touch]`,
+ * retaining its exact model, seed and saved note/velocity. `--touch` adds three
+ * independently captured source strengths up to the saved velocity.
  * WICK offers twenty-five provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
@@ -292,8 +296,10 @@ object SynthCommand {
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
+                "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
+                    else throw CliError("--macros for PLUCK requires UPRIGHT")
                 OhmPatch.ENGINE -> Ohm.macrosFor(3)
-                else -> throw CliError("--macros is only supported by APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE and OHM, got $engine")
+                else -> throw CliError("--macros is only supported by APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -320,8 +326,8 @@ object SynthCommand {
         if (engine == OrigamiPatch.ENGINE && drone) {
             throw CliError("--drone is not supported by ORIGAMI; use --instrument for model-4 FAN or STILL")
         }
-        if (opts.has("--touch") && (!instrument || engine != CreasePatch.ENGINE)) {
-            throw CliError("--touch requires CREASE --instrument")
+        if (opts.has("--touch") && (!instrument || engine !in setOf(CreasePatch.ENGINE, FlockPatch.ENGINE))) {
+            throw CliError("--touch requires CREASE --instrument or FLOCK RIBBON --instrument")
         }
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         if (instrument && engine == ContourPatch.ENGINE) {
@@ -333,6 +339,8 @@ object SynthCommand {
         val noteRange = if (noteFlags.isEmpty()) null else {
             if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
+                "PLUCK" -> if (voice == "UPRIGHT") 28..52
+                    else throw CliError("${noteFlags.joinToString()} for PLUCK requires UPRIGHT")
                 ApsisPatch.ENGINE -> Apsis.MIDI_MIN..Apsis.MIDI_MAX
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
                 TrioPatch.ENGINE -> Trio.MIN_MIDI..Trio.MAX_MIDI
@@ -490,6 +498,11 @@ object SynthCommand {
             else -> listOf(presets.first())
         }).map { patch ->
             val withNote = if (noteFlags.isEmpty()) patch else when (patch) {
+                is PluckPatch -> patch.copy(
+                    macros = if (midiOverride == null) patch.macros else patch.macros +
+                        ("TUNE" to (midiOverride - 28) / Pluck.TUNE_SEMITONES.toFloat()),
+                    velocity = velocityOverride ?: patch.velocity,
+                )
                 is ApsisPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OrigamiPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TrioPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
@@ -592,6 +605,8 @@ object SynthCommand {
                     throw CliError("SHOAL $materialOverride renders finite notes; --material cannot override a HOLD preset")
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
+            } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
+                withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is CausticPatch) {
@@ -643,7 +658,7 @@ object SynthCommand {
         val flockInstrumentSpec = if (instrument && engine == FlockPatch.ENGINE) try {
             val patch = chosen.single() as FlockPatch
             FlockPadMaker.Spec(patch.copy(playback = FlockPlayback.HELD,
-                releaseSeconds = flockInstrumentRelease ?: patch.releaseSeconds))
+                releaseSeconds = flockInstrumentRelease ?: patch.releaseSeconds), touchLayers = opts.has("--touch"))
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid FLOCK instrument"}")
         } else null
@@ -710,7 +725,8 @@ object SynthCommand {
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch) {
+            if (patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+                patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
             if (patch is FlockPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
@@ -774,13 +790,17 @@ object SynthCommand {
         val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
         val midis = FlockPadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { i, midi ->
-            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            FlockPadMaker.renderZone(spec, midi)
+            val progress = if (spec.touchLayers)
+                " (layers ${i * spec.layerCount + 1}..${(i + 1) * spec.layerCount}/${midis.size * spec.layerCount})" else ""
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}$progress")
+            FlockPadMaker.renderLayers(spec, midi)
         }
-        FlockPadMaker.export(name, spec, notes, dir)
+        FlockPadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} native zones, captured RIBBON sustain - RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}")
+        if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         out.println("recipe: ${File(dir, "$name.patch.json").path}")
+        if (spec.touchLayers) out.println("instrument recipe: ${FlockPadMaker.recipeFile(dir, name).path}")
         return 0
     }
 
