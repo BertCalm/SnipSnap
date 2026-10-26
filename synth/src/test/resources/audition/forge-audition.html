@@ -1,0 +1,539 @@
+<title>Forge Listening Gate</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&display=swap">
+<style>
+  /* TapeOS OILSLICK, the scheme every SnipSnap audition page wears (shell/Schemes.kt, design/HANDOFF.md).
+     Dark by design: this page commits to one look and paints every surface explicitly.
+     Layout: one phone-width window; the gate's questions first, each with its own A/B clips,
+     then every clip by source. */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised: #221A34;
+    --lcd: #0A0714;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --cyan: #40E0E8;
+    --accent: #E040C8;
+    --warn: #FFB000;
+    --heat: #FF7A3C;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 56px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 18px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 460px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background: linear-gradient(var(--win), var(--win2)) padding-box, var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    border-radius: 5px 5px 0 0;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-pixel);
+    font-size: 12px;
+    letter-spacing: .08em;
+  }
+
+  .body { display: grid; gap: 18px; padding: 16px 14px 20px; }
+
+  h1 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 26px;
+    letter-spacing: .06em;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+
+  h2 {
+    margin: 0;
+    font-family: var(--f-pixel);
+    font-size: 13px;
+    letter-spacing: .1em;
+    color: var(--cyan);
+    text-transform: uppercase;
+  }
+
+  p { margin: 0; color: var(--ink); }
+  .dim { color: var(--ink2); }
+
+  .lcd {
+    display: grid;
+    gap: 6px;
+    padding: 10px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 4px;
+    background: var(--lcd);
+  }
+
+  .stages { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; }
+  .stages b { font-family: var(--f-pixel); font-size: 11px; letter-spacing: .08em; color: var(--accent); font-weight: 400; padding-top: 3px; }
+
+  .status { font-size: 16px; color: var(--ink2); }
+  .status[data-kind="shared"] { color: var(--cyan); }
+
+  .q {
+    display: grid;
+    gap: 10px;
+    padding: 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+  }
+  .q h3 { margin: 0; font-family: var(--f-lcd); font-size: 21px; font-weight: 400; color: var(--title-ink); text-wrap: balance; }
+  .q .n { font-family: var(--f-pixel); font-size: 11px; letter-spacing: .1em; color: var(--ink3); }
+
+  .clips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .opts { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  button {
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .play {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 36px;
+    padding: 4px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 4px;
+    background: var(--raised);
+    color: var(--ink);
+    font-size: 17px;
+    text-align: left;
+  }
+  .play::before { content: "\25B6"; font-size: 11px; color: var(--cyan); }
+  .play[aria-pressed="true"] { border-color: var(--cyan); color: var(--title-ink); box-shadow: 0 0 0 1px var(--cyan) inset; }
+  .play[aria-pressed="true"]::before { content: "\25A0"; color: var(--accent); }
+
+  .opt {
+    min-height: 36px;
+    padding: 4px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 18px;
+    background: transparent;
+    color: var(--ink2);
+    font-size: 17px;
+  }
+  .opt[aria-pressed="true"] { border-color: var(--accent); background: rgba(224, 64, 200, .18); color: var(--title-ink); }
+
+  button:focus-visible, textarea:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+
+  textarea {
+    width: 100%;
+    min-height: 56px;
+    padding: 8px;
+    border: 1px solid var(--field-border);
+    border-radius: 4px;
+    background: var(--lcd);
+    color: var(--ink);
+    font: inherit;
+    font-size: 17px;
+    resize: vertical;
+  }
+
+  .tabs { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tab {
+    min-height: 34px;
+    padding: 4px 10px;
+    border: 1px solid var(--field-border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--ink2);
+    font-family: var(--f-pixel);
+    font-size: 11px;
+    letter-spacing: .08em;
+  }
+  .tab[aria-selected="true"] { background: var(--raised); color: var(--title-ink); border-color: var(--accent); }
+
+  .list { display: grid; gap: 6px; }
+  .row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+  }
+  .row .play { width: 100%; }
+  .meter { font-size: 15px; color: var(--ink2); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .meter .up { color: var(--heat); }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .primary {
+    min-height: 38px;
+    padding: 4px 14px;
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    background: linear-gradient(90deg, rgba(90, 42, 224, .5), rgba(224, 64, 200, .5));
+    color: var(--title-ink);
+    font-family: var(--f-pixel);
+    font-size: 11px;
+    letter-spacing: .08em;
+  }
+
+  .warn { color: var(--warn); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .play, .opt, .tab { transition: border-color .12s, background-color .12s, color .12s; }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar"><span>FORGE.SECTION</span><span>LISTENING GATE</span></div>
+  <div class="body">
+    <div style="display:grid;gap:8px">
+      <h1>FORGE</h1>
+      <p>A rack section that forms a hit against a die: a low shock, a sweep through the medium, the fast part folded, then a hard stop with a flash of heat. These clips are the real Kotlin section on real pads. Nobody has heard them yet: your ear is the measurement.</p>
+    </div>
+
+    <div class="lcd stages" aria-label="What the four knobs do">
+      <b>CHARGE</b><span>Adds a 48 Hz shock under the hit, and spreads the click into a short sweep.</span>
+      <b>STANDOFF</b><span>When the shock lands: 0 to 1 ms after the hit.</span>
+      <b>YIELD</b><span>How fast the sound must move to fold. Low folds more; 1 folds nothing.</span>
+      <b>ARREST</b><span>The die: 0 touches nothing, 1 is a hard stop at 0.4 of the peak, with grit.</span>
+    </div>
+
+    <p class="dim">The clips play as the rack lands them, so they keep their peaks and their loudness differences. A number like <span class="up" style="color:var(--heat)">+2.1 dB</span> is how much louder than dry, at the same peak. "Same loudness" levels three clips to check that tone, not volume, is what you like.</p>
+
+    <p id="loadState" class="dim" role="status">Loading the clips…</p>
+
+    <section style="display:grid;gap:12px" aria-labelledby="gateTitle">
+      <h2 id="gateTitle">The gate: seven questions</h2>
+      <div id="questions" style="display:grid;gap:12px"></div>
+      <div class="q">
+        <h3><label for="notes">Anything else</label></h3>
+        <textarea id="notes" placeholder="What you loved, what you hated, a clip that surprised you…"></textarea>
+      </div>
+      <div class="actions">
+        <button id="copy" class="primary" type="button">COPY MY ANSWERS</button>
+        <span id="saveState" class="status" role="status">Answers stay in this browser.</span>
+      </div>
+      <textarea id="copyText" hidden readonly aria-label="Your answers as text"></textarea>
+    </section>
+
+    <section style="display:grid;gap:10px" aria-labelledby="allTitle">
+      <h2 id="allTitle">Every clip</h2>
+      <div id="tabs" class="tabs" role="tablist" aria-label="Sources"></div>
+      <p id="sectionNote" class="dim"></p>
+      <div id="list" class="list" role="tabpanel"></div>
+    </section>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  // The gate's questions, each with the clips to compare (section/clip ids from manifest.json).
+  var QUESTIONS = [
+    { id: 'chirp', title: 'CHARGE 0 against 1 on the bell and the kick: is the folded sweep thicker, or a laser zap?',
+      clips: ['METAL/charge_0', 'METAL/charge_1', 'KICK/charge_0', 'KICK/charge_1'],
+      options: ['Thicker', 'Laser zap', 'Mixed'] },
+    { id: 'die', title: 'ARREST 1: loud and solid, or broken?',
+      clips: ['KICK/arrest_0', 'KICK/arrest_1', 'LEVELLED/kick_dry', 'LEVELLED/kick_arrest_1'],
+      options: ['Loud and solid', 'Broken', 'Too subtle'] },
+    { id: 'heat', title: 'The burst at the moment of impact, at ARREST 1: heat, or a click?',
+      clips: ['SNARE/arrest_0', 'SNARE/arrest_1', 'CHOP/arrest_0', 'CHOP/arrest_1'],
+      options: ['Heat', 'A click', "Can't hear it"] },
+    { id: 'harsh', title: 'YIELD 0.25 is harsher than YIELD 0 (the fold switches inside every cycle). Keep that middle, or smooth it?',
+      clips: ['KICK/yield_0', 'KICK/yield_025', 'KICK/defaults'],
+      options: ['Keep it', 'Smooth it', "Don't mind"] },
+    { id: 'hat', title: 'On the hat, are the defaults too much? (The classifier calls it a snare.)',
+      clips: ['HAT/dry', 'HAT/defaults', 'HAT/yield_1'],
+      options: ['Fine', 'Too much', 'Wrong for hats'] },
+    { id: 'order', title: 'FORGE before the amp, as built, or after it?',
+      clips: ['ORDER/kick_forge_valve', 'ORDER/kick_valve_forge', 'ORDER/snare_forge_valve', 'ORDER/snare_valve_forge'],
+      options: ['Before', 'After', 'No difference'] },
+    { id: 'fold', title: 'The folder at 1x has audible aliasing. Can you hear any of it at 4x?',
+      clips: ['FOLDBACK/snare_1x', 'FOLDBACK/snare_4x'],
+      options: ['4x is clean', '4x has it too', "Can't tell"] }
+  ];
+
+  var STORE_KEY = 'forge-gate:answers';
+  var answers = { notes: '' };
+  QUESTIONS.forEach(function (q) { answers[q.id] = null; answers[q.id + 'Note'] = ''; });
+
+  var clipsById = {};
+  var sections = [];
+  var audio = new Audio();
+  audio.preload = 'auto';
+  var playing = null;
+
+  var shared = null;   // the db document for this viewer's answers, when the store is available
+  var saveTimer = null;
+  var saving = false;
+
+  function el(tag, attrs, text) {
+    var e = document.createElement(tag);
+    if (attrs) Object.keys(attrs).forEach(function (k) { e.setAttribute(k, attrs[k]); });
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  // ---------- playback ----------
+
+  function playButtons() { return document.querySelectorAll('.play'); }
+
+  function setPlaying(key) {
+    playing = key;
+    playButtons().forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.clip === key ? 'true' : 'false'); });
+  }
+
+  function toggle(key) {
+    var clip = clipsById[key];
+    if (!clip) return;
+    if (playing === key && !audio.paused) { audio.pause(); setPlaying(null); return; }
+    audio.src = clip.file;
+    audio.currentTime = 0;
+    var p = audio.play();
+    setPlaying(key);
+    if (p && p.catch) p.catch(function () { setPlaying(null); });
+  }
+
+  audio.addEventListener('ended', function () { setPlaying(null); });
+
+  function playButton(key, text) {
+    var b = el('button', { type: 'button', 'class': 'play', 'aria-pressed': 'false' }, text);
+    b.dataset.clip = key;
+    b.addEventListener('click', function () { toggle(key); });
+    return b;
+  }
+
+  function shortLabel(key) {
+    var c = clipsById[key];
+    if (!c) return key;
+    return c.label.replace(' (THE HARSH ZONE)', '').replace(' (THE RACK)', '').replace(', LEVELLED', ' SAME LOUDNESS');
+  }
+
+  function meterText(c) {
+    if (c.loudnessDb == null) return 'crest ' + c.crest.toFixed(1);
+    var d = c.loudnessDb;
+    var sign = d >= 0.05 ? '+' : (d <= -0.05 ? '' : '±');
+    return sign + d.toFixed(1) + ' dB · crest ' + c.crest.toFixed(1);
+  }
+
+  // ---------- answers ----------
+
+  function readLocal() {
+    try { var raw = localStorage.getItem(STORE_KEY); return raw ? JSON.parse(raw) : null; } catch (e) { return null; }
+  }
+
+  function writeLocal() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(answers)); } catch (e) { /* private mode: the copy button still works */ }
+  }
+
+  function merge(from) {
+    if (!from || typeof from !== 'object') return;
+    Object.keys(answers).forEach(function (k) { if (typeof from[k] === 'string') answers[k] = from[k]; });
+  }
+
+  function setSaveState(text, kind) {
+    var s = document.getElementById('saveState');
+    s.textContent = text;
+    if (kind) s.dataset.kind = kind; else delete s.dataset.kind;
+  }
+
+  async function pushShared() {
+    if (!shared || saving) return;
+    saving = true;
+    try {
+      var body = {};
+      Object.keys(answers).forEach(function (k) { body[k] = answers[k] == null ? '' : answers[k]; });
+      body.updatedAt = new Date().toISOString();
+      await shared.set(body);
+      setSaveState('Saved. Claude can read these answers.', 'shared');
+    } catch (e) {
+      shared = null;
+      setSaveState('Saved in this browser only. Use Copy to send them.');
+    } finally {
+      saving = false;
+    }
+  }
+
+  function changed() {
+    writeLocal();
+    if (!shared) return;
+    setSaveState('Saving…', 'shared');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushShared, 900);
+  }
+
+  function answerText() {
+    var lines = ['FORGE listening gate'];
+    QUESTIONS.forEach(function (q, i) {
+      lines.push((i + 1) + '. ' + q.title);
+      lines.push('   ' + (answers[q.id] || '(no answer)') + (answers[q.id + 'Note'] ? ' - ' + answers[q.id + 'Note'] : ''));
+    });
+    if (answers.notes) lines.push('Notes: ' + answers.notes);
+    return lines.join('\n');
+  }
+
+  document.getElementById('copy').addEventListener('click', function () {
+    var text = answerText();
+    var area = document.getElementById('copyText');
+    function fallback() {
+      area.hidden = false;
+      area.value = text;
+      area.focus();
+      area.select();
+      setSaveState('Select all and copy the text above.');
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () { setSaveState('Copied. Paste it into the chat.'); }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  document.getElementById('notes').addEventListener('input', function (e) { answers.notes = e.target.value; changed(); });
+
+  function renderQuestions() {
+    var host = document.getElementById('questions');
+    host.textContent = '';
+    QUESTIONS.forEach(function (q, i) {
+      var card = el('div', { 'class': 'q' });
+      card.appendChild(el('span', { 'class': 'n' }, 'QUESTION ' + (i + 1) + ' OF ' + QUESTIONS.length));
+      card.appendChild(el('h3', { id: 'q-' + q.id }, q.title));
+      var clips = el('div', { 'class': 'clips' });
+      q.clips.forEach(function (key) { if (clipsById[key]) clips.appendChild(playButton(key, shortLabel(key))); });
+      card.appendChild(clips);
+      var opts = el('div', { 'class': 'opts', role: 'group', 'aria-labelledby': 'q-' + q.id });
+      q.options.forEach(function (o) {
+        var b = el('button', { type: 'button', 'class': 'opt', 'aria-pressed': answers[q.id] === o ? 'true' : 'false' }, o);
+        b.addEventListener('click', function () {
+          answers[q.id] = answers[q.id] === o ? null : o;
+          opts.querySelectorAll('.opt').forEach(function (x) { x.setAttribute('aria-pressed', x.textContent === answers[q.id] ? 'true' : 'false'); });
+          changed();
+        });
+        opts.appendChild(b);
+      });
+      card.appendChild(opts);
+      var note = el('textarea', { id: 'note-' + q.id, placeholder: 'Why, in a few words (optional)', 'aria-label': 'Note for question ' + (i + 1) });
+      note.value = answers[q.id + 'Note'] || '';
+      note.style.minHeight = '40px';
+      note.addEventListener('input', function (e) { answers[q.id + 'Note'] = e.target.value; changed(); });
+      card.appendChild(note);
+      host.appendChild(card);
+    });
+    document.getElementById('notes').value = answers.notes || '';
+  }
+
+  // ---------- every clip ----------
+
+  function renderTabs(active) {
+    var tabs = document.getElementById('tabs');
+    tabs.textContent = '';
+    sections.forEach(function (s) {
+      var t = el('button', { type: 'button', 'class': 'tab', role: 'tab', id: 'tab-' + s.id, 'aria-selected': s.id === active ? 'true' : 'false' }, s.title.toUpperCase());
+      t.addEventListener('click', function () { renderTabs(s.id); renderList(s.id); });
+      tabs.appendChild(t);
+    });
+  }
+
+  function renderList(id) {
+    var s = sections.filter(function (x) { return x.id === id; })[0];
+    var list = document.getElementById('list');
+    list.textContent = '';
+    list.setAttribute('aria-labelledby', 'tab-' + id);
+    document.getElementById('sectionNote').textContent = s ? s.note : '';
+    if (!s) return;
+    s.clips.forEach(function (c) {
+      var key = s.id + '/' + c.id;
+      var row = el('div', { 'class': 'row' });
+      row.appendChild(playButton(key, c.label));
+      var m = el('span', { 'class': 'meter' });
+      if (c.loudnessDb != null && c.loudnessDb >= 0.05) {
+        m.appendChild(el('span', { 'class': 'up' }, '+' + c.loudnessDb.toFixed(1) + ' dB'));
+        m.appendChild(document.createTextNode(' · crest ' + c.crest.toFixed(1)));
+      } else {
+        m.textContent = meterText(c);
+      }
+      row.appendChild(m);
+      list.appendChild(row);
+    });
+    setPlaying(playing);
+  }
+
+  // ---------- boot ----------
+
+  merge(readLocal());
+
+  fetch('manifest.json').then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function (m) {
+    sections = m.sections;
+    sections.forEach(function (s) { s.clips.forEach(function (c) { clipsById[s.id + '/' + c.id] = c; }); });
+    var count = Object.keys(clipsById).length;
+    document.getElementById('loadState').textContent = count + ' clips, rendered by ./gradlew :synth:generateForgeAudition.';
+    renderQuestions();
+    renderTabs(sections[0].id);
+    renderList(sections[0].id);
+  }).catch(function () {
+    var s = document.getElementById('loadState');
+    s.className = 'warn';
+    s.textContent = 'The clip list did not load. Opened from a folder? Serve it: python3 -m http.server, in testkit/forge-audition.';
+    renderQuestions();
+  });
+
+  // The shared store, where the viewer's page offers one: each viewer writes answers/<their id>.
+  (async function () {
+    if (!window.claude || typeof window.claude.use !== 'function') return;
+    try {
+      var both = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
+      var db = both[0], user = both[1];
+      if (!db || !user) return;
+      var id = await user.id();
+      if (!id) return;
+      var ref = db.doc('answers/' + id);
+      var snap = await ref.get();
+      if (snap.exists) { merge(snap.data()); writeLocal(); renderQuestions(); }
+      shared = ref;
+      setSaveState('Answers save as you go. Claude can read them.', 'shared');
+    } catch (e) { /* no store this visit: the browser copy and the Copy button stand */ }
+  })();
+})();
+</script>

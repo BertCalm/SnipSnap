@@ -78,7 +78,7 @@ class PrismSynthScreenTest : ComposeScreenTest() {
         val node = compose.onNodeWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNode()
         val action = node.config.getOrNull(SemanticsActions.OnClick)?.action
             ?: error("No click action for $label")
-        assertTrue("Click refused for $label", action.invoke())
+        compose.runOnIdle { assertTrue("Click refused for $label", action.invoke()) }
         pump()
     }
 
@@ -99,7 +99,14 @@ class PrismSynthScreenTest : ComposeScreenTest() {
 
     private fun loadFactory(patch: PrismPatch) {
         press(patch.voice.name)
-        // tapeClick preserves the preset's mixed-case name in its spoken label.
+        // The spoken name has to be on the tree after the voice change. A chip
+        // left over from the previous voice is not this preset.
+        waitFor("PRESET ${patch.name}") {
+            runCatching {
+                compose.onNodeWithContentDescription("PRESET ${patch.name}", useUnmergedTree = true)
+                    .fetchSemanticsNode()
+            }.isSuccess
+        }
         press("PRESET ${patch.name}")
         waitFor("${patch.name} complete recipe") { draft(patch.voice) == patch }
     }

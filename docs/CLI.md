@@ -233,8 +233,9 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 
 TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
 and `--beats 1..4` edit the finite performance while preserving its saved seed,
-articulation and model. The selected beats must fit within two seconds;
-the output remains a 3.5-second one-shot with room for the replies to decay.
+articulation and model. The selected beat grid must fit within two seconds;
+answers and course staggering can continue past it. The output remains a
+3.5-second one-shot with its existing final fade.
 
 ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA

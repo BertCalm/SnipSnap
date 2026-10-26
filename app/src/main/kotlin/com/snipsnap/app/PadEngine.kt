@@ -306,7 +306,7 @@ class PadEngine(preferredSampleRate: Int) {
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
             handle, voiceId, sample,
-            hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            hit.startFrame, hit.endFrameExclusive, hit.loopStartFrame, hit.gainLeft, hit.gainRight, hit.pitchRatio,
             reverse = false,
         )
     }

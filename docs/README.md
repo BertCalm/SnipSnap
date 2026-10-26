@@ -125,3 +125,16 @@ ceiling, canonical SFZ containment with one copy budget, a NaN-safe DC mean,
 recordings kept out of cloud backup) and the findings recorded for a design
 or listening session. Its sound-quality findings are the review's claims,
 not heard, and nothing in that change alters a shipped sound.
+
+**Apsis.** [APSIS.md](APSIS.md) records the PASSAGE orbital listening prototype,
+explicit note/velocity recipes, internal resonant exchange, and the recurring
+HOLD roster. The six-voice production bank remains later work;
+mathematical and numerical checks do not establish the owner's listening verdict.
+Android SYNTH now exposes the six presets, ROOT, VELOCITY and movement controls,
+complete saved recipes, looping previews and gated full-cycle pad exports.
+The second listening round includes Luthier's masking review, model-1 replay,
+and the model-2 body-forward voicing with six same-pitch preset gestures.
+The musical-bank round adds model-3 playing response and bounded preparation
+reuse, seven exported-sample scores, three velocity-layer inspections, and a
+native sixteen-pad MPC 3/MPC 2 bank with forty PCM24 samples. The retained
+history and physical device checks remain separate.

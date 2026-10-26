@@ -182,6 +182,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** Accepted versus revised upper-TOUCH character with identical seeded scores. */
+tasks.register<JavaExec>("generateTrioTouchAudition") {
+    group = "distribution"
+    description = "Render twelve TRIO model 5/6 upper-TOUCH comparisons and a listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioTouchAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioTouchOutput").orNull ?: "${rootDir}/testkit/trio-touch")
+}
+
 /** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
 tasks.register<JavaExec>("generateTrioMusicalBank") {
     group = "distribution"
@@ -1318,6 +1329,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeAudition") {
+    group = "distribution"
+    description = "Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-audition", "${rootDir}")
+}
+
 /** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
 tasks.register<JavaExec>("generateFadeLawAudition") {
     group = "distribution"
@@ -1942,4 +1963,52 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     workingDir = projectDir
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
+}
+
+/** Retained model-one/model-two Apsis listening history. */
+tasks.register<JavaExec>("generateApsisAudition") {
+    group = "distribution"
+    description = "Reproduce the retained APSIS model-one/model-two comparison set and orbital evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisOutput").orNull ?: "${rootDir}/testkit/apsis-audition")
+    if (providers.gradleProperty("apsisQuick").isPresent) args("--quick")
+}
+
+/** Native sixteen-pad bank, three-zone playing samples, and genuine held-loop metadata. */
+tasks.register<JavaExec>("generateApsisKit") {
+    group = "distribution"
+    description = "Export APSIS MPC 3/MPC 2 programs, exact dry PCM24 samples, recipes and verified pad map."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisPlayingEvidence") {
+    group = "distribution"
+    description = "Render model-three velocity and material-exchange comparisons at shared gain."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args("$bankOutput/performance", "--performance")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisMusicalAudition") {
+    group = "distribution"
+    description = "Render APSIS bass, keys, chord answers, gesture pairs, held fields and layer comparisons from the exported bank."
+    dependsOn("generateApsisKit", "generateApsisPlayingEvidence")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
 }
