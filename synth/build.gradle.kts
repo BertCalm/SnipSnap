@@ -1926,3 +1926,51 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
 }
+
+/** Retained model-one/model-two Apsis listening history. */
+tasks.register<JavaExec>("generateApsisAudition") {
+    group = "distribution"
+    description = "Reproduce the retained APSIS model-one/model-two comparison set and orbital evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisOutput").orNull ?: "${rootDir}/testkit/apsis-audition")
+    if (providers.gradleProperty("apsisQuick").isPresent) args("--quick")
+}
+
+/** Native sixteen-pad bank, three-zone playing samples, and genuine held-loop metadata. */
+tasks.register<JavaExec>("generateApsisKit") {
+    group = "distribution"
+    description = "Export APSIS MPC 3/MPC 2 programs, exact dry PCM24 samples, recipes and verified pad map."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisPlayingEvidence") {
+    group = "distribution"
+    description = "Render model-three velocity and material-exchange comparisons at shared gain."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args("$bankOutput/performance", "--performance")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisMusicalAudition") {
+    group = "distribution"
+    description = "Render APSIS bass, keys, chord answers, gesture pairs, held fields and layer comparisons from the exported bank."
+    dependsOn("generateApsisKit", "generateApsisPlayingEvidence")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
+}

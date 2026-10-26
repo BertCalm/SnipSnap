@@ -424,5 +424,10 @@ testkit/murmur-luthier-audition/
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
 testkit/thump-spark-audition/
 
+# Generated Apsis listening and native-bank artifacts.
+testkit/apsis-audition/
+testkit/apsis-audition-v2/
+testkit/apsis-musical/
+
 # Owner-preferred Murmur production recipes and their regenerated proof audio.
 testkit/murmur-approved-audition/

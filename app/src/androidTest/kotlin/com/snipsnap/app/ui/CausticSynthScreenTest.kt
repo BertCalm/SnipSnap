@@ -169,6 +169,24 @@ class CausticSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun a_macro_edit_survives_recreation_in_the_same_ui_event() {
+        val root = shelf()
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to "ALLOY")
+        show(root, settings)
+        val adjust = compose.onNodeWithContentDescription("SOURCE", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action!!
+
+        // Navigation can dispose the screen before its persistence effect runs.
+        // Do not pump a frame between the final edit and recreating the bench.
+        compose.runOnIdle {
+            assertTrue(adjust(.68f))
+            generation++
+        }
+        pump()
+        assertEquals(.68f, progress("SOURCE"), .00001f)
+    }
+
+    @Test
     fun a_stale_reserved_hold_setting_cannot_trap_a_restored_note() {
         val root = shelf()
         val patch = CausticPatch("Saved root", CausticVoice.ALLOY,

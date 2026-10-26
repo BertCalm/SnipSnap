@@ -21,6 +21,8 @@ object PadHit {
         val gainRight: Float,
         /** Playback speed over the sample's own rate; 1.0 = as recorded. */
         val pitchRatio: Double,
+        /** -1 = finite; otherwise the native voice repeats from this frame. */
+        val loopStartFrame: Long = -1,
     ) {
         init {
             require(startFrame >= 0 && endFrameExclusive > startFrame) { "empty window $startFrame..$endFrameExclusive" }
@@ -160,6 +162,7 @@ object PadHit {
             chain.window(base + hitIndex % cycle, frames)
         }
         if (window.isEmpty()) return null
-        return Hit(file, window.first, window.last + 1, left, right, ratio)
+        return Hit(file, window.first, window.last + 1, left, right, ratio,
+            loopStartFrame = if (pad.loop && !pad.oneShot && pad.chain == null) window.first else -1)
     }
 }
