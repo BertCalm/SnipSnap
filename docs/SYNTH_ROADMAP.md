@@ -6,16 +6,26 @@ them through the exact same kit → preflight → export pipeline as captured
 snips. A kit where pad A01 came off a YouTube rip and pad A02 came out of the
 synth is one kit, not two features.
 
-**Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
+**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
+motion/contact core. Higher contacts survive the 243-point middle-control grid
+and disappear when mount coupling is removed. Saved model/note/velocity/cue
+recipes and 92 finite audition cases are available outside the factory roster
+and phone picker. Historical six-voice recordings remain separate references.
+HOLD loops, other voices, phone cost and sonic acceptance remain open. See
+[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
+
+**Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
-cohorts, surviving cores, and extended ringing strands. The finite prototype has
-replayable recipes, a dry listening matrix with mechanism comparisons, and a
-prototype kit outside the factory roster and phone picker. HOLD remains zero;
-reconstruction, the other voices, and factory expansion follow listening review.
+cohorts, surviving cores, and extended ringing strands. The owner approved the
+second source pass. Six model-2 presets, the phone SYNTH editor and a dry
+sixteen-pad FRESH TAPE starter preserve complete note/velocity/seed/model recipes.
+Production rendering shares its source stages with diagnostic evidence and adds
+a bounded completed-audio cache. Pads play once despite long-sample LOOP filing.
+HOLD remains zero; reconstruction, the other voices, and factory expansion remain later work.
 See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
-contains 58 raw/matched cases and a ten-clip starter download. The owner's
-listening verdict remains pending.
+opens with eighteen model-2 comparisons and retains the original 58-case matrix.
+Full preset curation, physical phone performance and MPC listening remain open.
 
 **Chamber finite instrument (2026-10-24).** HYBRID and AQUARIUM place a
 simultaneously struck membrane, bar, cowbell and triangle in a rectangular room
@@ -393,28 +403,29 @@ Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### WICK — ignite, cascade, recover
 
-The [supplied specification](WICK_SPEC.md) is being tested as a five-voice
-PLUCK/WOOD/BREATH/BUBBLE/FLICKER listening prototype. One pitched complex source feeds three
+The [supplied specification](WICK_SPEC.md) is being tested as a six-voice
+PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE listening prototype. One pitched complex source feeds three
 parallel low-pass gates. Each has bounded charge and recoverable availability;
 real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
 TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
 and velocity. The oscillator/filter techniques draw on TIDE; the gate network
 and release scheduler are new.
 
-Twenty-one provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+Twenty-five provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
 kit support the first audition. WICK stays outside the factory preset roster,
 phone picker and starter menu pending listening. Run
 `./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
-controls, register/velocity probes, mechanism ablations, held examples and six
-musical phrases: five solo voices using one score and the retained three-voice arrangement.
+controls, register/velocity probes, mechanism ablations, held examples and seven
+musical phrases: six solo voices using one score and the retained three-voice arrangement.
 The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](WICK.md) retain the scope and current limits.
-RATTLE and the proposed 36-preset library follow listening.
+The proposed 36-preset library follows listening to RATTLE.
 The longer pitched BUBBLE response is the owner's preferred working baseline;
 the owner also accepted WOOD's dry pitched body with smaller answering rebounds.
 The owner also accepted BREATH's sustained root and soft overlapping openings.
-FLICKER now tests brief metallic answers around a clear pitched body;
-[design notes](WICK_FLICKER.md) explain the target and its limits.
+The owner also accepted FLICKER's brief metallic answers around a clear pitched body.
+RATTLE now tests pitched clusters with depleted and recovering pulse strength;
+[design notes](WICK_RATTLE.md) explain the target and its limits.
 
 ### TANGLE — oscillators that catch and release
 

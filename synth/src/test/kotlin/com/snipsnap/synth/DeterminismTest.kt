@@ -10,6 +10,27 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+        for (voice in CairnVoice.entries) {
+            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
+            val a = patch.render().samples
+            Cairn.clearMotionCache()
+            assertContentEquals(a, patch.render().samples)
+        }
+    }
+
+    @Test
+    fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {
+        for (voice in TidalVoice.entries) {
+            val patch = TidalPresets.forVoice(voice).first().copy(
+                midi = 57, velocity = .41f, seed = 9_007_199_254_740_993L,
+            )
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recalled.render().samples,
+                "$voice must retain the finite encounter through its complete recipe")
+        }
+    }
 
     @Test
     fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {

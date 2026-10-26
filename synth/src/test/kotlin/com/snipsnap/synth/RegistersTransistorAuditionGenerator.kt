@@ -178,7 +178,9 @@ object RegistersTransistorAuditionGenerator {
     }
 
     private fun cases(): List<Case> = buildList {
-        val presets = RegistersPresets.forVoice(voice).map { it.copy(model = 4) }
+        val presets = RegistersPresets.forVoice(voice)
+            .filter { it.name in listOf("Compact Keys", "Clean Combo", "Garage Buzz") }
+            .map { it.copy(model = 4) }
         check(presets.map { it.name } == listOf("Compact Keys", "Clean Combo", "Garage Buzz"))
         check(presets.all { it.model == 4 && it.midi == 60 && it.velocity == 1f })
         for (note in listOf(48, 60, 69)) for (gesture in listOf("restrained", "expressive")) {

@@ -164,6 +164,14 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
+and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
+contact-aligned playback, a 243-point middle-control check and a 92-clip audition
+are available outside the factory roster and phone picker. The earlier six-voice
+recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
+new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
+provides the next listening gate. HOLD loops and the other four voices are deferred.
+
 APSIS's first listening prototype is a pitched center with independently
 orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
 COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
@@ -368,7 +376,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 51 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 52 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -407,14 +415,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD, BREATH, BUBBLE and FLICKER share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Twenty-one provisional recipes stay outside
+PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Twenty-five provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, five solo
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, six solo
 musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
-[implementation notes](docs/WICK.md) describe this first round; the remaining
-remaining proposed voice and full preset library follow the listening verdict.
+[implementation notes](docs/WICK.md) describe this six-voice round; the full
+preset library follows listening to RATTLE.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -587,15 +595,17 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
-Its latest body revision adds a rounded same-pitch foundation while retaining
-the opening click and all original model-4 recipes.
-Nine starting settings, saved recipes, native velocity and CLI rendering share
+Its fuller body adds a rounded same-pitch foundation while retaining the opening
+click. The sustain revision keeps subtle ensemble movement in short held loops
+and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
+Ten starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
-compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
-baseline and retains the original chiff and airflow comparisons. TRANSISTOR
-awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
+opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
+preset with stronger bank motion and vibrato and a nine-zone MPC download. The
+earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of Rich Ensemble is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
@@ -920,6 +930,15 @@ listening pack, native patch downloads and MPC 3/XPM starter export. The
 [LATTICE notes](docs/LATTICE.md) separate the accepted source direction from new
 HOLD/preset listening and phone/MPC verification still to come.
 
+TIDAL brings two original source populations through a seeded encounter:
+PAIR gathers and passes, while STREAM exposes evolving ringing material.
+Its approved model-2 source direction, six finite factory presets and dry
+sixteen-pad starter are available through SYNTH and FRESH TAPE. ROOT,
+VELOCITY, source and exact variation seed stay in the editable recipe;
+the 9.8-second pads play once. Original model-1 recipes remain reproducible.
+See [TIDAL](docs/TIDAL.md) for the finite scope, rendering measurements,
+MPC kit export and remaining device checks.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -928,8 +947,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, CHAMBER and GRAINS round out the lineup —
-62 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
+63 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1136,7 +1155,7 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
+OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing

@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+/** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
+tasks.register<JavaExec>("generateCairnAudition") {
+    group = "distribution"
+    description = "Render CAIRN KNOCK/ANSWER, common controls, sweeps, causes, recipes and render cost."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnOutput").orNull ?: "${rootDir}/testkit/cairn-reconstruction")
+    if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
 /** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
 tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
     group = "distribution"
@@ -75,6 +87,37 @@ tasks.register<JavaExec>("benchmarkFilament") {
     args("--samples=${providers.gradleProperty("filamentBenchmarkSamples").orNull ?: "5"}")
     providers.gradleProperty("filamentBenchmarkOutput").orNull?.let { args("--output=$it") }
     providers.gradleProperty("filamentBenchmarkLabel").orNull?.let { args("--label=$it") }
+}
+
+/** Render-only measurements; timings never decide whether correctness tests pass. */
+tasks.register<JavaExec>("benchmarkTidal") {
+    group = "verification"
+    description = "Measure TIDAL cold, geometry-warm and completed-cache rendering with exact audio hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    providers.gradleProperty("tidalBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+    args("--path=${providers.gradleProperty("tidalBenchmarkPath").orNull ?: "production"}")
+    args("--state=${providers.gradleProperty("tidalBenchmarkState").orNull ?: "all"}")
+    args("--cases=${providers.gradleProperty("tidalBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("tidalBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("tidalBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("tidalBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("tidalBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("tidalBenchmarkProfile").orNull?.let { args("--profile=$it") }
+}
+
+/** Sixteen finite TIDAL pads with complete saved recipes in both MPC formats. */
+tasks.register<JavaExec>("generateTidalKit") {
+    group = "distribution"
+    description = "Export sixteen finite TIDAL pads, editable recipes, and MPC 3/MPC 2 programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("tidalKitOutput").orNull ?: "${rootDir}/testkit/tidal-kit")
 }
 
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
@@ -386,7 +429,7 @@ tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
     args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
-/** Five-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
+/** Six-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
     description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
@@ -491,6 +534,29 @@ tasks.register<JavaExec>("generateRegistersTransistorDepthAudition") {
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r5")
     project.findProperty("registersR4Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
+/** Actual keyboard attack-to-loop pairs with the complete accepted R5 archive retained. */
+tasks.register<JavaExec>("generateRegistersTransistorSustainAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R5 audio and reviews, then compare model-5/model-6 keyboard sustain."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorSustainAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r6")
+    project.findProperty("registersR5Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
+/** Stronger current-model recipe options for listening before any factory change. */
+tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
+    group = "distribution"
+    description = "Compare current TRANSISTOR, warmer body and stronger ensemble at three notes without changing factory settings."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */

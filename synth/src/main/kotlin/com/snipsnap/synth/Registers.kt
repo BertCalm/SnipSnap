@@ -32,6 +32,7 @@ data class RegistersProbe(
     val rawPeak: Double,
     val cycleError: Double?,
     val seamError: Double?,
+    /** Constant bank detune, or nominal peak bank swing before vibrato when [spreadModulationHz] is nonzero. */
     val effectiveSpreadHz: Double,
     val motionHz: Double,
     val previousCycle: FloatArray? = null,
@@ -45,6 +46,8 @@ data class RegistersProbe(
     val airflowPreviousCycle: FloatArray? = null,
     val airflowCycleError: Double? = null,
     val airflowSeamError: Double? = null,
+    /** Model-6 TRANSISTOR held ensemble repeats at this rate; zero means constant detune. */
+    val spreadModulationHz: Double = 0.0,
 )
 
 /**
@@ -59,7 +62,7 @@ data class RegistersProbe(
  * the same loop, with the carrier adjusted by substantially less than a tenth of a cent.
  */
 object Registers {
-    const val MODEL_VERSION = 5
+    const val MODEL_VERSION = 6
     const val LEGACY_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
