@@ -318,7 +318,7 @@ class PrismSynthScreenTest : ComposeScreenTest() {
         pump()
         waitFor("selected source without stale macro overwrite", timeoutMillis = 30_000) {
             val live = draft(factory.voice)
-            live?.motion?.sourceId == "tessera-wooden-arrival" && live.macros["BODY"] == .23f && live.motion.evolve == .41f
+            live?.motion?.sourceId == "tessera-wooden-arrival" && live.macros["BODY"] == .23f && live.motion?.evolve == .41f
         }
         press("CHOOSE MOTION SOURCE")
         press("MOTION SOURCE HOLLOW GROWL")
