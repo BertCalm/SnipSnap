@@ -44,7 +44,7 @@ class OhmLegacyTest {
                 old.render().samples)
         }
         assertFailsWith<IllegalArgumentException> { Ohm.renderRaw(model = 0) }
-        assertFailsWith<IllegalArgumentException> { Ohm.renderRaw(model = 3) }
+        assertFailsWith<IllegalArgumentException> { Ohm.renderRaw(model = Ohm.MODEL_VERSION + 1) }
     }
 
     @Test

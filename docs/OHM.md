@@ -83,9 +83,22 @@ per-patch normalization. `render` levels the complete instrument once to
 the shared melodic reference and restores velocity dynamics afterward.
 There is no per-layer normalization or feedback limiter.
 
-These are finite samples. Separate notes and pads do not share an ensemble.
-Bowing, captured exciters, FM elder, grains, freeze and seamless HOLD are
-future work. No live plugin, cross-pad coupling or sustain-loop claim is made.
+Models 1 and 2 are finite samples. Separate notes and pads start fresh ensembles.
+The optional model-3 extension adds bowed and captured excitation, FM elder,
+source-audio grains, captured-buffer freeze and HOLD. It is explicitly selected
+through EXTEND; the accepted factory recipes remain model 2. See
+[the extension notes](OHM_EXPANDED.md) for its source, loop and instrument contracts.
+
+In model 3, HOLD below .99 extends the finite driven duration; at .99 or above,
+ordinary pads contain just the repeating region. MAKE INSTRUMENT preserves the
+arrival once and then loops the sustain until note-off. Bowed HOLD captures and
+joins a stretch of physical bowing; plucked/captured HOLD uses periodic driven
+excitation with independently checked physical continuation. The new audition
+labels that distinction and retains raw source/continuation evidence.
+
+The new source options are provisional listening studies, not additional factory
+presets. This is still offline synthesis: different notes do not exchange live
+audio, and source-buffer freeze is not a claim of FFT spectral freeze.
 
 ## Render responsiveness
 
@@ -174,8 +187,20 @@ fingerprints guard against attaching a recipe to a changed recording.
 ./gradlew :cli:test --tests '*OhmSynthCommandTest'
 ./gradlew :synth:generateOhmAudition
 ./gradlew :synth:generateOhmKit
+./gradlew :synth:generateOhmExpandedAudition
+./gradlew :shell:generateOhmExpandedHandoff
 ./gradlew :cli:run --args="synth OHM STRING --all --midi 60 --velocity 0.8 --seed 731 --out /tmp/ohm"
+./gradlew :cli:run --args="synth OHM STRING --model 3 --macros HOLD=1 --instrument --release 0.3 --out /tmp/ohm-keys"
 ```
+
+The extended audition writes `testkit/ohm-expanded-audition/`, preserving the
+original listening pack. Its isolated OFF/ON studies, phrases and held examples
+carry full model-3 recipes, including the original authored capture when used.
+The handoff task writes three provisional C3–C5 instruments with MPC 3 `.xty`,
+MPC 2 keygroup `.xpm`, shared PCM24 WAVs, instrument metadata and ordinary
+`.patch.json` recipes under `testkit/ohm-expanded-handoff/`. The source choices
+and saved release replay through CLI `--patch`; named controls can be edited
+through `--macros`. Native note, velocity and seed overrides remain available.
 
 The generator writes `testkit/ohm-audition/`: a listening page, 79 dry
 raw/matched PCM16 clips, recipes, measurements, audio hashes and a focused

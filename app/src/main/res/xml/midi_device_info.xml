@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- manufacturer and product must equal MIDI_DEVICE_MANUFACTURER and
+     MIDI_DEVICE_PRODUCT in MidiOut.kt: MidiInput recognises (and skips)
+     SnipSnap's own device by them. -->
+<devices>
+    <device manufacturer="SnipSnap" product="SnipSnap" tags="pads,keys">
+        <input-port name="SnipSnap In" />
+        <output-port name="SnipSnap Out" />
+    </device>
+</devices>

@@ -126,6 +126,8 @@ import com.snipsnap.synth.VentVoice
 import com.snipsnap.synth.Wick
 import com.snipsnap.synth.WickPatch
 import com.snipsnap.synth.OhmPatch
+import com.snipsnap.synth.Ohm
+import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.synth.WickPresets
 import com.snipsnap.synth.WickVoice
 import java.io.File
@@ -244,8 +246,8 @@ object SynthCommand {
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(ApsisPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE)) {
-            throw CliError("--patch is only supported by APSIS, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK and LATTICE, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(ApsisPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE)) {
+            throw CliError("--patch is only supported by APSIS, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, LATTICE and OHM, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -292,7 +294,8 @@ object SynthCommand {
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
-                else -> throw CliError("--macros is only supported by APSIS, CONTOUR, ORIGAMI, CAUSTIC and LATTICE, got $engine")
+                OhmPatch.ENGINE -> Ohm.macrosFor(3)
+                else -> throw CliError("--macros is only supported by APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE and OHM, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -330,7 +333,7 @@ object SynthCommand {
             }
         }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 ApsisPatch.ENGINE -> Apsis.MIDI_MIN..Apsis.MIDI_MAX
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
@@ -423,7 +426,8 @@ object SynthCommand {
                 CreasePatch.ENGINE -> Crease.MODEL_VERSION
                 TidalPatch.ENGINE -> Tidal.MODEL_VERSION
                 CausticPatch.ENGINE -> CausticInstrument.MODEL_VERSION
-                else -> throw CliError("--model is only supported by OSPREY, CREASE, TIDAL and CAUSTIC, got $engine")
+                OhmPatch.ENGINE -> Ohm.MODEL_VERSION
+                else -> throw CliError("--model is only supported by OSPREY, CREASE, TIDAL, CAUSTIC and OHM, got $engine")
             }
             raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
@@ -433,7 +437,9 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL and FLOCK RIBBON export a keys instrument here - try snipsnap synth CONTOUR KEY --instrument")
+            if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride != 3) throw CliError("OHM --instrument requires model 3")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON and OHM export a keys instrument here")
+            if (engine == OhmPatch.ENGINE && opts["--attack"] != null) throw CliError("OHM keeps its authored attack; use --release for the held instrument")
             if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
             if (engine == ContourPatch.ENGINE && opts["--attack"] != null) throw CliError("CONTOUR --instrument uses settled sustain without the finite attack; omit --attack and use --release")
             if (engine == RegistersPatch.ENGINE && opts["--attack"] != null) throw CliError("REGISTERS keeps its authored attack - use --release to shape the held instrument")
@@ -622,7 +628,12 @@ object SynthCommand {
             else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
-            else if (withNote is OhmPatch && seedOverride != null) withNote.copy(seed = seedOverride)
+            else if (withNote is OhmPatch) {
+                val model = modelOverride ?: if (instrument || "HOLD" in macroOverrides) 3 else withNote.model
+                if (model < 3 && withNote.model == 3) throw CliError("OHM source options cannot be downgraded; choose a legacy recipe")
+                withNote.copy(model = model, seed = seedOverride ?: withNote.seed,
+                    macros = Ohm.defaults(model) + withNote.macros + macroOverrides)
+            }
             else withNote
         }
 
@@ -661,6 +672,17 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument: ${e.message ?: "ORIGAMI supports model-4 FAN and STILL only"}")
         } else null
+        val ohmInstrumentSpec = if (instrument && engine == OhmPatch.ENGINE) try {
+            val patch = chosen.single() as OhmPatch
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .02f..3f }
+                    ?: throw CliError("OHM --release wants finite seconds in 0.02..3")
+            } ?: patch.releaseSeconds
+            OhmPadMaker.Spec(patch.copy(model = 3, macros = Ohm.defaults(3) + patch.macros + ("HOLD" to 1f),
+                releaseSeconds = release))
+        } catch (e: IllegalArgumentException) {
+            throw CliError("OHM --instrument: ${e.message ?: "invalid held recipe"}")
+        } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
@@ -669,6 +691,7 @@ object SynthCommand {
         if (creaseInstrumentSpec != null) return makeCreaseInstrument(creaseInstrumentSpec, dir, out)
         if (contourInstrumentSpec != null) return makeContourInstrument(contourInstrumentSpec, dir, out)
         if (origamiInstrumentSpec != null) return makeOrigamiInstrument(origamiInstrumentSpec, dir, out)
+        if (ohmInstrumentSpec != null) return makeOhmInstrument(ohmInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
         if (drone) return makeDrone(voice, chosen.single(), opts, dir, out)
 
@@ -676,23 +699,28 @@ object SynthCommand {
             // What SEND TO PAD would make: the string machines take their ENSEMBLE, so the file you audition is the pad you would get.
             val landing = Presets.landingFor(engine, voice, patch.macros)
             val heldRibbon = if (patch is FlockPatch && patch.playback == FlockPlayback.HELD) FlockHeld.render(patch) else null
-            val snip = if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
+            val heldOhm = if (patch is OhmPatch && Ohm.isHeld(patch)) Ohm.renderHeld(patch) else null
+            val snip = if (heldOhm != null) heldOhm.snip else if (heldRibbon != null) heldRibbon.snip else if (patch is TesseraPatch && velocityOverride != null) {
                 val dry = Velocity.atVelocity(patch, velocityOverride)
                 landing?.process(dry) ?: dry
             } else if (landing == null) patch.render() else PadRecipe(patch, landing).render()
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
-            val sampler = heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
-                SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
+            val sampler = heldOhm?.let { SmplChunk((patch as OhmPatch).midi,
+                SmplChunk.Loop(it.loopStartFrame, it.snip.frameCount.toLong())) }
+                ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
+                    SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
             if (patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
             if (patch is FlockPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
+            if (patch is OhmPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
                 heldRibbon != null -> "  (captured RIBBON sustain, loop-enabled WAV)"
+                heldOhm != null -> "  (OHM attack plus captured sustain, loop-enabled WAV)"
                 patch is LatticePatch && Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.LOOP -> "  (held loop, mono)"
                 landing != null -> "  (lands with ENSEMBLE, stereo)"
                 else -> ""
@@ -700,6 +728,19 @@ object SynthCommand {
             out.println("${file.name}  ${"%.2f".format(Locale.ROOT, snip.durationSeconds)}s$mode")
         }
         out.println("${chosen.size} rendered into ${dir.path}")
+        return 0
+    }
+
+    private fun makeOhmInstrument(spec: OhmPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = OhmPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            OhmPadMaker.renderZone(spec, midi)
+        }
+        OhmPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} OHM zones, authored attack and sustain, RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
     }
 

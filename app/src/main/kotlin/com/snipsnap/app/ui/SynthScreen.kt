@@ -109,6 +109,7 @@ import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.FlockPadMaker
+import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ContourPadMaker
@@ -238,7 +239,6 @@ import com.snipsnap.synth.Osprey
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Ohm
-import com.snipsnap.synth.OhmGesture
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OhmVoice
 import com.snipsnap.synth.Oven
@@ -574,6 +574,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
     is CausticPatch -> CausticInstrument.defaults(editable.voice, editable.model)
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
+    is OhmPatch -> Ohm.defaults(editable.model)
     else -> base
 }
 
@@ -754,7 +755,7 @@ fun SynthScreen(
                     val restoredScanned = if (e == Engine.SCANNED_CHAIN) seed.restoredScannedRecipes[v as ScannedChainVoice]?.patch?.macros else null
                     put(e to v, when {
                         workingPatch != null -> editableDefaults(e.defaults(v), workingPatch) + editableMacros(workingPatch)
-                        e == Engine.OHM && seed.restoredOhm != null -> defaults + seed.restoredOhm.macros
+                        e == Engine.OHM && seed.restoredOhm != null -> Ohm.defaults(seed.restoredOhm.model) + seed.restoredOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
@@ -980,6 +981,7 @@ fun SynthScreen(
     }
     fun keepOhmPatch(patch: OhmPatch) {
         loadedPatchesByVoice[Engine.OHM to OhmVoice.STRING] = patch
+        macrosByVoice[Engine.OHM to OhmVoice.STRING] = Ohm.defaults(patch.model) + patch.macros
         // Write with the edit, before navigation can dispose remember-state.
         settings[SETTINGS_OHM_PATCH] = patch.toJsonText()
     }
@@ -1504,13 +1506,14 @@ fun SynthScreen(
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val cls = engine.drumClass(voice, macros)
+                val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
                     is ApsisPatch -> patch.midi
                     is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
                     is FilamentPatch -> patch.midi
+                    is OhmPatch -> patch.midi
                     is ChamberPatch -> patch.midi
                     else -> null
                 }
@@ -1527,6 +1530,7 @@ fun SynthScreen(
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
+                                patch is OhmPatch && Ohm.isHeld(patch) -> 20f
                                 patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
                                 else -> null
                             }
@@ -1673,6 +1677,7 @@ fun SynthScreen(
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
+        (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch))
     val heldInstrumentReady = when (engine) {
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
@@ -1731,6 +1736,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
             if (FlockPadMaker.supports(patch)) HeldSpec.Flock(FlockPadMaker.Spec(patch)) else null
         }
+        Engine.OHM -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch
+            if (OhmPadMaker.supports(patch)) HeldSpec.Ohm(OhmPadMaker.Spec(patch)) else null
+        }
         Engine.CONTOUR -> HeldSpec.Contour(ContourPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, heldSheet.holdRelease,
         ))
@@ -1752,7 +1761,12 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = withContext(Dispatchers.Default) { spec.preview { !isActive } }
+                val heard = if (spec is HeldSpec.Ohm) {
+                    val renderJob = coroutineContext[Job]
+                    runInterruptible(Dispatchers.Default) {
+                        spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
+                    }
+                } else withContext(Dispatchers.Default) { spec.preview { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -1781,7 +1795,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -1792,9 +1806,12 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = withContext(Dispatchers.Default) {
-                                spec.renderZone(midi) { !isActive }
-                            }
+                            val note = if (spec is HeldSpec.Ohm) {
+                                val renderJob = coroutineContext[Job]
+                                runInterruptible(Dispatchers.Default) {
+                                    spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
+                                }
+                            } else withContext(Dispatchers.Default) { spec.renderZone(midi) { !isActive } }
                             withContext(Dispatchers.Main) { heldSheet.holdDone += spec.progressPerZone }
                             note
                         }
@@ -1994,7 +2011,7 @@ fun SynthScreen(
         if (spreadOpening || sendBusy || entry == null) return
         spreadOpening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
-        val cls = engine.drumClass(voice, macros)
+        val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
         scope.launch {
             try {
                 val spreadJob = coroutineContext[Job]
@@ -2440,54 +2457,16 @@ fun SynthScreen(
                     )
                 }
 
-                // OHM's performance lives beside its five timbre/relationship controls.
-                // Copy the whole recipe so a loaded seed or legacy model never changes.
+                // The extracted source panel returns complete recipes, including captured
+                // excitation and the opt-in held model, without expanding this composable's locals.
                 if (engine == Engine.OHM) {
-                    val ohmPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch
-                    val midiSpan = (Ohm.MIDI_MAX - Ohm.MIDI_MIN).toFloat()
-                    MacroSlider(
-                        label = "NOTE",
-                        value = (ohmPatch.midi - Ohm.MIDI_MIN) / midiSpan,
+                    // Keep the saved name. buildCurrentPatch's name argument replaces it,
+                    // and a display name would discard a recipe the player already named.
+                    OhmControls(
+                        patch = buildCurrentPatch((loadedPatch as? OhmPatch)?.name ?: engine.patchDisplayName(voice)) as OhmPatch,
+                        entry = entry,
                         fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(ohmPatch.midi),
-                        onValueChange = { value ->
-                            updateOhmPerformance { patch ->
-                                patch.copy(midi = (Ohm.MIDI_MIN + value * midiSpan).roundToInt()
-                                    .coerceIn(Ohm.MIDI_MIN, Ohm.MIDI_MAX))
-                            }
-                        },
-                    )
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = ohmPatch.velocity,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            updateOhmPerformance { patch -> patch.copy(velocity = value.coerceIn(0f, 1f)) }
-                        },
-                    )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        for (gesture in OhmGesture.entries) {
-                            ActionButton(
-                                gesture.name,
-                                scheme,
-                                enabled = true,
-                                lit = ohmPatch.gesture == gesture,
-                                modifier = Modifier.weight(1f).semantics { selected = ohmPatch.gesture == gesture },
-                                accessibilityLabel = "OHM ${gesture.name}",
-                            ) {
-                                updateOhmPerformance { patch -> patch.copy(gesture = gesture) }
-                            }
-                        }
-                    }
-                    TapeText(
-                        when {
-                            macros.getValue("MEDDLING") == 0f -> "ONE FINITE NOTE. MEDDLING AT ZERO PLAYS SOLO."
-                            ohmPatch.gesture == OhmGesture.GATHER -> "ONE FINITE NOTE. COMPANY ARRIVES AS IT RINGS."
-                            else -> "ONE FINITE NOTE. LENGTH SHAPES THE RING."
-                        },
-                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                        onPatchChanged = { next -> updateOhmPerformance { next } },
                     )
                 }
 
@@ -3014,9 +2993,11 @@ fun SynthScreen(
                         val next = scrambled.mapValues { (key, value) -> value.coerceIn(macroRange(key)) }
                         // ORIGAMI's six controls describe one finite pitched note.
                         // Reroll its geometry while retaining the displayed/saved pitch.
-                        val values = if (engine == Engine.ORIGAMI) {
-                            next + ("TUNE" to macros.getValue("TUNE"))
-                        } else next
+                        val values = when (engine) {
+                            Engine.ORIGAMI -> next + ("TUNE" to macros.getValue("TUNE"))
+                            Engine.OHM -> next + macros.filterKeys { it == "HOLD" }
+                            else -> next
+                        }
                         macrosByVoice[engine to voice] = values
                         keepOhmMacros(values)
                         ensureNativeDraft()
@@ -3266,6 +3247,9 @@ fun SynthScreen(
                         if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.OHM) updateOhmPerformance {
+                            it.copy(releaseSeconds = OhmPadMaker.RELEASE.value(fraction)
+                                .coerceIn(OhmPadMaker.RELEASE.lo, OhmPadMaker.RELEASE.hi))
                         } else heldSheet.holdRelease = fraction
                     },
                     onTouchLayers = { heldSheet.holdTouchLayers = it },
@@ -3980,6 +3964,19 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
             FlockPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Ohm(private val spec: OhmPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OhmPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val releaseFraction get() = OhmPadMaker.RELEASE.fraction(spec.releaseSeconds)
+        override val knobLabel get() = "RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "C3–C5 · KEEPS THE ARRIVAL, THEN HOLDS THE SHARED TONE. LET GO TO RELEASE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OhmPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = OhmPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            OhmPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Origami(private val spec: OrigamiPadMaker.Spec) : HeldSpec {
@@ -4710,7 +4707,7 @@ private enum class Engine {
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
-        OHM -> DrumClass.TONAL
+        OHM -> if ((macros["HOLD"] ?: 0f) >= .99f) DrumClass.LOOP else DrumClass.TONAL
         OVERLAP -> Overlap.drumClassFor(voice as OverlapTopology, macros)
         VENT -> Vent.drumClassFor(voice as VentVoice, macros)
         PRISM -> Prism.drumClassFor(voice as PrismVoice, macros)

@@ -60,6 +60,20 @@ object MidiPads {
     }
 
     /**
+     * The note that plays [slot] (1..[PadNoteMap.PAD_COUNT]) under [map]; null outside the pads.
+     * The outgoing side of the same map [slotForNote] reads, so an MPC on the
+     * other end plays the pad SnipSnap played.
+     */
+    fun noteForSlot(slot: Int, map: Map): Int? {
+        if (slot !in 1..PadNoteMap.PAD_COUNT) return null
+        val note = when (map) {
+            Map.MPC -> PadNoteMap.DEFAULT[slot - 1]
+            Map.IN_ORDER -> IN_ORDER_FIRST_NOTE + slot - 1
+        }
+        return note.takeIf { it in 0..127 }
+    }
+
+    /**
      * Route one event to a pad screen's own two verbs: [onHit] is what a
      * finger down calls, [onRelease] a finger up. The screen's hit is the
      * one place choke groups and the voice allocator are reasoned about;

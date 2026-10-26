@@ -273,7 +273,7 @@ object Velocity {
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
-        is OhmPatch -> Ohm.MACROS
+        is OhmPatch -> Ohm.macrosFor(patch.model)
         is CausticPatch -> CausticInstrument.macrosFor(patch.voice, patch.model)
     }
 

@@ -32,6 +32,14 @@ object PadHit {
     /** Touch velocity 0..1 as the MPC's 0..127. */
     fun midiVelocity(velocity: Float): Int = (velocity.coerceIn(0f, 1f) * 127f).roundToInt()
 
+    /** Shared by playback and its layer indicator, including the existing gap fallback. */
+    fun layerIndex(pad: KitPad, velocity: Float): Int? {
+        if (pad.velocityLayers.isEmpty()) return null
+        val midi = midiVelocity(velocity)
+        return pad.velocityLayers.indexOfFirst { midi in it.velStart..it.velEnd }
+            .takeIf { it >= 0 } ?: pad.velocityLayers.lastIndex
+    }
+
     /**
      * The softest a touch-Y velocity can be: quiet, and deliberately not
      * silent — a pad that makes no sound reads as broken rather than soft.
@@ -140,11 +148,7 @@ object PadHit {
         require(gainVelocity in 0f..1f) { "gain velocity 0..1, got $gainVelocity" }
         require(hitIndex >= 0) { "hitIndex is a count, got $hitIndex" }
         val midi = midiVelocity(velocity)
-        val file = if (pad.velocityLayers.isEmpty()) {
-            pad.sampleFile
-        } else {
-            (pad.velocityLayers.firstOrNull { midi in it.velStart..it.velEnd } ?: pad.velocityLayers.last()).sampleFile
-        }
+        val file = layerIndex(pad, velocity)?.let { pad.velocityLayers[it].sampleFile } ?: pad.sampleFile
         val frames = framesOf(file)?.takeIf { it > 0 } ?: return null
         val (left, right) = gains(pad.level, pad.pan, gainVelocity)
         val ratio = pitchRatio(pad.tuneCoarse, pad.tuneFine)
