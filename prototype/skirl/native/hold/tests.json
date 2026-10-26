@@ -102,5 +102,14 @@
     "Owner listening review pending for new HOLD.",
     "An actual rendered-audio classifier exclusion was added after this focused run; the final complete JVM gate must verify it.",
     "Full JVM gate is recorded separately by the integrating session."
-  ]
+  ],
+  "subsequentFullValidation": {
+    "report": "gate.json",
+    "exitCode": 0,
+    "tests": 6006,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "allCurrentClassifierAndWholeCycleAssertionsIncluded": true
+  }
 }

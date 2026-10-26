@@ -2366,7 +2366,8 @@ auditions received positive feedback; Kotlin listening remains pending. Smaller,
 launch-dependent terminal bands replace the broad handoff cube because it contains
 friction failures. Python calibration checked 84 complete trajectories and 420 exits,
 with required friction at most .67513 against assumed .8 and rolling durations
-1.873–5.250 s. The full 5,994-test JVM gate passed. Native register/material tests stayed
+1.873–5.250 s. The original finite 5,994-test gate passed; the current HOLD gate passed all 6,006 JVM
+tests with zero failures, errors or skips. Native register/material tests stayed
 within 19.753 cents; the 106-case audition passed 212 pitch windows and reproduced all
 production WAVs across separate JVM runs. Warm default render medians of 148.85/160.73 ms
 missed the 50 ms target in that historical run. Exact silent-tail/resampling optimizations

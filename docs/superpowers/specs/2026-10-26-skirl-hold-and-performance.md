@@ -102,12 +102,15 @@ reproduction commands are under `prototype/skirl/native/performance/`.
   `Tide`, `Resampler`, CLI and velocity APIs were read before implementation.
 - Measured: 106 finite production/prelevel arrays and acoustic diagnostic ledgers match
   frozen model-1 jars bit-for-bit after the optimizations. The final report records hashes.
-- Measured: 36 held register/material/touch cases stay within `19.114 cents`, confidence
+- Measured: the initial model-2 36-case matrix stays within `19.114 cents`, confidence
   at least `.8387`, absolute DC below `7.1e-9`, and pass independent cycle and wrap guards.
-  A disturbed preceding cycle fails both unchanged `1e-3` error limits.
+  A disturbed preceding cycle fails both unchanged `1e-3` error limits. Current model-3
+  matrix DC is below `8.5e-9`, with the same root/confidence bounds.
 - Measured: the isolated model-3 proof passes all 15 changed test methods, including
   genuine span convergence, 36 actual LOOP classifications and 12 frozen model-2 Float
-  hashes/held markers. Normal Gradle validation is recorded separately; a LOOP duration
+  hashes/held markers. Normal Gradle focus passes 46 tests, and the final nine-module
+  JVM gate passes all 6,006 tests with zero failures, errors or skips. Exact source hashes
+  and counts are in `prototype/skirl/native/hold/gate.json`. A LOOP duration
   classification does not substitute for the independent pitch and sound checks.
 - Measured: the final pack retains one refused estimate among 36 fixed windows and six
   refused estimates among 24 soft-C2 phase windows. All 12 primitive-cycle estimates return

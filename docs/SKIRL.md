@@ -167,7 +167,11 @@ maximum normalized spectral band-mass L1 difference was `.000284405`; maximum st
 mass from 15 kHz to Nyquist was `2.232e−7`. These are spectral comparisons, not a direct
 measurement of alias energy. MIDI 108 is outside the production note range.
 
-The complete nine-module JVM gate passed: **5,994 tests, zero failures or skips**.
+The original finite gate passed 5,994 tests. The current model-3 nine-module JVM gate
+passed **6,006 tests, zero failures, errors or skips**, including all final loop-filing,
+legacy replay and whole-cycle assertions. Source hashes and module counts are in
+[`hold/gate.json`](../prototype/skirl/native/hold/gate.json). Android was not included
+because no SDK is installed.
 The final audition covered 106 renders and 212 early/tail pitch windows, with worst
 root error 18.342 cents and minimum confidence .7974. All 106 production WAVs matched
 a separate JVM preflight byte-for-byte. The selected offline listening ZIP contains

@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "baseCommit": "4ecd6fe1a14ac24a1ee446d87c81b35d5c8b8778",
+  "exitCode": 0,
+  "command": "./gradlew --offline -Dhttps.proxyHost=proxy -Dhttps.proxyPort=8080 -Dhttp.proxyHost=proxy -Dhttp.proxyPort=8080 --no-daemon --parallel --max-workers=4 --init-script prototype/skirl/native/hold/test-workers.init.gradle test",
+  "moduleCounts": {
+    "audio": {
+      "tests": 444,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 59
+    },
+    "cli": {
+      "tests": 205,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 36
+    },
+    "json": {
+      "tests": 16,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 2
+    },
+    "kit": {
+      "tests": 396,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 62
+    },
+    "loop": {
+      "tests": 421,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 34
+    },
+    "mpc3": {
+      "tests": 93,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 11
+    },
+    "shell": {
+      "tests": 1238,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 168
+    },
+    "synth": {
+      "tests": 3154,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 320
+    },
+    "xpm": {
+      "tests": 39,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 5
+    }
+  },
+  "totals": {
+    "tests": 6006,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "androidIncluded": false,
+  "androidReason": "No SDK installed; settings.gradle automatically omits :app. Stub-backed harness API check is recorded separately.",
+  "allCurrentHoldAssertionsIncluded": true,
+  "sourceSha256": {
+    "app/src/androidTest/kotlin/com/snipsnap/app/SkirlRenderBenchmark.kt": "dd388365a3e35d1bfabf8956475b1d0138e2bd9232ca909004af521466881d2b",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "c290c43c958106f847873eb4f01cd6ede23050bdcc28259f02af0e440e4a19a9",
+    "audio/src/test/kotlin/com/snipsnap/audio/ResamplerTest.kt": "4ac6b041d8013ba87d79488b0c08a8a234b2ffbf999bbe05364252d45b476cfc",
+    "cli/src/main/kotlin/com/snipsnap/cli/Main.kt": "78e5e7f812b8730054423c72a4cdc90d76de6cb13bd3c8e552891f29e41cdf94",
+    "cli/src/main/kotlin/com/snipsnap/cli/SynthCommand.kt": "f883d8b3443b064b88622f1eb66218bd93990327eaa909d7486a1bd35f1abda6",
+    "cli/src/test/kotlin/com/snipsnap/cli/SkirlSynthCommandTest.kt": "c8e3383fe2c3985ec05f8288b36deaf6b644849b14d17333d57cae54e3d47f9a",
+    "prototype/skirl/native/hold/test-workers.init.gradle": "23d9724c4f9682d88513554f8ddaf079612f78315a2d249b566fc1e95d964764",
+    "synth/build.gradle.kts": "ad518336e262b5f99ddba1ee0bd63cc2cc83015c4e56eb821c2ffb370707f4f3",
+    "synth/src/main/kotlin/com/snipsnap/synth/Skirl.kt": "3006978436f46be7d77db6ad8d36f01a958beac0480e519d9cf1a4461784a4d4",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlAcoustics.kt": "e889018c1a5cfc8e0d522186c26bc625043a90f2c21555799249bb581187d386",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlHold.kt": "5fb391e15ec1889d2254efc7275941ec38ca0a468e2bc83b8bc6ca6d0530e5f0",
+    "synth/src/main/kotlin/com/snipsnap/synth/SkirlPatch.kt": "e267ed92486db27c86551f2c4e58cead92f7120f93a608fedaf79d6daa3f20fe",
+    "synth/src/test/kotlin/com/snipsnap/synth/SkirlHoldAuditionGenerator.kt": "a8cf9773331bbd81c7028c6fd8b4e8cfc4c313655e4f8270f544b46de7398d16",
+    "synth/src/test/kotlin/com/snipsnap/synth/SkirlHoldTest.kt": "991eee3484cfd563a4c8c7d36e193986fec4265a08606422489269d1d8bbd14f",
+    "synth/src/test/kotlin/com/snipsnap/synth/SkirlPatchTest.kt": "7b3d804f7dec8e1359cf7d74d32353bdc3097021706be9b6bf987e579b7d37ee",
+    "synth/src/test/kotlin/com/snipsnap/synth/SkirlTest.kt": "c75d89efd11dcbd7befe750b2ae0ce5351fe1b8786df68c5c3d38b5ac946e190"
+  },
+  "testWorkerInitSha256": "23d9724c4f9682d88513554f8ddaf079612f78315a2d249b566fc1e95d964764",
+  "logSha256": "5c72378046d3469b6dded19b1a4ac80efbc906f2d433d3d01e33e8c16eb58dec",
+  "logName": "skirl-hold-full-test.log",
+  "implementationCommit": "2ce893b53e51b418f894291c681427fbc446e0d5",
+  "model2FilingFailureReport": "model2-filing-failure.json",
+  "priorInterruptedGates": [
+    {
+      "exitCode": 143,
+      "reason": "Stopped to restart on final CLI sampler metadata and test sources; no passed claim.",
+      "logName": "skirl-hold-full-before-final-freeze.log"
+    },
+    {
+      "exitCode": null,
+      "reason": "Environment restarted before task completion; no exit result or passed claim.",
+      "logName": "skirl-hold-full-interrupted-environment.log"
+    }
+  ],
+  "inputsFrozenSinceGateStart": true,
+  "validatedSourceCommit": "c750cd551d1ebbe5ae8d12ae87739264e95a311c",
+  "model": 3,
+  "sourceInputSnapshotSha256": "071b68cf2aeeedad520b64feec04dc4a228e6fba91c66943e0cc1635450db27c"
+}

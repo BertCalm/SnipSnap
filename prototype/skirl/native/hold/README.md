@@ -4,9 +4,11 @@ This folder separates acoustic capture evidence from the original finite mechani
 Repeated captures assume externally replenished sound. The unchanged finite work budget
 does not fund infinite repetition. Native listening acceptance remains open.
 
-- `tests.json`: focused native gate and the initial 36-case held matrix. The final full
-  gate is recorded separately; its whole-cycle/phase test and classifier checks supersede
-  the earlier focused assertion set.
+- `gate.json`: final nine-module JVM gate, exit 0, **6,006 tests with zero failures,
+  errors or skips**. All final Kotlin/build/test input hashes remained frozen during
+  the run. Android was not included because no SDK is installed.
+- `tests.json`: earlier focused gate and initial model-2 matrix, with a pointer to the
+  subsequent full validation. The old focused snapshot is kept as measured history.
 - `listening.json`: exact 18-clip pack, source/compiler and audio hashes, independent
   method replay, sampler metadata, ZIP paths/CRC and browser QA.
 - `capture-length-proof.json`: bounded `.6/.9/1.2 s` and note-dependent alternatives,
