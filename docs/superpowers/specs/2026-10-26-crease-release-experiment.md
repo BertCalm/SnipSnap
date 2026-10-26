@@ -78,7 +78,8 @@ without a universal contrast requirement; Paper Keys at the falling position
 has a smaller maximum TV of 0.04617. This phase dependence is a result, not a
 listening verdict. TV is a normalized power-distribution distance, not decibels.
 
-- Worst root-constrained pitch estimate: 0.11951 cents, within the 10-cent gate.
+- Worst root-constrained pitch estimate: 0.11951 cents relative to the fitted
+  held-loop root, within the 10-cent gate.
   The estimator searches within ±5% of the intended root; this is not independent
   octave-error detection.
 - Worst C6 4x/16x harmonic-power TV: 0.00016159, below .01. This is a reference
