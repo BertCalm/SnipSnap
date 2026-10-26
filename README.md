@@ -936,7 +936,9 @@ Its approved model-2 source direction, six finite factory presets and dry
 sixteen-pad starter are available through SYNTH and FRESH TAPE. ROOT,
 VELOCITY, source and exact variation seed stay in the editable recipe;
 the 9.8-second pads play once. Original model-1 recipes remain reproducible.
-See [TIDAL](docs/TIDAL.md) for the finite scope, rendering measurements,
+NOTE retains the finite encounter; HOLD reconstructs its moving aftermath.
+MAKE INSTRUMENT keeps the opening across seventeen C2–C6 zones with note-off release.
+See [TIDAL](docs/TIDAL.md) for the finite and held modes, rendering measurements,
 MPC kit export and remaining device checks.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites

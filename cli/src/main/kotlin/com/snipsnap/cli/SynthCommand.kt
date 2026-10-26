@@ -14,6 +14,7 @@ import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.OrphicaPadMaker
+import com.snipsnap.shell.TidalPadMaker
 import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
 import com.snipsnap.shell.ResinPadMaker
@@ -214,8 +215,9 @@ import kotlin.random.Random
  * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  * APSIS supports complete --patch replay, signed 32-bit --seed, and six --macros controls.
- * TIDAL offers finite PAIR/STREAM factory encounters with native note/velocity,
- * exact 64-bit --seed, versioned models, and complete --patch replay. HOLD reconstruction is deferred.
+ * TIDAL offers PAIR/STREAM factory encounters and reconstructed held keys with native note/velocity,
+ * exact 64-bit --seed, versioned models, complete --patch replay, --macros HOLD=1,
+ * and --instrument with the authored encounter before a reconstructed sustain.
  * TRIO accepts `--tempo 60..200 --beats 1..4`; the beat grid must fit within two seconds; answers may continue after it.
  * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
  */
@@ -287,13 +289,14 @@ object SynthCommand {
         }
         val macroOverrides = opts["--macros"]?.let { raw ->
             val names = when (engine) {
+                TidalPatch.ENGINE -> Tidal.macrosFor(TidalVoice.valueOf(voice))
                 ApsisPatch.ENGINE -> Apsis.macrosFor(ApsisVoice.valueOf(voice))
                 ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
                 LatticePatch.ENGINE -> Lattice.macrosFor(LatticeVoice.valueOf(voice))
                 OrigamiPatch.ENGINE -> Origami.macrosFor(OrigamiVoice.valueOf(voice))
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
                 OhmPatch.ENGINE -> Ohm.macrosFor(3)
-                else -> throw CliError("--macros is only supported by APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE and OHM, got $engine")
+                else -> throw CliError("--macros is only supported by TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE and OHM, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -306,6 +309,9 @@ object SynthCommand {
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
                 if (engine == CausticPatch.ENGINE && name == "HOLD" && value > 0f) {
                     throw CliError("--macros HOLD is reserved for CAUSTIC; only 0 is supported")
+                }
+                if (engine == TidalPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() !in listOf(0.0, 1.0)) {
+                    throw CliError("TIDAL HOLD is a NOTE/HOLD switch; choose 0 or 1")
                 }
                 overrides[name] = value
             }
@@ -331,7 +337,7 @@ object SynthCommand {
             }
         }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 ApsisPatch.ENGINE -> Apsis.MIDI_MIN..Apsis.MIDI_MAX
                 OrigamiPatch.ENGINE -> Origami.MIDI_MIN..Origami.MIDI_MAX
@@ -435,8 +441,9 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
+            if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
             if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride != 3) throw CliError("OHM --instrument requires model 3")
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON and OHM export a keys instrument here")
+            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OHM and TIDAL export a keys instrument here")
             if (engine == OhmPatch.ENGINE && opts["--attack"] != null) throw CliError("OHM keeps its authored attack; use --release for the held instrument")
             if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
             if (engine == ContourPatch.ENGINE && opts["--attack"] != null) throw CliError("CONTOUR --instrument uses settled sustain without the finite attack; omit --attack and use --release")
@@ -620,6 +627,7 @@ object SynthCommand {
             ) else if (withNote is CreasePatch) withNote.copy(
                 model = modelOverride ?: withNote.model,
             ) else if (withNote is TidalPatch) withNote.copy(
+                macros = withNote.macros + macroOverrides,
                 seed = longSeedOverride ?: withNote.seed,
                 model = modelOverride ?: withNote.model,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
@@ -664,6 +672,14 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("--release: ${e.message ?: "invalid CONTOUR instrument"}")
         } else null
+        val tidalInstrumentSpec = if (instrument && engine == TidalPatch.ENGINE) try {
+            val release = opts["--release"]?.let { raw ->
+                raw.toFloatOrNull()?.takeIf { it.isFinite() } ?: throw CliError("--release wants finite seconds")
+            } ?: TidalPadMaker.RELEASE.default
+            TidalPadMaker.Spec(chosen.single() as TidalPatch, release)
+        } catch (e: IllegalArgumentException) {
+            throw CliError("TIDAL --instrument: ${e.message}")
+        } else null
         val origamiInstrumentSpec = if (instrument && engine == OrigamiPatch.ENGINE) try {
             OrigamiPadMaker.Spec(chosen.single() as OrigamiPatch,
                 releaseSeconds = origamiInstrumentRelease ?: OrigamiPadMaker.RELEASE.default)
@@ -688,6 +704,7 @@ object SynthCommand {
         if (flockInstrumentSpec != null) return makeFlockInstrument(flockInstrumentSpec, dir, out)
         if (creaseInstrumentSpec != null) return makeCreaseInstrument(creaseInstrumentSpec, dir, out)
         if (contourInstrumentSpec != null) return makeContourInstrument(contourInstrumentSpec, dir, out)
+        if (tidalInstrumentSpec != null) return makeTidalInstrument(tidalInstrumentSpec, dir, out)
         if (origamiInstrumentSpec != null) return makeOrigamiInstrument(origamiInstrumentSpec, dir, out)
         if (ohmInstrumentSpec != null) return makeOhmInstrument(ohmInstrumentSpec, dir, out)
         if (instrument) return makeInstrument(voice, chosen.single(), opts, dir, out)
@@ -705,7 +722,9 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
-            val sampler = heldOhm?.let { SmplChunk((patch as OhmPatch).midi,
+            val heldTidal = patch is TidalPatch && Tidal.isHeld(patch.macros["HOLD"] ?: 0f)
+            val sampler = if (heldTidal) SmplChunk((patch as TidalPatch).midi,
+                SmplChunk.Loop(0, snip.frameCount.toLong())) else heldOhm?.let { SmplChunk((patch as OhmPatch).midi,
                 SmplChunk.Loop(it.loopStartFrame, it.snip.frameCount.toLong())) }
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
@@ -717,6 +736,7 @@ object SynthCommand {
             if (patch is OhmPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
+                heldTidal -> "  (reconstructed aftermath, loop-enabled WAV)"
                 heldRibbon != null -> "  (captured RIBBON sustain, loop-enabled WAV)"
                 heldOhm != null -> "  (OHM attack plus captured sustain, loop-enabled WAV)"
                 patch is LatticePatch && Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.LOOP -> "  (held loop, mono)"
@@ -739,6 +759,19 @@ object SynthCommand {
         OhmPadMaker.export(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} OHM zones, authored attack and sustain, RELEASE ${OhmPadMaker.secondsLabel(spec.releaseSeconds)}")
+        return 0
+    }
+
+    private fun makeTidalInstrument(spec: TidalPadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = TidalPadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            TidalPadMaker.renderZone(spec, midi)
+        }
+        TidalPadMaker.export(name, spec, notes, dir)
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ MPC 2 twin)")
+        out.println("${midis.size} TIDAL zones, encounter then held aftermath, RELEASE ${TidalPadMaker.secondsLabel(spec.releaseSeconds)}")
         return 0
     }
 

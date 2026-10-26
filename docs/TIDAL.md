@@ -1,4 +1,4 @@
-# TIDAL — finite encounter instrument
+# TIDAL — encounter and held aftermath
 
 TIDAL turns a restricted two-center encounter into a pitched sound. Two original
 populations retain different harmonic fingerprints as their disks deform into
@@ -9,9 +9,9 @@ This milestone implements PAIR and STREAM, complete replayable recipes, dry
 listening comparisons, six factory presets, and a sixteen-pad starter. It is a musical adaptation of a
 softened restricted gravitational model, not a calibrated galaxy prediction.
 The owner approved the model-2 source direction after the second audition.
-The remaining proposed voices, 36-preset bank, and HOLD reconstruction remain
-later work. The complete preset bank and physical phone/MPC playback still need
-their own listening pass.
+The remaining proposed voices and larger preset bank remain later work. HOLD
+now reconstructs the post-encounter material for pads and held keys. The preset
+bank and physical phone/MPC playback still need their own listening pass.
 
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 opens with 18 focused comparisons for the second source pass. The original
@@ -31,9 +31,11 @@ still available in model 1 and the archived audition.
 
 ROOT requests MIDI 36–84. VELOCITY changes source excitation independently of the
 encounter. The five timbral controls are APPROACH, PASSAGE, TILT, BIND, and TAIL.
-HOLD is saved at zero; positive HOLD is rejected. Repeating a clip on the audition
-page repeats the complete finite performance and does not establish a sustained
-instrument or seamless loop.
+PLAYBACK selects NOTE (`HOLD = 0`) or HOLD (`HOLD = 1`); fractional values are rejected.
+NOTE keeps the accepted finite performance. HOLD pads start in the moving aftermath
+and loop while gated. MAKE INSTRUMENT retains the opening encounter before its
+sustain marker and releases on note-off. Simply repeating a finite clip is separate
+from this reconstruction.
 
 | Control | Action |
 | --- | --- |
@@ -42,6 +44,7 @@ instrument or seamless loop.
 | TILT | Changes the actual 3D disk orientations and spin relationships. |
 | BIND | Places material farther out or deeper within the same softened central potential, with compatible circular velocities. |
 | TAIL | Changes listening emphasis and bounded resonance persistence toward material that actually extends. |
+| HOLD | Explicit NOTE/HOLD switch; selects a versioned reconstruction of the resulting material. |
 
 A fast passage can strip less material than a slow passage at the same closest
 separation. Its brighter musical impact is an explicit excitation mapping, not a
@@ -50,7 +53,8 @@ strong binding can leave little material in the tail pickup. Those comparisons
 must preserve that quiet result rather than normalize noise into a stream.
 
 `TidalPatch` saves voice, all controls, requested note, velocity, exact signed
-64-bit seed, and rendering model. The seed is canonical decimal text in JSON.
+64-bit seed, and rendering model. A held recipe also saves `heldModel = 1`; a missing or unsupported
+held version is refused. The seed is canonical decimal text in JSON.
 Models 1 and 2 fix their dynamics, reduction, source, and finite-window policies.
 New recipes use model 2; saved model-1 recipes keep their original defaults and
 rendering. Published model-1 baseline sample hashes are checked during generation.
@@ -64,12 +68,41 @@ by ROOT, VELOCITY, SOURCE (ORIGINAL or MATERIAL), and VARIATION SEED. SOURCE
 selects the saved rendering model; changing it keeps the current encounter
 controls. An invalid or overflowing seed keeps the previous valid variation.
 Drafts, saved presets, SCRAMBLE, SEND TO PAD, and reopening a pad retain the
-complete typed recipe. SPREAD uses the authored MIDI root rather than asking a
+complete typed recipe, including NOTE/HOLD. SPREAD uses the authored MIDI root rather than asking a
 pitch detector to infer it from upper-rich material.
 
 TIDAL on FRESH TAPE supplies sixteen dry, editable encounters. Every delivered
 pad plays once. Their long buffers are filed as LOOP by the generic duration
-classifier, but that does not enable sample looping or a held instrument.
+classifier, but that does not enable sample looping or a held instrument. The
+starter stays finite; choosing HOLD in SYNTH is explicit.
+
+## HOLD and MAKE INSTRUMENT
+
+The characteristic gesture is gather → encounter → moving aftermath → release.
+The held field revisits a bounded 1.4-second post-passage window of the actual
+32-cohort readout. A smooth cosine traversal moves through those controls and
+back, retaining the original population's spectral profile, contact texture,
+core allocation and already-damped tail amplitudes. Only the controls reverse
+direction. Audio is resynthesized; neither the finite WAV nor a fictional
+periodic gravitational orbit is repeated.
+
+A roughly four-second field fits each carrier's frequency integral to complete
+turns. The root is fitted within 0.1 cent; metallic partials keep their stretched
+ratios with a correction bounded by half a turn per field. The oscillator,
+band-limiter, decimator and 8 Hz DC-filter state run continuously through real
+neighboring cycles. The loop marker and exported end receive no crossfade or
+fade. A 350 ms transition joins the preserved finite opening to the field,
+well before the marker. [TIDAL_HOLD.md](TIDAL_HOLD.md) records the mechanism,
+measurements, limits and reproduction commands.
+
+HOLD in SYNTH and SEND TO PAD uses the aftermath alone, with gated looping.
+Returning to NOTE clears looping and restores one-shot playback. MAKE INSTRUMENT
+works from either switch position: seventeen roots from MIDI 36 through 84,
+three semitones apart, cover C2–C6. Every zone retains the encounter and a
+nonzero sustain marker. RELEASE spans 0.1–1.5 seconds. Samples render serially,
+with progress and cancellation; the existing package path writes MPC 2, MPC 3
+and the phone's instrument sidecar. Keyboard touch scales the captured source;
+it does not rerun the encounter at each performed velocity.
 
 ## Model and sound
 

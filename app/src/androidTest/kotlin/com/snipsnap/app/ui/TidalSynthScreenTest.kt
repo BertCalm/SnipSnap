@@ -122,8 +122,28 @@ class TidalSynthScreenTest : ComposeScreenTest() {
             button("TIDAL MATERIAL SOURCE").assertIsSelected()
             for (preset in TidalPresets.forVoice(voice)) button("PRESET ${preset.name}").assertExists()
             button("HOLD").assertDoesNotExist()
-            button("MAKE INSTRUMENT").assertDoesNotExist()
+            button("MAKE INSTRUMENT").assertExists()
+            button("TIDAL NOTE PLAYBACK").assertIsSelected()
+            button("TIDAL HOLD PLAYBACK").assertExists()
         }
+    }
+
+    @Test
+    fun heldPlaybackSurvivesPerformanceEditsAndNavigation() {
+        show(TidalPatch("Held original", TidalVoice.PAIR, mapOf("HOLD" to 1f),
+            midi = 55, velocity = .42f, seed = Long.MIN_VALUE, model = 1))
+        button("TIDAL HOLD PLAYBACK").assertIsSelected()
+        dial("TAIL", .8f)
+        dial("VELOCITY", .3f)
+        assertEquals(1f, working().macros["HOLD"])
+        assertEquals(Long.MIN_VALUE, working().seed)
+        assertEquals(1, working().model)
+        compose.runOnIdle { generation++ }
+        pump(32)
+        button("TIDAL HOLD PLAYBACK").assertIsSelected()
+        activate("TIDAL NOTE PLAYBACK")
+        assertEquals(0f, working().macros["HOLD"])
+        assertEquals(.8f, working().macros["TAIL"])
     }
 
     @Test
@@ -186,7 +206,30 @@ class TidalSynthScreenTest : ComposeScreenTest() {
         activate("REOPEN A01 ${pad.displayName}")
         assertEquals(delivered, working())
         button("HOLD").assertDoesNotExist()
-        button("MAKE INSTRUMENT").assertDoesNotExist()
+        button("MAKE INSTRUMENT").assertExists()
+        button("TIDAL NOTE PLAYBACK").assertIsSelected()
+        button("TIDAL HOLD PLAYBACK").assertExists()
+    }
+
+    @Test
+    fun heldPadDeliveryReopensAndSwitchingToNoteClearsLooping() {
+        show(TidalPatch("Held pad", TidalVoice.STREAM, mapOf("HOLD" to 1f), seed = Long.MAX_VALUE))
+        activate("SEND TO PAD")
+        activate("A01, EMPTY")
+        waitFor("held TIDAL pad delivery", timeoutMillis = 180_000) { kitUpdates > 0 }
+        var pad = KitStore.load(requireNotNull(entry).dir).pad(1)!!
+        assertFalse(pad.oneShot)
+        assertTrue(pad.loop)
+        activate("REOPEN PAD RECIPE")
+        activate("REOPEN A01 ${pad.displayName}")
+        button("TIDAL HOLD PLAYBACK").assertIsSelected()
+        activate("TIDAL NOTE PLAYBACK")
+        val updates = kitUpdates
+        activate("UPDATE PAD A01")
+        waitFor("finite replacement clears TIDAL looping", timeoutMillis = 180_000) { kitUpdates > updates }
+        pad = KitStore.load(requireNotNull(entry).dir).pad(1)!!
+        assertTrue(pad.oneShot)
+        assertFalse(pad.loop)
     }
 
     @Test

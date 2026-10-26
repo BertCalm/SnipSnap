@@ -27,7 +27,7 @@ class TidalTest {
         sqrt(a.indices.sumOf { (a[it].toDouble() - b[it]).let { d -> d * d } } / a.size)
 
     @Test
-    fun `finite recipe has five timbral macros independent of note and refuses hold`() {
+    fun `finite recipe has five timbral macros independent of note and refuses fractional hold`() {
         for (voice in TidalVoice.entries) {
             assertEquals(listOf("APPROACH", "PASSAGE", "TILT", "BIND", "TAIL", "HOLD"), Tidal.macrosFor(voice).map { it.name })
             assertEquals(0f, Tidal.defaults(voice).getValue("HOLD"))
