@@ -298,6 +298,9 @@ testkit/vent-voice-audition/
 # VENT's generated playable kit, groove mixes, recipes and audition assets.
 testkit/vent-kit-audition/
 
+# The optional Pulse Knuckle envelope comparison regenerates from its Kotlin recipes.
+testkit/vent-knuckle-audition/
+
 # FLOCK's generated finite listening pack, source snapshots, and diagnostic traces.
 testkit/flock-audition/
 testkit/flock-flow-audition/
