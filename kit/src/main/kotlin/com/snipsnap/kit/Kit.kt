@@ -84,6 +84,8 @@ data class KitPad(
     val humanize: Float? = null,
     /** Chain playback (see [ChainInfo]); null = the ordinary pad. */
     val chain: ChainInfo? = null,
+    /** Repeat the complete sample on an ordinary gated pad; one-shot and chain playback disable it. */
+    val loop: Boolean = false,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -319,6 +321,7 @@ data class Kit(
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                loop = p.loop,
                 attack = p.attack,
                 decay = p.decay,
                 cutoff = p.cutoff,

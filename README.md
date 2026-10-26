@@ -172,6 +172,22 @@ recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
 new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
 provides the next listening gate. HOLD loops and the other four voices are deferred.
 
+APSIS's first listening prototype is a pitched center with independently
+orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
+COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
+and internal exchange; held output uses a recurring reference-compatible
+orbital roster. Six provisional recipes, saved patches, CLI rendering and a
+dry sixteen-pad kit use the Kotlin renderer. APSIS is in the phone
+picker; device acceptance is still pending. Run `./gradlew :synth:generateApsisAudition` for the
+dry comparison set, raw/matched WAVs, recipes and orbital traces. See
+[implementation notes](docs/APSIS.md) for prototype scope and validation.
+The [private listening page](https://snipsnap-apsis-audition.bertcalm.chatgpt.site)
+now includes seven dry musical examples, a playable sixteen-pad map, and a
+downloadable MPC 3/MPC 2 kit with forty native samples. Model 3 adds velocity
+color and prepared-motion reuse; saved model-1/model-2 recipes retain their
+audio. Run `./gradlew :synth:generateApsisMusicalAudition` to export the bank and
+replay its actual samples into the musical scores. Device acceptance is pending.
+
 CHAMBER's finite instrument strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
@@ -920,8 +936,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER and GRAINS round out the lineup —
-61 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, CHAMBER and GRAINS round out the lineup —
+62 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1094,7 +1110,12 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), RING (the sound multiplied by a sine — metal, bells, radio;
+transient), FORGE (a hit formed against a die: a low shock, an all-pass
+sweep, the fast part folded and the slow part left, then a ceiling that
+closes with a flash of grit; peak-matched, no gain envelope, no chip until
+its listening gate, see
+[`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
+RING (the sound multiplied by a sine — metal, bells, radio;
 deliberately no longer the hit it was, the exemption GHOST already
 carries), DUB (generation loss: a dub of a dub, twelve deep), VINYL (the
 record under the hit, as TAPE is the cassette: rumble, groove hiss and
@@ -1104,8 +1125,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
-tape → ensemble → phase → echo → spring → motion — owns
+spike → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
+dub → vinyl → tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1123,7 +1144,7 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
+OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
