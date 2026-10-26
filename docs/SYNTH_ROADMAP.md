@@ -17,6 +17,14 @@ HOLD, collision model, or new engine. See [UPRIGHT.md](UPRIGHT.md) for the
 control contract, reproduction and separation of Python approval from Kotlin
 and hardware listening.
 
+**Cairn reconstruction (2026-10-24).** KNOCK and ANSWER share a bounded passive
+motion/contact core. Higher contacts survive the 243-point middle-control grid
+and disappear when mount coupling is removed. Saved model/note/velocity/cue
+recipes and 92 finite audition cases are available outside the factory roster
+and phone picker. Historical six-voice recordings remain separate references.
+HOLD loops, other voices, phone cost and sonic acceptance remain open. See
+[CAIRN.md](CAIRN.md) and the [private audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/).
+
 **Tidal first-listen prototype (2026-10-20).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
 cohorts, surviving cores, and extended ringing strands. The finite prototype has
