@@ -346,6 +346,7 @@ object Breed {
                 tuneFine = pad.tuneFine,
                 muteGroup = pad.muteGroup,
                 oneShot = pad.oneShot,
+                loop = pad.loop,
                 recipe = recipe,
                 source = pad.source + stamp,
             )

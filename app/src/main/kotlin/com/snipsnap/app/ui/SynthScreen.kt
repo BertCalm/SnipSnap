@@ -1188,7 +1188,11 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
-        loadedPatchesByVoice[engine to voice] = change(patch)
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        // Performance controls also own NOTE/HOLD. Keep the live macro map in
+        // sync so buildCurrentPatch cannot overwrite that choice on save/send.
+        macrosByVoice[engine to voice] = Tidal.defaults(updated.voice, updated.model) + updated.macros
     }
     fun updateFilamentPatch(change: (FilamentPatch) -> FilamentPatch) {
         val pair = engine to voice
