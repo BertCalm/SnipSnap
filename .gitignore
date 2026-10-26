@@ -443,3 +443,6 @@ testkit/apsis-musical/
 
 # Owner-preferred Murmur production recipes and their regenerated proof audio.
 testkit/murmur-approved-audition/
+
+# Generated OBBLIGATO relationship conversation comparison.
+testkit/obbligato-conversation-audition/
