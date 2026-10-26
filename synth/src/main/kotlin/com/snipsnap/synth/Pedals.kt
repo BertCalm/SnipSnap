@@ -35,8 +35,11 @@ enum class PedalSide(val id: String) {
  * two (DRIVE, and COMP, now SUSTAIN over its own section, gated on
  * 2026-10-24); the WAH section's three moves (WAH, TOUCH, ROCK), which
  * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
- * first board, authored as a hypothesis for its own gate. DELAY, added
- * after its own spec, awaits its gate.
+ * first board, authored as a hypothesis for its own gate; FORGE, the
+ * hydroforming section, gated on 2026-10-26. DELAY, added after its own
+ * spec, awaits its gate. With FORGE the row holds six chips, the card's
+ * ceiling (PadSheetTest), so DELAY's chip needs a layout decision when its
+ * gate passes.
  */
 object Pedals {
 
@@ -118,6 +121,9 @@ object Pedals {
         Entry("WAH", "wahed", character("wahed"), PedalSide.PRE, movable = true, gated = true),
         Entry("TOUCH", "touchwahed", character("touchwahed"), PedalSide.PRE, movable = true, gated = true),
         Entry("ROCK", "rockwahed", character("rockwahed"), PedalSide.PRE, movable = true, gated = true),
+        // FORGE in front of the amp, where the rack puts it, and not movable: the owner heard it before and after
+        // VALVE and chose before, "more powerful without distorting" (gate, 2026-10-26).
+        Entry("FORGE", "forged", character("forged"), PedalSide.PRE, movable = false, gated = true),
         // The first board: a compressor into the drive pedal into one slapback. A hypothesis for its own gate:
         // the brainstorm's RIG, values as the characters it is made of. It contains the amp, so it sits at AMP.
         Entry(
