@@ -1,9 +1,12 @@
 package com.snipsnap.synth
 
+import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.Snip
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import java.util.concurrent.CancellationException
 import kotlin.math.abs
+import kotlin.math.ln
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -33,6 +36,11 @@ class TidalHeldTest {
             assertTrue(probe.loop.all { it.isFinite() && abs(it) <= 1f })
             assertTrue(abs(probe.loop.sumOf { it.toDouble() } / probe.loop.size) < .005)
             assertTrue(probe.loop.maxOf { abs(it) } > .01f)
+            val pitch = Pitch.detect(Snip(probe.loop, 1, Dsp.RATE))
+                ?: error("held material lost the requested root: $p")
+            val detectedCents = 1200 * ln(pitch.hz / Keys.midiHz(p.midi).toDouble()) / ln(2.0)
+            assertTrue(pitch.confidence >= .3f && abs(detectedCents) < 25,
+                "held material root: $detectedCents cents, confidence ${pitch.confidence}")
             val pad = TidalKeys.padLoop(probe.loop)
             assertTrue(abs(pad.first()) < 1e-4, "held pad must not start with a hard amplitude step")
             val entry = probe.loop.indices.first { probe.loop[it].toRawBits() == pad.first().toRawBits() }

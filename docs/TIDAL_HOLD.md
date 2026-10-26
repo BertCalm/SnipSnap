@@ -103,7 +103,20 @@ roughly four-second field and 350 ms join. No new presets are claimed as heard.
 The moving control window is repeatable, so sustained listening can reveal its
 period. Physical phone latency, memory and playback, MPC hardware loading, the
 join's musical usefulness and the held source's character require listening.
-Numerical closure does not establish musical acceptance.
+Eighteen actual exported-audio pitch windows across the six default examples
+remain within 5.17 cents, with minimum confidence 0.873. Eight additional
+hard-played edge probes cover both voices at MIDI 36/84, full velocity, exact
+Long.MAX_VALUE seed, minimum BIND and maximum TAIL. All pass closure, finite
+output, peak and DC checks. Their maximum pad-entry magnitude is 2.42e-5; the
+six default examples stay below 6.90e-6 after rotation. The six instrument
+demonstrations remain byte-identical after pad-entry rotation, and all twelve
+WAVs remain exact after changing phase-state measurement to integer turn counts.
+[Final field evidence](benchmarks/tidal-hold/held-field-validation.json),
+[pitch windows](benchmarks/tidal-hold/pitch-probes.json) and
+[edge probes](benchmarks/tidal-hold/edge-probes.json) retain the measurements.
+Seam certification covers the dry source and exported instruments; subsequent
+rack processing has its own boundaries. Numerical closure does not establish
+musical acceptance.
 
 ## Reproduce
 

@@ -1,0 +1,23 @@
+{
+  "cases": 8,
+  "velocity": 1,
+  "bind": 0,
+  "tail": 1,
+  "seed": "9223372036854775807",
+  "maxEntry": 2.4156195649993606e-05,
+  "maxPeak": 0.7110759019851685,
+  "maxDc": 2.0924176667254383e-09,
+  "voices": [
+    "PAIR",
+    "STREAM"
+  ],
+  "midis": [
+    36,
+    84
+  ],
+  "sourceModel": 2,
+  "approachPassageTiltCoupledCorners": [
+    0,
+    1
+  ]
+}
