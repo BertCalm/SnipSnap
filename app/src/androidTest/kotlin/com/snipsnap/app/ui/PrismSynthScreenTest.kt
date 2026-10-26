@@ -123,7 +123,10 @@ class PrismSynthScreenTest : ComposeScreenTest() {
 
     private fun saveAs(name: String, root: File): PrismPatch {
         press("SAVE PRESET")
-        compose.onNode(hasSetTextAction()).performTextReplacement(name)
+        waitFor("the preset name field") {
+            compose.onAllNodes(hasSetTextAction(), useUnmergedTree = true).fetchSemanticsNodes().size == 1
+        }
+        compose.onNode(hasSetTextAction(), useUnmergedTree = true).performTextReplacement(name)
         pump()
         press("SAVE")
         waitFor("the saved PRISM preset", timeoutMillis = 30_000) {

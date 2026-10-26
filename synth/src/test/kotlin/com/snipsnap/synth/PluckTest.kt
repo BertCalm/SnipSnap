@@ -12,6 +12,14 @@ import kotlin.test.assertTrue
 
 class PluckTest {
 
+    // These guards pin the original noise-excited strings and their PICK,
+    // STRIKE, BODY and DOUBLE controls. UPRIGHT is a separate initialized-
+    // string path with TOUCH/DAMP/WOOD; UprightBassTest and
+    // PluckUprightIntegrationTest cover its own contract instead.
+    private val legacyVoices = listOf(
+        PluckVoice.NYLON, PluckVoice.HARP, PluckVoice.KOTO, PluckVoice.BANJO, PluckVoice.SITAR,
+    )
+
     /**
      * DeterminismTest proves two renders agree with each other; this proves
      * they agree with yesterday. Captured before SILK Phase 1a moved the
@@ -52,7 +60,7 @@ class PluckTest {
             "SITAR first preset" to 845240741,
         )
         val actual = LinkedHashMap<String, Int>()
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val names = Pluck.macrosFor(voice).map { it.name }
             val renders = listOf(
                 "defaults" to emptyMap<String, Float>(),
@@ -71,7 +79,7 @@ class PluckTest {
 
     @Test
     fun `every voice renders clean audio at defaults and both corners`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             for (macros in listOf(
                 emptyMap(),
                 Pluck.macrosFor(voice).associate { it.name to 0f },
@@ -99,7 +107,7 @@ class PluckTest {
         // the native RATE - OnePole(rate) and Dsp.decimate alone would
         // still make this pass even if n regressed; the next test covers
         // that specifically.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val actual = Pluck.render(voice)
             val direct = Pluck.synthesize(voice, emptyMap(), Dsp.RATE)
             Dsp.normalize(direct)
@@ -136,7 +144,7 @@ class PluckTest {
         // 787.5Hz against an expected ~392.0Hz once BODY's default rose).
         // The hinted sweeps in TuningAccuracyTest guard the note with the
         // body on, at the same TUNE/DAMP settings.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val expected = Pluck.frequencyFor(voice, 0.5f)
             val measured = TestPitch.estimate(Pluck.render(voice, mapOf("TUNE" to 0.5f, "DAMP" to 0.2f, "BODY" to 0f)))
             assertTrue(
@@ -163,7 +171,7 @@ class PluckTest {
         // wide tolerance here is deliberate headroom for that normal
         // rate-dependent variation (filter coefficient warping, the delay
         // line's integer rounding), not an admission of a real effect.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val actual = Pluck.render(voice, mapOf("DAMP" to 0.3f))
             val direct = Pluck.synthesize(voice, mapOf("DAMP" to 0.3f), Dsp.RATE)
             Dsp.normalize(direct)
@@ -181,7 +189,7 @@ class PluckTest {
 
     @Test
     fun `scrambles are reproducible and stay in range`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             assertEquals(Pluck.scramble(voice, Random(2)), Pluck.scramble(voice, Random(2)))
             repeat(8) { seed ->
                 val snip = Pluck.render(voice, Pluck.scramble(voice, Random(seed)))
@@ -203,7 +211,7 @@ class PluckTest {
         // test's own words just as much as a fake kick is. Only LOOP stays
         // excluded: a long ring reading as LOOP is the decay-following
         // render working, not the DC-thump it guards against.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             var misses = 0
             val rolls = 30
             repeat(rolls) { seed ->
@@ -218,7 +226,7 @@ class PluckTest {
     fun `scramble honors temperature and near`() {
         // The Dsp.scrambleNear boundary contract, proven end-to-end through
         // Pluck's own wiring: see DspTest for the central proof.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val preset = PluckPresets.forVoice(voice).first()
             // Presets may omit macros added after they were authored (STRIKE
             // is the first): the seed is the defaults under the preset's own
@@ -244,7 +252,7 @@ class PluckTest {
 
     @Test
     fun `is deterministic`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             assertTrue(
                 Pluck.render(voice).samples.contentEquals(Pluck.render(voice).samples),
                 "$voice not deterministic",
@@ -269,7 +277,7 @@ class PluckTest {
         // DAMP default moved to 0.5 and the sympathetic strings landed; the
         // margin under the 0.5 snare line is 0.211, and a regression over it
         // should fail here.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val c = Classifier.classify(Pluck.render(voice))
             val allowed = if (voice == PluckVoice.BANJO) setOf(DrumClass.PERC, DrumClass.SNARE) else setOf(DrumClass.PERC)
             assertTrue(c.drumClass in allowed, "$voice default read as ${c.drumClass}")
@@ -479,7 +487,7 @@ class PluckTest {
 
     @Test
     fun `STRIKE is a macro on every voice`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             assertTrue(Pluck.macrosFor(voice).any { it.name == "STRIKE" }, "$voice has no STRIKE")
         }
     }
@@ -490,7 +498,7 @@ class PluckTest {
         // small) the fundamental is the most attenuated harmonic, at the
         // centre (p = 0.5) the least. The audition read both ends as CLOSER
         // to the instrument; this pins that they are ends.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val f0 = Pluck.frequencyFor(voice, 0.5f)
             val bridge = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 0f, "DOUBLE" to 0f))
             val centre = Pluck.render(voice, mapOf("TUNE" to 0.5f, "STRIKE" to 1f, "DOUBLE" to 0f))
@@ -505,7 +513,7 @@ class PluckTest {
 
     @Test
     fun `STRIKE at the centre removes the second harmonic`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val f0 = Pluck.frequencyFor(voice, 0.5f)
             // The jawari makes even harmonics on purpose (the buzz), so this
             // comb notch is proven on the sitar's string with the bridge
@@ -566,7 +574,7 @@ class PluckTest {
 
     @Test
     fun `DAMP zero rings at least twice as long as DAMP half on every voice`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val open = Pluck.render(voice, mapOf("DAMP" to 0f)).durationSeconds
             val half = Pluck.render(voice, mapOf("DAMP" to 0.5f)).durationSeconds
             assertTrue(open >= half * 2f, "$voice: DAMP 0 ${open}s vs DAMP 0.5 ${half}s is not enough reach")
@@ -576,7 +584,7 @@ class PluckTest {
 
     @Test
     fun `DAMP at one is a short thud`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             // SITAR's own exception lives below: BODY 1's own resonance
             // keeps a muted string humming past this bound, confirmed as
             // the intended character rather than a defect this bound is
@@ -684,7 +692,7 @@ class PluckTest {
     fun `PICK moves the centroid at every step of its travel`() {
         // The sweep is the precondition for routing velocity through PICK,
         // the same sweep the snare's SNAP had to pass.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val points = (0..10).map { it / 10f }
             val measured = points.map { p ->
                 FeatureExtractor.extract(Pluck.render(voice, mapOf("PICK" to p))).centroidHz
@@ -732,7 +740,7 @@ class PluckTest {
 
     @Test
     fun `BODY is a macro on every voice with a body table`() {
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             assertTrue(Pluck.macrosFor(voice).any { it.name == "BODY" }, "$voice has no BODY")
             val table = Pluck.bodyFor(voice)
             // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): the test's own name scopes it to voices with a table.
@@ -755,7 +763,7 @@ class PluckTest {
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
         assertTrue(Pluck.withBody(string, PluckVoice.NYLON, 0f, rate) === string, "amount 0 must skip the stage and return the same buffer")
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val a = Pluck.render(voice, mapOf("BODY" to 0f))
             val b = Pluck.render(voice, mapOf("BODY" to 0f))
             assertTrue(a.samples.contentEquals(b.samples), "$voice: BODY 0 must be deterministic")
@@ -768,7 +776,7 @@ class PluckTest {
         // amount, so (out - string) carries `amount` times the string's RMS.
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         val string = decayingTone(seconds = 0.5f, t60 = 0.4f, rate = rate)
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): withBody is a no-op, so there is no share to measure.
             if (Pluck.bodyFor(voice).isEmpty()) continue
             val out = Pluck.withBody(string, voice, 1f, rate)
@@ -796,7 +804,7 @@ class PluckTest {
         // itself carries low-frequency energy of its own that would
         // otherwise swamp the difference the drive choice actually makes.
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val string = Pluck.synthesize(voice, mapOf("BODY" to 0f), rate)
             val velocityDriven = Pluck.withBody(string, voice, 1f, rate)
             val displacementDriven = Pluck.withBody(string, voice, 1f, rate, differentiate = false)
@@ -821,7 +829,7 @@ class PluckTest {
     fun `BODY reaches the ugly end`() {
         // BODY 1 is three times the string's RMS - the spike's "dominant",
         // which read CLOSER on two voices and must stay reachable.
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             // SITAR has no body table yet (plan 2026-09-26-pluck-sitar.md): BODY is inert, so the centroid cannot move.
             if (Pluck.bodyFor(voice).isEmpty()) continue
             val plain = FeatureExtractor.extract(Pluck.render(voice, mapOf("BODY" to 0f)))
@@ -838,7 +846,7 @@ class PluckTest {
         // The audition fingerprints (plan 2026-09-26-pluck-sitar.md, Task 2)
         // only mean something if two renders of the same voice agree.
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        for (voice in PluckVoice.entries) {
+        for (voice in legacyVoices) {
             val a = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
             val b = Pluck.synthesize(voice, mapOf("DOUBLE" to 0f), rate)
             assertTrue(a.contentEquals(b), "$voice is not deterministic")

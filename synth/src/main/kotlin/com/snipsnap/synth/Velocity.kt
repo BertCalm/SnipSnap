@@ -297,12 +297,12 @@ object Velocity {
      */
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
-        // PICK is proven monotonic for every PLUCK voice by PluckTest's
+        // PICK is proven monotonic for the original five PLUCK voices by PluckTest's
         // `PICK moves the centroid at every step of its travel`. SILK's own
         // PICK is the same exciter-brightness macro (Strings.pluckExciter's
         // pick low-pass), registered here rather than left to the generic
         // scan for the same reason PLUCK's is.
-        patch is PluckPatch -> "PICK"
+        patch is PluckPatch && patch.voice != PluckVoice.UPRIGHT -> "PICK"
         patch is SilkPatch -> "PICK"
         // STRIKE moves the hammer's cutoff, its own t60 and the tine's
         // swing together - none of BRIGHTNESS_MACROS' generic names, but
@@ -375,6 +375,9 @@ object Velocity {
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
         is ApsisPatch -> patch.copy(velocity = v).render()
+        // UPRIGHT changes its released-string excitation. The existing five
+        // PLUCK voices retain their measured PICK/soften path below.
+        is PluckPatch -> if (patch.voice == PluckVoice.UPRIGHT) patch.copy(velocity = v).render() else null
         is FlotillaPatch -> Flotilla.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is MercuryPatch ->
             if (Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) {
@@ -436,7 +439,7 @@ object Velocity {
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
-        is MagnetPatch, is PluckPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
+        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
         is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null

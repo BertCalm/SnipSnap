@@ -1,5 +1,9 @@
 # Which document to trust
 
+**Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
+voice, its approved Python direction, native port and remaining listening
+checks. It distinguishes saved excitation strength from MPC playback gain.
+
 **Tidal.** [`TIDAL.md`](TIDAL.md) records the approved model-2 source direction,
 finite PAIR/STREAM editor, factory presets, dry starter and saved-recipe policies.
 [`TIDAL_PERFORMANCE.md`](TIDAL_PERFORMANCE.md) records render-only measurements,
