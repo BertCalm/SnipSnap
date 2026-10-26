@@ -150,6 +150,17 @@ tasks.register<JavaExec>("generateFlockHeldInstrument") {
     args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
 }
 
+/** Three provisional model-3 OHM studies through the production keygroup handoff. */
+tasks.register<JavaExec>("generateOhmExpandedHandoff") {
+    group = "distribution"
+    description = "Export three provisional OHM model-3 keygroups, complete source recipes, MPC 2/3 packages and a verified ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OhmExpandedHandoffGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("ohmExpandedHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-handoff")
+}
+
 /** Package and play the approved CREASE sounds as continuous-onset held keys. */
 tasks.register<JavaExec>("generateCreaseKeysAudition") {
     group = "distribution"
