@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextReplacement
@@ -97,8 +98,13 @@ class FilamentScreenTest : ComposeScreenTest() {
 
     private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
         compose.runOnIdle { screenVisible = false }
-        pump()
-        button("ENGINE FILAMENT · TAP FOR NEXT").assertDoesNotExist()
+        // One pump can return while a cancelled render still holds the last
+        // frame. The control has to actually leave; a visible engine label
+        // still fails this wait.
+        waitFor("the hidden bench to drop ENGINE FILAMENT") {
+            compose.onAllNodesWithContentDescription("ENGINE FILAMENT · TAP FOR NEXT")
+                .fetchSemanticsNodes().isEmpty()
+        }
         compose.runOnIdle {
             currentEntry = entry
             screenVisible = true

@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "sourceRevision": "6acc0828",
+  "sourceNote": "Captured from frozen compiled accepted renderer, whose Tidal source is unchanged at5e953da5. NativeFloat32 hashes little-endian. No timing threshold.",
+  "loadedEngine": {
+    "classSha256": "3d47c55e019fede5ff7c7f67f820d3abdbcbbf7300b9af1e9f2fc989ed39373f",
+    "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f"
+  },
+  "cases": [
+    {
+      "id": "pair-model1-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model1-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.3499999940395355,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.6499999761581421,
+          "TAIL": 0.25,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "039f2c2bc01fce79f95a80cb6f1fa11d9c97cc854923cee8b1c81ca26d57b866",
+      "prelevelFloat32Sha256": "e1d06a18be54bed9b546d9cf6765f1f987cb7ad1e725d03cb84494e8c0766f63"
+    },
+    {
+      "id": "stream-model1-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model1-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "0bd6c3d8b8321db54b46795b420ec19c84713ebe01ace74cc2817d2e427c63f3",
+      "prelevelFloat32Sha256": "96c4fe54ed29e0453a09f0e9d5fe5acf0bdc304706a68173a8abeb980dc2d7a2"
+    },
+    {
+      "id": "pair-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model2-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "3ddafc853441469113534840b4e54213494a6147ed53ab603cb93e7125d69b85",
+      "prelevelFloat32Sha256": "44070a2a6f68142965e99b0492d276ccee6248256db72c1f5bd1fc6c48f95af2"
+    },
+    {
+      "id": "stream-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model2-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "1b34cb45b29a180bf6b3914dac60702b1bca0ca946a22ab2f307c31fcafdcd69",
+      "prelevelFloat32Sha256": "8dc22bdcd9334b4075794a9e6a2ad036737a17760fbbbd4da4d21c6c458cc57a"
+    },
+    {
+      "id": "pair-low-seed-min",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-low-seed-min",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 36,
+        "velocity": 0.3499999940395355,
+        "seed": "-9223372036854775808"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "42866747ef6a360767f9caaf3842d46be2a9afdd093be55f31559df531bf9e33",
+      "prelevelFloat32Sha256": "d3890b0db1d75a5f75b047aa4a5f110475e28c8e82133e3acc700b4fd8cc64b1"
+    },
+    {
+      "id": "stream-high-seed-max",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-high-seed-max",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 84,
+        "velocity": 1,
+        "seed": "9223372036854775807"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "d6ba28b89d12664c29012e1acca6180a7ab0002df7d9eadd611e57fa263ff190",
+      "prelevelFloat32Sha256": "c8228d8fe1e78f0cfe078e0042af3fcf292ff9309a3cd1284afbdbc14f9a3496"
+    },
+    {
+      "id": "pair-zero-velocity",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-zero-velocity",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0,
+        "seed": "0"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "322e5ff5ac97fbece9c48bac1edf245f3eb19639ea92c665a8f374f1b9834043",
+      "prelevelFloat32Sha256": "322e5ff5ac97fbece9c48bac1edf245f3eb19639ea92c665a8f374f1b9834043"
+    },
+    {
+      "id": "stream-low-velocity",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-low-velocity",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.25,
+        "seed": "7"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "97387088eacd6f7a4a37455c0ee940180d72fcf0354881f9e0e39eb12fb056c9",
+      "prelevelFloat32Sha256": "5a0d5569f3ca8944f57068a8eb65552cb4df0a8153f56914bb69bf4cb48c1985"
+    },
+    {
+      "id": "pair-all-high",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-all-high",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 1,
+          "PASSAGE": 1,
+          "TILT": 1,
+          "BIND": 1,
+          "TAIL": 1,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 84,
+        "velocity": 1,
+        "seed": "-1"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "0db433710457bb88ae0567cea1961b434c1f39039b8a2129dae833a94962c0e3",
+      "prelevelFloat32Sha256": "2c4150251a922b429af9cd7529ecbc35417868a1a404e1d0680ffa990346bf4e"
+    },
+    {
+      "id": "stream-all-low",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-all-low",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0,
+          "PASSAGE": 0,
+          "TILT": 0,
+          "BIND": 0,
+          "TAIL": 0,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 36,
+        "velocity": 0.75,
+        "seed": "1"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "181baed1f5c84a7fd2c8c04eb49bc26067358b2b422becc74ff4f98c34617fe6",
+      "prelevelFloat32Sha256": "161ad9dd4361d168c124e320e5ca6c1d80939faf460aaf8d193998645897ea16"
+    },
+    {
+      "id": "stream-close-diffuse",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-close-diffuse",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.8999999761581421,
+          "TILT": 0.15000000596046448,
+          "BIND": 0.10000000149011612,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "147e5790dd3977b4e3c910554d697e0597f18a011536487cae3f82ac11901864",
+      "prelevelFloat32Sha256": "7c2381aee7a18778086c5419a71014bb31f5e77cb961f14f388a391d5bfbdb18"
+    },
+    {
+      "id": "pair-inclined",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-inclined",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.8500000238418579,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.8500000238418579,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "seed": "-9223372036854775808"
+      },
+      "frames": 432180,
+      "normalizedFloat32Sha256": "95f43862c08714e2e0896b103bc913be9f4cc13926a704b920ae4a98a2a43ff1",
+      "prelevelFloat32Sha256": "97b40acbb5038d002d03be61ba4c1c976905cee6265754e7f63f4af52d50ef67"
+    }
+  ]
+}

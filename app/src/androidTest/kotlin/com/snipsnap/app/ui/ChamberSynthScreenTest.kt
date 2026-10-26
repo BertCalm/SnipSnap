@@ -128,6 +128,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         show(shelf(), settings)
         press("ENGINE FILAMENT · TAP FOR NEXT")
         press("ENGINE APSIS · TAP FOR NEXT")
+        press("ENGINE TIDAL · TAP FOR NEXT")
         compose.onNodeWithContentDescription("ENGINE CHAMBER · TAP FOR NEXT").assertExists()
         for (voice in ChamberVoice.entries) {
             press(voice.name)

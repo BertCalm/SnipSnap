@@ -69,20 +69,20 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (51 starters including STRIKE FX, CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC and CHAMBER,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (52 starters including STRIKE FX, CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 62 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 63 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM,
-MERCURY, CAUSTIC, FILAMENT, APSIS and CHAMBER.
+MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL and CHAMBER.
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
@@ -128,6 +128,15 @@ VELOCITY, GATE and DRY/WET are saved beside RISE, WIDTH, GLOW, AIR and the
 complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
+
+TIDAL exposes PAIR and STREAM with five encounter controls, ROOT, native
+VELOCITY, ORIGINAL/MATERIAL sources and an exact 64-bit VARIATION SEED.
+Complete recipes survive drafts, preset storage and pad reopening. Its six
+factory presets and sixteen-pad FRESH TAPE starter stay finite; SEND TO PAD
+retains the authored pitch and one-shot playback despite long-sample LOOP
+filing. Preview jobs cancel obsolete work and reuse a bounded completed-audio
+cache. HOLD and MAKE INSTRUMENT are deferred. Device timing and phone/MPC
+listening remain separate acceptance checks. See [TIDAL](../docs/TIDAL.md).
 
 ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
 six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve

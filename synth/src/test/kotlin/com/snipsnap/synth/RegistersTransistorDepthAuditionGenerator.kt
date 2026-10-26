@@ -159,7 +159,7 @@ object RegistersTransistorDepthAuditionGenerator {
         val recipe = patch.toJsonValue()
         check(recipe.entries - "model" == oldPatch.toJsonValue().entries - "model")
         val factoryName = original["factoryPreset"] as String?
-        if (factoryName != null) check(RegistersPresets.forVoice(voice).single { it.name == factoryName } == patch) {
+        if (factoryName != null) check(RegistersPresets.forVoice(voice).single { it.name == factoryName }.copy(model = MODEL) == patch) {
             "$id: the published comparison settings no longer match the current factory patch"
         }
         val probe = patch.probe()
