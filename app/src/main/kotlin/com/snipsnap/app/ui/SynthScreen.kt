@@ -284,6 +284,10 @@ import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.Overlap
 import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.Apsis
+import com.snipsnap.synth.ApsisPatch
+import com.snipsnap.synth.ApsisVoice
+import com.snipsnap.shell.ApsisPad
 import com.snipsnap.synth.OverlapTopology
 import com.snipsnap.synth.Relay
 import com.snipsnap.synth.RelayPatch
@@ -349,7 +353,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
@@ -1102,6 +1105,8 @@ fun SynthScreen(
         val bounded = value.coerceIn(macroRange(name))
         val values = macrosByVoice.getValue(engine to voice) + (name to bounded)
         macrosByVoice[engine to voice] = values
+        // Navigation can replace this screen before its state effect runs.
+        settings[macroSettingsKey(engine, voice, name)] = bounded.toString()
         ensureNativeDraft()
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
@@ -1223,7 +1228,7 @@ fun SynthScreen(
     var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
-            val (live, bin) = withContext(Dispatchers.IO) { embouchureRestore.readShelf(shelfRoot) }
+            val (live, bin) = offMain { embouchureRestore.readShelf(shelfRoot) }
             userPresets = live
             binnedPresets = bin
             // The YOURS presets the bag named (§3.6), now that the shelf has
@@ -1296,10 +1301,10 @@ fun SynthScreen(
         val held = engine to voice
         appScope.launch {
             try {
-                val gone = withContext(Dispatchers.IO) {
+                val gone = offMain {
                     UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
                 }
-                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
                 userPresets = live
                 binnedPresets = bin
                 if (gone == null) {
@@ -1324,8 +1329,8 @@ fun SynthScreen(
         binBusy = true
         appScope.launch {
             try {
-                val back = withContext(Dispatchers.IO) { UserPresets.unforget(shelfRoot, binned) }
-                val (live, bin) = withContext(Dispatchers.IO) { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
+                val back = offMain { UserPresets.unforget(shelfRoot, binned) }
+                val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
                 userPresets = live
                 binnedPresets = bin
                 // The name it actually landed under — a clash with a preset
@@ -1357,7 +1362,7 @@ fun SynthScreen(
         val patch = buildCurrentPatch(name)
         appScope.launch {
             try {
-                val (saved, all) = withContext(Dispatchers.IO) {
+                val (saved, all) = offMain {
                     val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
                     s to UserPresets.read(shelfRoot)
                 }
@@ -1390,6 +1395,7 @@ fun SynthScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
+                if (engine == Engine.APSIS) touched = false
                 voicePlayer?.release()
                 voicePlayer = null
             }
@@ -1411,7 +1417,8 @@ fun SynthScreen(
         val heard = if (engine == Engine.ORPHICA || engine == Engine.OPENSKY) target else Cleanup.toMono(target)
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
-        v.start(0)
+        v.start(0, loop = if (engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f))
+            0 until heard.frameCount else null)
     }
 
     val filamentPreviews = rememberFilamentPreviews()
@@ -1442,7 +1449,7 @@ fun SynthScreen(
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
             val previewJob = coroutineContext[Job]
-            val rendered = runInterruptible(Dispatchers.Default) {
+            val rendered = offMainInterruptible(Dispatchers.Default) {
                 val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.CHAMBER)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
@@ -1563,6 +1570,7 @@ fun SynthScreen(
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is ApsisPatch -> patch.midi
                     is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
                     is FilamentPatch -> patch.midi
                     is TidalPatch -> patch.midi
@@ -1574,7 +1582,7 @@ fun SynthScreen(
                     mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it), "rootOrigin" to "authored")
                 }
                 val tonalRoot = authoredMidi?.takeIf { cls == DrumClass.TONAL }
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         // A held Murmur source is seamless, but a one-shot pad stops
@@ -1619,6 +1627,7 @@ fun SynthScreen(
                             // and source tags; the player's tune offsets stay put.
                             // ORIGAMI retains its existing finite-note behavior.
                             val knownTune = when {
+                                patch is ApsisPatch && cls == DrumClass.LOOP -> 0 to 0
                                 (patch is FilamentPatch || patch is ChamberPatch) && reopenedHere -> null
                                 patch is FilamentPatch && cls == DrumClass.LOOP -> 0 to 0
                                 patch is TidalPatch && !reopenedHere -> 0 to 0
@@ -1631,6 +1640,7 @@ fun SynthScreen(
                                         drumClass = deliveredClass,
                                         colorHex = AutoPlace.colorFor(deliveredClass),
                                         muteGroup = AutoPlace.muteGroupFor(deliveredClass),
+                                        loop = false,
                                     )
                                     identified.copy(
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
@@ -1658,6 +1668,9 @@ fun SynthScreen(
                             )
                             model.update(slot) { p -> p.copy(recipe = recipe) }
                         }
+                        if (patch is ApsisPatch) {
+                            model.update(slot) { ApsisPad.configure(it, patch) }
+                        }
                         model.save()
                         alreadyThere to model.kit
                     }
@@ -1670,7 +1683,7 @@ fun SynthScreen(
                     // corners and the rest), and App opens the screen. The
                     // SURFACE screen is not showing while SYNTH is, so nothing
                     // else writes surface.json underneath this.
-                    withContext(Dispatchers.IO) { SurfaceStore.choosePad(e.dir, slot) }
+                    offMain { SurfaceStore.choosePad(e.dir, slot) }
                     onToast(Copy.sirenToSurface(padTag(slot), name, replaced = existed))
                     onOpenSurface()
                     return@launch
@@ -1740,7 +1753,7 @@ fun SynthScreen(
     LaunchedEffect(makingInstrument, holdBase) {
         if (!makingInstrument) return@LaunchedEffect
         heldSheet.holdName = try {
-            withContext(Dispatchers.IO) { OneNote.freshName(instrumentsDir, holdBase) }
+            offMain { OneNote.freshName(instrumentsDir, holdBase) }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -1812,10 +1825,10 @@ fun SynthScreen(
                 // CANCEL cancels this job; the render asks and stops.
                 val heard = if (spec is HeldSpec.Ohm) {
                     val renderJob = coroutineContext[Job]
-                    runInterruptible(Dispatchers.Default) {
+                    offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                     }
-                } else withContext(Dispatchers.Default) { spec.preview { !isActive } }
+                } else offMain(Dispatchers.Default) { spec.preview { !isActive } }
                 audition(heard)
             } catch (e: CancellationException) {
                 throw e
@@ -1857,10 +1870,10 @@ fun SynthScreen(
                         midis.map { midi ->
                             val note = if (spec is HeldSpec.Ohm) {
                                 val renderJob = coroutineContext[Job]
-                                runInterruptible(Dispatchers.Default) {
+                                offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                                 }
-                            } else withContext(Dispatchers.Default) { spec.renderZone(midi) { !isActive } }
+                            } else offMain(Dispatchers.Default) { spec.renderZone(midi) { !isActive } }
                             withContext(Dispatchers.Main) { heldSheet.holdDone += spec.progressPerZone }
                             note
                         }
@@ -1878,7 +1891,7 @@ fun SynthScreen(
                 }
                 // Past here the write lands even under CANCEL: a package half
                 // written is worse than a whole one the player can bin.
-                val made = withContext(NonCancellable + Dispatchers.IO) {
+                val made = offMain(NonCancellable + Dispatchers.IO) {
                     val name = OneNote.freshName(instrumentsDir, base)
                     spec.export(name, notes, instrumentsDir)
                     name
@@ -1968,7 +1981,7 @@ fun SynthScreen(
         val session = droneSheet.droneSession
         val spec = droneSpec()
         if (droneSheet.droneOpen && root != null && session != null && spec != null) {
-            droneSheet.droneLabel = withContext(Dispatchers.Default) {
+            droneSheet.droneLabel = offMain(Dispatchers.Default) {
                 // cancelled reaches SirenDrone.fitCarrier's own check: a
                 // rapid run of ROOT taps must stop one computation before
                 // starting the next, not pile them up on the pool that
@@ -1994,7 +2007,7 @@ fun SynthScreen(
         if (!droneSheet.droneOpen) return@LaunchedEffect
         val spec = droneSpec() ?: return@LaunchedEffect
         if (droneSheet.droneRoot?.let { it in spec.roots } != true) droneSheet.droneRoot = spec.defaultRoot(kit?.key)
-        droneSheet.droneSession = withContext(Dispatchers.IO) {
+        droneSheet.droneSession = offMain {
             val rate = deviceSampleRate(context)
             val dir = LoopWrites.dir(context)
             runCatching { SessionStore.load(dir) }.getOrNull()?.copy(sampleRate = rate)
@@ -2010,7 +2023,7 @@ fun SynthScreen(
         droneSheet.dronePreviewing = true
         droneSheet.droneJob = appScope.launch {
             try {
-                val heard = withContext(Dispatchers.Default) {
+                val heard = offMain(Dispatchers.Default) {
                     // CANCEL (or closing the sheet) cancels this job; the
                     // render asks and stops rather than running on for seconds.
                     val once = spec.render(root, session) { !isActive }
@@ -2065,7 +2078,7 @@ fun SynthScreen(
         scope.launch {
             try {
                 val spreadJob = coroutineContext[Job]
-                val src = runInterruptible(Dispatchers.Default) {
+                val src = offMainInterruptible(Dispatchers.Default) {
                     val cancelled = { spreadJob?.isActive == false || Thread.currentThread().isInterrupted }
                     val rendered = when (patch) {
                         is ChamberPatch -> seed.chamberRenderer.render(patch, cancelled)
@@ -2113,7 +2126,7 @@ fun SynthScreen(
                 // Planned again over the kit on disk, under the lock: the
                 // panel's preview read App's copy, which a write elsewhere
                 // may have moved on since.
-                val (plan, updatedKit) = withContext(Dispatchers.IO) {
+                val (plan, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val plan = Spread.plan(model.kit, src.midi, options)
@@ -2433,6 +2446,17 @@ fun SynthScreen(
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
+                }
+
+                if (engine == Engine.APSIS) {
+                    ApsisPlayingControls(
+                        buildCurrentPatch(engine.patchDisplayName(voice)) as ApsisPatch,
+                        classColor, scheme,
+                    ) { patch ->
+                        touched = true
+                        currentPresetByVoice.remove(engine to voice)
+                        loadedPatchesByVoice[engine to voice] = patch
+                    }
                 }
 
                 // OVEN's root and hammer energy are saved beside its six macros.
@@ -2856,7 +2880,7 @@ fun SynthScreen(
                     TapeText(
                         if (voice == TrioVoice.ENSEMBLE)
                             "DRAMA BRINGS ANSWERS TOGETHER · SIDES PICKS THE OUTSIDER · MOTION MOVES THE ALLIANCE"
-                        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION SHAPE THE ENSEMBLE",
+                        else "SOLO PERFORMER · DRAMA, SIDES AND MOTION ARE ENSEMBLE CONTROLS",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
                     )
                     MacroSlider(
@@ -2876,8 +2900,8 @@ fun SynthScreen(
                         fillColor = classColor, scheme = scheme,
                         onValueChange = { value -> updateTrioPatch { it.copy(velocity = value.coerceIn(0f, 1f)) } },
                     )
-                    // The gesture stays within its two-second playing window;
-                    // changing tempo retains the selected number of beats.
+                    // The beat grid spans at most two seconds; answers may extend past it.
+                    // Changing tempo retains the selected number of beats.
                     val minimumTempo = maxOf(60, config.beats * 30)
                     MacroSlider(
                         label = "TEMPO",
@@ -2901,6 +2925,11 @@ fun SynthScreen(
                             ) { updateTrioPatch { it.copy(config = it.config.copy(beats = beats)) } }
                         }
                     }
+                }
+
+                if (engine == Engine.TRIO) {
+                    TapeText("BEAT GRID UP TO 2s · ANSWERS AND RING CONTINUE · 3.5s RECORDING",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
                 }
 
                 if (engine == Engine.OBBLIGATO) {
@@ -3021,6 +3050,9 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.APSIS ->
+                                Apsis.scramble(voice as ApsisVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.CHAMBER ->
                                 Chamber.scramble(voice as ChamberVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3186,6 +3218,11 @@ fun SynthScreen(
 
             if (flockHeldPreview != null) {
                 FlockHeldAudition(flockHeldPreview, classColor, scheme)
+            } else if (engine == Engine.APSIS) {
+                ApsisAuditionControls(classColor, scheme,
+                    onAudition = { touched = true; snip?.let { audition(it) } },
+                    onStop = { touched = false; voicePlayer?.stop(); voicePlayer = null },
+                )
             } else {
                 Box(
                     Modifier
@@ -3363,6 +3400,59 @@ private fun rememberFilamentPreviews(): FilamentPreviewCache {
     return previews
 }
 
+/** Separate transport controls for the repeating Apsis preview. */
+@Composable
+private fun ApsisAuditionControls(
+    classColor: Color,
+    scheme: Scheme,
+    onAudition: () -> Unit,
+    onStop: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(
+            Modifier.weight(1f).heightIn(min = Layout.PRIMARY_ACTION_H.dp)
+                .raisedBevel(scheme, fill = classColor.copy(alpha = .85f))
+                .tapeClick(label = "AUDITION", onClick = onAudition)
+                .padding(horizontal = 10.dp),
+            contentAlignment = Alignment.Center,
+        ) { TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape) }
+        LabButton("STOP", scheme, enabled = true,
+            modifier = Modifier.weight(.45f).heightIn(min = Layout.PRIMARY_ACTION_H.dp),
+            accessibilityLabel = "STOP AUDITION", onClick = onStop)
+    }
+}
+
+/** Apsis playing controls stay outside the large screen's Compose method. */
+@Composable
+private fun ApsisPlayingControls(
+    patch: ApsisPatch,
+    classColor: Color,
+    scheme: Scheme,
+    onPatch: (ApsisPatch) -> Unit,
+) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - Apsis.MIDI_MIN).toFloat() / (Apsis.MIDI_MAX - Apsis.MIDI_MIN),
+        fillColor = classColor,
+        scheme = scheme,
+        readout = Scales.nameOf(patch.midi),
+        onValueChange = { value ->
+            val midi = (Apsis.MIDI_MIN + value * (Apsis.MIDI_MAX - Apsis.MIDI_MIN)).roundToInt()
+                .coerceIn(Apsis.MIDI_MIN, Apsis.MIDI_MAX)
+            onPatch(patch.copy(midi = midi))
+        },
+    )
+    MacroSlider(
+        label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
+        onValueChange = { onPatch(patch.copy(velocity = it.coerceIn(0f, 1f))) },
+    )
+    TapeText(
+        if (Apsis.isLoop(patch.macros["HOLD"] ?: 0f)) "HOLD: SETTLED CYCLE · REPEATS UNTIL STOP."
+        else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+    )
+}
+
 /**
  * The MACRO sliders, CONTOUR's under its TONE/ENVELOPE/MOVEMENT/FILTER/PLAY
  * headings. A composable of its own because `Column` is inline: inside
@@ -3411,7 +3501,8 @@ private fun MacroSliders(
                     readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
                     onValueChange = { v -> onMacro(spec.name, v) },
                     valueRange = macroRange(spec.name),
-                    enabled = spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC),
+                    enabled = (spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC)) &&
+                        (engine != Engine.TRIO || Trio.isMacroActive(voice as TrioVoice, spec.name)),
                 )
             }
         }
@@ -3501,6 +3592,7 @@ private fun macroReadout(
     registersRoot: Int?,
     shoalHoldSupported: Boolean,
 ): String? = when {
+    engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
     engine == Engine.PRISM && name == "HOLD" && loadedPatch is PrismPatch && loadedPatch.motion != null -> "NOTE"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
@@ -4378,7 +4470,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, TIDAL, CHAMBER;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
     val displayName: String get() = name.replace('_', ' ')
 
     /** Cycle through the registered synth engines, wrapping back to THUMP. */
@@ -4441,6 +4533,7 @@ private enum class Engine {
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
+        APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
         ORIGAMI -> OrigamiVoice.entries
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
@@ -4508,6 +4601,7 @@ private enum class Engine {
         RELAY -> Relay.macrosFor(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
+        APSIS -> Apsis.macrosFor(voice as ApsisVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
         MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
@@ -4573,6 +4667,7 @@ private enum class Engine {
         RELAY -> Relay.defaults(voice as RelayVoice)
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
+        APSIS -> Apsis.defaults(voice as ApsisVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
         MERCURY -> Mercury.defaults(voice as MercuryVoice)
@@ -4640,6 +4735,7 @@ private enum class Engine {
         RELAY -> Relay.scramble(voice as RelayVoice, random)
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
+        APSIS -> Apsis.scramble(voice as ApsisVoice, random)
         OVEN -> Oven.scramble(voice as OvenVoice, random)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
@@ -4712,6 +4808,7 @@ private enum class Engine {
         RELAY -> Relay.render(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
+        APSIS -> Apsis.render(voice as ApsisVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
@@ -4783,6 +4880,7 @@ private enum class Engine {
         RELAY -> Relay.drumClassFor(voice as RelayVoice, macros)
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
+        APSIS -> Apsis.drumClassFor(voice as ApsisVoice, macros)
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
@@ -4849,6 +4947,7 @@ private enum class Engine {
         RELAY -> RelayPatch(name, voice as RelayVoice, macros)
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
+        APSIS -> ApsisPatch(name, voice as ApsisVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
@@ -5074,27 +5173,29 @@ private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSele
                 for (v in row) {
                     val selected = v == current
                     val color = Schemes.classColor(engine.drumClass(v)).tape
-                    Column(
-                        Modifier
-                            .weight(1f)
-                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                            .semantics { this.selected = selected }
-                            .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
-                            .padding(horizontal = 2.dp, vertical = 3.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        TapeText(
-                            chipLabel(engine, v),
-                            TapeType.pixelSmall,
-                            color,
-                            maxLines = 1,
-                        )
-                        // Reserved on every chip, not just the selected one
-                        // (blank when not selected) — so one selection
-                        // doesn't grow only its own cell and leave the row
-                        // jagged against its neighbours.
-                        TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                    key(v) {
+                        Column(
+                            Modifier
+                                .weight(1f)
+                                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                                .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                                .semantics { this.selected = selected }
+                                .tapeClick(label = chipLabel(engine, v)) { onSelect(v) }
+                                .padding(horizontal = 2.dp, vertical = 3.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            TapeText(
+                                chipLabel(engine, v),
+                                TapeType.pixelSmall,
+                                color,
+                                maxLines = 1,
+                            )
+                            // Reserved on every chip, not just the selected one
+                            // (blank when not selected) — so one selection
+                            // doesn't grow only its own cell and leave the row
+                            // jagged against its neighbours.
+                            TapeText(if (selected) "SELECTED" else "", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+                        }
                     }
                 }
             }
@@ -5160,14 +5261,21 @@ private fun PresetList(
     onSelect: (Patch) -> Unit,
     onHold: (Patch) -> Unit,
 ) {
-    val presets = remember(engine, voice) { Presets.forVoice(engine.name, voice.name) }
-    PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    // A new voice must not reuse the previous voice's chip nodes. Positional
+    // reuse kept the old spoken names, so a later voice's preset (PRISM BASS
+    // "Hollow Rise" after the KEY openings) was absent from the tree.
+    val presets = Presets.forVoice(engine.name, voice.name)
+    key(engine, voice) {
+        PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
+    }
     // The player's own, under the factory row (docs/WORKSHOP.md, WS5):
     // a second strip that exists only once this voice has one, with the
     // same chips and the same highlight rule, and YOURS in the slider
     // label column below it so the two rows read as two rows. A hold on
     // one of these asks to forget it; the factory's chips have no hold.
-    PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+    key(engine, voice, "YOURS") {
+        PresetStrip(engine, voice, yours, current, scheme, label = "YOURS", spoken = "YOUR PRESET", onSelect = onSelect, onHold = onHold)
+    }
 }
 
 /**
@@ -5214,32 +5322,34 @@ private fun PresetStrip(
         ) {
             for (p in presets) {
                 val selected = p.name == current
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                        .semantics { this.selected = selected }
-                        .let { chip ->
-                            if (onHold == null) {
-                                chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
-                            } else {
-                                // A plain tap/long-press with no drag —
-                                // combinedClickable registers both as real
-                                // accessibility actions (KitsScreen's RoomRow).
-                                chip.combinedClickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    onClickLabel = "$spoken ${p.name}",
-                                    onLongClickLabel = "FORGET ${p.name}",
-                                    onLongClick = { onHold(p) },
-                                    onClick = { onSelect(p) },
-                                )
+                key(p.name) {
+                    Box(
+                        Modifier
+                            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
+                            .semantics { this.selected = selected }
+                            .let { chip ->
+                                if (onHold == null) {
+                                    chip.tapeClick(label = "$spoken ${p.name}") { onSelect(p) }
+                                } else {
+                                    // A plain tap/long-press with no drag —
+                                    // combinedClickable registers both as real
+                                    // accessibility actions (KitsScreen's RoomRow).
+                                    chip.combinedClickable(
+                                        interactionSource = remember { MutableInteractionSource() },
+                                        indication = null,
+                                        onClickLabel = "$spoken ${p.name}",
+                                        onLongClickLabel = "FORGET ${p.name}",
+                                        onLongClick = { onHold(p) },
+                                        onClick = { onSelect(p) },
+                                    )
+                                }
                             }
-                        }
-                        .padding(horizontal = 8.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        TapeText(p.name, TapeType.pixelSmall, if (selected) scheme.amber.tape else scheme.ink2.tape, maxLines = 1)
+                    }
                 }
             }
         }

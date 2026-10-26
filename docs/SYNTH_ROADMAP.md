@@ -2505,3 +2505,46 @@ home. Its seam is checked against real successive resonator/filter periods.
 The owner heard R1 and reported static and weak control separation. The
 revised voice remains a listening candidate; numerical checks do not replace
 that verdict.
+
+## Apsis — first listening prototype
+
+PASSAGE is a sample-free pitched center and stable roster of up to six orbital
+resonant bodies, with three participating at default. Safeguarded Kepler timing
+drives excitation and contractive internal state exchange. Separate MIDI and
+velocity, six movement controls, versioned recipes, six provisional settings,
+CLI rendering and a dry starter kit use the existing JVM pipeline. HOLD uses a
+commensurate reference-compatible roster and settled adjacent-cycle evidence;
+it does not freeze the movement to manufacture a seamless pad.
+
+The first audition compares circular/elongated timing, gathered/staggered
+arrivals, population, orbital scale, coupling and an otherwise unexcited
+recipient, mechanism simplifications, playing range and held repetition.
+The proposed six-voice, 36-preset production bank, phone picker and device
+acceptance remain later work. The owner's listening verdict is pending.
+Contract and reproduction commands: [APSIS.md](APSIS.md).
+
+Round two responds to weak audible variation: the first full mix put about 99%
+of powered spectral energy in the fundamental. Model 2 lowers that masking,
+exposes body-specific finite contact resonances and shortens bright-mode memory.
+The private study retains an exact original/revised pair plus six same-pitch
+preset gestures. Model-1 recipes keep their renderer, including recipes whose
+model metadata is absent. Numerical contrast screens supplement stability and
+pitch checks; the owner's revised listening verdict and faster rerendering are
+still open.
+
+The Apsis musical-bank round now supplies sixteen role-based pads and forty
+PCM24 samples, native MPC 3/MPC 2 programs with explicit held-loop flags, seven
+dry scores using those exact samples, and native velocity-zone inspections.
+Model 3 adds excitation color and a weaker material port alongside the resonant
+bridges, plus bounded prepared-motion reuse and a lighter production diagnostic
+path. Saved models 1/2 retain their audio. Scoped engine/export checks and
+desktop/mobile audition checks pass; physical MPC playback and the owner's
+musical-bank verdict remain open.
+
+Android integration adds APSIS to SYNTH with PASSAGE and the six presets,
+independent ROOT/VELOCITY, all six movement controls, complete recipe restoration,
+SAVE PRESET/YOURS, SPREAD's authored root and SEND TO PAD. Held previews repeat
+the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
+gate on release; both drum exporters write the corresponding slice-loop and
+sustain settings. Finite notes retain complete one-shot tails. Dedicated
+keyboard multisampling and physical phone/MPC acceptance remain separate.

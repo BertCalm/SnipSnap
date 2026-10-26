@@ -127,6 +127,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         val settings = mutableMapOf("engine" to "FILAMENT", "voice" to "THREAD")
         show(shelf(), settings)
         press("ENGINE FILAMENT · TAP FOR NEXT")
+        press("ENGINE APSIS · TAP FOR NEXT")
         press("ENGINE TIDAL · TAP FOR NEXT")
         compose.onNodeWithContentDescription("ENGINE CHAMBER · TAP FOR NEXT").assertExists()
         for (voice in ChamberVoice.entries) {

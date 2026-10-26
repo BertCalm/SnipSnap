@@ -2,11 +2,11 @@ package com.snipsnap.synth
 
 enum class TrioPresetGroup { ROOTS, LOW_DRAMA, MID_DRAMA, HIGH_DRAMA }
 
-/** Sixteen dry, finite model-5 recipes in C minor pentatonic, from C3 to C5. */
+/** Sixteen dry, finite model-6 recipes in C minor pentatonic, from C3 to C5. */
 object TrioPresets {
     private fun c(seed: Int, tempoBpm: Float = 104f, beats: Int = 2, press: Float = .4f,
         tremoloHz: Float = 10f, strumMs: Float = 8f) =
-        TrioConfig(seed, tempoBpm, beats, press, tremoloHz, strumMs, model = 5)
+        TrioConfig(seed, tempoBpm, beats, press, tremoloHz, strumMs, model = Trio.MODEL_VERSION)
 
     private fun p(voice: TrioVoice, name: String, midi: Int, velocity: Float, config: TrioConfig,
         vararg macros: Pair<String, Float>) = TrioPatch(name, voice,

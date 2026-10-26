@@ -151,6 +151,9 @@ object SynthKits {
         return ArrangedPad(recipe.render(), drumClass, recipe.toJsonValue())
     }
 
+    /** The authoritative dry orbital performance bank, with native velocity zones. */
+    fun apsis(): List<ArrangedPad?> = ApsisKitBank.arrangedPads()
+
     private fun pluck(name: String, voice: PluckVoice, semitone: Int, vararg extra: Pair<String, Float>) =
         pad(
             PluckPatch(name, voice, mapOf("TUNE" to semitone / Pluck.TUNE_SEMITONES.toFloat()) + extra),
