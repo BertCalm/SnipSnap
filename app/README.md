@@ -168,7 +168,12 @@ SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
 saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
 nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
 retaining the editable held recipe. HOLD stays finite. See the
-[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). Phone playback
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). FLOCK MAKE also offers
+TOUCH LAYERS, initially on: soft, medium and hard touches select three distinct
+source disturbances per root. Its preview plays all three through the reference
+player; the main hold audition retains the saved anchor. The exported instrument
+keyboard uses touch position to select a layer. See the
+[touch-layer design](../docs/FLOCK_RIBBON_TOUCH.md). Phone playback
 remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available

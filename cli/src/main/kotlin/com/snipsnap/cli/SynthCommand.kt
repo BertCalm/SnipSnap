@@ -204,8 +204,9 @@ import kotlin.random.Random
  * use the factory kit recipes; ROUND, WIRE and TEAR retain CLI-only model-1 starts.
  * FLOCK GATHER/RIBBON/SPLIT accept `--seed N` across the full signed 64-bit range
  * for their finite performances. FLOCK also replays `--patch <json>`; RIBBON
- * becomes a captured-sustain instrument with `--instrument [--release S]`,
- * retaining its exact model, seed and saved note/velocity.
+ * becomes a captured-sustain instrument with `--instrument [--release S] [--touch]`,
+ * retaining its exact model, seed and saved note/velocity. `--touch` adds three
+ * independently captured source strengths up to the saved velocity.
  * WICK offers twenty-one provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
@@ -322,8 +323,8 @@ object SynthCommand {
         if (engine == OrigamiPatch.ENGINE && drone) {
             throw CliError("--drone is not supported by ORIGAMI; use --instrument for model-4 FAN or STILL")
         }
-        if (opts.has("--touch") && (!instrument || engine != CreasePatch.ENGINE)) {
-            throw CliError("--touch requires CREASE --instrument")
+        if (opts.has("--touch") && (!instrument || engine !in setOf(CreasePatch.ENGINE, FlockPatch.ENGINE))) {
+            throw CliError("--touch requires CREASE --instrument or FLOCK RIBBON --instrument")
         }
         val noteFlags = listOf("--midi", "--velocity").filter { opts[it] != null }
         if (instrument && engine == ContourPatch.ENGINE) {
@@ -645,7 +646,7 @@ object SynthCommand {
         val flockInstrumentSpec = if (instrument && engine == FlockPatch.ENGINE) try {
             val patch = chosen.single() as FlockPatch
             FlockPadMaker.Spec(patch.copy(playback = FlockPlayback.HELD,
-                releaseSeconds = flockInstrumentRelease ?: patch.releaseSeconds))
+                releaseSeconds = flockInstrumentRelease ?: patch.releaseSeconds), touchLayers = opts.has("--touch"))
         } catch (e: IllegalArgumentException) {
             throw CliError("--instrument / --midi: ${e.message ?: "invalid FLOCK instrument"}")
         } else null
@@ -776,13 +777,17 @@ object SynthCommand {
         val name = OneNote.freshName(dir, Names.sanitizeStem(patch.name))
         val midis = FlockPadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { i, midi ->
-            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            FlockPadMaker.renderZone(spec, midi)
+            val progress = if (spec.touchLayers)
+                " (layers ${i * spec.layerCount + 1}..${(i + 1) * spec.layerCount}/${midis.size * spec.layerCount})" else ""
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}$progress")
+            FlockPadMaker.renderLayers(spec, midi)
         }
-        FlockPadMaker.export(name, spec, notes, dir)
+        FlockPadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} native zones, captured RIBBON sustain - RELEASE ${FlockPadMaker.secondsLabel(spec.releaseSeconds)}")
+        if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         out.println("recipe: ${File(dir, "$name.patch.json").path}")
+        if (spec.touchLayers) out.println("instrument recipe: ${FlockPadMaker.recipeFile(dir, name).path}")
         return 0
     }
 

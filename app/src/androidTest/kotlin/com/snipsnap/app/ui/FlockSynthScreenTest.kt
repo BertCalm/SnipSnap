@@ -7,12 +7,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.SynthWork
 import com.snipsnap.shell.UserPresets
@@ -44,6 +47,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
     private var generation by mutableStateOf(0)
     private var entry by mutableStateOf<KitShelf.Entry?>(null)
     private var kitUpdates = 0
+    private var instrumentUpdates = 0
 
     @After
     fun cleanUp() {
@@ -66,7 +70,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
                     shelfRoot = shelf,
                     onToast = {},
                     onKitUpdated = { updated -> entry = entry?.copy(kit = updated); kitUpdates++ },
-                    onShelfAssetWritten = {},
+                    onShelfAssetWritten = { instrumentUpdates++ },
                     onDroneToLoop = { _, _, _ -> },
                     onOpenSurface = {},
                     appScope = appScope,
@@ -94,6 +98,14 @@ class FlockSynthScreenTest : ComposeScreenTest() {
     private fun workingRibbon(): FlockPatch = SynthWork.read(settings).single {
         it.recipe.patch?.voiceName == "RIBBON"
     }.recipe.patch as FlockPatch
+
+    private fun cancelInstrumentSheet() {
+        // CANCEL is shared by the scrim and action; use the action's final node.
+        val cancels = compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("CANCEL"))
+        cancels[cancels.fetchSemanticsNodes().lastIndex]
+            .performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+        pump(16)
+    }
 
     @Test
     fun onlyRibbonHasAnExplicitHeldChoiceAndFiniteHoldKeepsItsMeaning() {
@@ -161,11 +173,7 @@ class FlockSynthScreenTest : ComposeScreenTest() {
             .performSemanticsAction(SemanticsActions.SetProgress) { assertTrue(it(1f)) }
         pump(16)
         compose.runOnIdle { assertEquals(1.5f, workingRibbon().releaseSeconds, .00001f) }
-        // CANCEL is shared by the scrim and action; invoke the action's visible text.
-        val cancels = compose.onAllNodes(androidx.compose.ui.test.hasContentDescription("CANCEL"))
-        cancels[cancels.fetchSemanticsNodes().lastIndex]
-            .performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
-        pump(16)
+        cancelInstrumentSheet()
         activate("RIBBON FINITE")
         button("HOLD").assertExists()
         assertFalse(workingRibbon().playback == FlockPlayback.HELD)
@@ -174,6 +182,65 @@ class FlockSynthScreenTest : ComposeScreenTest() {
         activate("RIBBON HELD")
         assertEquals(1f, progress("RELEASE"), .0001f)
         compose.runOnIdle { assertEquals(1.5f, workingRibbon().releaseSeconds, .00001f) }
+    }
+
+    @Test
+    fun ribbonTouchLayersOpenEnabledCanReturnToSingleAndLeaveTheSourceUntouched() {
+        show()
+        activate("RIBBON HELD")
+        val source = workingRibbon().toJsonText()
+        activate("MAKE INSTRUMENT")
+        button("TOUCH LAYERS").assertIsSelected()
+        assertReadsInFull("TOUCH LAYERS ON")
+        button("PREVIEW").assertExists()
+        button("INSTRUMENT AUDITION").assertDoesNotExist()
+        compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE FLOCK MOTION. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.")
+            .fetchSemanticsNode()
+        activate("TOUCH LAYERS")
+        button("TOUCH LAYERS").assertIsNotSelected()
+        assertReadsInFull("TOUCH LAYERS OFF")
+        button("PREVIEW").assertDoesNotExist()
+        button("INSTRUMENT AUDITION").assertExists()
+        assertEquals(source, workingRibbon().toJsonText())
+        val instruments = File(shelf, KitShelf.INSTRUMENTS_DIR)
+        assertTrue("choosing dynamics must not write an instrument", !instruments.exists() || instruments.listFiles().isNullOrEmpty())
+        cancelInstrumentSheet()
+        activate("MAKE INSTRUMENT")
+        button("TOUCH LAYERS").assertIsNotSelected()
+        activate("TOUCH LAYERS")
+        button("TOUCH LAYERS").assertIsSelected()
+        assertEquals(source, workingRibbon().toJsonText())
+    }
+
+    @Test
+    fun makeWritesThreeIndependentVelocityLayersAndPreservesTheAuthoredRecipe() {
+        val source = FlockPatch("VELOCITY RIBBON", FlockVoice.RIBBON,
+            Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .22f), midi = 67, velocity = .42f,
+            seed = 9_007_199_254_740_993L, model = 1, playback = FlockPlayback.HELD,
+            releaseSeconds = .37f)
+        show(source)
+        activate("MAKE INSTRUMENT")
+        button("TOUCH LAYERS").assertIsSelected()
+        activate("MAKE")
+        waitFor("three-layer RIBBON instrument", timeoutMillis = 240_000) { instrumentUpdates > 0 }
+        val dir = File(shelf, KitShelf.INSTRUMENTS_DIR)
+        val sidecar = dir.listFiles()!!.single { it.name.endsWith(InstrumentStore.SUFFIX) }
+        val instrument = InstrumentStore.read(sidecar)
+        assertEquals(9, instrument.zones.size)
+        assertEquals(27, instrument.sampleFiles.size)
+        assertEquals(.37f, instrument.release, .00001f)
+        for (zone in instrument.zones) {
+            assertEquals(listOf(1..42, 43..84, 85..127), zone.playableLayers.map { it.velStart..it.velEnd })
+            assertEquals(3, zone.playableLayers.map { it.sample }.distinct().size)
+            for (layer in zone.playableLayers) {
+                assertTrue("layer keeps its source onset", layer.loopStartFrame > 0)
+                assertTrue("layer has a nonempty sustain", layer.loopStartFrame < layer.frameCount - 1)
+                assertTrue("every velocity sample is exported", File(dir, layer.sample).isFile)
+            }
+        }
+        val recipe = FlockPatch.fromJsonText(File(dir, "${instrument.name}.patch.json").readText())
+        assertEquals(source.copy(name = recipe.name), recipe)
+        assertEquals(source.copy(name = workingRibbon().name), workingRibbon())
     }
 
     @Test
