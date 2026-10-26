@@ -206,7 +206,7 @@ import kotlin.random.Random
  * for their finite performances. FLOCK also replays `--patch <json>`; RIBBON
  * becomes a captured-sustain instrument with `--instrument [--release S]`,
  * retaining its exact model, seed and saved note/velocity.
- * WICK offers twenty-one provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER recipes without adding a phone engine.
+ * WICK offers twenty-five provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE recipes without adding a phone engine.
  * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
