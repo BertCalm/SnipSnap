@@ -8,7 +8,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 /** Eight named factory sources from the palette audition. No source file or recording is needed for replay. */
 object PrismMotionSources {
-    data class Source internal constructor(val id: String, val title: String, val category: String, val patch: Patch)
+    data class Source(val id: String, val title: String, val category: String, val patch: Patch)
 
     private fun source(id: String, category: String, patch: Patch) = Source(id, patch.name, category, patch)
 

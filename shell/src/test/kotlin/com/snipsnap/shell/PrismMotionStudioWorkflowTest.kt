@@ -56,7 +56,8 @@ class PrismMotionStudioWorkflowTest {
 
             for (repeat in listOf(false, true)) {
                 val label = if (repeat) "REPEAT" else "FINITE"
-                val seeded = selected.copy(name = "MY $label MOTION", motion = selectedMotion.copy(
+                val presetName = if (repeat) "MY REPEAT MOVE" else "MY OPEN MOVE"
+                val seeded = selected.copy(name = presetName, motion = selectedMotion.copy(
                     morph = .13f, evolve = .69f, seconds = .47f, groupLag = .31f,
                 ))
                 val amountEdited = PrismMotionEditor.withAmount(seeded, .71f)
@@ -74,7 +75,8 @@ class PrismMotionStudioWorkflowTest {
                 val newer = PrismMotionEditor.withTime(patch, 1.17f)
                 UserPresets.save(shelf, newer, nowMillis = 14L)
                 val restored = assertNotNull(UserPresets.unforget(shelf, binned))
-                val expected = patch.copy(name = "${patch.name} 2")
+                val restoredName = if (repeat) "MY REPEAT MO 2" else "MY OPEN MOVE 2"
+                val expected = patch.copy(name = restoredName)
                 assertEquals(expected, restored.patch, "collision restore preserves both endpoint banks, provenance and repeat mode")
                 assertEquals(expected, UserPresets.read(shelf).single { it.name == expected.name }.patch)
                 assertEquals(newer, UserPresets.read(shelf).single { it.name == patch.name }.patch)

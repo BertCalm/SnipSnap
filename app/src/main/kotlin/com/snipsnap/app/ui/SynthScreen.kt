@@ -3552,6 +3552,8 @@ private fun MacroSliders(
                     valueRange = macroRange(spec.name),
                     enabled = (spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC)) &&
                         (engine != Engine.TRIO || Trio.isMacroActive(voice as TrioVoice, spec.name)),
+                    semanticRange = if (engine == Engine.PRISM && spec.name == "HOLD")
+                        ({ macroRange(spec.name) }) else null,
                 )
             }
         }
@@ -5534,8 +5536,10 @@ internal fun MacroSlider(
     readout: String? = null,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     enabled: Boolean = true,
+    semanticRange: (() -> ClosedFloatingPointRange<Float>)? = null,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
+    val currentSemanticRange by rememberUpdatedState(semanticRange)
     Row(
         Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).alpha(if (enabled) 1f else .45f),
         verticalAlignment = Alignment.CenterVertically,
@@ -5557,7 +5561,13 @@ internal fun MacroSlider(
                 .semantics {
                     contentDescription = label
                     progressBarRangeInfo = ProgressBarRangeInfo(value.coerceIn(valueRange), valueRange)
-                    if (enabled) setProgress { target -> currentOnChange(target.coerceIn(valueRange)); true }
+                    if (enabled) setProgress { target ->
+                        // PRISM can change OPEN/REPEAT before this node recomposes. Its
+                        // action validates against that live mode; other sliders keep
+                        // their captured range, and pointer geometry stays unchanged.
+                        currentOnChange(target.coerceIn(currentSemanticRange?.invoke() ?: valueRange))
+                        true
+                    }
                     else disabled()
                 }
                 .pointerInput(valueRange, enabled) {
