@@ -1,8 +1,10 @@
 # PRISM motion studio
 
 Repository baseline: `fd791f583579dda3dcab3d2ea9e34f9975b07a12`.
-Status: implementation and coordinated verification in progress. Phone and
-physical MPC interaction remain separate checks; no new listening approval is claimed.
+Status: motion editing, source selection and repeating HOLD are implemented.
+The audition records render evidence; the accompanying pull request records
+build and test results. Phone and physical MPC interaction remain separate
+checks; no new listening approval is claimed.
 
 The characteristic gesture is **lower body → upper colour → return to body → repeat**.
 OPEN keeps the accepted **body → colour → finite release** gesture.
@@ -116,6 +118,18 @@ with an independent frozen copy of the baseline renderer on the same JVM.
 Platform-specific floating-point audio hashes are not treated as universal.
 Workflow tests cover save, bin restore, drafts, kit reopen, replay and factory
 promotion with repeating state and source identity intact.
+
+The initial clean JDK 17 studio run reproduced all four accepted factory recipes
+and their captured sample hashes. All 28 complete recipes replayed exactly;
+all six independently generated preceding HOLD cycles matched their exports
+sample-for-sample, with measured seam error zero. The 0.2-second repeat fitted
+to 0.19875 seconds and exported eight colour cycles in a 1.59002-second file.
+
+On that JVM, warmed public renders ranged from 18 to 1,146 ms (median 115 ms).
+First source selections took 36 ms for Driven Sub, 413 ms for Mellow Reed and
+1,365 ms for Wooden Arrival. These are single-run desktop measurements, not
+Android latency guarantees. The source cache prevents that first-analysis cost
+from recurring on amount/time edits or repeated equivalent source selections.
 
 ## Why it is built this way
 

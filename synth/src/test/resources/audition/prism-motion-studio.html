@@ -62,7 +62,7 @@
     };
     const syncPlayback = () => {
       const playing = state.current && !audio.paused && !audio.ended;
-      $('#player-status').textContent = (!state.current ? 'READY' : audio.error ? 'AUDIO ERROR' : audio.ended ? 'FINISHED' : playing ? 'PLAYING' : 'PAUSED') + ' / ' + state.mode.toUpperCase() + (state.eight ? ' / 8 CYCLES' : '');
+      $('#player-status').textContent = (!state.current ? 'READY' : audio.error ? 'AUDIO ERROR' : audio.ended ? 'FINISHED' : playing ? 'PLAYING' : 'PAUSED') + ' / ' + state.mode.toUpperCase() + (state.eight ? ' / 8 EXPORTED LOOPS' : '');
       for (const card of document.querySelectorAll('.clip-card')) {
         const current = card.dataset.id === state.current?.id;
         card.classList.toggle('is-current',current);
