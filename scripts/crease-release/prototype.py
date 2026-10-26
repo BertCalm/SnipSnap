@@ -92,6 +92,14 @@ def classpath():
 
 
 def run_harness(out, build):
+    env = os.environ.copy()
+    env.pop('ANDROID_HOME', None)
+    env.pop('ANDROID_SDK_ROOT', None)
+    jar_command = ['./gradlew', '--no-daemon', '--max-workers=2', ':synth:jar']
+    with (build/'synth-jar.log').open('w') as log:
+        jar_result = subprocess.run(jar_command, cwd=ROOT, env=env, stdout=log, stderr=subprocess.STDOUT)
+    (build/'synth-jar.exit').write_text(str(jar_result.returncode)+'\n')
+    require(jar_result.returncode == 0, 'The fresh synth JAR gate failed; see raw/synth-jar.log')
     jars = classpath()
     classes = build / 'classes'
     classes.mkdir(parents=True, exist_ok=True)
@@ -100,7 +108,7 @@ def run_harness(out, build):
     subprocess.run([str(bins/'javac'), '--release', '17', '-cp', cp, '-d', str(classes),
                     str(Path(__file__).with_name('CreaseReleaseExperiment.java'))], cwd=ROOT, check=True)
     runtime = os.pathsep.join([cp, str(classes)])
-    commands = []
+    commands = [{'group': 'synth-jar', 'command': jar_command, 'exitCode': jar_result.returncode}]
     for group in ['main', 'reference', 'silence']:
         folder = build / group
         folder.mkdir(exist_ok=True)
@@ -266,18 +274,18 @@ def analyse(out, build):
                 entry=export_audio(out,stem,x.astype(np.float64)*gain*preview_fade)
                 entry.update(id=stem,preset=preset,phase=phase,mode=mode,level='common',keyUpSeconds=1.0)
                 clips.append(entry)
+            ar=rms(window(xa,(.04,.5)));br=rms(window(xb,(.04,.5)))
+            scalars=[1,ar/br]
+            peak=max(float(np.max(np.abs(x)))*gain*s for x,s in zip([xa,xb],scalars))
+            headroom=min(1,.99/max(peak,1e-30))
+            for mode,x,s in zip(['fade','unfold'],[xa,xb],scalars):
+                stem=f'{preset}-p{int(phase*100)}-{mode}-matched'
+                entry=export_audio(out,stem,x.astype(np.float64)*gain*s*headroom*preview_fade)
+                entry.update(id=stem,preset=preset,phase=phase,mode=mode,level='tail-matched',
+                             keyUpSeconds=1.0,extraWholeTakeGain=s*headroom,
+                             matchingWindowSecondsAfterKeyUp=[.04,.5])
+                clips.append(entry)
             if phase==.5:
-                ar=rms(window(xa,(.04,.5)));br=rms(window(xb,(.04,.5)))
-                scalars=[1,ar/br]
-                peak=max(float(np.max(np.abs(x)))*gain*s for x,s in zip([xa,xb],scalars))
-                headroom=min(1,.99/max(peak,1e-30))
-                for mode,x,s in zip(['fade','unfold'],[xa,xb],scalars):
-                    stem=f'{preset}-p50-{mode}-matched'
-                    entry=export_audio(out,stem,x.astype(np.float64)*gain*s*headroom*preview_fade)
-                    entry.update(id=stem,preset=preset,phase=.5,mode=mode,level='tail-matched',
-                                 keyUpSeconds=1.0,extraWholeTakeGain=s*headroom,
-                                 matchingWindowSecondsAfterKeyUp=[.04,.5])
-                    clips.append(entry)
                 plot_case(out,preset,pa.with_suffix('.csv'),pb.with_suffix('.csv'),xa,xb,ra['renderedHz'])
         for mode in [0,1]:
             r4,x4,_=reference[(preset,.5,84,4,mode)];_,x16,_=reference[(preset,.5,84,16,mode)]
@@ -322,6 +330,7 @@ def main():
     args=parser.parse_args();out=args.out.resolve();out.mkdir(parents=True,exist_ok=True)
     build=out/'raw';build.mkdir(exist_ok=True)
     started=time.monotonic(); source=git('rev-parse','HEAD')
+    require(not git('status','--porcelain'), 'Commit the experiment sources before generating provenance')
     source_hashes={p:sha((ROOT/p).read_bytes()) for p in SOURCE_PATHS}
     protocol=Path(__file__).with_name('protocol.md')
     base={'sourceCommit':source,'workingTreeDirty':bool(git('status','--porcelain')),
@@ -330,9 +339,25 @@ def main():
           'productionKotlinChanged':False,'protocolSha256':sha(protocol.read_bytes()),
           'sourceHashes':source_hashes,'generatedAt':datetime.now(timezone.utc).isoformat()}
     try:
-        commands,jars=run_harness(out,build) if not args.analyse_only else ([],[])
+        provenance_file=build/'provenance.json'
+        java_hash=sha(Path(__file__).with_name('CreaseReleaseExperiment.java').read_bytes())
+        if args.analyse_only:
+            raw_provenance=json.loads(provenance_file.read_text())
+            require(raw_provenance['sourceHashes']==source_hashes, 'Raw circuit source inputs changed')
+            require(raw_provenance['javaHarnessSha256']==java_hash, 'Raw Java harness changed')
+            for jar in raw_provenance['jarHashes']:
+                path=Path(jar['path'])
+                if not path.is_absolute(): path=ROOT/path
+                require(sha(path.read_bytes())==jar['sha256'], 'Raw runtime JAR changed')
+            commands,jars=raw_provenance['commands'],raw_provenance['jarHashes']
+        else:
+            commands,jars=run_harness(out,build)
+            raw_provenance={**base,'javaHarnessSha256':java_hash,'commands':commands,'jarHashes':jars}
+            write_json(provenance_file,raw_provenance)
         measured=analyse(out,build)
-        report={**base,'result':'passed','commands':commands,'jarHashes':jars,**measured}
+        report={**base,'result':'passed','commands':commands,'jarHashes':jars,
+                'rawCircuitSourceCommit':raw_provenance['sourceCommit'],
+                'reusedRawCircuitExecution':args.analyse_only,**measured}
         report['seconds']=time.monotonic()-started
         write_json(out/'report.json',report)
         manifest={**base,'kind':'crease-release-experiment','title':'Key-up: fade or unfold?',
@@ -345,7 +370,7 @@ def main():
                      'The current phone/export path cannot select a separately evolving release tail at arbitrary key-up.',
                      'No phone/MPC hardware or listening verdict is claimed.']}
         write_json(out/'manifest.json',manifest)
-        (out/'README.txt').write_text('CREASE RELEASE EXPERIMENT\n\nActual Kotlin circuit; Java harness and Python measurements. These are fixed-key-up recordings, not release-aware instrument exports.\n\nCompare Fade only and Unfold at the same gesture phase. Both use the same1.2s linear gain fade and a common preset gain. Key-up occurs1.0s into each preview. Tail-matched variants at phase0.5 add one whole-take scalar measured40–500ms after key-up; no dynamic level flattening.\n\nThe WAV archive contains30 mono44.1kHz PCM16 fixed performances. FLAC previews decode to identical PCM.\n')
+        (out/'README.txt').write_text('CREASE RELEASE EXPERIMENT\n\nActual Kotlin circuit; Java harness and Python measurements. These are fixed-key-up recordings, not release-aware instrument exports.\n\nCompare Fade only and Unfold at the same gesture phase. Both use the same 1.2 s linear gain fade and a common preset gain. Key-up occurs 1.0 s into each preview. Tail-matched variants add one whole-take scalar measured 40–500 ms after key-up; no dynamic level flattening.\n\nThe WAV archive contains 48 mono 44.1 kHz PCM16 fixed performances. FLAC previews decode to identical PCM.\n')
         archive=package(out);write_json(out/'download.json',archive)
         require(source_hashes=={p:sha((ROOT/p).read_bytes()) for p in SOURCE_PATHS},'source changed during experiment')
         print(json.dumps({'result':'passed','summary':measured['summary'],'seconds':report['seconds'],
