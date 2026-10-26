@@ -407,14 +407,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD, BREATH, BUBBLE and FLICKER share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Twenty-one provisional recipes stay outside
+PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Twenty-five provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, five solo
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, six solo
 musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
-[implementation notes](docs/WICK.md) describe this first round; the remaining
-remaining proposed voice and full preset library follow the listening verdict.
+[implementation notes](docs/WICK.md) describe this six-voice round; the full
+preset library follows listening to RATTLE.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share

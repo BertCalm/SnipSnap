@@ -70,7 +70,7 @@ class WickTest {
 
     @Test
     fun `transmitted excitations follow observed parent releases on a later update`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)) {
             val probe = Wick.inspect(voice, active + mapOf("FEED" to .25f, "CASCADE" to 1f))
             val events = probe.diagnostics.events
             val releases = events.filter { it.kind == "RELEASE" }
@@ -127,7 +127,7 @@ class WickTest {
 
     @Test
     fun `each timbral control moves a finite gesture and its held recurrent gesture`() {
-        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
+        for (voice in listOf(WickVoice.BUBBLE, WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)) for (hold in listOf(0f, 1f)) for (macro in timbral) {
             fun at(value: Float): FloatArray {
                 val probe = Wick.inspect(voice, active + mapOf("HOLD" to hold, macro to value))
                 assertReplayProvenance(probe)
@@ -211,8 +211,8 @@ class WickTest {
     }
 
     @Test
-    fun `wood breath and flicker velocity change finite and recurrent articulation while retaining the requested note`() {
-        for (voice in listOf(WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER)) for (hold in listOf(0f, 1f)) {
+    fun `wood breath flicker and rattle velocity change finite and recurrent articulation while retaining the requested note`() {
+        for (voice in listOf(WickVoice.WOOD, WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)) for (hold in listOf(0f, 1f)) {
             val controls = Wick.defaults(voice) + ("HOLD" to hold)
             val soft = Wick.inspect(voice, controls, midi = 60, velocity = .25f)
             val hard = Wick.inspect(voice, controls, midi = 60, velocity = 1f)
@@ -320,6 +320,85 @@ class WickTest {
                     "FLICKER MIDI$midi half-order color is not distinct from $other: $metalShare / $referenceShare")
             }
         }
+    }
+
+    @Test
+    fun `rattle keeps the requested note beneath repeated root openings across registers`() {
+        for (midi in listOf(48, 60, 72)) {
+            val probe = Wick.inspect(WickVoice.RATTLE, midi = midi)
+            val wanted = Keys.midiHz(midi)
+            val body = Snip(probe.raw, 1, Dsp.RATE)
+            val measured = FineTuning.measuredHz(body, wanted, .05f, .25f)
+            val cents = FineTuning.cents(measured, wanted.toDouble())
+            val detected = assertNotNull(Pitch.detect(body, .05f, .25f), "RATTLE MIDI$midi opening body is unpitched")
+            val detectedCents = FineTuning.cents(detected.hz.toDouble(), wanted.toDouble())
+            val rootShare = TangleMeasure.toneShare(probe.raw, wanted.toDouble())
+            val rootAdmissions = probe.diagnostics.events.filter {
+                it.destination == 0 && it.kind != "RELEASE" && it.admittedStrength > 0.0
+            }
+            println("WICK RATTLE MIDI$midi root $cents cents, detector $detectedCents cents/confidence ${detected.confidence}, root share $rootShare, root admissions ${rootAdmissions.size}")
+            assertTrue(abs(cents) < 25.0, "RATTLE MIDI$midi loses its requested root: $cents cents")
+            assertTrue(detected.confidence > .3f && abs(detectedCents) < 35.0,
+                "RATTLE MIDI$midi pulse color obscures the playing pitch: ${detected.hz} Hz, confidence ${detected.confidence}")
+            assertTrue(rootShare > .10, "RATTLE MIDI$midi underlying root is only a spectral trace: $rootShare")
+            assertTrue(rootAdmissions.size >= 3, "RATTLE MIDI$midi default never develops a repeated pitched gesture")
+        }
+        val controls = Wick.defaults(WickVoice.RATTLE)
+        val rattle = Wick.inspect(WickVoice.RATTLE, controls, midi = 60)
+        val bubble = Wick.inspect(WickVoice.BUBBLE, controls, midi = 60)
+        val difference = TangleMeasure.distance(rattle.samples, bubble.samples)
+        fun earlyFeedCount(probe: Wick.Probe) = probe.diagnostics.events.count {
+            it.destination == 0 && it.kind == "FEED" && it.timeSeconds <= 1.5 && it.admittedStrength > 0.0
+        }
+        val rattlePulses = earlyFeedCount(rattle)
+        val bubblePulses = earlyFeedCount(bubble)
+        println("WICK RATTLE/BUBBLE same-control first 1.5s admitted root feeds $rattlePulses / $bubblePulses, shape difference $difference")
+        // A phase offset alone can change waveform distance. The distinct gesture must also
+        // admit a denser sequence of genuine root openings in the same elapsed window.
+        assertTrue(rattlePulses > bubblePulses,
+            "RATTLE has no denser root gesture than BUBBLE at the same controls: $rattlePulses / $bubblePulses")
+        assertTrue(difference > .02, "RATTLE is only a gain change of BUBBLE at the same controls: $difference")
+    }
+
+    @Test
+    fun `rattle spends reserve on repeated pulses and recovery restores later admitted strength`() {
+        val controls = Wick.defaults(WickVoice.RATTLE) + mapOf("FEED" to .85f, "CASCADE" to .80f)
+        fun rootAdmissions(probe: Wick.Probe) = probe.diagnostics.events.filter {
+            it.destination == 0 && it.kind != "RELEASE" && it.requestedStrength > 0.0 && it.admittedStrength > 0.0
+        }
+        fun laterRatios(probe: Wick.Probe): List<Double> {
+            val later = rootAdmissions(probe).filter { it.kind == "FEED" && it.timeSeconds > .4 }
+            assertTrue(later.size >= 2, "RATTLE has too few genuine recurrent admissions to reveal depletion")
+            println("WICK RATTLE later root FEED admission times ${later.map { it.timeSeconds }}")
+            return later.map { it.admittedStrength / it.requestedStrength }
+        }
+        val depleted = Wick.inspect(WickVoice.RATTLE, controls)
+        val constant = Wick.inspect(WickVoice.RATTLE, controls, options = Wick.Options(constantAvailability = true))
+        val first = rootAdmissions(depleted).first()
+        val initialRatio = first.admittedStrength / first.requestedStrength
+        val depletedRatios = laterRatios(depleted)
+        val constantRatios = laterRatios(constant)
+        println("WICK RATTLE requested/admitted ratios initial $initialRatio, depleted $depletedRatios, constant $constantRatios")
+        // Ratios remove requested pulse strength and output leveling as explanations. These
+        // are actual root admissions, not a synthetic amplitude pattern or release records.
+        assertTrue(depletedRatios.min() < initialRatio * .85, "RATTLE repeats never become meaningfully depleted")
+        assertTrue(constantRatios.average() > depletedRatios.average() + .05,
+            "constant reserve fails to restore admitted excitation")
+        assertTrue(TangleMeasure.distance(depleted.samples, constant.samples) > .01,
+            "RATTLE reserve only changes diagnostics")
+        for ((previous, next) in rootAdmissions(depleted).zipWithNext()) {
+            if (next.timeSeconds > previous.timeSeconds) {
+                assertTrue(next.availabilityBefore > previous.availabilityAfter,
+                    "RATTLE idle time does not refill its spent root reserve")
+            }
+        }
+        val quick = Wick.inspect(WickVoice.RATTLE, controls + ("RECOVERY" to 0f))
+        val slow = Wick.inspect(WickVoice.RATTLE, controls + ("RECOVERY" to 1f))
+        val quickRatios = laterRatios(quick)
+        val slowRatios = laterRatios(slow)
+        println("WICK RATTLE fast/slow recovery admission ratios $quickRatios / $slowRatios")
+        assertTrue(quickRatios.average() > slowRatios.average() + .05,
+            "faster reserve recovery does not restore later admitted strength")
     }
 
     @Test

@@ -393,28 +393,29 @@ Android device, MPC hardware and naming checks remain separate acceptance work.
 
 ### WICK — ignite, cascade, recover
 
-The [supplied specification](WICK_SPEC.md) is being tested as a five-voice
-PLUCK/WOOD/BREATH/BUBBLE/FLICKER listening prototype. One pitched complex source feeds three
+The [supplied specification](WICK_SPEC.md) is being tested as a six-voice
+PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE listening prototype. One pitched complex source feeds three
 parallel low-pass gates. Each has bounded charge and recoverable availability;
 real releases schedule later pulses into the next gate. SPARK, FEED, CASCADE,
 TIMBRE, RECOVERY and HOLD are the six controls, with explicit saved MIDI 24–84
 and velocity. The oscillator/filter techniques draw on TIDE; the gate network
 and release scheduler are new.
 
-Twenty-one provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
+Twenty-five provisional recipes, JSON/velocity/CLI integration and a dry sixteen-pad
 kit support the first audition. WICK stays outside the factory preset roster,
 phone picker and starter menu pending listening. Run
 `./gradlew :synth:generateWickAudition` for native/matched dry audio, five-point
-controls, register/velocity probes, mechanism ablations, held examples and six
-musical phrases: five solo voices using one score and the retained three-voice arrangement.
+controls, register/velocity probes, mechanism ablations, held examples and seven
+musical phrases: six solo voices using one score and the retained three-voice arrangement.
 The [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](WICK.md) retain the scope and current limits.
-RATTLE and the proposed 36-preset library follow listening.
+The proposed 36-preset library follows listening to RATTLE.
 The longer pitched BUBBLE response is the owner's preferred working baseline;
 the owner also accepted WOOD's dry pitched body with smaller answering rebounds.
 The owner also accepted BREATH's sustained root and soft overlapping openings.
-FLICKER now tests brief metallic answers around a clear pitched body;
-[design notes](WICK_FLICKER.md) explain the target and its limits.
+The owner also accepted FLICKER's brief metallic answers around a clear pitched body.
+RATTLE now tests pitched clusters with depleted and recovering pulse strength;
+[design notes](WICK_RATTLE.md) explain the target and its limits.
 
 ### TANGLE — oscillators that catch and release
 

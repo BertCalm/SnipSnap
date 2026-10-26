@@ -386,7 +386,7 @@ tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
     args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
-/** Five-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
+/** Six-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
     description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
