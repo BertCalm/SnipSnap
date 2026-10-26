@@ -658,8 +658,14 @@ their complete saved A/B recipes after the preceding 36 presets, preserving
 existing sounds and selection indices. Their finite 0.8-second movement needs
 no donor audio at playback. The phone keeps HOLD below its loop threshold for
 these recipes; factory promotion retains their motion. A separate release
-matrix covers three notes and two velocities per opening. Repeating motion,
-additional motion controls and a donor picker remain later work.
+matrix covers three notes and two velocities per opening. The
+[motion studio](PRISM_MOTION_STUDIO.md) adds a separate amount/time editor,
+eight factory source choices and opt-in A→B→A repetition. OPEN retains the
+finite HOLD guard; REPEAT supports genuinely synthesized held loops, with
+fitted cycle readouts and enough complete cycles for loop classification.
+Existing recipes keep their default finite rendering and JSON shape. A new
+bounded audition compares the actual editor/source results and repeated exports;
+phone response and physical MPC playback remain device checks.
 
 ### SHOAL — materials animated by moving energy
 

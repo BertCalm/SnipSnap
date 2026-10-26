@@ -206,6 +206,8 @@ PRISM adds six additive voices, forty factory presets including four finite
 body openings, and a dry pitched starter. The
 [audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site) preserves the
 earlier bank, body-opening studies and original/revised GLASS comparisons.
+Its MOTION detail panel edits amount/time, chooses a source, and switches from
+the saved finite opening to repeating movement with genuine held loops.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.

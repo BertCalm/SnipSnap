@@ -301,6 +301,7 @@ testkit/vent-isolation-audition/
 /testkit/prism-palette-audition/
 /testkit/prism-opening-audition/
 /testkit/prism-opening-release-audition/
+/testkit/prism-motion-studio-audition/
 
 # Model-2 clean voice audio, ordinary recipes and listening evidence are generated.
 testkit/vent-voice-audition/
