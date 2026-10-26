@@ -87,6 +87,8 @@ object Cli {
         |                        WAV + complete .patch; HOLD=1 exports a sustained loop)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
+        |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
+        |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; finite, HOLD unavailable)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72

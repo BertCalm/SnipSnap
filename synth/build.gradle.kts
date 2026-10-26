@@ -89,6 +89,37 @@ tasks.register<JavaExec>("benchmarkFilament") {
     providers.gradleProperty("filamentBenchmarkLabel").orNull?.let { args("--label=$it") }
 }
 
+/** Render-only measurements; timings never decide whether correctness tests pass. */
+tasks.register<JavaExec>("benchmarkTidal") {
+    group = "verification"
+    description = "Measure TIDAL cold, geometry-warm and completed-cache rendering with exact audio hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    providers.gradleProperty("tidalBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+    args("--path=${providers.gradleProperty("tidalBenchmarkPath").orNull ?: "production"}")
+    args("--state=${providers.gradleProperty("tidalBenchmarkState").orNull ?: "all"}")
+    args("--cases=${providers.gradleProperty("tidalBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("tidalBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("tidalBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("tidalBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("tidalBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("tidalBenchmarkProfile").orNull?.let { args("--profile=$it") }
+}
+
+/** Sixteen finite TIDAL pads with complete saved recipes in both MPC formats. */
+tasks.register<JavaExec>("generateTidalKit") {
+    group = "distribution"
+    description = "Export sixteen finite TIDAL pads, editable recipes, and MPC 3/MPC 2 programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("tidalKitOutput").orNull ?: "${rootDir}/testkit/tidal-kit")
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"

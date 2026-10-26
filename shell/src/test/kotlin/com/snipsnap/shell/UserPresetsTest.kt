@@ -68,6 +68,7 @@ import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.TideVoice
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.SkinVoice
@@ -354,6 +355,12 @@ class UserPresetsTest {
             } else if (preset is FilamentPatch) {
                 val promoted = filamentFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, velocity, geometry and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is TidalPatch) {
+                val literal = line.removePrefix("TidalPatch.fromJsonText(").removeSuffix("),")
+                val promoted = TidalPatch.fromJsonText(Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete note, velocity, seed and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is TrioPatch) {
@@ -900,6 +907,10 @@ class UserPresetsTest {
                 val decoder = FilamentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(FilamentPatch::class.java, decoder.returnType,
                     "FILAMENT promotion names its public complete-JSON constructor")
+            } else if (engine == "TIDAL") {
+                val decoder = com.snipsnap.synth.TidalPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TidalPatch::class.java, decoder.returnType,
+                    "TIDAL promotion names its complete saved-recipe constructor")
             } else if (engine == ScannedChainPatch.ENGINE) {
                 val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ScannedChainPatch::class.java, decoder.returnType,

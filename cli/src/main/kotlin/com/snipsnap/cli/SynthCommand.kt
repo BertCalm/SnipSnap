@@ -114,7 +114,6 @@ import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.Tidal
 import com.snipsnap.synth.TidalPatch
-import com.snipsnap.synth.TidalPresets
 import com.snipsnap.synth.TidalVoice
 import com.snipsnap.synth.Velocity
 import com.snipsnap.synth.Trio
@@ -215,7 +214,7 @@ import kotlin.random.Random
  * CHAMBER offers finite HYBRID/AQUARIUM recipes, native note/velocity, full 64-bit
  * `--seed N`, and `--patch <json>` replay retaining the complete room configuration.
  * APSIS supports complete --patch replay, signed 32-bit --seed, and six --macros controls.
- * TIDAL offers finite PAIR/STREAM encounter prototypes with native note/velocity,
+ * TIDAL offers finite PAIR/STREAM factory encounters with native note/velocity,
  * exact 64-bit --seed, versioned models, and complete --patch replay. HOLD reconstruction is deferred.
  * TRIO accepts `--tempo 60..200 --beats 1..4`; the beat grid must fit within two seconds; answers may continue after it.
  * OHM STRING offers five finite family encounters, with --midi 48..72, --velocity and --seed.
@@ -277,7 +276,6 @@ object SynthCommand {
             } ?: emptyList()
             WickPatch.ENGINE -> WickVoice.entries.firstOrNull { it.name == voice }?.let { WickPresets.forVoice(it) } ?: emptyList()
             ChamberPatch.ENGINE -> ChamberVoice.entries.firstOrNull { it.name == voice }?.let { ChamberPresets.forVoice(it) } ?: emptyList()
-            TidalPatch.ENGINE -> TidalVoice.entries.firstOrNull { it.name == voice }?.let { TidalPresets.forVoice(it) } ?: emptyList()
             NacrePatch.ENGINE -> NacreVoice.entries.firstOrNull { it.name == voice }?.let { NacrePresets.forVoice(it) } ?: emptyList()
             else -> Presets.forVoice(engine, voice)
         }

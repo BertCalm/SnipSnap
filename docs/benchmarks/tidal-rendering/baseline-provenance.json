@@ -1,0 +1,14 @@
+{
+  "sourceRevision": "5e953da5",
+  "note": "Frozen existing compiled classes; Tidal source unchanged from accepted6acc0828. Loaded bytecode hashes identify the measured code.",
+  "jar": "/workspace/scratch/tidal-performance/baseline-main.jar",
+  "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f",
+  "classSha256": {
+    "Tidal": "3d47c55e019fede5ff7c7f67f820d3abdbcbbf7300b9af1e9f2fc989ed39373f",
+    "TidalDynamics": "d9c78c4626644ed87021be83af3e63e6987725ccb0b7ab13fc85b5264f591298",
+    "Dsp": "515e61bbb0727533ba6b30ab63bb47d32035e129f8f63b29a43eabb0cfaea162",
+    "Tide": "5b8d287f107f275105697849d080ecce4c7d7156fe5f571e3612ba05e82fb2e8",
+    "Keys": "6c9c4fb4dc0c45f709c0b60a6fc09053597bcfda8e0c586892c36e6d4ac59964"
+  },
+  "classCount": 2317
+}

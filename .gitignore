@@ -403,6 +403,7 @@ testkit/trio-touch/
 testkit/lattice-audition/
 # TIDAL's generated WAVs, diagnostic recipes, traces and listening downloads.
 testkit/tidal-audition/
+testkit/tidal-kit/
 
 # Reproducible scanned-chain experiment audio and offline listening artifacts.
 testkit/scanned-chain-audition/

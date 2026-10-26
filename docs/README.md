@@ -1,5 +1,11 @@
 # Which document to trust
 
+**Tidal.** [`TIDAL.md`](TIDAL.md) records the approved model-2 source direction,
+finite PAIR/STREAM editor, factory presets, dry starter and saved-recipe policies.
+[`TIDAL_PERFORMANCE.md`](TIDAL_PERFORMANCE.md) records render-only measurements,
+cache behavior and reference-audio preservation. HOLD and device listening remain
+separate work.
+
 **OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
 instrument, versioned recipes and the control-authority revision. Its audition
 compares the original and revised renderers directly. The revised sound is the
