@@ -1,6 +1,6 @@
 # Stage 3: pedals in front of the amp, for guitar pads
 
-**Status:** design, 2026-10-27. The render (`PedalBoard.processAround`) and its listening clips are built; the door that would use it on the pad sheet is not, pending the owner's gate. This is Stage 3 of `2026-10-04-pedal-board-design.md`. Repository truth: commit `f6a47dba`.
+**Status:** built, 2026-10-27 (see "As built" at the end). The owner's gate: "yes, build it" (in conversation, 2026-10-27; the Amp Front Gate page saved no per-question answers). This is Stage 3 of `2026-10-04-pedal-board-design.md`. Repository truth: commit `f6a47dba`.
 **Builds on:** the pedal library and its board (`Pedals.kt`, `PedalBoard.kt`, `2026-10-21-pedal-library-and-board-design.md`), the WAH and COMPRESSOR sections, and two owner verdicts: WAH in front of the amp "a bit better" on the guitars (2026-10-23), and SUSTAIN's guitars "fine until the pedal goes in front of the amp" (2026-10-24).
 
 ## Why
@@ -56,7 +56,7 @@ Re-deriving soft velocity layers for a guitar pad; restoring a patch that an ear
 | A layered pad with a landing chain has softened copies, not re-renders | verified | `KitBuilder.kt:408-445`, `Velocity.layerAt` |
 | `processAround` puts PRE and AMP picks in front of the landing chain and POST after it | measured | `PedalBoardTest`, two tests |
 | In front does not widen SUSTAIN's range on the guitars | measured | the table above |
-| Guitar pedals sound better in front of the amp | heard? | not heard; the Amp Front Gate page |
+| Guitar pedals belong in front of the amp | heard | the owner, 2026-10-27: "yes, build it" (the per-pedal comparisons were not recorded) |
 
 ## Why it is built this way
 
@@ -64,3 +64,13 @@ Re-deriving soft velocity layers for a guitar pad; restoring a patch that an ear
 - **Keep the patch in the recipe**, because today one pedal tap throws it away, and then the second tap, undo and replay can only work on the finished file. Keeping it is what makes the pedals changeable.
 - **DRIVE goes between the pedals and the amp**, as a drive pedal does: it pushes the guitar's own amp instead of stacking a second one after it.
 - **The one risky decision** is what "undo" means on a synth pad: the bin brings back the exact old audio, and the recipe is rebuilt from the patch rather than cleared. If the two ever disagreed the pad would read one way and sound another, so the door's test must check that a pad restored this way re-renders to the file the bin gave back.
+
+## As built (2026-10-27, `synth` and `shell`)
+
+- **The door:** `KitBuilderModel.pedalPad` takes the new path when the pad's recipe parses to a `patch` with no `treatment`, no compound `board` and no velocity layers, **and** the recipe still renders the file on disk (every sample within `KitBuilderModel.RENDER_MATCH`, 1e-3, of a fresh render). It then writes `recipe.copy(pedals = board).render()` over the file (binned as before) and keeps the patch, the landing chain and any terminal fade in the recipe. Every other pad takes the old path unchanged.
+- **Why the render check (a deviation from the design):** `replaceAudio(slot, null)` keeps the pad's old recipe while it replaces the audio (the synth screen's neighbours, SPLIT and SNAP, do this), so a patch can outlive the sound it made. Without the check a pedal tap would throw that pad's real audio away and put the old synth sound back. With it, such a pad keeps the after-the-amp way.
+- **The recipe:** `PadRecipe.render()` with both a patch and pedals is `pedals.processAround(patch.render(), fx)`, then the compound board and the terminal fade as before. No recipe saved before this change held both, so no existing pad renders differently.
+- **Undo:** `unEraPad` (the sheet's) and `untreatPad` (the CLI's `--undo`) restore audio as before and, when the recipe they remove has a patch and pedals, write back the same recipe without the pedals instead of null (`recipeAfterUndo`). Every other undo still clears the recipe.
+- **Tests:** `PedalPadTest` gained five (the fifth: the CLI's single-file undo keeps the patch too): the wah in front of the amp on a JANGLE pad (the file, the kept patch and landing chain, the recipe rendering the file, the sheet and `KitDiff` reading the board); undo bringing back the bytes and the patch recipe, then a second pedal in front again; a pad whose file is no longer its patch's render keeping the after-the-amp way; and a velocity-layered guitar pad keeping it too. Proven by mutation: dropping the render check fails the stale-recipe test, and undo clearing the recipe fails the undo test.
+- **Not changed:** chips on the other rows still drop a synth pad's patch (an era, a character, a keyed treatment write their own recipe), as they did; a pad treated that way has no patch left to put pedals in front of.
+

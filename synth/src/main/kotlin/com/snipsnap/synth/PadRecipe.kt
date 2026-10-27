@@ -78,11 +78,18 @@ data class PadRecipe(
         }
     }
 
-    /** Regenerate a synth pad's audio from scratch. */
+    /**
+     * Regenerate a synth pad's audio from scratch. With [pedals], the board is rendered around the pad's own
+     * landing chain ([PedalBoard.processAround]): the pedals in front of the amp, the POST picks after it. A
+     * recipe holds a patch and pedals together only since the pedal door kept the patch (2026-10-27), so no
+     * recipe saved before renders differently.
+     */
     fun render(): Snip {
         val p = requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }
         val dry = p.render()
-        return process(dry)
+        val board = pedals ?: return process(dry)
+        val pedalled = board.processAround(dry, fx)
+        return terminalFade(this.board?.process(pedalled) ?: pedalled)
     }
 
     /** Re-treat captured audio with the stored chain. */
