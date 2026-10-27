@@ -66,8 +66,9 @@ the Pixel, the honest ceiling is step 11; step 12 onward is design only.
 One product question decides how long the clock road is. "SnipSnap drives the MPC" is step
 12 on step 2, two bench rows, and is complete on its own. "SnipSnap plays along with the
 MPC" adds steps 13 and 14 and two more bench rows. `MIDI_SYNC.md` recommends master first.
-This document assumes master unless the owner says the real need is playing along with an
-MPC that is already running.
+**Decided 2026-10-26 by the owner: SnipSnap leads.** SnipSnap sends the clock and the MPC
+follows. Steps 13 and 14 (one transport, the follower) are not on the road until the owner
+asks for playing along with an MPC that is already running.
 
 ## Housekeeping
 
@@ -148,9 +149,10 @@ Disclosed, not done:
   until the engine closes. That is acceptable today: three SPLIT voices or one ORBIT
   audition cannot fill a 255-slot ring. Since the final-review fix, any later `hit` or
   `hitLayers` flushes it first.
-- **Departure from the binding review, needs owner sign-off.** The review's T2 named a
-  `portIndex` in the fingerprint. This batch keys per device with port counts instead:
-  nothing on an event yet says which port of a two-port controller it came from.
+- **Departure from the binding review, signed off 2026-10-26.** The review's T2 named a
+  `portIndex` in the fingerprint. This batch keys per device with port counts instead, and
+  the owner chose that: a controller is one thing to remember, whatever ports it shows.
+  Nothing on an event yet says which port of a two-port controller it came from.
 
 Deferred minors, one line each: the fixture script's note tuples carry no stamp.
 
