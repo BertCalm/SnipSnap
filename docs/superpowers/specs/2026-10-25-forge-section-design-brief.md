@@ -225,3 +225,16 @@ The owner answered the gate page's seven questions on the published clips. The a
 | 7. Any of the 1x aliasing audible at 4x? | 4x is clean | FORGE stays at 4x; the YIELD 0 miss of VALVE's 45 dB bar (42.5 dB) is inaudible to the owner on the snare. |
 
 **What shipped from it.** `Treatments.EXTRA` gains `forged` (CHARGE 0.5, STANDOFF 0.5, YIELD 0.5, ARREST 1). `Pedals.entries` gains FORGE on the PRE side, not movable, gated. The pad sheet's pedal row derives from the library, so FORGE draws its chip there. That row now holds six chips, the card's ceiling, so DELAY's chip needs a layout decision when its own gate passes. `ForgeTest` pins that the chip at AMT 1 renders the heard clip sample for sample. At the pad sheet's AMT 0.7, the character's die is ARREST 0.7 and YIELD 0.65: a softer form of what was heard, not itself heard.
+
+## The CHARGE gate (opened 2026-10-27, awaiting the owner)
+
+The first gate's "mixed" on CHARGE asked for a tune. The likeliest zap is the medium: at CHARGE 1 its 24 all-passes from 300 Hz stretch a 0.8 ms click to 14.0 ms, most of it the low end arriving late. `Forge.Medium` now carries the medium's shape. Only `Medium.SHIPPED` reaches a pad, and the refactor was proven byte-identical: a hash over three pads at four settings matched before and after. `ForgeChargeAuditionGenerator` renders four candidates through the real section, published at https://claude.ai/artifact/C6R9Xicrk6WDbR49Bodgrp:
+
+| Medium | Sections, band | Click at CHARGE 1 | Bell attack over 3 kHz | Kick attack over 3 kHz |
+|---|---|---|---|---|
+| AS BUILT | 24, 300 Hz to 6 kHz | 14.0 ms | 0.755 | 0.470 |
+| SHORT | 12, 300 Hz to 6 kHz | 7.8 ms | 0.536 | 0.195 |
+| HIGH | 24, 1.2 to 8 kHz | 5.2 ms | 0.756 | 0.209 |
+| TIGHT | 12, 1.2 to 8 kHz | 3.0 ms | 0.504 | 0.101 |
+
+Attack shares are the first 5 ms at CHARGE 1, every other macro at its default; the bell at CHARGE 0 reads 0.621. HIGH keeps the bell's brightness with a third of the sweep. Every candidate tames the kick's. The owner's pick becomes `Medium.SHIPPED`; nothing ships until then.
