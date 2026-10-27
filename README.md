@@ -625,6 +625,8 @@ interaction grids, velocity and loop probes. The
 preserves the earlier factory bank, body-opening studies and original/revised
 GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
+The [motion studio](docs/PRISM_MOTION_STUDIO.md) adds source selection,
+amount/time editing and opt-in repeating motion in a separate detail panel.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
 animated by GLASS or RIPPLE energy transport. Velocity changes contact and

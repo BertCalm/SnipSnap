@@ -2093,6 +2093,17 @@ tasks.register<JavaExec>("generateApsisMusicalAudition") {
     args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
 }
 
+/** Actual editor/source selections, finite movement and independently verified repeating HOLD loops. */
+tasks.register<JavaExec>("generatePrismMotionStudioAudition") {
+    group = "distribution"
+    description = "Render PRISM motion editor and source comparisons with native/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismMotionStudioAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/prism-motion-studio-audition")
+}
+
 /** Held TIDAL listening evidence; the accepted finite audition remains separate. */
 tasks.register<JavaExec>("generateTidalHoldAudition") {
     group = "distribution"
