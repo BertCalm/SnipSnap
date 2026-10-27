@@ -45,6 +45,16 @@ object NativePads {
     external fun drainEnded(handle: Long): IntArray
     external fun framesRendered(handle: Long): Long
 
+    /** Complete physical snapshot, copied on the caller thread; false queues nothing. */
+    external fun configureAquarium(
+        handle: Long, parameterValues: FloatArray, seedLong: Long, model: Int,
+        bpm: Double, outputGain: Float, enabled: Boolean, reset: Boolean,
+    ): Boolean
+    external fun aquariumFaulted(handle: Long): Boolean
+    external fun aquariumLimitedFrames(handle: Long): Long
+    /** Native host-policy ceiling; finite wet sample peaks, not reconstructed true peaks. */
+    external fun aquariumOutputCeiling(): Float
+
     /**
      * The resample tap, the same four calls `NativeSurface` has. [armPrint]
      * reserves `maxFrames` before the callback is told to record and refuses

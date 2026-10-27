@@ -13,13 +13,14 @@
 // one makes the JVM throw at the Kotlin call site rather than hand the
 // caller the null. So what these two cases prove is the half that is
 // ours - that the bridge does not write into a null array before it
-// returns - and not what Kotlin then sees. `jni.cpp` never calls
-// ExceptionCheck, so the stub has no exception machinery to model.
+// returns - and not what Kotlin then sees. Aquarium configuration additionally
+// checks pending JNI exceptions; its region-copy refusal is modeled below.
 #include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -47,6 +48,10 @@ jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint
 jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong);
 jfloatArray Java_com_snipsnap_app_NativePads_stopPrint(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_configureAquarium(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
+jboolean Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong);
+jfloat Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
@@ -83,6 +88,7 @@ struct FakeArray {
 };
 
 bool failAllocations = false;
+bool pendingJniException = false;
 std::vector<FakeArray*> allocated;
 
 FakeArray* impl(jarray a) { return reinterpret_cast<FakeArray*>(a); }
@@ -90,8 +96,13 @@ FakeArray* impl(jarray a) { return reinterpret_cast<FakeArray*>(a); }
 jsize fakeGetArrayLength(JNIEnv*, jarray a) { return impl(a)->length; }
 
 void fakeGetFloatArrayRegion(JNIEnv*, jfloatArray a, jsize s, jsize n, jfloat* buf) {
+    if (s < 0 || n < 0 || static_cast<size_t>(s) + static_cast<size_t>(n) > impl(a)->f.size()) {
+        pendingJniException = true;
+        return;
+    }
     for (jsize k = 0; k < n; ++k) buf[k] = impl(a)->f[static_cast<size_t>(s + k)];
 }
+jboolean fakeExceptionCheck(JNIEnv*) { return pendingJniException ? JNI_TRUE : JNI_FALSE; }
 void fakeGetIntArrayRegion(JNIEnv*, jintArray a, jsize s, jsize n, jint* buf) {
     for (jsize k = 0; k < n; ++k) buf[k] = impl(a)->i[static_cast<size_t>(s + k)];
 }
@@ -131,11 +142,15 @@ const JNINativeInterface_ kIface = {
     fakeNewIntArray,
     fakeSetFloatArrayRegion,
     fakeSetIntArrayRegion,
+    nullptr,
+    nullptr,
+    fakeExceptionCheck,
 };
 
 JNIEnv* env() {
     static JNIEnv_ e{&kIface};
     failAllocations = false;
+    pendingJniException = false;
     for (auto* a : allocated) delete a;
     allocated.clear();
     return &e;
@@ -912,5 +927,69 @@ TEST(jni_stop_print_reaches_a_real_callback_still_arriving_concurrently) {
     CHECK(Java_com_snipsnap_app_NativePads_printState(e, nullptr, h) ==
           static_cast<jint>(PrintBuffer::State::Idle));
 
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_aquarium_configuration_keeps_unsigned_seeds_physical_controls_and_stereo_prints) {
+    constexpr int kRate = 48000;
+    auto* e = env();
+    const auto h = Java_com_snipsnap_app_NativePads_create(e, nullptr, kRate);
+    auto* engine = reinterpret_cast<PadEngine*>(h);
+    auto s = aquarium::parametersForPreset(aquarium::Preset::Dry);
+    CHECK(aquarium::setParameter(s, "aqua_tide_mix", 1));
+    CHECK(aquarium::setParameter(s, "aqua_tide_depth", 0));
+    const auto values = floats(std::vector<float>(s.values.begin(), s.values.end()));
+    CHECK(Java_com_snipsnap_app_NativePads_configureAquarium(e, nullptr, h, values, 0xffffffffLL, 1, 123.5, 0.25f, JNI_TRUE, JNI_TRUE));
+    Java_com_snipsnap_app_NativePads_beginBank(e, nullptr, h);
+    auto sample = floats(std::vector<float>(20000, 0.4f));
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_addSample(e, nullptr, h, sample, 1, kRate), 0);
+    Java_com_snipsnap_app_NativePads_commitBank(e, nullptr, h);
+    CHECK(Java_com_snipsnap_app_NativePads_noteOn(e, nullptr, h, 1, 0, 0, 20000, -1, 1, 0.5f, 1, JNI_FALSE));
+    pull(engine, 3000);
+    CHECK(Java_com_snipsnap_app_NativePads_armPrint(e, nullptr, h, 1024));
+    const auto rendered = pull(engine, 1024);
+    CHECK_NEAR(rendered[0], 0.1f, 0.000001f);
+    CHECK_NEAR(rendered[1], 0.05f, 0.000001f);
+    const auto printed = Java_com_snipsnap_app_NativePads_stopPrint(e, nullptr, h);
+    CHECK(printed != nullptr);
+    CHECK(impl(printed)->f == rendered);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(e, nullptr), 0.99f);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(e, nullptr, h), 0);
+    CHECK(!Java_com_snipsnap_app_NativePads_aquariumFaulted(e, nullptr, h));
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_aquarium_refuses_invalid_domains_and_pending_or_region_exceptions) {
+    constexpr int kRate = 48000;
+    auto* e = env();
+    const auto h = Java_com_snipsnap_app_NativePads_create(e, nullptr, kRate);
+    const auto defaults = aquarium::ParameterSnapshot{};
+    const auto good = floats(std::vector<float>(defaults.values.begin(), defaults.values.end()));
+    auto configure = [&](jfloatArray values, jlong seed, jint model, double bpm, float gain, jboolean on = JNI_TRUE, jboolean reset = JNI_FALSE) {
+        return Java_com_snipsnap_app_NativePads_configureAquarium(e, nullptr, h, values, seed, model, bpm, gain, on, reset);
+    };
+    CHECK(!configure(nullptr, 0, 1, 120, 0.5f));
+    CHECK(!configure(floats({1, 2}), 0, 1, 120, 0.5f));
+    CHECK(!configure(good, -1, 1, 120, 0.5f));
+    CHECK(!configure(good, 0x100000000LL, 1, 120, 0.5f));
+    CHECK(!configure(good, 0, 2, 120, 0.5f));
+    CHECK(!configure(good, 0, 1, std::numeric_limits<double>::infinity(), 0.5f));
+    CHECK(!configure(good, 0, 1, -1, 0.5f));
+    CHECK(!configure(good, 0, 1, 1000.01, 0.5f));
+    CHECK(!configure(good, 0, 1, 120, std::numeric_limits<float>::quiet_NaN()));
+    CHECK(!configure(good, 0, 1, 120, 1.01f));
+    CHECK(!configure(good, 0, 1, 120, 0.5f, 2));
+    CHECK(!configure(good, 0, 1, 120, 0.5f, JNI_TRUE, 2));
+    auto bad = std::vector<float>(defaults.values.begin(), defaults.values.end());
+    bad[18] = 0.5f;
+    CHECK(!configure(floats(bad), 0, 1, 120, 0.5f));
+    pendingJniException = true;
+    CHECK(!configure(good, 0, 1, 120, 0.5f));
+    pendingJniException = false;
+    CHECK(!configure(floatsClaiming(52, {}), 0, 1, 120, 0.5f));
+    CHECK(pendingJniException);
+    pendingJniException = false;
+    CHECK(configure(good, 0, 1, 0, 0.0f));
+    CHECK(!Java_com_snipsnap_app_NativePads_configureAquarium(e, nullptr, 0, good, 0, 1, 0, 0.5f, JNI_TRUE, JNI_FALSE));
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
