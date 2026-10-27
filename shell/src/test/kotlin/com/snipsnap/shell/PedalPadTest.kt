@@ -136,4 +136,105 @@ class PedalPadTest {
         assertEquals(board(PedalBoard.Pick("compressed", 0.7f, PedalSide.PRE)), asBoard)
         assertNull(PadSheet.readPedals(chip.recipe), "a chip recipe is not a board recipe")
     }
+
+    // ---------- Stage 3: a guitar pad's pedals in front of its own amp ----------
+
+    private val guitar = com.snipsnap.synth.PadRecipe(
+        patch = com.snipsnap.synth.MagnetPatch("Jangle", com.snipsnap.synth.MagnetVoice.JANGLE, emptyMap()),
+        fx = com.snipsnap.synth.Magnet.landingChain(com.snipsnap.synth.MagnetVoice.JANGLE),
+    )
+
+    /** A kit pad as the synth screen lands one: the recipe's render on disk, the recipe on the pad. */
+    private fun guitarPad(m: KitBuilderModel, slot: Int, recipe: com.snipsnap.synth.PadRecipe = guitar, audio: com.snipsnap.audio.Snip = recipe.render()) {
+        m.assign(slot, audio, DrumClass.TONAL)
+        m.update(slot) { it.copy(recipe = recipe.toJsonValue()) }
+    }
+
+    private fun worst(a: FloatArray, b: FloatArray): Float {
+        assertEquals(a.size, b.size, "different lengths")
+        return a.indices.maxOf { kotlin.math.abs(a[it] - b[it]) }
+    }
+
+    @Test
+    fun `on a guitar pad the pedals go in front of its own amp, and the recipe keeps the patch`() {
+        val dir = File(temp, "Guitar")
+        val m = KitBuilderModel.create("Guitar", dir)
+        guitarPad(m, 3)
+        val baked = WavReader.read(File(dir, m.pad(3)!!.sampleFile))
+        val wah = board(PedalBoard.Pick("wahed", 0.7f, PedalSide.PRE))
+
+        val treated = m.pedalPad(3, wah)
+        val onDisk = WavReader.read(File(dir, treated.sampleFile)).samples
+        val front = wah.processAround(guitar.patch!!.render(), guitar.fx).samples
+        assertTrue(worst(front, onDisk) < 1e-3f, "the file is not the wah in front of the amp")
+        val after = wah.process(baked).samples
+        assertTrue(worst(after, onDisk) > 0.05f, "in front of the amp sounds the same as after it")
+
+        val recipe = com.snipsnap.synth.PadRecipe.fromJsonValue(treated.recipe!!)
+        assertEquals(guitar.patch, recipe.patch, "the patch was dropped")
+        assertEquals(guitar.fx, recipe.fx, "the landing chain was dropped")
+        assertEquals(wah, recipe.pedals)
+        assertEquals(wah, PadSheet.readPedals(treated.recipe), "the sheet does not read the board back")
+        assertTrue(worst(recipe.render().samples, onDisk) < 1e-3f, "the recipe does not render the file it rides")
+        assertEquals("WAH 70% PRE", KitDiff.recipeName(treated.recipe!!))
+    }
+
+    @Test
+    fun `undo gives a guitar pad back its patch, and the next pedal goes in front of the amp again`() {
+        val dir = File(temp, "Undo")
+        val m = KitBuilderModel.create("Undo", dir)
+        guitarPad(m, 3)
+        val file = m.pad(3)!!.sampleFile
+        val original = File(dir, file).readBytes()
+        m.pedalPad(3, board(PedalBoard.Pick("wahed", 0.7f)))
+
+        val undone = m.unEraPad(3)
+        assertContentEquals(original, File(dir, file).readBytes(), "undo did not bring the audio back")
+        assertEquals(guitar.toJsonValue(), undone.recipe, "undo did not bring the patch recipe back")
+        assertNull(PadSheet.readPedals(undone.recipe), "the pedals outlived undo")
+
+        val sustain = board(PedalBoard.Pick("compressed", 0.7f))
+        m.pedalPad(3, sustain)
+        val again = WavReader.read(File(dir, file)).samples
+        assertTrue(worst(sustain.processAround(guitar.patch!!.render(), guitar.fx).samples, again) < 1e-3f, "the second pedal is not in front of the amp")
+    }
+
+    @Test
+    fun `the single-file undo (the CLI's --undo) gives a guitar pad back its patch too`() {
+        val dir = File(temp, "UndoOne")
+        val m = KitBuilderModel.create("UndoOne", dir)
+        guitarPad(m, 3)
+        m.pedalPad(3, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertEquals(guitar.toJsonValue(), m.untreatPad(3).recipe, "untreatPad dropped the patch")
+    }
+
+    @Test
+    fun `a pad whose patch no longer made its file keeps the after-the-amp way`() {
+        val dir = File(temp, "Stale")
+        val m = KitBuilderModel.create("Stale", dir)
+        // An audio replacement with no recipe keeps the old one: the file is a snare, the recipe still a guitar.
+        guitarPad(m, 3, audio = DrumSynth.snare())
+        val snare = WavReader.read(File(dir, m.pad(3)!!.sampleFile))
+        val wah = board(PedalBoard.Pick("wahed", 0.7f))
+
+        val treated = m.pedalPad(3, wah)
+        val onDisk = WavReader.read(File(dir, treated.sampleFile)).samples
+        assertTrue(worst(wah.process(snare).samples, onDisk) < 1e-3f, "the pad's own audio was replaced by its stale patch")
+        assertNull(com.snipsnap.synth.PadRecipe.fromJsonValue(treated.recipe!!).patch, "a stale patch rode on")
+    }
+
+    @Test
+    fun `a velocity-layered guitar pad keeps the after-the-amp way`() {
+        val dir = File(temp, "Layered")
+        val m = KitBuilderModel.create("Layered", dir)
+        guitarPad(m, 3)
+        m.addGhostLayers(3)
+        val main = WavReader.read(File(dir, m.pad(3)!!.sampleFile))
+        val wah = board(PedalBoard.Pick("wahed", 0.7f))
+
+        val treated = m.pedalPad(3, wah)
+        val onDisk = WavReader.read(File(dir, treated.sampleFile)).samples
+        assertTrue(worst(wah.process(main).samples, onDisk) < 1e-3f, "a layered pad's main file left the after-the-amp way")
+    }
 }
+

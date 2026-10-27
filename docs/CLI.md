@@ -559,7 +559,11 @@ same pad instead of one character: every pick with its own AMT and its side
 of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
-recipe riding the pad. The library today: `driven` (the amp), `compressed` (the
+recipe riding the pad. On a synth pad that still carries its patch (and its
+file is still that patch's render, with no velocity layers) the pad is
+re-rendered from the patch instead, the `pre` and `amp` picks in front of its
+own landing amp and the `post` picks after it, and the recipe keeps the patch;
+`--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), and
 `rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip

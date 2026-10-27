@@ -773,9 +773,42 @@ class KitBuilderModel private constructor(
             throw IllegalArgumentException("pad $slot carries a ${it.type.name} board - remove it before adding pedals")
         }
         if (board.isBypass) return pad
+        // A synth pad that still carries its patch is re-rendered from it with the pedals around its own
+        // landing chain, the pedals in front of the amp (docs/superpowers/specs/2026-10-27-pedals-in-front-
+        // of-the-amp-design.md), and keeps the patch so the next tap, undo and replay can do it again. A
+        // velocity-layered pad keeps the old way: its soft layers are softened copies of the main take, not
+        // renders of the patch, so they could not follow the main file in front of the amp.
+        synthRecipeForPedals(pad)?.let { recipe ->
+            val withPedals = recipe.copy(pedals = board)
+            return rewriteEveryFile(pad, "pedals") { _ -> withPedals.render() to withPedals.toJsonValue() }
+        }
         return rewriteEveryFile(pad, "pedals") { original ->
             board.process(original) to com.snipsnap.synth.PadRecipe(pedals = board).toJsonValue()
         }
+    }
+
+    /**
+     * The pad's synth recipe with no pedals on it, when the pedals can go in front of its amp: a patch, no
+     * velocity layers, no named treatment, no compound board, and the recipe still renders the file on disk.
+     * That last check matters because an audio replacement with no recipe keeps the old one
+     * ([replaceAudio]'s preserve-on-null), so a patch can outlive the sound it made; re-rendering it then
+     * would throw the pad's real audio away. Null for every other pad, which keeps the after-the-amp way.
+     */
+    private fun synthRecipeForPedals(pad: KitPad): com.snipsnap.synth.PadRecipe? {
+        if (pad.velocityLayers.isNotEmpty()) return null
+        val recipe = Breed.recipeOf(pad) ?: return null
+        if (recipe.patch == null || recipe.treatment != null || recipe.board != null) return null
+        val plain = recipe.copy(pedals = null)
+        val onDisk = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        return plain.takeIf { rendersTo(it.render(), onDisk) }
+    }
+
+    /** The same sound up to the WAV's own quantization: same shape, no sample further apart than [RENDER_MATCH]. */
+    private fun rendersTo(rendered: Snip, file: Snip): Boolean {
+        if (rendered.channels != file.channels || rendered.sampleRate != file.sampleRate) return false
+        if (rendered.frameCount != file.frameCount) return false
+        for (i in rendered.samples.indices) if (kotlin.math.abs(rendered.samples[i] - file.samples[i]) > RENDER_MATCH) return false
+        return true
     }
 
     /** The keyed family's honest refusal: the pad is a drum or noise, not a note. */
@@ -878,8 +911,16 @@ class KitBuilderModel private constructor(
             if (restoreFromBin(f) != null) restoredAny = true
         }
         require(restoredAny) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
-        return update(slot) { it.copy(recipe = null) }
+        return update(slot) { it.copy(recipe = recipeAfterUndo(pad)) }
     }
+
+    /**
+     * What a pad's recipe is once its treatment is undone. Pedals on a synth pad kept its patch, so undo gives
+     * the pad back its patch recipe rather than nothing: the sheet's restore-then-apply, the next pedal tap and
+     * the CLI's `--undo` can still render in front of the amp. Every other undo clears the recipe, as before.
+     */
+    private fun recipeAfterUndo(pad: KitPad): com.snipsnap.json.JsonValue.Obj? =
+        Breed.recipeOf(pad)?.takeIf { it.patch != null && it.pedals != null }?.copy(pedals = null)?.toJsonValue()
 
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
@@ -887,7 +928,7 @@ class KitBuilderModel private constructor(
         requireNotChained(pad, "un-treating")
         restoreFromBin(pad.sampleFile)
             ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
-        return update(slot) { it.copy(recipe = null) }
+        return update(slot) { it.copy(recipe = recipeAfterUndo(pad)) }
     }
 
     /** Back to a single-sample pad; the soft renders are deleted. */
@@ -1356,6 +1397,12 @@ class KitBuilderModel private constructor(
     }
 
     companion object {
+
+        /**
+         * How far apart a re-render and the file on disk may be and still be the same sound: 1e-3, well over a
+         * 16-bit step (3.1e-5) and a 24-bit one, and far under any change a different sound would make.
+         */
+        const val RENDER_MATCH = 1e-3f
 
         /** Provenance stamps that describe the old file's processing, dropped by [backOnto]. */
         val LEFT_WITH_OLD_FILE: Set<String> = setOf("mutatedWith", "outside", "desampled")

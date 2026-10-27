@@ -203,3 +203,7 @@ WAH passed the owner's gate, and the owner asked for TOUCH and ROCK chips as wel
 
 The COMPRESSOR section passed its gate and was built (`2026-10-23-compressor-section-design.md`). The COMP entry keeps its key `compressed`, side and movability and now reads SUSTAIN, the owner's word; its chain follows the character by reference, so it moved to the new section with no library edit beyond the word. RIG's compressor follows `compressed` too, so the board's sections are now `compressor`, `valve`, `echo`.
 
+## Stage 3 (2026-10-27)
+
+On a synth pad that still carries its patch, the board now renders around the pad's own landing chain (`PedalBoard.processAround`): PRE picks and the AMP pick in front of the amp, POST picks after it, so a pick's side means the side of the guitar's own amp. The recipe keeps the patch beside `pedals`, and undo writes the patch recipe back. Captured, layered and re-treated pads keep the board on the audio on disk (`2026-10-27-pedals-in-front-of-the-amp-design.md`).
+
