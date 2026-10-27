@@ -42,6 +42,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
 }
 
+/** Three relationship conversations beside their gentler reference performances. */
+tasks.register<JavaExec>("generateObbligatoConversationAudition") {
+    group = "distribution"
+    description = "Compare OBBLIGATO Play, Fight and Protect conversations with their gentler reference notes and melodies."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoConversationAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoConversationOutput").orNull ?: "${rootDir}/testkit/obbligato-conversation-audition")
+}
+
 /** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
 tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
     group = "distribution"

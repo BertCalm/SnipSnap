@@ -27,14 +27,16 @@ enum class ObbligatoRelationship {
  * Dry mono, explicit C4–C5 notes, independently seeded players and one final loudness target.
  * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
  * Model 5 is accepted. Model 6 adds activity-driven Fight entries. Model 7 is an explicit
- * gentler-voiced listening revision; both experiments remain opt-in.
+ * gentler-voiced listening revision. Model 8 adds remembered articulations for Play,
+ * Fight and Protect. These listening revisions remain opt-in.
  */
 object Obbligato {
     /** The accepted sound stays the default until the responsive experiment is heard. */
     const val MODEL = 5
     const val EXPERIMENTAL_MODEL = 6
     const val MUSICAL_MODEL = 7
-    const val MAX_MODEL = MUSICAL_MODEL
+    const val CONVERSATION_MODEL = 8
+    const val MAX_MODEL = CONVERSATION_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
@@ -95,6 +97,7 @@ object Obbligato {
         val airEffort: FloatArray,
         val reedEffort: FloatArray,
         val interactionEvents: List<ObbligatoInteraction.Event> = emptyList(),
+        val conversationEvents: List<ObbligatoConversation.Event> = emptyList(),
     )
 
     /** A physical pressure intervention used only for causal listening and tests. */
@@ -169,7 +172,8 @@ object Obbligato {
     /**
      * Physical source removal is a causal probe. For models 1–5, responses=false keeps the
      * saved timed gesture and player seeds but removes reciprocal pressure response. In
-     * models 6 and 7 it also disables activity-driven entries, preserving the opening air assertion.
+     * models 6–8 it also disables activity-driven answers and partner memory. Each
+     * player's independent opening remains, providing an exact survivor negative control.
      * This is not a live relationship across pads: each call starts two new source states.
      */
     fun probe(
@@ -233,7 +237,20 @@ object Obbligato {
             4 -> current.copy(irregularity = 0.0)
             else -> current
         }
-        val interaction = if (model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
+        val conversationMode = if (model == CONVERSATION_MODEL) when {
+            r.callDepth > 0.0 -> ObbligatoConversation.Mode.PLAY
+            r.rivalry > 0.0 -> ObbligatoConversation.Mode.FIGHT
+            r.fluteLead > 0.0 -> ObbligatoConversation.Mode.PROTECT
+            else -> null
+        } else null
+        val conversationDepth = when (conversationMode) {
+            ObbligatoConversation.Mode.PLAY -> r.callDepth
+            ObbligatoConversation.Mode.FIGHT -> r.rivalry
+            ObbligatoConversation.Mode.PROTECT -> r.fluteLead / .65
+            null -> 0.0
+        }.coerceIn(0.0, 1.0)
+        val conversation = conversationMode?.let { ObbligatoConversation(it, heldSeconds, mischief, seed) }
+        val interaction = if (conversation == null && model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
             ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.
         // Protect now exposes that tone before the reed joins. Subtracting the same
@@ -242,7 +259,9 @@ object Obbligato {
         // Deep pressure trades stopped the self-excited pipes speaking. Fight keeps
         // both captured, with a smaller reciprocal pressure response; its stronger
         // prominence changes happen in overlapping radiation envelopes below.
-        val pressureTrade = r.trade * (1.0 - r.rivalry)
+        val legacyPressureTrade = r.trade * (1.0 - r.rivalry)
+        val pressureTrade = if (conversationMode == ObbligatoConversation.Mode.PLAY)
+            legacyPressureTrade * (1.0 - conversationDepth) else legacyPressureTrade
         val responseDepth = 1.0 - .75 * r.rivalry
         val hz = Keys.midiHz(midi)
         // Native velocity changes the contact operating point and radiation, not just final gain.
@@ -285,6 +304,7 @@ object Obbligato {
                 // Every decision reads the previous complete source-activity snapshot.
                 // The two bores retain stable mouth pressure throughout a prominence trade.
                 if (frame > 0) interaction?.step(CONTROL_BLOCK.toDouble() / RATE, heardAir, heardReed, responses)
+                if (frame > 0) conversation?.step(CONTROL_BLOCK.toDouble() / RATE, heardAir, heardReed, responses)
                 val phase = (t / heldSeconds).coerceIn(0.0, 1.0)
                 val exchange = sin(2.0 * PI * (1.1 * t / heldSeconds))
                 val arch = 1.0 - r.swell + r.swell * sin(PI * phase) * sin(PI * phase)
@@ -294,6 +314,10 @@ object Obbligato {
                 answerReed += (targetReed - answerReed) * responseCoeff
                 pressureAir = (1.0 + answerAir).toFloat()
                 pressureReed = (1.0 + answerReed).toFloat()
+                if (conversation != null) {
+                    pressureAir *= mix(1.0, conversation.airPressure, conversationDepth).toFloat()
+                    pressureReed *= mix(1.0, conversation.reedPressure, conversationDepth).toFloat()
+                }
                 if (capture) {
                     maxResponseAir = maxOf(maxResponseAir, abs(answerAir))
                     maxResponseReed = maxOf(maxResponseReed, abs(answerReed))
@@ -307,7 +331,7 @@ object Obbligato {
                 val wanderReed = sin(2.0 * PI * (.31 * t + phases[1]))
                 pitchAir = (r.detune + mischief * (8.0 + 3.0 * wanderAir)).toFloat()
                 pitchReed = (-r.detune - mischief * (8.0 + 3.0 * wanderReed)).toFloat()
-                if (r.irregularity > 0.0) {
+                if (r.irregularity > 0.0 && conversation == null) {
                     pitchAir += (r.irregularity * (interaction?.airPitchPush
                         ?: rivalPitchPush(t, heldSeconds, air = true))).toFloat()
                     pitchReed += (r.irregularity * (interaction?.reedPitchPush
@@ -316,9 +340,13 @@ object Obbligato {
                 // Keep the same conversational inflections, closer to the requested note.
                 // The prior opposing offsets produced about 24 cents of separation at
                 // default Fight, so upper harmonics beat faster than the phrase itself.
-                if (model == MUSICAL_MODEL) {
+                if (model >= MUSICAL_MODEL) {
                     pitchAir *= .25f
                     pitchReed *= .25f
+                }
+                if (conversation != null) {
+                    pitchAir += (conversation.airPitch * conversationDepth).toFloat()
+                    pitchReed += (conversation.reedPitch * conversationDepth).toFloat()
                 }
                 if (capture) {
                     maxPitch = maxOf(maxPitch, abs(pitchAir.toDouble()), abs(pitchReed.toDouble()))
@@ -332,10 +360,16 @@ object Obbligato {
             val t = frame.toDouble() / RATE
             val airPressure = if (weakening?.air == true) pressureAir * weakening.scaleAt(t) else pressureAir
             val reedPressure = if (weakening?.air == false) pressureReed * weakening.scaleAt(t) else pressureReed
-            val a = if (sourceA) airPlayer.tick(envAir, t, pressureScale = airPressure,
-                pitchCents = pitchAir) else 0f
-            val b = if (sourceB && t >= reedLag) reedPlayer.tick(envReed, t - reedLag, pressureScale = reedPressure,
-                pitchCents = pitchReed) else 0f
+            val a = if (sourceA) {
+                if (conversation == null) airPlayer.tick(envAir, t, pressureScale = airPressure, pitchCents = pitchAir)
+                else airPlayer.tick(envAir, t, pressureScale = airPressure, pitchCents = pitchAir,
+                    turbulenceScale = mix(1.0, conversation.airTurbulence, conversationDepth).toFloat())
+            } else 0f
+            val b = if (sourceB && t >= reedLag) {
+                if (conversation == null) reedPlayer.tick(envReed, t - reedLag, pressureScale = reedPressure, pitchCents = pitchReed)
+                else reedPlayer.tick(envReed, t - reedLag, pressureScale = reedPressure, pitchCents = pitchReed,
+                    turbulenceScale = mix(1.0, conversation.reedTurbulence, conversationDepth).toFloat())
+            } else 0f
             rawAir[frame] = a
             rawReed[frame] = b
             if (capture) rawPeak = maxOf(rawPeak, abs(a.toDouble()), abs(b.toDouble()))
@@ -345,12 +379,19 @@ object Obbligato {
             // speaking range. The other player hears that emphasis after normalization;
             // applying it inside tanh would hide quiet turns behind meter saturation.
             if (responses) {
-                presence.update(t, heldSeconds, r.callDepth,
-                    if (interaction == null) r.rivalry else 0.0, r.irregularity)
-                val rivalAir = if (interaction == null) presence.rivalAir else mix(1.0, interaction.airPresence, r.rivalry)
-                val rivalReed = if (interaction == null) presence.rivalReed else mix(1.0, interaction.reedPresence, r.rivalry)
-                val levelAir = tanh(4.0 * abs(a) / meterPressureAir) * presence.callAir * rivalAir
-                val levelReed = tanh(4.0 * abs(b) / meterPressureReed) * presence.callReed * rivalReed
+                val levelAir: Double
+                val levelReed: Double
+                if (conversation == null) {
+                    presence.update(t, heldSeconds, r.callDepth,
+                        if (interaction == null) r.rivalry else 0.0, r.irregularity)
+                    val rivalAir = if (interaction == null) presence.rivalAir else mix(1.0, interaction.airPresence, r.rivalry)
+                    val rivalReed = if (interaction == null) presence.rivalReed else mix(1.0, interaction.reedPresence, r.rivalry)
+                    levelAir = tanh(4.0 * abs(a) / meterPressureAir) * presence.callAir * rivalAir
+                    levelReed = tanh(4.0 * abs(b) / meterPressureReed) * presence.callReed * rivalReed
+                } else {
+                    levelAir = tanh(4.0 * abs(a) / meterPressureAir) * mix(1.0, conversation.airPresence, conversationDepth)
+                    levelReed = tanh(4.0 * abs(b) / meterPressureReed) * mix(1.0, conversation.reedPresence, conversationDepth)
+                }
                 heardAir += (levelAir - heardAir) * meterCoeff
                 heardReed += (levelReed - heardReed) * meterCoeff
             }
@@ -360,7 +401,7 @@ object Obbligato {
         // The standalone sax's deliberately raspy radiation is too forceful for a warm
         // duet. Change the audible reed, leaving its calibrated mouth pressure and pipe
         // untouched. These restrained voicing choices still require a listening verdict.
-        val reed = if (model == MUSICAL_MODEL) {
+        val reed = if (model >= MUSICAL_MODEL) {
             Bore.condition(rawReed, RATE, 2f, .06f, Bore.Voicing(-4f, 3f))
         } else {
             Bore.condition(rawReed, RATE, Bore.biteBoostDb(BoreVoice.SAX, .60f),
@@ -368,14 +409,30 @@ object Obbligato {
         }
         val inputEnergy = sqrt(breath) * velocity
         val reactiveRadiation = interaction?.radiationReader()
+        val conversationRadiation = conversation?.performanceReader()
+        val airTone = if (conversation != null) Dsp.FixedOnePole(hz * 2.5f, Dsp.RATE) else null
+        val reedTone = if (conversation != null) Dsp.FixedOnePole(hz * 2.5f, Dsp.RATE) else null
         for (i in air.indices) {
             air[i] *= AIR_GAIN * inputEnergy
-            reed[i] *= (if (model == MUSICAL_MODEL) MUSICAL_REED_GAIN else REED_GAIN) * inputEnergy
-            if (r.callDepth > 0.0 || r.rivalry > 0.0) {
+            reed[i] *= (if (model >= MUSICAL_MODEL) MUSICAL_REED_GAIN else REED_GAIN) * inputEnergy
+            if (conversationRadiation != null) {
+                conversationRadiation.at(i.toDouble() / Dsp.RATE)
+                // A fixed, gentle split changes the upper partials with the actual
+                // articulation. It cannot add highs beyond the gentler source voicing.
+                val lowAir = requireNotNull(airTone).lp(air[i])
+                val lowReed = requireNotNull(reedTone).lp(reed[i])
+                val airTop = mix(1.0, .45 + .55 * conversationRadiation.airTone, conversationDepth).toFloat()
+                val reedTop = mix(1.0, .45 + .55 * conversationRadiation.reedTone, conversationDepth).toFloat()
+                air[i] = (lowAir + (air[i] - lowAir) * airTop) *
+                    mix(1.0, conversationRadiation.airPresence, conversationDepth).toFloat()
+                reed[i] = (lowReed + (reed[i] - lowReed) * reedTop) *
+                    mix(1.0, conversationRadiation.reedPresence, conversationDepth).toFloat()
+            }
+            if (conversation == null && (r.callDepth > 0.0 || r.rivalry > 0.0)) {
                 presence.update(i.toDouble() / Dsp.RATE, heldSeconds, r.callDepth,
                     if (interaction == null) r.rivalry else 0.0, r.irregularity)
             }
-            if (r.callDepth > 0.0) {
+            if (r.callDepth > 0.0 && conversation == null) {
                 air[i] *= presence.callAir.toFloat()
                 reed[i] *= presence.callReed.toFloat()
             }
@@ -388,7 +445,7 @@ object Obbligato {
                 val entry = .5 - .5 * cos(PI * phase)
                 reed[i] *= (1.0 - r.fluteLead / .65 * (1.0 - entry)).toFloat()
             }
-            if (r.rivalry > 0.0) {
+            if (r.rivalry > 0.0 && conversation == null) {
                 if (reactiveRadiation == null) {
                     air[i] *= presence.rivalAir.toFloat()
                     reed[i] *= presence.rivalReed.toFloat()
@@ -418,7 +475,7 @@ object Obbligato {
             "effortTraceRate" to RATE.toDouble() / CONTROL_BLOCK,
         )
         return Synthesis(out, Report(Snip(out, 1, Dsp.RATE), air, reed, diagnostics, effortAir, effortReed,
-            interaction?.events?.toList() ?: emptyList()))
+            interaction?.events?.toList() ?: emptyList(), conversation?.events?.toList() ?: emptyList()))
     }
 
     fun render(macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,

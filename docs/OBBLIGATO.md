@@ -1,5 +1,9 @@
 # OBBLIGATO: accepted duet and listening revisions
 
+The next Play, Fight and Protect audition adds remembered articulations and
+relationship-specific endings. See [the conversation revision](OBBLIGATO_CONVERSATION.md)
+for its design, measurements and replayable listening pack.
+
 Repository baseline: `91384fa189a68c4993c8e359af6b748412bf95c3`.
 
 Model 5 is the accepted sound and remains the default for presets, missing-model
