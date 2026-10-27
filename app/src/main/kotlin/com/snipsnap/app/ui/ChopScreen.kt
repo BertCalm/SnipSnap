@@ -116,6 +116,7 @@ fun ChopScreen(
     /** EMPTY_CHOP's own second route: a kit with samples already on it. No default, same reasoning as [onNavigateTape]. */
     onNavigateKits: () -> Unit,
 ) {
+    composedOffMainThread("ChopScreen")
     val scheme = LocalScheme.current
 
     // entry is nullable on purpose, mirroring TapeScreen's own fix: a TAPE
@@ -363,6 +364,7 @@ private fun ChopContent(
     onSentToGrid: (KitShelf.Entry, String) -> Unit,
     onLandedOnto: (KitShelf.Entry, Int, String) -> Unit,
 ) {
+    composedOffMainThread("ChopContent")
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
