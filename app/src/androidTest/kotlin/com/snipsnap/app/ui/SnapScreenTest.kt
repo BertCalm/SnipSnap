@@ -36,6 +36,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -61,10 +62,12 @@ class SnapScreenTest : ComposeScreenTest() {
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val folders = mutableListOf<File>()
-    private val toasts = mutableListOf<String>()
-    private val updates = mutableListOf<Kit>()
-    private val builtKits = mutableListOf<Photo>()
-    private val builtChords = mutableListOf<Photo>()
+    // Written by the screen on the main thread, read by the test's own:
+    // lists that are safe to read while the other thread adds to them.
+    private val toasts = CopyOnWriteArrayList<String>()
+    private val updates = CopyOnWriteArrayList<Kit>()
+    private val builtKits = CopyOnWriteArrayList<Photo>()
+    private val builtChords = CopyOnWriteArrayList<Photo>()
 
     @After
     fun cleanUp() {
@@ -154,9 +157,15 @@ class SnapScreenTest : ComposeScreenTest() {
     private fun padOnDisk(entry: KitShelf.Entry, slot: Int): KitPad? =
         runCatching { KitStore.load(entry.dir).pad(slot) }.getOrNull()
 
+    /**
+     * The pad's audio is on disk, and the screen told the app about the
+     * kit it wrote. Waited for, not asserted at once: the kit lands on disk
+     * inside the write, and the screen says so only after the write
+     * returns to the main thread, a beat later.
+     */
     private fun assertLandedAudio(entry: KitShelf.Entry, pad: KitPad) {
         assertTrue("the pad's audio is on disk", File(entry.dir, pad.sampleFile).length() > 44)
-        assertTrue("the screen heard about the kit it wrote", updates.any { it.pad(1) != null })
+        waitFor("the screen to hand the written kit to the app") { updates.any { it.pad(1) != null } }
     }
 
     @Test
@@ -220,10 +229,12 @@ class SnapScreenTest : ComposeScreenTest() {
         // CLOUD needs FIELD's grains, so it stays off until a field is built.
         button("CLOUD TO PAD").assertIsNotEnabled()
         invokeClick("PHOTO FIELD")
-        waitFor("the field over the picture", timeoutMillis = 60_000) { present("◄ SNAP") }
-        assertTrue(showing("PHOTO FIELD"))
-        invokeClick("◄ SNAP")
-        waitFor("back on SNAP") { !present("◄ SNAP") }
+        // The field's back chip reads "◄ SNAP" and is named for a screen
+        // reader in words (spokenBack): "BACK TO SNAP".
+        waitFor("the field over the picture", timeoutMillis = 60_000) { present("BACK TO SNAP") }
+        assertTrue(showing("◄ SNAP"))
+        invokeClick("BACK TO SNAP")
+        waitFor("back on SNAP") { !present("BACK TO SNAP") }
         waitFor("CLOUD to light") { runCatching { button("CLOUD TO PAD").assertIsEnabled() }.isSuccess }
         invokeClick("CLOUD TO PAD")
         invokeClick("${PadBanks.tag(1)}, EMPTY")
