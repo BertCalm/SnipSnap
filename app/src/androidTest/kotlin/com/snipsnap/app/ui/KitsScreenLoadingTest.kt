@@ -63,5 +63,9 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         compose.onNodeWithContentDescription(Copy.LIBRARY_LOADING).assertDoesNotExist()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertIsDisplayed()
         button(Places.CATCH_FIRST).assertIsDisplayed()
+        // The cold shelf draws this row too: the positive control for the
+        // literal the loading test asserts absent, so a rename of the button
+        // cannot leave that assertion passing for nothing.
+        button("NEW KIT ▸ STARTERS").assertIsDisplayed()
     }
 }

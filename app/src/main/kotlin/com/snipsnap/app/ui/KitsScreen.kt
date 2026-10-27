@@ -117,8 +117,8 @@ fun KitsScreen(
      */
     startingKit: Boolean = false,
     /**
-     * The kit list or the project list has not come back from disk yet
-     * (`App.kt`'s `kitsLoaded` / `projectsLoaded`). An empty list then means
+     * One of the shelf's lists (kits, projects, rooms) has not come back from disk yet
+     * (`App.kt`'s `kitsLoaded` / `shelfListsLoaded`). An empty list then means
      * "not read", not "nothing here": the shelf draws [Copy.LIBRARY_LOADING]
      * in the list's place and none of the footer's buttons, so a populated
      * library never opens on NOTHING TAPED YET and CATCH YOUR FIRST SOUND.

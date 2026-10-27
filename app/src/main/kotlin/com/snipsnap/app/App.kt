@@ -344,14 +344,20 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val nav = rememberNavigation()
     val location = nav.location
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
-    // Whether the kit list and the project list have each been read once. An
-    // empty `kits` or `projects` before that is "not read yet", not an empty
+    // Whether the shelf's lists have been read once: `kitsLoaded` for the kit
+    // list, `shelfListsLoaded` for the projects, the rooms and the rooms in the
+    // bin (the shelf effect below, which sets it only after the last of the
+    // three). An empty list before that is "not read yet", not an empty
     // library, and the shelf says LOADING instead of NOTHING TAPED YET until
-    // both are true. Set once and never cleared: a later re-read of a list
-    // that already holds something is a refresh, and flashing the panel over
-    // it on every kit change would be the flicker this removes, moved.
+    // both are true. All three lists matter, not only the projects: the empty
+    // panel is drawn when kits, rooms and binned rooms are all empty, so a
+    // flag set while rooms were still on their way would let a library with
+    // no kits but some rooms flash it. Set once and never cleared: a later
+    // re-read of a list that already holds something is a refresh, and
+    // flashing the panel over it on every kit change would be the flicker
+    // this removes, moved.
     var kitsLoaded by remember { mutableStateOf(false) }
-    var projectsLoaded by remember { mutableStateOf(false) }
+    var shelfListsLoaded by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // The dock (§1): the strip at the foot of every screen. Its `now` is
     // the line the toast used to say, and the door the toast used to carry
@@ -533,9 +539,12 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                     .onFailure { Log.e(TAG, "shelf open: projects unreadable", it) }
                     .getOrDefault(emptyList())
             }
-            projectsLoaded = true
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
+            // After the last list the empty panel reads, not after the first:
+            // see `shelfListsLoaded`. (`binnedCount` below only gates the BIN
+            // row, which the empty panel does not read.)
+            shelfListsLoaded = true
             binnedCount = withContext(Dispatchers.IO) {
                 runCatching { shelf.binnedKits().size }.getOrDefault(0) +
                     runCatching { SnipStore.binned(context.filesDir).size }.getOrDefault(0)
@@ -3359,7 +3368,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 onCatchFirst = ::requestArm,
                                 busy = busy != null,
                                 startingKit = pendingKit != null,
-                                loading = !(kitsLoaded && projectsLoaded),
+                                loading = !(kitsLoaded && shelfListsLoaded),
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
                                     val addTo = pendingAddTo
