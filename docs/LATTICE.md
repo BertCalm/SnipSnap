@@ -13,6 +13,29 @@ steps”. That verdict authorizes this native instrument milestone. The new pres
 bank and HOLD behavior still need their own listening verdict; the original
 engineering specification is not declared complete.
 
+## Focused musical gesture
+
+R4 asks a narrower listening question: does a solid pluck becoming a hollow,
+ringing trace give Lattice a useful musical character? The opening comparison
+plays a plain phrase, then the same notes with moving gates and a changing blend
+of passing tone and rejected resonance. Both use the same source, note velocities
+and source gain. The ringing tail comes from the existing rejection collector.
+
+This is an authored audition trajectory through `Lattice.probe`, not a new native
+patch setting. Existing saved patches and HOLD still use static gates. Passing
+this listening test would establish a direction for a playable motion control;
+it does not declare the proposed character heard or approved.
+
+Why it is built this way:
+
+- The plain phrase gives the ear a direct reference for what the gates change.
+- Gate movement must reshape the passing tone before the branch blend, so the
+  example demonstrates more than fading between two sounds.
+- The source stops before the exposed tail. That makes the collector's stored
+  ringing energy distinct from a separate sustained source or added reverb.
+- The existing source gain stays fixed. A result-level boost would conceal the
+  losses that connect this example to Lattice's mechanism.
+
 The [published audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site)
 retains the source choices and comparison studies. R3 adds native instrument and
 HOLD examples, a native patch download and a dry sixteen-pad MPC starter. Earlier

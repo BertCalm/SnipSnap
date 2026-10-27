@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#111211">
-  <meta name="description" content="Lattice: playable SnipSnap voices, saved patches, sustained HOLD loops, and accepted source comparisons.">
+  <meta name="description" content="Compare a plain pluck with the same notes moving through Lattice: a solid body gives way to a ringing trace.">
   <title>Lattice — SnipSnap instrument study</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23111211'/%3E%3Cpath d='M18 14v36m14-31v26m14-31v36' stroke='%23dfb175' stroke-width='5'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="./styles.css">
@@ -20,33 +20,27 @@
   <main>
     <section class="hero wrap" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot"></span> <span id="revision-kicker">LISTENING REVISION 03</span> <span class="eyebrow-rule"></span> INSTRUMENT STUDY</p>
+        <p class="eyebrow"><span class="status-dot"></span> <span id="revision-kicker">LISTENING REVISION 04</span> <span class="eyebrow-rule"></span> INSTRUMENT STUDY</p>
         <h1 id="hero-title">Lattice<span class="title-period">.</span></h1>
-        <p class="hero-line" id="revision-title">Softer source.<br> Clearer comparisons.</p>
-        <p class="hero-description" id="revision-summary">Start with short musical sources. Then compare the same phrase through different gates, with cue buttons to move between A and B.</p>
+        <p class="hero-line" id="revision-title">A pluck.<br>Then its ringing trace.</p>
+        <p class="hero-description" id="revision-summary">A plays the plain notes. B plays the same phrase through moving gates. Listen for the body to thin and a ringing tail to remain.</p>
         <p class="revision-note" id="revision-note" hidden></p>
-        <a class="text-link" id="first-listen-link" href="#source-listen">Listen to the sources <span aria-hidden="true">↓</span></a>
+        <a class="text-link" id="first-listen-link" href="#passage-proof">Play the short comparison <span aria-hidden="true">↓</span></a>
       </div>
-      <div class="mechanism" aria-label="Calculated illustration of a crossed gate chain">
-        <div class="mechanism-top"><span class="small-label">THE PASSAGE</span><span class="figure-number">FIG. 01</span></div>
-        <svg id="gate-diagram" class="gate-diagram" viewBox="0 0 520 285" role="img" aria-labelledby="diagram-title diagram-description"><title id="diagram-title">A chain of four projection gates</title><desc id="diagram-description">Intermediate gates guide a direction through crossed endpoints. The displayed transmission is an analytic amplitude ratio.</desc></svg>
-        <div class="diagram-footer"><div><span class="diagram-metric" id="diagram-value">65<span>%</span></span><span class="small-label metric-label">AMPLITUDE THROUGH</span></div><div class="gate-selector" role="group" aria-label="Illustrated total gate count"><button type="button" data-gates="2" aria-pressed="false">2</button><button type="button" data-gates="3" aria-pressed="false">3</button><button type="button" data-gates="4" class="selected" aria-pressed="true">4</button><button type="button" data-gates="16" aria-pressed="false">16</button><span>GATES</span></div></div>
-        <p class="diagram-note">Calculated illustration · crossed endpoints · halo off</p>
-      </div>
+      <section id="passage-proof" class="hero-listen" aria-labelledby="hero-listen-title">
+        <div class="hero-listen-inner">
+          <div class="hero-listen-heading"><div><p class="eyebrow muted" id="hero-listen-eyebrow">START HERE · THE SAME THREE NOTES</p><h2 id="hero-listen-title">Plain pluck → ringing trace</h2></div><span class="gain-badge"><span></span> COMMON GAIN</span></div>
+          <p id="hero-listen-guide" class="hero-listen-guide">Use A and B below to compare the plain phrase with the moving-gate version.</p>
+          <div id="hero-player" class="hero-player"><div class="loading-line"><span class="loading-dot"></span> Loading the rendered audition…</div></div>
+          <div class="hero-footnote"><span><svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 11V9a7 7 0 0 1 14 0v2M3 10h3v7H3zM14 10h3v7h-3z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> Headphones recommended</span><span id="hero-footnote-text">The notes and source level stay the same. The gates and rejected-signal mix move.</span></div>
+        </div>
+      </section>
     </section>
 
     <section id="source-listen" class="source-listen wrap" aria-labelledby="source-listen-title" hidden>
-      <div class="section-heading"><div><p class="eyebrow muted">START WITH THE INSTRUMENT</p><h2 id="source-listen-title">Find a source you like.</h2></div><p id="source-listen-intro">Short phrases, before<br>the listening comparisons.</p></div>
+      <div class="section-heading"><div><p class="eyebrow muted">THE SAVED INSTRUMENT</p><h2 id="source-listen-title">Find a source you like.</h2></div><p id="source-listen-intro">Short phrases, before<br>the listening comparisons.</p></div>
       <div id="source-clips" class="clip-grid"></div>
       <p class="source-footnote" id="source-footnote">Each source uses the same phrase. Start with one, then try the short proof below.</p>
-    </section>
-
-    <section id="passage-proof" class="hero-listen wrap" aria-labelledby="hero-listen-title">
-      <div class="hero-listen-inner">
-        <div class="hero-listen-heading"><div><p class="eyebrow muted">THE SHORT PROOF <span class="eyebrow-rule"></span> ONE CONTINUOUS TAKE</p><h2 id="hero-listen-title">Hear it disappear. Then return.</h2></div><span class="gain-badge"><span></span> COMMON GAIN</span></div>
-        <div id="hero-player" class="hero-player"><div class="loading-line"><span class="loading-dot"></span> Loading the rendered audition…</div></div>
-        <div class="hero-footnote"><span><svg width="15" height="15" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 11V9a7 7 0 0 1 14 0v2M3 10h3v7H3zM14 10h3v7h-3z" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> Headphones recommended</span><span>The returning tone comes from the original source. No makeup gain.</span></div>
-      </div>
     </section>
 
     <section id="listen" class="studies wrap" aria-labelledby="studies-title">
@@ -59,7 +53,14 @@
 
     <section id="notes" class="notes wrap" aria-labelledby="notes-title">
       <div class="notes-copy"><p class="eyebrow muted">WHAT YOU’RE HEARING</p><h2 id="notes-title">Same source.<br>Different ways through.</h2><p>Lattice carries harmonic groups through a chain of directional gates. Each gate passes one component and rejects another. The rejected sound excites a separate, tuned halo.</p><p>These are actual audio renders from the Kotlin engine in SnipSnap. The controls are baked into each recording; this page plays the actual files.</p><div class="signal-key"><span><i class="transmitted"></i> Transmitted tone</span><span><i class="rejected"></i> Rejected halo</span></div></div>
-      <div class="notes-detail"><div class="prototype-note"><span class="small-label">THIS ROUND</span><p>Three playable voices, saved patches, a starter bank, and seamless HOLD exports.</p><span class="small-label">LATER</span><p>Moving geometry, broader voicing, and phone/MPC listening verification.</p></div><dl class="engine-facts" id="engine-facts"><div><dt>OUTPUT</dt><dd>44.1 kHz · mono</dd></div><div><dt>INTERNAL RATE</dt><dd>4× oversampled</dd></div><div><dt>EXTERNAL EFFECTS</dt><dd>None</dd></div></dl></div>
+      <div class="notes-detail"><div class="prototype-note"><span class="small-label">THIS ROUND</span><p>One moving-gate musical comparison. Listen for a pluck’s body giving way to its ringing trace.</p><span class="small-label">SAVED PATCHES</span><p>The saved voices and HOLD loops use fixed gate settings. This new motion is an audition prototype; it is not stored in those native patches.</p></div><dl class="engine-facts" id="engine-facts"><div><dt>OUTPUT</dt><dd>44.1 kHz · mono</dd></div><div><dt>INTERNAL RATE</dt><dd>4× oversampled</dd></div><div><dt>EXTERNAL EFFECTS</dt><dd>None</dd></div></dl>
+      <div class="mechanism" aria-label="Calculated illustration of a crossed gate chain">
+        <div class="mechanism-top"><span class="small-label">THE PASSAGE</span><span class="figure-number">FIG. 01</span></div>
+        <svg id="gate-diagram" class="gate-diagram" viewBox="0 0 520 285" role="img" aria-labelledby="diagram-title diagram-description"><title id="diagram-title">A chain of four projection gates</title><desc id="diagram-description">Intermediate gates guide a direction through crossed endpoints. The displayed transmission is an analytic amplitude ratio.</desc></svg>
+        <div class="diagram-footer"><div><span class="diagram-metric" id="diagram-value">65<span>%</span></span><span class="small-label metric-label">AMPLITUDE THROUGH</span></div><div class="gate-selector" role="group" aria-label="Illustrated total gate count"><button type="button" data-gates="2" aria-pressed="false">2</button><button type="button" data-gates="3" aria-pressed="false">3</button><button type="button" data-gates="4" class="selected" aria-pressed="true">4</button><button type="button" data-gates="16" aria-pressed="false">16</button><span>GATES</span></div></div>
+        <p class="diagram-note">Calculated illustration · crossed endpoints · halo off</p>
+      </div>
+      </div>
     </section>
 
     <section class="evidence wrap" aria-labelledby="evidence-title">

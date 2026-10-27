@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * The third LATTICE audition: the accepted finite proof, native patches and periodic HOLD.
+ * The fourth LATTICE audition: one moving pluck beside its plain source, plus preserved earlier studies.
  * Every primary clip retains the engine's common
  * source gain. Optional matched files are separate listening aids, never the restoration proof.
  *
@@ -60,6 +60,10 @@ object LatticeAuditionGenerator {
         "shell/src/test/kotlin/com/snipsnap/shell/LatticeSurfaceTest.kt",
         "cli/src/test/kotlin/com/snipsnap/cli/LatticeSynthCommandTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/LatticeAuditionGenerator.kt",
+        "synth/src/test/kotlin/com/snipsnap/synth/LatticeGestureStudy.kt",
+        "docs/lattice-audition/index.html",
+        "docs/lattice-audition/styles.css",
+        "docs/lattice-audition/app.js",
     )
 
     private data class Rendered(
@@ -216,6 +220,17 @@ object LatticeAuditionGenerator {
             println("LATTICE ${clips.size}: $id, peak=${stats.getValue("peak")}, rms=${stats.getValue("rms")}")
         }
 
+        val focused = sequenceRecipe(listOf(
+            "A · Plain pluck" to gesturePhraseRecipe(moving = false),
+            "B · Body into ringing tail" to gesturePhraseRecipe(moving = true),
+        ))
+        add(
+            "pluck-to-outline", "A plain pluck. A body that becomes a ringing tail.",
+            "A plays the plain three-note phrase. B plays the same notes while the body thins and gives way to a tuned ringing tail. Compare the change of body and the space after each note. This moving version is an audition prototype; native patches remain static.",
+            "focus", listOf("START HERE", "SAME THREE NOTES", "COMMON GAIN"), focused,
+            cues = sequenceCues(focused),
+        )
+
         val sourceBase = Lattice.Settings(
             midi = 48, velocity = .62f, turn = 0.0, gateCount = 2.0,
             color = 0.0, reject = 0.0, haloEnabled = false,
@@ -366,7 +381,7 @@ object LatticeAuditionGenerator {
         val referenceChecks = referenceChecks()
         val peak = clips.maxOf { ((it.getValue("metrics") as Map<*, *>)["peak"] as Number).toDouble() }
         val maxResidual = evidence.maxOf { ((it.getValue("diagnostics") as Map<*, *>)["allocationResidual"] as? Number)?.toDouble() ?: 0.0 }
-        check(clips.size == 18 && replayCount == 21 && matchedCount == 3) { "incomplete Lattice R3 listening pack" }
+        check(clips.size == 19 && replayCount == 22 && matchedCount == 3) { "incomplete Lattice R4 listening pack" }
         check(silentPeak == 0.0) { "crossed fixture is not digital silence after PCM16 export: $silentPeak" }
         check(referenceChecks.all { abs((it.getValue("error") as Number).toDouble()) < 1e-12 }) { "analytic reference failed" }
         val validation = linkedMapOf<String, Any?>(
@@ -381,7 +396,7 @@ object LatticeAuditionGenerator {
             "heldClipCount" to clips.count { it["section"] == "hold" },
             "maxHeldSeamError" to clips.mapNotNull { (it["metrics"] as? Map<*, *>)?.get("seamError") as? Number }.maxOf { it.toDouble() },
             "starterKitPadCount" to starterKit.getValue("padCount"),
-            "listeningVerdict" to "The owner accepted the R2 source improvement and clearer comparisons. Native factory phrases, HOLD and MPC playback await listening review.",
+            "listeningVerdict" to "The owner accepted the R2 source improvement and clearer comparisons. Moving pluck character, native factory phrases, HOLD and MPC playback await listening review.",
         )
         val engine = linkedMapOf<String, Any?>(
             "name" to "Lattice", "model" to MODEL, "sourceCommit" to revision,
@@ -394,6 +409,7 @@ object LatticeAuditionGenerator {
                 "Matched COLOR/TWIST variants scale each A/B condition separately before concatenation. Repeated A/B segments reuse those exact gains. Source and restoration recordings remain common-gain.",
                 "R3 adds twelve native patches, three factory phrases, three periodic HOLD studies and a dry sixteen-pad MPC starter. Held studies repeat one settled source cycle four times without seam repair or makeup gain.",
                 "Standard patch, preset, velocity, CLI and phone-picker registration is present in source. Phone behavior and hardware MPC playback require their own device checks.",
+                "R4 adds one authored moving-pluck A/B phrase using the unchanged projection and reject collector. The curve is saved in its audition recipe; native patches and HOLD remain static.",
             ),
         )
         val measurements = linkedMapOf<String, Any?>(
@@ -404,12 +420,13 @@ object LatticeAuditionGenerator {
         )
         File(output, "measurements.json").writeText(Json.write(json(measurements)))
         val manifest = linkedMapOf<String, Any?>(
-            "revision" to 3,
-            "title" to "Lattice · native instrument and HOLD",
-            "subtitle" to "The accepted source direction, now saved as playable patches and periodic held notes.",
-            "revisionTitle" to "From listening study to instrument.",
-            "revisionSummary" to "The accepted sources and clearer comparisons remain. Try the native factory phrases, hear four unmodified HOLD cycles, and download the saved patches or sixteen-pad starter kit.",
-            "revisionNote" to "The owner accepted the R2 source improvement and comparison clarity. The new native voicings, held notes and MPC starter are ready for their next listening review.",
+            "revision" to 4,
+            "title" to "Lattice · from pluck to ringing tail",
+            "subtitle" to "One plain pluck beside the same notes losing their body into a tuned ringing tail.",
+            "revisionTitle" to "A pluck.\nThen its ringing trace.",
+            "revisionSummary" to "Start with one short A/B phrase. A is the plain source; B changes its harmonic balance and closes the direct path, leaving a resonant tail. Earlier source, native instrument and HOLD studies remain below.",
+            "revisionNote" to "The moving example is an audition prototype using the existing engine. It has not added automatic motion to native patches, and its musical character still needs your listening verdict.",
+            "heroClipId" to "pluck-to-outline",
             "preferredComparisonMode" to "matched",
             "generatedAt" to Instant.now().toString(), "engine" to engine,
             "clips" to clips, "referenceChecks" to referenceChecks, "validation" to validation,
@@ -425,7 +442,7 @@ object LatticeAuditionGenerator {
             if (template.isFile) template.copyTo(File(output, name), overwrite = true)
         }
         File(output, "REPLAY.txt").writeText("""
-            LATTICE — native instrument and HOLD audition, model $MODEL
+            LATTICE — moving pluck, native instrument and HOLD audition, model $MODEL
 
             Generate from the SnipSnap checkout:
               ./gradlew --no-daemon :synth:generateLatticeAudition
@@ -435,6 +452,11 @@ object LatticeAuditionGenerator {
                 -PlatticeRecipe=/absolute/path/recipes/two-vs-three.json \
                 -PlatticeReplayOutput=/absolute/path/replay.wav
 
+            recipes/pluck-to-outline.json compares identical PLUCK source notes with authored gate motion.
+            Its motion-phrase events save every TURN/STAGES-equivalent gate count/TWIST/COLOR/REJECT
+            keyframe and smoothstep interpolation. The curve is an audition proposal, not a native macro.
+            The direct path closes at .44 s, source effort ends at .46 s, and the later tail comes
+            from the existing signed-rejection resonators. No extra oscillator or effect is added.
             recipes/ contains audition-performance wrappers, not app Patch/PadRecipe files.
             patches/ and lattice-patches.zip contain all twelve standard native LATTICE patches.
             native-phrase wrappers save a full native patch for every note. native-hold wrappers
@@ -453,10 +475,10 @@ object LatticeAuditionGenerator {
             Source revision: $revision
             Exact working-tree source fingerprints are in manifest.json and each recipe.
         """.trimIndent() + "\n")
-        val sourcePaths = sourceFiles + listOf(
+        val sourcePaths = (sourceFiles + listOf(
             "synth/build.gradle.kts", "docs/LATTICE.md", "docs/SYNTH_ROADMAP.md",
             "docs/lattice-audition/index.html", "docs/lattice-audition/styles.css", "docs/lattice-audition/app.js",
-        )
+        )).distinct()
         archive(File(output, "lattice-source.zip"), sourcePaths.map { it to File(repo, it) }.filter { it.second.isFile })
         val pack = File(output, "lattice-audition.zip")
         archive(pack, output.walkTopDown().filter { it.isFile && it != pack }.map {
@@ -531,7 +553,7 @@ object LatticeAuditionGenerator {
                 } else Lattice.probe(settings)
                 Rendered(probe.snip, diagnostics(probe.diagnostics), (System.nanoTime() - started) / 1e6)
             }
-            "phrase" -> {
+            "phrase", "motion-phrase" -> {
                 val events = recipe.getValue("events").arr()
                 val duration = recipe.getValue("durationSeconds").num()
                 val gain = recipe["assemblyGain"]?.num() ?: 1.0
@@ -541,13 +563,27 @@ object LatticeAuditionGenerator {
                 var residual = 0.0
                 var sourceGain: Double? = null
                 val stageEnergy = DoubleArray(16)
+                val motion = recipe.getValue("kind").str() == "motion-phrase"
+                val noteStudies = mutableListOf<Map<String, Any?>>()
                 for (event in events) {
                     val obj = event.obj()
                     val settings = settingsFrom(obj.getValue("settings").obj())
-                    val probe = Lattice.probe(settings)
+                    val probe = if (motion) {
+                        require(settings.durationSeconds >= 1.2) { "moving study notes must include the 1.2 second evidence window" }
+                        require(recipe.getValue("interpolation").str() == "smoothstep") { "unsupported motion interpolation" }
+                        val frames = obj.getValue("trajectory").arr().map { value ->
+                            val row = value.obj()
+                            LatticeGestureStudy.Frame(row.getValue("time").num(), row.getValue("turn").num(),
+                                row.getValue("gateCount").num(), row.getValue("twist").num(),
+                                row.getValue("color").num(), row.getValue("reject").num())
+                        }
+                        Lattice.probe(settings, LatticeGestureStudy.controls(frames, settings.durationSeconds))
+                    } else Lattice.probe(settings)
+                    if (motion) noteStudies += LatticeGestureStudy.evidence(probe, settings) + mapOf("midi" to settings.midi)
                     val eventTime = obj.getValue("timeSeconds").num()
                     require(eventTime.isFinite() && eventTime in 0.0..duration) { "phrase event starts outside the render" }
                     val offset = (eventTime * RATE).roundToInt()
+                    if (motion) require(offset + probe.snip.samples.size <= samples.size) { "motion phrase truncates a note" }
                     for (i in probe.snip.samples.indices) if (offset + i in samples.indices) samples[offset + i] += probe.snip.samples[i]
                     residual = max(residual, probe.diagnostics.allocationResidual)
                     sourceGain = probe.diagnostics.sourceGain
@@ -555,7 +591,15 @@ object LatticeAuditionGenerator {
                 }
                 Rendered(
                     Snip(FloatArray(samples.size) { (samples[it] * gain).toFloat() }, channels = 1, sampleRate = RATE),
-                    mapOf("allocationResidual" to residual, "sourceGain" to sourceGain, "stageRejectedEnergy" to stageEnergy.toList(), "assemblyGain" to gain, "events" to events.size),
+                    linkedMapOf<String, Any?>("allocationResidual" to residual, "sourceGain" to sourceGain, "stageRejectedEnergy" to stageEnergy.toList(), "assemblyGain" to gain, "events" to events.size).apply {
+                        if (motion) {
+                            put("authoredMotion", true)
+                            put("nativePatchControl", false)
+                            put("noteStudies", noteStudies)
+                            put("externalEffects", false)
+                            put("outputNormalization", false)
+                        }
+                    },
                     (System.nanoTime() - started) / 1e6,
                 )
             }
@@ -598,6 +642,25 @@ object LatticeAuditionGenerator {
 
     private fun nativePatch(value: JsonValue): LatticePatch =
         Patches.fromJsonValue(value) as? LatticePatch ?: error("audition native recipe must contain a LATTICE patch")
+
+    private fun gesturePhraseRecipe(moving: Boolean): Map<String, Any?> {
+        val notes = listOf(48, 55, 51)
+        val settings = LatticeGestureStudy.settings()
+        val events = notes.mapIndexed { index, midi ->
+            linkedMapOf<String, Any?>("timeSeconds" to index * .85,
+                "settings" to settingsMap(settings.copy(midi = midi))).apply {
+                if (moving) put("trajectory", LatticeGestureStudy.frames.map { frame ->
+                    mapOf("time" to frame.time, "turn" to frame.turn, "gateCount" to frame.gates,
+                        "twist" to frame.twist, "color" to frame.color, "reject" to frame.reject)
+                })
+            }
+        }
+        return linkedMapOf<String, Any?>(
+            "kind" to if (moving) "motion-phrase" else "phrase", "settings" to settingsMap(settings),
+            "durationSeconds" to 3.7, "assemblyGain" to PHRASE_GAIN, "events" to events,
+            "renderSettings" to events.map { it["settings"] },
+        ).apply { if (moving) put("interpolation", "smoothstep") }
+    }
 
     private fun nativePhraseRecipe(patch: LatticePatch): Map<String, Any?> {
         val notes = listOf(48, 55, 60)
