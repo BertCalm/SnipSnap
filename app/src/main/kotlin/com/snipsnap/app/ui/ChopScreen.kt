@@ -89,7 +89,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * The CHOP SHOP screen: `ChopReviewModel` review + `SEND TO PADS`, over
@@ -146,7 +145,7 @@ fun ChopScreen(
         // The decode (and the classifier's first pass over every slice) are
         // both real work on real audio — off the main thread, matching
         // TapeScreen's own `loadLongestTape`.
-        val (oomEncountered, loaded) = withContext(Dispatchers.IO) {
+        val (oomEncountered, loaded) = offMain {
             val result = loadChopSource(entry, lastCommit)
             val built = result.found?.let { (file, snip) ->
                 // The tape reference (RE-TRIM): only when what loaded is
@@ -442,7 +441,7 @@ private fun ChopContent(
         val current = model
         melodicBusy = true
         try {
-            val (placedList, labels) = withContext(Dispatchers.IO) {
+            val (placedList, labels) = offMain {
                 val p = current.melodicPreview()
                 val l = current.rows.indices.map { i -> current.pitchOf(i)?.let(::pitchLabel) }
                 p to l
@@ -473,7 +472,7 @@ private fun ChopContent(
     // the first model (every later model cut from this source shares the
     // measurement), null while measuring or when the tape has no pulse.
     val tempoMeasured by produceState<Pair<Boolean, com.snipsnap.audio.TempoEstimate?>>(initialValue = false to null, initialModel) {
-        val t = withContext(Dispatchers.IO) { initialModel.tempo }
+        val t = offMain { initialModel.tempo }
         value = true to t
     }
 
@@ -496,7 +495,7 @@ private fun ChopContent(
         val current = model
         scope.launch {
             try {
-                val fresh = withContext(Dispatchers.IO) { current.rechopKeeping(newMode) }
+                val fresh = offMain { current.rechopKeeping(newMode) }
                 model = fresh
                 after(fresh)
             } catch (e: Exception) {
@@ -579,7 +578,7 @@ private fun ChopContent(
         val current = model
         scope.launch {
             try {
-                val fresh = withContext(Dispatchers.IO) { edit(current) }
+                val fresh = offMain { edit(current) }
                 if (fresh == null) {
                     onToast(refused)
                 } else {
@@ -689,12 +688,12 @@ private fun ChopContent(
         val current = model
         scope.launch {
             try {
-                val reading = withContext(Dispatchers.IO) {
+                val reading = offMain {
                     // Whatever the ring recorded since the stop is the newest
                     // part of the tail: asked for and dropped, so the window
                     // ends at the stop, not at the snapshot.
                     val late = ((SystemClock.elapsedRealtime() - stopAt) * micRate / 1000L).toInt().coerceAtLeast(0)
-                    val raw = MicSessionService.snapshotTail(frames + late) ?: return@withContext null
+                    val raw = MicSessionService.snapshotTail(frames + late) ?: return@offMain null
                     val window = if (late > 0 && raw.size > late) raw.copyOf(raw.size - late) else raw
                     Hum.read(current.source, Snip(window, 1, micRate), offsetFrames = offsetOnTape)
                 }
@@ -702,7 +701,7 @@ private fun ChopContent(
                     reading == null -> onToast(Copy.HUM_NOTHING)
                     reading.cuts.isEmpty() -> onToast(Copy.HUM_NO_MATCH)
                     else -> {
-                        val fresh = withContext(Dispatchers.IO) { current.rechop(reading.mode()) }
+                        val fresh = offMain { current.rechop(reading.mode()) }
                         model = fresh
                         onToast(Copy.hummed(fresh.sliceCount, reading.missed))
                     }
@@ -868,7 +867,7 @@ private fun ChopContent(
                     val current = model
                     scope.launch {
                         try {
-                            val (count, fresh) = withContext(Dispatchers.IO) {
+                            val (count, fresh) = offMain {
                                 val n = current.autoCount()
                                 n to n?.let { current.rechopKeeping(ChopReviewModel.withHits(current.mode, hits.copy(maxSlices = it))) }
                             }
@@ -1130,7 +1129,7 @@ private fun ChopContent(
                         // deliberately clean re-chop is ever wanted it
                         // deserves its own named control rather than living
                         // on as a side effect nothing announces.
-                        val fresh = withContext(Dispatchers.IO) { current.rechopKeeping(current.mode) }
+                        val fresh = offMain { current.rechopKeeping(current.mode) }
                         model = fresh
                         onToast(Copy.RECHOPPED)
                     } catch (e: Exception) {
@@ -1162,14 +1161,14 @@ private fun ChopContent(
                     val rated = stars
                     scope.launch {
                         try {
-                            val send = withContext(Dispatchers.IO) {
+                            val send = offMain {
                                 when {
                                     isMelodic -> current.sendToGridMelodic()
                                     isFold -> current.sendToGridFolded()
                                     else -> current.sendToGrid()
                                 }
                             }
-                            val (newEntry, sungBars) = withContext(Dispatchers.IO) {
+                            val (newEntry, sungBars) = offMain {
                                 // The name the button said, unless the shelf
                                 // took it since - another writer landing a
                                 // kit of the same name while CHOP sat open.
@@ -1265,14 +1264,14 @@ private fun ChopContent(
                 val rated = stars
                 scope.launch {
                     try {
-                        val send = withContext(Dispatchers.IO) {
+                        val send = offMain {
                             when {
                                 isMelodic -> current.sendToGridMelodic()
                                 isFold -> current.sendToGridFolded()
                                 else -> current.sendToGrid()
                             }
                         }
-                        val (updated, landed) = withContext(Dispatchers.IO) {
+                        val (updated, landed) = offMain {
                             // The same lock every kit writer takes: this is an
                             // open → assign → save on the open kit's kit.json.
                             KitWrites.mutex.withLock {
@@ -1436,7 +1435,7 @@ private fun SourceStrip(source: Snip, cuts: List<Int>, scheme: Scheme) {
     // draws its markers alone until it lands, rather than freezing the
     // screen on first composition.
     val peaks by produceState<PeaksPyramid?>(initialValue = null, source) {
-        value = withContext(Dispatchers.IO) { PeaksPyramid.fromSnip(source) }
+        value = offMain { PeaksPyramid.fromSnip(source) }
     }
     Canvas(Modifier.fillMaxWidth().height(40.dp).lcdPanel(scheme).padding(horizontal = 2.dp)) {
         if (source.frameCount <= 0) return@Canvas
