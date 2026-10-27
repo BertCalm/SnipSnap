@@ -163,7 +163,8 @@ class ForgeTest {
     @Test
     fun `CHARGE adds weight where there was none`() {
         val shares = listOf(0f, 0.25f, 0.5f, 0.75f, 1f).map { c -> bandShare(forge(cowbell, "CHARGE" to c).samples, 20f, 120f) }
-        // Measured 0.0050, 0.0267, 0.0390, 0.1025, 0.1507: a cowbell has almost nothing under 120 Hz.
+        // Measured on the TIGHT medium (2026-10-27): 0.0050, 0.0150, 0.0467, 0.0983, 0.1515 (AS_BUILT read 0.0050,
+        // 0.0267, 0.0390, 0.1025, 0.1507): a cowbell has almost nothing under 120 Hz.
         println("FORGE CHARGE on a cowbell, share 20-120 Hz: ${shares.joinToString { "%.4f".format(it) }}")
         for (i in 1 until shares.size) assertTrue(shares[i] > shares[i - 1], "CHARGE ${i * 0.25f} did not add weight: $shares")
         assertTrue(shares.first() < 0.01, "the dry-ish end already has weight: ${shares.first()}")
@@ -185,18 +186,21 @@ class ForgeTest {
             return 1000.0 * y.size / rate
         }
         val widths = listOf(0f, 0.25f, 0.5f, 1f).map { width(it) }
-        // Measured 0.54, 4.76, 7.82, 13.95 ms (the brief's prototype: 0.2 ms to 12.5 ms at 24 sections).
+        // Measured on the TIGHT medium: 0.54, 1.36, 1.88, 2.95 ms. AS_BUILT spread it to 13.95 ms, the "pew" the
+        // owner tuned out at the CHARGE gate (2026-10-27); a short sweep is the point now, so the bar is a floor.
         println("FORGE medium, 90 % energy width of a 0.8 ms click: ${widths.joinToString { "%.2f ms".format(it) }}")
         for (i in 1 until widths.size) assertTrue(widths[i] > widths[i - 1], "more CHARGE did not spread the click: $widths")
-        assertTrue(widths.last() > 10.0, "the full medium spread the click only to ${widths.last()} ms")
+        assertTrue(widths.last() > 2.5, "the full medium spread the click only to ${widths.last()} ms")
     }
 
     @Test
     fun `the medium's centres never move as CHARGE adds sections`() {
+        val m = Forge.Medium.SHIPPED
         val first = (0 until Forge.MAX_SECTIONS).map { Forge.mediumHz(it) }
         assertEquals(first.size, first.toSet().size, "two sections share a centre")
-        assertTrue(first.all { it in 300f..6_000f }, "a centre left the range: $first")
-        assertEquals(300f, first[0], 1e-3f)
+        assertTrue(first.all { it in m.loHz..m.hiHz }, "a centre left the range: $first")
+        assertEquals(m.loHz, first[0], 1e-3f)
+        assertTrue(first.all { it >= 1_200f }, "the shipped medium reaches into the low end, where the sweep read as a zap: $first")
     }
 
     @Test
@@ -211,9 +215,10 @@ class ForgeTest {
         val attack = ms(6f)
         val diff = FloatArray(attack) { far[it] - near[it] }
         val change = rms(diff) / rms(near, 0, attack)
-        // Measured 1.270. No comb-notch claim: the folder and the die scramble the interference (the brief).
+        // Measured 0.674 on the TIGHT medium (1.270 on AS_BUILT, whose long sweep carried the shift further).
+        // No comb-notch claim: the folder and the die scramble the interference (the brief).
         println("FORGE STANDOFF 0 vs 1 on the kick: the first 6 ms differ by ${"%.3f".format(change)} of their RMS")
-        assertTrue(change > 1.0, "STANDOFF moved the attack by only ${"%.3f".format(change)} of its RMS")
+        assertTrue(change > 0.5, "STANDOFF moved the attack by only ${"%.3f".format(change)} of its RMS")
     }
 
     @Test
@@ -237,11 +242,12 @@ class ForgeTest {
         }
         println("FORGE YIELD on the kick (ARREST 0), body share over 200 Hz after 50 ms / attack share over 3 kHz in 5 ms: " +
             rows.joinToString { (y, b, a) -> "$y: %.4f / %.4f".format(b, a) })
-        // Measured body 0.0206, 0.0866, 0.0035, 0.0039, 0.0039 and attack 0.0573, 0.0573, 0.1316, 0.2150,
-        // 0.0560. The body is NOT monotonic: at YIELD 0.25 the threshold sits inside the body's own slew,
-        // and slew peaks at every zero crossing, so the flow switches on and off twice a cycle - harsher
-        // (0.0866) than the steady full fold at YIELD 0 (0.0206). Disclosed for the owner's ear (the gate's
-        // YIELD 0.25 clip), not asserted away. The bars below are the middle of the knob.
+        // Measured on the TIGHT medium: body 0.0379, 0.0211, 0.0222, 0.0223, 0.0226 and attack 0.1397, 0.0418,
+        // 0.0592, 0.0266, 0.0111. On AS_BUILT the body was NOT monotonic (0.0206, 0.0866, 0.0035, 0.0039,
+        // 0.0039): at YIELD 0.25 the threshold sat inside the body's own slew and the flow switched twice a
+        // cycle, the harsh middle the owner chose to keep at the first gate. The TIGHT medium moves the
+        // normalisation, so on this kick that middle no longer reads harsher than YIELD 0; disclosed in the
+        // brief for the owner's ear, not asserted either way. The bars below are the middle of the knob.
         val rigid = rows.last()
         val mid = rows[2]
         assertTrue(mid.second < 2 * rigid.second, "at YIELD 0.5 the body distorts: ${mid.second} against ${rigid.second} rigid")
@@ -257,12 +263,13 @@ class ForgeTest {
             }
             println("FORGE ARREST on the $name, crest / share over 6 kHz: " + rows.joinToString { (a, c, h) -> "$a: %.3f / %.5f".format(c, h) })
             for (i in 1 until rows.size) assertTrue(rows[i].second < rows[i - 1].second, "$name: ARREST ${rows[i].first} did not lower the crest: $rows")
-            // Measured kick 5.008 -> 2.989 (0.60), snare 7.889 -> 5.652 (0.72).
+            // Measured on the TIGHT medium: kick 5.242 -> 3.086 (0.59); AS_BUILT read kick 5.008 -> 2.989, snare 7.889 -> 5.652.
             assertTrue(rows.last().second < 0.78 * rows.first().second, "$name: ARREST 1 coined too little: $rows")
             if (name == "kick") {
-                // The heat on a pad with no top of its own: measured 0.00050 at ARREST 0.5, 0.00102 at 1. (On the
-                // snare the share falls, 0.401 -> 0.370, because the die clips its bright body harder than it adds.)
-                assertTrue(rows.last().third > 1.8 * rows[2].third, "the heat did not rise on the kick: $rows")
+                // The heat on a pad with no top of its own: measured 0.00084 at ARREST 0.5, 0.00124 at 1 on the TIGHT
+                // medium (1.48x; AS_BUILT read 0.00050 to 0.00102, whose long sweep left less top of its own). On
+                // the snare the share falls, because the die clips its bright body harder than it adds.
+                assertTrue(rows.last().third > 1.3 * rows[2].third, "the heat did not rise on the kick: $rows")
             }
         }
     }
@@ -316,7 +323,8 @@ class ForgeTest {
             val hard = Classifier.classify(forge(s, "CHARGE" to 1f, "YIELD" to 0f, "ARREST" to 1f)).drumClass
             println("FORGE classes, $name: dry $dry, defaults $def, CHARGE 1 $hot, every macro at its hot end $hard")
         }
-        // Measured: kick KICK at defaults, PERC at CHARGE 1; snare SNARE everywhere; the THUMP closed hat
+        // Measured: kick KICK at defaults and, on the TIGHT medium, at CHARGE 1 too (AS_BUILT filed it PERC there);
+        // snare SNARE everywhere; the THUMP closed hat
         // HAT_CLOSED dry, PERC through the neutral round trip (VALVE's neutral does the same: the rack's
         // 19.5 kHz corner, not FORGE's), SNARE at YIELD 0.5 (a hat is all fast material, so nearly all of it
         // flows). Disclosed in the brief's As built; the defaults are the owner's to set at the gate.
@@ -326,7 +334,8 @@ class ForgeTest {
 
     @Test
     fun `the FORGE chip at full is the clip the owner heard as loud and solid`() {
-        // The gate's question two (2026-10-26): every macro at its default, ARREST 1. The chip's character
+        // The gate's question two (2026-10-26): every macro at its default, ARREST 1, on the TIGHT medium the owner
+        // then picked for the kick and the snare at the CHARGE gate (2026-10-27). The chip's character
         // sets no VALVE, so Treatments adds no pre-amp fade and the chain is FORGE alone.
         val heard = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1f)
         for (pad in listOf(kick, snare)) {
