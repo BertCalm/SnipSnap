@@ -116,6 +116,14 @@ fun KitsScreen(
      * is true for every job, this one included.
      */
     startingKit: Boolean = false,
+    /**
+     * The kit list or the project list has not come back from disk yet
+     * (`App.kt`'s `kitsLoaded` / `projectsLoaded`). An empty list then means
+     * "not read", not "nothing here": the shelf draws [Copy.LIBRARY_LOADING]
+     * in the list's place and none of the footer's buttons, so a populated
+     * library never opens on NOTHING TAPED YET and CATCH YOUR FIRST SOUND.
+     */
+    loading: Boolean = false,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
@@ -268,13 +276,13 @@ fun KitsScreen(
     // project list is not drawn (the empty panel is) and a kit is what is
     // missing.
     val picking = assigningSnip || breedingFrom != null || addingTo != null
-    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() && !picking
+    val projectFirst = !loading && projects.isNotEmpty() && kits.isNotEmpty() && !picking
     // The first run — no project and no kit — has a button of its own: the
     // way in that needs nothing made first is a sound, so CATCH YOUR FIRST
     // SOUND ▸ is the filled button, and NEW KIT ▸ STARTERS (the other honest
     // way in, a kit someone already composed) steps down to the outline row.
     // Once the first SNIP lands the shelf has both, and this is gone for good.
-    val coldShelf = projects.isEmpty() && kits.isEmpty() && !picking
+    val coldShelf = !loading && projects.isEmpty() && kits.isEmpty() && !picking
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -420,7 +428,10 @@ fun KitsScreen(
                 TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
 
-            if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
+            if (loading) {
+                // Read, not empty: neither the empty state below nor the list.
+                LoadingPanel(Copy.LIBRARY_LOADING, Modifier.fillMaxWidth().weight(1f))
+            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -594,51 +605,57 @@ fun KitsScreen(
                 }
             }
 
-            if (coldShelf || projectFirst) {
-                if (coldShelf) {
-                    PrimaryAction(
-                        label = Places.CATCH_FIRST,
+            // While the library is still being read the footer's way in is not
+            // offered either: which button is the primary one (CATCH YOUR FIRST
+            // SOUND, NEW PROJECT, or NEW KIT alone) is decided by what the lists
+            // hold, and they do not hold anything yet.
+            if (!loading) {
+                if (coldShelf || projectFirst) {
+                    if (coldShelf) {
+                        PrimaryAction(
+                            label = Places.CATCH_FIRST,
+                            enabled = !busy,
+                            onClick = onCatchFirst,
+                        )
+                    } else {
+                        PrimaryAction(
+                            label = "NEW PROJECT ▸",
+                            enabled = !busy,
+                            onClick = onNewProject,
+                        )
+                    }
+                    // Outline, one step down: a kit is made inside a project more
+                    // often than the other way round, and the menu it opens still
+                    // says PICK A STARTER as its own heading.
+                    ActionButton(
+                        "NEW KIT ▸ STARTERS",
+                        scheme,
                         enabled = !busy,
-                        onClick = onCatchFirst,
+                        working = startingKit,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { menuOpen = true },
                     )
                 } else {
+                    // Renamed from "FRESH TAPE": on a cold open this reads as
+                    // "start recording" (the persona walkthroughs' single most
+                    // costly misread), when what it actually opens is a menu of
+                    // starter kits — most of them pre-composed, only BLANK/START
+                    // EMPTY genuinely empty. The label now predicts that.
                     PrimaryAction(
-                        label = "NEW PROJECT ▸",
+                        // 18 chars, deliberately: this sits in a single-line
+                        // PrimaryAction whose longest proven-safe label is 22
+                        // ("WRITING — DO NOT EJECT"), and at 200% font scale a
+                        // longer one ellipsizes. "PICK A STARTER" was the honest
+                        // subtitle but pushed it to 24 and would have truncated
+                        // mid-word; the menu it opens says PICK A STARTER as its
+                        // own heading, so the word isn't lost, just moved to where
+                        // it always fits.
+                        label = "NEW KIT ▸ STARTERS",
                         enabled = !busy,
-                        onClick = onNewProject,
+                        working = startingKit,
+                        onClick = { menuOpen = true },
                     )
                 }
-                // Outline, one step down: a kit is made inside a project more
-                // often than the other way round, and the menu it opens still
-                // says PICK A STARTER as its own heading.
-                ActionButton(
-                    "NEW KIT ▸ STARTERS",
-                    scheme,
-                    enabled = !busy,
-                    working = startingKit,
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { menuOpen = true },
-                )
-            } else {
-                // Renamed from "FRESH TAPE": on a cold open this reads as
-                // "start recording" (the persona walkthroughs' single most
-                // costly misread), when what it actually opens is a menu of
-                // starter kits — most of them pre-composed, only BLANK/START
-                // EMPTY genuinely empty. The label now predicts that.
-                PrimaryAction(
-                    // 18 chars, deliberately: this sits in a single-line
-                    // PrimaryAction whose longest proven-safe label is 22
-                    // ("WRITING — DO NOT EJECT"), and at 200% font scale a
-                    // longer one ellipsizes. "PICK A STARTER" was the honest
-                    // subtitle but pushed it to 24 and would have truncated
-                    // mid-word; the menu it opens says PICK A STARTER as its
-                    // own heading, so the word isn't lost, just moved to where
-                    // it always fits.
-                    label = "NEW KIT ▸ STARTERS",
-                    enabled = !busy,
-                    working = startingKit,
-                    onClick = { menuOpen = true },
-                )
             }
             // The capture pair (LISTEN / APP AUDIO, then SNIP / STOP) sat here
             // under NEW KIT until the dock took it (plan §1): capture state is

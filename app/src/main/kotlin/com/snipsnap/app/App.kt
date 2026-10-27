@@ -344,6 +344,14 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val nav = rememberNavigation()
     val location = nav.location
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
+    // Whether the kit list and the project list have each been read once. An
+    // empty `kits` or `projects` before that is "not read yet", not an empty
+    // library, and the shelf says LOADING instead of NOTHING TAPED YET until
+    // both are true. Set once and never cleared: a later re-read of a list
+    // that already holds something is a refresh, and flashing the panel over
+    // it on every kit change would be the flicker this removes, moved.
+    var kitsLoaded by remember { mutableStateOf(false) }
+    var projectsLoaded by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // The dock (§1): the strip at the foot of every screen. Its `now` is
     // the line the toast used to say, and the door the toast used to carry
@@ -525,6 +533,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                     .onFailure { Log.e(TAG, "shelf open: projects unreadable", it) }
                     .getOrDefault(emptyList())
             }
+            projectsLoaded = true
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
             binnedCount = withContext(Dispatchers.IO) {
@@ -1053,6 +1062,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
 
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+        kitsLoaded = true
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
         // Same promise, for forgotten presets (docs/WORKSHOP.md, WS5's
@@ -3349,6 +3359,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 onCatchFirst = ::requestArm,
                                 busy = busy != null,
                                 startingKit = pendingKit != null,
+                                loading = !(kitsLoaded && projectsLoaded),
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
                                     val addTo = pendingAddTo
