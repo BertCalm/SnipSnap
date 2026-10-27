@@ -41,7 +41,6 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -104,7 +103,7 @@ internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifi
                         }.padding(horizontal = 3.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(label, TapeType.pixelSmall, if (active) scheme.amberOnChrome else scheme.ink2.tape, maxLines = 1)
+                    TapeText(label, TapeType.pixelSmall, if (active) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
                 }
             }
         }
@@ -161,7 +160,7 @@ internal fun StrikeFader(state: StrikeState, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("STRIKE", TapeType.pixelSmall, scheme.ink2.tape)
-        TapeText("${(state.strength * 100).roundToInt()}%", TapeType.lcdSmall, scheme.amberOnChrome)
+        TapeText("${(state.strength * 100).roundToInt()}%", TapeType.lcdSmall, scheme.accent.tape)
         Box(
             Modifier.weight(1f).fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .lcdPanel(scheme)

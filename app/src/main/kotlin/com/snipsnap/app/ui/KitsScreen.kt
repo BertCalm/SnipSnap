@@ -49,7 +49,6 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
-import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
@@ -58,7 +57,6 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Scheme
-import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.ShelfFilter
 import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Places
@@ -1258,12 +1256,7 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
 @Composable
 fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
     val scheme = LocalScheme.current
-    val rim =
-        if (scheme.id == SchemeId.OILSLICK) {
-            Modifier.border(2.dp, oilslickSweep(), RoundedCornerShape(6.dp))
-        } else {
-            Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-        }
+    val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
         Modifier
             .fillMaxWidth()

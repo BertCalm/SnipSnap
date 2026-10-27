@@ -71,7 +71,6 @@ import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
@@ -86,7 +85,6 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
-import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiGate
 import com.snipsnap.shell.MidiPadMaps
@@ -632,7 +630,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.amberOnChrome, maxLines = 1)
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 1)
                 }
                 // PLAY's FULL, at the header's right end (section 3.3):
                 // the fullscreen grid is the part of PLAY that was
@@ -1405,8 +1403,8 @@ private fun PadCell(
         Box(
             modifier
                 .height(Layout.KIT_PAD_H.dp)
-                .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
+                .then(if (selected) Modifier.border(2.dp, scheme.accent.tape, shape).padding(2.dp) else Modifier)
+                .padSkin(scheme, null, shape, 0f)
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1493,26 +1491,18 @@ private fun PadCell(
     // a brighter fill than a fresh hit produces.
     val lit = maxOf(0.35f * glow.value, 0.35f * (echo?.value ?: 0f), if (held) PAD_HELD_ALPHA else 0f)
 
-    val modern = scheme.look == Look.MODERN
     Box(
         modifier
             .height(Layout.KIT_PAD_H.dp)
-            // The selection ring, OUTSIDE the class rim with the rim inset
-            // under it: the rim's width is the held state and its hue the
-            // drum class, so the ring takes the one thing neither already
-            // says. It used to be a 1dp line drawn over the rim's outer
-            // pixel, which the first run on a phone could not see at all.
-            .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-            // The face is PadGrid's `padSkin`, shared with PlayPad. Classic
-            // is this cell's own chain: the held rim is 3dp, and the hit's
-            // flash is drawn over the border.
-            .padSkin(
-                scheme, cls, shape, lit,
-                classic = Modifier
-                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                    .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-                    .background(cls.tape.copy(alpha = lit), shape),
-            )
+            // The selection ring, OUTSIDE the face with the face inset
+            // under it: the face's bottom edge is the drum class and its
+            // flash is the hit and the hold, so the ring takes the one thing
+            // neither already says. It used to be a 1dp line drawn over the
+            // pad's outer pixel, which the first run on a phone could not
+            // see at all.
+            .then(if (selected) Modifier.border(2.dp, scheme.accent.tape, shape).padding(2.dp) else Modifier)
+            // The face is PadGrid's `padSkin`, shared with PlayPad.
+            .padSkin(scheme, cls, shape, lit)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably

@@ -45,7 +45,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.theme.BinRedOnLcd
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -299,7 +298,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.amberOnChrome)
+        TapeText(label, TapeType.pixel, scheme.accent.tape)
     }
 }
 

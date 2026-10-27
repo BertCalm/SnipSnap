@@ -1342,11 +1342,11 @@ The app's brain: every screen's state machine as tested pure Kotlin, so the
 Android app is Compose bound to proven logic instead of logic written in a
 UI layer. What lives here:
 
-- **`Schemes`/`Type`/`Layout`/`Motion`** — the ten TapeOS scheme token
-  tables as data (verbatim from the design system; VENT and OPENSKY, the
-  two MODERN ones, from the audition pages `docs/DIRECTION_2026_10.md`
-  names — OPENSKY the first paper scheme, which reopened the August cut
-  of light shells for the modern look only), pad-label ink tables
+- **`Schemes`/`Layout`/`Motion`** — the two TapeOS scheme token
+  tables as data (VENT and OPENSKY, from the audition pages
+  `docs/DIRECTION_2026_10.md` names — OPENSKY the first paper scheme,
+  which reopened the August cut of light shells; the schemes of the
+  classic look were retired on 2026-10-27), pad-label ink tables
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.
@@ -1357,9 +1357,8 @@ UI layer. What lives here:
   the capture light, the line and its standing door), `ShelfModel`
   (projects above kits, the migration on open), `PadStrip` (the tap door
   under the grid, built on the pad sheet's own closed-box words),
-  `ProjectSessionModel` (OUT's session card over the project exporter),
-  `Places` (the rows' words, the dock's labels, HELP by place) and
-  `Scheme.look` (CLASSIC or MODERN, the second axis beside the scheme).
+  `ProjectSessionModel` (OUT's session card over the project exporter) and
+  `Places` (the rows' words, the dock's labels, HELP by place).
   Built ahead of the SDK session that draws them, so that session binds
   rather than designs; `UatSimTest`'s J11 walks the plan's journeys on
   `Navigation` and counts them.
