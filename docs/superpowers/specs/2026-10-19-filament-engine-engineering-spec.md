@@ -228,3 +228,28 @@ C3–C5 with native C3/C4/C5 roots and one velocity layer; the host owns gain an
 note-off release. Physical phone/MPC acceptance, independent halo release,
 the remaining voices and the larger preset target remain later work. Current
 validation, render measurements and reproduction commands live in FILAMENT.md.
+
+
+## Held-family completion, 2026-10-26
+
+Model-3 PULSE and CURL now use the same onset-retaining keygroup path as THREAD.
+Their own periodic source, guided routing, activity memory and halo start from
+zero state and settle under the existing convergence rule. Only the capability
+boundary is expanded; the three synthesis models and twelve approved recipes
+keep their existing arithmetic and parameters. Native C3/C4/C5, one velocity
+layer and host-owned velocity gain/note-off release remain the package contract.
+
+The shared capability predicate drives both the phone sheet and renderer. The
+held-note tests compare actual preceding and following cycles after PCM16/24
+encoding, and the package tests exercise all three voices through native roots,
+WAV markers, both MPC containers, saved source settings and reference-player
+wrap/release. The family audition command writes the three programs, native
+WAVs and exported-file demos together with verified ZIP receipts. Physical
+phone/MPC acceptance and owner listening acceptance remain separate gates.
+
+Why it is built this way:
+
+- Keeping the original voice-specific drive retains PULSE's articulation and CURL's bloom.
+- One renderer and one support predicate keep the sheet and exported instrument aligned.
+- Three roots and one captured velocity keep this extension small enough to audition directly.
+- Existing program release makes note-off behavior editable without changing the saved source.
