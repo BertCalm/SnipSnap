@@ -63,6 +63,9 @@ import kotlinx.coroutines.delay
 /** How tall the busy bar is: thin enough to sit on a dock line without a row of its own. */
 private val BAR_HEIGHT = 4.dp
 
+/** How much of its colour the track behind a counted bar's fill keeps. */
+private const val TRACK_ALPHA = 0.20f
+
 /** The share of the track the indeterminate bar's moving segment covers. */
 private const val SWEEP_SHARE = 0.30f
 
@@ -78,9 +81,11 @@ private const val SPINNER_STROKE_SHARE = 0.14f
 /**
  * A job's progress as a thin bar the width of whatever holds it.
  *
- *  - **Counted** ([Busy.fraction] not null): a filled rect that long, with
- *    the fraction in its semantics. Reduced motion does not change it; a
- *    count is not an animation.
+ *  - **Counted** ([Busy.fraction] not null): a filled rect that long over
+ *    a faint full-width track ([TRACK_ALPHA] of [color]), with the fraction
+ *    in its semantics. The track is why a job at 0 of N is still a bar -
+ *    without it the bar would draw nothing until the first item finished.
+ *    Reduced motion does not change it; a count is not an animation.
  *  - **Not counted:** a [SWEEP_SHARE] segment sweeping left to right over
  *    [Motion.BUSY_SWEEP_MS], linear, repeating - "still working", with no
  *    claim about how much is left. With animations off it is the whole
@@ -98,7 +103,10 @@ fun BusyBar(busy: Busy, color: Color, modifier: Modifier = Modifier) {
         fraction != null -> Box(
             bar
                 .progressSemantics(fraction)
-                .drawBehind { drawRect(color, size = Size(size.width * fraction, size.height)) },
+                .drawBehind {
+                    drawRect(color.copy(alpha = TRACK_ALPHA))
+                    drawRect(color, size = Size(size.width * fraction, size.height))
+                },
         )
         LocalReduceMotion.current -> Box(
             bar

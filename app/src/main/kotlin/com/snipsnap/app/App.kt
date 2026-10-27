@@ -143,6 +143,7 @@ import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.BenchExport
 import com.snipsnap.shell.BenchNotes
 import com.snipsnap.shell.Breed
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
@@ -449,7 +450,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         note = null
         dock.offer(message, Door(label, locationOf(target)))
     }
-    var busy by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf<Busy?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over PADS. Not a
     // place or a stage of its own; it's PADS-scoped overlay state, cleared
@@ -1164,7 +1165,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // import runs beside that dub without racing it, and must not wipe
         // the dub's own DUBBING… line on its way out.
         val ownsBusy = busy == null
-        if (ownsBusy) busy = Copy.IMPORT_BUSY
+        if (ownsBusy) busy = Busy(Copy.IMPORT_BUSY)
         // The share's own name, for the refusal box; blank until the provider answers.
         var sharedName = ""
         try {
@@ -1176,7 +1177,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             sharedName = name
             val kind = withContext(Dispatchers.IO) { ShelfImport.sniff(ShareInbox.head(context, uri, ShelfImport.SNIFF_BYTES)) }
             if (ShelfImport.isKit(kind)) {
-                if (ownsBusy) busy = Copy.LANDING_BUSY
+                if (ownsBusy) busy = Busy(Copy.LANDING_BUSY)
                 val local = withContext(Dispatchers.IO) { ShareInbox.copyToCache(context, uri, name, LANDING_MAX_BYTES) }
                 try {
                     // Any ZIP sniffs the same by its magic bytes alone -
@@ -1256,7 +1257,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
 
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
-        busy = Copy.dubbingBusy(starter.displayName)
+        busy = Busy(Copy.dubbingBusy(starter.displayName))
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
@@ -1290,7 +1291,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun buildPhotoKit(photo: Photo) {
         if (busy != null) return
-        busy = Copy.SNAP_KIT_BUSY
+        busy = Busy(Copy.SNAP_KIT_BUSY)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.landPhotoKit("PHOTO KIT", PhotoKit.build(photo, "PHOTO KIT")) }
@@ -1321,7 +1322,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun buildPathRing(cells: List<Pair<Int, Int>>, bpm: Float) {
         val e = open ?: return
         if (busy != null) return
-        busy = Copy.SNAP_PATH_BUSY
+        busy = Busy(Copy.SNAP_PATH_BUSY)
         scope.launch {
             try {
                 val current = withContext(Dispatchers.IO) {
@@ -1372,7 +1373,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun buildChordKit(photo: Photo) {
         if (busy != null) return
-        busy = Copy.SNAP_CHORD_BUSY
+        busy = Busy(Copy.SNAP_CHORD_BUSY)
         scope.launch {
             try {
                 val built = withContext(Dispatchers.Default) { PhotoChord.build(photo, "PHOTO CHORD") }
@@ -1430,11 +1431,11 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun texture(slot: Int, spec: TextureKits.Spec) {
         val source = open ?: return
         if (busy != null) return
-        busy = when (spec) {
+        busy = Busy(when (spec) {
             is TextureKits.Spec.Sculpt -> "SCULPTING…"
             is TextureKits.Spec.Stretch -> "STRETCHING…"
             is TextureKits.Spec.Freeze -> "FREEZING…"
-        }
+        })
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.texture(source, slot, spec) }
@@ -1505,7 +1506,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
-        busy = Copy.EVIL_TWINS_BUSY
+        busy = Busy(Copy.EVIL_TWINS_BUSY)
         scope.launch {
             val (entry, _) = try {
                 // Same reasoning as setKey above: evilTwins is an
@@ -1548,7 +1549,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             dock.say(Copy.dustTapeGone(kitTape))
             return
         }
-        busy = Copy.DUSTING_BUSY
+        busy = Busy(Copy.DUSTING_BUSY)
         scope.launch {
             // What landed before a failure, if one comes: saved and shown,
             // never left as audio in the bin with no recipe in kit.json.
@@ -1653,7 +1654,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun finishBreed(source: KitShelf.Entry, partner: KitShelf.Entry) {
         pendingBreedWith = null
         if (busy != null) return
-        busy = Copy.BREEDING_BUSY
+        busy = Busy(Copy.BREEDING_BUSY)
         scope.launch {
             val (entry, report) = try {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.breed(source, partner, Random.nextInt()) } }
@@ -1706,7 +1707,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // run finishes, for a hand-off the user has already moved past.
         pendingBreedWith = null
         if (uris.isEmpty() || busy != null) return
-        busy = Copy.CHOP_ALL_BUSY
+        busy = Busy(Copy.CHOP_ALL_BUSY)
         scope.launch {
             var wavCount = 0
             var made = 0
@@ -1770,7 +1771,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun xray(uri: Uri?) {
         if (uri == null || busy != null) return
-        busy = Copy.XRAY_BUSY
+        busy = Busy(Copy.XRAY_BUSY)
         scope.launch {
             try {
                 val name = withContext(Dispatchers.IO) { ShareInbox.displayName(context, uri) }
@@ -2024,7 +2025,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun backOnto(request: RetrimRequest, range: IntRange) {
         if (busy != null) return
-        busy = Copy.RETRIM_BUSY
+        busy = Busy(Copy.RETRIM_BUSY)
         scope.launch {
             try {
                 val (updated, treatment) = withContext(Dispatchers.IO) {
@@ -2155,7 +2156,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         if (busy != null) return
-        busy = Copy.READ_GROOVE_BUSY
+        busy = Busy(Copy.READ_GROOVE_BUSY)
         scope.launch {
             try {
                 val reading = withContext(Dispatchers.IO) {
@@ -2206,7 +2207,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         if (busy != null) return
-        busy = Copy.FEEL_BUSY
+        busy = Busy(Copy.FEEL_BUSY)
         scope.launch {
             try {
                 val felt = withContext(Dispatchers.IO) {
@@ -2251,7 +2252,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
-        busy = Copy.INSTANT_KIT_BUSY
+        busy = Busy(Copy.INSTANT_KIT_BUSY)
         scope.launch {
             // `finally` owns the busy overlay: whichever way this leaves
             // (built, refused, or the scope cancelled underneath it), the
@@ -2291,7 +2292,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun shareKit() {
         val source = open ?: return
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val file = withContext(Dispatchers.IO) { shelf.pack(source, ShareOut.shareDir(context)) }
@@ -2313,7 +2314,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // Under the app's one busy lock, like every other file move: a second
         // tap, or another job in flight, must not race the bin.
         if (busy != null) return
-        busy = Copy.ROOM_FORGET_BUSY
+        busy = Busy(Copy.ROOM_FORGET_BUSY)
         scope.launch {
             try {
                 // The bin may freshen the name ("FUNK ROOM 2") - the toast says the name it went in under.
@@ -2338,7 +2339,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun shareRoom(room: Rooms.Room) {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val file = withContext(Dispatchers.IO) { shelf.packRoom(room, ShareOut.shareDir(context)) }
@@ -2379,7 +2380,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun shareSnip(info: SnipStore.Info) {
         if (busy != null) return
-        busy = Copy.SHARE_BUSY
+        busy = Busy(Copy.SHARE_BUSY)
         scope.launch {
             try {
                 val staged = withContext(Dispatchers.IO) {
@@ -2403,7 +2404,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /** RESTORE on a binned room: back onto the shelf, the toast names it. */
     fun restoreRoom(binned: Rooms.Binned) {
         if (busy != null) return
-        busy = Copy.ROOM_RESTORE_BUSY
+        busy = Busy(Copy.ROOM_RESTORE_BUSY)
         scope.launch {
             try {
                 val room = withContext(Dispatchers.IO) { shelf.restoreRoom(binned) }
@@ -2431,7 +2432,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun emptyRoomsBin() {
         if (busy != null) return
-        busy = Copy.ROOM_BIN_EMPTY_BUSY
+        busy = Busy(Copy.ROOM_BIN_EMPTY_BUSY)
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { shelf.emptyRoomsBin() }
@@ -2471,7 +2472,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun deleteKit(entry: KitShelf.Entry) {
         if (busy != null) return
-        busy = Copy.KIT_DELETE_BUSY
+        busy = Busy(Copy.KIT_DELETE_BUSY)
         scope.launch {
             try {
                 val ok = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.deleteKit(entry) } }
@@ -2526,7 +2527,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun renameKit(entry: KitShelf.Entry, newName: String) {
         if (busy != null) return
-        busy = Copy.KIT_RENAME_BUSY
+        busy = Busy(Copy.KIT_RENAME_BUSY)
         scope.launch {
             try {
                 val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
@@ -2561,7 +2562,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             dock.say(Copy.BACKUP_EMPTY)
             return
         }
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val (result, presets) = withContext(Dispatchers.IO) {
@@ -2606,7 +2607,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun sendToBench() {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val (logs, notes, presets) = withContext(Dispatchers.IO) {
@@ -2645,7 +2646,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun sendHitsToBench() {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val hits = withContext(Dispatchers.IO) { LabelledHits.list(shelf.root) }

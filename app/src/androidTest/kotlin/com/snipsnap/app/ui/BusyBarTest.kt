@@ -70,10 +70,34 @@ class BusyBarTest : ComposeScreenTest() {
 
         // 5 of 16, drawn as one node a reader of the screen can ask "how far?".
         compose.onAllNodes(progress(ProgressBarRangeInfo(0.3125f, 0f..1f))).assertCountEquals(1)
-        // And drawn as that much of the track: lit at 15 %, dark at 60 %.
+        // And drawn as that much of the track: filled at 15 %, and past the
+        // fill, at 60 %, the faint track the fill is part of - dim, neither
+        // full nor dark.
         val bar = drawn()
         assertTrue("the first third of the bar is filled", bar.brightnessAt(0.15f) > 0.9f)
-        assertTrue("the rest of the bar is not", bar.brightnessAt(0.60f) < 0.05f)
+        assertTrue("the rest of the bar is the track, not the fill", bar.brightnessAt(0.60f) in 0.1f..0.3f)
+    }
+
+    @Test
+    fun a_counted_bar_at_zero_still_shows_its_track() {
+        // 0 of 16 fills nothing, and a bar that drew nothing would be
+        // invisible for as long as the first item took: the track is what
+        // says "a counted job is under way".
+        showOnBlack { BusyBar(Busy("X", 0, 16), Color.White) }
+
+        compose.onAllNodes(progress(ProgressBarRangeInfo(0f, 0f..1f))).assertCountEquals(1)
+        val bar = drawn()
+        assertTrue("the track's left end is dim", bar.brightnessAt(0.02f) in 0.1f..0.3f)
+        assertTrue("the track's right end is dim", bar.brightnessAt(0.98f) in 0.1f..0.3f)
+    }
+
+    @Test
+    fun a_full_counted_bar_has_no_track_showing() {
+        showOnBlack { BusyBar(Busy("X", 16, 16), Color.White) }
+
+        val bar = drawn()
+        assertTrue("the whole bar is filled", bar.brightnessAt(0.02f) > 0.9f)
+        assertTrue("the whole bar is filled to its far end", bar.brightnessAt(0.98f) > 0.9f)
     }
 
     @Test
