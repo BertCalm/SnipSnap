@@ -10,7 +10,8 @@ before asking a lawyer the one question that matters.
 ## 0. The one fact first: SnipSnap has no LICENSE file
 
 Checked at commit `b429ec2` on 2026-10-22: no `LICENSE`, `LICENSE.md` or `COPYING` at the
-repo root; only font licenses under `app/licenses/`. Until a license is committed the code
+repo root. (`app/licenses/` once held the bundled fonts' licenses; the fonts are gone, so
+the directory is too, and no license file of any kind remains.) Until a license is committed the code
 is "all rights reserved" by default, which contradicts Josh's stated intent that the tool
 will always be open source, and it blocks one concrete MIDI decision: whether Ableton Link
 (GPLv2+ or a commercial license) can ever be bundled. Flag this once per conversation when
