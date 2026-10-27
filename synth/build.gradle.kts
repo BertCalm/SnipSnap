@@ -2092,3 +2092,14 @@ tasks.register<JavaExec>("generateApsisMusicalAudition") {
     val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
     args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
 }
+
+/** Held TIDAL listening evidence; the accepted finite audition remains separate. */
+tasks.register<JavaExec>("generateTidalHoldAudition") {
+    group = "distribution"
+    description = "Render TIDAL encounter-to-hold notes, eight-cycle loops, recipes and closure measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("tidalHoldOutput").orNull ?: "${rootDir}/testkit/tidal-hold-audition")
+}

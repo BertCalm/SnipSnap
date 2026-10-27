@@ -34,6 +34,8 @@ Production rendering shares its source stages with diagnostic evidence and adds
 a bounded completed-audio cache. Pads play once despite long-sample LOOP filing.
 HOLD remains zero; reconstruction, the other voices, and factory expansion remain later work.
 See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
+TIDAL HOLD now adds a versioned post-encounter reconstruction, gated aftermath pads and seventeen-zone attack-plus-sustain instruments; see [TIDAL_HOLD.md](TIDAL_HOLD.md). Physical phone/MPC and listening acceptance remain open.
+
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 opens with eighteen model-2 comparisons and retains the original 58-case matrix.
 Full preset curation, physical phone performance and MPC listening remain open.

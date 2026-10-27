@@ -15,7 +15,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** Two source characters for the finite first-listen proof. */
+/** Two starting gestures for the encounter instrument. */
 enum class TidalVoice { PAIR, STREAM }
 
 /**
@@ -28,8 +28,8 @@ enum class TidalVoice { PAIR, STREAM }
  * material exists; ending the supply leaves a passive modal decay. Gravity supplies
  * geometry, not audio energy. All voicing constants are first-listen hypotheses.
  *
- * This version is finite only. HOLD is retained at zero in recipes and any positive
- * value fails; replaying a complete sample is not a reconstructed held encounter.
+ * HOLD selects a separately versioned reconstruction of the resulting material.
+ * Finite model-1 and model-2 performances retain their accepted arithmetic.
  */
 object Tidal {
     const val MODEL_VERSION = 2
@@ -78,6 +78,7 @@ object Tidal {
     internal data class ProfiledRender(val snip: Snip, val profile: RenderProfile)
     private data class Rendered(val samples: FloatArray, val probe: Probe?, val profile: RenderProfile)
 
+    fun isHeld(hold: Float): Boolean = hold == 1f
     fun supportsModel(model: Int): Boolean = model == 1 || model == 2
     fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: TidalVoice): Int = DEFAULT_MIDI
     fun macrosFor(voice: TidalVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
@@ -96,7 +97,7 @@ object Tidal {
         require(macros.keys.all { it in base }) { "unknown TIDAL macro" }
         require(macros.values.all { it.isFinite() && it in 0f..1f }) { "TIDAL macros must be finite and in 0..1" }
         val result = base + macros
-        require(result.getValue("HOLD") == 0f) { "TIDAL finite models require HOLD zero" }
+        require(result.getValue("HOLD") == 0f || result.getValue("HOLD") == 1f) { "TIDAL HOLD is a NOTE/HOLD switch (0 or 1)" }
         return result
     }
     fun drumClassFor(voice: TidalVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
@@ -107,7 +108,8 @@ object Tidal {
     fun scramble(voice: TidalVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice, (near as? TidalPatch)?.model ?: MODEL_VERSION)
         return Dsp.scrambleNear(base + near?.macros.orEmpty().filterKeys { it in base },
-            temperature.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: .35f, random) + ("HOLD" to 0f)
+            temperature.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: .35f, random) +
+            ("HOLD" to ((near as? TidalPatch)?.macros?.get("HOLD") ?: 0f))
     }
 
     internal data class Options(
@@ -139,13 +141,13 @@ object Tidal {
     }
     private fun smooth(value: Double): Double = value.coerceIn(0.0, 1.0).let { it * it * (3 - 2 * it) }
     private fun guard(hz: Double): Double = 1 - smooth((hz - 12_000) / 6_000)
-    private fun osc(phase: Double): Double {
+    internal fun osc(phase: Double): Double {
         val x = (phase - kotlin.math.floor(phase)) * TABLE_SIZE
         val i = x.toInt().coerceIn(0, TABLE_SIZE - 1)
         return sine[i] + (sine[i + 1] - sine[i]) * (x - i)
     }
     private fun rms(a: FloatArray): Double = sqrt(a.sumOf { it.toDouble() * it } / a.size.coerceAtLeast(1))
-    private data class Node(val cohortAmplitude: DoubleArray, val cohortHz: DoubleArray,
+    internal data class Node(val cohortAmplitude: DoubleArray, val cohortHz: DoubleArray,
         val modalAmplitude: DoubleArray, val modalHz: DoubleArray, val rootAmplitude: Double,
         val extension: DoubleArray, val coreAllocation: Double, val tailAllocation: Double,
         val contactPhase: DoubleArray = DoubleArray(0))
@@ -241,26 +243,17 @@ object Tidal {
         options: Options = Options(), cancelled: () -> Boolean = { false },
     ): Probe = generate(voice, macros, midi, velocity, seed, model, options, cancelled, true).probe!!
 
-    private fun generate(
-        voice: TidalVoice, macros: Map<String, Float>, midi: Int,
-        velocity: Float, seed: Long, model: Int,
-        options: Options, cancelled: () -> Boolean, diagnostics: Boolean,
-    ): Rendered {
-        val renderStart = System.nanoTime()
-        require(supportsModel(model)) { "unsupported TIDAL model $model" }
-        require(midi in MIN_MIDI..MAX_MIDI) { "TIDAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
-        require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be finite and in 0..1" }
-        require(options.oversample in listOf(1, 4, 8)) { "TIDAL oversample must be 1, 4 or 8" }
-        val m = settled(voice, macros, model)
-        checkCancelled(cancelled)
-        if (!diagnostics && velocity == 0f) {
-            // A validated zero-effort recipe has no source or modal drive. Its
-            // exact accepted output is silence; no geometry or carrier is needed.
-            val samples = FloatArray(((TidalDynamics.AUDIO_DURATION + TAIL_SECONDS) * Dsp.RATE).toInt())
-            checkCancelled(cancelled)
-            val elapsed = (System.nanoTime() - renderStart) / 1e6
-            return Rendered(samples, null, RenderProfile(0.0, 0.0, 0.0, 0.0, elapsed, elapsed, 0L))
-        }
+    internal data class ControlField(val nodes: List<Node>, val prepared: TidalDynamics.Prepared,
+        val hz: Double, val preparationMillis: Double, val synthesisStart: Long,
+        val maxCents: Double, val maxAllocation: Double, val maxModal: Double, val maxFrequency: Double)
+
+    /** Shared readout; HOLD reconstructs these controls, never a loop of the finished finite WAV. */
+    internal fun heldControls(patch: TidalPatch, cancelled: () -> Boolean): ControlField =
+        controlField(patch.voice, settled(patch.voice, patch.macros, patch.model), patch.midi,
+            patch.velocity, patch.seed, patch.model, Options(), cancelled)
+
+    private fun controlField(voice: TidalVoice, m: Map<String, Float>, midi: Int, velocity: Float,
+        seed: Long, model: Int, options: Options, cancelled: () -> Boolean): ControlField {
         val textured = model == 2
         val modesPerPopulation = if (textured) 16 else 8
         val modes = modesPerPopulation * 2
@@ -424,6 +417,50 @@ object Tidal {
                 coreAllocation, tailAllocation, if (textured) contactPhase.copyOf() else DoubleArray(0))
         }
 
+        return ControlField(nodes, prepared, hz, prepMillis, synthStart,
+            maxCents, maxAllocation, maxModal, maxFrequency)
+    }
+
+    private fun generate(
+        voice: TidalVoice, macros: Map<String, Float>, midi: Int,
+        velocity: Float, seed: Long, model: Int,
+        options: Options, cancelled: () -> Boolean, diagnostics: Boolean,
+    ): Rendered {
+        val renderStart = System.nanoTime()
+        require(supportsModel(model)) { "unsupported TIDAL model $model" }
+        require(midi in MIN_MIDI..MAX_MIDI) { "TIDAL MIDI must be $MIN_MIDI..$MAX_MIDI" }
+        require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be finite and in 0..1" }
+        require(options.oversample in listOf(1, 4, 8)) { "TIDAL oversample must be 1, 4 or 8" }
+        val m = settled(voice, macros, model)
+        require(!isHeld(m.getValue("HOLD"))) { "finite diagnostics require NOTE mode; use TidalKeys.probe for HOLD" }
+        checkCancelled(cancelled)
+        if (!diagnostics && velocity == 0f) {
+            // A validated zero-effort recipe has no source or modal drive. Its
+            // exact accepted output is silence; no geometry or carrier is needed.
+            val samples = FloatArray(((TidalDynamics.AUDIO_DURATION + TAIL_SECONDS) * Dsp.RATE).toInt())
+            checkCancelled(cancelled)
+            val elapsed = (System.nanoTime() - renderStart) / 1e6
+            return Rendered(samples, null, RenderProfile(0.0, 0.0, 0.0, 0.0, elapsed, elapsed, 0L))
+        }
+        val field = controlField(voice, m, midi, velocity, seed, model, options, cancelled)
+        val textured = model == 2
+        val modesPerPopulation = if (textured) 16 else 8
+        val modes = modesPerPopulation * 2
+        val prepared = field.prepared
+        val prepMillis = field.preparationMillis
+        val synthStart = field.synthesisStart
+        val hz = field.hz
+        val v = velocity.toDouble()
+        val count = 32
+        val supplyEnd = prepared.durationSeconds
+        val totalSeconds = supplyEnd + TAIL_SECONDS
+        val dt = 1.0 / CONTROL_RATE
+        val harmonics = IntArray(count) { 1 + (it % 16) % modesPerPopulation }
+        val nodes = field.nodes
+        val maxCents = field.maxCents
+        val maxAllocation = field.maxAllocation
+        val maxModal = field.maxModal
+        val maxFrequency = field.maxFrequency
         val controlsEnd = System.nanoTime()
         val frames = (totalSeconds * Dsp.RATE).toInt()
         val rate = Dsp.RATE * options.oversample
@@ -528,7 +565,9 @@ object Tidal {
             checkCancelled(cancelled)
             return Snip(samples, channels = 1, sampleRate = Dsp.RATE)
         }
-        val snip = renderUncached(voice, settled, midi, velocity, seed, model, cancelled)
+        val snip = if (isHeld(settled["HOLD"] ?: 0f))
+            TidalKeys.loop(TidalPatch("TIDAL HOLD", voice, settled, midi, velocity, seed, model), cancelled)
+        else renderUncached(voice, settled, midi, velocity, seed, model, cancelled)
         checkCancelled(cancelled)
         audioCache.put(key, snip.samples) { checkCancelled(cancelled) }
         return snip
