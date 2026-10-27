@@ -1395,6 +1395,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeChargeAudition") {
+    group = "distribution"
+    description = "Render FORGE's CHARGE tuning gate under testkit/forge-charge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeChargeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-charge-audition", "${rootDir}")
+}
+
 /** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeAudition") {
     group = "distribution"
