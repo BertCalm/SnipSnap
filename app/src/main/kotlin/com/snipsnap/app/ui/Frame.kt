@@ -387,9 +387,7 @@ internal fun Dock(
     val armed = dock.capture is DockModel.Capture.Armed
     val visible = rememberBusyVisible(busy, clock)
     // The last job the dock was handed, so the bar's linger past the job's
-    // end still has its words and its count and not a blank. Plain memory,
-    // not state: it is only read when [busy] is null, on the composition
-    // that follows the last one to write it.
+    // end still has its words and its count and not a blank.
     val last = remember { LastBusy() }
     if (busy != null) last.job = busy
     val shown = if (visible) busy ?: last.job else null
@@ -495,8 +493,14 @@ internal fun Dock(
     }
 }
 
-/** What [Dock] remembers of the job it last drew; see where it is read. */
-private class LastBusy {
+/**
+ * What a screen remembers of the job it last drew, so that the linger past
+ * the job's end still has its words and its count and not a blank ([Dock],
+ * and `KitLoading` for the kit's card). Plain memory, not state: it is only
+ * read when the job is null, on the composition that follows the last one to
+ * write it.
+ */
+internal class LastBusy {
     var job: Busy? = null
 }
 

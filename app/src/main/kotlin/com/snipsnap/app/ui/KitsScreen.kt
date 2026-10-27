@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -53,6 +54,8 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Ages
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.Layout
@@ -119,9 +122,12 @@ fun KitsScreen(
     /**
      * One of the shelf's lists (kits, projects, rooms) has not come back from disk yet
      * (`App.kt`'s `kitsLoaded` / `shelfListsLoaded`). An empty list then means
-     * "not read", not "nothing here": the shelf draws [Copy.LIBRARY_LOADING]
-     * in the list's place and none of the footer's buttons, so a populated
-     * library never opens on NOTHING TAPED YET and CATCH YOUR FIRST SOUND.
+     * "not read", not "nothing here": the shelf holds the list's place - an
+     * empty LCD panel for the first [BusyLatch.SHOW_AFTER_MS], then
+     * [Copy.LIBRARY_LOADING], which once shown stays at least
+     * [BusyLatch.MIN_VISIBLE_MS] - and none of the footer's buttons, so a
+     * populated library never opens on NOTHING TAPED YET and CATCH YOUR FIRST
+     * SOUND, and one that reads at once never flashes the words.
      */
     loading: Boolean = false,
     onOpen: (KitShelf.Entry) -> Unit,
@@ -209,8 +215,22 @@ fun KitsScreen(
      */
     shelfSort: KitShelf.ShelfSort = KitShelf.ShelfSort.RECENT,
     onToggleSort: () -> Unit = {},
+    /**
+     * The clock, in ms and monotonic, that [loading]'s show delay and minimum
+     * linger run on. A device test hands it the compose test clock, because the
+     * latch sleeps on a coroutine `delay`, which runs on that clock's virtual
+     * time, and [SystemClock] would not move with it.
+     */
+    loadingClock: () -> Long = SystemClock::uptimeMillis,
 ) {
     val scheme = LocalScheme.current
+    // The loading screen's own rule, the dock bar's latch: no words for the
+    // first 200 ms of a read, and 500 ms of them once shown. [holding] is
+    // everything that is not the content yet - reading, or the panel lingering
+    // after the read - and what the footer waits on; [panelShown] is whether
+    // the words are up.
+    val panelShown = rememberBusyVisible(if (loading) Busy(Copy.LIBRARY_LOADING) else null, loadingClock)
+    val holding = loading || panelShown
     var menuOpen by remember { mutableStateOf(false) }
     // TOOLS door (oilslick followups): BACKUP/CHOP ALL/X-RAY/DOUBLES nested
     // behind one row instead of pinned individually — see [ToolsMenu]'s own
@@ -276,13 +296,13 @@ fun KitsScreen(
     // project list is not drawn (the empty panel is) and a kit is what is
     // missing.
     val picking = assigningSnip || breedingFrom != null || addingTo != null
-    val projectFirst = !loading && projects.isNotEmpty() && kits.isNotEmpty() && !picking
+    val projectFirst = !holding && projects.isNotEmpty() && kits.isNotEmpty() && !picking
     // The first run — no project and no kit — has a button of its own: the
     // way in that needs nothing made first is a sound, so CATCH YOUR FIRST
     // SOUND ▸ is the filled button, and NEW KIT ▸ STARTERS (the other honest
     // way in, a kit someone already composed) steps down to the outline row.
     // Once the first SNIP lands the shelf has both, and this is gone for good.
-    val coldShelf = !loading && projects.isEmpty() && kits.isEmpty() && !picking
+    val coldShelf = !holding && projects.isEmpty() && kits.isEmpty() && !picking
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -428,9 +448,15 @@ fun KitsScreen(
                 TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
 
-            if (loading) {
+            if (holding) {
                 // Read, not empty: neither the empty state below nor the list.
-                LoadingPanel(Copy.LIBRARY_LOADING, Modifier.fillMaxWidth().weight(1f))
+                // An empty lit panel, silent, until the read has run long
+                // enough to be worth a word.
+                if (panelShown) {
+                    LoadingPanel(Copy.LIBRARY_LOADING, Modifier.fillMaxWidth().weight(1f))
+                } else {
+                    Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme))
+                }
             } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
                 Box(
                     Modifier
@@ -605,11 +631,12 @@ fun KitsScreen(
                 }
             }
 
-            // While the library is still being read the footer's way in is not
-            // offered either: which button is the primary one (CATCH YOUR FIRST
-            // SOUND, NEW PROJECT, or NEW KIT alone) is decided by what the lists
-            // hold, and they do not hold anything yet.
-            if (!loading) {
+            // While the library is still being read - and while the words that
+            // said so linger - the footer's way in is not offered either: which
+            // button is the primary one (CATCH YOUR FIRST SOUND, NEW PROJECT, or
+            // NEW KIT alone) is decided by what the lists hold, and they do not
+            // hold anything yet.
+            if (!holding) {
                 if (coldShelf || projectFirst) {
                     if (coldShelf) {
                         PrimaryAction(

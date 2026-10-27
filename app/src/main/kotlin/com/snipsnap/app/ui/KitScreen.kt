@@ -79,7 +79,6 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
-import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
@@ -222,25 +221,8 @@ fun KitScreen(
      * player's eye.
      */
     beat: BeatPlayer,
-    /**
-     * The name of a starter kit that is rendering now (`App.kt`'s `pendingKit`),
-     * or null. While it is set the page is [PadPlaceholderGrid] for that name
-     * and nothing else - not the kit that was open before, and not the empty
-     * panel - and it stops being the page the moment the kit lands.
-     */
-    pendingKitName: String? = null,
 ) {
     val scheme = LocalScheme.current
-
-    if (pendingKitName != null) {
-        // The skeleton of the grid with the card that says what is coming laid
-        // over it, centred. (`KitLoading` takes this over, with its show delay.)
-        Box(Modifier.fillMaxWidth()) {
-            PadPlaceholderGrid()
-            LoadingCard(Busy(Copy.loadingBusy(pendingKitName)), Modifier.align(Alignment.Center))
-        }
-        return
-    }
 
     if (entry == null) {
         // One panel, one story, and no switcher: with no kit there is

@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -22,6 +25,9 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.tape
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.BusyLatch
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.PlaceholderPulse
@@ -112,5 +118,59 @@ private fun PlaceholderTiles(modifier: Modifier, amount: (tile: Int) -> Float) {
                 }
             }
         }
+    }
+}
+
+/**
+ * The pad page of a starter kit while it renders, and the kit once it has.
+ *
+ * [pendingName] is the starter being rendered now (`App.kt`'s `pendingKit`),
+ * or null; [landed] is the page for when there is nothing pending. In
+ * between it keeps the rule every loading screen keeps - nothing with words
+ * for the first [BusyLatch.SHOW_AFTER_MS], and once the words have shown, at
+ * least [BusyLatch.MIN_VISIBLE_MS] of them - on the same [BusyLatch] the
+ * dock's bar uses (`rememberBusyVisible`):
+ *
+ *  - **Pending, in the first 200 ms:** the [PadPlaceholderGrid] skeleton
+ *    alone, silent. No card and no text.
+ *  - **Pending, after 200 ms:** the [LoadingCard] over the skeleton.
+ *  - **Landed while the card shows:** the card and the skeleton stay until
+ *    the latch lets go, which is at least 500 ms after the card appeared, and
+ *    the card keeps the name it had. Then [landed].
+ *  - **Landed before the card showed:** [landed], at once. Nothing with
+ *    words ever drew. (The device showed "LOADING EMPTY GRID…" over sixteen
+ *    tiles for about 89 ms before an instant starter landed: the case this
+ *    exists for.)
+ */
+@Composable
+fun KitLoading(pendingName: String?, landed: @Composable () -> Unit) =
+    KitLoading(pendingName, SystemClock::uptimeMillis, landed)
+
+/**
+ * [KitLoading] on a clock the caller supplies, in ms and monotonic. The device
+ * test hands it the compose test clock, for the reason
+ * [rememberBusyVisible]'s own overload has one: the latch sleeps on a
+ * coroutine `delay`, which runs on that clock's virtual time, and
+ * [SystemClock] would not move with it. [clock] has no default so this cannot
+ * be mistaken for the public one at a call site.
+ */
+@Composable
+internal fun KitLoading(pendingName: String?, clock: () -> Long, landed: @Composable () -> Unit) {
+    val busy = pendingName?.let { Busy(Copy.loadingBusy(it)) }
+    val cardUp = rememberBusyVisible(busy, clock)
+    // The last name there was, so the card's linger past the kit landing says
+    // what it was loading and not a blank.
+    val last = remember { LastBusy() }
+    if (busy != null) last.job = busy
+    val shown = busy ?: last.job
+    if (busy != null || cardUp) {
+        // One tree for the skeleton with and without the card, so the pulse is
+        // not restarted when the card comes up over it.
+        Box(Modifier.fillMaxWidth()) {
+            PadPlaceholderGrid()
+            if (cardUp && shown != null) LoadingCard(shown, Modifier.align(Alignment.Center))
+        }
+    } else {
+        landed()
     }
 }

@@ -75,6 +75,7 @@ import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
 import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
+import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -3665,73 +3666,75 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                         appScope = scope,
                                     )
                                 }
-                                else -> KitScreen(
-                                    open,
-                                    // The switcher (plan §3.3): the project's line,
-                                    // its kit list, and the shelf in pick mode.
-                                    switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
-                                    // With fewer than two kits there is nothing to
-                                    // switch between: the chip is the shelf's door,
-                                    // not a one-row sheet naming the kit on screen.
-                                    onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
-                                    onAddFromShelf = ::addFromShelf,
-                                    // The grid's state, held by the navigation model.
-                                    bank = nav.padsBank,
-                                    onBankChange = { nav.padsBank = it },
-                                    selectedSlot = nav.padsSelectedSlot,
-                                    onSelectSlot = { nav.padsSelectedSlot = it },
-                                    // The strip's doors: the tap twin of the hold (W#22).
-                                    onOpenPad = ::openPadSheet,
-                                    onCaptureInto = { slot -> padCaptureSlot = slot },
-                                    onFromSnips = { slot ->
-                                        pendingSnipTarget = slot
-                                        nav.open(Bench.SNIPS)
-                                    },
-                                    versions = versions,
-                                    busy = busy != null,
-                                    // A starter still rendering: the page is the
-                                    // placeholder grid for it, whatever kit is open.
-                                    pendingKitName = pendingKit,
-                                    onLongPress = ::openPadSheet,
-                                    onTakesBin = { takesBinOpen = true },
-                                    onTexture = ::texture,
-                                    onSetKey = ::setKey,
-                                    onInKey = ::inKey,
-                                    onTwins = ::evilTwins,
-                                    onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
-                                    bankRequest = kitBankRequest,
-                                    onBankRequestConsumed = { kitBankRequest = null },
-                                    lightRequest = lightRequest,
-                                    onLightConsumed = { lightRequest = null },
-                                    beat = beat,
-                                    onBreed = ::startBreed,
-                                    // A second kit to cross with has to
-                                    // already be on the shelf — BREED can't
-                                    // offer a pick with nothing else there.
-                                    canBreed = kits.size > 1,
-                                    onSplit = { landOn(AppScreen.SPLIT) },
-                                    onDustAll = ::dustAll,
-                                    onEmptyLongPress = { slot ->
-                                        // SNIPS → PAD's landing: a pick still
-                                        // armed intercepts the press here,
-                                        // before it ever reaches the normal
-                                        // capture surface below — KitScreen.kt
-                                        // itself needs no changes for this.
-                                        val pending = pendingSnipAssign
-                                        if (pending != null) {
-                                            assignPendingSnip(pending, slot)
-                                        } else {
-                                            padCaptureSlot = slot
-                                        }
-                                    },
-                                    onEmptyTapHint = {
-                                        dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
-                                    },
-                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
-                                    hasProject = project != null,
-                                    onNavigateTape = { goToScreen(AppScreen.TAPE) },
-                                    hosts = hosts,
-                                )
+                                else -> KitLoading(pendingKit) {
+                                    // A starter still rendering: the page is the placeholder grid for it
+                                    // (and, after 200 ms, the loading card over it), whatever kit is open;
+                                    // the kit is the page again once it has landed and the card has had its time.
+                                    KitScreen(
+                                        open,
+                                        // The switcher (plan §3.3): the project's line,
+                                        // its kit list, and the shelf in pick mode.
+                                        switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
+                                        // With fewer than two kits there is nothing to
+                                        // switch between: the chip is the shelf's door,
+                                        // not a one-row sheet naming the kit on screen.
+                                        onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
+                                        onAddFromShelf = ::addFromShelf,
+                                        // The grid's state, held by the navigation model.
+                                        bank = nav.padsBank,
+                                        onBankChange = { nav.padsBank = it },
+                                        selectedSlot = nav.padsSelectedSlot,
+                                        onSelectSlot = { nav.padsSelectedSlot = it },
+                                        // The strip's doors: the tap twin of the hold (W#22).
+                                        onOpenPad = ::openPadSheet,
+                                        onCaptureInto = { slot -> padCaptureSlot = slot },
+                                        onFromSnips = { slot ->
+                                            pendingSnipTarget = slot
+                                            nav.open(Bench.SNIPS)
+                                        },
+                                        versions = versions,
+                                        busy = busy != null,
+                                        onLongPress = ::openPadSheet,
+                                        onTakesBin = { takesBinOpen = true },
+                                        onTexture = ::texture,
+                                        onSetKey = ::setKey,
+                                        onInKey = ::inKey,
+                                        onTwins = ::evilTwins,
+                                        onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
+                                        bankRequest = kitBankRequest,
+                                        onBankRequestConsumed = { kitBankRequest = null },
+                                        lightRequest = lightRequest,
+                                        onLightConsumed = { lightRequest = null },
+                                        beat = beat,
+                                        onBreed = ::startBreed,
+                                        // A second kit to cross with has to
+                                        // already be on the shelf — BREED can't
+                                        // offer a pick with nothing else there.
+                                        canBreed = kits.size > 1,
+                                        onSplit = { landOn(AppScreen.SPLIT) },
+                                        onDustAll = ::dustAll,
+                                        onEmptyLongPress = { slot ->
+                                            // SNIPS → PAD's landing: a pick still
+                                            // armed intercepts the press here,
+                                            // before it ever reaches the normal
+                                            // capture surface below — KitScreen.kt
+                                            // itself needs no changes for this.
+                                            val pending = pendingSnipAssign
+                                            if (pending != null) {
+                                                assignPendingSnip(pending, slot)
+                                            } else {
+                                                padCaptureSlot = slot
+                                            }
+                                        },
+                                        onEmptyTapHint = {
+                                            dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
+                                        },
+                                        onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                        hasProject = project != null,
+                                        onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                                        hosts = hosts,
+                                    )
+                                }
                             }
                         }
                         top == null && location.stage == Stage.DECK -> TapeScreen(
