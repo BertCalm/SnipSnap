@@ -9,9 +9,18 @@ import kotlin.test.assertTrue
 class SchemesTest {
 
     @Test
-    fun `two schemes in picker order, VENT by default`() {
-        assertEquals(listOf(SchemeId.VENT, SchemeId.OPENSKY), Schemes.ALL.map { it.id })
+    fun `eight schemes in picker order, dark then paper, VENT by default`() {
+        assertEquals(
+            listOf(
+                SchemeId.VENT, SchemeId.DUSK, SchemeId.PHOSPHOR,
+                SchemeId.OPENSKY, SchemeId.TIDE, SchemeId.MEMO, SchemeId.RISO, SchemeId.SAGE,
+            ),
+            Schemes.ALL.map { it.id },
+        )
         assertEquals(SchemeId.VENT, Schemes.DEFAULT.id)
+        // The picker groups by chrome: every dark scheme before every paper one.
+        val dark = Schemes.ALL.map { Scheme.luma(it.gray) < 90 }
+        assertEquals(dark.sortedDescending(), dark, "a paper scheme sits among the dark ones")
     }
 
     /**
@@ -142,6 +151,49 @@ class SchemesTest {
         assertEquals(0xEEEADD, s.lcdInk, "the dock's text is the page's text")
         assertEquals(0x151614, s.desk1, "--bg, flat: desk1 == desk2")
         assertEquals(s.desk1, s.desk2)
+    }
+
+    /**
+     * The colourways of 2026-10-27, pinned to the audition board the owner
+     * chose them from (the SnipSnap Colourways canvas): the chrome, its ink,
+     * the selection, the dock and the dock's two inks. A retune is a design
+     * decision, and this is where it shows up as one.
+     */
+    @Test
+    fun `the six colourways match the audition board`() {
+        data class Pin(val s: Scheme, val css: String, val gray: Int, val ink: Int, val accent: Int, val lcd: Int, val lcdInk: Int, val amber: Int)
+        val pins = listOf(
+            Pin(Schemes.DUSK, "t-dusk", 0x1B1F27, 0xE7E9EE, 0xF2A25C, 0x0E1117, 0xE7E9EE, 0xF2A25C),
+            Pin(Schemes.PHOSPHOR, "t-phosphor", 0x161916, 0xE2EBDF, 0x7BE38A, 0x080B08, 0xB6F2BE, 0x7BE38A),
+            Pin(Schemes.TIDE, "t-tide", 0xEEF3F2, 0x1E2A2C, 0x00676B, 0x132022, 0xEEF3F2, 0x5FD3C6),
+            Pin(Schemes.MEMO, "t-memo", 0xFBF5D6, 0x22252E, 0x1F4FA8, 0x1C2030, 0xFBF5D6, 0xFFC94A),
+            Pin(Schemes.RISO, "t-riso", 0xFAF0EE, 0x2A2230, 0xB0245F, 0x241A2A, 0xFAF0EE, 0xFF7DB8),
+            Pin(Schemes.SAGE, "t-sage", 0xEBEFE6, 0x1F2A21, 0x2F6B3A, 0x18221B, 0xEBEFE6, 0xA6E07F),
+        )
+        for (p in pins) {
+            val id = p.s.id
+            assertEquals(p.css, p.s.cssClass, "$id: css class")
+            assertEquals(p.gray, p.s.gray, "$id: chrome")
+            assertEquals(p.ink, p.s.ink, "$id: ink")
+            assertEquals(p.accent, p.s.accent, "$id: accent")
+            assertEquals(p.lcd, p.s.lcd, "$id: lcd")
+            assertEquals(p.lcdInk, p.s.lcdInk, "$id: lcdInk")
+            assertEquals(p.amber, p.s.amber, "$id: amber")
+            assertEquals(p.s.field, p.s.raised, "$id: one raised fill, as both its group's first schemes have")
+        }
+    }
+
+    /**
+     * The colourways hold what OPENSKY does not: the third text tier clears
+     * AA on its own chrome. OPENSKY's gap is pinned as a known one in
+     * `ContrastTest`; no newer scheme gets to have one.
+     */
+    @Test
+    fun `every colourway's third ink tier clears AA text contrast`() {
+        for (scheme in Schemes.ALL.filter { it.id != SchemeId.OPENSKY }) {
+            val ratio = Scheme.contrastRatio(scheme.ink3, scheme.gray)
+            assertTrue(ratio >= 4.5, "${scheme.id} ink3 vs gray = %.2f:1, below AA text".format(ratio))
+        }
     }
 
     /**

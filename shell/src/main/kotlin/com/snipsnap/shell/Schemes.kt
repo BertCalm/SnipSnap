@@ -4,8 +4,9 @@ import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 
 /**
- * The TapeOS scheme system as data — VENT (dark) and OPENSKY (paper), the
- * two schemes of the one look the app has (`docs/DIRECTION_2026_10.md`).
+ * The TapeOS scheme system as data — eight schemes of the one look the app
+ * has (`docs/DIRECTION_2026_10.md`): VENT, DUSK and PHOSPHOR dark, OPENSKY,
+ * TIDE, MEMO, RISO and SAGE paper.
  * `design/Schemes.dc.html` still shows them beside the schemes retired on
  * 2026-10-27, and stays as the visual reference for the history.
  *
@@ -143,11 +144,28 @@ data class Scheme(
     }
 }
 
+/**
+ * Every scheme, in picker order: the dark ones, then the paper ones, each
+ * group led by the scheme it grew from. Restore reads a saved [name], so
+ * the order is free to change; the names are not.
+ */
 enum class SchemeId(val displayName: String) {
     /** Slate, warm off-white ink and one ember accent — the dark scheme, and the default. */
     VENT("VENT"),
+    /** Blue-gray after sundown, lit by a low orange — `docs/MODERN_LOOK.md` §6's dusk variant. */
+    DUSK("DUSK"),
+    /** Near-black with a green-glow LCD and an amber warning — the old terminal. */
+    PHOSPHOR("PHOSPHOR"),
     /** Paper, ink and a deep orange — the first light modern scheme, from the OPENSKY audition page (`docs/MODERN_LOOK.md` §2). */
     OPENSKY("OPENSKY"),
+    /** Sea-washed paper, deep teal and a teal-lit dock. */
+    TIDE("TIDE"),
+    /** Yellow legal-pad paper and blue-pen ink. */
+    MEMO("MEMO"),
+    /** Pink risograph paper and a deep magenta. */
+    RISO("RISO"),
+    /** Green-gray paper and a forest green. */
+    SAGE("SAGE"),
 }
 
 object Schemes {
@@ -206,12 +224,106 @@ object Schemes {
         bin = 0x813600, binLcd = 0xFF8C00,
     )
 
+    // The colourways of 2026-10-27 - DUSK, PHOSPHOR, TIDE, MEMO, RISO and
+    // SAGE - chosen by the owner from the colourway audition board. Every
+    // value was tuned against SchemesTest's and ContrastTest's laws before it
+    // was shown, and each holds one more than OPENSKY does: its third ink
+    // tier clears AA on its own chrome. Each fills the slots the way its
+    // group's first scheme does - a dark one like VENT (one accent for chrome
+    // and LCD alike, the one tuned BIN_RED_GLOW for both its reds), a paper
+    // one like OPENSKY (a flat title bar, a dark dock, `amber` for the dock
+    // only and `accent` for chrome, its own `bin` and `binLcd`).
+
+    /** DUSK: VENT's slate turned blue-gray, its ember a lower orange. */
+    val DUSK = Scheme(
+        SchemeId.DUSK, "t-dusk",
+        gray = 0x1B1F27, grayHi = 0x343A47, grayEdge = 0x2A303B, grayMid = 0x171A21, grayDark = 0x0D0F13,
+        ink = 0xE7E9EE, ink2 = 0xAEB4C0,
+        title1 = 0x10131A, title2 = 0x222731, titleInk = 0xE7E9EE,
+        desk1 = 0x14171D, desk2 = 0x14171D,
+        lcd = 0x0E1117, lcdInk = 0xE7E9EE, amber = 0xF2A25C, field = 0x222731,
+        warn = 0xF2A25C, ink3 = 0x8E95A3, accent = 0xF2A25C,
+        raised = 0x222731, win = 0x1B1F27, winFrame = 0x4F5767, deskGlow = 0x2E2320,
+    )
+
+    /**
+     * PHOSPHOR: a green-glow LCD, so `lcdInk` is green and not the chrome's
+     * ink. The accent is the same green; `warn` stays amber, as the needle
+     * law needs, which is what makes it read across green readouts.
+     */
+    val PHOSPHOR = Scheme(
+        SchemeId.PHOSPHOR, "t-phosphor",
+        gray = 0x161916, grayHi = 0x313730, grayEdge = 0x262B25, grayMid = 0x121411, grayDark = 0x0A0C0A,
+        ink = 0xE2EBDF, ink2 = 0xA7B5A3,
+        title1 = 0x0B0E0B, title2 = 0x1E221D, titleInk = 0xE2EBDF,
+        desk1 = 0x101310, desk2 = 0x101310,
+        lcd = 0x080B08, lcdInk = 0xB6F2BE, amber = 0x7BE38A, field = 0x1E221D,
+        warn = 0xE9A23B, ink3 = 0x889685, accent = 0x7BE38A,
+        raised = 0x1E221D, win = 0x161916, winFrame = 0x4A5448, deskGlow = 0x16261A,
+    )
+
+    /** TIDE: cool paper, a deep teal on chrome and a teal glow in the dock. */
+    val TIDE = Scheme(
+        SchemeId.TIDE, "t-tide",
+        gray = 0xEEF3F2, grayHi = 0xFFFFFF, grayEdge = 0xCFDAD8, grayMid = 0xE2EAE8, grayDark = 0xA3B2B0,
+        ink = 0x1E2A2C, ink2 = 0x566668,
+        title1 = 0xEEF3F2, title2 = 0xEEF3F2, titleInk = 0x1E2A2C,
+        desk1 = 0xE3ECEA, desk2 = 0xE8EFED,
+        lcd = 0x132022, lcdInk = 0xEEF3F2, amber = 0x5FD3C6, field = 0xF8FBFA,
+        warn = 0xE07A2E, ink3 = 0x5E6E70, accent = 0x00676B,
+        raised = 0xF8FBFA, win = 0xEEF3F2, winFrame = 0xA3B2B0, deskGlow = 0xBFE6DF,
+        bin = 0x9E2B1E, binLcd = 0xFF8F7A,
+    )
+
+    /** MEMO: a yellow legal pad written in blue pen, over a navy dock. */
+    val MEMO = Scheme(
+        SchemeId.MEMO, "t-memo",
+        gray = 0xFBF5D6, grayHi = 0xFFFFFF, grayEdge = 0xE3D9A8, grayMid = 0xF2EAC4, grayDark = 0xBDB27F,
+        ink = 0x22252E, ink2 = 0x55576A,
+        title1 = 0xFBF5D6, title2 = 0xFBF5D6, titleInk = 0x22252E,
+        desk1 = 0xF2EAC4, desk2 = 0xF6EFCD,
+        lcd = 0x1C2030, lcdInk = 0xFBF5D6, amber = 0xFFC94A, field = 0xFFFCEB,
+        warn = 0xE0701E, ink3 = 0x5C5E70, accent = 0x1F4FA8,
+        raised = 0xFFFCEB, win = 0xFBF5D6, winFrame = 0xBDB27F, deskGlow = 0xFFE68A,
+        bin = 0xA0281C, binLcd = 0xFF8F7A,
+    )
+
+    /**
+     * RISO: pink paper and a deep magenta. `bin` is a brick red, kept well
+     * away from the magenta accent, so a destructive word never reads as a
+     * selection.
+     */
+    val RISO = Scheme(
+        SchemeId.RISO, "t-riso",
+        gray = 0xFAF0EE, grayHi = 0xFFFFFF, grayEdge = 0xE8D3D0, grayMid = 0xF2E3E0, grayDark = 0xC4A9A5,
+        ink = 0x2A2230, ink2 = 0x65586A,
+        title1 = 0xFAF0EE, title2 = 0xFAF0EE, titleInk = 0x2A2230,
+        desk1 = 0xF2E3E0, desk2 = 0xF6EAE7,
+        lcd = 0x241A2A, lcdInk = 0xFAF0EE, amber = 0xFF7DB8, field = 0xFFF8F7,
+        warn = 0xE8752A, ink3 = 0x6B5E70, accent = 0xB0245F,
+        raised = 0xFFF8F7, win = 0xFAF0EE, winFrame = 0xC4A9A5, deskGlow = 0xFFC7DB,
+        bin = 0x7A2E12, binLcd = 0xFF9A6E,
+    )
+
+    /** SAGE: green-gray paper, a forest green on chrome and a leaf green in the dock. */
+    val SAGE = Scheme(
+        SchemeId.SAGE, "t-sage",
+        gray = 0xEBEFE6, grayHi = 0xFFFFFF, grayEdge = 0xCCD5C6, grayMid = 0xDFE6D9, grayDark = 0xA2AE9B,
+        ink = 0x1F2A21, ink2 = 0x536154,
+        title1 = 0xEBEFE6, title2 = 0xEBEFE6, titleInk = 0x1F2A21,
+        desk1 = 0xDFE6D9, desk2 = 0xE5EBE0,
+        lcd = 0x18221B, lcdInk = 0xEBEFE6, amber = 0xA6E07F, field = 0xF7F9F4,
+        warn = 0xDD7A2A, ink3 = 0x5A685B, accent = 0x2F6B3A,
+        raised = 0xF7F9F4, win = 0xEBEFE6, winFrame = 0xA2AE9B, deskGlow = 0xF3E7A8,
+        bin = 0x9E2B1E, binLcd = 0xFF8F7A,
+    )
+
     /**
      * Picker order: every [SchemeId], in the enum's order. [get] is `first`
      * over this list, so a [SchemeId] missing from it would throw at launch;
      * `SchemesTest` holds the two together.
      */
-    val ALL: List<Scheme> = listOf(VENT, OPENSKY)
+    val ALL: List<Scheme> = listOf(VENT, DUSK, PHOSPHOR, OPENSKY, TIDE, MEMO, RISO, SAGE)
 
     /** What a fresh install, a saved name that is no longer a [SchemeId], and every export without a choice get. */
     val DEFAULT: Scheme = VENT
