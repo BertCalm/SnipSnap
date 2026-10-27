@@ -227,8 +227,8 @@
   <div class="titlebar"><span>FORGE.SECTION</span><span>LISTENING GATE</span></div>
   <div class="body">
     <div style="display:grid;gap:8px">
-      <h1>FORGE</h1>
-      <p>A rack section that forms a hit against a die: a low shock, a sweep through the medium, the fast part folded, then a hard stop with a flash of heat. These clips are the real Kotlin section on real pads. Nobody has heard them yet: your ear is the measurement.</p>
+      <h1 id="gateHeading">FORGE</h1>
+      <p id="gateIntro">A rack section that forms a hit against a die: a low shock, a sweep through the medium, the fast part folded, then a hard stop with a flash of heat. These clips are the real Kotlin section on real pads. Nobody has heard them yet: your ear is the measurement.</p>
     </div>
 
     <div class="lcd stages" aria-label="What the four knobs do">
@@ -295,8 +295,29 @@
   ];
 
   var STORE_KEY = 'forge-gate:answers';
-  var answers = { notes: '' };
-  QUESTIONS.forEach(function (q) { answers[q.id] = null; answers[q.id + 'Note'] = ''; });
+  var GATE_NAME = 'FORGE listening gate';
+  var TASK = 'generateForgeAudition';
+  var answers = {};
+  function resetAnswers() {
+    answers = { notes: '' };
+    QUESTIONS.forEach(function (q) { answers[q.id] = null; answers[q.id + 'Note'] = ''; });
+  }
+  resetAnswers();
+
+  // A later gate over the same section ships its own questions and words in its manifest's `gate`
+  // (ForgeChargeAuditionGenerator); without one, this page is the first gate exactly as heard.
+  function applyGate(g) {
+    if (!g) return;
+    if (g.questions) QUESTIONS = g.questions;
+    if (g.id) STORE_KEY = 'forge-gate:' + g.id;
+    if (g.name) GATE_NAME = g.name;
+    if (g.task) TASK = g.task;
+    if (g.title) document.title = g.title;
+    if (g.heading) document.getElementById('gateHeading').textContent = g.heading;
+    if (g.intro) document.getElementById('gateIntro').textContent = g.intro;
+    if (g.questionsTitle) document.getElementById('gateTitle').textContent = g.questionsTitle;
+    resetAnswers();
+  }
 
   var clipsById = {};
   var sections = [];
@@ -404,7 +425,7 @@
   }
 
   function answerText() {
-    var lines = ['FORGE listening gate'];
+    var lines = [GATE_NAME];
     QUESTIONS.forEach(function (q, i) {
       lines.push((i + 1) + '. ' + q.title);
       lines.push('   ' + (answers[q.id] || '(no answer)') + (answers[q.id + 'Note'] ? ' - ' + answers[q.id + 'Note'] : ''));
@@ -499,28 +520,32 @@
 
   // ---------- boot ----------
 
-  merge(readLocal());
-
+  // The questions come from the manifest, so saved answers are read only once they are known.
   fetch('manifest.json').then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return r.json();
   }).then(function (m) {
+    applyGate(m.gate);
+    merge(readLocal());
     sections = m.sections;
     sections.forEach(function (s) { s.clips.forEach(function (c) { clipsById[s.id + '/' + c.id] = c; }); });
     var count = Object.keys(clipsById).length;
-    document.getElementById('loadState').textContent = count + ' clips, rendered by ./gradlew :synth:generateForgeAudition.';
+    document.getElementById('loadState').textContent = count + ' clips, rendered by ./gradlew :synth:' + TASK + '.';
     renderQuestions();
     renderTabs(sections[0].id);
     renderList(sections[0].id);
+    connectStore();
   }).catch(function () {
+    merge(readLocal());
     var s = document.getElementById('loadState');
     s.className = 'warn';
-    s.textContent = 'The clip list did not load. Opened from a folder? Serve it: python3 -m http.server, in testkit/forge-audition.';
+    s.textContent = 'The clip list did not load. Opened from a folder? Serve it: python3 -m http.server, in the audition folder.';
     renderQuestions();
+    connectStore();
   });
 
   // The shared store, where the viewer's page offers one: each viewer writes answers/<their id>.
-  (async function () {
+  function connectStore() { (async function () {
     if (!window.claude || typeof window.claude.use !== 'function') return;
     try {
       var both = await Promise.all([window.claude.use('db'), window.claude.use('user')]);
@@ -534,6 +559,6 @@
       shared = ref;
       setSaveState('Answers save as you go. Claude can read them.', 'shared');
     } catch (e) { /* no store this visit: the browser copy and the Copy button stand */ }
-  })();
+  })(); }
 })();
 </script>

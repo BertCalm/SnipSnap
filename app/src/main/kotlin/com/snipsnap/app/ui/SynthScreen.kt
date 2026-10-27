@@ -894,9 +894,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, CHAMBER and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, CHAMBER, PRISM and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is ChamberPatch ||
+            patch is PrismPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -946,6 +947,7 @@ fun SynthScreen(
         }
     }
     val loadedPatch = loadedPatchesByVoice[engine to voice]
+    val prismMotionStudio = rememberPrismMotionStudio()
     // SCANNED CHAIN's recalled or restored pad recipe (effects and all) is kept apart
     // from a reopened pad's working recipe: it is not a shelf pad, so it never writes
     // a reopen entry and never clears the preset highlight. A reopened recipe wins.
@@ -956,6 +958,13 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.PRISM) {
+            // Detail edits and accessibility events can share a frame with SAVE or HOLD.
+            val current = loadedPatchesByVoice[engine to voice] as? PrismPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: PrismPatch(name, voice as PrismVoice, controls)
+        }
         if (engine == Engine.TIDAL) {
             // Accessibility and pointer events can arrive before recomposition.
             // Saving/sending must observe the last edit, not the previous frame's patch.
@@ -1072,7 +1081,7 @@ fun SynthScreen(
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
         // Motion recipes contain a finite opening. Keep HOLD below the loop
         // threshold so a slider or accessibility edit cannot discard that gesture.
-        if (name == "HOLD" && (loadedPatch as? PrismPatch)?.motion != null) {
+        if (name == "HOLD" && prismFiniteMotion(loadedPatchesByVoice[engine to voice] as? PrismPatch)) {
             return 0f..Math.nextDown(Prism.LOOP_THRESHOLD)
         }
         if (name != "TUNE") return 0f..1f
@@ -1209,6 +1218,18 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = patch.copy(config = change(patch.config))
     }
+    fun editPrismMotion(target: PrismVoice, change: (PrismPatch) -> PrismPatch) {
+        if (engine != Engine.PRISM || voice != target) return
+        val pair = engine to voice
+        val name = loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice)
+        val next = change(buildCurrentPatch(name) as PrismPatch)
+        touched = true
+        Snapshot.withMutableSnapshot {
+            currentPresetByVoice.remove(pair)
+            loadedPatchesByVoice[pair] = next
+            macrosByVoice[pair] = Prism.defaults(next.voice) + next.macros
+        }
+    }
     fun loadPreset(patch: Patch) {
         touched = true
         loadedRecipesByVoice.remove(engine to voice)
@@ -1217,6 +1238,7 @@ fun SynthScreen(
         // Audition recipes can save an explicit root beside a different TUNE.
         // Canonicalize the sliders without changing that sound or its model.
         val editable = editablePreset(patch)
+        if (editable is PrismPatch) prismMotionStudio.selected(editable)
         // Merged over the engine's own defaults, same as macrosByVoice's own
         // seeding above: a preset only has to name the macros it cares
         // about (PUNCH, added after every existing THUMP preset was
@@ -1287,6 +1309,10 @@ fun SynthScreen(
                     if (mine != null) {
                         val editable = editablePreset(mine)
                         loadedPatchesByVoice[pair] = editable
+                        if (editable is PrismPatch) {
+                            macrosByVoice[pair] = Prism.defaults(editable.voice) + editable.macros
+                            if (pair == (engine to voice)) prismMotionStudio.selected(editable)
+                        }
                         if (editable is EmbouchurePatch) {
                             macrosByVoice[pair] = restoredMacros(pair.first, pair.second, embouchureRestore.macroSettings, editable)
                         }
@@ -1423,6 +1449,7 @@ fun SynthScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 if (engine == Engine.APSIS) touched = false
+                if (engine == Engine.PRISM) { touched = false; prismMotionStudio.cancel() }
                 voicePlayer?.release()
                 voicePlayer = null
             }
@@ -1457,7 +1484,11 @@ fun SynthScreen(
     // with clearTimeout/setTimeout in the prototype. Keyed on `engine` too
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
-    LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe, embouchureRestore.pending.containsKey(engine to voice)) {
+    LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe, embouchureRestore.pending.containsKey(engine to voice), prismMotionStudio.ownsPreview) {
+        if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) {
+            rendering = false
+            return@LaunchedEffect
+        }
         if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) {
             voicePlayer?.stop()
             snip = null
@@ -1512,6 +1543,7 @@ fun SynthScreen(
                 else Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
             }
             coroutineContext.ensureActive()
+            if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) return@LaunchedEffect
             snip = rendered
             if (touched) audition(rendered, allowLoop = true)
         } catch (e: CancellationException) {
@@ -1553,6 +1585,7 @@ fun SynthScreen(
         val sourceVoice = sourceEngine.voices().firstOrNull { it.name == patch.voiceName } ?: return
         val key = sourceEngine to sourceVoice
         val editable = editablePreset(patch)
+        if (editable is PrismPatch) prismMotionStudio.selected(editable)
         loadedPatchesByVoice[key] = editable
         loadedRecipesByVoice[key] = recipe
         recalledRecipesByVoice.remove(key)
@@ -2254,7 +2287,11 @@ fun SynthScreen(
                     scheme, Modifier.fillMaxWidth().height(104.dp))
 
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
-                VoicePicker(engine, voice, scheme, onSelect = { touched = true; voice = it })
+                VoicePicker(engine, voice, scheme, onSelect = {
+                    touched = true
+                    if (engine == Engine.PRISM) { prismMotionStudio.cancel(); voicePlayer?.stop() }
+                    voice = it
+                })
 
                 PresetList(
                     engine = engine,
@@ -3013,7 +3050,20 @@ fun SynthScreen(
                     TapeText("HOLD EXTENDS A FINITE NOTE", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
-                if ((loadedPatch as? PrismPatch)?.motion != null) {
+                if (engine == Engine.PRISM) {
+                    PrismMotionPanel(
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as PrismPatch,
+                        studio = prismMotionStudio, scheme = scheme, color = classColor,
+                        currentPatch = {
+                            if (engine == Engine.PRISM) buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                                ?: engine.patchDisplayName(voice)) as PrismPatch else null
+                        },
+                        onEdit = ::editPrismMotion,
+                        onPreview = { target -> snip = target; audition(target, allowLoop = false) },
+                        onStopPreview = { pause -> if (pause) touched = false; voicePlayer?.stop() },
+                    )
+                }
+                if (prismFiniteMotion(loadedPatch as? PrismPatch)) {
                     TapeText("FINITE NOTE · HOLD SETS LENGTH", TapeType.pixelSmall, scheme.ink2.tape)
                 }
 
@@ -3553,6 +3603,8 @@ private fun MacroSliders(
                     valueRange = macroRange(spec.name),
                     enabled = (spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC)) &&
                         (engine != Engine.TRIO || Trio.isMacroActive(voice as TrioVoice, spec.name)),
+                    semanticRange = if (engine == Engine.PRISM && spec.name == "HOLD")
+                        ({ macroRange(spec.name) }) else null,
                 )
             }
         }
@@ -3648,7 +3700,7 @@ private fun macroReadout(
         Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
-    engine == Engine.PRISM && name == "HOLD" && loadedPatch is PrismPatch && loadedPatch.motion != null -> "NOTE"
+    engine == Engine.PRISM && name == "HOLD" && prismFiniteMotion(loadedPatch as? PrismPatch) -> "NOTE"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
     engine == Engine.OVERLAP && name == "HOLD" -> {
         val hold = macros.getValue(name)
@@ -5585,8 +5637,10 @@ internal fun MacroSlider(
     readout: String? = null,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     enabled: Boolean = true,
+    semanticRange: (() -> ClosedFloatingPointRange<Float>)? = null,
 ) {
     val currentOnChange by rememberUpdatedState(onValueChange)
+    val currentSemanticRange by rememberUpdatedState(semanticRange)
     Row(
         Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp).alpha(if (enabled) 1f else .45f),
         verticalAlignment = Alignment.CenterVertically,
@@ -5608,7 +5662,13 @@ internal fun MacroSlider(
                 .semantics {
                     contentDescription = label
                     progressBarRangeInfo = ProgressBarRangeInfo(value.coerceIn(valueRange), valueRange)
-                    if (enabled) setProgress { target -> currentOnChange(target.coerceIn(valueRange)); true }
+                    if (enabled) setProgress { target ->
+                        // PRISM can change OPEN/REPEAT before this node recomposes. Its
+                        // action validates against that live mode; other sliders keep
+                        // their captured range, and pointer geometry stays unchanged.
+                        currentOnChange(target.coerceIn(currentSemanticRange?.invoke() ?: valueRange))
+                        true
+                    }
                     else disabled()
                 }
                 .pointerInput(valueRange, enabled) {

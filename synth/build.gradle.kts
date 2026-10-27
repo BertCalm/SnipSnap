@@ -42,6 +42,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
 }
 
+/** Three relationship conversations beside their gentler reference performances. */
+tasks.register<JavaExec>("generateObbligatoConversationAudition") {
+    group = "distribution"
+    description = "Compare OBBLIGATO Play, Fight and Protect conversations with their gentler reference notes and melodies."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoConversationAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoConversationOutput").orNull ?: "${rootDir}/testkit/obbligato-conversation-audition")
+}
+
 /** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
 tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
     group = "distribution"
@@ -1395,6 +1406,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeChargeAudition") {
+    group = "distribution"
+    description = "Render FORGE's CHARGE tuning gate under testkit/forge-charge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeChargeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-charge-audition", "${rootDir}")
+}
+
 /** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeAudition") {
     group = "distribution"
@@ -1422,6 +1443,16 @@ tasks.register<JavaExec>("generatePedalAudition") {
     mainClass.set("com.snipsnap.synth.PedalAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/pedal-audition")
+}
+
+/** Render Stage 3's listen (the pedals on both guitar pads after and in front of the amp) under testkit/amp-front-audition/. See AmpFrontAuditionGenerator. */
+tasks.register<JavaExec>("generateAmpFrontAudition") {
+    group = "distribution"
+    description = "Render Stage 3's listen (pedals after and in front of a guitar pad's amp) under testkit/amp-front-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AmpFrontAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/amp-front-audition")
 }
 
 /** Render the WAH section's gate clips and manifest under testkit/wah-audition/. See WahAuditionGenerator. */
@@ -2091,6 +2122,17 @@ tasks.register<JavaExec>("generateApsisMusicalAudition") {
     maxHeapSize = "1g"
     val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
     args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
+}
+
+/** Actual editor/source selections, finite movement and independently verified repeating HOLD loops. */
+tasks.register<JavaExec>("generatePrismMotionStudioAudition") {
+    group = "distribution"
+    description = "Render PRISM motion editor and source comparisons with native/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismMotionStudioAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/prism-motion-studio-audition")
 }
 
 /** Held TIDAL listening evidence; the accepted finite audition remains separate. */

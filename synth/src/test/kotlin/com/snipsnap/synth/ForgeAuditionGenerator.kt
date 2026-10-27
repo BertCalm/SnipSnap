@@ -141,7 +141,7 @@ object ForgeAuditionGenerator {
      * Loudest by the peak of the 20 ms after each detected onset: [Transients.detectStrongest] ranks by
      * the jump in energy, and its first pick here was a small click with a bigger hit 240 ms later.
      */
-    private fun chop(file: File): Snip {
+    internal fun chop(file: File): Snip {
         val take = WavReader.read(file)
         val window = (0.02f * take.sampleRate).toInt()
         fun peakAfter(frame: Int): Float {
@@ -164,14 +164,14 @@ object ForgeAuditionGenerator {
     }
 
     /** The gain [AuditionLevel] would give [dry], peak-guarded the same way. */
-    private fun sourceGain(dry: Snip): Float {
+    internal fun sourceGain(dry: Snip): Float {
         var g = AUDITION_LEVEL / Loudness.of(dry).coerceAtLeast(1e-9f)
         val peak = dry.peak()
         if (peak * g > 0.99f) g = 0.99f / peak
         return g
     }
 
-    private fun scaled(s: Snip, g: Float): Snip {
+    internal fun scaled(s: Snip, g: Float): Snip {
         val out = FloatArray(s.samples.size) { s.samples[it] * g }
         // A clip of the source grid shares the dry's peak (FORGE and VALVE peak-match), so this guard
         // only ever trims a sample the order A/B rounded over.
@@ -180,14 +180,14 @@ object ForgeAuditionGenerator {
         return Snip(out, s.channels, s.sampleRate)
     }
 
-    private fun crest(s: Snip): Double {
+    internal fun crest(s: Snip): Double {
         var sum = 0.0
         for (v in s.samples) sum += v.toDouble() * v
         val rms = sqrt(sum / s.samples.size.coerceAtLeast(1))
         return if (rms > 0) s.peak() / rms else 0.0
     }
 
-    private fun q(s: String): String {
+    internal fun q(s: String): String {
         check(s.none { it == '"' || it == '\\' || it < ' ' }) { "manifest field needs escaping: $s" }
         return "\"$s\""
     }
