@@ -62,8 +62,6 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
-import com.snipsnap.app.ui.BootGate
-import com.snipsnap.app.ui.BootText
 import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.ChoiceSheet
 import com.snipsnap.app.ui.SheetRow
@@ -293,15 +291,9 @@ data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay
  * later milestones bind to them; M0's state is navigation and a shelf.
  */
 @Composable
-fun App(shelf: KitShelf, bootText: Boolean = true) {
+fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-
-    // The boot text: the LCD draws Copy.BOOT_LINES then BOOT_READY for ~0.6 s
-    // on a cold start and lifts to whatever is under it. `BootGate` is the
-    // process's, so a rotation (which rebuilds this composition) does not
-    // replay it; [bootText] is the seam for a harness that must not wait.
-    var booting by remember { mutableStateOf(bootText && BootGate.claim()) }
 
     // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
     // getExternalFilesDir does real filesystem work - it creates the
@@ -4164,10 +4156,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                         // nothing rather than something false.
                         else -> Unit
                     }
-                    // The boot text over the stage, last so it is on top: the
-                    // frame around it is already drawn, the stage under it is
-                    // already composing, and it lifts after ~0.6 s or a tap.
-                    BootText(booting = booting, onDone = { booting = false })
                 }
                 // The dock, at the foot of every screen (plan §1). The status
                 // bar's three cells live on: where you are is the two rows

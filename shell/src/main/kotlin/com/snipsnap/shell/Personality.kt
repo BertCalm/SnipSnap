@@ -14,9 +14,10 @@ package com.snipsnap.shell
  */
 object Copy {
 
+    /** HELP's banner heading. The app no longer boots behind a start-up overlay; this is HELP's alone (its wording is a later copy pass's to settle). */
     const val BOOT_READY = "SNIPSNAP.EXE — READY."
 
-    /** Boot screen progress lines, in order. */
+    /** The lines of HELP's banner, in order. They were the start-up overlay's, which is gone. */
     val BOOT_LINES = listOf(
         "CHECKING HEADS…",
         "DEMAGNETIZING…",
