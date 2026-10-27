@@ -1073,7 +1073,7 @@ private fun KitRow(
             .let { if (revealActions) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .then(
                 if (pickModeActive) {
-                    Modifier.tapeClick(label = "OPEN ${kit.name.uppercase()}") { onOpen(entry) }
+                    Modifier.tapeClick(label = "OPEN ${kit.name.uppercase()}", enabled = !busy) { onOpen(entry) }
                 } else {
                     // A plain tap/long-press pair with no drag — the
                     // sharpest instance the audit found (finding 1): with
@@ -1081,7 +1081,13 @@ private fun KitRow(
                     // way to open a kit from the normal shelf flow, and a
                     // switch-access/TalkBack user couldn't reach it.
                     // combinedClickable registers both as real actions.
+                    //
+                    // Closed to taps while a job is in flight, as the project
+                    // row is: opening kit X while a starter renders would land
+                    // on the starter's placeholders. An armed row stays open to
+                    // the tap that disarms it, which opens nothing.
                     Modifier.combinedClickable(
+                        enabled = !busy || armed,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onLongClickLabel = "RENAME OR DELETE",

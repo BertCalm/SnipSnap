@@ -179,7 +179,7 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 fun SnapScreen(
     entry: KitShelf.Entry?,
     // App()'s own busy lock: KIT ▸ renders off-thread through it (the
-    // same DUBBING…-shaped overlay FRESH TAPE and BREED use), since it
+    // same busy-then-land shape FRESH TAPE and BREED use), since it
     // lands on the shelf and leaves this screen rather than staying on
     // it the way FIELD/CLOUD's own local busy flags do.
     busy: Boolean,

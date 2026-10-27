@@ -1274,10 +1274,11 @@ fun App(shelf: KitShelf) {
 
     /**
      * A starter kit, rendered and landed on PADS. The render takes a few
-     * seconds, so the user is taken to PADS at once and finds the shape of
-     * the grid there ([pendingKit] makes `KitScreen` draw
-     * `PadPlaceholderGrid` for the starter's name), with the dock's bar
-     * saying the same job; the kit replaces the placeholders when it lands.
+     * seconds (a minute, on a slow phone), so the user is taken to PADS at
+     * once and finds the shape of the grid there ([pendingKit] makes `KitLoading`
+     * draw `PadPlaceholderGrid` for the starter's name, with the loading card
+     * over it once the job has run 200 ms), with the dock's bar saying the same
+     * job; the kit replaces the placeholders when it lands.
      *
      * Moved with [landOn], not `goToScreen`: that one also clears the
      * transient state, `pendingSnipAssign` among it, and the snip waiting
@@ -1292,12 +1293,19 @@ fun App(shelf: KitShelf) {
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 pendingKit = null
                 busy = null
-                // Nothing landed, so the placeholders have nothing to become:
-                // back to the shelf, where the kit was asked for, and say so.
-                landOn(AppScreen.KITS)
+                // Nothing landed, so the placeholders have nothing to become -
+                // but only a user still looking at them is moved. Someone who
+                // went to TAPE or BEAT while it rendered is where they chose to
+                // be, and is told, not yanked. From the placeholders it is Back,
+                // not a new landing, so the KIT entry `fresh` pushed is popped
+                // and not left in the history; the shelf is landed on only if
+                // Back did not get there (`Navigation.backOutOf`).
+                if (nav.backOutOf(locationOf(AppScreen.KIT), locationOf(AppScreen.KITS))) dock.moved(nav.location)
                 // Law 3 in practice, matching ExportScreen's own dub-failed
                 // catch: the user gets what failed, not a Java exception's
                 // `message` quoted at them — that detail stays in logcat.
@@ -1314,10 +1322,10 @@ fun App(shelf: KitShelf) {
             // armed says what to do next (September UAT, finding 12).
             dock.say(if (pendingSnipAssign != null) Copy.snipLanding(hasLandingPad(entry.kit)) else Copy.FRESH_TAPE)
             landKit(entry)
-            // Last, so `open` already holds the kit when the placeholders go
-            // and the dock's bar goes with them: busy used to clear before
-            // landKit, a beat in which the bar was gone and the kit was not
-            // yet on the grid.
+            // Cleared after landKit has put the kit in `open`. It is one run on
+            // the main thread, so the placeholders and the dock's bar go in the
+            // same frame the kit arrives; the order is only the one that reads
+            // as "the kit is here, so the wait is over".
             pendingKit = null
             busy = null
         }
@@ -1465,8 +1473,9 @@ fun App(shelf: KitShelf) {
     /**
      * SCULPT / STRETCH / FREEZE from the KIT screen: one pad of the open kit
      * becomes a texture kit of its own on the shelf, which then opens —
-     * the same DUBBING… shape as [fresh], because it's the same thing: a
-     * new tape rendered offline over a few seconds.
+     * the same busy-then-land shape as [fresh] (the dock says SCULPTING…,
+     * STRETCHING… or FREEZING…, where [fresh] says LOADING <NAME>…), because
+     * it's the same thing: a new tape rendered offline over a few seconds.
      */
     fun texture(slot: Int, spec: TextureKits.Spec) {
         val source = open ?: return
@@ -1531,8 +1540,9 @@ fun App(shelf: KitShelf) {
 
     /**
      * EVIL TWINS (W4.3): bank B lit with seeded re-treatments of bank A, a
-     * new seed every press so the second press rerolls. The same DUBBING…
-     * shape as a fresh tape: every twin renders offline over a few seconds.
+     * new seed every press so the second press rerolls. The same
+     * busy-then-land shape as a fresh tape: every twin renders offline over a
+     * few seconds.
      */
     fun evilTwins() {
         val source = open ?: return
@@ -1573,7 +1583,7 @@ fun App(shelf: KitShelf) {
      * per-pad door `KitBuilderModel.dustPad` once per pad under one
      * `KitWrites.mutex`, each tape's print read once. Layered and chained
      * pads are left as they are and counted, since every audio rewrite
-     * refuses them. The same DUBBING…-shaped busy line as EVIL TWINS: the
+     * refuses them. The same busy-then-land shape as EVIL TWINS: the
      * prints and sixteen convolutions run offline.
      */
     fun dustAll() {
@@ -1688,7 +1698,7 @@ fun App(shelf: KitShelf) {
      * own open→mutate→save (via `KitBuilderModel.create`) is exactly the
      * kind of kit write two concurrent presses must never race, the same
      * reasoning `setKey`/`evilTwins` above already follow. Same
-     * DUBBING…-shaped busy line as EVIL TWINS: every crossed pad renders
+     * busy-then-land shape as EVIL TWINS: every crossed pad renders
      * offline.
      */
     fun finishBreed(source: KitShelf.Entry, partner: KitShelf.Entry) {
@@ -2282,7 +2292,7 @@ fun App(shelf: KitShelf) {
     /**
      * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
      * deck) chopped with the defaults and landed on the grid without the
-     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * review, the same busy-then-land shape as a fresh tape. CHOP can still open
      * the result later to argue with the chips.
      *
      * [hadSelection] is TAPE's answer, not this function's guess (September

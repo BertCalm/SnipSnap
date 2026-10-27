@@ -2793,7 +2793,11 @@ object Copy {
     fun busyCount(done: Int, total: Int): String = "$done OF $total"
     /** The dock's busy line while something loads and there is no name to give it. */
     const val LOADING_BUSY = "LOADING…"
-    /** The dock's busy line for a job with no name and no count - the reduced-motion label, where no bar moves. */
+    /**
+     * What a button says to TalkBack as its state while the job it started is
+     * running: its `stateDescription`, beside the label it keeps and the ring
+     * drawn at its edge. It is not a visible label and not the dock's line.
+     */
     const val WORKING_BUSY = "WORKING…"
     /** The KITS screen's placeholder line while the library is read from disk. */
     const val LIBRARY_LOADING = "LOADING THE LIBRARY…"

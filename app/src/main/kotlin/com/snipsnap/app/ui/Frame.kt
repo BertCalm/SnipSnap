@@ -148,6 +148,13 @@ class NavState(private val model: Navigation = Navigation()) {
         return moved
     }
 
+    /** [Navigation.backOutOf]: leave [page] for [fallback] if it is still what is on screen; true when it moved. */
+    fun backOutOf(page: Location, fallback: Location): Boolean {
+        val moved = model.backOutOf(page, fallback)
+        location = model.location
+        return moved
+    }
+
     private inline fun sync(move: () -> Location) {
         move()
         location = model.location
