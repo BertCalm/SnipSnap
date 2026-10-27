@@ -165,13 +165,17 @@ class ChopScreenTest : ComposeScreenTest() {
         // builds, built here, says which class the first slice is. Only
         // the chips take a long press (RESTORE THE MACHINE'S CALL), which
         // tells a chip from anything else on screen reading that class.
-        val first = ChopReviewModel.chipName(ChopReviewModel.chop(breakSnip()).rows.first().effectiveClass)
+        val model = ChopReviewModel.chop(breakSnip())
+        val first = ChopReviewModel.chipName(model.rows.first().effectiveClass)
         val chip = compose.onAllNodes(hasText(first) and hasClickAction() and SemanticsMatcher.keyIsDefined(SemanticsActions.OnLongClick))
             .fetchSemanticsNodes().first()
         clickNode("the $first chip", chip.config.getOrNull(SemanticsActions.OnClick)?.action)
         invokeClick("MERGE WITH 2")
         waitFor("the merge") { Copy.chopMerged(1) in toasts }
-        waitFor("three slices") { showing(header(3, "BY HITS")) }
+        // A hand edit says so in the header: the merged model's own label.
+        val merged = requireNotNull(model.merged(0))
+        assertEquals(3, merged.sliceCount)
+        waitFor("three slices") { showing(header(3, merged.modeLabel())) }
     }
 
     @Test
