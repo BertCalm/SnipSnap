@@ -2718,9 +2718,9 @@ private fun AuditionBar(
 /**
  * The main view: a fixed needle at [Layout.NEEDLE_Y], notes scrolling
  * under it at [Layout.STEP_W] px/step. The needle draws in [Scheme.warn]
- * — deliberately not [Scheme.amber] (OILSLICK spends that slot on cyan; a
- * needle drawn in it would vanish into the readouts it's meant to cross),
- * per `Scheme.warn`'s own KDoc. This is load-bearing design history, not a
+ * — deliberately not [Scheme.amber] (a scheme may spend that slot on a cool
+ * colour; a needle drawn in it would vanish into the readouts it's meant to
+ * cross), per `Scheme.warn`'s own KDoc. This is load-bearing design history, not a
  * styling choice to relitigate.
  */
 @Composable

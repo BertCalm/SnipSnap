@@ -670,10 +670,7 @@ class UatSimTest {
         note("no toast: the dock's line says what happened and stays — nothing is timed, nothing is gated")
 
         say("")
-        val byLook = Schemes.byLook()
-        for ((look, schemes) in byLook) {
-            say("  LOOK ${look.displayName}: ${schemes.size} schemes · ${schemes.joinToString(", ") { it.id.displayName }}")
-        }
+        say("  LOOK: ${Schemes.ALL.size} schemes · ${Schemes.ALL.joinToString(", ") { it.id.displayName }}")
         say("")
         say("  HELP, by place, verbatim from Places.HELP:")
         for ((section, lines) in Places.HELP) {

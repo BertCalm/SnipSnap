@@ -37,7 +37,6 @@ import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Scheme
-import com.snipsnap.shell.Look
 import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.Schemes
 
@@ -86,14 +85,6 @@ import com.snipsnap.shell.Schemes
 fun PropertiesScreen(
     currentScheme: SchemeId,
     onScheme: (SchemeId) -> Unit,
-    /**
-     * LOOK (plan §3.7, `Scheme.look`): which drawing's schemes the picker
-     * shows, CLASSIC or MODERN. A preference beside the scheme's, written
-     * by [onLook]; the drawing itself follows in the modern-look step, so
-     * for now the row groups the schemes and nothing more.
-     */
-    currentLook: Look,
-    onLook: (Look) -> Unit,
     teachEnabled: Boolean,
     onTeach: (Boolean) -> Unit,
     /** HAPTICS: whether the motor ticks under pads, steppers and landings. ON by default; always silent while the mic is armed (`Haptics`). */
@@ -136,35 +127,17 @@ fun PropertiesScreen(
         // line each, and LOOK - the biggest visible change on the page, and
         // the thing most people came for - open and first.
 
-        // LOOK: the two drawings, the schemes under the chosen one. The same
-        // two-up toggle TEACH THE MACHINE uses below.
+        // LOOK: the schemes, listed. The group's summary still says MODERN,
+        // the name of the look every scheme here belongs to; the words are
+        // for the copy pass to retire, not this one.
         var lookOpen by rememberSaveable { mutableStateOf(true) }
         GroupBox(
             legend = "LOOK",
-            summary = "${currentLook.displayName} · ${currentScheme.displayName}",
+            summary = "MODERN · ${currentScheme.displayName}",
             open = lookOpen,
             onToggle = { lookOpen = !lookOpen },
             scheme = scheme,
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                for (look in Look.entries) {
-                    val selected = look == currentLook
-                    Box(
-                        Modifier
-                            .weight(1f)
-                            .height(44.dp)
-                            .let { if (selected) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
-                            .semantics { this.selected = selected }
-                            .tapeClick(label = "LOOK ${look.displayName}") { if (!selected) onLook(look) },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        TapeText(look.displayName, TapeType.pixel, if (selected) scheme.ink.tape else scheme.ink2.tape)
-                    }
-                }
-            }
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -172,7 +145,7 @@ fun PropertiesScreen(
                     .padding(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                for (s in Schemes.byLook().getValue(currentLook)) {
+                for (s in Schemes.ALL) {
                     SchemeRow(s, selected = s.id == currentScheme, onPick = { onScheme(s.id) })
                 }
             }

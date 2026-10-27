@@ -146,7 +146,6 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Location
-import com.snipsnap.shell.Look
 import com.snipsnap.shell.Names
 import com.snipsnap.shell.Place
 import com.snipsnap.shell.ShelfModel
@@ -195,9 +194,6 @@ private const val TAG = "App"
 
 internal const val PREFS = "tapeos"
 private const val PREF_SCHEME = "scheme"
-
-/** LOOK (plan §3.7): CLASSIC or MODERN, beside the scheme. Defaults to the scheme's own look. */
-private const val PREF_LOOK = "look"
 private const val PREF_TEACH = "teach"
 /** HAPTICS (SETUP): the motor under pads, steppers and landings - ON unless the player turned it off. */
 private const val PREF_HAPTICS = "haptics"
@@ -325,12 +321,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         )
     }
     val scheme = Schemes[schemeId]
-    var look by remember {
-        mutableStateOf(
-            prefs.getString(PREF_LOOK, null)?.let { saved -> Look.entries.firstOrNull { it.name == saved } }
-                ?: Schemes[schemeId].look,
-        )
-    }
 
     // SHELF SORT (name-and-find followups): RECENT by default — persisted
     // like scheme above. `setShelfSort` both writes the pref
@@ -3748,11 +3738,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                             onScheme = {
                                 schemeId = it
                                 prefs.edit().putString(PREF_SCHEME, it.name).apply()
-                            },
-                            currentLook = look,
-                            onLook = {
-                                look = it
-                                prefs.edit().putString(PREF_LOOK, it.name).apply()
                             },
                             teachEnabled = teachEnabled,
                             onTeach = { on ->

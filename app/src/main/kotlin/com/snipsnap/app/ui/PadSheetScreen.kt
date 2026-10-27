@@ -74,7 +74,6 @@ import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
@@ -4846,7 +4845,7 @@ internal fun ActionButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (litNow) it.border(2.dp, scheme.amberOnChrome, RoundedCornerShape(4.dp)) else it }
+            .let { if (litNow) it.border(2.dp, scheme.accent.tape, RoundedCornerShape(4.dp)) else it }
             // Always clickable, `enabled` forwarded rather than dropped:
             // a screen reader is told this control is temporarily
             // unavailable instead of it silently vanishing from the tree

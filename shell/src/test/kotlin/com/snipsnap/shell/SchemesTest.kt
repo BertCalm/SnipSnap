@@ -9,37 +9,42 @@ import kotlin.test.assertTrue
 class SchemesTest {
 
     @Test
-    fun `ten schemes in picker order, OILSLICK by default`() {
-        assertEquals(
-            listOf(
-                SchemeId.METAL, SchemeId.OILSLICK, SchemeId.PETROL, SchemeId.INFRARED,
-                SchemeId.ACID, SchemeId.SODIUM, SchemeId.ICE, SchemeId.VAPOR, SchemeId.VENT, SchemeId.OPENSKY,
-            ),
-            Schemes.ALL.map { it.id },
-        )
-        assertEquals(SchemeId.OILSLICK, Schemes.DEFAULT.id)
+    fun `two schemes in picker order, VENT by default`() {
+        assertEquals(listOf(SchemeId.VENT, SchemeId.OPENSKY), Schemes.ALL.map { it.id })
+        assertEquals(SchemeId.VENT, Schemes.DEFAULT.id)
+    }
+
+    /**
+     * `Schemes.get` is `ALL.first { it.id == id }`, so a [SchemeId] with no
+     * row in [Schemes.ALL] is a crash at launch for whoever has it saved
+     * (and `SchemeId.entries` is what the app's restore reads), while a row
+     * with no [SchemeId] cannot exist. This holds the enum and the list to
+     * the same members in the same order: shrinking one without the other
+     * fails here, not on a phone.
+     */
+    @Test
+    fun `every SchemeId has exactly one scheme, in the enum's order`() {
+        assertEquals(SchemeId.entries.toList(), Schemes.ALL.map { it.id })
+        for (id in SchemeId.entries) {
+            assertEquals(id, Schemes[id].id)
+        }
     }
 
     /**
      * The August cut (`DESIGN_GAP.md` §2f, 2026-08-28: "CLEAR is cut. Every
-     * light shell goes with it") held every scheme's chrome dark. It holds
-     * for the classic drawing still — a pale bevelled shell is what was
-     * cut, and the bevels are what made it pale. The decision of 2026-10-15
-     * reopened it for the modern look only: a paper scheme is a printed
-     * page that happens to be light, drawn flat, and it is light all the
-     * way — chrome at paper luma, not a grey that is neither. What every
-     * scheme still owes, light or dark, is the two-surface rule (the LCD
-     * stays dark, the next law) and chrome text that reads on its chrome.
+     * light shell goes with it") held every scheme's chrome dark: a pale
+     * bevelled shell is what was cut, and the bevels are what made it pale.
+     * The decision of 2026-10-15 reopened it for a paper scheme, which is a
+     * printed page that happens to be light, drawn flat, and it is light all
+     * the way — chrome at paper luma, not a grey that is neither. What every
+     * scheme owes, light or dark, is the two-surface rule (the LCD stays
+     * dark, the next law) and chrome text that reads on its chrome.
      */
     @Test
-    fun `classic chrome is dark, and a modern scheme is dark or paper, never between`() {
+    fun `a scheme's chrome is dark or paper, never between`() {
         for (scheme in Schemes.ALL) {
             val luma = Scheme.luma(scheme.gray)
-            if (scheme.look == Look.CLASSIC) {
-                assertTrue(luma < 90, "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is a light shell under the classic drawing, and those were cut")
-            } else {
-                assertTrue(luma < 90 || luma > 200, "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is neither dark nor paper (luma $luma)")
-            }
+            assertTrue(luma < 90 || luma > 200, "${scheme.id}: chrome ${"%06x".format(scheme.gray)} is neither dark nor paper (luma $luma)")
         }
     }
 
@@ -79,7 +84,7 @@ class SchemesTest {
 
     @Test
     fun `pad label inks are darker than their pads in both ink tables`() {
-        for (scheme in listOf(Schemes.OILSLICK)) {
+        for (scheme in Schemes.ALL) {
             for (dc in DrumClass.entries) {
                 val pad = Schemes.classColor(dc)
                 val ink = Schemes.padLabelInk(scheme, dc)
@@ -90,15 +95,14 @@ class SchemesTest {
             }
         }
         // Spot-check the tables verbatim from the prototypes.
-        assertEquals(0x3A1005, Schemes.padLabelInk(Schemes.OILSLICK, DrumClass.KICK))
+        assertEquals(0x3A1005, Schemes.padLabelInk(Schemes.DEFAULT, DrumClass.KICK))
     }
 
     @Test
     fun `scheme lookup and css cross-reference`() {
-        assertEquals(Schemes.PETROL, Schemes[SchemeId.PETROL])
-        assertEquals("t-oilslick", Schemes.OILSLICK.cssClass)
-        assertEquals(5, Schemes.OILSLICK_SWEEP.size)
-        assertEquals(Schemes.OILSLICK_SWEEP.first(), Schemes.OILSLICK_SWEEP.last())
+        assertEquals(Schemes.OPENSKY, Schemes[SchemeId.OPENSKY])
+        assertEquals("t-vent", Schemes.DEFAULT.cssClass)
+        assertEquals("t-opensky", Schemes[SchemeId.OPENSKY].cssClass)
     }
 
     @Test
@@ -115,27 +119,11 @@ class SchemesTest {
         }
     }
 
-    @Test
-    fun `OILSLICK separates its warn from its amber slot`() {
-        assertEquals(0x40E0E8, Schemes.OILSLICK.amber, "the amber slot is cyan in OILSLICK")
-        assertEquals(0xFFB000, Schemes.OILSLICK.warn, "but the needle stays amber")
-    }
-
-    @Test
-    fun `OILSLICK matches the handoff token table exactly`() {
-        val s = Schemes.OILSLICK
-        assertEquals(0xE040C8, s.accent, "accent — selection and row inset bar")
-        assertEquals(0x221A34, s.raised, "raised — button and empty-pad gradient start")
-        assertEquals(0x1A1424, s.win, "win — window body gradient start")
-        assertEquals(0x2A1050, s.deskGlow, "desk-glow — the radial behind everything")
-        assertEquals(0x584A80, s.ink3, "ink3 — third text tier")
-    }
-
     /**
      * VENT is transcribed from the VENT audition page's `:root`
-     * (`docs/DIRECTION_2026_10.md` §4), the way OILSLICK is from its handoff
-     * table. The slot each page token fills is the thing worth pinning: a
-     * retune that moves `--panel` must move `gray`, not `field`.
+     * (`docs/DIRECTION_2026_10.md` §4). The slot each page token fills is
+     * the thing worth pinning: a retune that moves `--panel` must move
+     * `gray`, not `field`.
      */
     @Test
     fun `VENT matches the audition page's root exactly`() {
@@ -157,36 +145,15 @@ class SchemesTest {
     }
 
     /**
-     * The first scheme whose third text tier clears AA on its own chrome.
-     * OILSLICK's gap is documented in `ContrastTest`; this pins that VENT
-     * does not inherit it, so the modern look starts from a scheme with no
-     * known text-contrast gap.
+     * VENT's third text tier clears AA on its own chrome. OPENSKY's does
+     * not, and `ContrastTest` pins that gap as a measured one; this pins
+     * that the dark scheme has no known text-contrast gap.
      */
     @Test
     fun `VENT's third ink tier clears AA text contrast`() {
         val s = Schemes.VENT
         val ratio = Scheme.contrastRatio(s.ink3, s.gray)
         assertTrue(ratio >= 4.5, "VENT ink3 vs gray = %.2f:1, below AA text".format(ratio))
-    }
-
-    /**
-     * The second axis (`docs/DIRECTION_2026_10.md` §4): VENT is the first
-     * MODERN scheme and every earlier one is CLASSIC. The picker groups by
-     * look without reordering within a look, so the OG story still reads
-     * METAL first and OILSLICK second.
-     */
-    @Test
-    fun `VENT and OPENSKY are the modern schemes and the picker groups by look`() {
-        assertEquals(Look.MODERN, Schemes.VENT.look)
-        assertEquals(Look.MODERN, Schemes.OPENSKY.look)
-        for (scheme in Schemes.ALL.filter { it.id != SchemeId.VENT && it.id != SchemeId.OPENSKY }) {
-            assertEquals(Look.CLASSIC, scheme.look, "${scheme.id} is an OG scheme")
-        }
-        val groups = Schemes.byLook()
-        assertEquals(listOf(Look.CLASSIC, Look.MODERN), groups.keys.toList())
-        assertEquals(Schemes.ALL.filter { it.look == Look.CLASSIC }, groups.getValue(Look.CLASSIC))
-        assertEquals(listOf(Schemes.VENT, Schemes.OPENSKY), groups.getValue(Look.MODERN))
-        assertEquals(Schemes.ALL.size, groups.values.sumOf { it.size }, "every scheme is in exactly one group")
     }
 
     /**
@@ -247,11 +214,6 @@ class SchemesTest {
                     "would disappear into the chrome behind it",
             )
         }
-    }
-
-    @Test
-    fun `the handwriting is Rock Salt`() {
-        assertEquals("Rock Salt", Type.MARKER)
     }
 
     @Test
