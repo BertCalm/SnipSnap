@@ -40,6 +40,22 @@ class KeygroupWriterTest {
     }
 
     @Test
+    fun `every keygroup explicitly uses note-on triggering for its release`() {
+        val xml = KeygroupWriter().write(program())
+        val instruments = Regex("""<Instrument number="\d+">(.*?)</Instrument>""", RegexOption.DOT_MATCHES_ALL)
+            .findAll(xml).toList()
+        assertEquals(program().keygroups.size, instruments.size)
+        instruments.forEachIndexed { index, instrument ->
+            val header = instrument.groupValues[1].substringBefore("<Layers>")
+            assertEquals(
+                listOf("2"), Regex("<TriggerMode>(.*?)</TriggerMode>")
+                    .findAll(header).map { it.groupValues[1] }.toList(),
+                "keygroup $index must explicitly use NoteOn so note-off reaches its release",
+            )
+        }
+    }
+
+    @Test
     fun `filled layers carry the real root note and empty layers write 0`() {
         val xml = KeygroupWriter().write(program())
         assertTrue("<RootNote>35</RootNote>" in xml)

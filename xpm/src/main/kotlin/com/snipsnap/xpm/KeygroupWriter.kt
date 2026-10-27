@@ -121,6 +121,9 @@ class KeygroupWriter {
         sb.append("        <VolumeDecay>").append(0f.f()).append("</VolumeDecay>\n")
         sb.append("        <VolumeSustain>").append(1f.f()).append("</VolumeSustain>\n")
         sb.append("        <VolumeRelease>").append(release.f()).append("</VolumeRelease>\n")
+        // A held keygroup must receive note-off. This is the NoteOn value
+        // used by the corpus' sustained keygroups and our MPC 3 writer.
+        sb.append("        <TriggerMode>2</TriggerMode>\n")
         sb.append("        <TuneCoarse>0</TuneCoarse>\n")
         sb.append("        <TuneFine>0</TuneFine>\n")
         sb.append("        <LowNote>").append(kg.lowNote).append("</LowNote>\n")

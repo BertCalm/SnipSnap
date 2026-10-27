@@ -313,6 +313,17 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
     }
 }
 
+/** A small, opt-in MPC keygroup trial built from the approved steady held bodies. */
+tasks.register<JavaExec>("generateOverlapHeldKeygroups") {
+    group = "distribution"
+    description = "Export four OVERLAP held keygroups, looped samples and a hardware-check package."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldKeygroupGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("overlapHeldKeygroupOutput").orNull ?: "${rootDir}/testkit/overlap-held-keygroup")
+}
+
 /** Separate steady sustain proof with real loop recurrence and passive note-off. */
 tasks.register<JavaExec>("generateOverlapHeldAudition") {
     group = "distribution"
