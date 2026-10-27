@@ -429,6 +429,7 @@ testkit/skitter-quartet/
 # Generated R8 Skitter internal-interaction listening proof
 testkit/skitter-depth/
 testkit/fade-law-audition/
+testkit/amp-front-audition/
 
 # Three-clip model-1 venue-return experiment, regenerated from testkit sources.
 testkit/nacre-gentle-audition/

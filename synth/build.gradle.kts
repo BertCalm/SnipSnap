@@ -1445,6 +1445,16 @@ tasks.register<JavaExec>("generatePedalAudition") {
     args("${rootDir}/testkit/pedal-audition")
 }
 
+/** Render Stage 3's listen (the pedals on both guitar pads after and in front of the amp) under testkit/amp-front-audition/. See AmpFrontAuditionGenerator. */
+tasks.register<JavaExec>("generateAmpFrontAudition") {
+    group = "distribution"
+    description = "Render Stage 3's listen (pedals after and in front of a guitar pad's amp) under testkit/amp-front-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AmpFrontAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/amp-front-audition")
+}
+
 /** Render the WAH section's gate clips and manifest under testkit/wah-audition/. See WahAuditionGenerator. */
 tasks.register<JavaExec>("generateWahAudition") {
     group = "distribution"
