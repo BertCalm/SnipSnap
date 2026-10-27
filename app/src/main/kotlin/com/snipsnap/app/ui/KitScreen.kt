@@ -89,7 +89,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiGate
-import com.snipsnap.shell.MidiPadMemory
+import com.snipsnap.shell.MidiPadMaps
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -316,8 +316,8 @@ fun KitScreen(
 
     // Declared above hit/playHeld/release: they send under the current map.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
-    // The map each keyboard was last played with (`MidiPadMemory`, keyed by its
-    // fingerprint): saved when MIDI MAP is tapped, brought back when it connects.
+    // The map each controller was last played with, keyed by its fingerprint.
+    // Saved when MIDI MAP is tapped, brought back when it connects.
     val padMapPrefs = remember(engineContext) { engineContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
     fun hit(slot: Int, velocity: Float = 1f, gainVelocity: Float = velocity) {
@@ -433,19 +433,24 @@ fun KitScreen(
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
         MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
     })
+    // The listener outlives a composition; compare against the live map, not a captured one.
+    val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = onMidi(event)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) {
                 midiDevices = devices
-                // A keyboard last played with another map brings it back; one
-                // with nothing saved leaves the map the screen is showing.
-                MidiPadMemory.recall(devices) { padMapPrefs.getString(it, null) }?.let { saved ->
-                    if (saved != midiMap) {
-                        onPanic()
-                        midiMap = saved
-                    }
+                // A controller seen before brings its pad map back. Panic FIRST:
+                // a note held under the old map would otherwise release under the
+                // new one, land on a different slot and leave a local voice ringing.
+                // The most recently connected hardware device wins; the virtual
+                // port is not a controller to remember. Nothing saved leaves the
+                // map the screen is showing.
+                val restored = MidiPadMaps.restore(devices) { padMapPrefs.getString(it, null) }
+                if (restored != null && restored != midiMapNow()) {
+                    onPanic()
+                    midiMap = restored
                 }
             }
             // The cable is out: a gated pad it held would ring until PANIC.
@@ -1096,12 +1101,15 @@ fun KitScreen(
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
                             .tapeClick(label = "MIDI MAP ${midiMap.label}") {
+                                // Panic before the switch: a held note must release under the map it struck under.
                                 panic()
                                 midiMap = midiMap.next()
-                                val pairs = MidiPadMemory.remember(midiDevices, midiMap)
-                                if (pairs.isNotEmpty()) {
+                                // Remembered for every connected hardware controller, not the virtual port.
+                                val chosen = midiMap.name
+                                val keys = MidiPadMaps.keysToSave(midiDevices)
+                                if (keys.isNotEmpty()) {
                                     val editor = padMapPrefs.edit()
-                                    pairs.forEach { (key, value) -> editor.putString(key, value) }
+                                    for (k in keys) editor.putString(k, chosen)
                                     editor.apply()
                                 }
                             }

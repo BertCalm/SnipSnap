@@ -35,7 +35,7 @@ class SnipSnapMidiService : MidiDeviceService() {
         private val wire = MidiWire()
 
         override fun onSend(msg: ByteArray, offset: Int, count: Int, timestamp: Long) {
-            val events = wire.feed(msg, offset, count, timestamp).filter { it !is MidiWire.Event.RealTime }
+            val events = wire.feed(msg, offset, count, timestamp).filter { it.reachesScreens() }
             if (events.isEmpty()) return
             main.post { VirtualMidi.deliver(events) }
         }

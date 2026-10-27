@@ -43,6 +43,9 @@ jboolean Java_com_snipsnap_app_NativePads_noteOn(JNIEnv*, jobject, jlong, jint, 
 jboolean Java_com_snipsnap_app_NativePads_noteOnLayers(JNIEnv*, jobject, jlong, jintArray, jintArray, jlong, jlong, jlong, jfloatArray, jfloatArray, jdouble, jbooleanArray);
 jintArray Java_com_snipsnap_app_NativePads_drainEnded(JNIEnv*, jobject, jlong);
 jlong Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong);
+jboolean Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv*, jobject, jlong, jlongArray);
+jint Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong);
+jint Java_com_snipsnap_app_NativePads_audioApi(JNIEnv*, jobject, jlong);
 jboolean Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong, jint, jfloat);
 jboolean Java_com_snipsnap_app_NativePads_armPrint(JNIEnv*, jobject, jlong, jint);
 jint Java_com_snipsnap_app_NativePads_printState(JNIEnv*, jobject, jlong);
@@ -84,6 +87,7 @@ struct FakeArray {
     std::vector<float> f;
     std::vector<jint> i;
     std::vector<jboolean> z;
+    std::vector<jlong> l;
     jsize length = 0;  // what GetArrayLength reports - not always the truth
 };
 
@@ -133,6 +137,10 @@ void fakeSetIntArrayRegion(JNIEnv*, jintArray a, jsize s, jsize n, const jint* b
     for (jsize k = 0; k < n; ++k) impl(a)->i[static_cast<size_t>(s + k)] = buf[k];
 }
 
+void fakeSetLongArrayRegion(JNIEnv*, jlongArray a, jsize s, jsize n, const jlong* buf) {
+    for (jsize k = 0; k < n; ++k) impl(a)->l[static_cast<size_t>(s + k)] = buf[k];
+}
+
 const JNINativeInterface_ kIface = {
     fakeGetArrayLength,
     fakeGetFloatArrayRegion,
@@ -145,6 +153,8 @@ const JNINativeInterface_ kIface = {
     nullptr,
     nullptr,
     fakeExceptionCheck,
+    nullptr,
+    fakeSetLongArrayRegion,
 };
 
 JNIEnv* env() {
@@ -167,6 +177,12 @@ jintArray ints(std::vector<jint> v) {
     a->length = static_cast<jsize>(v.size());
     a->i = std::move(v);
     return reinterpret_cast<jintArray>(a);
+}
+jlongArray longs(std::vector<jlong> v) {
+    auto* a = track(new FakeArray{});
+    a->length = static_cast<jsize>(v.size());
+    a->l = std::move(v);
+    return reinterpret_cast<jlongArray>(a);
 }
 jbooleanArray bools(std::vector<jboolean> v) {
     auto* a = track(new FakeArray{});
@@ -364,6 +380,22 @@ TEST(jni_refuses_a_sample_it_cannot_copy) {
     CHECK_EQ(static_cast<int>(pads->drainEnded(buf, 8)), 1);
     CHECK_EQ(buf[0], 5);
 
+    Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_pads_not_started_has_no_hardware_position) {
+    JNIEnv* e = env();
+    const jlong h = Java_com_snipsnap_app_NativePads_create(e, nullptr, 48000);
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_framesPerBurst(e, nullptr, h), jint{0});
+    CHECK_EQ(Java_com_snipsnap_app_NativePads_audioApi(e, nullptr, h), jint{-1});
+    // No stream: false, and the caller's array is left alone.
+    jlongArray out = longs({7, 9});
+    CHECK(Java_com_snipsnap_app_NativePads_hardwarePosition(e, nullptr, h, out) == JNI_FALSE);
+    CHECK_EQ(impl(out)->l[0], jlong{7});
+    CHECK_EQ(impl(out)->l[1], jlong{9});
+    // A null or short out array is refused before the engine is asked.
+    CHECK(Java_com_snipsnap_app_NativePads_hardwarePosition(e, nullptr, h, nullptr) == JNI_FALSE);
+    CHECK(Java_com_snipsnap_app_NativePads_hardwarePosition(e, nullptr, h, longs({7})) == JNI_FALSE);
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 }
 

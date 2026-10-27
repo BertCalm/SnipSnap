@@ -19,6 +19,17 @@ import com.snipsnap.shell.MidiEndpoint
 import com.snipsnap.shell.MidiFingerprint
 
 /**
+ * Whether an event is worth a hop to the main thread, where the screens
+ * listen. The clock belongs to the future follower, which will read it on
+ * the MIDI thread; bend and pressure belong to MIDI learn (step 4), which
+ * removes the second clause. Until something consumes them each would be a
+ * posted lambda thrown away, and a pressure pad or touch strip sends them
+ * continuously. The raw-byte monitor is fed before parsing and is unaffected.
+ */
+internal fun MidiWire.Event.reachesScreens(): Boolean =
+    this !is MidiWire.Event.RealTime && this !is MidiWire.Event.Expression
+
+/**
  * A keyboard plugged into the phone, as events on the main thread.
  *
  * The phone's `MidiManager` lists every MIDI device the system knows -
@@ -272,10 +283,12 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
             // the follower that will read it on this thread (roadmap P1.3/P1.8);
             // until that exists each 0xF8 would be a posted lambda thrown away
             // 24 times a beat.
+            // Bend and pressure are filtered with it, for the same reason, until
+            // MIDI learn reads them.
             // The raw copy is taken before parsing, here, because the service
             // may reuse msg once onSend returns.
             val raw = if (tapRaw && count > 0) msg.copyOfRange(offset, offset + count) else null
-            val events = wire.feed(msg, offset, count, timestamp).filter { it !is MidiWire.Event.RealTime }
+            val events = wire.feed(msg, offset, count, timestamp).filter { it.reachesScreens() }
             if (raw == null && events.isEmpty()) return
             handler.post {
                 if (!alive) return@post

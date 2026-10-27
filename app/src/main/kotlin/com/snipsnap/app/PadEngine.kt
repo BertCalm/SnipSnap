@@ -540,6 +540,22 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun framesRendered(): Long = if (open) NativePads.framesRendered(handle) else 0L
 
+    /**
+     * The hardware's reported playback position, written into [out] (two longs the caller owns):
+     * `[framePosition, timeNanos]` on CLOCK_MONOTONIC. False, leaving [out] alone, when closed, when
+     * the stream has no timestamp yet, or when [out] is too small. Main thread, never the audio callback.
+     */
+    @Synchronized
+    fun hardwarePosition(out: LongArray): Boolean = open && NativePads.hardwarePosition(handle, out)
+
+    /** Frames per hardware burst; 0 when closed or no stream. */
+    @Synchronized
+    fun framesPerBurst(): Int = if (open) NativePads.framesPerBurst(handle) else 0
+
+    /** Oboe's AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio); -1 when closed or no stream. */
+    @Synchronized
+    fun audioApi(): Int = if (open) NativePads.audioApi(handle) else -1
+
     // ---- the resample tap -------------------------------------------------
 
     /**
