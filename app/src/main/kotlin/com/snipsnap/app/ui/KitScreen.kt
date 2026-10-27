@@ -316,6 +316,9 @@ fun KitScreen(
 
     // Declared above hit/playHeld/release: they send under the current map.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    // The map each controller was last played with, keyed by its fingerprint.
+    // Saved when MIDI MAP is tapped, brought back when it connects.
+    val padMapPrefs = remember(engineContext) { engineContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
     fun hit(slot: Int, velocity: Float = 1f, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
@@ -430,7 +433,6 @@ fun KitScreen(
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
         MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
     })
-    val midiPrefs = remember { engineContext.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE) }
     // The listener outlives a composition; compare against the live map, not a captured one.
     val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
@@ -442,7 +444,10 @@ fun KitScreen(
                 // A controller seen before brings its pad map back. Panic FIRST:
                 // a note held under the old map would otherwise release under the
                 // new one, land on a different slot and leave a local voice ringing.
-                val restored = MidiPadMaps.restore(devices) { midiPrefs.getString(it, null) }
+                // The most recently connected hardware device wins; the virtual
+                // port is not a controller to remember. Nothing saved leaves the
+                // map the screen is showing.
+                val restored = MidiPadMaps.restore(devices) { padMapPrefs.getString(it, null) }
                 if (restored != null && restored != midiMapNow()) {
                     onPanic()
                     midiMap = restored
@@ -1099,11 +1104,14 @@ fun KitScreen(
                                 // Panic before the switch: a held note must release under the map it struck under.
                                 panic()
                                 midiMap = midiMap.next()
-                                // Remembered for every connected controller (not the virtual port).
+                                // Remembered for every connected hardware controller, not the virtual port.
                                 val chosen = midiMap.name
-                                midiPrefs.edit().apply {
-                                    for (k in MidiPadMaps.keysToSave(midiDevices)) putString(k, chosen)
-                                }.apply()
+                                val keys = MidiPadMaps.keysToSave(midiDevices)
+                                if (keys.isNotEmpty()) {
+                                    val editor = padMapPrefs.edit()
+                                    for (k in keys) editor.putString(k, chosen)
+                                    editor.apply()
+                                }
                             }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,

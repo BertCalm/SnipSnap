@@ -3,7 +3,7 @@ package com.snipsnap.synth
 import kotlin.math.pow
 
 /**
- * The first playable FILAMENT instrument: model-three THREAD at C3–C5.
+ * Playable model-three FILAMENT instruments: THREAD, PULSE and CURL at C3–C5.
  *
  * The same periodic excitation starts from a quiet network and continues until the real
  * delay, halo and activity states settle. The returned [KeyNote] retains that onset and
@@ -18,6 +18,11 @@ import kotlin.math.pow
 object FilamentKeys {
     const val MIN_MIDI = 48
     const val MAX_MIDI = 72
+    private val supportedVoices = setOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
+
+    /** Keep the phone, package maker and same-network renderer on one audited capability. */
+    fun supports(patch: FilamentPatch): Boolean =
+        patch.model == Filament.MODEL_VERSION && patch.voice in supportedVoices
 
     fun note(
         patch: FilamentPatch,
@@ -43,10 +48,10 @@ object FilamentKeys {
     }
 
     private fun validate(patch: FilamentPatch, midi: Int) {
-        require(patch.voice == FilamentVoice.THREAD) { "FILAMENT playable keys currently support THREAD" }
+        require(patch.voice in supportedVoices) { "FILAMENT playable keys do not support ${patch.voice}" }
         require(patch.model == Filament.MODEL_VERSION) {
             "FILAMENT playable keys require model ${Filament.MODEL_VERSION}; saved model ${patch.model} remains available through its original renderer"
         }
-        require(midi in MIN_MIDI..MAX_MIDI) { "FILAMENT THREAD keys require absolute MIDI $MIN_MIDI..$MAX_MIDI: $midi" }
+        require(midi in MIN_MIDI..MAX_MIDI) { "FILAMENT keys require absolute MIDI $MIN_MIDI..$MAX_MIDI: $midi" }
     }
 }

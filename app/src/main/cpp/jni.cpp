@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <exception>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -287,6 +288,45 @@ Java_com_snipsnap_app_NativePads_start(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativePads_stop(JNIEnv*, jobject, jlong handle) {
     pads(handle)->stop();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_configureAquarium(
+    JNIEnv* env, jobject, jlong handle, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset) {
+    using namespace snipsnap::aquarium;
+    if (!handle || !values || seed < 0 ||
+        seed > static_cast<jlong>(std::numeric_limits<std::uint32_t>::max()) ||
+        model != static_cast<jint>(kRenderModelVersion) ||
+        (enabled != JNI_FALSE && enabled != JNI_TRUE) ||
+        (reset != JNI_FALSE && reset != JNI_TRUE)) return JNI_FALSE;
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    const jsize count = env->GetArrayLength(values);
+    if (env->ExceptionCheck() || count != static_cast<jsize>(kParameterCount)) return JNI_FALSE;
+    PerformanceSettings settings;
+    env->GetFloatArrayRegion(values, 0, count, settings.parameters.values.data());
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    settings.seed = static_cast<std::uint32_t>(seed);
+    settings.model = static_cast<std::uint32_t>(model);
+    settings.bpm = bpm;
+    settings.outputGain = gain;
+    settings.enabled = enabled == JNI_TRUE;
+    return pads(handle)->configureAquarium(settings, reset == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlong handle) {
+    return handle && pads(handle)->aquariumFaulted() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(pads(handle)->aquariumLimitedFrames()) : 0;
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject) {
+    return snipsnap::aquarium::PerformanceBus::kOutputCeiling;
 }
 
 JNIEXPORT jint JNICALL

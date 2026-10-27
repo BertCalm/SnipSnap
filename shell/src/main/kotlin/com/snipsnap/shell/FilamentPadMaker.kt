@@ -9,7 +9,6 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.mpc3.Mpc3TrackWriter
 import com.snipsnap.synth.FilamentKeys
 import com.snipsnap.synth.FilamentPatch
-import com.snipsnap.synth.FilamentVoice
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
@@ -17,7 +16,7 @@ import com.snipsnap.xpm.VelocityLayer
 import java.io.File
 
 /**
- * The model-3 THREAD pilot: three native roots, one velocity layer and a real attack before sustain.
+ * Model-3 THREAD, PULSE and CURL: three native roots, one velocity layer and a real onset before sustain.
  * The source patch retains its velocity-dependent timbre; the instrument host supplies velocity
  * gain and note-off release. Wider zoning and separate velocity samples remain a later round.
  */
@@ -29,14 +28,14 @@ object FilamentPadMaker {
 
     data class Spec(val patch: FilamentPatch, val releaseSeconds: Float = RELEASE.default) {
         init {
-            require(supports(patch)) { "FILAMENT keys currently support model-3 THREAD" }
+            require(supports(patch)) { "FILAMENT keys require a supported model-3 recipe" }
             require(releaseSeconds.isFinite() && releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
                 "release wants $RELEASE_MIN_SECONDS..$RELEASE_MAX_SECONDS s, got $releaseSeconds"
             }
         }
     }
 
-    fun supports(patch: FilamentPatch): Boolean = patch.voice == FilamentVoice.THREAD && patch.model == 3
+    fun supports(patch: FilamentPatch): Boolean = FilamentKeys.supports(patch)
 
     fun spec(patch: FilamentPatch, releaseFraction: Float): Spec =
         Spec(patch, RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS))

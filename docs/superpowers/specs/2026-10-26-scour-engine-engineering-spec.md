@@ -1,8 +1,10 @@
 # SCOUR Engine: Engineering Specification
-Version 1.1 · 2026-10-26 (adapts the 2026-10-25 draft, version 1.0, to the repository)
+Version 1.2 · 2026-10-26 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+1.2 records the first listen and sources the plate table)
 Status: proposed engineering handoff. No Kotlin exists. Phase 0 was measured in the Python
-harness and in two Kotlin scratch probes (section 20); nothing has been heard. R1 probes and
-the owner's listen remain outstanding.
+harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of
+harness renders (HARDEN 0 against 1, section 20.1); the R1 probes and the Kotlin audition
+remain outstanding.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -77,7 +79,7 @@ it back). MERCURY shares the `Modes.Bank` and the metal and glass bodies but has
 The honest risk on the roster: this is the eighth engine whose every render lands LOOP by
 length, in the struck-modal-with-a-mechanism mould the inventory calls heavy. It earns its
 pad only if the hardening is audible. That is the R1 gate (section 16), and section 18 names
-the lighter landing if it fails.
+the lighter landing if it fails. The first harness listen heard it (section 20.1).
 
 ## 3. SnipSnap contract
 
@@ -246,24 +248,39 @@ limiter on the excitation.
 - `Modes.Bank(K, 176400)`, K = 8 (PLATE) or 6 (PANE), tuned before the first `step`, retuned
   every 176 samples. Force lands through `drive` (velocity kick); the pickup is
   `velocityAlong(w)` with `w_k = gain^k`.
-- Ratios: a free-edge circular plate table (1, 1.73, 2.33, 3.91, 4.11, 6.30, 6.71, 7.34),
-  **recalled from Fletcher & Rossing and not verified in this session**; a search found no
-  source confirming the values. `Modes.kt`'s rule applies: "do not adjust a value here
-  without a source". R1 sources the table (Fletcher & Rossing, or Leissa's *Vibration of
-  Plates*) or picks a sourced one (`Modes.tableFor(METAL_BAR)`).
+- Ratios: the completely free circular plate, sourced from Leissa, *Vibration of Plates*
+  (NASA SP-160, 1969), Table 2.5, ν = 0.33, which gives `λ² = ωa²√(ρh/D)` per mode
+  (n nodal diameters, s nodal circles). Read from the OCR text of the NTRS scan:
+
+  | mode (n, s) | (2,0) | (0,1) | (3,0) | (1,1) | (4,0) | (5,0) | (2,1) | (0,2) |
+  |---|---|---|---|---|---|---|---|---|
+  | λ² | 5.253 | 9.084 | 12.23 | 20.52 | 21.6* | 33.1* | 35.25 | 38.55 |
+  | ratio to (2,0) | 1 | 1.729 | 2.328 | 3.906 | 4.112 | 6.301 | 6.710 | 7.339 |
+
+  \* Leissa marks these "true within 2 percent". The prototype's rounded table (1, 1.73,
+  2.33, 3.91, 4.11, 6.30, 6.71, 7.34) sits within 0.1 % of every sourced ratio, so the
+  section 20 numbers stand. R1 writes the sourced values with this citation, per `Modes.kt`'s
+  rule ("do not adjust a value here without a source").
+- What the source adds about the strike: a mode with n nodal diameters has zero amplitude
+  at the centre for every n ≥ 1, so a real centre strike excites only (0,1) and (0,2) and
+  **not the root**, which is (2,0). The prototype's fixed root weight (below) is therefore a
+  deliberate departure from the physics, kept so the note survives TRAVERSE. R1 either builds
+  real participation from the (n, s) labels and limits TRAVERSE's range so the root stays
+  excited, or keeps the fixed root weight and says so in the KDoc.
 - Root: mode 0 never moves (`g_0 = 0`) and always takes full strike weight (TRAVERSE cannot
   put the note on a node). That is necessary, not sufficient. Measured with the house
   `Pitch.detect` (section 20): at the house window (0.05 s, 0.25 s) 18 of 22 renders sit
   within 50 cents, but PLATE TRAVERSE 0 read 87.8 Hz for a 261.6 Hz note (f0/3). In the tail
   after the blast, only 10 of 22 sit within 50 cents, with f0/3 readings at RPM 0 and
   TRAVERSE 1. The wrong readings carried confidence 0.58 to 0.81, so the confidence floor
-  (0.3) does not catch them. A plausible cause: the recalled ratios sit near multiples of f0/3
+  (0.3) does not catch them. A plausible cause: the plate's own ratios sit near multiples of f0/3
   (1.73 ≈ 5/3, 2.33 ≈ 7/3, 4.11 ≈ 12/3), which an autocorrelation reads as a period three
-  times too long. R1 either shortens and quiets modes 1 and 2 against the root, or moves to a
+  times too long. The sourced table confirms the grid is the free plate's physics, not a
+  recall error. R1 either shortens and quiets modes 1 and 2 against the root, or moves to a
   table off that grid, and the root probe runs at both windows.
 - Ceiling: a mode whose hardened frequency could exceed 18 kHz at this note (`f0·r_k·(1 +
   shift)`) is dropped for the whole note, so nothing switches mid-render. `Bank.tune` refuses
-  only past 88.2 kHz, so the engine owns this guard. With the recalled table the top mode at
+  only past 88.2 kHz, so the engine owns this guard. With this table the top mode at
   TUNE 1, HARDEN 1 is about 5.2 kHz and all 8 modes are kept; the guard matters for any voice
   with higher ratios.
 - Raw level: `Modes.Bank`'s velocity pickup has no `1/sin θ` growth (a force kick sets
@@ -294,7 +311,7 @@ R1 ships two voices. Every value is a shape value, a hypothesis for the listen.
 
 | | PLATE (dense metal) | PANE (glass) |
 |---|---|---|
-| modes | 8, the full recalled table | 6: 1, 1.73, 2.33, 3.91, 6.30, 7.34 |
+| modes | 8, the full Leissa table (section 8) | 6: 1, 1.73, 2.33, 3.91, 6.30, 7.34 |
 | root t60, upper decay per mode, pickup gain per mode | 2.2 s, ×0.80, ×0.72 | 1.4 s, ×0.74, ×0.65 |
 | κ (coverage per shot), ρ (recovery) | .012, .15/s | .03, 1.5/s |
 | shift (top mode at HARDEN = S = 1), damp | +35 %, 1.2 | +25 %, 0.6 |
@@ -428,7 +445,7 @@ diagnostics and `metrics.csv` as MURK and NACRE write them.
 
 ## 16. Build rounds and gates
 
-- **R0**: none. `Modes.Bank` serves as is. Source the plate table before R1 writes it down.
+- **R0**: none. `Modes.Bank` serves as is. The plate table is sourced (section 8).
 - **R1**: `Scour.kt` (two voices, one-shot path), patch, JSON arm, Velocity arms, the
   `PROTOTYPES` entry, canary, `ScourTest.kt` probes, the audition generator. Gate: probes
   pass by the gradle exit code, and the owner can hear HARDEN in the SHOT × HARDEN corners.
@@ -444,7 +461,8 @@ diagnostics and `metrics.csv` as MURK and NACRE write them.
    off, some at f0/3. Caught by the two-window root probe.
 2. **HARDEN too subtle.** Overall brightness falls during every render whatever HARDEN does,
    and HARDEN's activity measured 1.69 dB. Caught by the trace probe and the audition corners;
-   the R1 gate.
+   the R1 gate. The first harness listen heard HARDEN 1 clearly (section 20.1), so this risk
+   is now about the other corners and PANE, not PLATE at SHOT .7.
 3. **The roller reads as hiss, not rolling.** Caught by the RPM sweep in the audition.
 4. **TRAVERSE is dead or breaks the note.** Measured 0.87 dB and an f0/3 reading at 0.
    If R1 cannot fix it with the sourced mode shapes, make TRAVERSE the nozzle sweeping across
@@ -483,8 +501,9 @@ Applying different operators to the same brief:
   SAE J2277's 98 % "full coverage". Read as search excerpts, not the full articles.
 - K. L. Johnson, *Contact Mechanics* (1985): Hertzian impact scaling (indentation ∝ v^(4/5)).
   Not opened in this session.
-- N. H. Fletcher and T. D. Rossing, *The Physics of Musical Instruments*: circular plate
-  modes. The ratios used here are recalled and unverified (section 8).
+- A. W. Leissa, *Vibration of Plates*, NASA SP-160 (1969), Table 2.5: completely free
+  circular plate, ν = 0.33 (https://ntrs.nasa.gov/citations/19700009156). Read from the OCR
+  text of the scan; the values are in section 8.
 - J. Mellmann, "The transverse motion of solids in rotating cylinders: forms of motion and
   transition behavior", *Powder Technology* 118(3), 251-270 (2001). Citation confirmed by
   search; the paper was not read (Alternate A only).
@@ -522,6 +541,21 @@ harness WAVs.
 | House `Pitch.detect`, house window | 18 of 22 within 50 cents, confidence 0.68 to 0.93; TRAVERSE 0 read f0/3 at 0.79 |
 | House `Pitch.detect`, tail window | 10 of 22 within 50 cents; 10 off by more than 100 cents |
 
+### 20.1 First listen (owner, 2026-10-26)
+
+Files: `PLATE_SHOT.7_HARDEN0.0.wav` and `PLATE_SHOT.7_HARDEN1.0.wav` from the prototype
+(PLATE, SHOT .7, every other macro at its default, levelled to the same RMS; 3.30 s and
+2.45 s long). The owner's words: "1.0 harden is shorter/faster and higher resonance".
+
+What it supports: both things HARDEN moves are audible. "Shorter/faster" matches the damping
+law (`t60 / (1 + damp·HARDEN·S)`) and the shorter render; "higher resonance" matches the
+upper partials rising (tracked partial 4.11 → about 4.2 to 4.4, section 20).
+
+What it does not settle: whether "higher resonance" means higher in pitch or more ringing;
+whether a hardened plate *should* ring shorter (the open ledger question); PANE, and every
+corner other than SHOT .7. It was one listen to Python renders, not the Kotlin audition, so
+the R1 gate still stands; Alternate B is not needed unless that audition disagrees.
+
 ## 21. Verified / proposed / heard ledger
 
 | Claim | Status | Evidence |
@@ -535,10 +569,11 @@ harness WAVs.
 | the draft's HOLD cut fails `Keys.seamError` | measured (harness) | H, section 20 |
 | a periodic HOLD passes `Keys.seamError` | measured (harness) | H, section 20 |
 | every render files LOOP | measured (house Classifier on harness WAVs) | section 20 |
-| the circular plate ratios | proposed (recalled, unverified) | section 8 |
+| the circular plate ratios | verified | Leissa, NASA SP-160, Table 2.5 (section 8) |
 | the root is the perceived pitch in the tail | not met in the harness | 10 of 22, section 20 |
-| a hardened plate should ring shorter, not longer | proposed | the draft's choice; listening question |
-| HARDEN is audible | heard? | not heard; audition SHOT × HARDEN corners |
+| a hardened plate should ring shorter, not longer | heard as shorter; preference not stated | 20.1; the owner's call at the R1 audition |
+| HARDEN is audible | heard (PLATE, SHOT .7, harness) | owner, 2026-10-26: "shorter/faster and higher resonance" (20.1) |
+| HARDEN is audible at the other corners and in PANE | heard? | not heard; audition SHOT × HARDEN corners |
 | PANE's springback reads as glass giving way | heard? | not heard; audition voices |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
@@ -559,7 +594,7 @@ harness WAVs.
    texture has no seam you can find afterwards, which is why the draft's cut measured up to
    4,550 times over the bar. Making one revolution's worth of shots repeat, and letting the
    stress settle into its own repeating cycle first, closes the seam to about a billionth.
-5. **The risky decision is the plate itself.** A plate's pitch is weak by nature, and the
-   recalled ratios may make the note read a twelfth low in the tail. Fixing the root mode is
-   necessary but not enough. The first listen decides whether this is a pitched instrument
-   or a texture, and the mode table is the first thing to source.
+5. **The risky decision is the plate itself.** A plate's pitch is weak by nature, and its
+   ratios (now sourced from Leissa) sit on a grid that can make the note read a twelfth low
+   in the tail. Fixing the root mode is necessary but not enough. The Kotlin audition decides
+   whether this is a pitched instrument or a texture.

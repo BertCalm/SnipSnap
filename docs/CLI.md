@@ -544,10 +544,13 @@ toe a decade above it by a sine with a flat top, which never parks at the heel b
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
-gesture, then the wah waits at the heel) and `delayed` (a delay pedal: ECHO's
+gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
 long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
 120 ms so a held
-note's attack comes back as a repeat).
+note's attack comes back as a repeat) and `forged` (a hit formed against a die:
+FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
+with a flash of grit at impact; peak-matched, so it reads louder at the same
+peak).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -557,7 +560,8 @@ of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
 recipe riding the pad. The library today: `driven` (the amp), `compressed` (the
-sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `delayed` (after the amp), and
+sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
+fixed there), `delayed` (after the amp), and
 `rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip
 until their gates — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -577,8 +581,8 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK — `driven`, `compressed`,
-`wahed`, `touchwahed` and `rockwahed`),
+the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE — `driven`, `compressed`,
+`wahed`, `touchwahed`, `rockwahed` and `forged`),
 grouped by what an effect *is*, because a guitarist looks for a pedal by
 its name; tapping any
 of them changes every file the pad references, velocity layers included.

@@ -10,6 +10,7 @@
 
 #include "PrintBuffer.h"
 #include "SpscRing.h"
+#include "aquarium/PerformanceBus.h"
 
 namespace snipsnap {
 
@@ -137,6 +138,11 @@ public:
     int32_t framesPerBurst() const;
     /** oboe::AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio), or -1 with no stream. UI thread only. */
     int32_t audioApi() const;
+
+    /** Serialized control thread; false means no settings were queued. */
+    bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
+    bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
+    uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -267,6 +273,7 @@ private:
     PadCommand held_[kHeldMax];
     int32_t heldCount_ = 0;
 
+    aquarium::PerformanceBus aquarium_;
     PrintBuffer print_;
 };
 

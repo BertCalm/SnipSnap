@@ -23,13 +23,15 @@ package com.snipsnap.kit
  *    common messages (song position, a SysEx) *do* cancel running
  *    status, as the spec says.
  *
- * What comes out is what a player and a transport need: notes,
- * controllers, pitch bend and the two pressures (as [Event.Expression]),
- * and the clock's own four bytes. Program changes are read correctly -
- * their length is honoured, so the bytes after them stay in step - and
- * dropped. A bend's 14 bits arrive least significant seven first.
- * A note-on at velocity 0 is a note-off, the convention every
- * keyboard built since 1983 relies on.
+ * What comes out is every channel message a player or a transport needs:
+ * notes, controllers, pitch bend and the two pressures (as [Event.Expression]),
+ * program changes, and the clock's own four bytes. Bend, pressure and
+ * program change are emitted for whichever rule wants them (MIDI learn, a
+ * KEYS bend range); `MidiKeys` and `MidiPads` pass over them until then,
+ * and `reachesScreens()` keeps expression and real-time bytes off the main
+ * thread until something plays them. A bend's 14 bits arrive least
+ * significant seven first. A note-on at velocity 0 is a note-off, the
+ * convention every keyboard built since 1983 relies on.
  *
  * Velocity is MIDI's 1..127 as 0..1, the inverse of what [MidiGroove]
  * writes (`velocity * 127`, rounded): a velocity played in and written
@@ -70,7 +72,7 @@ class MidiWire {
          */
         val timestampNanos: Long
 
-        /** A channel message: a note or a controller on one of sixteen channels. */
+        /** A channel message: a note, a controller, a bend, a pressure or a program change on one of sixteen channels. */
         sealed interface Channel : Event {
             val channel: Int
         }
@@ -97,19 +99,27 @@ class MidiWire {
         /** Bend and pressure: continuous expression on one channel. Nothing plays them yet. */
         sealed interface Expression : Channel
 
-        /** 14-bit bend, LSB first on the wire, centred: -8192..8191, 0 is centre. */
+        /**
+         * The pitch wheel or strip, as MIDI's 14 bits centred on zero:
+         * [value] -8192 (all the way down) to 8191 (all the way up), 0 at
+         * rest. How far that bends is the receiver's bend range, not the
+         * message's. Least significant seven bits arrive first.
+         */
         data class PitchBend(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Expression
 
-        /** Channel pressure (D0): 0..127. */
+        /** Channel pressure (aftertouch for the whole channel, D0): [value] 0..127. */
         data class ChannelPressure(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Expression
 
-        /** Polyphonic key pressure (A0): one note's pressure, 0..127. */
+        /** Polyphonic pressure on one held [note] (A0): [value] 0..127. */
         data class PolyPressure(
             override val channel: Int,
             val note: Int,
             val value: Int,
             override val timestampNanos: Long = 0L,
         ) : Expression
+
+        /** A program change: [program] 0..127, as sent (a front panel's "1" is usually 0). */
+        data class ProgramChange(override val channel: Int, val program: Int, override val timestampNanos: Long = 0L) : Channel
 
         /** A system real-time message: one byte, no channel, the transport's clock and its buttons. */
         sealed interface RealTime : Event
@@ -217,11 +227,12 @@ class MidiWire {
             NOTE_ON -> if (second == 0) Event.NoteOff(channel, first, stamp) else Event.NoteOn(channel, first, velocity(second), stamp)
             NOTE_OFF -> Event.NoteOff(channel, first, stamp)
             CONTROL_CHANGE -> Event.Control(channel, first, second, stamp)
-            // Bend is LSB first on the wire: `first` is the low seven bits, `second` the high.
-            PITCH_BEND -> Event.PitchBend(channel, ((second shl 7) or first) - 8192, stamp)
-            // One data byte, so the caller passes it as both `first` and `second`.
-            CHANNEL_PRESSURE -> Event.ChannelPressure(channel, first, stamp)
             POLY_PRESSURE -> Event.PolyPressure(channel, first, second, stamp)
+            // One data byte: begin() asked for one, so first and second are the same byte.
+            PROGRAM_CHANGE -> Event.ProgramChange(channel, second, stamp)
+            CHANNEL_PRESSURE -> Event.ChannelPressure(channel, second, stamp)
+            // Least significant seven bits first, then the most significant.
+            PITCH_BEND -> Event.PitchBend(channel, ((second shl 7) or first) - BEND_CENTRE, stamp)
             else -> null
         }
     }
@@ -234,6 +245,9 @@ class MidiWire {
         private const val PROGRAM_CHANGE = 0xC0
         const val CHANNEL_PRESSURE = 0xD0
         const val PITCH_BEND = 0xE0
+
+        /** The raw 14-bit bend value at rest: [Event.PitchBend.value] is the raw value minus this. */
+        const val BEND_CENTRE = 8192
         private const val SYSEX_START = 0xF0
 
         /** System real-time: the timing clock, 24 to a quarter note. */

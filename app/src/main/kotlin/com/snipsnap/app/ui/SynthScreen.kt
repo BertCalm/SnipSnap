@@ -116,6 +116,8 @@ import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.GlintPadMaker
 import com.snipsnap.shell.OpenSkyPadMaker
+import com.snipsnap.shell.TidalPadMaker
+import com.snipsnap.shell.TidalPad
 import com.snipsnap.shell.OrigamiPadMaker
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
@@ -777,10 +779,12 @@ fun SynthScreen(
                         // EMBOUCHURE restores only the selected model's controls; a legacy
                         // BRASS recipe never inherits GROW and GROW never inherits model 2.
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
-                            // Finite CAUSTIC, TIDAL and CHAMBER reserve HOLD: a stale
+                            // Finite CAUSTIC and CHAMBER reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.TIDAL || e == Engine.CHAMBER) && name == "HOLD") fallback
-                            else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
+                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER) && name == "HOLD") fallback
+                            else if (e == Engine.TIDAL && name == "HOLD") {
+                                if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
+                            } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
                                 ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
                         }
                     })
@@ -1066,7 +1070,6 @@ fun SynthScreen(
     // landing on SYNTH never plays a kick unasked.
     var touched by remember { mutableStateOf(false) }
     fun macroRange(name: String): ClosedFloatingPointRange<Float> {
-        if (name == "HOLD" && engine == Engine.TIDAL) return 0f..0f
         // Motion recipes contain a finite opening. Keep HOLD below the loop
         // threshold so a slider or accessibility edit cannot discard that gesture.
         if (name == "HOLD" && (loadedPatch as? PrismPatch)?.motion != null) {
@@ -1185,7 +1188,11 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
-        loadedPatchesByVoice[engine to voice] = change(patch)
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        // Performance controls also own NOTE/HOLD. Keep the live macro map in
+        // sync so buildCurrentPatch cannot overwrite that choice on save/send.
+        macrosByVoice[engine to voice] = Tidal.defaults(updated.voice, updated.model) + updated.macros
     }
     fun updateFilamentPatch(change: (FilamentPatch) -> FilamentPatch) {
         val pair = engine to voice
@@ -1424,7 +1431,7 @@ fun SynthScreen(
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    fun audition(target: Snip) {
+    fun audition(target: Snip, allowLoop: Boolean) {
         // Signal-only at the swap site: `stop()` is a non-blocking flag flip
         // — the old voice's own stream thread releases its own AudioTrack on
         // its way out (TapeVoice's per-thread-owns-its-track contract) — so
@@ -1437,7 +1444,8 @@ fun SynthScreen(
         val heard = if (engine == Engine.ORPHICA || engine == Engine.OPENSKY) target else Cleanup.toMono(target)
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
-        v.start(0, loop = if (engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f))
+        v.start(0, loop = if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
+            (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f))))
             0 until heard.frameCount else null)
     }
 
@@ -1505,7 +1513,7 @@ fun SynthScreen(
             }
             coroutineContext.ensureActive()
             snip = rendered
-            if (touched) audition(rendered)
+            if (touched) audition(rendered, allowLoop = true)
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -1694,6 +1702,7 @@ fun SynthScreen(
                         if (patch is ApsisPatch) {
                             model.update(slot) { ApsisPad.configure(it, patch) }
                         }
+                        if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
                         model.save()
                         alreadyThere to model.kit
                     }
@@ -1758,7 +1767,7 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
+    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -1826,6 +1835,9 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch
             if (OhmPadMaker.supports(patch)) HeldSpec.Ohm(OhmPadMaker.Spec(patch)) else null
         }
+        Engine.TIDAL -> HeldSpec.Tidal(TidalPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as TidalPatch, heldSheet.holdRelease,
+        ))
         Engine.CONTOUR -> HeldSpec.Contour(ContourPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, heldSheet.holdRelease,
         ))
@@ -1848,13 +1860,13 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Flock) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
                     }
                 } else offMain(Dispatchers.Default) { spec.preview { !isActive } }
-                audition(heard)
+                audition(heard, allowLoop = false)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1882,7 +1894,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -1893,7 +1905,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Flock) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2054,7 +2066,7 @@ fun SynthScreen(
                     val once = spec.render(root, session) { !isActive }
                     Snip(FloatArray(once.size * 2) { once[it % once.size] }, 1, session.sampleRate)
                 }
-                audition(heard)
+                audition(heard, allowLoop = false)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2107,6 +2119,8 @@ fun SynthScreen(
                     val cancelled = { spreadJob?.isActive == false || Thread.currentThread().isInterrupted }
                     val rendered = when (patch) {
                         is ChamberPatch -> seed.chamberRenderer.render(patch, cancelled)
+                        is TidalPatch -> Tidal.render(patch.voice, patch.macros, patch.midi, patch.velocity,
+                            patch.seed, patch.model, cancelled)
                         is OpenSkyPatch -> patch.render(cancelled)
                         else -> patch.render()
                     }
@@ -3251,7 +3265,7 @@ fun SynthScreen(
                 FlockHeldAudition(flockHeldPreview, classColor, scheme)
             } else if (engine == Engine.APSIS) {
                 ApsisAuditionControls(classColor, scheme,
-                    onAudition = { touched = true; snip?.let { audition(it) } },
+                    onAudition = { touched = true; snip?.let { audition(it, allowLoop = true) } },
                     onStop = { touched = false; voicePlayer?.stop(); voicePlayer = null },
                 )
             } else {
@@ -3261,7 +3275,7 @@ fun SynthScreen(
                         .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                         .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
                         .tapeClick(label = "AUDITION", enabled = engine != Engine.TIDAL ||
-                            !embouchureRestore.pending.containsKey(engine to voice)) { snip?.let { audition(it) } }
+                            !embouchureRestore.pending.containsKey(engine to voice)) { snip?.let { audition(it, allowLoop = true) } }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -4045,6 +4059,18 @@ private sealed interface HeldSpec {
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = OpenSkyPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
+    class Tidal(private val spec: TidalPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = TidalPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${TidalPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "C2–C6 · KEEPS THE ENCOUNTER, THEN HOLDS ITS MOVING AFTERMATH. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(TidalPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = TidalPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            TidalPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Registers(private val spec: RegistersPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = RegistersPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
@@ -4495,7 +4521,19 @@ internal fun TidalPerformanceControls(
     if (seedText.toLongOrNull() == null) {
         TapeText("INVALID SEED · PREVIOUS VARIATION KEPT", TapeType.pixelSmall, scheme.warn.tape, maxLines = 3)
     }
-    TapeText("ONE FINITE ENCOUNTER · PLAYS ONCE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+    TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((hold, title) in listOf(0f to "NOTE", 1f to "HOLD")) {
+            val active = (patch.macros["HOLD"] ?: 0f) == hold
+            ActionButton(title, scheme, enabled = true, lit = active,
+                modifier = Modifier.weight(1f).semantics { selected = active },
+                accessibilityLabel = "TIDAL $title PLAYBACK",
+            ) { onEdit(patch.voice) { it.copy(macros = it.macros + ("HOLD" to hold)) } }
+        }
+    }
+    TapeText(if (Tidal.isHeld(patch.macros["HOLD"] ?: 0f))
+        "PADS LOOP THE AFTERMATH · MAKE INSTRUMENT KEEPS THE ENCOUNTER"
+        else "ONE FINITE ENCOUNTER · PLAYS ONCE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 }
 
 // ---------- the engine adapter ----------

@@ -2033,15 +2033,16 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** First dry SPARK voice and ordered expression-family listening gate. */
+/** SPARK revision-two control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
-    description = "Render SPARK native/matched hits, expression families, replayable recipes, measurements and a sixteen-pad XPM kit."
+    description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ThumpSparkAuditionGenerator")
     workingDir = projectDir
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
+    providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
 }
 
 /** Retained model-one/model-two Apsis listening history. */
@@ -2090,4 +2091,15 @@ tasks.register<JavaExec>("generateApsisMusicalAudition") {
     maxHeapSize = "1g"
     val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
     args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
+}
+
+/** Held TIDAL listening evidence; the accepted finite audition remains separate. */
+tasks.register<JavaExec>("generateTidalHoldAudition") {
+    group = "distribution"
+    description = "Render TIDAL encounter-to-hold notes, eight-cycle loops, recipes and closure measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("tidalHoldOutput").orNull ?: "${rootDir}/testkit/tidal-hold-audition")
 }

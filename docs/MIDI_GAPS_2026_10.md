@@ -54,8 +54,7 @@ it is done. The gate column names what has to be true first; S1 to S4 are
 | 13 | **One transport.** ORBIT's render cursor and BEAT's display clock migrate onto the frame mapping | `OrbitEngine.kt`, `BeatPlayer.kt` | `BeatClockTest` pinned; a drift row between the two streams | **S1, S3** |
 | 14 | **Clock in, follower.** A PLL in `:kit` with jitter and stall fixtures, holdover as its own mechanism | `:kit`, `:app` | fixtures; **S3, S4** on hardware | step 13 |
 
-Beyond these sit the expression and sequencing items (pitch bend and aftertouch in the
-parser, MPE, isomorphic grids, per-step probability and conditions, sensors, Scala), and
+Beyond these sit the expression and sequencing items (MPE, isomorphic grids, per-step probability and conditions, sensors, Scala), and
 none of them is blocked except by the rows above.
 
 ## The gates that are not code
@@ -67,8 +66,9 @@ the Pixel, the honest ceiling is step 11; step 12 onward is design only.
 One product question decides how long the clock road is. "SnipSnap drives the MPC" is step
 12 on step 2, two bench rows, and is complete on its own. "SnipSnap plays along with the
 MPC" adds steps 13 and 14 and two more bench rows. `MIDI_SYNC.md` recommends master first.
-This document assumes master unless the owner says the real need is playing along with an
-MPC that is already running.
+**Decided 2026-10-26 by the owner: SnipSnap leads.** SnipSnap sends the clock and the MPC
+follows. Steps 13 and 14 (one transport, the follower) are not on the road until the owner
+asks for playing along with an MPC that is already running.
 
 ## Housekeeping
 
@@ -149,9 +149,10 @@ Disclosed, not done:
   until the engine closes. That is acceptable today: three SPLIT voices or one ORBIT
   audition cannot fill a 255-slot ring. Since the final-review fix, any later `hit` or
   `hitLayers` flushes it first.
-- **Departure from the binding review, needs owner sign-off.** The review's T2 named a
-  `portIndex` in the fingerprint. This batch keys per device with port counts instead:
-  nothing on an event yet says which port of a two-port controller it came from.
+- **Departure from the binding review, signed off 2026-10-26.** The review's T2 named a
+  `portIndex` in the fingerprint. This batch keys per device with port counts instead, and
+  the owner chose that: a controller is one thing to remember, whatever ports it shows.
+  Nothing on an event yet says which port of a two-port controller it came from.
 
 Deferred minors, one line each: the fixture script's note tuples carry no stamp.
 

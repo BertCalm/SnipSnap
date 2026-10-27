@@ -270,7 +270,7 @@ opens and relaxes related routes, and CURL lets its upper colour bloom.
 Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
 share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
 BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
-held pads contain sustain cycles. Model-3 THREAD also makes a three-root
+held pads contain sustain cycles. Each model-3 voice also makes a three-root
 C3–C5 instrument that keeps its attack and sustains until note-off. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](docs/FILAMENT.md) document the sound and its limits.
 
@@ -941,7 +941,9 @@ Its approved model-2 source direction, six finite factory presets and dry
 sixteen-pad starter are available through SYNTH and FRESH TAPE. ROOT,
 VELOCITY, source and exact variation seed stay in the editable recipe;
 the 9.8-second pads play once. Original model-1 recipes remain reproducible.
-See [TIDAL](docs/TIDAL.md) for the finite scope, rendering measurements,
+NOTE retains the finite encounter; HOLD reconstructs its moving aftermath.
+MAKE INSTRUMENT keeps the opening across seventeen C2–C6 zones with note-off release.
+See [TIDAL](docs/TIDAL.md) for the finite and held modes, rendering measurements,
 MPC kit export and remaining device checks.
 
 `Velocity` renders the darker soft-zone variants (a soft strike excites
@@ -1128,8 +1130,8 @@ breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
 transient), FORGE (a hit formed against a die: a low shock, an all-pass
 sweep, the fast part folded and the slow part left, then a ceiling that
-closes with a flash of grit; peak-matched, no gain envelope, no chip until
-its listening gate, see
+closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
+on the pedal row since its listening gate, see
 [`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
 RING (the sound multiplied by a sine — metal, bells, radio;
 deliberately no longer the hit it was, the exemption GHOST already
