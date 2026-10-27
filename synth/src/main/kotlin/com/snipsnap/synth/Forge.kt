@@ -92,11 +92,20 @@ object Forge {
     /** STANDOFF 1's delay. The brief's "sub-millisecond" (shape). */
     internal const val STANDOFF_MAX_SECONDS = 1.0e-3f
 
-    /** The medium at CHARGE 1: this many second-order all-passes (shape; the prototype's 24 spread a 0.2 ms click to 12.5 ms). */
-    internal const val MAX_SECTIONS = 24
-    private const val MEDIUM_LO_HZ = 300f
-    private const val MEDIUM_HI_HZ = 6_000f
-    private const val MEDIUM_Q = 0.7f
+    /**
+     * The medium's shape: how many second-order all-passes at CHARGE 1, the band their centres span,
+     * and their Q. Only [SHIPPED] reaches a pad; the others exist so a tuning audition can render
+     * candidates through the real section without a second copy of it.
+     */
+    internal data class Medium(val sections: Int, val loHz: Float, val hiHz: Float, val q: Float) {
+        companion object {
+            /** As heard at the gate (shape; the prototype's 24 spread a 0.2 ms click to 12.5 ms). */
+            val SHIPPED = Medium(24, 300f, 6_000f, 0.7f)
+        }
+    }
+
+    /** The medium at CHARGE 1: this many second-order all-passes. */
+    internal val MAX_SECTIONS = Medium.SHIPPED.sections
 
     /** The slew detector's smoother (shape): fast enough to see a click, slow enough not to read every sample's wiggle. */
     internal const val DETECTOR_HZ = 2_000f
@@ -137,9 +146,10 @@ object Forge {
 
     /**
      * [oversample] false runs the stages at the snip's own rate: for the aliasing test, which proves its
-     * probe sees fold-back, and the audition's fold-back A/B. The product always runs the 4x path.
+     * probe sees fold-back, and the audition's fold-back A/B. The product always runs the 4x path with the
+     * [Medium.SHIPPED] medium; [medium] is for the tuning audition's candidates.
      */
-    internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean): Snip {
+    internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean, medium: Medium = Medium.SHIPPED): Snip {
         val m = settled(macros)
         val inPeak = snip.peak()
         if (inPeak <= 0f || snip.frameCount == 0) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
@@ -160,7 +170,7 @@ object Forge {
         if (charge > 0f) {
             formed = Array(channels) { charged(formed[it], m, workRate) }
             normaliseTogether(formed)
-            formed = Array(channels) { medium(formed[it], charge, workRate) }
+            formed = Array(channels) { medium(formed[it], charge, workRate, medium) }
             normaliseTogether(formed)
         }
         val slews = Array(channels) { slew(formed[it], workRate) }
@@ -236,11 +246,11 @@ object Forge {
     // ---------- 2. the medium ----------
 
     /**
-     * The k-th all-pass's centre: van der Corput's base-2 sequence on a log scale between
-     * [MEDIUM_LO_HZ] and [MEDIUM_HI_HZ], so the first few sections already span the range and
-     * one more section never moves the ones before it (CHARGE adds a section, never re-tunes).
+     * The k-th all-pass's centre: van der Corput's base-2 sequence on a log scale across the
+     * medium's band, so the first few sections already span the range and one more section never
+     * moves the ones before it (CHARGE adds a section, never re-tunes).
      */
-    internal fun mediumHz(k: Int): Float {
+    internal fun mediumHz(k: Int, medium: Medium = Medium.SHIPPED): Float {
         var n = k
         var denom = 1.0
         var u = 0.0
@@ -249,18 +259,18 @@ object Forge {
             u += (n and 1) / denom
             n = n shr 1
         }
-        return (MEDIUM_LO_HZ * (MEDIUM_HI_HZ / MEDIUM_LO_HZ).toDouble().pow(u)).toFloat()
+        return (medium.loHz * (medium.hiHz / medium.loHz).toDouble().pow(u)).toFloat()
     }
 
-    internal fun sectionsFor(charge: Float): Int = (charge * MAX_SECTIONS).roundToInt()
+    internal fun sectionsFor(charge: Float, medium: Medium = Medium.SHIPPED): Int = (charge * medium.sections).roundToInt()
 
     /** [x] through [sectionsFor] all-passes. The caller re-normalises: the medium spreads the hit but delivers all of its energy. */
-    internal fun medium(x: FloatArray, charge: Float, rate: Int): FloatArray {
-        val n = sectionsFor(charge)
+    internal fun medium(x: FloatArray, charge: Float, rate: Int, medium: Medium = Medium.SHIPPED): FloatArray {
+        val n = sectionsFor(charge, medium)
         if (n == 0) return x
         val out = x.copyOf()
         for (k in 0 until n) {
-            val ap = Dsp.Biquad().apply { allpass(mediumHz(k), MEDIUM_Q, rate) }
+            val ap = Dsp.Biquad().apply { allpass(mediumHz(k, medium), medium.q, rate) }
             for (i in out.indices) out[i] = ap.process(out[i])
         }
         return out
