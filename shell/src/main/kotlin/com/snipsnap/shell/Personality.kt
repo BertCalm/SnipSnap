@@ -2783,6 +2783,23 @@ object Copy {
     const val EVIL_TWINS_BUSY = "TWINNING…"
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
+    /**
+     * The dock's busy line while a kit loads, named so the wait is attributable
+     * - [name] is the kit's own name. The successor to [dubbingBusy] for work
+     * that is loading something, not dubbing it; that one retires when its only
+     * caller moves over.
+     */
+    fun loadingBusy(name: String): String = "LOADING $name…"
+    /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
+    fun busyCount(done: Int, total: Int): String = "$done OF $total"
+    /** The dock's busy line while something loads and there is no name to give it. */
+    const val LOADING_BUSY = "LOADING…"
+    /** The dock's busy line for a job with no name and no count - the reduced-motion label, where no bar moves. */
+    const val WORKING_BUSY = "WORKING…"
+    /** The KITS screen's placeholder line while the library is read from disk. */
+    const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** The dock's button to stop a job that can be stopped part-way. */
+    const val CANCEL_JOB = "CANCEL"
 
 
     // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----
