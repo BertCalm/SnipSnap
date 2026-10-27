@@ -324,6 +324,20 @@ class ForgeTest {
         assertEquals(DrumClass.SNARE, Classifier.classify(Forge.process(snare)).drumClass)
     }
 
+    @Test
+    fun `the FORGE chip at full is the clip the owner heard as loud and solid`() {
+        // The gate's question two (2026-10-26): every macro at its default, ARREST 1. The chip's character
+        // sets no VALVE, so Treatments adds no pre-amp fade and the chain is FORGE alone.
+        val heard = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1f)
+        for (pad in listOf(kick, snare)) {
+            assertContentEquals(Forge.process(pad, heard).samples, Treatments.apply("forged", pad, 1f).snip.samples)
+        }
+        // AMT fades toward the neutrals: at the pad sheet's 0.7 the die is softer (ARREST 0.7) and less flows (YIELD 0.65).
+        val faded = Treatments.chain("forged", 0.7f).forge!!
+        assertEquals(0.7f, faded.getValue("ARREST"), 1e-6f)
+        assertEquals(0.65f, faded.getValue("YIELD"), 1e-6f)
+    }
+
     // ---------- edges ----------
 
     @Test
