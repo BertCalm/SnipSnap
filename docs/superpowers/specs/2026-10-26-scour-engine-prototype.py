@@ -43,8 +43,9 @@ REVS_PER_S = 5.0            # roller revolutions per second at v = 1
 TABLE = 8192                # roughness points per revolution
 NYQ_GUARD_HZ = 18_000.0     # a mode that HARDEN could push past this is dropped for the note
 
-# Recalled from Fletcher & Rossing's free-edge circular plate table, NOT read from the book
-# in this session. Modes.kt's rule applies: source it before Kotlin.
+# Completely free circular plate, Leissa, Vibration of Plates (NASA SP-160, 1969), Table 2.5,
+# nu = 0.33, ratios to the (2,0) mode, rounded: each is within 0.1 % of the sourced value
+# (1.729, 2.328, 3.906, 4.112, 6.301, 6.710, 7.339). Kept rounded so the spec's numbers reproduce.
 PLATE_RATIOS = [1.0, 1.73, 2.33, 3.91, 4.11, 6.30, 6.71, 7.34]
 
 VOICES = {

@@ -34,6 +34,8 @@ Production rendering shares its source stages with diagnostic evidence and adds
 a bounded completed-audio cache. Pads play once despite long-sample LOOP filing.
 HOLD remains zero; reconstruction, the other voices, and factory expansion remain later work.
 See [TIDAL.md](TIDAL.md) for model limits, reproducibility, and the listening gate.
+TIDAL HOLD now adds a versioned post-encounter reconstruction, gated aftermath pads and seventeen-zone attack-plus-sustain instruments; see [TIDAL_HOLD.md](TIDAL_HOLD.md). Physical phone/MPC and listening acceptance remain open.
+
 The [private audition](https://tidal-snipsnap-audition.bertcalm.chatgpt.site)
 opens with eighteen model-2 comparisons and retains the original 58-case matrix.
 Full preset curation, physical phone performance and MPC listening remain open.
@@ -72,7 +74,7 @@ approved dry model-3 recipes are in the factory library, phone SYNTH picker
 and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
 replayable. Playback shares the diagnostic DSP core while skipping optional
 capture work, supports cancellation and uses a bounded dry-preview cache.
-The model-3 THREAD keygroup pilot retains actual startup before settled
+The model-3 THREAD/PULSE/CURL keygroups retain actual startup before settled
 sustain, with C3/C4/C5 roots, one velocity layer and host note-off release.
 Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and

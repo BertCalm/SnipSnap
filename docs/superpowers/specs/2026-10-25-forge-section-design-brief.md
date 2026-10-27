@@ -1,6 +1,6 @@
 # FORGE: a hydroforming transient section. Design brief
 
-**Status:** built in Kotlin, awaiting the owner's listening gate (see "As built" at the end). Prototyped in Python first (`2026-10-25-forge-section-prototype.py`, beside this file). Nothing heard. No pedal chip until the gate names one.
+**Status:** built and gated. The owner's listening gate passed on 2026-10-26 (see "Heard" at the end), and FORGE is the sixth chip on the pad sheet's pedal row (`forged`). Prototyped in Python first (`2026-10-25-forge-section-prototype.py`, beside this file); "As built" records the Kotlin.
 **Source idea:** the owner's XO_HYDROFORM design specification (explosive hydroforming as a transient synthesis paradigm: a transmission medium, a charge at a standoff, strain-rate dependent plasticity, die arrest). This brief adapts it to SnipSnap; it does not reproduce it.
 **Repository truth:** commit `ad2439e` (2026-10-25). APIs grepped and read: `Valve.process`/`Valve.upsample` (`Valve.kt:153-197`, the rack's only oversampled section), `Tide.bandLimit`, `Dsp.decimate`, `Dsp.Biquad.allpass` (`Dsp.kt:425`), `Dsp.seedFor`, `Dsp.Noise`, `Dsp.limitPeak`, `Dsp.levelTo`, `FxChain.SECTIONS` (`FxChain.kt:196`), `Squash`, `Spike`, `Compressor`, `Punch`, `Onset.render`, `Thump.render`, `Tide.fold` (`Tide.kt:357`). No slew-dependent transfer curve exists anywhere in `synth/`; no section converts clipped energy into noise.
 
@@ -209,3 +209,19 @@ Guards proven by reverting them alone. Unfiltered heat noise put 1.23e-5 of the 
 - **44.1 kHz assumed**, VALVE's note: the round trip's corner is absolute. A 48 kHz pad renders finite and its own length, and is tested.
 
 **Not heard.** This sandbox cannot play audio. Every sonic claim above is a measurement or a question on the gate page.
+
+## Heard (the owner's gate, 2026-10-26)
+
+The owner answered the gate page's seven questions on the published clips. The answers came back as the page's copied text; none reached its store.
+
+| Question | Answer | What it decides |
+|---|---|---|
+| 1. CHARGE 0 against 1 on the bell and the kick: thicker, or a laser zap? | Mixed | Open: which source read as which is not recorded. CHARGE stays as built; the next listen should name the source. |
+| 2. ARREST 1: loud and solid, or broken? | Loud and solid | The chip's character shuts the die: `forged` is every default with ARREST 1, exactly the heard clip. |
+| 3. The burst at impact at ARREST 1: heat, or a click? | Heat | The heat stays as built (gain 0.35, band 3 to 14 kHz). |
+| 4. YIELD 0.25's harsh middle: keep it, or smooth it? | Keep it | The slew detector stays. The harsh zone is a character of the knob, not a defect to fix. |
+| 5. On the hat, are the defaults too much? | Fine | No hat-specific detector. That the classifier files the hat as a snare is the classifier's reading, not a sound the owner rejected. |
+| 6. FORGE before the amp, as built, or after? | Before: "more powerful without distorting" | The rack's slot stays, and the pedal is fixed in front of the amp (`movable = false`). |
+| 7. Any of the 1x aliasing audible at 4x? | 4x is clean | FORGE stays at 4x; the YIELD 0 miss of VALVE's 45 dB bar (42.5 dB) is inaudible to the owner on the snare. |
+
+**What shipped from it.** `Treatments.EXTRA` gains `forged` (CHARGE 0.5, STANDOFF 0.5, YIELD 0.5, ARREST 1). `Pedals.entries` gains FORGE on the PRE side, not movable, gated. The pad sheet's pedal row derives from the library, so FORGE draws its chip there. That row now holds six chips, the card's ceiling, so DELAY's chip needs a layout decision when its own gate passes. `ForgeTest` pins that the chip at AMT 1 renders the heard clip sample for sample. At the pad sheet's AMT 0.7, the character's die is ARREST 0.7 and YIELD 0.65: a softer form of what was heard, not itself heard.

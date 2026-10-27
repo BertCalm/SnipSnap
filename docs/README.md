@@ -1,5 +1,7 @@
 # Which document to trust
 
+**Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
+
 **Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
 voice, its approved Python direction, native port and remaining listening
 checks. It distinguishes saved excitation strength from MPC playback gain.
@@ -7,8 +9,8 @@ checks. It distinguishes saved excitation strength from MPC playback gain.
 **Tidal.** [`TIDAL.md`](TIDAL.md) records the approved model-2 source direction,
 finite PAIR/STREAM editor, factory presets, dry starter and saved-recipe policies.
 [`TIDAL_PERFORMANCE.md`](TIDAL_PERFORMANCE.md) records render-only measurements,
-cache behavior and reference-audio preservation. HOLD and device listening remain
-separate work.
+cache behavior and reference-audio preservation. Held source listening and device
+acceptance remain separate checks.
 
 **OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
 instrument, versioned recipes and the control-authority revision. Its audition
@@ -123,7 +125,8 @@ export. Phone and MPC listening checks remain open.
 
 **Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
 the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved sources,
-replay and export contracts. Continuous performance routing remains a later stage of
+replay and export contracts. The [first performance backend](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md)
+connects PadEngine playback and stereo PRINT. Remaining routes and PERFORMANCE controls follow
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)

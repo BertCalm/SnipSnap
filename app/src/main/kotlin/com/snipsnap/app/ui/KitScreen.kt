@@ -65,6 +65,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
+import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
@@ -88,6 +89,7 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiGate
+import com.snipsnap.shell.MidiPadMemory
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -314,6 +316,9 @@ fun KitScreen(
 
     // Declared above hit/playHeld/release: they send under the current map.
     var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    // The map each keyboard was last played with (`MidiPadMemory`, keyed by its
+    // fingerprint): saved when MIDI MAP is tapped, brought back when it connects.
+    val padMapPrefs = remember(engineContext) { engineContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
 
     fun hit(slot: Int, velocity: Float = 1f, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
@@ -432,7 +437,17 @@ fun KitScreen(
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = onMidi(event)
-            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) {
+                midiDevices = devices
+                // A keyboard last played with another map brings it back; one
+                // with nothing saved leaves the map the screen is showing.
+                MidiPadMemory.recall(devices) { padMapPrefs.getString(it, null) }?.let { saved ->
+                    if (saved != midiMap) {
+                        onPanic()
+                        midiMap = saved
+                    }
+                }
+            }
             // The cable is out: a gated pad it held would ring until PANIC.
             override fun onDeviceRemoved() = onPanic()
         }
@@ -1080,7 +1095,16 @@ fun KitScreen(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}") {
+                                panic()
+                                midiMap = midiMap.next()
+                                val pairs = MidiPadMemory.remember(midiDevices, midiMap)
+                                if (pairs.isNotEmpty()) {
+                                    val editor = padMapPrefs.edit()
+                                    pairs.forEach { (key, value) -> editor.putString(key, value) }
+                                    editor.apply()
+                                }
+                            }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {

@@ -23,12 +23,13 @@ package com.snipsnap.kit
  *    common messages (song position, a SysEx) *do* cancel running
  *    status, as the spec says.
  *
- * What comes out is what a player and a transport need: notes,
- * controllers, and the clock's own four bytes. Pitch bend,
- * aftertouch and program changes are read correctly - their lengths
- * are honoured, so the bytes after them stay in step - and dropped.
- * A note-on at velocity 0 is a note-off, the convention every
- * keyboard built since 1983 relies on.
+ * What comes out is every channel message - notes, controllers, pitch
+ * bend, channel and poly pressure, program changes - and the clock's
+ * own four bytes. The bend, pressure and program events are emitted
+ * for whichever rule wants them (MIDI learn, a bend range on KEYS);
+ * the screens' own rules, `MidiKeys` and `MidiPads`, pass over them
+ * until then. A note-on at velocity 0 is a note-off, the convention
+ * every keyboard built since 1983 relies on.
  *
  * Velocity is MIDI's 1..127 as 0..1, the inverse of what [MidiGroove]
  * writes (`velocity * 127`, rounded): a velocity played in and written
@@ -69,7 +70,7 @@ class MidiWire {
          */
         val timestampNanos: Long
 
-        /** A channel message: a note or a controller on one of sixteen channels. */
+        /** A channel message: a note, a controller, a bend, a pressure or a program change on one of sixteen channels. */
         sealed interface Channel : Event {
             val channel: Int
         }
@@ -92,6 +93,28 @@ class MidiWire {
             val value: Int,
             override val timestampNanos: Long = 0L,
         ) : Channel
+
+        /**
+         * The pitch wheel or strip, as MIDI's 14 bits centred on zero:
+         * [value] -8192 (all the way down) to 8191 (all the way up), 0 at
+         * rest. How far that bends is the receiver's bend range, not the
+         * message's.
+         */
+        data class PitchBend(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Channel
+
+        /** Channel pressure (aftertouch for the whole channel): [value] 0..127. */
+        data class ChannelPressure(override val channel: Int, val value: Int, override val timestampNanos: Long = 0L) : Channel
+
+        /** Polyphonic pressure on one held [note]: [value] 0..127. */
+        data class PolyPressure(
+            override val channel: Int,
+            val note: Int,
+            val value: Int,
+            override val timestampNanos: Long = 0L,
+        ) : Channel
+
+        /** A program change: [program] 0..127, as sent (a front panel's "1" is usually 0). */
+        data class ProgramChange(override val channel: Int, val program: Int, override val timestampNanos: Long = 0L) : Channel
 
         /** A system real-time message: one byte, no channel, the transport's clock and its buttons. */
         sealed interface RealTime : Event
@@ -199,6 +222,12 @@ class MidiWire {
             NOTE_ON -> if (second == 0) Event.NoteOff(channel, first, stamp) else Event.NoteOn(channel, first, velocity(second), stamp)
             NOTE_OFF -> Event.NoteOff(channel, first, stamp)
             CONTROL_CHANGE -> Event.Control(channel, first, second, stamp)
+            POLY_PRESSURE -> Event.PolyPressure(channel, first, second, stamp)
+            // One data byte: begin() asked for one, so first and second are the same byte.
+            PROGRAM_CHANGE -> Event.ProgramChange(channel, second, stamp)
+            CHANNEL_PRESSURE -> Event.ChannelPressure(channel, second, stamp)
+            // Least significant seven bits first, then the most significant.
+            PITCH_BEND -> Event.PitchBend(channel, ((second shl 7) or first) - BEND_CENTRE, stamp)
             else -> null
         }
     }
@@ -207,8 +236,13 @@ class MidiWire {
         const val NOTE_OFF = 0x80
         const val NOTE_ON = 0x90
         const val CONTROL_CHANGE = 0xB0
+        private const val POLY_PRESSURE = 0xA0
         private const val PROGRAM_CHANGE = 0xC0
         private const val CHANNEL_PRESSURE = 0xD0
+        private const val PITCH_BEND = 0xE0
+
+        /** The raw 14-bit bend value at rest: [Event.PitchBend.value] is the raw value minus this. */
+        const val BEND_CENTRE = 8192
         private const val SYSEX_START = 0xF0
 
         /** System real-time: the timing clock, 24 to a quarter note. */
