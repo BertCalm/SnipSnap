@@ -451,6 +451,10 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
+    // The starter kit being rendered, by name, or null: while set, PADS draws
+    // the placeholder grid for it and the shelf's NEW KIT button shows its
+    // spinner. Set and cleared by `fresh`, alongside `busy`, and by nothing else.
+    var pendingKit by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over PADS. Not a
     // place or a stage of its own; it's PADS-scoped overlay state, cleared
@@ -1255,14 +1259,32 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
         (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
 
+    /**
+     * A starter kit, rendered and landed on PADS. The render takes a few
+     * seconds, so the user is taken to PADS at once and finds the shape of
+     * the grid there ([pendingKit] makes `KitScreen` draw
+     * `PadPlaceholderGrid` for the starter's name), with the dock's bar
+     * saying the same job; the kit replaces the placeholders when it lands.
+     *
+     * Moved with [landOn], not `goToScreen`: that one also clears the
+     * transient state, `pendingSnipAssign` among it, and the snip waiting
+     * for a home is exactly what the success line below checks for. (It is
+     * also declared further down, out of a local function's reach.)
+     */
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
-        busy = Busy(Copy.dubbingBusy(starter.displayName))
+        busy = Busy(Copy.loadingBusy(starter.displayName))
+        pendingKit = starter.displayName
+        landOn(AppScreen.KIT)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
             } catch (e: Exception) {
+                pendingKit = null
                 busy = null
+                // Nothing landed, so the placeholders have nothing to become:
+                // back to the shelf, where the kit was asked for, and say so.
+                landOn(AppScreen.KITS)
                 // Law 3 in practice, matching ExportScreen's own dub-failed
                 // catch: the user gets what failed, not a Java exception's
                 // `message` quoted at them — that detail stays in logcat.
@@ -1271,7 +1293,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            busy = null
             // A snip may be waiting for a home: the empty shelf's own copy
             // sends the user here to make a kit for it (EMPTY_SHELF_FOR_ASSIGN),
             // and `fresh` deliberately does not clear the hand-off. Saying
@@ -1280,6 +1301,12 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             // armed says what to do next (September UAT, finding 12).
             dock.say(if (pendingSnipAssign != null) Copy.snipLanding(hasLandingPad(entry.kit)) else Copy.FRESH_TAPE)
             landKit(entry)
+            // Last, so `open` already holds the kit when the placeholders go
+            // and the dock's bar goes with them: busy used to clear before
+            // landKit, a beat in which the bar was gone and the kit was not
+            // yet on the grid.
+            pendingKit = null
+            busy = null
         }
     }
 
@@ -3321,6 +3348,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 onNewProject = ::newProject,
                                 onCatchFirst = ::requestArm,
                                 busy = busy != null,
+                                startingKit = pendingKit != null,
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
                                     val addTo = pendingAddTo
@@ -3641,6 +3669,9 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                     },
                                     versions = versions,
                                     busy = busy != null,
+                                    // A starter still rendering: the page is the
+                                    // placeholder grid for it, whatever kit is open.
+                                    pendingKitName = pendingKit,
                                     onLongPress = ::openPadSheet,
                                     onTakesBin = { takesBinOpen = true },
                                     onTexture = ::texture,

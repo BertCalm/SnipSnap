@@ -109,6 +109,13 @@ fun KitsScreen(
      */
     onCatchFirst: () -> Unit,
     busy: Boolean,
+    /**
+     * A starter kit is being rendered (`App.kt`'s `pendingKit`): the NEW KIT
+     * ▸ STARTERS button is the control that started it, so it draws a spinner
+     * beside its label. It keeps the label; [busy] is what disables it, and
+     * is true for every job, this one included.
+     */
+    startingKit: Boolean = false,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
@@ -605,10 +612,10 @@ fun KitsScreen(
                 // often than the other way round, and the menu it opens still
                 // says PICK A STARTER as its own heading.
                 ActionButton(
-                    if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    "NEW KIT ▸ STARTERS",
                     scheme,
                     enabled = !busy,
-                    accessibilityLabel = "NEW KIT ▸ STARTERS",
+                    working = startingKit,
                     modifier = Modifier.fillMaxWidth(),
                     onClick = { menuOpen = true },
                 )
@@ -627,8 +634,9 @@ fun KitsScreen(
                     // mid-word; the menu it opens says PICK A STARTER as its
                     // own heading, so the word isn't lost, just moved to where
                     // it always fits.
-                    label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
+                    label = "NEW KIT ▸ STARTERS",
                     enabled = !busy,
+                    working = startingKit,
                     onClick = { menuOpen = true },
                 )
             }
@@ -1252,9 +1260,16 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
  * is not the same button dimmed: the accent rim and the dark fill are what
  * say "tap me", so both go, and it draws as a disabled [ActionButton] does
  * (the raised bevel, `ink3` text) at the primary's height.
+ *
+ * [working] marks the control that started the job in flight: a [Spinner]
+ * is drawn left of [label] and the node says [Copy.WORKING_BUSY] as its
+ * state. The label stays what it was - it is still the name of the thing
+ * pressed, and the dock says what the job is. It sits before [onClick] so a
+ * trailing-lambda caller still compiles, and it goes with `enabled = false`:
+ * the job being in flight is what disables the button.
  */
 @Composable
-fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+fun PrimaryAction(label: String, enabled: Boolean, working: Boolean = false, onClick: () -> Unit) {
     val scheme = LocalScheme.current
     val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
@@ -1272,17 +1287,25 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            label,
-            // Past 22 characters (the longest label proven to fit one line at
-            // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
-            // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
-            if (label.length > 22) TapeType.display else TapeType.displayBig,
-            if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
-        )
+        // Past 22 characters (the longest label proven to fit one line at
+        // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
+        // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
+        val type = if (label.length > 22) TapeType.display else TapeType.displayBig
+        val ink = if (enabled) scheme.lcdInk.tape else scheme.ink3.tape
+        if (working) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spinner(scheme.accent.tape, size = 18.dp)
+                // Shrinks before it pushes the ring off, so a long label at a
+                // large font scale ellipsizes rather than overflowing.
+                TapeText(label, type, ink, Modifier.weight(1f, fill = false))
+            }
+        } else {
+            TapeText(label, type, ink)
+        }
     }
 }
 

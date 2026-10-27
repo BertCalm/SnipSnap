@@ -224,7 +224,7 @@ class KitShelf(val root: File) {
     /**
      * Render a starter onto the shelf — the FRESH TAPE menu's action.
      * Synchronous and seconds-long (the synth engines render offline);
-     * the caller shows DUBBING… while it runs.
+     * `App.kt`'s `fresh` shows LOADING… and the placeholder grid while it runs.
      */
     fun render(starter: StarterKits.Starter, seed: Int, name: String = freshName(starter.displayName)): Entry {
         root.mkdirs()

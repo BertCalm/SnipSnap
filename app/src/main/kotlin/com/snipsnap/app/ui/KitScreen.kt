@@ -221,8 +221,20 @@ fun KitScreen(
      * player's eye.
      */
     beat: BeatPlayer,
+    /**
+     * The name of a starter kit that is rendering now (`App.kt`'s `pendingKit`),
+     * or null. While it is set the page is [PadPlaceholderGrid] for that name
+     * and nothing else - not the kit that was open before, and not the empty
+     * panel - and it stops being the page the moment the kit lands.
+     */
+    pendingKitName: String? = null,
 ) {
     val scheme = LocalScheme.current
+
+    if (pendingKitName != null) {
+        PadPlaceholderGrid(pendingKitName)
+        return
+    }
 
     if (entry == null) {
         // One panel, one story, and no switcher: with no kit there is
@@ -1347,12 +1359,23 @@ private fun TexturePanel(
             onFractionCommit = {},
         )
 
+        // Whether the job in flight is this button's own. `busy` is every
+        // job's, so on its own it would put the spinner on this button for
+        // a job started from the grid or the shelf; the dock says what the
+        // job is, and the ring belongs on the control that was pressed.
+        // Set on the press, cleared when the app is idle again.
+        var startedHere by remember { mutableStateOf(false) }
+        LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            if (busy) "DUBBING…" else "$kind ▸ NEW TAPE",
+            "$kind ▸ NEW TAPE",
             scheme,
             enabled = !busy,
+            working = busy && startedHere,
             modifier = Modifier.fillMaxWidth(),
-            onClick = onGo,
+            onClick = {
+                startedHere = true
+                onGo()
+            },
         )
     }
 }

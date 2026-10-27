@@ -2777,17 +2777,15 @@ object Copy {
     /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
     fun xrayUnlabeledFields(count: Int): String =
         "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
-    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
-    fun dubbingBusy(name: String): String = "DUBBING $name…"
     /** EVIL TWINS' own busy overlay while every twin renders offline. */
     const val EVIL_TWINS_BUSY = "TWINNING…"
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
     /**
      * The dock's busy line while a kit loads, named so the wait is attributable
-     * - [name] is the kit's own name. The successor to [dubbingBusy] for work
-     * that is loading something, not dubbing it; that one retires when its only
-     * caller moves over.
+     * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
+     * starter renders, and `PadPlaceholderGrid` heads itself with the same
+     * line, so the dock and the grid never word the one job two ways.
      */
     fun loadingBusy(name: String): String = "LOADING $name…"
     /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
