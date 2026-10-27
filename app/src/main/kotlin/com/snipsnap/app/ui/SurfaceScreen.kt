@@ -288,7 +288,6 @@ fun SurfaceScreen(
      */
     settings: MutableMap<String, String> = mutableMapOf(),
 ) {
-    composedOffMainThread("SurfaceScreen")
     val scheme = LocalScheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

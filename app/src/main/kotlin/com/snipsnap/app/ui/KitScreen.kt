@@ -64,6 +64,8 @@ import com.snipsnap.app.BeatPlayer
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
+import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
@@ -75,6 +77,7 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
@@ -85,6 +88,8 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Look
 import com.snipsnap.shell.MidiDeviceId
+import com.snipsnap.shell.MidiGate
+import com.snipsnap.shell.MidiPadMaps
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -287,6 +292,7 @@ fun KitScreen(
 
     val kit = entry.kit
     val strike = rememberSaveable(entry.dir.absolutePath, saver = StrikeState.Saver) { StrikeState() }
+    LaunchedEffect(kit) { strike.lastHit = null }
 
     // The glow the pad cells cannot draw for themselves: a hit that did not
     // arrive as a finger on a cell (a MIDI note, the fullscreen grid) has no
@@ -308,6 +314,12 @@ fun KitScreen(
         scope.launch { anim.snapTo(0f) }
     }
 
+    // Declared above hit/playHeld/release: they send under the current map.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    // The map each controller was last played with, keyed by its fingerprint.
+    // Saved when MIDI MAP is tapped, brought back when it connects.
+    val padMapPrefs = remember(engineContext) { engineContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
     fun hit(slot: Int, velocity: Float = 1f, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
         if (!host.up || !player.isUp()) return
@@ -321,14 +333,35 @@ fun KitScreen(
         // be built and never heard.
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)) allocator.voiceEnded(allocation.started.id)
+        val sounded = player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)
+        if (sounded) {
+            strike.recordHit(pad, velocity)
+        } else allocator.voiceEnded(allocation.started.id)
+        // Out over MIDI (touch only), and only for a hit that made local sound.
+        // No release gesture here, so MidiOut schedules the note-off one step
+        // later; the window grid sends under PLAY's current map, like fullscreen.
+        // The wire carries the layer-picking velocity; gainVelocity is local feel.
+        if (sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(kit.tempoBpm)))
+            }
+        }
     }
+
+    // slot -> the note the wire's on named. The wire's off must name the note the wire's on named,
+    // and must not wait for an allocator voice that a one-shot pad never has.
+    val sentNotes = remember(entry.dir) { HashMap<Int, Int>() }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
     // MIDI key and the fullscreen grid both HAVE a release, so a gate pad
     // honours its own metadata here - noteOn reads `pad.oneShot` and
     // `release` calls noteOff - where the window's tap cannot.
-    fun playHeld(slot: Int, velocity: Float, gainVelocity: Float = velocity) {
+    //
+    // [fromMidi] is true when the note arrived over MIDI (MidiPads.handle):
+    // it plays locally but is never sent back out, so a keyboard that echoes
+    // its input cannot loop. Touch passes false and is sent. It has no
+    // default on purpose: every new caller has to say which it is.
+    fun playHeld(slot: Int, velocity: Float, fromMidi: Boolean, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
         // No stream, no voice: with no callback running nothing would ever
         // report an ending, and the voice count would climb and stick.
@@ -345,15 +378,29 @@ fun KitScreen(
             // decide the pad's opening glow value.
             if (voice.padSlot != slot) extinguish(voice.padSlot)
         }
-        if (!player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)) {
+        val sounded = player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)
+        if (!sounded) {
             // Nothing loaded for this pad (or nothing yet): the allocator
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
+        } else {
+            strike.recordHit(pad, velocity)
         }
         flash(slot)
+        if (!fromMidi && sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                val now = System.nanoTime()
+                // Retrigger while held: end the note that went out before the new one.
+                sentNotes.remove(slot)?.let { MidiOut.drumOff(it, now) }
+                MidiOut.drumOn(note, velocity, now)
+                sentNotes[slot] = note
+            }
+        }
     }
 
-    fun release(slot: Int) {
+    fun release(slot: Int, fromMidi: Boolean) {
+        // Before the early return: the off never depends on the allocator.
+        if (!fromMidi) sentNotes.remove(slot)?.let { MidiOut.drumOff(it, System.nanoTime()) }
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
@@ -363,6 +410,8 @@ fun KitScreen(
     fun panic() {
         strike.releaseTouch()
         host.allOff()
+        MidiOut.allNotesOff()
+        sentNotes.clear()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
@@ -380,16 +429,30 @@ fun KitScreen(
     // listener. The keyboard itself is opened and closed with the
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
-    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
     var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
-        MidiPads.handle(event, midiMap, onHit = { slot, velocity -> playHeld(slot, velocity) }, onRelease = ::release, onPanic = ::panic)
+        MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
     })
+    // The listener outlives a composition; compare against the live map, not a captured one.
+    val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event) = onMidi(event)
-            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) {
+                midiDevices = devices
+                // A controller seen before brings its pad map back. Panic FIRST:
+                // a note held under the old map would otherwise release under the
+                // new one, land on a different slot and leave a local voice ringing.
+                // The most recently connected hardware device wins; the virtual
+                // port is not a controller to remember. Nothing saved leaves the
+                // map the screen is showing.
+                val restored = MidiPadMaps.restore(devices) { padMapPrefs.getString(it, null) }
+                if (restored != null && restored != midiMapNow()) {
+                    onPanic()
+                    midiMap = restored
+                }
+            }
             // The cable is out: a gated pad it held would ring until PANIC.
             override fun onDeviceRemoved() = onPanic()
         }
@@ -429,6 +492,8 @@ fun KitScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen: whatever this screen turned on must end on the wire.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -464,7 +529,13 @@ fun KitScreen(
     // manifest, so flipping `requestedOrientation` at runtime reflows the
     // window instead of recreating the Activity.
     var fullscreen by remember { mutableStateOf(false) }
-    val exitFullscreen = { fullscreen = false }
+    val exitFullscreen = {
+        // A pad held when the popup closes never gets its release gesture: end its note here.
+        val now = System.nanoTime()
+        for (note in sentNotes.values) MidiOut.drumOff(note, now)
+        sentNotes.clear()
+        fullscreen = false
+    }
 
     // The beat lights the pads it plays. The clock's notes are not fingers
     // and not MIDI, so they have no cell gesture to light them: they come
@@ -651,6 +722,7 @@ fun KitScreen(
         }
 
         StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
         if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
             TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         }
@@ -1028,7 +1100,19 @@ fun KitScreen(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}") {
+                                // Panic before the switch: a held note must release under the map it struck under.
+                                panic()
+                                midiMap = midiMap.next()
+                                // Remembered for every connected hardware controller, not the virtual port.
+                                val chosen = midiMap.name
+                                val keys = MidiPadMaps.keysToSave(midiDevices)
+                                if (keys.isNotEmpty()) {
+                                    val editor = padMapPrefs.edit()
+                                    for (k in keys) editor.putString(k, chosen)
+                                    editor.apply()
+                                }
+                            }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1057,9 +1141,9 @@ fun KitScreen(
                 strike = strike,
                 onHit = { s, v, _ ->
                     val touch = strike.hit(v)
-                    playHeld(s, touch.velocity, touch.gainVelocity)
+                    playHeld(s, touch.velocity, fromMidi = false, gainVelocity = touch.gainVelocity)
                 },
-                onRelease = { s, _ -> release(s) },
+                onRelease = { s, _ -> release(s, fromMidi = false) },
                 onExit = exitFullscreen,
             )
         }

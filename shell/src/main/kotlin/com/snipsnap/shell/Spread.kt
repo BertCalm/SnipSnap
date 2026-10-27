@@ -10,6 +10,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Ballast
+import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CreasePatch
@@ -26,6 +27,8 @@ import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.TidalPatch
 import kotlin.math.roundToInt
 
 /**
@@ -104,10 +107,12 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
+        is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
@@ -215,6 +220,7 @@ object Spread {
             val recipe = sound.recipe?.takeIf(PrintedPads::has) ?: sound.like?.recipe
             Copy.boardRemoveBeforeSpread(PrintedPads.label(recipe))
         }
+        val tidal = sound.recipe?.let { runCatching { PadRecipe.fromJsonValue(it).patch }.getOrNull() } as? TidalPatch
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {
@@ -245,6 +251,7 @@ object Spread {
                     humanize = like.humanize,
                 )
             }
+            if (tidal != null) model.update(note.slot) { TidalPad.configure(it, tidal) }
         }
         return plan.notes
     }

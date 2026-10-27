@@ -185,7 +185,7 @@ each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
 CLI-only model-1 comparison each from `VentPresets`. The voice selects its
 saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH, four FLICKER and five BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH, four FLICKER, four RATTLE and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
@@ -233,8 +233,9 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 
 TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
 and `--beats 1..4` edit the finite performance while preserving its saved seed,
-articulation and model. The selected beats must fit within two seconds;
-the output remains a 3.5-second one-shot with room for the replies to decay.
+articulation and model. The selected beat grid must fit within two seconds;
+answers and course staggering can continue past it. The output remains a
+3.5-second one-shot with its existing final fade.
 
 ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
@@ -543,10 +544,13 @@ toe a decade above it by a sine with a flat top, which never parks at the heel b
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
-gesture, then the wah waits at the heel) and `delayed` (a delay pedal: ECHO's
+gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
 long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
 120 ms so a held
-note's attack comes back as a repeat).
+note's attack comes back as a repeat) and `forged` (a hit formed against a die:
+FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
+with a flash of grit at impact; peak-matched, so it reads louder at the same
+peak).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -556,7 +560,8 @@ of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
 recipe riding the pad. The library today: `driven` (the amp), `compressed` (the
-sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `delayed` (after the amp), and
+sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
+fixed there), `delayed` (after the amp), and
 `rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip
 until their gates — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
@@ -576,8 +581,8 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK — `driven`, `compressed`,
-`wahed`, `touchwahed` and `rockwahed`),
+the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE — `driven`, `compressed`,
+`wahed`, `touchwahed`, `rockwahed` and `forged`),
 grouped by what an effect *is*, because a guitarist looks for a pedal by
 its name; tapping any
 of them changes every file the pad references, velocity layers included.

@@ -141,6 +141,12 @@ closely spaced roots, retaining the saved model, seed and source velocity. SEND
 TO PAD makes a one-shot with a recorded end fade and keeps the held recipe editable.
 The held audition and instrument are dry. Hardware playback remains a listening check.
 
+MAKE INSTRUMENT now also offers TOUCH LAYERS, on by default when opening FLOCK's
+MAKE sheet. Three source disturbances per root respond to soft, medium and hard
+key touches. The saved velocity remains the hard-touch anchor; single-layer MAKE
+and CLI exports remain available. See [the touch-layer design](FLOCK_RIBBON_TOUCH.md)
+for sustain matching, MIDI windows, provenance and listening checks.
+
 Generate the default C3–C5 instrument and reference-player listening evidence:
 
 ```sh
@@ -232,7 +238,8 @@ makes that limitation audible.
 The listening questions are whether the captured period repeats distractingly,
 whether blends cause clicks or level scoops, whether FLOW remains distinct, and
 whether note release sounds natural. Numerical edge checks do not establish a
-listening pass. Sustained phone instruments and MPC keygroups remain future work.
+listening pass. Sustained phone instruments and MPC keygroups are implemented
+above; their physical playback and listening checks remain open.
 
 ```sh
 ./gradlew :synth:generateFlockRibbonSustainAudition

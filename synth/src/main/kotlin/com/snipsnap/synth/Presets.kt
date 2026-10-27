@@ -16,6 +16,14 @@ package com.snipsnap.synth
 object Presets {
 
     fun forVoice(engine: String, voice: String): List<Patch> = when (engine) {
+        TidalPatch.ENGINE -> {
+            val v = TidalVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            TidalPresets.forVoice(v)
+        }
+        ApsisPatch.ENGINE -> {
+            val v = ApsisVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            ApsisPresets.forVoice(v)
+        }
         LatticePatch.ENGINE -> {
             val v = LatticeVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             LatticePresets.forVoice(v)
@@ -292,7 +300,7 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        LatticePresets.all() +
+        TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +

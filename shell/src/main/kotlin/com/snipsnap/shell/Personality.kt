@@ -937,6 +937,24 @@ object Copy {
     /** Under the HAPTICS switch: what it touches, and the one time it stays still whatever the switch says. */
     const val SETUP_HAPTICS_NOTE = "A TICK UNDER A PAD OR A STEPPER. SILENT WHILE THE MIC IS ARMED, SO IT IS NOT ON THE TAPE."
 
+    // ---- Settings: MIDI OUT, what the pads and keys send to a plugged-in device ----
+    /** The heading of the MIDI OUT section of SETUP. */
+    const val SETUP_MIDI_OUT_HEADING = "MIDI OUT"
+    /** Under the MIDI OUT heading: where the notes go, and the port other apps can always open. */
+    const val SETUP_MIDI_OUT_NOTE = "PADS AND KEYS GO OUT TO EVERY PLUGGED-IN DEVICE. OTHER APPS CAN ALWAYS OPEN SNIPSNAP OUT."
+    /** In place of the device list when nothing is plugged in. */
+    const val SETUP_MIDI_OUT_NONE = "NOTHING PLUGGED IN. SNIPSNAP OUT IS STILL PUBLISHED."
+    /** In place of the whole section on a phone with no MIDI service. */
+    const val SETUP_MIDI_OUT_UNSUPPORTED = "THIS PHONE HAS NO MIDI."
+    /** The name SETUP lists, and the LCD prints, for SnipSnap's own published output port. */
+    const val MIDI_PORT_OUT_NAME = "SNIPSNAP OUT"
+    /** The name the LCD prints for SnipSnap's own published input port, while another app holds it. */
+    const val MIDI_PORT_IN_NAME = "SNIPSNAP IN"
+    /** Beside a device whose port opened: it is being sent to. */
+    const val SETUP_MIDI_OUT_PORT_OK = "OUT"
+    /** Beside a device whose port another app already holds. */
+    const val SETUP_MIDI_OUT_PORT_BUSY = "BUSY"
+
     // ---- Settings: the WORKSHOP, the developer's tools behind a knock (docs/WORKSHOP.md) ----
     /** Under the WORKSHOP heading at the foot of SETUP, once the knock has opened it: what the section is, and what it is not. */
     const val WORKSHOP_NOTE = "TOOLS FOR THE BENCH, NOT FOR PLAYING. NOTHING HERE CHANGES HOW THE APP SOUNDS."
@@ -2766,4 +2784,47 @@ object Copy {
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
 
+
+    // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----
+    /** The MIDI screen's button that runs the six-second clock check (bench S1). */
+    const val MIDI_CLOCK_CHECK = "CLOCK CHECK"
+    /** The same button while the check runs; a tap does nothing. */
+    const val MIDI_CLOCK_RUNNING = "CHECKING…"
+    /** The pad engine's stream would not start, so there is nothing to check. */
+    const val MIDI_CLOCK_NO_STREAM = "NO AUDIO STREAM. THE CLOCK CHECK CANNOT RUN."
+    /** Headphones went in or out, or the device restarted the stream, mid-check. */
+    const val MIDI_CLOCK_ROUTE_CHANGED = "THE AUDIO ROUTE CHANGED. RUN IT AGAIN."
+    /** The stream fell back to shared mode; it may not be what clock out would get. */
+    const val MIDI_CLOCK_SHARED = "SHARED STREAM: ANOTHER STREAM WAS PLAYING, MAYBE SNIPSNAP'S OWN BEAT. STOP EVERYTHING AND RUN IT AGAIN."
+
+    // ---- gear · MIDI: the clock check's one-line answer (ClockProbe.describe) ----
+    /** The clock check found a position that tracks. Rate and lag follow it. */
+    const val CLOCK_TRACKED = "POSITION TRACKED."
+    /** Every read of the playback position failed. */
+    const val CLOCK_UNAVAILABLE = "THIS PHONE REPORTS NO POSITION FOR THIS STREAM."
+    /** Not enough run after the position first moved to judge it. */
+    const val CLOCK_TOO_SHORT = "TOO SHORT. RUN IT AGAIN."
+    /** The position sat still at the start for [ms], then moved. */
+    fun clockStoodStill(ms: Long): String = "POSITION STOOD STILL $ms MS AT THE START, THEN TRACKED."
+    /** The position stopped for [ms], starting [atSeconds] into the run. */
+    fun clockStopped(ms: Long, atSeconds: Double, slowStartMs: Long? = null): String =
+        "POSITION STOPPED FOR $ms MS, ${"%.1f".format(java.util.Locale.ROOT, atSeconds)} S IN" +
+            (if (slowStartMs != null) ", AFTER A SLOW START OF $slowStartMs MS." else ".")
+    /** The position never moved in [seconds] of playing: the clock cannot be trusted. */
+    fun clockNeverMoved(seconds: Double): String = "POSITION NEVER MOVED IN ${"%.1f".format(java.util.Locale.ROOT, seconds)} S. THIS PHONE'S CLOCK CANNOT BE TRUSTED ON THIS STREAM."
+    /** The position's clock runs [ppm] from the stream's rate (signed: negative is slow), far more than drift. */
+    fun clockRateWrong(ppm: Long): String =
+        "POSITION RUNS AT THE WRONG RATE: ${Math.abs(ppm)} PPM ${if (ppm < 0) "SLOW" else "FAST"}. DON'T TRUST THIS CLOCK."
+    /** The phone's position timestamps never advanced, or spanned too little to fit a rate. */
+    const val CLOCK_TIMESTAMPS_STUCK = "THE PHONE'S TIMESTAMPS DID NOT ADVANCE. DON'T TRUST THIS CLOCK."
+    /** How far the position's clock runs from the stream's rate. */
+    fun clockRate(ppm: Long): String = when {
+        ppm > 0 -> "RATE $ppm PPM FAST."
+        ppm < 0 -> "RATE ${-ppm} PPM SLOW."
+        else -> "RATE 0 PPM OFF."
+    }
+    /** Coarse: the position trails the frames written by about [ms]. */
+    fun clockBehind(ms: Long): String = "ABOUT $ms MS BEHIND."
+    /** Coarse: the position is ahead of the frames written by about [ms] (the two reads skew). */
+    fun clockAhead(ms: Long): String = "ABOUT $ms MS AHEAD."
 }

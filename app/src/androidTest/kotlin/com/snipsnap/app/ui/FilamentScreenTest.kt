@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextReplacement
@@ -97,8 +98,13 @@ class FilamentScreenTest : ComposeScreenTest() {
 
     private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
         compose.runOnIdle { screenVisible = false }
-        pump()
-        button("ENGINE FILAMENT · TAP FOR NEXT").assertDoesNotExist()
+        // One pump can return while a cancelled render still holds the last
+        // frame. The control has to actually leave; a visible engine label
+        // still fails this wait.
+        waitFor("the hidden bench to drop ENGINE FILAMENT") {
+            compose.onAllNodesWithContentDescription("ENGINE FILAMENT · TAP FOR NEXT")
+                .fetchSemanticsNodes().isEmpty()
+        }
         compose.runOnIdle {
             currentEntry = entry
             screenVisible = true
@@ -207,7 +213,7 @@ class FilamentScreenTest : ComposeScreenTest() {
                 assertEquals((preset.midi - Filament.MIN_MIDI) / 48f, progress("ROOT"), 0f)
             }
         }
-        button("MAKE INSTRUMENT").assertDoesNotExist()
+        button("MAKE INSTRUMENT").assertExists()
         button("DRONE TO LOOP").assertDoesNotExist()
     }
 
@@ -281,9 +287,17 @@ class FilamentScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun current_thread_makes_a_three_root_instrument_with_its_attack_and_saved_source() {
+    fun current_thread_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.THREAD)
+
+    @Test
+    fun current_pulse_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.PULSE)
+
+    @Test
+    fun current_curl_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.CURL)
+
+    private fun makeInstrument(voice: FilamentVoice) {
         val root = shelfRoot()
-        val source = FilamentPresets.forVoice(FilamentVoice.THREAD).first().copy(
+        val source = FilamentPresets.forVoice(voice).first().copy(
             midi = 57, velocity = .7f,
             config = FilamentConfig(seed = 73, profile = FilamentProfile.LATE),
         )
@@ -298,7 +312,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         activate("MAKE")
         val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
-        waitFor("the three THREAD roots and their source recipe", timeoutMillis = 180_000) {
+        waitFor("the three $voice roots and their source recipe", timeoutMillis = 180_000) {
             instruments.isDirectory && instruments.walkTopDown().any { it.name == FilamentPadMaker.PATCH_FILE }
         }
         val (_, instrument) = InstrumentStore.list(instruments).single()

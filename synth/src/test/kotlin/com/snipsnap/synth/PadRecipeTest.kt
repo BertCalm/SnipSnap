@@ -73,6 +73,7 @@ class PadRecipeTest {
         OverlapPatch("Network Test", OverlapTopology.TREFOIL, mapOf("KNOT" to 0.6f), midi = 57, velocity = 0.6f),
         // FLOCK also exercises a saved root, velocity and exact seed beyond its factory defaults.
         FlockPatch("Flock Test", FlockVoice.RIBBON, mapOf("FLOW" to 0.65f, "HOLD" to 0f), midi = 55, velocity = 0.6f, seed = 7),
+        CairnPatch("Stone Test", CairnVoice.ANSWER, mapOf("BODY" to .5f), midi = 55, velocity = .6f, startAtContact = false),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
         // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.

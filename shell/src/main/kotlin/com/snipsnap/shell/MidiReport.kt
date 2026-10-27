@@ -38,6 +38,40 @@ object MidiReport {
         val model: String,
     )
 
+    /** Where the audio went while a CLOCK CHECK ran, as the report names it. */
+    enum class Route { SPEAKER, WIRED, BLUETOOTH, USB }
+
+    /**
+     * One finished CLOCK CHECK (bench S1), carried into [text] so a pasted
+     * report holds the verdict line and the stream facts that explain it.
+     * The app reads the stream's facts at the end of the run; [line] is
+     * [ClockProbe.describe] of [result].
+     */
+    data class ClockReport(
+        val line: String,
+        val result: ClockProbe.Result,
+        val sampleRate: Int,
+        val shared: Boolean,
+        val framesPerBurst: Int,
+        /** Oboe's `AudioApi` as `PadEngine.audioApi()` returns it: 0 unspecified, 1 OpenSL ES, 2 AAudio, -1 no stream. */
+        val audioApi: Int,
+        val latencyMillis: Double?,
+        val model: String,
+        val sdk: Int,
+        val route: Route,
+    )
+
+    /** Oboe's `AudioApi` number as a word. */
+    fun apiWord(api: Int): String = when (api) {
+        0 -> "UNSPECIFIED"
+        1 -> "OPENSL ES"
+        2 -> "AAUDIO"
+        else -> "NO STREAM"
+    }
+
+    /** What the CLOCK section's last sentence says it answers, and what it leaves out. */
+    const val CLOCK_SCOPE = "Answers S1 for the pad engine's Oboe stream, the one clock out uses. The AudioTrack path is not probed."
+
     const val TITLE = "MIDI"
     const val COPY = "COPY REPORT"
     const val COPIED = "REPORT COPIED"
@@ -92,6 +126,7 @@ object MidiReport {
         endpoints: List<MidiEndpoint>,
         refused: List<String>,
         monitor: MidiMonitor.Snapshot,
+        clock: ClockReport? = null,
     ): String = buildString {
         appendLine("SNIPSNAP MIDI REPORT")
         appendLine("APP ${phone.app ?: "UNKNOWN"} · ANDROID ${phone.android} (API ${phone.sdk}) · ${phone.maker} ${phone.model}")
@@ -107,5 +142,25 @@ object MidiReport {
         val last = monitor.lines.take(REPORT_LINES).asReversed()
         appendLine("LAST ${last.size} MESSAGES, OLDEST FIRST")
         for (l in last) appendLine(line(l))
+        if (clock != null) clockSection(clock)
+    }
+
+    private fun StringBuilder.clockSection(c: ClockReport) {
+        val r = c.result
+        appendLine("CLOCK CHECK")
+        appendLine(c.line)
+        appendLine("SAMPLES ${r.samples} · WITH POSITION ${r.validSamples}")
+        val gap = r.startupGapMs?.let { "${Math.round(it)} MS" } ?: "NONE"
+        val stallAt = r.stallAtMs?.let { " AT ${Math.round(it)} MS" } ?: ""
+        appendLine("START-UP GAP $gap · LONGEST STALL ${Math.round(r.longestStallMs)} MS$stallAt")
+        fun ms(v: Double?) = v?.let { "%.1f".format(java.util.Locale.ROOT, it) }
+        val age = ms(r.timestampAgeMeanMs)?.let { "$it MS, MAX ${ms(r.timestampAgeMaxMs) ?: "UNKNOWN"} MS" } ?: "UNKNOWN"
+        appendLine("TIMESTAMP AGE $age")
+        appendLine("BURST USED ${ms(r.burstMs)?.let { "$it MS" } ?: "UNKNOWN"}")
+        appendLine("POSITION UPDATES EVERY ${ms(r.medianUpdateMs)?.let { "$it MS" } ?: "UNKNOWN"}")
+        val latency = c.latencyMillis?.let { "%.1f MS".format(java.util.Locale.ROOT, it) } ?: "UNKNOWN"
+        appendLine("SAMPLE RATE ${c.sampleRate} · ${if (c.shared) "SHARED" else "EXCLUSIVE"} · BURST ${c.framesPerBurst} FRAMES · API ${apiWord(c.audioApi)} · LATENCY $latency")
+        appendLine("ROUTE ${c.route.name} · ${c.model} · SDK ${c.sdk}")
+        appendLine(CLOCK_SCOPE)
     }
 }

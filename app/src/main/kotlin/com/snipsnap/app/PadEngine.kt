@@ -7,6 +7,8 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadHit
+import com.snipsnap.synth.AquariumPerformanceSettings
+import com.snipsnap.synth.AquariumRecipe
 import java.io.File
 
 /**
@@ -63,6 +65,10 @@ class PadEngine(preferredSampleRate: Int) {
     private val pendingStops = ArrayDeque<Pair<Int, Float>>()
     private var pendingAllOff: Float? = null
     private var keptWarned = false
+    private var aquariumWanted = AquariumPerformanceSettings()
+    private var aquariumBpm = 0.0
+    private var aquariumPending = false
+    private var aquariumResetPending = false
 
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
@@ -100,7 +106,61 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun start(): Boolean {
         running = open && NativePads.start(handle)
+        if (running) flushAquarium()
         return running
+    }
+
+    /**
+     * Stage this instance's live bus. True queued now; false keeps the latest
+     * request for the existing frame-rate drain to retry, unless already closed.
+     * Sound edits fade the wet branch; bypass alone retains effect time.
+     * A reset request stays sticky across newer edits until it is queued.
+     */
+    @Synchronized
+    fun configureAquarium(settings: AquariumPerformanceSettings, reset: Boolean = false): Boolean {
+        if (!open) return false
+        aquariumWanted = settings
+        aquariumPending = true
+        aquariumResetPending = aquariumResetPending || reset
+        return flushAquarium()
+    }
+
+    /** Kit tempo drives the shared Tide clock. Zero means free time. */
+    @Synchronized
+    fun setAquariumTempo(bpm: Double): Boolean {
+        require(bpm.isFinite() && bpm in 0.0..1000.0) { "Aquarium host BPM must be finite and in 0..1000: $bpm" }
+        if (!open) return false
+        if (aquariumBpm != bpm) {
+            aquariumBpm = if (bpm == 0.0) 0.0 else bpm
+            aquariumPending = true
+        }
+        return flushAquarium()
+    }
+
+    @Synchronized
+    fun aquariumSettings(): AquariumPerformanceSettings = aquariumWanted
+
+    @Synchronized
+    fun aquariumFaulted(): Boolean = open && NativePads.aquariumFaulted(handle)
+
+    @Synchronized
+    fun aquariumLimitedFrames(): Long = if (open) NativePads.aquariumLimitedFrames(handle) else 0L
+
+    private fun flushAquarium(): Boolean {
+        if (!open) return false
+        if (!aquariumPending) return true
+        val parameters = FloatArray(AquariumRecipe.PARAMETERS.size) { index ->
+            aquariumWanted.settings.parameters.getValue(AquariumRecipe.PARAMETERS[index].id)
+        }
+        val accepted = NativePads.configureAquarium(
+            handle, parameters, aquariumWanted.settings.seed, aquariumWanted.settings.model,
+            aquariumBpm, aquariumWanted.outputGain, aquariumWanted.enabled, aquariumResetPending,
+        )
+        if (accepted) {
+            aquariumPending = false
+            aquariumResetPending = false
+        }
+        return accepted
     }
 
     @Synchronized
@@ -306,7 +366,7 @@ class PadEngine(preferredSampleRate: Int) {
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
             handle, voiceId, sample,
-            hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            hit.startFrame, hit.endFrameExclusive, hit.loopStartFrame, hit.gainLeft, hit.gainRight, hit.pitchRatio,
             reverse = false,
         )
     }
@@ -466,6 +526,7 @@ class PadEngine(preferredSampleRate: Int) {
             if (!NativePads.stopVoice(handle, voiceId, stopFade)) return
             pendingStops.removeFirst()
         }
+        flushAquarium()
     }
 
     /** One warning the first time anything is kept; never per frame. */
@@ -478,6 +539,22 @@ class PadEngine(preferredSampleRate: Int) {
     /** Frames the audio callback has rendered since this engine was created; 0 when closed. For diagnostics. */
     @Synchronized
     fun framesRendered(): Long = if (open) NativePads.framesRendered(handle) else 0L
+
+    /**
+     * The hardware's reported playback position, written into [out] (two longs the caller owns):
+     * `[framePosition, timeNanos]` on CLOCK_MONOTONIC. False, leaving [out] alone, when closed, when
+     * the stream has no timestamp yet, or when [out] is too small. Main thread, never the audio callback.
+     */
+    @Synchronized
+    fun hardwarePosition(out: LongArray): Boolean = open && NativePads.hardwarePosition(handle, out)
+
+    /** Frames per hardware burst; 0 when closed or no stream. */
+    @Synchronized
+    fun framesPerBurst(): Int = if (open) NativePads.framesPerBurst(handle) else 0
+
+    /** Oboe's AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio); -1 when closed or no stream. */
+    @Synchronized
+    fun audioApi(): Int = if (open) NativePads.audioApi(handle) else -1
 
     // ---- the resample tap -------------------------------------------------
 

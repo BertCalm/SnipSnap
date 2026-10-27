@@ -68,7 +68,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
 // the September UAT's finding 11 made bank B reachable, at which point a
@@ -172,6 +171,7 @@ fun GrainFieldScreen(
     /** A field built elsewhere (SNAP's photo), in place of loading and analyzing a pad. */
     prebuilt: PrebuiltField? = null,
 ) {
+    composedOffMainThread("GrainFieldScreen")
     val scheme = LocalScheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -190,7 +190,7 @@ fun GrainFieldScreen(
         }
         val pad = entry.kit.pad(slot)
         val snip = pad?.let { p ->
-            withContext(Dispatchers.IO) {
+            offMain {
                 // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
                 // from an already-bounded Snip — readCapped's 600s ceiling is defense in
                 // depth, not expected to ever bind.
@@ -201,7 +201,7 @@ fun GrainFieldScreen(
             failed = true
             return@LaunchedEffect
         }
-        val map = withContext(Dispatchers.Default) { GrainField.analyze(snip) }
+        val map = offMain(Dispatchers.Default) { GrainField.analyze(snip) }
         if (map == null) failed = true else loaded = snip to map
     }
     // The picture under the dots, converted once per field.
@@ -273,7 +273,7 @@ fun GrainFieldScreen(
 
     fun printToTape(snip: Snip) {
         scope.launch {
-            val landed = withContext(Dispatchers.IO) {
+            val landed = offMain {
                 runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
             }
             landed.onSuccess {
@@ -294,7 +294,7 @@ fun GrainFieldScreen(
         printing = false
         scope.launch {
             try {
-                val samples = withContext(Dispatchers.Default) { v.stopPrint() }
+                val samples = offMain(Dispatchers.Default) { v.stopPrint() }
                 if (samples == null || samples.size < rate / 10) {
                     onToast(Copy.GRAIN_FIELD_NOTHING_PRINTED)
                     return@launch
@@ -382,7 +382,7 @@ fun GrainFieldScreen(
                             val raw = MicSessionService.snapshotTail(GrainField.GRAIN_FRAMES)
                             if (raw != null && raw.size >= GrainField.GRAIN_FRAMES) {
                                 val projected = runCatching {
-                                    withContext(Dispatchers.Default) {
+                                    offMain(Dispatchers.Default) {
                                         val snip = Snip(raw, channels = 1, sampleRate = MicSessionService.SAMPLE_RATE)
                                         p.project(Similar.vector(FeatureExtractor.extract(snip)))
                                     }

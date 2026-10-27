@@ -14,6 +14,7 @@ import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.crossTable
 import java.io.File
@@ -262,7 +263,10 @@ object Breed {
             val bp = b?.patch
             if (bp != null && bp.engine == ap.engine && bp.voiceName == ap.voiceName) {
                 val names = (ap.macros.keys + bp.macros.keys).toList().sorted()
-                val macros = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
+                val crossed = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
+                // TIDAL's playback switch is discrete, like its saved source model,
+                // note and seed: keep A's performance shape while crossing its timbre.
+                val macros = if (ap is TidalPatch) crossed + ("HOLD" to (ap.macros["HOLD"] ?: 0f)) else crossed
                 // SNAP is the one engine whose "settings" are a drawn line,
                 // not knobs alone — two photos, one child means the line
                 // itself crosses too, not just the macros the photo set.
@@ -342,6 +346,7 @@ object Breed {
                 tuneFine = pad.tuneFine,
                 muteGroup = pad.muteGroup,
                 oneShot = pad.oneShot,
+                loop = pad.loop,
                 recipe = recipe,
                 source = pad.source + stamp,
             )

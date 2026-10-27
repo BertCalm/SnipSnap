@@ -91,6 +91,28 @@ data class PedalBoard(val picks: List<Pick>) {
         return capTail(snip, out)
     }
 
+    /**
+     * The board around a synth pad's own landing chain, rendered from its [dry] patch: the PRE picks,
+     * then the pre-amp end fade and the AMP pick (a drive pedal into the amp), then [landing] (the
+     * pad's amp and whatever it lands through), then the POST picks. This is the rig way: on a guitar
+     * pad the wah and the compressor reach the amp instead of following it
+     * (docs/superpowers/specs/2026-10-27-pedals-in-front-of-the-amp-design.md). With no landing chain
+     * it is [process] on the dry sound, and a bypassed board is the landing chain alone.
+     */
+    fun processAround(dry: Snip, landing: FxChain?): Snip {
+        if (landing == null || landing.isBypass) return process(dry)
+        if (isBypass || dry.frameCount == 0) return landing.process(dry)
+        var out = dry
+        chainFor(PedalSide.PRE)?.let { out = it.process(out) }
+        chainFor(PedalSide.AMP)?.let { amp ->
+            val full = owner(PedalSide.AMP, "valve")?.entry?.chain ?: amp
+            out = amp.process(Treatments.endFaded(out, amp, full))
+        }
+        out = landing.process(out)
+        chainFor(PedalSide.POST)?.let { out = it.process(out) }
+        return capTail(dry, out)
+    }
+
     /** The board's own budget: never more than [FxChain.MAX_CHAIN_TAIL_SECONDS] over the original, faded so the cut never clicks. */
     private fun capTail(input: Snip, output: Snip): Snip {
         val maxFrames = input.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()

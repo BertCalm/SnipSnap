@@ -13,9 +13,21 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiEndpoint
 import com.snipsnap.shell.MidiFingerprint
+
+/**
+ * Whether an event is worth a hop to the main thread, where the screens
+ * listen. The clock belongs to the future follower, which will read it on
+ * the MIDI thread; bend and pressure belong to MIDI learn (step 4), which
+ * removes the second clause. Until something consumes them each would be a
+ * posted lambda thrown away, and a pressure pad or touch strip sends them
+ * continuously. The raw-byte monitor is fed before parsing and is unaffected.
+ */
+internal fun MidiWire.Event.reachesScreens(): Boolean =
+    this !is MidiWire.Event.RealTime && this !is MidiWire.Event.Expression
 
 /**
  * A keyboard plugged into the phone, as events on the main thread.
@@ -98,7 +110,30 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
     private var listener: Listener? = null
     private var callback: MidiManager.DeviceCallback? = null
 
-    private class Opened(val info: MidiDeviceInfo, val id: MidiDeviceId, val device: MidiDevice, val ports: List<Pair<MidiOutputPort, Receiver>>)
+    /** SnipSnap's own published port: notes from another app, and its being bound as a device. */
+    private val virtualListener = object : VirtualMidi.Listener {
+        override fun onEvent(event: MidiWire.Event) {
+            listener?.onEvent(event)
+        }
+
+        override fun onBound(id: MidiDeviceId) {
+            listener?.onDevicesChanged(devices)
+        }
+
+        override fun onUnbound() {
+            // The other app is gone with its held notes; let them go first,
+            // as closeDevice does for a pulled cable.
+            listener?.onDeviceRemoved()
+            listener?.onDevicesChanged(devices)
+        }
+    }
+
+    private class Opened(
+        val info: MidiDeviceInfo,
+        val id: MidiDeviceId,
+        val device: MidiDevice,
+        val ports: List<Pair<MidiOutputPort, Receiver>>,
+    )
 
     private val opened = LinkedHashMap<Int, Opened>()
 
@@ -106,13 +141,18 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
     val supported: Boolean get() = manager != null
 
     /** What is connected right now, by name and fingerprint, in the order it was found. */
-    val devices: List<MidiDeviceId> get() = opened.values.map { it.id }
+    val devices: List<MidiDeviceId> get() = opened.values.map { it.id } + listOfNotNull(VirtualMidi.boundId)
 
-    /** [devices] with their port names, for the MIDI screen. */
+    /**
+     * [devices] with their port names, for the MIDI screen. The published
+     * "SnipSnap In" is listed while another app holds it, as [devices] lists
+     * it; what that app sends arrives parsed, so it reaches the screens but
+     * not the MIDI screen's raw monitor.
+     */
     val endpoints: List<MidiEndpoint>
         get() = opened.values.map {
             MidiEndpoint(it.id, portNames(it.info, MidiDeviceInfo.PortInfo.TYPE_OUTPUT), portNames(it.info, MidiDeviceInfo.PortInfo.TYPE_INPUT))
-        }
+        } + listOfNotNull(VirtualMidi.boundId?.let { MidiEndpoint(it, listOf(Copy.MIDI_PORT_IN_NAME), emptyList()) })
 
     /**
      * Start listening: every device present now is opened, and the
@@ -123,6 +163,9 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
         val manager = manager ?: return false
         if (this.listener != null) return true
         this.listener = listener
+        VirtualMidi.subscribe(virtualListener)
+        // A screen opened while another app already holds "SnipSnap In" must print it now, not on the next change.
+        if (VirtualMidi.boundId != null) listener.onDevicesChanged(devices)
         val cb = object : MidiManager.DeviceCallback() {
             override fun onDeviceAdded(info: MidiDeviceInfo) = openDevice(info)
             override fun onDeviceRemoved(info: MidiDeviceInfo) = closeDevice(info.id)
@@ -142,7 +185,11 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
 
     private fun openDevice(info: MidiDeviceInfo) {
         val manager = manager ?: return
-        if (info.outputPortCount == 0 || info.id in opened) return
+        if (info.id in opened) return
+        // SnipSnap's own published device is listed like any other; opening
+        // it would hear our own notes and send into ourselves.
+        if (isOwnDevice(info)) return
+        if (info.outputPortCount == 0) return
         manager.openDevice(info, { device ->
             if (device == null) {
                 Log.w(TAG, "MIDI device ${nameOf(info)} would not open")
@@ -167,6 +214,10 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
                 port.connect(receiver)
                 ports += port to receiver
             }
+            // Output ports only. The device's input ports (where this app
+            // sends) are opened for the whole process by MidiOut, through a
+            // second MidiDevice handle: ports are exclusive, devices are not,
+            // and the two openers never open the same port.
             opened[info.id] = Opened(info, id, device, ports)
             listener?.onDevicesChanged(devices)
         }, handler)
@@ -175,6 +226,9 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
     private fun closeDevice(id: Int) {
         val gone = opened.remove(id) ?: return
         release(gone)
+        // A receiver must not keep a note the app let go: whatever else is
+        // still connected hears the silence before the screen is told.
+        MidiOut.allNotesOff()
         // The cable is out: every note it turned on is held by nothing
         // now, and the screen must let them all go before it hears about
         // the shorter list. In this order, so the readout never names a
@@ -199,6 +253,7 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
     fun close() {
         val manager = manager ?: return
         listener = null
+        VirtualMidi.unsubscribe(virtualListener)
         // One unregister serves both registrations; only the register
         // call grew a transport argument in 33.
         callback?.let(manager::unregisterDeviceCallback)
@@ -228,10 +283,12 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
             // the follower that will read it on this thread (roadmap P1.3/P1.8);
             // until that exists each 0xF8 would be a posted lambda thrown away
             // 24 times a beat.
+            // Bend and pressure are filtered with it, for the same reason, until
+            // MIDI learn reads them.
             // The raw copy is taken before parsing, here, because the service
             // may reuse msg once onSend returns.
             val raw = if (tapRaw && count > 0) msg.copyOfRange(offset, offset + count) else null
-            val events = wire.feed(msg, offset, count, timestamp).filter { it !is MidiWire.Event.RealTime }
+            val events = wire.feed(msg, offset, count, timestamp).filter { it.reachesScreens() }
             if (raw == null && events.isEmpty()) return
             handler.post {
                 if (!alive) return@post
@@ -244,6 +301,20 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
 
     companion object {
         private const val TAG = "MidiInput"
+
+        /**
+         * SnipSnap's own published device, which neither this class nor
+         * [MidiOut]'s input-port opener may open (it would hear or send into
+         * ourselves). The one definition. Public properties only; a
+         * third-party virtual device that calls itself SnipSnap/SnipSnap
+         * would be skipped too, which is acceptable.
+         */
+        internal fun isOwnDevice(info: MidiDeviceInfo): Boolean {
+            val p = info.properties
+            return info.type == MidiDeviceInfo.TYPE_VIRTUAL &&
+                p.getString(MidiDeviceInfo.PROPERTY_MANUFACTURER) == MIDI_DEVICE_MANUFACTURER &&
+                p.getString(MidiDeviceInfo.PROPERTY_PRODUCT) == MIDI_DEVICE_PRODUCT
+        }
 
         /**
          * What the device says it is: transport, USB vendor and product ids

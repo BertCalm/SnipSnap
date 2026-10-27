@@ -251,7 +251,6 @@ fun ExportScreen(
     /** ALSO ▸ BEAT WRITERS: the door to BEAT, where bounce, MIDI and chart are written from. */
     onBeatWriters: () -> Unit = {},
 ) {
-    composedOffMainThread("ExportScreen")
     val scheme = LocalScheme.current
 
     if (entry == null) {
@@ -351,7 +350,6 @@ private fun ExportContent(
     onShareKit: () -> Unit,
     onBeatWriters: () -> Unit,
 ) {
-    composedOffMainThread("ExportContent")
     val model = session.model
     val kit = session.kit
 
@@ -974,7 +972,6 @@ private fun ProjectCard(
     onToast: (String) -> Unit,
     onNote: (LandingNote.Note) -> Unit,
 ) {
-    composedOffMainThread("ProjectCard")
     val model = remember(project, shelfRoot) { ProjectSessionModel(project, shelfRoot) }
     val scope = rememberCoroutineScope()
     // The model is a plain mutable class; what the card draws from it is

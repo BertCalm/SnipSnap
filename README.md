@@ -164,6 +164,30 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
+and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
+contact-aligned playback, a 243-point middle-control check and a 92-clip audition
+are available outside the factory roster and phone picker. The earlier six-voice
+recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
+new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
+provides the next listening gate. HOLD loops and the other four voices are deferred.
+
+APSIS's first listening prototype is a pitched center with independently
+orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,
+COUPLE and HOLD, with separate MIDI and velocity. Position changes excitation
+and internal exchange; held output uses a recurring reference-compatible
+orbital roster. Six provisional recipes, saved patches, CLI rendering and a
+dry sixteen-pad kit use the Kotlin renderer. APSIS is in the phone
+picker; device acceptance is still pending. Run `./gradlew :synth:generateApsisAudition` for the
+dry comparison set, raw/matched WAVs, recipes and orbital traces. See
+[implementation notes](docs/APSIS.md) for prototype scope and validation.
+The [private listening page](https://snipsnap-apsis-audition.bertcalm.chatgpt.site)
+now includes seven dry musical examples, a playable sixteen-pad map, and a
+downloadable MPC 3/MPC 2 kit with forty native samples. Model 3 adds velocity
+color and prepared-motion reuse; saved model-1/model-2 recipes retain their
+audio. Run `./gradlew :synth:generateApsisMusicalAudition` to export the bank and
+replay its actual samples into the musical scores. Device acceptance is pending.
+
 CHAMBER's finite instrument strikes a membrane, bar, cowbell and triangle
 together in independently assigned wood/glass or concrete/aquarium regions.
 HYBRID and AQUARIUM share geometric reflections, a late field and passive delayed
@@ -226,6 +250,11 @@ WARBLE, DIRT. Both snap TUNE to semitones, so pads get notes;
 a row of organ stabs — the keys-on-pads bet, playable before any keygroup
 work exists.
 
+UPRIGHT adds a finger-plucked bass voice inside PLUCK, spanning E1–E3.
+ROUND and MUTED are two DAMP settings of the same string, with TOUCH, WOOD
+and saved excitation strength. Its sixteen-pad starter and native audition
+use complete replayable recipes. See [UPRIGHT](docs/UPRIGHT.md).
+
 VELVET is subtractive, the playability king — a naive
 saw/pulse unison pair over a sub, into a resonant SVF swept by its own
 envelope. SHAPE walks saw → square → PWM on one knob; SQUEEZE is resonance
@@ -241,7 +270,7 @@ opens and relaxes related routes, and CURL lets its upper colour bloom.
 Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
 share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
 BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
-held pads contain sustain cycles. Model-3 THREAD also makes a three-root
+held pads contain sustain cycles. Each model-3 voice also makes a three-root
 C3–C5 instrument that keeps its attack and sustains until note-off. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](docs/FILAMENT.md) document the sound and its limits.
 
@@ -352,7 +381,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 50 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 53 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -391,14 +420,14 @@ available for listening review; physical device validation remains a bench step.
 
 WICK is a first listening prototype: one pitched complex source feeds three
 recovering low-pass gates, and actual releases ignite later articulations.
-PLUCK, WOOD, BREATH, BUBBLE and FLICKER share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
-saved MIDI 24–84 roots and velocity. Twenty-one provisional recipes stay outside
+PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE share SPARK, FEED, CASCADE, TIMBRE, RECOVERY and HOLD, with
+saved MIDI 24–84 roots and velocity. Twenty-five provisional recipes stay outside
 the phone picker and factory roster pending listening. Run
-`./gradlew :synth:generateWickAudition` for dry native/matched clips, five solo
+`./gradlew :synth:generateWickAudition` for dry native/matched clips, six solo
 musical phrases and the retained three-voice arrangement, BUBBLE tone comparisons, control sweeps, held loops and causal traces. The
 [private audition](https://wick-snipsnap-audition.bertcalm.chatgpt.site) and
-[implementation notes](docs/WICK.md) describe this first round; the remaining
-remaining proposed voice and full preset library follow the listening verdict.
+[implementation notes](docs/WICK.md) describe this six-voice round; the full
+preset library follows listening to RATTLE.
 
 TANGLE is an experimental pitched engine whose two oscillators influence,
 catch and release each other. BASS, LEAD, HOLLOW, PULSE, METAL and KNOT share
@@ -571,15 +600,17 @@ REGISTERS adds PIPE, MUSETTE and TRANSISTOR to the phone's SYNTH picker.
 PIPE keeps the selected model-3 chiff and soft sustained airflow; MUSETTE has
 three beating reeds and a bellows contour. TRANSISTOR adds square-wave octave
 ranks, immediate keying, electronic key-click, vibrato and transistor drive.
-Its latest body revision adds a rounded same-pitch foundation while retaining
-the opening click and all original model-4 recipes.
-Nine starting settings, saved recipes, native velocity and CLI rendering share
+Its fuller body adds a rounded same-pitch foundation while retaining the opening
+click. The sustain revision keeps subtle ensemble movement in short held loops
+and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
+Ten starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site?study=depth&voice=TRANSISTOR#listen)
-compares Original / More body TRANSISTOR alongside the working PIPE/MUSETTE
-baseline and retains the original chiff and airflow comparisons. TRANSISTOR
-awaits listening review;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
+opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
+preset with stronger bank motion and vibrato and a nine-zone MPC download. The
+earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of Rich Ensemble is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
@@ -594,6 +625,8 @@ interaction grids, velocity and loop probes. The
 preserves the earlier factory bank, body-opening studies and original/revised
 GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
+The [motion studio](docs/PRISM_MOTION_STUDIO.md) adds source selection,
+amount/time editing and opt-in repeating motion in a separate detail panel.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
 animated by GLASS or RIPPLE energy transport. Velocity changes contact and
@@ -904,6 +937,17 @@ listening pack, native patch downloads and MPC 3/XPM starter export. The
 [LATTICE notes](docs/LATTICE.md) separate the accepted source direction from new
 HOLD/preset listening and phone/MPC verification still to come.
 
+TIDAL brings two original source populations through a seeded encounter:
+PAIR gathers and passes, while STREAM exposes evolving ringing material.
+Its approved model-2 source direction, six finite factory presets and dry
+sixteen-pad starter are available through SYNTH and FRESH TAPE. ROOT,
+VELOCITY, source and exact variation seed stay in the editable recipe;
+the 9.8-second pads play once. Original model-1 recipes remain reproducible.
+NOTE retains the finite encounter; HOLD reconstructs its moving aftermath.
+MAKE INSTRUMENT keeps the opening across seventeen C2–C6 zones with note-off release.
+See [TIDAL](docs/TIDAL.md) for the finite and held modes, rendering measurements,
+MPC kit export and remaining device checks.
+
 `Velocity` renders the darker soft-zone variants (a soft strike excites
 fewer partials — one filter, physics does the design), `Groove` makes a kit
 play itself (the expansion preview, the pre-export audition, and the best
@@ -912,8 +956,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER and GRAINS round out the lineup —
-61 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
+63 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1086,7 +1130,12 @@ becomes the room it was struck in; a FLOOR makes it banded, so a kick
 loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
-transient), RING (the sound multiplied by a sine — metal, bells, radio;
+transient), FORGE (a hit formed against a die: a low shock, an all-pass
+sweep, the fast part folded and the slow part left, then a ceiling that
+closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
+on the pedal row since its listening gate, see
+[`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
+RING (the sound multiplied by a sine — metal, bells, radio;
 deliberately no longer the hit it was, the exemption GHOST already
 carries), DUB (generation loss: a dub of a dub, twelve deep), VINYL (the
 record under the hit, as TAPE is the cassette: rumble, groove hiss and
@@ -1096,8 +1145,8 @@ tape start, baked); beside the rack, WOBBLE sweeps the same filter on
 the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
-spike → eq → contour → wah → squash → valve → crunch → ring → dub → vinyl →
-tape → ensemble → phase → echo → spring → motion — owns
+spike → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
+dub → vinyl → tape → ensemble → phase → echo → spring → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
@@ -1115,7 +1164,7 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
+OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
@@ -1167,6 +1216,15 @@ contrasts. `./gradlew :synth:generateOhmKit` exports sixteen dry finite
 one-shots, native MPC 3 and MPC 2 programs, complete editable recipes and
 `testkit/SnipSnap-Ohm-Kit.zip`. Phone playability and MPC hardware acceptance
 remain open.
+
+OHM's optional **EXTEND** model adds friction bowing, portable captured excitation,
+FM elder, source-audio grains and captured-buffer freeze. HOLD supplies loop-only
+pads or an attack/sustain instrument through MAKE INSTRUMENT; the existing five
+factory recipes keep their accepted model-2 sound. Build the separate listening
+study with `:synth:generateOhmExpandedAudition` and three provisional MPC 3/MPC 2
+keygroups with `:shell:generateOhmExpandedHandoff`. [Extension notes](docs/OHM_EXPANDED.md)
+separate the physical bow, captured-loop treatment, measured host costs and
+remaining listening/device checks.
 
 BELLOWS is a pressure-driven reed-and-wheel prototype inspired by XOleg's
 Sacred Bellows. CHAMBER, COUNTER, FOLK and WHEEL render chambered reed ranks,

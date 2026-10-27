@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     kotlin("jvm")
 }
@@ -150,6 +152,28 @@ tasks.register<JavaExec>("generateFlockHeldInstrument") {
     args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
 }
 
+/** Render independently excited soft, middle and hard RIBBON keygroup layers. */
+tasks.register<JavaExec>("generateFlockVelocityInstrument") {
+    group = "distribution"
+    description = "Export touch-layer RIBBON for SnipSnap/MPC with PCM24 readback, reference clips, source evidence and download ZIP parts."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FlockVelocityInstrumentGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockVelocityOutput").orNull ?: "${rootDir}/testkit/flock-velocity-instrument")
+}
+
+/** Three provisional model-3 OHM studies through the production keygroup handoff. */
+tasks.register<JavaExec>("generateOhmExpandedHandoff") {
+    group = "distribution"
+    description = "Export three provisional OHM model-3 keygroups, complete source recipes, MPC 2/3 packages and a verified ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OhmExpandedHandoffGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("ohmExpandedHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-handoff")
+}
+
 /** Package and play the approved CREASE sounds as continuous-onset held keys. */
 tasks.register<JavaExec>("generateCreaseKeysAudition") {
     group = "distribution"
@@ -192,14 +216,16 @@ tasks.register<JavaExec>("generateCreaseTouchAudition") {
     args(providers.gradleProperty("creaseTouchOutput").orNull ?: "${rootDir}/testkit/crease-touch-audition")
 }
 
-/** Render and package the three native THREAD attack/sustain keys plus an exported-file playback demo. */
+/** Render native FILAMENT attack/sustain keys plus exported-file playback demos. */
 tasks.register<JavaExec>("generateFilamentKeysAudition") {
     group = "distribution"
-    description = "Package the FILAMENT THREAD three-root held instrument and native/reference-player listening files."
+    description = "Package FILAMENT held instruments and native/reference-player listening files."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.FilamentKeysAuditionGenerator")
     workingDir = rootDir
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-thread-keys").get())
+    val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
+    val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory-keys").get(), voice)
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */

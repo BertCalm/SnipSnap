@@ -62,9 +62,10 @@ class PedalsTest {
     }
 
     @Test
-    fun `DRIVE, SUSTAIN and the wah's three moves draw chips, RIG and DELAY wait for their gates`() {
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK"), Pedals.gated().map { it.word })
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "RIG", "DELAY"), Pedals.entries.map { it.word })
+    fun `DRIVE, SUSTAIN, the wah's three moves and FORGE draw chips, RIG and DELAY wait for their gates`() {
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE"), Pedals.gated().map { it.word })
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "RIG", "DELAY"), Pedals.entries.map { it.word })
+        assertEquals(listOf(PedalSide.PRE), Pedals.byKey("forged").sides, "FORGE moved off the side the owner chose")
         assertTrue(Pedals.byKey("rig").isBoard)
         assertEquals(listOf("compressor", "valve", "echo"), Pedals.byKey("rig").sections, "RIG is a compressor into the amp into a slapback, in rack order")
     }

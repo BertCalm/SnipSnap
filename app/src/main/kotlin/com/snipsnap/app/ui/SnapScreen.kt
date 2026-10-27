@@ -90,7 +90,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /** Same trailing-edge debounce as SYNTH's: a slider drag never renders 60×/s. */
 private const val MACRO_DEBOUNCE_MS = 100L
@@ -221,6 +220,7 @@ fun SnapScreen(
     // falls back to the default.
     settings: MutableMap<String, String> = mutableMapOf(),
 ) {
+    composedOffMainThread("SnapScreen")
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
 
@@ -366,7 +366,7 @@ fun SnapScreen(
         looking = true
         scope.launch {
             try {
-                val (small, p, r) = withContext(Dispatchers.Default) {
+                val (small, p, r) = offMain(Dispatchers.Default) {
                     val small = bitmap.shrunk()
                     val p = small.toPhoto()
                     Triple(small, p, Snap.look(p))
@@ -432,7 +432,7 @@ fun SnapScreen(
         // toast. Same handler as the render loop's: a failure here is a
         // named logcat line and a toast, not a silent death.
         try {
-            val t = withContext(Dispatchers.Default) { Snap.table(p, v) }
+            val t = offMain(Dispatchers.Default) { Snap.table(p, v) }
             val isFlat = Snap.isFlat(t)
             line = Line(p, v, t, isFlat)
             if (isFlat) onToast(Copy.SNAP_FLAT)
@@ -463,7 +463,7 @@ fun SnapScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { Snap.render(l.table, macros, envelope) }
+            val rendered = offMain(Dispatchers.Default) { Snap.render(l.table, macros, envelope) }
             snip = rendered
             if (touched && !quietResume) audition(rendered)
             quietResume = false
@@ -500,7 +500,7 @@ fun SnapScreen(
             try {
                 val patch = SnapPatch(patchName, l.voice, macros, l.table, envelope)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val rendered = patch.render()
@@ -556,7 +556,7 @@ fun SnapScreen(
         buildingField = true
         scope.launch {
             try {
-                val f = withContext(Dispatchers.Default) { PhotoField.build(p) }
+                val f = offMain(Dispatchers.Default) { PhotoField.build(p) }
                 // A newer photo arrived while this built: this field is
                 // the old picture's and lands nowhere.
                 if (photo !== p) return@launch
@@ -587,8 +587,8 @@ fun SnapScreen(
         cloudBusy = true
         appScope.launch {
             try {
-                val cloud = withContext(Dispatchers.Default) { PhotoField.cloud(f) }
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val cloud = offMain(Dispatchers.Default) { PhotoField.cloud(f) }
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val alreadyThere = model.pad(slot) != null
@@ -645,8 +645,8 @@ fun SnapScreen(
         spectrumBusy = true
         appScope.launch {
             try {
-                val spectrum = withContext(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val spectrum = offMain(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val alreadyThere = model.pad(slot) != null
@@ -698,8 +698,8 @@ fun SnapScreen(
         pathBusy = true
         appScope.launch {
             try {
-                val loop = withContext(Dispatchers.Default) { PhotoPath.render(p, pending.first, pending.second) }
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val loop = offMain(Dispatchers.Default) { PhotoPath.render(p, pending.first, pending.second) }
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val alreadyThere = model.pad(slot) != null
@@ -754,8 +754,8 @@ fun SnapScreen(
             try {
                 // Same reading SPECTRUM ▸ itself makes, so the line starts
                 // from exactly what SPECTRUM ▸ would have landed.
-                val start = withContext(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
-                val line = withContext(Dispatchers.Default) { Telephone.chain(start, 8) }
+                val start = offMain(Dispatchers.Default) { Spectrogram.read(p, seconds = 2.5f) }
+                val line = offMain(Dispatchers.Default) { Telephone.chain(start, 8) }
                 // A newer photo arrived while this chained: this line is
                 // the old picture's and opens nowhere, the same guard
                 // openField() makes.
@@ -793,7 +793,7 @@ fun SnapScreen(
         telephoneBusy = true
         appScope.launch {
             try {
-                val (existed, updatedKit) = withContext(Dispatchers.IO) {
+                val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
                         val model = KitBuilderModel.open(e.dir)
                         val alreadyThere = model.pad(slot) != null
@@ -1532,7 +1532,7 @@ private fun DrawOverlay(
         val env = if (shapeDrawn && Draw.opens(shape)) shape else null
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = withContext(Dispatchers.Default) { Snap.render(table, macros, env) }
+            val rendered = offMain(Dispatchers.Default) { Snap.render(table, macros, env) }
             onAudition(rendered)
         } catch (e: CancellationException) {
             throw e

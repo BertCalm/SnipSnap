@@ -61,11 +61,10 @@ internal object PatchTypes {
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
      * NACRE's finite PEARL duet likewise has provisional listening recipes only.
-     * TIDAL's finite PAIR/STREAM encounters follow the same first-listen policy.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(WickPatch.ENGINE, NacrePatch.ENGINE, TidalPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(CairnPatch.ENGINE, WickPatch.ENGINE, NacrePatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

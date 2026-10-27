@@ -68,6 +68,7 @@ import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RelayVoice
 import com.snipsnap.synth.RevelVoice
 import com.snipsnap.synth.TideVoice
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
 import com.snipsnap.synth.SkinVoice
@@ -300,7 +301,13 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is ObbligatoPatch) {
+            if (preset is com.snipsnap.synth.ApsisPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                val promoted = com.snipsnap.synth.ApsisPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete orbital recipe promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is ObbligatoPatch) {
                 assertEquals(preset, obbligatoFromRosterLine(line), "${preset.name}: complete duet recipe promotion")
             } else if (preset is com.snipsnap.synth.OverlapPatch) {
                 val literal = line.removePrefix("OverlapPatch.fromJsonText(").removeSuffix("),")
@@ -348,6 +355,12 @@ class UserPresetsTest {
             } else if (preset is FilamentPatch) {
                 val promoted = filamentFromRosterLine(line)
                 assertEquals(preset, promoted, "${preset.name}: complete note, velocity, geometry and model promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is TidalPatch) {
+                val literal = line.removePrefix("TidalPatch.fromJsonText(").removeSuffix("),")
+                val promoted = TidalPatch.fromJsonText(Json.parse(literal).str())
+                assertEquals(preset, promoted, "${preset.name}: complete note, velocity, seed and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is TrioPatch) {
@@ -635,8 +648,8 @@ class UserPresetsTest {
                 ),
                 model = 1,
             )
-            assertEquals(2, held.config.model, "the promotion helper starts from the new model")
-            for (model in 1..2) {
+            assertEquals(2, held.config.model, "the factory reference retains its pinned sound")
+            for (model in 1..3) {
                 val source = held.copy(name = "MY \"HUM\" \$X", midi = 48, velocity = .7f, config = config.copy(model = model))
                 UserPresets.save(root, source, 1L)
                 val saved = UserPresets.read(root).single()
@@ -656,7 +669,8 @@ class UserPresetsTest {
 
     /**
      * [line] as MurmurPresets.kt would build it: `p(voice, name, macros...)` is
-     * `MurmurPatch(name, voice, Murmur.defaults(voice) + macros)`, then `.copy(...)`.
+     * a MurmurPatch with voice defaults plus macros and an explicit model-2 configuration,
+     * then `.copy(...)` restores the complete saved instrument.
      * Every literal must have the type its parameter takes, and every constructor
      * must name exactly the fields of its class, so a field the line drops (or one
      * added to the class later) fails here rather than in the owner's paste.
@@ -869,6 +883,10 @@ class UserPresetsTest {
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
                 assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == com.snipsnap.synth.ApsisPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.ApsisPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.ApsisPatch::class.java, decoder.returnType,
+                    "APSIS promotion retains its saved pitch velocity model and seed context")
             } else if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")
@@ -889,6 +907,10 @@ class UserPresetsTest {
                 val decoder = FilamentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(FilamentPatch::class.java, decoder.returnType,
                     "FILAMENT promotion names its public complete-JSON constructor")
+            } else if (engine == "TIDAL") {
+                val decoder = com.snipsnap.synth.TidalPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TidalPatch::class.java, decoder.returnType,
+                    "TIDAL promotion names its complete saved-recipe constructor")
             } else if (engine == ScannedChainPatch.ENGINE) {
                 val decoder = ScannedChainPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ScannedChainPatch::class.java, decoder.returnType,

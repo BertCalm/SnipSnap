@@ -153,6 +153,8 @@ data class Pad(
     val humanize: Float? = null,
     /** Chain playback (see [ChainPlay]); null = the ordinary one-shot pad. */
     val chain: ChainPlay? = null,
+    /** Repeat the full sample while gated; one-shot and chain pads keep their existing playback. */
+    val loop: Boolean = false,
 ) {
     init {
         require(sampleName.isNotBlank()) { "sampleName must not be blank" }

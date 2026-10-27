@@ -7,7 +7,7 @@ excitation; repeated pulses deplete that availability, which recovers over
 time. This is an articulation model, not a claim of physical energy conservation.
 
 The supplied [engineering specification](WICK_SPEC.md) is preserved as the
-proposal. This listening round implements **PLUCK, WOOD, BREATH, BUBBLE and FLICKER**, twenty-one
+proposal. This listening round implements **PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE**, twenty-five
 provisional recipes and a dry sixteen-pad kit. RATTLE
 and the proposed 36-preset library await the owner's listening verdict.
 Numerical checks do not establish that the cascade is musically convincing.
@@ -68,12 +68,20 @@ at MIDI 60. Its default is SPARK .55, FEED .45, CASCADE .65, TIMBRE .80,
 RECOVERY .35 and HOLD 0. The four recipes are **Metal Flash**, **Single Glint**,
 **Bright Chain** and **Held Flicker**. See the [design notes](WICK_FLICKER.md).
 
+RATTLE targets a pitched strike followed by clustered pulses that weaken under
+repeated feeding and recover between admissions. Its controlled default is
+SPARK .65, FEED .50, CASCADE .65, TIMBRE .45, RECOVERY .65 and HOLD 0, rooted
+at MIDI 60. **Recovering Rattle**, **Depleted Rattle**, **Small Rattle** and
+**Held Rattle** are provisional listening recipes. The dense supplied setting
+is retained as Depleted Rattle. See the [design notes](WICK_RATTLE.md).
+
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen
-dry pads with regenerable recipes: each voice at C3/C4, one held example per voice and Single Glint.
-The twenty-one-recipe library is larger than the kit; eleven exact library recipes
-and five transposed default variations occupy its sixteen pads.
+dry pads with regenerable recipes: each voice at C3/C4 plus Held Bubbles,
+Held Breath, Held Flicker and Held Rattle. The twenty-five-recipe library is
+larger than the kit; ten exact library recipes and six transposed default
+variations occupy its sixteen pads.
 
 ```sh
 ./gradlew --no-daemon :synth:generateWickAudition
@@ -86,7 +94,7 @@ and five transposed default variations occupy its sixteen pads.
 ## Listening evidence
 
 The audition renders the real Kotlin engine with an empty FX chain. It contains
-native and matched audio, the five starting voices, provisional recipes,
+native and matched audio, all six voices, provisional recipes,
 five-step macro sweeps, pitch/velocity probes, interactions and held examples.
 Mechanism comparisons disconnect the cascade, force constant availability, or
 replace correlated brightness/gain with gain-only gating. Diagnostic JSON
@@ -94,8 +102,8 @@ records event parent stages, release and admission times, requested/admitted
 strengths, availability and bounded-state measurements. Ablation recipes retain
 their diagnostic options separately from normal production patch JSON.
 
-Six dry musical phrases use a two-bar score at 100 BPM: the same notes,
-onsets and velocities rendered separately by PLUCK, WOOD, BREATH, BUBBLE and FLICKER,
+Seven dry musical phrases use a two-bar score at 100 BPM: the same notes,
+onsets and velocities rendered separately by PLUCK, WOOD, BREATH, BUBBLE, FLICKER and RATTLE,
 plus the retained phrase sharing those events across PLUCK, WOOD and BUBBLE. Each note is a
 fresh pad render; recovery state is internal to that note. One fixed assembly
 gain preserves differences in strike strength. Loudness matching applies to
@@ -129,7 +137,7 @@ No Android device or MPC hardware acceptance is claimed in this round.
 Implementation measurements and checks are recorded beside the generated
 manifest and on the audition page. PLUCK, the revised BUBBLE direction, WOOD
 and the three-voice phrases have received positive listening feedback. BREATH is now accepted as a working voice.
-FLICKER's listening verdict remains open. The short-window classifier can
+FLICKER is also accepted as a working voice. RATTLE's listening verdict remains open. The short-window classifier can
 mislabel a late BREATH swell when the window ends before any real decay;
 its raw label and direct envelope evidence are retained in diagnostics.
 The source names, constants, voice settings and proposed release identity are

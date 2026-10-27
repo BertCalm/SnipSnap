@@ -10,6 +10,44 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+        for (voice in CairnVoice.entries) {
+            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
+            val a = patch.render().samples
+            Cairn.clearMotionCache()
+            assertContentEquals(a, patch.render().samples)
+        }
+    }
+
+    @Test
+    fun `UPRIGHT preserves the saved excitation and both damping endpoints`() {
+        for (damp in listOf(.18f, 1f)) {
+            val patch = PluckPatch("Upright canary", PluckVoice.UPRIGHT,
+                Pluck.defaults(PluckVoice.UPRIGHT) + ("DAMP" to damp), velocity = .65f)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples)
+        }
+    }
+
+    @Test
+    fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {
+        for (voice in TidalVoice.entries) {
+            val patch = TidalPresets.forVoice(voice).first().copy(
+                midi = 57, velocity = .41f, seed = 9_007_199_254_740_993L,
+            )
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recalled.render().samples,
+                "$voice must retain the finite encounter through its complete recipe")
+        }
+    }
+
+    @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
 
     @Test
     fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
@@ -184,6 +222,15 @@ class DeterminismTest {
     fun `RESIN is byte-identical across renders`() {
         val patch = ResinPatch("Canary", ResinVoice.LEAD, Resin.defaults(ResinVoice.LEAD))
         assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `VENT saved clean recipes keep note touch and trajectory history across replay`() {
+        for (entry in VentKitPresets.entries.filter { it.role == "Percussive hit" }) {
+            val patch = entry.patch
+            val restored = VentPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, restored.render().samples, "${entry.id} recipe replay changed its sound")
+        }
     }
 
     // TIDE seeds WANDER from the recipe itself (Tide.seedFor), so this is

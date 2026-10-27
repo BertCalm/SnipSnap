@@ -36,6 +36,9 @@ class SnipSnapApplication : Application(), Application.ActivityLifecycleCallback
         // The shared audio-focus owner needs an application Context before
         // any voice's first acquire() - see AudioFocus's own KDoc.
         AudioFocus.install(this)
+        // The one MIDI sender: reads the saved on/off switch and starts its
+        // thread here, before any screen can play a note.
+        MidiOut.install(this)
         registerActivityLifecycleCallbacks(this)
     }
 

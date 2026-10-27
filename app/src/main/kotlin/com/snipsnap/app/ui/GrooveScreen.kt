@@ -383,7 +383,6 @@ fun GrooveScreen(
     /** AUDITION's own choose-a-winner write — same shape as every other screen's `onKitUpdated`. */
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit = {},
 ) {
-    composedOffMainThread("GrooveScreen")
     val scheme = LocalScheme.current
 
     if (entry == null) {
