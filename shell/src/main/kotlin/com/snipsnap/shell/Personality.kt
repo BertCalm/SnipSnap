@@ -14,7 +14,7 @@ package com.snipsnap.shell
  */
 object Copy {
 
-    const val BOOT_READY = "SNIPSNAP.EXE — READY."
+    const val BOOT_READY = "SNIPSNAP — READY."
 
     /** Boot screen progress lines, in order. */
     val BOOT_LINES = listOf(

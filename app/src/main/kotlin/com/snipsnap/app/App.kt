@@ -283,7 +283,7 @@ private class CatchSession {
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
- * The whole M0 app: the SNIPSNAP.EXE window on its desk, the menu row,
+ * The whole M0 app: the SNIPSNAP window on its desk, the menu row,
  * the status bar, and the three real screens. State is plain Compose
  * state — the screens' actual machines live tested in `:shell`, and the
  * later milestones bind to them; M0's state is navigation and a shelf.
