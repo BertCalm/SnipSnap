@@ -81,6 +81,23 @@ class BusyLatch {
         if (startedAt != null && endedAt == null) endedAt = now
     }
 
+    /**
+     * Forget the current run as if it had never started: nothing is visible
+     * now or later, nothing is scheduled, and the next [start] begins a fresh
+     * delay.
+     *
+     * For a job that ended after its show delay but whose bar the caller never
+     * managed to draw: the delay and the draw are two moments, and a job can end
+     * between them (the frame that would have drawn the bar came after the job's
+     * result had landed). By [stop] and [visible] alone such a run owes a bar for
+     * [MIN_VISIBLE_MS], and drawing it then would put a loading screen over the
+     * thing that was loading. A bar that was never up has no minimum to serve.
+     */
+    fun discard() {
+        startedAt = null
+        endedAt = null
+    }
+
     /** Whether the bar should be on screen at [now]. */
     fun visible(now: Long): Boolean {
         val showAt = showAt() ?: return false

@@ -345,6 +345,10 @@ fun LoadingCard(busy: Busy, modifier: Modifier = Modifier) {
  * Whether a job exists is what drives it, not which [Busy] it is: a
  * progress update is a new value for the same job and leaves the latch
  * alone.
+ *
+ * The minimum is owed to a bar that was drawn. A job that ends after the
+ * delay but before the bar was up (the frame had not come) shows none: the
+ * latch forgets the run ([BusyLatch.discard]).
  */
 @Composable
 fun rememberBusyVisible(busy: Busy?): Boolean = rememberBusyVisible(busy, SystemClock::uptimeMillis)
@@ -362,7 +366,18 @@ internal fun rememberBusyVisible(busy: Busy?, now: () -> Long): Boolean {
     val clock by rememberUpdatedState(now)
     val running = busy != null
     LaunchedEffect(running) {
-        if (running) latch.start(clock()) else latch.stop(clock())
+        when {
+            running -> latch.start(clock())
+            // The bar is up: it stays its minimum.
+            visible -> latch.stop(clock())
+            // It never was. The delay and the draw are two moments, and a job
+            // can end between them: the latch alone would say a bar is owed for
+            // a job that is over, and drawing it then would put a loading screen
+            // over the result it was loading (the device showed exactly that
+            // for a starter that took about 250 ms). A bar that was not up has no
+            // minimum to serve.
+            else -> latch.discard()
+        }
         while (true) {
             val t = clock()
             visible = latch.visible(t)

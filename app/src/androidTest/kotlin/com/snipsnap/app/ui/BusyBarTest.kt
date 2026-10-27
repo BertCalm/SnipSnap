@@ -283,10 +283,13 @@ class BusyBarTest : ComposeScreenTest() {
     // clock this test owns (the frozen one, in ms), so "after 200 ms" is
     // exactly 200 ms and not whatever the emulator managed.
 
+    /** Added to the latched clock: time the latch believes passed that the compose clock has not run. */
+    private var skew = 0L
+
     /** Shows a marker while [rememberBusyVisible] says the bar should be up. */
     private fun showLatched(busy: () -> Busy?) {
         show {
-            val visible = rememberBusyVisible(busy()) { compose.mainClock.currentTime }
+            val visible = rememberBusyVisible(busy()) { compose.mainClock.currentTime + skew }
             if (visible) Box(Modifier.size(4.dp).testTag(BAR))
         }
     }
@@ -302,6 +305,27 @@ class BusyBarTest : ComposeScreenTest() {
         compose.onNodeWithTag(BAR).assertDoesNotExist()
 
         busy = null
+        pump(BusyLatch.MIN_VISIBLE_MS * 2)
+        compose.onNodeWithTag(BAR).assertDoesNotExist()
+    }
+
+    @Test
+    fun a_job_that_ends_after_the_delay_but_before_the_bar_was_drawn_never_draws_it() {
+        var busy by mutableStateOf<Busy?>(null)
+        showLatched { busy }
+
+        busy = Busy("X")
+        pump(20)
+        compose.onNodeWithTag(BAR).assertDoesNotExist()
+
+        // By the latch's clock the job ran 230 ms, so by its rules a bar is
+        // owed; by the compose clock the delay that would draw it has not run.
+        // A bar that was never up has no 500 ms minimum to serve, and drawing
+        // it now would show a job that is over.
+        skew = 230
+        busy = null
+        pump(50)
+        compose.onNodeWithTag(BAR).assertDoesNotExist()
         pump(BusyLatch.MIN_VISIBLE_MS * 2)
         compose.onNodeWithTag(BAR).assertDoesNotExist()
     }

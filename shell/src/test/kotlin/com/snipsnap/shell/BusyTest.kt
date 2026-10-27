@@ -143,6 +143,45 @@ class BusyTest {
     }
 
     @Test
+    fun `a discarded run shows nothing, now or later, and schedules nothing`() {
+        // The job ran past the show delay but its bar was never drawn (the frame
+        // that would have drawn it had not come when the job ended), so the
+        // caller forgets the run: showing the bar after the job's result has
+        // landed would be a loading screen over the thing it was loading.
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.stop(230)
+        assertTrue(latch.visible(230), "by the latch's rules alone, a job that ran 230 ms owes a bar")
+        latch.discard()
+        for (t in listOf(230L, 300L, 700L, 5000L)) assertFalse(latch.visible(t), "a discarded run is invisible at $t")
+        assertNull(latch.nextChangeAt(230), "and has nothing to wake for")
+    }
+
+    @Test
+    fun `a job after a discarded one gets a fresh delay of its own`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.stop(230)
+        latch.discard()
+
+        latch.start(1000)
+        assertFalse(latch.visible(1100), "the new job is inside its own 200 ms")
+        assertFalse(latch.visible(1199))
+        assertTrue(latch.visible(1200), "and shows at 200 ms from its own start, not the old one's")
+        assertEquals(1200L, latch.nextChangeAt(1100))
+    }
+
+    @Test
+    fun `discarding with nothing running changes nothing`() {
+        val latch = BusyLatch()
+        latch.discard()
+        assertFalse(latch.visible(0))
+        assertNull(latch.nextChangeAt(0))
+        latch.start(10)
+        assertTrue(latch.visible(210), "and the next job runs as normal")
+    }
+
+    @Test
     fun `fraction`() {
         assertEquals(0.3125f, Busy("X", 5, 16).fraction, "5 of 16")
         assertEquals(1f, Busy("X", 20, 16).fraction, "a count past the total clamps to full")
