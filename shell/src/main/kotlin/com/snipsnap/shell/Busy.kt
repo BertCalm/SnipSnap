@@ -1,5 +1,8 @@
 package com.snipsnap.shell
 
+import kotlin.math.PI
+import kotlin.math.sin
+
 /**
  * One job in flight, as the dock draws it: a [label] saying what is
  * happening and, when the work can be counted, how far along it is.
@@ -128,4 +131,34 @@ class BusyLatch {
         /** How long a bar that has appeared stays up, at the least. */
         const val MIN_VISIBLE_MS = 500L
     }
+}
+
+/**
+ * The pulse of the sixteen placeholder tiles where a starter kit will land.
+ *
+ * Each tile's fill sits [amount] of the way from the raised surface to the
+ * ink, and [amount] moves as a sine of the loop's phase, each tile a
+ * sixteenth of a loop behind the one before it in reading order: a soft
+ * wave across the grid, not one lamp. It swings between 0 and about
+ * [BASE] + [SWING]. The numbers are chosen so the swing is seen: a tile
+ * that only moved a few levels of 255 (the first version breathed alpha on
+ * a fill that was nearly the stage's own colour) pulses on a screenshot of
+ * the code and not on the phone.
+ */
+object PlaceholderPulse {
+    /** Tiles in the grid: 4 rows of 4, numbered in reading order. */
+    const val TILES = 16
+
+    /** The middle of the swing. */
+    const val BASE = 0.09f
+
+    /** Half the swing: [BASE] plus or minus this. */
+    const val SWING = 0.09f
+
+    /** What reduced motion holds: the middle, so the tiles read as "not yet" without moving. */
+    const val STILL = BASE
+
+    /** How far from the raised surface to the ink tile [tile] sits at [phase], 0..1 around the loop. */
+    fun amount(phase: Float, tile: Int): Float =
+        BASE + SWING * sin(2.0 * PI * (phase - tile.toDouble() / TILES)).toFloat()
 }

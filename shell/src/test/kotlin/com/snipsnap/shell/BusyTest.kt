@@ -1,5 +1,8 @@
 package com.snipsnap.shell
 
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.sin
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -147,6 +150,40 @@ class BusyTest {
         assertNull(Busy("X").fraction, "no total means indeterminate")
         assertNull(Busy("X", 1, 0).fraction, "a total of zero would divide by zero, so it is indeterminate")
         assertNull(Busy("X", 1, -4).fraction, "a negative total is not a total")
+    }
+
+    @Test
+    fun `a placeholder tile swings between about nothing and 0 point 18 of the way to the ink`() {
+        val all = (0 until PlaceholderPulse.TILES).flatMap { tile ->
+            (0..100).map { step -> PlaceholderPulse.amount(step / 100f, tile) }
+        }
+        assertTrue(all.min() >= -1e-6f, "never below the raised fill: ${all.min()}")
+        assertTrue(all.max() <= 0.18f + 1e-6f, "never past 0.18 of the way to the ink: ${all.max()}")
+        assertTrue(all.min() < 0.005f, "it goes down to about nothing: ${all.min()}")
+        assertTrue(all.max() > 0.175f, "and up to about 0.18: ${all.max()}")
+    }
+
+    @Test
+    fun `the wave crosses the grid in reading order`() {
+        // Tile i runs the same breath a sixteenth of a loop behind tile i-1, so
+        // the pulse reads as a wave travelling over the pads and not as one
+        // lamp: at one phase the sixteen tiles are sixteen different shades.
+        val phase = 0.3f
+        for (tile in 0 until PlaceholderPulse.TILES) {
+            val expected = 0.09f + 0.09f * sin(2.0 * PI * (phase - tile / 16.0)).toFloat()
+            assertEquals(expected, PlaceholderPulse.amount(phase, tile), 1e-5f, "tile $tile at phase $phase")
+        }
+        val shades = (0 until PlaceholderPulse.TILES).map { PlaceholderPulse.amount(phase, it) }
+        assertTrue(shades.toSet().size > 8, "the grid holds many shades at one instant: $shades")
+        // And one full loop later it is where it was: the repeat has no jump.
+        for (tile in 0 until PlaceholderPulse.TILES) {
+            assertTrue(abs(PlaceholderPulse.amount(0f, tile) - PlaceholderPulse.amount(1f, tile)) < 1e-5f, "tile $tile loops")
+        }
+    }
+
+    @Test
+    fun `a still placeholder sits in the middle of the swing`() {
+        assertEquals(0.09f, PlaceholderPulse.STILL, "what reduced motion holds")
     }
 
     @Test

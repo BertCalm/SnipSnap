@@ -11,20 +11,26 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PixelMap
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.ProgressBarRangeInfo
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.unit.dp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.snipsnap.app.theme.LocalReduceMotion
+import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.BusyLatch
+import com.snipsnap.shell.Schemes
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -63,6 +69,11 @@ class BusyBarTest : ComposeScreenTest() {
 
     private fun progress(info: ProgressBarRangeInfo) =
         SemanticsMatcher.expectValue(SemanticsProperties.ProgressBarRangeInfo, info)
+
+    private fun anyProgress() = SemanticsMatcher.keyIsDefined(SemanticsProperties.ProgressBarRangeInfo)
+
+    /** Any node that says LOADING, by its words or its description. */
+    private fun loadingWords() = hasText("LOADING", substring = true) or hasContentDescription("LOADING", substring = true)
 
     @Test
     fun a_determinate_bar_reports_its_fraction() {
@@ -105,13 +116,31 @@ class BusyBarTest : ComposeScreenTest() {
         showOnBlack { BusyBar(Busy("X"), Color.White) }
 
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
-        // Under reduced motion it is the whole track, dimmed, and it stays
-        // exactly that: nothing sweeps, so two seconds on it has not changed.
+        // Under reduced motion it is a faint track the whole width with a
+        // solid segment in the middle of it, and it stays exactly that:
+        // nothing sweeps, so two seconds on it has not changed.
         val before = drawn()
-        assertTrue("the track's left end is dimmed, not dark or full", before.brightnessAt(0.02f) in 0.3f..0.5f)
-        assertTrue("the track's right end is dimmed too", before.brightnessAt(0.98f) in 0.3f..0.5f)
+        assertTrue("the track's left end is dim, not dark or full", before.brightnessAt(0.02f) in 0.1f..0.3f)
+        assertTrue("the track's right end is dim too", before.brightnessAt(0.98f) in 0.1f..0.3f)
         pump(2_000)
         assertArrayEquals(before.buffer, drawn().buffer)
+    }
+
+    @Test
+    fun the_still_bar_has_a_solid_segment_in_the_middle() {
+        // The first still form was the whole track dimmed, which on the dock's
+        // edge read as a divider and not as work. It is a progress bar when
+        // there is something solid on it: 40 % of the width, centred, so from
+        // 30 % to 70 % - and a bar that lost the segment would pass every
+        // other still assertion.
+        showOnBlack { BusyBar(Busy("X"), Color.White) }
+
+        val bar = drawn()
+        assertTrue("the middle of the bar is solid", bar.brightnessAt(0.50f) > 0.9f)
+        assertTrue("the segment reaches in to 35 %", bar.brightnessAt(0.35f) > 0.9f)
+        assertTrue("and out to 65 %", bar.brightnessAt(0.65f) > 0.9f)
+        assertTrue("outside it, at 25 %, is track", bar.brightnessAt(0.25f) in 0.1f..0.3f)
+        assertTrue("and at 75 %", bar.brightnessAt(0.75f) in 0.1f..0.3f)
     }
 
     @Test
@@ -145,6 +174,62 @@ class BusyBarTest : ComposeScreenTest() {
         pump(2_000)
         compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
         assertArrayEquals(before.buffer, drawn().buffer)
+    }
+
+    @Test
+    fun the_loading_card_is_one_node_named_for_its_job() {
+        showOnBlack { LoadingCard(Busy("LOADING TIDAL…")) }
+
+        // One thing to a reader of the screen: named for the job, in progress
+        // with no end in sight. Its spinner and its bar are drawing, not
+        // three more things to swipe past.
+        compose.onNodeWithContentDescription("LOADING TIDAL…").assertExists()
+        compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).assertCountEquals(1)
+        compose.onAllNodes(anyProgress()).assertCountEquals(1)
+        // The words are on the card, drawn and not only said: the same
+        // matcher the loading-screen tests use for "no text", so those cannot
+        // pass for a card that never says anything.
+        compose.onNode(hasText("LOADING TIDAL…")).assertExists()
+        compose.onNode(loadingWords()).assertExists()
+    }
+
+    @Test
+    fun the_loading_card_counts_when_the_job_can_be_counted() {
+        showOnBlack { LoadingCard(Busy("LOADING TIDAL…", 5, 16)) }
+
+        compose.onAllNodes(progress(ProgressBarRangeInfo(0.3125f, 0f..1f))).assertCountEquals(1)
+        compose.onAllNodes(anyProgress()).assertCountEquals(1)
+        compose.onNode(hasText("5 OF 16")).assertExists()
+    }
+
+    @Test
+    fun the_loading_card_says_no_count_for_a_job_with_none() {
+        showOnBlack { LoadingCard(Busy("LOADING TIDAL…", done = 3)) }
+
+        compose.onNode(hasText("LOADING TIDAL…")).assertExists()
+        compose.onNode(hasText("3 OF", substring = true)).assertDoesNotExist()
+    }
+
+    @Test
+    fun the_loading_card_draws_its_ring_and_bar_in_the_amber_on_a_lit_panel() {
+        showOnBlack { LoadingCard(Busy("LOADING TIDAL…")) }
+
+        // The card is the dark LCD (not the black it is laid on), and the ring
+        // and the 6 dp bar are drawn on it in the scheme's amber: a good many
+        // pixels of exactly that colour, which a card that drew only its words
+        // would not have.
+        val amber = Schemes.DEFAULT.amber.tape.toArgb()
+        val card = drawn()
+        assertTrue("the amber ring and bar are drawn: ${card.buffer.count { it == amber }} pixels", card.buffer.count { it == amber } > 2_000)
+        assertTrue("the panel is the LCD and not the black under it", card.buffer.count { it == Color.Black.toArgb() } < card.buffer.size / 2)
+    }
+
+    @Test
+    fun a_taller_bar_is_taller() {
+        // The card's bar is 6 dp where the dock's is 4: a height the caller picks.
+        showOnBlack { BusyBar(Busy("X", 16, 16), Color.White, height = 20.dp) }
+
+        compose.onNodeWithTag(DRAWN).assertHeightIsEqualTo(20.dp)
     }
 
     // rememberBusyVisible: the same latch the JVM suite proves, driven by a

@@ -79,6 +79,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
@@ -232,7 +233,12 @@ fun KitScreen(
     val scheme = LocalScheme.current
 
     if (pendingKitName != null) {
-        PadPlaceholderGrid(pendingKitName)
+        // The skeleton of the grid with the card that says what is coming laid
+        // over it, centred. (`KitLoading` takes this over, with its show delay.)
+        Box(Modifier.fillMaxWidth()) {
+            PadPlaceholderGrid()
+            LoadingCard(Busy(Copy.loadingBusy(pendingKitName)), Modifier.align(Alignment.Center))
+        }
         return
     }
 
