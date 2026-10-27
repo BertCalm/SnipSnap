@@ -154,12 +154,21 @@ private fun SweepingBar(color: Color, modifier: Modifier) {
         animationSpec = infiniteRepeatable(tween(Motion.BUSY_SWEEP_MS, easing = LinearEasing)),
         label = "busySweepPhase",
     )
-    // The phase is read inside the draw lambda, so a frame redraws the bar
-    // and recomposes nothing.
+    SweepBar(color, modifier) { phase.value }
+}
+
+/**
+ * The sweep at the [phase] it is handed, 0..1. Read inside the draw lambda, so
+ * a frame redraws the bar and recomposes nothing. A separate function from the
+ * transition that feeds it so the device test can pin the phase where the
+ * system pins it when it skips an infinite animation to its end.
+ */
+@Composable
+internal fun SweepBar(color: Color, modifier: Modifier, phase: () -> Float) {
     Box(
         modifier
             .progressSemantics()
-            .drawBehind { drawSweep(color, phase.value) },
+            .drawBehind { drawSweep(color, phase()) },
     )
 }
 
@@ -178,12 +187,26 @@ private fun DrawScope.drawStill(color: Color) {
  * leaves past the right, so it is fully off the track at both ends of the
  * loop and the repeat has no jump in it. What lies outside the track is
  * not drawn.
+ *
+ * A segment with no width at any phase past the start is not a sweep but a
+ * pinned animation: when the system's animator scale is 0 Compose skips an
+ * infinite transition to its end, the phase sits at 1, and the segment is off
+ * the right edge for good. That draws [drawStill] rather than nothing, so a
+ * bar the app has not yet been told to hold still (the setting is changed
+ * while the app is up; see `rememberReduceMotion`) never vanishes. Phase 0
+ * is exempt: it is the first frame of every loop, the segment about to
+ * enter, and flashing the still bar for it would flash a centred segment each
+ * time a bar appears.
  */
 private fun DrawScope.drawSweep(color: Color, phase: Float) {
     val segment = size.width * SWEEP_SHARE
     val left = ((size.width + segment) * phase - segment).coerceAtLeast(0f)
     val right = ((size.width + segment) * phase).coerceAtMost(size.width)
-    if (right > left) drawRect(color, topLeft = Offset(left, 0f), size = Size(right - left, size.height))
+    if (right > left) {
+        drawRect(color, topLeft = Offset(left, 0f), size = Size(right - left, size.height))
+    } else if (phase > 0f) {
+        drawStill(color)
+    }
 }
 
 /**

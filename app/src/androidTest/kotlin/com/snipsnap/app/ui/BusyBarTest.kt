@@ -2,6 +2,8 @@ package com.snipsnap.app.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -141,6 +143,51 @@ class BusyBarTest : ComposeScreenTest() {
         assertTrue("and out to 65 %", bar.brightnessAt(0.65f) > 0.9f)
         assertTrue("outside it, at 25 %, is track", bar.brightnessAt(0.25f) in 0.1f..0.3f)
         assertTrue("and at 75 %", bar.brightnessAt(0.75f) in 0.1f..0.3f)
+    }
+
+    // The sweep's own form, at a phase the test pins. Animation is not on: a
+    // transition under the frozen clock would never idle. The phases are the
+    // ones that matter: mid-sweep, the very start, and the end, where Compose
+    // pins an infinite animation when the system's animator scale is 0.
+
+    private fun sweepAt(phase: Float) {
+        showOnBlack { SweepBar(Color.White, Modifier.fillMaxWidth().height(4.dp)) { phase } }
+    }
+
+    @Test
+    fun a_sweep_mid_loop_is_a_moving_segment_over_nothing() {
+        sweepAt(0.25f)
+
+        // At a quarter of the loop the 30 % segment is 2.5 % to 32.5 % of the
+        // way along, and there is no track under or beyond it: black.
+        val bar = drawn()
+        assertTrue("the segment is there at 15 %", bar.brightnessAt(0.15f) > 0.9f)
+        assertTrue("and nothing is drawn beyond it, at 60 %", bar.brightnessAt(0.60f) < 0.05f)
+    }
+
+    @Test
+    fun a_sweep_pinned_at_the_end_draws_the_still_bar_and_not_nothing() {
+        // The system skips an infinite animation to its end when the animator
+        // scale is 0, which pins the phase at 1: the segment computed from it is
+        // off the right edge, zero wide, and the bar used to vanish.
+        sweepAt(1f)
+
+        val bar = drawn()
+        assertTrue("the middle is solid, as the still bar's is", bar.brightnessAt(0.50f) > 0.9f)
+        assertTrue("and the track under it is dim, not dark", bar.brightnessAt(0.10f) in 0.1f..0.3f)
+        assertTrue("to its far end", bar.brightnessAt(0.95f) in 0.1f..0.3f)
+    }
+
+    @Test
+    fun a_sweep_on_its_first_frame_draws_nothing_and_not_a_flash_of_the_still_bar() {
+        // Phase 0 is the segment about to enter, as empty as phase 1 is, but it
+        // is the start of every loop and not a pinned animation: showing the
+        // still bar for that one frame would flash a centred segment each time
+        // the bar appears.
+        sweepAt(0f)
+
+        val bar = drawn()
+        assertTrue("nothing is drawn yet", bar.brightnessAt(0.50f) < 0.05f)
     }
 
     @Test

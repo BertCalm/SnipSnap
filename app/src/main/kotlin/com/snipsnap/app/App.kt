@@ -52,9 +52,9 @@ import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.animationsOff
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
+import com.snipsnap.app.theme.rememberReduceMotion
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
@@ -379,10 +379,11 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
-    // REDUCED MOTION: the system's own "remove animations", read once. The
+    // REDUCED MOTION: the system's own "remove animations", kept current while
+    // the app is up (it can change under us; see `rememberReduceMotion`). The
     // drawings that loop (the busy bar, the spinner) read it through
     // `LocalReduceMotion` and hold still when it is on.
-    val reduceMotion = remember { context.animationsOff() }
+    val reduceMotion = rememberReduceMotion()
     // MIDI OUT (SETUP): the hardware switch, remembered like HAPTICS, on by
     // default (MIDI_OUT_DEFAULT). `MidiOut.install` reads the same pref; pushing the value
     // once here makes the two agree even if install ran before it was written.
