@@ -10,6 +10,7 @@
 
 #include "PrintBuffer.h"
 #include "SpscRing.h"
+#include "aquarium/PerformanceBus.h"
 
 namespace snipsnap {
 
@@ -123,6 +124,11 @@ public:
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
+
+    /** Serialized control thread; false means no settings were queued. */
+    bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
+    bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
+    uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -253,6 +259,7 @@ private:
     PadCommand held_[kHeldMax];
     int32_t heldCount_ = 0;
 
+    aquarium::PerformanceBus aquarium_;
     PrintBuffer print_;
 };
 

@@ -98,6 +98,7 @@ class PadHost(preferredSampleRate: Int) {
      */
     fun request(entry: KitShelf.Entry) {
         if (closed) return
+        engine.setAquariumTempo(entry.kit.tempoBpm?.toDouble() ?: 0.0)
         val prior = wanted
         if (prior != null && prior.kit === entry.kit && prior.dir == entry.dir) return
         wanted = entry

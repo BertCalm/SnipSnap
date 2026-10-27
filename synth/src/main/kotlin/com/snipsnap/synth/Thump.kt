@@ -228,9 +228,10 @@ object Thump {
      * SPARK: strike -> metallic flare -> falling pitch -> rounded body.
      *
      * This is a bounded, one-way oscillator model, not analog circuit
-     * emulation. A dry sine keeps the root while an independently filtered
-     * edge combines sine phase modulation and multiplication by a finite
-     * triangle. Both branches have their own loss; no signal feeds back.
+     * emulation. A harmonic body's fundamental keeps the root while an
+     * independently filtered edge combines sine phase modulation and
+     * multiplication by a finite triangle. Both branches have their own
+     * loss; no signal feeds back.
      * All ranges and envelope ratios here are shape hypotheses awaiting a
      * human listen. [ThumpFamilies] turns one patch into ordered positions
      * along a repeatable expression path without adding a motion sequencer.
@@ -244,14 +245,26 @@ object Thump {
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.16f, 1f).toDouble()
         val metal = m.getValue("METAL").toDouble()
         val color = m.getValue("COLOR")
-        // COLOR coordinates layer balance with its filters. Even the brightest
-        // setting keeps a separate, fixed dry-root path beneath the moving edge.
-        val edgeGain = 0.45 * sqrt(metal) * (0.65 + 0.70 * color)
-        val edgeT60 = t60 * (0.80 - 0.15 * metal)
+        val punch = m.getValue("PUNCH").toDouble()
+        // A sine gave COLOR almost nothing to filter, and a quiet edge only
+        // became useful with both controls fully open. Give the body real
+        // harmonics and bring the edge alongside it at ordinary METAL values.
+        // Their envelopes still leave the settled fundamental underneath.
+        val bodyGain = 0.80 - 0.28 * metal
+        val edgeGain = 0.95 * sqrt(metal)
+        val edgeT60 = t60 * (0.55 - 0.10 * metal)
         val bendDepth = 0.08 + 0.92 * metal
         val bendTime = 0.012 + 0.012 * color
-        val bodyCutoff = Dsp.expMap(color, (root * 1.5).toFloat(), (root * 8.0).toFloat())
-        val edgeCutoff = Dsp.expMap(color, 200f, 5000f)
+        val bodyCutoff = Dsp.expMap(color, (root * 0.9).toFloat(), (root * 9.0).toFloat())
+        val edgeCutoff = Dsp.expMap(color, (root * 1.5).toFloat(), (root * 24.0).toFloat())
+        // The shared PUNCH stage protects legacy drums with a tiny 2 ms
+        // window. SPARK needs a source articulation that lasts long enough
+        // to hear: a rounded 18 ms rise to a hard 0.35 ms strike, plus a
+        // linear-depth 18 ms attack/body envelope. The fixed quarter scale
+        // bounds unfinished gain without changing the later level matching.
+        val attackSeconds = Dsp.expMap(punch.toFloat(), 0.018f, 0.00035f).toDouble()
+        val harmonicWeights = doubleArrayOf(1.0, 0.9, 0.8, 0.65, 0.5, 0.4, 0.3)
+        val harmonicScale = harmonicWeights.sum()
         val body = FloatArray(frames((t60 * 1.4).toFloat(), RATE) * (rate / RATE))
         val edge = FloatArray(body.size)
         val edgeFilter = Dsp.TptSvf(rate)
@@ -268,8 +281,27 @@ object Thump {
             val modulator = sin(modPhase)
             val dry = sin(phase)
             val edgeEnvelope = exp(-6.9078 * t / edgeT60)
-            val modEnvelope = exp(-6.9078 * t / (t60 * 0.90))
-            val pm = sin(phase + (0.8 + 3.2 * metal) * modEnvelope * modulator)
+            val modEnvelope = exp(-6.9078 * t / (t60 * 0.75))
+            val pm = sin(phase + (1.5 + 6.0 * metal) * modEnvelope * modulator)
+
+            // Finite harmonics, at the same falling root. The recurrence
+            // avoids six more sin calls per frame. The upper partials lose
+            // energy a little faster than the fundamental, so the strike
+            // resolves toward a body rather than leaving a static bright tone.
+            val twiceCos = 2.0 * cos(phase)
+            val harmonicLoss = exp(-6.9078 * t / (t60 * 0.9))
+            val bodyLoss = exp(-6.9078 * t / t60)
+            var bodyPrevious = 0.0
+            var bodyCurrent = dry
+            var bodyWave = 0.0
+            for (h in harmonicWeights.indices) {
+                val loss = if (h == 0) bodyLoss else harmonicLoss
+                bodyWave += harmonicWeights[h] * bodyCurrent * loss
+                val next = twiceCos * bodyCurrent - bodyPrevious
+                bodyPrevious = bodyCurrent
+                bodyCurrent = next
+            }
+            bodyWave /= harmonicScale
 
             // Seven odd harmonics, all below output Nyquist at the highest
             // TUNE. The odd-sine recurrence saves six sin() calls per frame
@@ -287,16 +319,14 @@ object Thump {
                 sign = -sign
             }
             triangle /= triangleScale
-            val attack = 0.5 - 0.5 * cos(PI * (t / 0.0008).coerceAtMost(1.0))
-            body[i] = (0.55 * dry * attack * exp(-6.9078 * t / t60)).toFloat()
+            val attack = 0.5 - 0.5 * cos(PI * (t / attackSeconds).coerceAtMost(1.0))
+            val strike = 0.25 * attack * (1.0 + 3.0 * punch * exp(-t / 0.018))
+            body[i] = (bodyGain * bodyWave * strike).toFloat()
             val interaction = 0.65 * pm + 0.35 * dry * triangle
-            // The square-root blend gives low and middle METAL room to speak.
-            // A linear, quieter edge with two very fast loss envelopes passed
-            // safety probes but left ordinary settings spectrally inert.
-            val edgeInput = (edgeGain * interaction * attack * edgeEnvelope).toFloat()
+            val edgeInput = (edgeGain * interaction * strike * edgeEnvelope).toFloat()
             // Independent spectral decay on the edge, with fixed positive
             // damping. The root branch never inherits this moving cutoff.
-            edgeFilter.process(edgeInput, edgeCutoff * (0.35f + 0.65f * modEnvelope.toFloat()), 1.4142135f)
+            edgeFilter.process(edgeInput, edgeCutoff * (0.60f + 0.40f * modEnvelope.toFloat()), 1.4142135f)
             edge[i] = edgeFilter.low
         }
         Dsp.TptSvf(rate).lowPassInPlace(body, bodyCutoff, 1.4142135f)

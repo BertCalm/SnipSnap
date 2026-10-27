@@ -130,13 +130,13 @@ renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
 
 TIDAL exposes PAIR and STREAM with five encounter controls, ROOT, native
-VELOCITY, ORIGINAL/MATERIAL sources and an exact 64-bit VARIATION SEED.
-Complete recipes survive drafts, preset storage and pad reopening. Its six
-factory presets and sixteen-pad FRESH TAPE starter stay finite; SEND TO PAD
-retains the authored pitch and one-shot playback despite long-sample LOOP
-filing. Preview jobs cancel obsolete work and reuse a bounded completed-audio
-cache. HOLD and MAKE INSTRUMENT are deferred. Device timing and phone/MPC
-listening remain separate acceptance checks. See [TIDAL](../docs/TIDAL.md).
+VELOCITY, original/material source selection, exact Long VARIATION SEED and
+NOTE/HOLD playback. NOTE keeps the finite encounter; HOLD pads loop its
+reconstructed aftermath. MAKE INSTRUMENT retains the encounter before a verified
+sustain marker across seventeen C2–C6 zones, with note-off RELEASE. Complete
+recipes survive drafts, saved presets and pad reopening. The sixteen-pad starter
+stays finite. Hardware latency and listening remain acceptance checks.
+See [TIDAL](../docs/TIDAL.md) and [HOLD](../docs/TIDAL_HOLD.md).
 
 ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
 six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
@@ -154,9 +154,9 @@ chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
 FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
 VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
-THREAD also offers MAKE INSTRUMENT: C3/C4/C5 source roots, one velocity layer,
-the real attack before its settled loop and note-off release. Other voices
-and older saved models retain their existing pad workflow. Physical phone/MPC
+THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
+one velocity layer, each voice's real onset before its settled loop and
+note-off release. Older saved models retain their existing pad workflow. Physical phone/MPC
 acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and

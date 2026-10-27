@@ -4,7 +4,7 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 
-/** A replayable finite encounter. The saved model pins its source, preparation and window. */
+/** A replayable encounter. The source model and optional held model pin both render paths. */
 data class TidalPatch(
     override val name: String,
     val voice: TidalVoice,
@@ -13,13 +13,15 @@ data class TidalPatch(
     val velocity: Float = .75f,
     val seed: Long = Tidal.DEFAULT_SEED,
     val model: Int = Tidal.MODEL_VERSION,
+    val heldModel: Int = TidalKeys.MODEL_VERSION,
 ) : Patch {
     init {
         Patches.validateMacros(this, Tidal.macrosFor(voice, model))
         require(midi in Tidal.MIN_MIDI..Tidal.MAX_MIDI) { "TIDAL midi must be ${Tidal.MIN_MIDI}..${Tidal.MAX_MIDI}" }
         require(velocity.isFinite() && velocity in 0f..1f) { "TIDAL velocity must be 0..1" }
         require(Tidal.supportsModel(model)) { "unsupported tidal model $model" }
-        require((macros["HOLD"] ?: 0f) == 0f) { "TIDAL first-listen prototype supports finite encounters only; HOLD must be 0" }
+        require((macros["HOLD"] ?: 0f) in setOf(0f, 1f)) { "TIDAL HOLD must be 0 or 1" }
+        require(heldModel == TidalKeys.MODEL_VERSION) { "unsupported TIDAL held model $heldModel" }
     }
 
     override val engine get() = ENGINE
@@ -29,6 +31,7 @@ data class TidalPatch(
 
     override fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(
         LinkedHashMap(Patches.toJsonValue(this).entries).also {
+            if (Tidal.isHeld(macros["HOLD"] ?: 0f)) it["heldModel"] = JsonValue.Num(heldModel.toDouble())
             it["model"] = JsonValue.Num(model.toDouble())
             it["midi"] = JsonValue.Num(midi.toDouble())
             it["velocity"] = JsonValue.Num(velocity.toDouble())
@@ -59,10 +62,13 @@ data class TidalPatch(
             if (rawMacros is JsonValue.Obj) for ((key, raw) in rawMacros.entries) {
                 val number = raw.num()
                 if (!number.isFinite() || number !in 0.0..1.0) throw JsonException("TIDAL $key must be 0..1")
-                if (key == "HOLD" && number != 0.0) throw JsonException("TIDAL first-listen prototype requires HOLD 0")
+                if (key == "HOLD" && number != 0.0 && number != 1.0) throw JsonException("TIDAL HOLD must be 0 or 1")
             }
+            val held = (rawMacros as? JsonValue.Obj)?.entries?.get("HOLD")?.num() == 1.0
+            val heldModel = obj["heldModel"]?.int() ?: if (held)
+                throw JsonException("TIDAL HOLD recipe has no heldModel") else TidalKeys.MODEL_VERSION
             Patches.decode(value, ENGINE, { name -> TidalVoice.entries.firstOrNull { it.name == name } }) { name, voice, macros ->
-                TidalPatch(name, voice, macros, midi, velocity.toFloat(), seed, model)
+                TidalPatch(name, voice, macros, midi, velocity.toFloat(), seed, model, heldModel)
             } as TidalPatch
         } catch (e: IllegalArgumentException) {
             throw JsonException(e.message ?: "invalid TIDAL patch")

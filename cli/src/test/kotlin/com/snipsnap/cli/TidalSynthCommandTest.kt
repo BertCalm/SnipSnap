@@ -1,5 +1,6 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
@@ -62,7 +63,23 @@ class TidalSynthCommandTest {
     }
 
     @Test
-    fun `invalid performance and deferred held routes fail before creating output`() {
+    fun `held pad WAV carries its loop marker and exact versioned recipe`() {
+        val directory = createTempDirectory("tidal-cli-held").toFile()
+        try {
+            assertEquals(0, SynthCommand.run(listOf("TIDAL", "STREAM", "--macros", "HOLD=1",
+                "--midi", "48", "--out", directory.path), PrintStream(ByteArrayOutputStream())))
+            val patch = TidalPatch.fromJsonText(directory.listFiles { it.extension == "patch" }!!.single().readText())
+            assertEquals(1f, patch.macros["HOLD"])
+            val rendered = patch.render()
+            val expected = ByteArrayOutputStream().also {
+                WavWriter.write(it, rendered, smpl = SmplChunk(patch.midi, SmplChunk.Loop(0, rendered.frameCount.toLong())))
+            }.toByteArray()
+            assertContentEquals(expected, directory.listFiles { it.extension == "wav" }!!.single().readBytes())
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test
+    fun `invalid performance and unsupported held edits fail before creating output`() {
         val directory = createTempDirectory("tidal-cli-invalid").toFile()
         val destination = File(directory, "not-created")
         try {
@@ -70,7 +87,8 @@ class TidalSynthCommandTest {
                 arrayOf("--midi", "35"), arrayOf("--midi", "85"), arrayOf("--midi", "60.5"),
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "1.01"), arrayOf("--velocity", "-.01"),
                 arrayOf("--seed", "1.5"), arrayOf("--seed", "9223372036854775808"),
-                arrayOf("--instrument"), arrayOf("--drone"), arrayOf("--scramble", "3"),
+                arrayOf("--instrument", "--attack", ".1"),
+                arrayOf("--instrument", "--release", "NaN"), arrayOf("--instrument", "--release", "0"), arrayOf("--drone"), arrayOf("--scramble", "3"),
                 arrayOf("--model", "0"), arrayOf("--model", (Tidal.MODEL_VERSION + 1).toString()), arrayOf("--seconds", "2"),
                 arrayOf("--wet"), arrayOf("--dry"), arrayOf("--patch", "missing.json"),
             )) {

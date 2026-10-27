@@ -22,25 +22,56 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** Manual THREAD keys handoff: production notes and package, then playback from exported files. */
+/** Manual FILAMENT keys handoff: production notes and package, then playback from exported files. */
 object FilamentKeysAuditionGenerator {
     private const val RATE = 44_100
-    private const val NAME = "Filament Thread Keys"
-    private const val ARCHIVE = "filament-thread-keys.zip"
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 1) { "Supply only an optional output directory." }
+        require(args.size <= 2) { "Supply an optional output directory and THREAD, PULSE, CURL or ALL." }
         val repository = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile && File(it, ".git").exists() }
         // Capture source state before creating generated files, including a custom output path.
         val sourceCommit = git(repository, "rev-parse", "HEAD")
         val sourceDirty = git(repository, "status", "--porcelain").isNotEmpty()
-        val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-thread-keys").path).canonicalFile
+        val selection = args.getOrNull(1) ?: "THREAD"
+        val voices = if (selection == "ALL") FilamentVoice.entries.toList() else listOf(FilamentVoice.valueOf(selection))
+        val directory = if (selection == "ALL") "held" else selection.lowercase(Locale.ROOT)
+        val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-$directory-keys").path).canonicalFile
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }
         check(output.mkdirs() || output.isDirectory)
-        val bundle = File(output, NAME).apply { check(mkdirs()) }
-        val patch = FilamentPresets.forVoice(FilamentVoice.THREAD).single { it.name == "Glass Thread" }
+        val bundles = voices.map { voice ->
+            val destination = if (voices.size == 1) output else File(output, voice.name.lowercase(Locale.ROOT))
+            generate(destination, voice, sourceCommit, sourceDirty)
+        }
+        if (voices.size > 1) {
+            val manifest = File(output, "manifest.json").apply { writeText(Json.write(json(linkedMapOf(
+                "engine" to "FILAMENT", "model" to 3, "sourceCommit" to sourceCommit,
+                "workingTreeDirty" to sourceDirty, "nativeRootCount" to bundles.sumOf { InstrumentStore.list(it).single().second.zones.size },
+                "instruments" to bundles.map { bundle -> linkedMapOf(
+                    "directory" to bundle.name, "manifest" to "${bundle.name}/manifest.json",
+                    "manifestSha256" to sha(File(bundle, "manifest.json")),
+                ) },
+                "physicalPhoneValidated" to false, "mpcHardwareValidated" to false,
+                "ownerListeningAcceptance" to false,
+            ))) + "\n") }
+            val readme = File(output, "README.txt").apply { writeText(
+                "FILAMENT HELD INSTRUMENTS\n\nTHREAD, PULSE and CURL each have native C3/C4/C5 roots, one velocity layer, real onset and marked sustain.\n" +
+                "Each program folder includes MPC 3/MPC 2 files, its complete source recipe, native WAVs and an exported-file playback demo.\n" +
+                "The demos hold each root through its first wrap, then release. Their reference-player gain is ${InstrumentEngine.VOICE_LEVEL}; native WAVs retain source gain.\n" +
+                "Use each program folder's README and manifest for loading instructions, frame markers and hashes.\n" +
+                "Physical phone/MPC acceptance and owner listening acceptance remain open.\n",
+            ) }
+            archive(output, "filament-held-keys.zip", bundles, listOf(manifest, readme), "manifest.json")
+        }
+    }
+
+    private fun generate(output: File, voice: FilamentVoice, sourceCommit: String, sourceDirty: Boolean): File {
+        check(output.mkdirs() || output.isDirectory)
+        val lower = voice.name.lowercase(Locale.ROOT)
+        val name = "Filament ${lower.replaceFirstChar { it.uppercaseChar() }} Keys"
+        val bundle = File(output, name).apply { check(mkdirs()) }
+        val patch = FilamentPresets.forVoice(voice).first()
         require(patch.model == 3 && patch.velocity == 1f)
         val spec = FilamentPadMaker.Spec(patch)
         val roots = FilamentPadMaker.zoneMidis(spec)
@@ -49,11 +80,11 @@ object FilamentKeysAuditionGenerator {
             val start = System.nanoTime()
             FilamentPadMaker.renderZone(spec, midi).also {
                 observedRenderMs += (System.nanoTime() - start) / 1e6
-                println("THREAD ${Scales.nameOf(midi)}: ${it.snip.frameCount} frames, loop at ${it.loopStartFrame}")
+                println("$voice ${Scales.nameOf(midi)}: ${it.snip.frameCount} frames, loop at ${it.loopStartFrame}")
             }
         }
-        val program = FilamentPadMaker.export(NAME, spec, notes, bundle)
-        val data = File(bundle, Mpc3TrackWriter.trackDataDirName(NAME))
+        val program = FilamentPadMaker.export(name, spec, notes, bundle)
+        val data = File(bundle, Mpc3TrackWriter.trackDataDirName(name))
         val sourceFile = File(data, FilamentPadMaker.PATCH_FILE)
         require(FilamentPatch.fromJsonText(sourceFile.readText()) == patch)
         val (sidecar, instrument) = InstrumentStore.list(bundle).single()
@@ -80,9 +111,9 @@ object FilamentKeysAuditionGenerator {
                 "maxPcm24Error" to pcmError, "observedRenderMs" to observedRenderMs[index],
             )
         }
-        val nativeTrack = File(bundle, "$NAME.xty")
+        val nativeTrack = File(bundle, "$name.xty")
         require(Acvs.read(nativeTrack).payloadText == Mpc3TrackWriter().keygroupPayloadText(program))
-        val compatibility = File(data, "$NAME.xpm")
+        val compatibility = File(data, "$name.xpm")
         val xpm = compatibility.readText()
         for (note in notes) require("<SliceLoopStart>${note.loopStartFrame}</SliceLoopStart>" in xpm)
 
@@ -126,9 +157,9 @@ object FilamentKeysAuditionGenerator {
                 "releasedToSilence" to true,
             )
         }
-        val demoFile = WavWriter.write(File(bundle, "thread-held-demo.wav"), Snip(demo, 2, RATE))
+        val demoFile = WavWriter.write(File(bundle, "$lower-held-demo.wav"), Snip(demo, 2, RATE))
         val manifest = linkedMapOf<String, Any?>(
-            "engine" to "FILAMENT", "voice" to "THREAD", "model" to patch.model,
+            "engine" to "FILAMENT", "voice" to voice.name, "model" to patch.model,
             "generatedAt" to Instant.now().toString(), "sourceCommit" to sourceCommit,
             "workingTreeDirty" to sourceDirty,
             "sourcePatch" to patch.toJsonValue(), "sourcePatchFile" to relative(bundle, sourceFile),
@@ -152,36 +183,43 @@ object FilamentKeysAuditionGenerator {
             ),
         )
         File(bundle, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
-        File(bundle, "README.txt").writeText(readme(instrument.release))
+        File(bundle, "README.txt").writeText(readme(instrument.release, patch.name, name, lower))
         check(bundle.walkTopDown().count { it.isFile && it.extension == "wav" } == 4)
-        val archive = File(output, ARCHIVE)
-        val entries = bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.toList()
+        archive(output, "filament-$lower-keys.zip", listOf(bundle), emptyList(), "$name/manifest.json")
+        println("Three native $voice attack/sustain notes and one exported-file playback demo; physical phone/MPC acceptance remains open.")
+        return bundle
+    }
+
+    private fun archive(output: File, archiveName: String, bundles: List<File>, extras: List<File>, manifestPath: String) {
+        val archive = File(output, archiveName)
+        val entries = bundles.flatMap { bundle ->
+            bundle.walkTopDown().filter { it.isFile }.map { "${bundle.name}/${relative(bundle, it)}" to it }.toList()
+        }.plus(extras.map { it.name to it }).sortedBy { it.first }
         ZipOutputStream(archive.outputStream().buffered()).use { zip ->
-            for (file in entries) {
-                zip.putNextEntry(ZipEntry("$NAME/${relative(bundle, file)}").apply { time = 0L })
+            for ((path, file) in entries) {
+                zip.putNextEntry(ZipEntry(path).apply { time = 0L })
                 file.inputStream().use { it.copyTo(zip) }
                 zip.closeEntry()
             }
         }
         ZipFile(archive).use { zip ->
             check(zip.size() == entries.size)
-            for (file in entries) {
-                val entry = requireNotNull(zip.getEntry("$NAME/${relative(bundle, file)}"))
+            for ((path, file) in entries) {
+                val entry = requireNotNull(zip.getEntry(path))
                 check(zip.getInputStream(entry).use { it.readBytes() }.contentEquals(file.readBytes()))
             }
         }
         File(output, "archive.json").writeText(Json.write(json(linkedMapOf(
-            "archive" to ARCHIVE, "bytes" to archive.length(), "sha256" to sha(archive),
-            "zipEntriesVerified" to entries.size, "manifest" to "$NAME/manifest.json",
+            "archive" to archiveName, "bytes" to archive.length(), "sha256" to sha(archive),
+            "zipEntriesVerified" to entries.size, "manifest" to manifestPath,
         ))) + "\n")
         println("${archive.path}: ${archive.length()} bytes, SHA-256 ${sha(archive)}")
-        println("Three native attack/sustain notes and one exported-file playback demo; physical phone/MPC acceptance remains open.")
     }
 
-    private fun readme(release: Float): String = """
-        FILAMENT THREAD KEYS
+    private fun readme(release: Float, preset: String, name: String, lower: String): String = """
+        ${name.uppercase(Locale.ROOT)}
 
-        Glass Thread, saved model 3, native C3/C4/C5, source velocity 1.
+        $preset, saved model 3, native C3/C4/C5, source velocity 1.
         The three mono PCM24 WAVs in the TrackData folder retain the real attack
         and a marked sustain loop. Each root has one full-range velocity layer.
         Program release is $release seconds after note-off. Source settings are
@@ -189,11 +227,11 @@ object FilamentKeysAuditionGenerator {
 
         Load the .xty and its adjacent TrackData folder for MPC 3. The .xpm twin
         inside TrackData is the MPC 2 program. Keep the files together. The phone
-        reads the adjacent Filament Thread Keys.instrument.json sidecar.
+        reads the adjacent $name.instrument.json sidecar.
         Ordinary WAV players play
         through the marked sustain once and stop; they do not hold the key.
 
-        thread-held-demo.wav plays C3, C4 and C5 from the exported files using
+        $lower-held-demo.wav plays C3, C4 and C5 from the exported files using
         SnipSnap's reference instrument player. Every note passes the end of its
         source file, wraps in sustain and then releases. This stereo demo includes
         the player's fixed voice gain; the three native WAVs do not. No listening
