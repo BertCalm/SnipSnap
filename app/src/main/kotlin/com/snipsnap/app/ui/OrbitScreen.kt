@@ -222,6 +222,7 @@ fun OrbitScreen(
     brush: OrbitBrush = OrbitBrush.WEIGHT,
     onBrushChange: (OrbitBrush) -> Unit = {},
 ) {
+    composedOffMainThread("OrbitScreen")
     val scheme = LocalScheme.current
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

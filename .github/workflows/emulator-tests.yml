@@ -73,7 +73,7 @@ jobs:
           # would make every one of these a test of the fallback toast.
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
           # EXPERIMENT (not for merge): repeat the tests that show the screen being moved onto offMain.
-          script: REPEAT_ROUNDS=10 REPEAT_TESTS=com.snipsnap.app.ui.ChopScreenTest sh scripts/repeat-android-tests.sh
+          script: REPEAT_ROUNDS=10 REPEAT_TESTS=com.snipsnap.app.ui.OrbitScreenTest sh scripts/repeat-android-tests.sh
       - name: Keep the reports
         if: always()
         uses: actions/upload-artifact@v4
