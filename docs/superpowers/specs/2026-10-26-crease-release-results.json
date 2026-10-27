@@ -1,0 +1,493 @@
+{
+  "renderSourceCommit": "adcee4b84aac331f974af27f22b0f5f85003f8f3",
+  "baselineCommit": "fd791f583579dda3dcab3d2ea9e34f9975b07a12",
+  "harness": "actual Kotlin Crease circuit via Java reflection; Python/SciPy measurements",
+  "result": "passed",
+  "summary": {
+    "pairs": 12,
+    "clips": 48,
+    "rawCircuitCases": 63,
+    "zeroVelocityCases": 9,
+    "allPublicPrefixesExact": true,
+    "allStateForksExact": true,
+    "allDeterministicForksPassed": true,
+    "allPcm16FlacDecodesExact": true,
+    "crestMaxTvByPreset": {
+      "paper-keys": 0.197299114698433,
+      "reed-mark": 0.41506219880589,
+      "ink-ribbon": 0.2516340733105474
+    },
+    "worstMeasuredPitchCents": 0.11950819060950725,
+    "maxReferenceHarmonicTv": 0.00016158735810175838
+  },
+  "pairs": [
+    {
+      "preset": "paper-keys",
+      "phase": 0,
+      "earlyHarmonicTv": 0.025586275846790213,
+      "lateHarmonicTv": 0.0708873945642115,
+      "resetCanaryTv": 0.039820365485605524,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.6247918541905,
+          "cents": -1.7858670260164293e-05,
+          "correlation": 0.9998030411990297,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6248585109655,
+          "cents": 0.0004232251544476983,
+          "correlation": 0.9998171512030591,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 63885,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4796397785852562,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 1.20971294228e-08,
+      "mechanicsDrainSeconds": 4.782871719
+    },
+    {
+      "preset": "paper-keys",
+      "phase": 0.25,
+      "earlyHarmonicTv": 0.09111860219877285,
+      "lateHarmonicTv": 0.27167894464681475,
+      "resetCanaryTv": 0.04078130224648626,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.62399273673157,
+          "cents": -0.005305818794967258,
+          "correlation": 0.9997492689500687,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6245658842597,
+          "cents": -0.0015131565907130396,
+          "correlation": 0.9998176892883638,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 63885,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4796397785852562,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 1.03541491477e-08,
+      "mechanicsDrainSeconds": 4.782871719
+    },
+    {
+      "preset": "paper-keys",
+      "phase": 0.5,
+      "earlyHarmonicTv": 0.19654926724008875,
+      "lateHarmonicTv": 0.197299114698433,
+      "resetCanaryTv": 0.13132624914597163,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.62448929549527,
+          "cents": -0.002019963341647839,
+          "correlation": 0.9994536115373724,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6247462122369,
+          "cents": -0.000319882459665377,
+          "correlation": 0.999717525475801,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 63885,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4796397785852562,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 2.74479284321e-08,
+      "mechanicsDrainSeconds": 4.782871719
+    },
+    {
+      "preset": "paper-keys",
+      "phase": 0.75,
+      "earlyHarmonicTv": 0.04616888882666125,
+      "lateHarmonicTv": 0.04260884037150633,
+      "resetCanaryTv": 0.11077849466984727,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.62476281887785,
+          "cents": -0.00020999231443490259,
+          "correlation": 0.9997085777356329,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.62498454844865,
+          "cents": 0.0012572450212286056,
+          "correlation": 0.999744924548911,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 63885,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4796397785852562,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 2.77794761221e-08,
+      "mechanicsDrainSeconds": 4.782871719
+    },
+    {
+      "preset": "reed-mark",
+      "phase": 0,
+      "earlyHarmonicTv": 0.12085240880075106,
+      "lateHarmonicTv": 0.2472506902391316,
+      "resetCanaryTv": 1.695178222919878e-05,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.622663560869,
+          "cents": -0.009020242253518001,
+          "correlation": 0.9992396879029254,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6235423447862,
+          "cents": -0.0032050805876474298,
+          "correlation": 0.9997357986460923,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 72819,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4835790288619715,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 4.69403170286e-24,
+      "mechanicsDrainSeconds": 4.0
+    },
+    {
+      "preset": "reed-mark",
+      "phase": 0.25,
+      "earlyHarmonicTv": 0.33947089185931806,
+      "lateHarmonicTv": 0.41528112475147205,
+      "resetCanaryTv": 0.00021908288727003997,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.60994352971596,
+          "cents": -0.09319447277068713,
+          "correlation": 0.9941430679968728,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6232063842033,
+          "cents": -0.005428224455026642,
+          "correlation": 0.9997065764307675,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 72819,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4835790288619715,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 1.56396604264e-23,
+      "mechanicsDrainSeconds": 4.0
+    },
+    {
+      "preset": "reed-mark",
+      "phase": 0.5,
+      "earlyHarmonicTv": 0.41506219880589,
+      "lateHarmonicTv": 0.30200029483531493,
+      "resetCanaryTv": 0.0002876797961781862,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.605967245905,
+          "cents": -0.11950819060950725,
+          "correlation": 0.9896797605506933,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.62340903276885,
+          "cents": -0.004087242644971582,
+          "correlation": 0.9996424111777243,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 72819,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4835790288619715,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 3.26230664762e-23,
+      "mechanicsDrainSeconds": 4.0
+    },
+    {
+      "preset": "reed-mark",
+      "phase": 0.75,
+      "earlyHarmonicTv": 0.12407307859417559,
+      "lateHarmonicTv": 0.04979649820302157,
+      "resetCanaryTv": 2.7107718943405223e-05,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.6220821689513,
+          "cents": -0.012867487704259713,
+          "correlation": 0.9990791482232183,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.62290319304645,
+          "cents": -0.007434526439771743,
+          "correlation": 0.9997194029393146,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 4,
+      "loopFrames": 72819,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.4835790288619715,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 2.22357776605e-23,
+      "mechanicsDrainSeconds": 4.0
+    },
+    {
+      "preset": "ink-ribbon",
+      "phase": 0,
+      "earlyHarmonicTv": 0.03618576191056083,
+      "lateHarmonicTv": 0.18822715232061996,
+      "resetCanaryTv": 0.1509973257560085,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.62064452730215,
+          "cents": -0.03758098093520995,
+          "correlation": 0.9978177346138705,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.61982860197656,
+          "cents": -0.04298024868174897,
+          "correlation": 0.9980199294399157,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 10,
+      "loopFrames": 92540,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.6598964978657877,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 5.38375666936e-07,
+      "mechanicsDrainSeconds": 17.531166447
+    },
+    {
+      "preset": "ink-ribbon",
+      "phase": 0.25,
+      "earlyHarmonicTv": 0.15006888458156295,
+      "lateHarmonicTv": 0.2691781135436494,
+      "resetCanaryTv": 0.27245582604002344,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.62115617664824,
+          "cents": -0.03419522403291162,
+          "correlation": 0.9960086750073254,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.62011535604313,
+          "cents": -0.04108269323149992,
+          "correlation": 0.9965557484218134,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 10,
+      "loopFrames": 92540,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.6598964978657877,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 5.19504689161e-07,
+      "mechanicsDrainSeconds": 17.531166447
+    },
+    {
+      "preset": "ink-ribbon",
+      "phase": 0.5,
+      "earlyHarmonicTv": 0.12145835925312626,
+      "lateHarmonicTv": 0.2516340733105474,
+      "resetCanaryTv": 0.34260090681750505,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.6214813579144,
+          "cents": -0.032043392971410865,
+          "correlation": 0.9957769628400907,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.61989458682314,
+          "cents": -0.04254360288428526,
+          "correlation": 0.9957378057086733,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 10,
+      "loopFrames": 92540,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.6598964978657877,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 6.82512767274e-07,
+      "mechanicsDrainSeconds": 17.531166447
+    },
+    {
+      "preset": "ink-ribbon",
+      "phase": 0.75,
+      "earlyHarmonicTv": 0.08885329616044127,
+      "lateHarmonicTv": 0.1115854077334778,
+      "resetCanaryTv": 0.3159732202411684,
+      "firstPostKeyUpDifference": 0.0,
+      "pitch": [
+        {
+          "hz": 261.6193818748219,
+          "cents": -0.04593640810293354,
+          "correlation": 0.9951556357884304,
+          "scope": "root-constrained \u00b15 percent"
+        },
+        {
+          "hz": 261.6192249314514,
+          "cents": -0.046974961845943575,
+          "correlation": 0.9959741624604534,
+          "scope": "root-constrained \u00b15 percent"
+        }
+      ],
+      "warmCycles": 10,
+      "loopFrames": 92540,
+      "releaseSeconds": 1.2,
+      "commonGain": 1.6598964978657877,
+      "sharedHeadroom": 1,
+      "forkStateError": 0.0,
+      "publicPrefixMaxError": 0.0,
+      "deformationDrainResidual": 7.20461238702e-07,
+      "mechanicsDrainSeconds": 17.531166447
+    }
+  ],
+  "referenceChecks": [
+    {
+      "preset": "paper-keys",
+      "mode": 0,
+      "midi": 84,
+      "harmonicTv": 4.65579001395553e-07,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    },
+    {
+      "preset": "paper-keys",
+      "mode": 1,
+      "midi": 84,
+      "harmonicTv": 3.925780674049763e-06,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    },
+    {
+      "preset": "reed-mark",
+      "mode": 0,
+      "midi": 84,
+      "harmonicTv": 0.00016158735810175838,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    },
+    {
+      "preset": "reed-mark",
+      "mode": 1,
+      "midi": 84,
+      "harmonicTv": 1.3824041657437082e-07,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    },
+    {
+      "preset": "ink-ribbon",
+      "mode": 0,
+      "midi": 84,
+      "harmonicTv": 2.8127897188119293e-05,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    },
+    {
+      "preset": "ink-ribbon",
+      "mode": 1,
+      "midi": 84,
+      "harmonicTv": 2.2250192860567928e-05,
+      "scope": "harmonic magnitude shape; not a complete off-harmonic alias-power proof"
+    }
+  ],
+  "commands": [
+    {
+      "group": "synth-jar",
+      "exitCode": 0
+    },
+    {
+      "group": "main",
+      "exitCode": 0,
+      "seconds": 9.432831674000226
+    },
+    {
+      "group": "reference",
+      "exitCode": 0,
+      "seconds": 25.750263502000053
+    },
+    {
+      "group": "silence",
+      "exitCode": 0,
+      "seconds": 4.163350646000254
+    }
+  ],
+  "runtimeJarHashes": [
+    {
+      "path": "synth/build/libs/synth.jar",
+      "sha256": "2fd6d28dc625439233652c51dd44376d55b954ecb67be9554bc7020c7fb5cf38"
+    },
+    {
+      "path": "audio/build/libs/audio.jar",
+      "sha256": "9de98e54a91a1f908d3b6fb54d16fed8d39ad839028fed4a58d56fd11939bd69"
+    },
+    {
+      "path": "json/build/libs/json.jar",
+      "sha256": "16eadda7e3a054748d86a664f6d5f0e405b0cda14299d7d7524ee4686b261a5a"
+    },
+    {
+      "path": "/home/agent/.gradle/caches/modules-2/files-2.1/org.jetbrains.kotlin/kotlin-stdlib/2.0.21/618b539767b4899b4660a83006e052b63f1db551/kotlin-stdlib-2.0.21.jar",
+      "sha256": "f31cc53f105a7e48c093683bbd5437561d1233920513774b470805641bedbc09"
+    }
+  ],
+  "independentPcmAudit": {
+    "result": "passed",
+    "renderSourceCommit": "adcee4b84aac331f974af27f22b0f5f85003f8f3",
+    "pcmFiles": 48,
+    "allDecodedPcmIdentical": true,
+    "commonGainPrefixPairs": 12,
+    "tailMatchedPairs": 12,
+    "maxMatchedTailRmsDifferenceDb": 1.8949296107246257e-05,
+    "allFixedPerformancesEndSilent": true,
+    "all48ArchiveWavsByteIdentical": true,
+    "productionModulesUnchangedFromBaseline": true,
+    "scope": "Independent WAV/FLAC/ZIP readers and PCM comparisons; same decoder executable is used for transport round trip, with separate browser decoder check in browser proof."
+  }
+}
