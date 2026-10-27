@@ -1,5 +1,7 @@
 # A second look for TapeOS — the OpenSky proposal
 
+> 2026-10-27: the owner retired CLASSIC; modern (VENT, OPENSKY) is the only look. See PR #704.
+
 *Status: proposal, 2026-10-13. Nothing in `:shell` or `:app` changes with this
 document. The side-by-side mockup is [`../design/ModernLook.html`](../design/ModernLook.html).*
 
