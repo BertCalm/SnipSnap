@@ -48,9 +48,11 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
+import com.snipsnap.app.theme.animationsOff
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.tape
@@ -361,6 +363,10 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
+    // REDUCED MOTION: the system's own "remove animations", read once. The
+    // drawings that loop (the busy bar, the spinner) read it through
+    // `LocalReduceMotion` and hold still when it is on.
+    val reduceMotion = remember { context.animationsOff() }
     // MIDI OUT (SETUP): the hardware switch, remembered like HAPTICS, on by
     // default (MIDI_OUT_DEFAULT). `MidiOut.install` reads the same pref; pushing the value
     // once here makes the two agree even if install ran before it was written.
@@ -3160,7 +3166,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics) {
+    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion) {
         Box(
             Modifier
                 .fillMaxSize()
