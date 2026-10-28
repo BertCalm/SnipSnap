@@ -961,6 +961,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.TREFOIL) {
+            // SAVE or SEND can arrive in the same frame as a root/touch/contact edit.
+            // Read the current recipe map rather than the previous composition's snapshot.
+            val current = loadedPatchesByVoice[engine to voice] as? TrefoilPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: TrefoilPatch(name, voice as TrefoilVoice, controls)
+        }
         if (engine == Engine.PRISM) {
             // Detail edits and accessibility events can share a frame with SAVE or HOLD.
             val current = loadedPatchesByVoice[engine to voice] as? PrismPatch
