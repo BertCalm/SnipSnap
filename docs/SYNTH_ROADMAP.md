@@ -103,6 +103,15 @@ four raw responses before one output stage. Native ALLOY model 1 and archived
 models 1–4 retain their interpretation. The study recordings have been heard;
 the native ports and their new control positions still need listening. Current
 validation is recorded separately from the earlier twenty-clip ALLOY pack.
+The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+provides 42 clips and six downloads. Native patch/WAV hashes, all six ZIP CRCs,
+32 MPC pad readbacks and browser checks from 320 to 1440 pixels pass. The
+sixteen compiled character checks pass at published render source `8f988463`;
+they also pass on CI-matched Temurin 17 with all 78 cross-runtime stage hashes
+unchanged. Merged `04071091` completes all nine JVM `testClasses` tasks and
+both Android APK builds on JDK 17. The full gate passes at `d17359db` with
+7,001 results, zero failures/errors/skips; its final run repeats all 421 loop
+tests and reuses the eight unchanged modules' successful Gradle results.
 Deformation, SCATTER, ORBIT, sustained HOLD and hardware checks remain later
 work. See [CAUSTIC.md](CAUSTIC.md) for the control contract and evidence ledger.
 

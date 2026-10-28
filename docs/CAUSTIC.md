@@ -109,14 +109,16 @@ do not increase the engine count or claim a held instrument export.
   production ports and new control positions have not yet been heard.
 - **Verified:** the shared CAUSTIC geometry, saved root/velocity contract,
   original native model 1 and archived models 1–4 were read at `53366f9c` before
-  this expansion. The main Kotlin classes compile cleanly. The registry exposes
-  four voices, eleven starting patches and a sixteen-pad finite starter.
+  this expansion. The published pack and completed build stage use clean source
+  `8f988463`. The registry exposes four voices, eleven starting patches and a
+  sixteen-pad finite starter. Merged source `04071091` includes the current
+  default branch and retains the published Caustic DSP unchanged.
 - **Measured:** the independent reference comparisons below cover the nine
-  new-voice defaults at C2/C4/C6. The first fourteen character checks pass,
-  including control authority, interactions, decay and the higher-rate
-  comparison below. Expanded corner validation, render cost, generated archives
-  and the full test gate remain pending. Historical results below apply only
-  to their named earlier packs.
+  new-voice defaults at C2/C4/C6. All sixteen compiled character checks pass,
+  including the 27-case short-bass matrix. The generated recordings, archives,
+  kit readback and browser payload checks pass as detailed below. JDK 17
+  focused runtime, cross-runtime waveform checks and the full nine-module JVM
+  gate pass. Historical results below apply only to their named earlier packs.
 - **Proposed:** new profile constants away from the heard reference positions,
   factory variations and all unlistened control extremes remain sound-design
   choices rather than hearing approval or measured physical properties.
@@ -128,24 +130,65 @@ do not increase the engine count or claim a held instrument export.
 | Finished port agreement | The reference uses the same Kotlin house finish and PCM24 path. Worst relative RMS error against native output is `8.90e-7`; fitted gain stays within `1.64e-7` of unity. |
 | Default native bounds | Across those nine comparisons, maximum native peak is `.8391` and maximum absolute mean is `1.32e-8`. These are default measurements, not all-control bounds. |
 | Low-note short gesture | With the twelve-period modal-release floor, C2/LENGTH=0/velocity=.75 passes the broad pitch probe at BODY 0, .5 and 1: 12.93–14.40 cents error, confidence .583–.595. Late raw/attack RMS is approximately `1e-6`, before the output fade. |
+| Expanded short-bass matrix | All 27 C2 Hollow cases across LENGTH 0/.05/.125, BODY 0/.5/1 and velocity .25/.75/1 pass the dedicated evidence check. Worst returned house pitch error is 14.482 cents and minimum measured note-period correlation .5824. Five house-detector nulls use the independent broad-spectrum check described below. |
 | Control activity | The weakest measured adjacent-control normalized spectral L1 difference is .113. SOURCE × FOCUS interaction is .195–.742; BODY × LENGTH envelope interaction is .159–.755 across the three added voices. These are shape measurements, not an audibility verdict. |
 | Higher-rate comparison | At C6/hard effort, 4× versus 16× normalized spectral L1 differences are .000223, .00798 and .01916 for Hollow, Rubbed and Catches respectively. Maximum measured power above 20 kHz is `1.22e-8`; the noise realization differs between internal rates. |
-| Current pack and test gate | The generator defines 42 clips and six ZIPs: five portable listening packs and the sixteen-pad starter. A 25 MiB asset limit is enforced. Generation, archive sizes, expanded corner probes and the full test suite are pending. |
+| Generated pack | All 42 clips, 84 mono PCM24 WAVs and 42 native patches pass the artifact audit; 126 declared hashes match. Twelve defaults pass the voiced-window pitch gate. Maximum native peak is .9900 and worst reported broad pitch error is 13.70 cents. The early C2 Hollow classifier warning remains visible. |
+| Downloads and kit | All six ZIPs pass CRC checks and remain below 25 MiB; the largest is 14.09 MiB. Both MPC readers pass all 32 pad readbacks. The thirteen retained ALLOY pads keep exact patch and WAV bytes; the three added voices occupy A11–A13. |
+| Browser payload | All 84 WAVs, named comparison routing, renderer/matched handoffs, retry, keyboard playback and downloads pass browser checks. Widths 320, 375, 390, 768, 1024 and 1440 have no horizontal overflow. |
+| Published render build | At `8f988463`, the build completed all nine JVM `testClasses` tasks, debug APK, Android test APK and the 42-clip generator with exit 0 in 6m 2s. Independent invocation of the sixteen compiled character tests passes in 21.474s, exit 0. |
+| Merged JDK 17 build | At `04071091`, all nine JVM `testClasses` tasks, debug APK and Android test APK pass with exit 0 in 5m 28s on Temurin 17.0.21+9. The local compiler command uses `-Pkotlin.daemon.jvmargs=-Xmx4g`; no repository memory setting changes. |
+| Cross-runtime audio | On Temurin 17.0.21+9, the sixteen compiled character tests pass in 20.101s. All 51 earlier ALLOY stage hashes and all 27 stage hashes for the nine added-voice defaults match the published JDK 21 output exactly. |
+| Focused compiler stress | Three JDK 17 profiles complete 720, 2520 and 720 calls, all exit 0. The original 1046-byte `synthesize` method reaches tier-4 compilation with no compiler exclusions. This is focused runtime evidence, not the full suite result. |
+| Merged APK artifact | The `04071091` debug APK is 52,441,963 bytes, SHA-256 `f3dc6732662cfd6902b9dfa17af2185a8aafe6788463a3c716216d925026959a`. ZIP, debug signature, four native ABIs and all four voice names in DEX pass the packaging audit. Device instrumentation was not run. |
+| Full JVM gate | At validation commit `d17359db`, the Temurin 17 nine-module gate exits 0 with 7,001 passing results across 858 classes, zero failures, errors or skips. The final invocation takes 35.757s: all 421 loop tests rerun, while the eight unchanged modules are legitimately UP-TO-DATE from the completed first run. |
+
+The first full JVM attempt stopped in OpenJDK 21's HotSpot compiler while
+compiling `CausticInstrument.synthesize`. The complete gate is being rerun on
+Temurin 17, matching `.github/workflows/tests.yml` and the synth module's
+`JvmTarget.JVM_17`. Production DSP remains the published `8f988463` source;
+no renderer change is used for this runtime failure. The compiler crash's
+cause has not been established. The completed JDK 17 checks above preserve
+the original compiled method and audio. The JDK 21 failure remains unresolved;
+the complete passing gate uses the repository's CI runtime.
+
+The first JDK 17 run took 1h 58m 38s and completed 7,001 tests with one
+failure: a `ResidencyTest` wall-clock assertion observed 79 ms against a 50 ms
+limit. All 3,806 synth tests passed. Commit `d17359db` changes only that test
+guard: actual caller/renderer threads and latches prove the drone starts
+elsewhere and remains blocked when `buffersFor` returns. A scratch-only mutant
+that runs just the drone executor inline fails with the named caller-thread
+assertion, exit 1 at 68.5 ms; the normal guard exits 0. Silent-drone, audible
+other-track, frame-count, single-bake and completed-buffer assertions remain.
+
+The earlier warm-cache fixture uses already-fitting audio so its bounded
+deadline tests waiting rather than tempo analysis. It retains a real two-thread
+queue, a 40 ms delay, six completed-bake checks and the assertion that applying
+the warmed interval does not bake again. These test changes do not alter
+production DSP or the APK built from `04071091`.
+
+The generated pack's eight-second C4 captures took 258 ms for ALLOY, 523 ms
+for Hollow, 323 ms for Rubbed and 346 ms for Catches. Across all 42 captures,
+the maximum was 2.626 seconds. These Linux/OpenJDK 21 generation timings
+include the renderer's actual preparation and finish; they are not warm phone
+latency measurements.
 
 The independent reports are `independent-reference-comparison.json` and
 `independent-finished-reference-comparison.json` from the native-capture probe.
 These numerical agreements establish port fidelity at the reference settings;
 they do not establish the owner's acceptance of the production instruments.
+The [portable evidence aggregate](evidence/caustic-native-voices-2026-10-28.json)
+retains the measured reports, source hashes and build fingerprint.
 
 ### Disclosed limits
 
-Some soft, short C2 Hollow settings still return no result from the house
-autocorrelation pitch detector. The diagnosed cases have an unconstrained
-40–1200 Hz spectral maximum at 65.27–65.44 Hz, −3.55 to +.91 cents from C2,
-and note-period correlation .626–.656. The detector's relative-peak cutoff can
-reject that period. These checks support the authored root at those settings;
-they do not claim that every house pitch probe passes. The independent report
-is `caustic-short-hollow-pitch-diagnosis/diagnosis.json`.
+Five of the 27 soft/short C2 Hollow matrix settings return no result from the
+house autocorrelation pitch detector. Their independent unconstrained spectral
+check finds the requested root within 2.425 cents and note-period correlation
+at least .6248. The detector's relative-peak cutoff can reject that period.
+These checks support the authored root at those settings; they do not claim
+that every house pitch probe passes. The earlier independent diagnosis also
+found the strongest 40–1200 Hz peak at C2 without a root-constrained search.
 
 The audio-only classifier can call dark C2 Hollow notes TOM or KICK. The
 accepted Python prototype's first .5 seconds already receives TOM, so this
@@ -215,7 +258,17 @@ the broader moving-geometry design remains later work.
 
 ## Listen and reproduce
 
-Generate the current four-voice comparison with:
+The published [four-voice native audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+contains 42 recordings, native patches and all six downloads. It uses a
+companion site so the original listening archive can keep its recordings
+within the hosting limit. All 275 earlier non-navigation files remain exact;
+only the three original HTML pages gain links to the native voices.
+
+The companion's 139 files match the generated payload except four documented
+HTML/history-link metadata files. Its audio and native patch hashes remain
+unchanged. The browser checks above exercise that payload.
+
+Reproduce the current four-voice comparison with:
 
 ```text
 ./gradlew --no-daemon :synth:generateCausticCharactersAudition
