@@ -404,8 +404,10 @@ object Layout {
 }
 
 /**
- * Motion constants — "TapeOS is snappy, not springy": these five are the
- * complete animation budget.
+ * Motion constants — "TapeOS is snappy, not springy": these nine are the
+ * complete animation budget. The last three are the loading drawings (the
+ * busy bar's sweep, the spinner's turn, a placeholder's pulse); each stands
+ * still when the system has animations off (`LocalReduceMotion`).
  */
 object Motion {
     /** Reel rotation period while playing, ms per revolution. */
@@ -427,4 +429,10 @@ object Motion {
     const val QUIP_ROTATE_MS = 6000
     /** The bubble swells while dragged, so the eject gesture reads as physical. */
     const val BUBBLE_DRAG_SCALE = 1.08f
+    /** One pass of the busy bar's sweep across its track, ms, linear, repeating. */
+    const val BUSY_SWEEP_MS = 1100
+    /** One turn of the spinner, ms per revolution, linear, repeating. */
+    const val SPINNER_MS = 900
+    /** One breath of a placeholder where a result will land, ms, repeating. */
+    const val PLACEHOLDER_PULSE_MS = 900
 }

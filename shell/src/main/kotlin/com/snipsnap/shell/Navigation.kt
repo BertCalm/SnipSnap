@@ -101,6 +101,26 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     }
 
     /**
+     * Leave [page], a place that turned out to have nothing to show (the
+     * placeholders of a starter kit that failed to render), but only if that
+     * is still what the user is looking at. Someone who went to TAPE while it
+     * rendered is where they chose to be, and nothing moves; the caller says
+     * what happened wherever they are. True when it moved the user.
+     *
+     * From the page it is [back], not a new landing, so the entry the page
+     * pushed is popped and not left in the history: the shelf it was asked for
+     * from is where Back lands. [fallback] is landed on only when Back did not
+     * reach its place (a history that did not hold it, or the user's own
+     * wandering since). The caller moves the dock after a true.
+     */
+    fun backOutOf(page: Location, fallback: Location): Boolean {
+        if (location != page) return false
+        back()
+        if (location.place != fallback.place) goTo(fallback)
+        return true
+    }
+
+    /**
      * Whether [back] has anywhere to go. The app's root Back handler reads
      * this to decide whether to take the press or leave it to the system,
      * which finishes the Activity: the true root of a session is having

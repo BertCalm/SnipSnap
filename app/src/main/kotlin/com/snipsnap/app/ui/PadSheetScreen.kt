@@ -4823,6 +4823,15 @@ internal fun ActionButton(
      */
     lit: Boolean = false,
     /**
+     * This is the control that started the job in flight: a [Spinner] is
+     * drawn left of [label], and the node says [Copy.WORKING_BUSY] as its
+     * state, so someone who cannot see the ring is still told. The label is
+     * kept, not swapped for a "working" word - it is still the name of the
+     * thing pressed, and the dock says what it is doing. Normally sits with
+     * `enabled = false`: the job being in flight is what disables it.
+     */
+    working: Boolean = false,
+    /**
      * Override for [label] as the accessible name — for the button whose
      * visible glyph is too short/acronym-shaped to trust TalkBack to read
      * as a word (e.g. SplitScreen's "M"/"S" mute/solo chips, or "▶"/"▲"
@@ -4851,15 +4860,19 @@ internal fun ActionButton(
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
             .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
+            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            label,
-            TapeType.pixel,
-            if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape,
-            maxLines = 1,
-        )
+        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
+        if (working) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spinner(scheme.accent.tape)
+                TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 1)
+            }
+        } else {
+            TapeText(label, TapeType.pixel, ink, maxLines = 1)
+        }
     }
 }
 

@@ -1347,12 +1347,23 @@ private fun TexturePanel(
             onFractionCommit = {},
         )
 
+        // Whether the job in flight is this button's own. `busy` is every
+        // job's, so on its own it would put the spinner on this button for
+        // a job started from the grid or the shelf; the dock says what the
+        // job is, and the ring belongs on the control that was pressed.
+        // Set on the press, cleared when the app is idle again.
+        var startedHere by remember { mutableStateOf(false) }
+        LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            if (busy) "DUBBING…" else "$kind ▸ NEW TAPE",
+            "$kind ▸ NEW TAPE",
             scheme,
             enabled = !busy,
+            working = busy && startedHere,
             modifier = Modifier.fillMaxWidth(),
-            onClick = onGo,
+            onClick = {
+                startedHere = true
+                onGo()
+            },
         )
     }
 }
