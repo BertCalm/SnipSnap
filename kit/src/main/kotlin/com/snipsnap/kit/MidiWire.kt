@@ -27,9 +27,9 @@ package com.snipsnap.kit
  * notes, controllers, pitch bend and the two pressures (as [Event.Expression]),
  * program changes, and the clock's own four bytes. Bend, pressure and
  * program change are emitted for whichever rule wants them (MIDI learn, a
- * KEYS bend range); `MidiKeys` and `MidiPads` pass over them until then,
- * and `reachesScreens()` keeps expression and real-time bytes off the main
- * thread until something plays them. A bend's 14 bits arrive least
+ * KEYS bend range); `MidiKeys` and `MidiPads` pass over them, MIDI learn
+ * binds them, and `reachesScreens()` keeps real-time bytes off the main
+ * thread until something follows the clock. A bend's 14 bits arrive least
  * significant seven first. A note-on at velocity 0 is a note-off, the
  * convention every keyboard built since 1983 relies on.
  *
@@ -96,7 +96,7 @@ class MidiWire {
             override val timestampNanos: Long = 0L,
         ) : Channel
 
-        /** Bend and pressure: continuous expression on one channel. Nothing plays them yet. */
+        /** Bend and pressure: continuous expression on one channel. MIDI learn binds them; nothing plays them yet. */
         sealed interface Expression : Channel
 
         /**

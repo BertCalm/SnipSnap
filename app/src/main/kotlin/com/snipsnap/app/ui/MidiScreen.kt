@@ -134,7 +134,7 @@ fun MidiScreen() {
         object : MidiInput.Listener {
             // The parsed events are the playing screens' business; the
             // monitor reads the raw bytes below, which carry everything.
-            override fun onEvent(event: MidiWire.Event) {}
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {}
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { endpoints = midi.endpoints }
             override fun onDeviceRemoved() {}
             override fun onRaw(device: MidiDeviceId, port: String, bytes: ByteArray, timestampNanos: Long) {

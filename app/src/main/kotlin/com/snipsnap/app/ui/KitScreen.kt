@@ -436,7 +436,7 @@ fun KitScreen(
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event) = onMidi(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) {
                 midiDevices = devices
                 // A controller seen before brings its pad map back. Panic FIRST:
