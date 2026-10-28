@@ -207,7 +207,7 @@ class UatSimTest {
         val t0 = System.currentTimeMillis()
         val kit = starter.render("FACTORY", dir, seed = 0)
         val renderMs = System.currentTimeMillis() - t0
-        note("DUBBING FACTORY… took ${renderMs} ms of real DSP on this machine")
+        note("LOADING FACTORY… took ${renderMs} ms of real DSP on this machine")
         note("landed ${kit.pads.size} pads; toast: \"${Copy.FRESH_TAPE}\"")
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 

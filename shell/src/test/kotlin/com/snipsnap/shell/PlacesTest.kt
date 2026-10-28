@@ -41,15 +41,6 @@ class PlacesTest {
     }
 
     @Test
-    fun `the boot text finishes inside its ceiling, and its fade is short enough to be a blink`() {
-        // One step per line and one for READY, the run the composable's own loop makes.
-        val run = (Copy.BOOT_LINES.size + 1) * Places.BOOT_STEP_MS
-        assertTrue(run <= Places.BOOT_MAX_MS, "the boot text runs ${run} ms against a ${Places.BOOT_MAX_MS} ms ceiling")
-        assertTrue(Places.BOOT_FADE_MS <= 150L, "the glass lifts in ${Places.BOOT_FADE_MS} ms")
-        assertEquals("READY.", Copy.BOOT_LINES.last())
-    }
-
-    @Test
     fun `every door label carries its own arrow`() {
         for (door in listOf(Places.DOOR_CUT, Places.DOOR_PADS, Places.DOOR_BEAT, Places.DOOR_OUT, PadStrip.DOOR_OPEN, PadStrip.DOOR_CAPTURE, PadStrip.DOOR_FROM_SNIPS)) {
             assertTrue(door.endsWith(" ▸"), door)

@@ -279,7 +279,8 @@ logcat tag to grab when something is wrong.
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
-  seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+  seconds on desktop JVM; the dock says LOADING and the kit's name, and
+  PADS shows sixteen placeholders, meanwhile).
 - **IMPORT (share sheet)**: share a WAV, an MP3 and a screen-recorded
   MP4 into SnipSnap from another app. Each should land on TAPE with a
   "TAPED FROM OUTSIDE" toast naming its length; a share while the app is
