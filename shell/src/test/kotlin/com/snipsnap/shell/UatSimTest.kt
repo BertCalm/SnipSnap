@@ -659,7 +659,7 @@ class UatSimTest {
         note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸, ${Places.GEAR_HELP} ▸ and ${Places.GEAR_MIDI} ▸ — the first two were tabs twelve and thirteen of the old row, all one tap from anywhere now")
         note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
         note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
-        note("title bar reads: SNIPSNAP.EXE, then the open project's name — the stale M0 build tag went with finding 2")
+        note("title bar reads: SNIPSNAP, then the open project's name — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,
         // since once every toast states fact there is nothing left for a
