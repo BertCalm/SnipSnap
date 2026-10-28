@@ -426,6 +426,7 @@ testkit/scanned-chain-listen.html
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/
 testkit/contour-edge-audition/
+testkit/contour-presets/
 
 # Generated R6 Skitter listening proof
 testkit/skitter-character-r6/
