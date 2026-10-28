@@ -1,8 +1,8 @@
-# OBLITERATE core — first listening experiment
+# OBLITERATE core — approved proof and Kotlin port
 
 The characteristic gesture is **a hit gains an octave edge → its recent past breaks into reversed, pitched fragments → left and right chop on a saved clock**.
 
-This is an offline Python sound-design prototype, compared with actual SnipSnap Kotlin renders. It is not an Android effect implementation. Shimmer, the first stage of the original five-stage OBLITERATE concept, is deliberately deferred until the destructive core earns its place in listening.
+The first listening experiment is an offline Python prototype, compared with actual SnipSnap Kotlin renders. Josh kept all four examples. The same destruction core is now ported to a standalone Kotlin input effect; it has not been wired into Android. Shimmer, the first stage of the original five-stage concept, remains a separate next audition.
 
 ## Choosing the landing
 
@@ -16,7 +16,7 @@ The nearest siblings are OPENSKY's upward shimmer room and ORPHICA's fragmentati
 
 The lightest useful landing is this experiment. Production landing, if listening supports it, is a dedicated stereo effect with explicit tempo and bounded offline renders, followed by Android selection and export work.
 
-## Contract
+## Historical Python contract
 
 ```text
 mono or stereo source, 44.1 kHz
@@ -63,7 +63,7 @@ python3 experiments/obliterate-core/validate_audition.py --require-current-head
 - The 6 kHz **fuzz-stage** probe measured residual RMS 0.0003903 at 8× versus 0.0298226 at 1× against a 32× reference, a 37.66 dB improvement. This does not measure alias rejection of the complete effect. Pitched grains still use linear interpolation without a ratio-specific antialias filter.
 - The first proof contains 30 unique clips / 120 PCM24 WAVs, 114,675,864 bytes, with two complete hits per clip. Durations are 2.78–5.95 seconds. All source/reference PCM retention, WAV/source hashes, repeated hits, common timing and silent gaps passed the independent validator. Mono rounding error was at most 0.5 PCM24 LSB.
 - First-proof full-core renders took approximately 49–131 ms on an unisolated AMD EPYC Python host; concurrent load was uncontrolled. This is not Kotlin or Android performance. Independent worst-budget testing of a 12-second stereo input measured 1.24 seconds and at most 764 scheduled grains across the tested clock extremes.
-- Broader repository validation is incomplete: the full offline JVM run was canceled after a client disconnection on 2026-10-24, before the synth module produced its final report. Eight completed modules recorded 2,896 tests with zero failures, errors or skips. There is no full-suite exit 0; the SnipSnap branch/PR handoff remains pending. This does not replace the focused Python and artifact checks above.
+- The initial 2026-10-24 JVM run was interrupted. It is superseded for the Kotlin port by the completed full-suite result below; the historical Python artifacts remain unchanged.
 
 Production performance remains a gate: target tens of milliseconds for a representative two-second input on a named phone, with cached schedules keyed by clock, duration, amount and seed. Measure a Kotlin implementation before exposing it in the app. This prototype precomputes its event inventory once per render and caps input at 12 seconds / 1,024 events.
 
@@ -84,14 +84,52 @@ The exact report and heard source revision are retained in `listening-003-2026-1
 
 The legacy baseline's normalization and DC are preserved; do not infer that every raw reference meets the core's DC behavior. Fixed nonzero high/low-pass stages mean this proof does not establish a continuously transparent control arbitrarily close to zero. The tested listening choices are 35%, 70% and 100%, with a separate exact bypass.
 
-If the core is worth keeping: implement and benchmark the dedicated stereo Kotlin processor, add shimmer as a separately auditioned stage, then wire saved clock/seed/versioned recipes into `BoardRecipe.kt` and the Android board selection flow. Existing WIDE/RUSH remain the implementation pattern, not evidence that these OBLITERATE surfaces are done. A freely assignable three-chain rack and OBSCURITY remain later work.
+The standalone Kotlin core is implemented and host-benchmarked below. Next, audition shimmer separately and address render cost before wiring saved clock/seed/versioned recipes into `BoardRecipe.kt` and the Android board selection flow. Existing WIDE/RUSH remain the implementation pattern, not evidence that these OBLITERATE surfaces are done. A freely assignable three-chain rack and OBSCURITY remain later work.
 
 | Ledger | Status |
 | --- | --- |
 | Verified by source inspection | Current Kotlin GRAINS/GATE APIs, stereo/normalization limitations, existing board ordering |
 | Measured in Python / generated PCM | 18 signal tests, full hit/tail/framing integrity, source/WAV hashes, fuzz-only alias reference, clock and bounded scheduling, host render cost |
-| Proposed | Kotlin extraction, shimmer, production macro tuning and Android integration |
+| Proposed | Shimmer, phone render-budget work, production macro tuning and Android integration |
 | Heard | Josh's 2026-10-24 report: keep all four; snare 70%, percussion/pluck/bass 35%; no written comments or listening modes supplied |
+
+## Kotlin port and edition 004
+
+`ObliterateCore.render(snip, settings, stages = 3)` returns `RenderResult(audio, diagnostics)`. `Settings` defaults to AMT **0.35**, BPM 120, division 16 and seed 20261023. AMT 0 returns the exact same `Snip` with no tail; nonzero processing duplicates mono to stereo, preserves stereo channels independently, appends exactly 33,075 frames and applies a linked attenuation-only 0.98 sample-peak ceiling. Inputs are finite PCM in −1..1 at `WavWriter.MPC_SAMPLE_RATE`, one or two channels, at most 12 seconds. Amount, BPM, division, unsigned-32-bit seed and stage count are validated. This is an offline input effect, without engine registration, presets, HOLD, shimmer, feedback, live sync or a seamless-loop claim.
+
+The 8× FIR, Double SOS state and NumPy-compatible SeedSequence/PCG64 schedule preserve the approved reference. Shared Float effects or a different random generator would change that reference. The RNG helper contains its MIT attribution and license; FIR/SOS coefficients were generated with SciPy 1.17.0. Pitch-shifted grains still use linear interpolation without ratio-specific antialias filtering. Exact bypass is distinct from near-zero nonzero processing, which retains fixed filters.
+
+The port was built on upstream snapshot `3032c781f8a557cec6d16c8a3b15b8f1b6cb9ef4`, merged into local checkpoint `126a28edc5168455fe0d798cfd5d65850dbafaca`. The heard Python source is `9b55dc821787dc60827b49d48d927d0ced89d723`; its processor SHA256 is recorded in the new reference manifest. Historical source-generation hashes refer to that older producer, not current main. The retained source WAVs are used directly; do not rerun `SourcesAndBaseline.kt` on changed production sources and call them the same listening set.
+
+### Measured port results
+
+- **16 Kotlin tests** passed, including independent Python audio/event fixtures, exact bypass, validation, silence/DC/release, stereo isolation and quiet scaling, seed-dependent schedules including skipped draws, grain-history bounds, clock drift, peak guard, repeat determinism, and maximum input duration.
+- **36 same-input render cases** passed: four retained sources × three amounts × three cumulative stages. Maximum absolute Float32 output difference was **1.4901161193847656e-8**, maximum RMS difference **7.176162403617192e-11**. Predeclared limits remain 2e-6 maximum / 2e-7 RMS; geometry, tail and clock checks also pass. This is close numerical agreement, not bit identity or a listening verdict.
+- Actual Kotlin `WavReader` decodes PCM24 with divisor 8,388,607 into Float32; the old Python proof used 8,388,608 in Float64. The comparison replays the actual Kotlin-decoded input through both processors to isolate port error. Separately measured decoder-only differences were at most 1.1921e-7 at input and 1.1454e-7 at Python output, RMS 6.66e-9. Edition 004 labels this a Python replay and leaves all 120 edition 003 WAVs unchanged.
+- The new page contains **28 unique clips / 112 PCM24 WAVs**, 109,089,680 bytes, with raw/matched stereo/mono, repeated complete hits, unchanged folds and full finite tails. An independent read-only validator checks every hash, the actual decoder boundary, retained edition 003 assets, PCM rounding, common gain and framing. Mono differences are bounded by 1 PCM24 LSB; common-gain reconstruction by 0.942 LSB.
+- Warm **host JVM** median public-render times were **104.64–458.06 ms** on the retained sources (3 warmups, 7 trials, JDK 17.0.20.1, Linux amd64, four available CPUs). Other load and GC were uncontrolled. This misses the intended tens-of-ms interaction budget on this host. Phone performance and schedule caching remain unmeasured/unimplemented; no Android readiness claim follows from parity.
+- The complete nine-module JVM suite finished with **6,755 tests, zero failures/errors/skips, Gradle exit 0** on 2026-10-26. Invocation: `./gradlew --offline --no-daemon --max-workers=4 -I /workspace/scratch/obliterate-test-execution.init.gradle --continue test`, with no SDK in the graph. The untracked init script changes only scheduling: up to three synth/shell test forks, the existing LOOP latency suite after test compilation and before other test tasks. No test filters or exclusions were used. Earlier runs exposed contention in LOOP's 50 ms guard and the new core's duplicated sample-rate constant; the latter now aliases `WavWriter.MPC_SAMPLE_RATE`. Both pass in the completed run. Native and Android code are outside this change.
+
+### Reproduce the port comparison
+
+Use the retained `testkit/obliterate-core-inputs` source WAVs and original `testkit/obliterate-core-audition` artifacts. They are required evidence, not tracked binary distribution. With the pinned Python requirements and JDK 17:
+
+```sh
+python3 experiments/obliterate-core/kotlin_reference.py export
+./gradlew --offline --no-daemon -I experiments/obliterate-core/port.init.gradle :synth:renderObliteratePort
+python3 experiments/obliterate-core/kotlin_reference.py compare --wavs
+python3 experiments/obliterate-core/validate_kotlin_audition.py
+./gradlew --no-daemon test
+```
+
+Outputs go to ignored `testkit/obliterate-kotlin-audition/`. `reference-inputs.json`, `kotlin-port-results.json` and `parity-report.json` record exact source hashes and clean/dirty state. Fixture regeneration is explicit (`kotlin_reference.py fixtures`) and is not part of normal tests. The original Python processor, default, generator and heard WAVs have not changed. Published recipes and all parity results are downloadable from [edition 004](https://snipsnap-wide-audition.bertcalm.chatgpt.site/obliterate/kotlin/); the [approved proof](https://snipsnap-wide-audition.bertcalm.chatgpt.site/obliterate/) remains available.
+
+| Ledger | Status |
+| --- | --- |
+| Verified | Standalone public Kotlin API, bounded offline stereo contract, preserved historical artifacts; no Android wiring |
+| Measured | 16 port tests, 36 render comparisons, 112 new WAVs, complete 6,755-test JVM run and host timing |
+| Proposed | Shimmer audition, render-budget improvements and later versioned board/app integration |
+| Heard | Josh kept edition 003 at snare 70%, other sources 35%. Kotlin listening remains pending. |
 
 ## Why it is built this way
 
