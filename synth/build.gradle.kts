@@ -1786,7 +1786,7 @@ tasks.register<JavaExec>("generateAlloyAudition") {
 /** Current selected voices, separate from the frozen original and contrast references. */
 tasks.register<JavaExec>("generateAlloySelectedAudition") {
     group = "distribution"
-    description = "Render the selected ALLOY voice matrix, 36 factory patches and 16-pad MPC kit under testkit/alloy-selected/."
+    description = "Render the selected ALLOY voice matrix, current factory patches and 16-pad MPC kit under testkit/alloy-selected/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
     maxHeapSize = "768m"
@@ -1794,6 +1794,19 @@ tasks.register<JavaExec>("generateAlloySelectedAudition") {
     args(providers.gradleProperty("alloySelectedOutput").orNull ?: "${rootDir}/testkit/alloy-selected", "--selected")
     if (project.hasProperty("alloySelectedFull")) args("--full")
     if (project.hasProperty("alloySelectedRefreshPage")) args("--refresh-page")
+}
+
+/** Approved distinct-role factory release, preserving all earlier listening packs. */
+tasks.register<JavaExec>("generateAlloyFactoryAudition") {
+    group = "distribution"
+    description = "Render ALLOY's approved 24-patch factory bank, full-config listening matrix, 16-pad starter kit and three eight-pad MPC programs under testkit/alloy-factory/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("alloyFactoryOutput").orNull ?: "${rootDir}/testkit/alloy-factory", "--factory")
+    if (project.hasProperty("alloyFactoryFull")) args("--full")
+    if (project.hasProperty("alloyFactoryRefreshPage")) args("--refresh-page")
 }
 
 /** Separate candidate recipes; the released Alloy audition remains unchanged. */

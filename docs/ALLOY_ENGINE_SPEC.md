@@ -108,7 +108,7 @@ Defer SY77 data compatibility, factory PCM imports, unrestricted audio-rate modu
 ## 12. As built: selected-voice release preparation
 
 The listening selection retains original BASS and SOFT, and adopts revised KEY,
-PLUCK, BRASS and STRING configurations. The current factory bank has six presets
+PLUCK, BRASS and STRING configurations. The preceding factory bank had six presets
 per voice. Complete saved configurations and the original missing-config model-1
 fallback keep their existing sound.
 
@@ -123,3 +123,30 @@ Verified and measured results belong to the corresponding test reports and pack
 manifest. The owner has heard and approved the voice choice; final preset review,
 phone render profiling, physical MPC playback and release naming remain distinct
 acceptance work. This preparation adds no synthesis mechanism or model revision.
+
+## 13. As built: distinct factory roles
+
+The owner heard the separate role comparison, reported a substantial improvement,
+and authorized integration. The active factory bank now contains 24 complete
+patches: each voice's first-preset reference and three authored roles with distinct
+operator balances, routing and envelopes. Sonic inputs match the published role
+patches; Elastic Contact is labeled Elastic Touch to fit the existing preset strip.
+The six previous held references remain available separately, with Held Filament
+and Endless Ember retained on the starter kit's last two pads.
+
+The new factory audition has its own generated folder and review namespace.
+It exports the full bank in three eight-pad MPC programs and a regenerated
+sixteen-pad starter. Existing original, contrast, selected and role-comparison
+publications remain references. Saved configurations, voice defaults and model-1
+fallback semantics are unchanged. The integration adds no synthesis mechanism.
+
+Verified recipe correspondence and numerical/export checks belong to the release
+reports. The owner approved the role direction by listening; phone performance and
+physical MPC playback still require device acceptance. The authored roles preserve
+the approved matching wood/tine projections, so MATERIAL below .5 is flat for those
+patches; selected-default diagnostic studies keep separate material projections.
+The original 108 register/classification regressions remain over frozen earlier
+inputs. New roles are additionally measured over complete events so slow swells
+are not mistaken for short decays by a cropped capture. Picked Fibre at C2 retains
+its approved short pitched gesture and a disclosed generic TOM classification;
+the engine's TONAL export class and saved root remain intact.

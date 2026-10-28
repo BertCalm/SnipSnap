@@ -956,20 +956,23 @@ object SynthKits {
     }
 
     /**
-     * Sixteen dry hybrid pads: eight KEY notes in C minor pentatonic, one finite
-     * preset from each voice, and the original settled held STRING/SOFT presets.
+     * Sixteen dry hybrid pads: eight Long Prism KEY notes in C minor pentatonic,
+     * six distinct finite factory roles, and the original settled held STRING/SOFT presets.
      * Every pad saves the generated attack, PM routing, envelopes, root and energy.
      */
     fun alloy(): List<ArrangedPad?> {
-        val key = AlloyPresets.forVoice(AlloyVoice.KEY).first()
+        val presets = AlloyPresets.all()
+        val key = AlloyPresets.forVoice(AlloyVoice.KEY).single { it.name == "Long Prism" }
         fun landed(patch: AlloyPatch) = pad(patch, Alloy.drumClassFor(patch.voice, patch.macros))
         val scale = PENTATONIC.take(8).mapIndexed { i, semitone ->
             landed(key.copy(name = "Alloy ${i + 1}", midi = Alloy.DEFAULT_MIDI + semitone))
         }
-        val finite = AlloyVoice.entries.map { landed(AlloyPresets.forVoice(it).first()) }
-        // Keep the starter's two held pads stable as the factory roster grows.
+        val finite = listOf("Hollow Rail", "Reed Switch", "Open Chime", "Bright Stamp",
+            "Beating Glass", "Velvet Rise").map { name -> landed(presets.single { it.name == name }) }
+        // These settled-loop references stay stable while the finite factory roles change.
+        val heldReferences = AlloyPresets.heldReferences()
         val held = listOf("Held Filament", "Endless Ember").map { name ->
-            landed(AlloyPresets.all().single { it.name == name })
+            landed(heldReferences.single { it.name == name })
         }
         return scale + finite + held
 
