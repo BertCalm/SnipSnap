@@ -349,6 +349,17 @@ tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
 }
 
+/** Separate vibrato from spread before choosing a calmer ensemble setting. */
+tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
+    group = "distribution"
+    description = "Compare the current Rich Ensemble with less vibrato and calmer bank spread at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"
