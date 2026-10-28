@@ -436,6 +436,11 @@ val LocalBusySink = staticCompositionLocalOf<(Busy?) -> Unit> { {} }
  *
  * The sink is read as of the latest composition, so the withdrawal always
  * reaches the sink the app has now.
+ *
+ * [busy] is the effect's key, so a caller that passes a [Busy] carrying a
+ * `cancel` lambda must `remember` it: a fresh lambda on every recomposition
+ * is a changed key, and churns the dock with a withdrawal and a report each
+ * time.
  */
 @Composable
 fun ReportBusy(busy: Busy?) {

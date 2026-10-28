@@ -663,6 +663,12 @@ class PersonalityTest {
         "LOADING_BUSY", "WORKING_BUSY", "LIBRARY_LOADING",
         // The dock's CANCEL control: a button label, not a landing.
         "CANCEL_JOB",
+        // The dock's progress lines for the pad editor's named jobs (MUTATE
+        // and DRIFT, DE-SAMPLE, MAKE PAD, MAKE INSTRUMENT, SPREAD) and for
+        // SPLIT - the same `…`-suffixed shape as every other *_BUSY constant
+        // above: a line the dock says while the job runs, not a landing.
+        // Each job's own landing toast is a separate line.
+        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
     )
 
     /**

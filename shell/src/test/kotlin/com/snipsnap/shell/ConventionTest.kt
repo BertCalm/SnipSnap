@@ -3430,4 +3430,54 @@ class ConventionTest {
         assertEquals(0, insertCalls, "the app calls Inserts.write directly; go through ExportWizardModel, which hands the renderer in")
     }
 
+    // ---- Law: a busy guard is raised before its launch, not inside it ----
+
+    private val splitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SplitScreen.kt")
+
+    /**
+     * A control is guarded by a flag (`busy`, `working`) that its handler
+     * checks and its job clears when it ends. If the job raises the flag as
+     * the first line of the coroutine it launches, the handler's check has a
+     * hole in front of it: `launch` only schedules, the body runs a beat
+     * later, and a second tap in that beat finds the flag still down and
+     * starts the job again. SplitScreen carried a comment conceding it ("a
+     * fast second tap beats it"). The flag goes up in the handler, before
+     * the `launch`, and comes down in the `finally` inside it.
+     *
+     * The scan looks for the shape that leaves the hole: a `launch {` whose
+     * first statement is `busy = true` or `working = true`. It names the
+     * lines, so the next one is found by reading the failure. It cannot see
+     * a flag raised inside a `suspend fun` that a one-line `launch` calls
+     * (SplitScreen's `loadSource` was that shape), so that fix is held by
+     * the code, not by this scan.
+     */
+    private val guardRaisedInsideLaunch = Regex("""launch\s*\{\s*\n\s*(busy|working)\s*=\s*true""")
+
+    @Test
+    fun `a busy guard is raised before its launch, not inside it`() {
+        // The scan has to be able to see the shape it forbids, and to let the
+        // raised form pass; otherwise a clean result would mean nothing.
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn("appScope.launch {\n            busy = true\n            try {"),
+            "the scan no longer recognises a guard raised as the first line of a launch",
+        )
+        assertFalse(
+            guardRaisedInsideLaunch.containsMatchIn("busy = true\n        appScope.launch {\n            try {"),
+            "the scan flags a guard that is already raised before its launch",
+        )
+        val offending = listOf(padSheetScreen, splitScreen).flatMap { file ->
+            val src = file.readText(Charsets.UTF_8)
+            guardRaisedInsideLaunch.findAll(src).map { m ->
+                val at = m.groups[1]!!.range.first
+                "${file.name}:${src.take(at).count { it == '\n' } + 1}"
+            }.toList()
+        }
+        assertTrue(
+            offending.isEmpty(),
+            "a busy guard is raised inside its launch, so a second tap in the gap before the coroutine starts " +
+                "runs the job twice. Raise the flag in the handler, before the `launch`, and keep the " +
+                "`finally` that clears it inside. At: ${offending.joinToString(", ")}",
+        )
+    }
+
 }

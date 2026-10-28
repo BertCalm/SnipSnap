@@ -93,6 +93,7 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
@@ -349,7 +350,19 @@ fun PadSheetScreen(
         }
     }
 
+    // The guard every action on this sheet checks first. It goes up in the
+    // handler, before the `launch` that does the work, and comes down in the
+    // `finally` inside it: raised inside the coroutine, a second tap in the
+    // gap before it starts would run the job twice (ConventionTest holds this).
     var busy by remember(model) { mutableStateOf(false) }
+    // What the job in flight is called in the dock; null for a job with no
+    // word of its own, which the dock says as WORKING…. Set beside `busy`,
+    // cleared with it.
+    var padJob by remember(model) { mutableStateOf<String?>(null) }
+    // The sheet's one report to the dock (the sink is a single slot). `busy`
+    // is the effect's key, so the value is remembered: a fresh one each
+    // recomposition would withdraw the report and make it again.
+    ReportBusy(remember(busy, padJob) { if (busy) Busy(padJob ?: Copy.WORKING_BUSY) else null })
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
 
@@ -676,15 +689,26 @@ fun PadSheetScreen(
      * since disposal used to cancel the first) — benign: [withFreshKit]
      * serialises both under `KitWrites.mutex`, and the `sampleFile`
      * identity check above already refuses whichever one loses the race.
+     *
+     * The guard goes up here, before the launch, so a second tap in the gap
+     * before the coroutine starts finds it. [job] is what the dock calls the
+     * work while it runs (SPREAD says `Copy.SPREAD_BUSY`); null for the
+     * callers with no word of their own, which the dock says as WORKING….
      */
-    fun commitPadEditNow(action: String, onSuccess: (() -> Unit)? = null, mutate: (KitBuilderModel) -> Unit) {
+    fun commitPadEditNow(
+        action: String,
+        onSuccess: (() -> Unit)? = null,
+        job: String? = null,
+        mutate: (KitBuilderModel) -> Unit,
+    ) {
         if (busy) return
         val m = model ?: return
         val kitDir = m.kitDir
         val staleSampleFile = m.kit.pad(slot)?.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = job
         appScope.launch {
-            busy = true
             try {
                 var applied = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
@@ -703,6 +727,7 @@ fun PadSheetScreen(
                 failure(action, e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -781,8 +806,9 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.treatmentBusy(PadSheet.displayLabel(PadSheet.SMEAR))
         appScope.launch {
-            busy = true
             try {
                 var applied = false
                 var stacked = false
@@ -834,6 +860,7 @@ fun PadSheetScreen(
                 if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -870,8 +897,9 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val staleSampleFile = p.sampleFile
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.treatmentBusy(PadSheet.displayLabel(PadSheet.DUST))
         appScope.launch {
-            busy = true
             try {
                 val tapeFile = File(snipsDir, tape)
                 // AMT 0 takes dust off and needs no print; anything above needs the tape's.
@@ -925,6 +953,7 @@ fun PadSheetScreen(
                 if (e is IllegalStateException) onToast(Copy.RETREAT_REFUSED) else failure("TREATMENT", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -1007,8 +1036,9 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
+        busy = true
+        padJob = Copy.treatmentBusy(PadSheet.displayLabel(segment))
         appScope.launch {
-            busy = true
             try {
                 var applied = false
                 var stacked = false
@@ -1081,6 +1111,7 @@ fun PadSheetScreen(
                 }
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -1123,8 +1154,8 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
         appScope.launch {
-            busy = true
             try {
                 // null = the slot changed underneath us; BIN_ITEM_GONE says so.
                 var state: PadSheet.UnTreat? = null
@@ -1662,8 +1693,9 @@ fun PadSheetScreen(
         val becomeFraction = pendingBecome
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.MUTATE_BUSY
         appScope.launch {
-            busy = true
             try {
                 var applied = false
                 var flipped = false
@@ -1706,6 +1738,7 @@ fun PadSheetScreen(
                 if (why != null) onToast(why.line) else failure("KEEP", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -1744,8 +1777,9 @@ fun PadSheetScreen(
         val move = MutateSheet.modeFor(mutateMode)
         val fraction = pendingMutateKnob
         val becomeFraction = pendingBecome
+        busy = true
+        padJob = Copy.MUTATE_BUSY
         scope.launch {
-            busy = true
             try {
                 val (rendered, padMs) = offMain {
                     MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) to MutateSheet.lengthMs(m, slot)
@@ -1764,6 +1798,7 @@ fun PadSheetScreen(
                 if (why != null) onToast(why.line) else failure("HEAR", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -1797,8 +1832,8 @@ fun PadSheetScreen(
         }
         val root = entry.dir.parentFile ?: entry.dir
         val seed = spins
+        busy = true
         scope.launch {
-            busy = true
             try {
                 val deal = offMain { MutateSheet.deal(m, slot, root, seed) }
                 spins = seed + 1
@@ -1891,8 +1926,9 @@ fun PadSheetScreen(
         pendingBecome = MutateSheet.BECOME.defaultFraction
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.MUTATE_BUSY
         appScope.launch {
-            busy = true
             try {
                 var drifted: Mutate.Drifted? = null
                 var beforeMs = 0
@@ -1928,6 +1964,7 @@ fun PadSheetScreen(
                 if (why != null) onToast(why.line) else failure("DRIFT", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -1942,8 +1979,8 @@ fun PadSheetScreen(
      */
     fun onFilePicked(uri: Uri) {
         if (busy) return
+        busy = true
         scope.launch {
-            busy = true
             try {
                 val held = offMain {
                     val name = ShareInbox.displayName(context, uri)
@@ -1997,8 +2034,9 @@ fun PadSheetScreen(
         if (m == null || currentSnip == null) return
         val p = m.kit.pad(slot) ?: return
         val instrumentBase = "${m.kit.name}_${p.displayName}"
+        busy = true
+        padJob = Copy.MAKE_INSTRUMENT_BUSY
         appScope.launch {
-            busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 // Named and written on IO, in that order and in one hop: the
@@ -2017,6 +2055,7 @@ fun PadSheetScreen(
                 if (e is IllegalArgumentException) onToast(Copy.NO_PITCH) else failure("INSTRUMENT", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -2057,7 +2096,7 @@ fun PadSheetScreen(
         val src = spreadSource ?: return
         val fromTag = padTag(slot)
         var landed: Spread.Plan? = null
-        commitPadEditNow("SPREAD", onSuccess = {
+        commitPadEditNow("SPREAD", job = Copy.SPREAD_BUSY, onSuccess = {
             val plan = landed
             if (plan != null && plan.notes.isNotEmpty()) spreadSource = null
             onToast(plan?.let(Spread::toast) ?: Copy.SPREAD_FAILED)
@@ -2177,9 +2216,9 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         voice?.release()
         voice = null
+        busy = true
+        outsideStage = Copy.OUTSIDE_LISTENING
         scope.launch {
-            busy = true
-            outsideStage = Copy.OUTSIDE_LISTENING
             // Set once the capture below lands and the write is handed off
             // to `appScope`; the outer `finally` only tidies `busy`/
             // `outsideStage` itself when this stays false, since past that
@@ -2505,8 +2544,9 @@ fun PadSheetScreen(
         }
         val padBase = "${m.kit.name}_${p.displayName}_Pad"
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
+        busy = true
+        padJob = Copy.MAKE_PAD_BUSY
         appScope.launch {
-            busy = true
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
                 // See [onMakeInstrument] for why the naming happens here.
@@ -2525,6 +2565,7 @@ fun PadSheetScreen(
                 failure("PAD", e)
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -2557,8 +2598,9 @@ fun PadSheetScreen(
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
+        padJob = Copy.DESAMPLE_BUSY
         appScope.launch {
-            busy = true
             try {
                 var match: com.snipsnap.synth.Desample.Match? = null
                 val (fresh, _) = withFreshKit(kitDir) { f ->
@@ -2586,6 +2628,7 @@ fun PadSheetScreen(
                 }
             } finally {
                 busy = false
+                padJob = null
             }
         }
     }
@@ -2616,8 +2659,8 @@ fun PadSheetScreen(
         }
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        busy = true
         scope.launch {
-            busy = true
             try {
                 val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
                 if (saved) onKitUpdated(fresh.kit)
@@ -3365,9 +3408,10 @@ fun PadSheetScreen(
                 onFractionCommit = {},
             )
             ActionButton(
-                if (busy) "DUBBING…" else "MAKE PAD ▸ INSTRUMENT",
+                "MAKE PAD ▸ INSTRUMENT",
                 scheme,
                 enabled = !busy,
+                working = busy && padJob == Copy.MAKE_PAD_BUSY,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakePad,
             )
