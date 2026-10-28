@@ -1,7 +1,6 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.ProvidedValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -31,6 +30,8 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
 
 /**
  * CHOP on a device, over a tape a test can count: kick, closed hat, snare
@@ -55,9 +56,12 @@ class ChopScreenTest : ComposeScreenTest() {
     private val landed = CopyOnWriteArrayList<Triple<KitShelf.Entry, Int, String>>()
     // What the screen told the dock about its own job, label by label; null is "no job".
     private val told = CopyOnWriteArrayList<String?>()
+    // A read the test keeps open: the screen's worker blocks on it, once it has chopped, until released.
+    private val release = CountDownLatch(1)
 
     @After
     fun cleanUp() {
+        release.countDown()
         folders.forEach { it.deleteRecursively() }
     }
 
@@ -96,24 +100,21 @@ class ChopScreenTest : ComposeScreenTest() {
     }
 
     /**
-     * [settleMillis] is how much of the frozen clock the first composition gets (see
-     * `setPhoneContent`): the test of the first frame takes none. [reduceMotion] is for a test
-     * that may have the loading panel's bar on screen under that frozen clock, as
-     * `ComposeScreenTest`'s KDoc asks.
+     * The screen under the compose test clock and with reduced motion on (the loading panel's bar
+     * under a frozen clock is the hazard [ComposeScreenTest] names). [settleMillis] is how much of
+     * the frozen clock the first composition gets (see `setPhoneContent`): the tests of the first
+     * 200 ms take none. [hold] keeps the read open until [release] is counted down, because a real
+     * decode of the break ends in a few milliseconds and the clock does not move on its own.
      */
     private fun show(
         entry: KitShelf.Entry?,
         commit: TapeCommit?,
         shelf: KitShelf = KitShelf(folder("chop-test-shelf")),
         settleMillis: Long = 300,
-        reduceMotion: Boolean = false,
+        hold: Boolean = false,
     ) {
-        val locals = buildList<ProvidedValue<*>> {
-            add(LocalBusySink provides { told += it?.label })
-            if (reduceMotion) add(LocalReduceMotion provides true)
-        }
         setPhoneContent(settleMillis) {
-            CompositionLocalProvider(*locals.toTypedArray()) {
+            CompositionLocalProvider(LocalBusySink provides { told += it?.label }, LocalReduceMotion provides true) {
                 ChopScreen(
                     entry = entry,
                     lastCommit = commit,
@@ -125,9 +126,31 @@ class ChopScreenTest : ComposeScreenTest() {
                     onLandedOnto = { e, bank, line -> landed += Triple(e, bank, line) },
                     onNavigateTape = {},
                     onNavigateKits = {},
+                    loadingClock = { compose.mainClock.currentTime },
+                    holdRead = {
+                        if (hold) check(release.await(30, TimeUnit.SECONDS)) { "the held read was never released" }
+                    },
                 )
             }
         }
+    }
+
+    /**
+     * Lets a held read finish and gives the screen the first frame after it: the read ends at that
+     * frame, whatever the real time it took, because the clock is the test's. The sleep is the
+     * worker's hop back to the main thread, which is real time and which nothing on screen shows;
+     * the sink hearing "no job" is what says the read was seen to end, so a hop that was not done
+     * fails here and not as a hold that was vacuously kept.
+     */
+    private fun endTheRead() {
+        release.countDown()
+        Thread.sleep(HOP_MS)
+        pump(16)
+        assertEquals("the read had not ended at ${compose.mainClock.currentTime} ms: $told", null, told.lastOrNull())
+    }
+
+    private fun assertWords(up: Boolean, why: String) {
+        assertEquals("$why (at ${compose.mainClock.currentTime} ms)", up, described(Copy.READING_RECORDING))
     }
 
     private fun invokeClick(label: String) {
@@ -182,19 +205,59 @@ class ChopScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun the_first_frame_of_a_read_has_no_words_to_flash() {
-        // No settle: the clock is frozen on the first frame, before the 200 ms show delay has
-        // run and before the decode's own state write has had a frame to recompose in. What is on
-        // screen then is the quiet lit panel - not the loading words, which a read that ends at
-        // once would flash, and not the empty face, which would say "nothing" over a read in flight.
-        show(entry = null, commit = tapeCommit(), settleMillis = 0, reduceMotion = true)
-        assertFalse(
-            "the first frame of a read drew \"${Copy.READING_RECORDING}\" before its 200 ms show delay",
-            described(Copy.READING_RECORDING),
+    fun a_read_has_no_words_for_200_ms_and_then_says_it_is_reading() {
+        show(entry = null, commit = tapeCommit(), settleMillis = 0, hold = true)
+        // The first frame, then 150 ms in: a quiet lit panel and no words.
+        assertWords(up = false, why = "the first frame of a read drew its words before the 200 ms show delay")
+        pump(150)
+        assertWords(up = false, why = "a read drew its words before the 200 ms show delay")
+        // Past the delay, with the read still open: now the words are up. This is what makes
+        // the absences above mean something.
+        pump(100)
+        assertWords(up = true, why = "a read still open after 200 ms did not say it was reading")
+        assertEquals(
+            "the dock was told the read, and has not been told it is over: $told",
+            listOf<String?>(Copy.READING_RECORDING),
+            told.toList(),
         )
-        assertFalse("the first frame of a read said there was nothing to chop", showing(Copy.EMPTY_CHOP))
-        // And the read goes on to its result: the first frame was the start of it, not the end.
+    }
+
+    @Test
+    fun a_read_that_ends_inside_200_ms_never_draws_its_words() {
+        show(entry = null, commit = tapeCommit(), settleMillis = 0, hold = true)
+        pump(150)
+        assertWords(up = false, why = "a read drew its words before the 200 ms show delay")
+        endTheRead()
+        // Every frame from the read's end to a full second on: no words, ever, though 200 ms
+        // and 500 ms both pass in that time. And the chop is up.
+        while (compose.mainClock.currentTime < 1_000) {
+            assertWords(up = false, why = "a read that ended at 150 ms drew its words after all")
+            pump(16)
+        }
         waitFor("the break chopped", timeoutMillis = 60_000) { showing(header(4, "BY HITS")) }
+        assertWords(up = false, why = "a read that ended inside the delay drew its words once the chop was up")
+    }
+
+    @Test
+    fun a_read_that_ends_at_300_ms_keeps_its_words_for_500_ms_from_when_they_showed() {
+        show(entry = null, commit = tapeCommit(), settleMillis = 0, hold = true)
+        pump(250)
+        assertWords(up = true, why = "a read still open after 200 ms did not say it was reading")
+        // The read ends at about 300 ms (the first frame after the release). The words showed at
+        // about 208 ms, so they are owed until about 708: the chop waits behind them.
+        pump(34)
+        endTheRead()
+        assertTrue("the read ended too late for this test to mean anything", compose.mainClock.currentTime < 400)
+        while (compose.mainClock.currentTime < 650) {
+            assertWords(up = true, why = "the words went before their 500 ms minimum was up")
+            assertFalse("the chop was drawn under the words", showing(header(4, "BY HITS")))
+            pump(50)
+        }
+        // Past the minimum: the words give way, and what they held is on screen.
+        pump(150)
+        assertWords(up = false, why = "the words stayed after their 500 ms minimum")
+        waitFor("the break chopped", timeoutMillis = 60_000) { showing(header(4, "BY HITS")) }
+        assertEquals("the dock heard the read end and nothing after: $told", null, told.last())
     }
 
     @Test
@@ -266,5 +329,10 @@ class ChopScreenTest : ComposeScreenTest() {
         val kit = KitStore.load(entry.dir)
         assertEquals(4, kit.pads.size)
         assertTrue("every pad is on bank ${PadBanks.letter(0)}", kit.pads.all { it.slot in PadBanks.slots(0) })
+    }
+
+    private companion object {
+        /** Real time for a released read's worker to hand its result to the main thread: a hop of milliseconds, with room to spare. */
+        const val HOP_MS = 500L
     }
 }

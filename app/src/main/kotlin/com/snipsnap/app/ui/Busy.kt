@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -449,4 +450,42 @@ fun ReportBusy(busy: Busy?) {
         sink(busy)
         onDispose { sink(null) }
     }
+}
+
+/**
+ * What a screen draws, and tells the dock, while it reads a recording from
+ * disk: TAPE and CHOP, which have nothing of their own to show until the
+ * decode is done. Returns true when the screen's place is held by this - drawn
+ * here, so the caller returns - and false when the screen should draw what it
+ * has (its deck, its chop, or the empty face for a read that found nothing).
+ *
+ * While [decoding] the dock is told [Copy.READING_RECORDING] (one
+ * [ReportBusy] per screen; the [Busy] is remembered under [decoding], so the
+ * sink sees a job start and end and not a new object on every recomposition).
+ * The screen's place says it too, by the same rule as the dock's bar though
+ * not the same latch (the dock keeps its own): a quiet lit panel for the
+ * first [BusyLatch.SHOW_AFTER_MS], so a read that ends at once draws no words
+ * at all, then a [LoadingPanel], and the words stay at least
+ * [BusyLatch.MIN_VISIBLE_MS] once they have shown. That last part is why this
+ * holds after [decoding] ends, ahead of the empty face and the content: a read
+ * that ends a moment after the words appear would otherwise leave them a
+ * flash. [LoadingPanel] does not keep the rule itself - it is a bare column -
+ * so the screen asks for it here, once, above its early return.
+ *
+ * [clock] is the latch's, in ms and monotonic: a device test hands it the
+ * compose test clock, for the reason [rememberBusyVisible]'s own overload has
+ * one.
+ */
+@Composable
+fun holdWhileReading(decoding: Boolean, clock: () -> Long = SystemClock::uptimeMillis): Boolean {
+    val reading = remember(decoding) { if (decoding) Busy(Copy.READING_RECORDING) else null }
+    ReportBusy(reading)
+    val panelShown = rememberBusyVisible(reading, clock)
+    if (!decoding && !panelShown) return false
+    if (panelShown) {
+        LoadingPanel(Copy.READING_RECORDING, Modifier.fillMaxSize())
+    } else {
+        Box(Modifier.fillMaxSize().lcdPanel(LocalScheme.current))
+    }
+    return true
 }

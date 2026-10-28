@@ -64,7 +64,6 @@ import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.Transients
 import com.snipsnap.audio.WavReader
-import com.snipsnap.shell.Busy
 import com.snipsnap.shell.CatchModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Dig
@@ -270,7 +269,6 @@ fun TapeScreen(
      */
     onCatchInFlight: (Boolean) -> Unit = {},
 ) {
-    val scheme = LocalScheme.current
     val context = LocalContext.current
 
     // entry is nullable on purpose: ARM/SNIP live on the shelf (KitsScreen),
@@ -334,9 +332,10 @@ fun TapeScreen(
             // open TAPE flow, the in-flight load effect is still running
             // (failed=false) when this replay lands; gating on `loaded ==
             // null` would bump reloadToken right then and cancel/restart
-            // that in-flight load for no reason (a double decode + a
-            // second blank-LCD flash). Waiting for `failed` means this only
-            // nudges a reload once the deck has genuinely settled on
+            // that in-flight load for no reason (a double decode, with the
+            // reading panel and the dock's job starting over). Waiting for
+            // `failed` means this only nudges a reload once the deck has
+            // genuinely settled on
             // nothing — at which point the in-flight load has already
             // picked up the replayed snip on its own, or a later, truly
             // new snip arrives. Once a tape is loaded, TapeDeckContent's
@@ -347,31 +346,14 @@ fun TapeScreen(
         }
     }
 
-    // The decode in flight. The dock says so for as long as it runs, and the
-    // deck's place says so by the same latch the dock's bar keeps: nothing for
-    // the first 200 ms, then its words for at least 500. Both are asked once,
-    // above the early return, so they are asked on every frame of the screen.
+    // The decode in flight: the dock is told, and the deck's place is held (quiet,
+    // then the reading words) - see holdWhileReading for the 200/500 rule. "No tape
+    // yet" said over a decode that is about to finish would be a lie, so the empty
+    // face waits behind it.
     val decoding = loaded == null && !failed
-    val reading = remember(decoding) { if (decoding) Busy(Copy.READING_RECORDING) else null }
-    ReportBusy(reading)
-    val panelShown = rememberBusyVisible(reading)
+    if (holdWhileReading(decoding)) return
 
     val tapeData = loaded
-    if (decoding || panelShown) {
-        // Still decoding, or the words are up and owed their minimum. Held
-        // ahead of the empty face and the deck, so a read that ends a moment
-        // after the words show does not leave them a flash. Until a decode
-        // has run long enough to be worth a word the place is a quiet lit
-        // panel, and a decode that ends inside that 200 ms never draws the
-        // words at all: "no tape yet" said over a decode that is about to
-        // finish would be a lie, and so would a loading card for one.
-        if (panelShown) {
-            LoadingPanel(Copy.READING_RECORDING, Modifier.fillMaxSize())
-        } else {
-            Box(Modifier.fillMaxSize().lcdPanel(scheme))
-        }
-        return
-    }
     if (tapeData == null || tapeData.samples.isEmpty()) {
         // Nothing resolved — no snip, no last-commit source, and nothing on
         // the (possibly empty) kit was a readable WAV — or a file that
