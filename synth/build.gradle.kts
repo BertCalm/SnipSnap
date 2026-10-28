@@ -2,6 +2,37 @@ plugins {
     kotlin("jvm")
 }
 
+/** Port the approved passive handoff and compare actual Kotlin exports with its retained references. */
+tasks.register<JavaExec>("generateFerryAudition") {
+    group = "distribution"
+    description = "Render Ferry PASSAGE, approved reference comparisons, complete recipes and Kotlin timing evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryOutput").orNull ?: "${rootDir}/testkit/ferry-audition")
+}
+
+/** Explicit production-call measurements; timing never decides correctness. */
+tasks.register<JavaExec>("benchmarkScannedChain") {
+    group = "verification"
+    description = "Measure Scanned Chain fresh renders, completed-cache hits, knob misses, raw probes and finishing with PCM hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args("--casegroup=${providers.gradleProperty("scannedChainBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("scannedChainBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("scannedChainBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("scannedChainBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("scannedChainBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("scannedChainBenchmarkPaths").orNull?.let { args("--paths=$it") }
+    providers.gradleProperty("scannedChainBenchmarkStates").orNull?.let { args("--states=$it") }
+    providers.gradleProperty("scannedChainBenchmarkCancellation").orNull?.let { args("--cancellation=$it") }
+    providers.gradleProperty("scannedChainBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+}
+
 /** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
 tasks.register<JavaExec>("generateUprightAudition") {
     group = "distribution"
@@ -313,6 +344,17 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
     }
 }
 
+/** A small, opt-in MPC keygroup trial built from the approved steady held bodies. */
+tasks.register<JavaExec>("generateOverlapHeldKeygroups") {
+    group = "distribution"
+    description = "Export four OVERLAP held keygroups, looped samples and a hardware-check package."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldKeygroupGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("overlapHeldKeygroupOutput").orNull ?: "${rootDir}/testkit/overlap-held-keygroup")
+}
+
 /** Separate steady sustain proof with real loop recurrence and passive note-off. */
 tasks.register<JavaExec>("generateOverlapHeldAudition") {
     group = "distribution"
@@ -596,6 +638,17 @@ tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
     mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
+}
+
+/** Separate vibrato from spread before choosing a calmer ensemble setting. */
+tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
+    group = "distribution"
+    description = "Compare the current Rich Ensemble with less vibrato and calmer bank spread at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
@@ -1867,6 +1920,20 @@ tasks.register<JavaExec>("generateSkitterDepthAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/skitter-depth")
     if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
+/** Focused BASS R8/R9 proof across C1/C2/C3, preserving normal depth processing. */
+tasks.register<JavaExec>("generateSkitterBassAudition") {
+    group = "distribution"
+    description = "Render BASS register pairs. Requires -PskitterProofSource=<full SHA> and -PskitterBassBaseline=<sealed R8 snapshot>."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterBassAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-bass")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterBassBaseline")) args("--baseline=${project.property("skitterBassBaseline")}")
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 

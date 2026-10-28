@@ -14,7 +14,7 @@ import kotlin.math.ln
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
-/** The selected ensemble recipe beside the original two direction-study references. */
+/** Direction studies share one actual keyboard render and independent recurrence checks. */
 object RegistersDepthDirectionsAuditionGenerator {
     private const val MODEL = 6
     private const val REPEATS = 3
@@ -22,18 +22,31 @@ object RegistersDepthDirectionsAuditionGenerator {
     private val voice = RegistersVoice.TRANSISTOR
     private data class Direction(val id: String, val label: String, val description: String,
         val changes: Map<String, Float>)
-    private val directions = listOf(
+    private val originalDirections = listOf(
         Direction("baseline", "Current Compact Keys", "The current model-6 Compact Keys recipe.", emptyMap()),
         Direction("body", "Warmer body", "Fewer upper ranks and less saturation, retaining the same root note, SPREAD and MOTION.",
             mapOf("COLOR" to .08f, "EDGE" to .10f)),
         Direction("ensemble", "Rich Ensemble", "The chosen setting: more side-bank movement and vibrato, retaining the current registration and saturation.",
             mapOf("SPREAD" to .65f, "MOTION" to .32f)),
     )
+    private val refinementDirections = listOf(
+        Direction("ensemble", "Rich Ensemble", "The current preset, retained exactly as the comparison reference.",
+            mapOf("SPREAD" to .65f, "MOTION" to .32f)),
+        Direction("steady", "Less vibrato", "The same ensemble spread, with less common pitch vibrato.",
+            mapOf("SPREAD" to .65f, "MOTION" to .08f)),
+        Direction("calm", "Calmer ensemble", "Less vibrato and gentler separation between the banks.",
+            mapOf("SPREAD" to .40f, "MOTION" to .08f)),
+    )
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 1) { "Supply one optional output directory." }
-        val root = File(args.firstOrNull() ?: "../testkit/registers-depth-directions").canonicalFile
+        val refinement = args.contains("--refine-ensemble")
+        val paths = args.filterNot { it == "--refine-ensemble" }
+        require(paths.size <= 1 && args.count { it == "--refine-ensemble" } <= 1 &&
+            paths.none { it.startsWith("--") }) { "Supply one optional output directory and --refine-ensemble." }
+        val resourceDirectory = if (refinement) "registers-ensemble-refinement" else "registers-depth-directions"
+        val directions = if (refinement) refinementDirections else originalDirections
+        val root = File(paths.firstOrNull() ?: "../testkit/$resourceDirectory").canonicalFile
         check(root.mkdirs() || root.isDirectory)
         val base = RegistersPresets.forVoice(voice).single { it.name == "Compact Keys" }.copy(model = MODEL)
         val preferred = RegistersPresets.forVoice(voice).single { it.name == "Rich Ensemble" }
@@ -58,9 +71,9 @@ object RegistersDepthDirectionsAuditionGenerator {
             "audio/src/main/kotlin/com/snipsnap/audio/WavReader.kt",
             "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt",
             "json/src/main/kotlin/com/snipsnap/json/Json.kt",
-            "synth/src/test/resources/audition/registers-depth-directions/index.html",
-            "synth/src/test/resources/audition/registers-depth-directions/app.js",
-            "synth/src/test/resources/audition/registers-depth-directions/styles.css")
+            "synth/src/test/resources/audition/$resourceDirectory/index.html",
+            "synth/src/test/resources/audition/$resourceDirectory/app.js",
+            "synth/src/test/resources/audition/$resourceDirectory/styles.css")
         val fingerprints = sourcePaths.map { path ->
             val source = File(repository, path); val target = File(root, "source/$path")
             target.parentFile.mkdirs(); source.copyTo(target, overwrite = true)
@@ -70,23 +83,42 @@ object RegistersDepthDirectionsAuditionGenerator {
             val hashes = it.getValue("sha256") as Map<*, *>
             "${it.getValue("id")}:${hashes["raw"]}:${hashes["matched"]}"
         }.toByteArray())
-        writeJson(File(root, "manifest.json"), mapOf("revision" to REVISION, "model" to MODEL, "sampleRate" to Dsp.RATE,
-            "title" to "TRANSISTOR Rich Ensemble", "status" to "Owner selected the richer ensemble direction",
+        writeJson(File(root, "manifest.json"), mapOf(
+            "revision" to if (refinement) "ensemble-refinement-1" else REVISION,
+            "model" to MODEL, "sampleRate" to Dsp.RATE,
+            "title" to if (refinement) "TRANSISTOR calmer ensemble comparison" else "TRANSISTOR Rich Ensemble",
+            "status" to if (refinement) "Calmer candidates awaiting listening" else "Owner selected the richer ensemble direction",
             "voice" to voice.name, "clipCount" to clips.size, "wavCount" to clips.size * 2,
-            "audioHash" to audioHash, "factoryChanged" to true, "engineChanged" to false,
-            "preferredDirection" to "ensemble", "preferredPreset" to preferred.name,
+            "audioHash" to audioHash, "factoryChanged" to !refinement, "engineChanged" to false,
+            "preferredDirection" to if (refinement) null else "ensemble",
+            "preferredPreset" to if (refinement) null else preferred.name,
+            "initialDirection" to if (refinement) "calm" else "ensemble",
             "sourceRevision" to git(repository, "rev-parse", "HEAD"),
             "workingTreeDirty" to (git(repository, "status", "--porcelain")?.isNotBlank() ?: true),
             "sourceFingerprints" to fingerprints, "clips" to clips, "groups" to groups,
             "directions" to directions.map { mapOf("id" to it.id, "label" to it.label,
                 "description" to it.description, "macroChanges" to it.changes) },
-            "metricNotes" to "All recipes use model 6, MIDI 48/60/72 and velocity 1. The owner preferred the richer ensemble direction, now also the Rich Ensemble factory preset. This adds a preset without changing engine arithmetic or existing settings. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop. Only the final 4 ms fade is audition-specific. Independent adjacent synthesis cycles prove recurrence before the playback repeats are copied. Matched files target the loudest 200 ms RMS of 0.03; loudness matching does not establish a listening verdict. Body removes upper ranks and drive; it adds no lower octave. Ensemble increases periodic side-bank motion and common vibrato. The accepted R5/R6 page remains available. Physical instrument listening is still pending."))
+            "metricNotes" to if (refinement)
+                "All recipes use model 6, MIDI 48/60/72 and velocity 1. The current Rich Ensemble reference is unchanged. Less vibrato retains SPREAD .65 and reduces MOTION from .32 to .08. Calmer ensemble also reduces SPREAD to .40. These are audition-only candidates following the owner's report that Rich Ensemble feels annoying; neither is an accepted preset. Registration, drive, click and all other controls remain fixed. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop, with only a final 4 ms audition fade. Independent adjacent synthesis cycles prove recurrence before repeats are copied. Matched files target loudest 200 ms RMS .03; measurements do not establish perceived comfort. Factory settings and engine arithmetic do not change."
+            else "All recipes use model 6, MIDI 48/60/72 and velocity 1. The owner preferred the richer ensemble direction, now also the Rich Ensemble factory preset. This adds a preset without changing engine arithmetic or existing settings. Actual Keys.registersPad attack and handoff lead into three full copies of its final held loop. Only the final 4 ms fade is audition-specific. Independent adjacent synthesis cycles prove recurrence before the playback repeats are copied. Matched files target the loudest 200 ms RMS of 0.03; loudness matching does not establish a listening verdict. Body removes upper ranks and drive; it adds no lower octave. Ensemble increases periodic side-bank motion and common vibrato. The accepted R5/R6 page remains available. Physical instrument listening is still pending."))
         for (asset in listOf("index.html", "styles.css", "app.js")) {
-            val stream = javaClass.getResourceAsStream("/audition/registers-depth-directions/$asset")
+            val stream = javaClass.getResourceAsStream("/audition/$resourceDirectory/$asset")
                 ?: error("Missing directions UI asset: $asset")
             File(root, asset).outputStream().use { output -> stream.use { it.copyTo(output) } }
         }
-        File(root, "README.txt").writeText("""
+        File(root, "README.txt").writeText((if (refinement) """
+            TRANSISTOR ensemble refinement: three current-model recipes at C3, C4 and C5.
+            Current Rich Ensemble: SPREAD .65 / MOTION .32, the unchanged reference.
+            Less vibrato: SPREAD .65 / MOTION .08. Calmer ensemble: SPREAD .40 / MOTION .08.
+            Remaining controls, pitch and velocity are unchanged. These are audition-only
+            candidates; no factory preset or engine arithmetic changes.
+            Compare matched playback to remove level as a deciding factor.
+            Audio is actual Keys.registersPad, through the loop marker plus three full held
+            cycles, with a final 4 ms audition-only fade. Play once in full, not repeatedly
+            from frame zero. Independent recurrence measurements are under instrumentLoop.
+            Regenerate: ./gradlew :synth:generateRegistersEnsembleRefinementAudition -PregistersOutput=<directory>
+            Audio fingerprint: $audioHash
+        """ else """
             TRANSISTOR depth directions: three current-model recipes at C3, C4 and C5.
             Rich Ensemble is now a named factory preset after the owner preferred that
             direction. Existing settings and engine arithmetic are unchanged.
@@ -99,7 +131,7 @@ object RegistersDepthDirectionsAuditionGenerator {
             from frame zero. Independent recurrence measurements are under instrumentLoop.
             Regenerate: ./gradlew :synth:generateRegistersDepthDirectionsAudition -PregistersOutput=<directory>
             Audio fingerprint: $audioHash
-        """.trimIndent() + "\n")
+        """).trimIndent() + "\n")
         println("Wrote ${clips.size} clips / ${clips.size * 2} WAVs under $root; audio fingerprint $audioHash")
     }
 

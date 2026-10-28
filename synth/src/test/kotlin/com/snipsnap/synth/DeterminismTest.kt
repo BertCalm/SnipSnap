@@ -11,6 +11,14 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
+        val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
+        val samples = patch.render().samples
+        Ferry.clearCache()
+        assertContentEquals(samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
             val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
