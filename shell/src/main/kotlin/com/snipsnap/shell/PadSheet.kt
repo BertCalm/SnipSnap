@@ -16,8 +16,9 @@ import com.snipsnap.synth.Treatments
  * damage done to it. Row four is what happens to it in time — repeats,
  * rooms, the grid. Row five is the machine's own transport. Row six is
  * the keyed family ([Keyed]), the treatments that read the kit's own key
- * and tempo. Row seven is the pedals, grouped by what an effect *is*: five of the slate
- * ([PEDAL_SEGMENTS]) and [MORE] ([rows], [PedalSlate]).
+ * and tempo. Row seven is the pedals, grouped by what an effect *is*: today the slate's
+ * ([PEDAL_SEGMENTS]) first six ([ROWS]), and five of it and [MORE] once the app draws the slate's
+ * card ([rows], [PedalSlate]).
  * Every row is a vocabulary mapping and nothing more: the words are the
  * app's, not the engine's, so [Eras] and [Treatments] never learn what a
  * "segment" is.

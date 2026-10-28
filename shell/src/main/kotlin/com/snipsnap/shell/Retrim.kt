@@ -63,13 +63,14 @@ sealed class Retrim {
          * toast — the card's own word for it ([PadSheet.read] → the segment
          * label), or SMEAR, which [PadSheet.read] can't see on purpose and
          * [PadSheet.readSmear] can, or a pedal board's one pedal or PEDALS
-         * ([PadSheet.readPedals]); null when the pad carried none.
+         * (the picks it plays, [PedalSlate.audible]); null when the pad carried none.
          */
         fun treatmentLeft(pad: KitPad): String? {
             if (PadSheet.readSmear(pad.recipe) != null) return "SMEAR"
             if (PadSheet.readDust(pad.recipe) != null) return "DUST"
             PadSheet.readPedals(pad.recipe)?.let { board ->
-                return board.picks.singleOrNull()?.entry?.word ?: "PEDALS"
+                val heard = PedalSlate.audible(board.picks)
+                if (heard.isNotEmpty()) return heard.singleOrNull()?.entry?.word ?: "PEDALS"
             }
             val applied = PadSheet.read(pad.recipe) ?: return null
             return applied.segment?.let(PadSheet::displayLabel) ?: applied.treatment.name.uppercase()

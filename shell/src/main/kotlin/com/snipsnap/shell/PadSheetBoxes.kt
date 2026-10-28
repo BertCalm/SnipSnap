@@ -50,14 +50,17 @@ object PadSheetBoxes {
     } ?: UNTOUCHED
 
     /**
-     * A pedal board, every pick in the order it went on: "WAH 70% · DRIVE 100%", or the words alone
-     * when the AMTs would not fit the strip, or the count when even the words would not.
+     * The pedals a pad plays ([PedalSlate.audible]: a pick at AMT 0, or one a later pick silences, is
+     * not named), in the order they went on: one reads as a chip does ("DELAY · 70%"), several as
+     * "WAH 70% · DRIVE 100%", or the words alone when the AMTs would not fit the strip, or the count
+     * when even the words would not.
      */
-    fun pedals(board: com.snipsnap.synth.PedalBoard): String {
-        val full = board.picks.joinToString(" · ") { "${it.entry.word} ${(it.amount * 100).roundToInt()}%" }
+    fun pedals(picks: List<com.snipsnap.synth.PedalBoard.Pick>): String {
+        picks.singleOrNull()?.let { return "${it.entry.word} · ${(it.amount * 100).roundToInt()}%" }
+        val full = picks.joinToString(" · ") { "${it.entry.word} ${(it.amount * 100).roundToInt()}%" }
         if (full.length <= SUMMARY_CHARS) return full
-        val words = board.picks.joinToString(" · ") { it.entry.word }
-        return if (words.length <= SUMMARY_CHARS) words else "${board.picks.size} PEDALS"
+        val words = picks.joinToString(" · ") { it.entry.word }
+        return if (words.length <= SUMMARY_CHARS) words else "${picks.size} PEDALS"
     }
 
     /** "ATK 12 MS · CUT 1.2K" - only the fields the pad sets; the rest are the format's defaults and say nothing. */
@@ -131,7 +134,7 @@ object PadSheetBoxes {
         Box.TREATMENT to (AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
             ?: BoardSheet.read(pad.recipe)?.let { "${it.type.name} · ${(it.amount * 100).roundToInt()}%" }
             ?: pad.recipe?.takeIf(PrintedPads::has)?.let { "${PrintedPads.label(it)} · CHECK RECIPE" }
-            ?: PadSheet.readPedals(pad.recipe)?.let(::pedals)
+            ?: PadSheet.readPedals(pad.recipe)?.let { PedalSlate.audible(it.picks) }?.takeIf { it.isNotEmpty() }?.let(::pedals)
             ?: treatment(PadSheet.read(pad.recipe))),
         Box.SHAPE to shape(pad),
         Box.MUTATE to mutate(MutateSheet.read(pad.recipe)),

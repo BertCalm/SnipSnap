@@ -150,6 +150,7 @@ class RetrimTest {
         )
         assertEquals("DELAY", Retrim.treatmentLeft(pedals("delayed")))
         assertEquals("PEDALS", Retrim.treatmentLeft(pedals("driven", "delayed")))
+        assertEquals("TOUCH", Retrim.treatmentLeft(pedals("wahed", "touchwahed")), "WAH under TOUCH is silent, so one pedal stayed")
         assertEquals("A02 RE-CUT. THE PEDALS STAYED WITH THE OLD ONE - IT'S IN THE BIN.", Copy.retrimLanded("A02", Retrim.treatmentLeft(pedals("driven", "delayed"))))
         assertEquals(
             "A02 RE-CUT. THE SMEAR STAYED WITH THE OLD ONE - IT'S IN THE BIN.",

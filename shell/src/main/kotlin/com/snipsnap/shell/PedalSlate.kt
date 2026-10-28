@@ -308,8 +308,8 @@ object PedalSlate {
         /** AMT on the marked pick. 0 takes it off. */
         data class Amount(override val key: String, val amount: Float) : Gesture
 
-        /** The before/after-the-amp toggle on a movable pick. */
-        data class Flip(override val key: String) : Gesture
+        /** The before/after-the-amp toggle on a movable pick, to the side the card offered ([to]), so a late second tap does nothing. */
+        data class Flip(override val key: String, val to: PedalSide) : Gesture
     }
 
     /** What a gesture does to a board, before any audio is touched. */
@@ -335,14 +335,16 @@ object PedalSlate {
      *   copying it would be arbitrary, and the habit "set AMT, then tap" would move the old pedal.
      * - [Gesture.Off] takes the pedal off.
      * - [Gesture.Amount] replaces the pick's AMT in place; 0 takes it off.
-     * - [Gesture.Flip] moves the pick to the other side and to the end of the order, so it wins any
+     * - [Gesture.Flip] moves the pick to [Gesture.Flip.to] and to the end of the order, so it wins any
      *   section it shares there.
      *
      * After each, the board keeps only its [audible] picks: a pedal that would be silenced comes off
      * and is named in [Change.Render.replaced] (TOUCH on a pad with WAH on the same side replaces
      * WAH: one wah section per side). More than [PedalBoard.MAX_PICKS] is [Change.Full]; the last pick
-     * off is [Change.Clear]. Refuses (in words) putting on what the library does not offer, AMT or a
-     * flip on a pick the board does not hold, and a flip on a pedal that cannot move.
+     * off is [Change.Clear]. A gesture the board already satisfies is [Change.Same], and so is AMT or a
+     * flip that arrives for a pick no longer on the pad (a late commit from a screen that had not
+     * caught up). Refuses (in words) putting on what the library does not offer, an AMT that is not a
+     * number, and a side the pedal cannot take.
      */
     fun change(board: PedalBoard?, gesture: Gesture): Change {
         val picks = board?.picks.orEmpty()
@@ -362,18 +364,19 @@ object PedalSlate {
             }
             is Gesture.Off -> if (at < 0) Change.Same else settle(picks.filterIndexed { i, _ -> i != at })
             is Gesture.Amount -> {
-                require(at >= 0) { "'${gesture.key}' is not on this pad" }
                 require(gesture.amount.isFinite()) { "AMT is a number, got ${gesture.amount}" }
+                if (at < 0) return Change.Same
                 if (gesture.amount <= 0f) return settle(picks.filterIndexed { i, _ -> i != at })
                 val moved = picks[at].copy(amount = gesture.amount.coerceAtMost(1f))
                 settle(picks.toMutableList().also { it[at] = moved })
             }
             is Gesture.Flip -> {
-                require(at >= 0) { "'${gesture.key}' is not on this pad" }
-                val pick = picks[at]
-                val other = pick.entry.sides.firstOrNull { it != pick.side }
-                    ?: throw IllegalArgumentException("${pick.entry.word} cannot move - it sits ${pick.side.id}")
-                settle(picks.filterIndexed { i, _ -> i != at } + pick.copy(side = other))
+                val entry = Pedals.byKey(gesture.key)
+                require(gesture.to in entry.sides) {
+                    "${entry.word} cannot sit on the ${gesture.to.id} side - it sits ${entry.sides.joinToString(" or ") { it.id }}"
+                }
+                if (at < 0 || picks[at].side == gesture.to) return Change.Same
+                settle(picks.filterIndexed { i, _ -> i != at } + picks[at].copy(side = gesture.to))
             }
         }
     }
@@ -424,7 +427,9 @@ object PedalSlate {
      * [Change.Clear], leaves the pad restored. A pad with another treatment and no original in the
      * bin takes the board on top and says so ([Landed.Applied.stacked]), as a chip does; a pad whose
      * own pedals the bin cannot restore refuses ([Landed.NotBinned]). Every refusal comes before any
-     * file moves. Throws for a slot with no pad and for the refusals [change] makes in words.
+     * file moves, and a pad that cannot change at all says so before a full board does, so the full
+     * board's advice (tap one off) is never refused on the next tap. Throws for a slot with no pad
+     * and for the refusals [change] makes in words.
      */
     fun land(model: KitBuilderModel, slot: Int, gesture: Gesture, sampleFile: String? = null): Landed {
         val pad = model.kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
@@ -432,18 +437,13 @@ object PedalSlate {
         if (PrintedPads.has(pad.recipe)) return Landed.Printed(PrintedPads.label(pad.recipe))
         val before = boardOf(pad.recipe)
         val change = change(before, gesture)
-        when (change) {
-            Change.Full -> return Landed.Full
-            Change.Same -> return Landed.Unchanged
-            else -> Unit
-        }
-        var stacked = false
-        when (PadSheet.unTreatState(pad, model.binContents().map { it.originalName }.toSet())) {
-            PadSheet.UnTreat.READY -> model.unEraPad(slot)
-            PadSheet.UnTreat.GHOSTS_POSTDATE -> return Landed.GhostsPostdate
-            PadSheet.UnTreat.NOT_BINNED -> if (before != null) return Landed.NotBinned else stacked = true
-            PadSheet.UnTreat.NOTHING -> Unit
-        }
+        if (change == Change.Same) return Landed.Unchanged
+        val state = PadSheet.unTreatState(pad, model.binContents().map { it.originalName }.toSet())
+        if (state == PadSheet.UnTreat.GHOSTS_POSTDATE) return Landed.GhostsPostdate
+        if (state == PadSheet.UnTreat.NOT_BINNED && before != null) return Landed.NotBinned
+        if (change == Change.Full) return Landed.Full
+        val stacked = state == PadSheet.UnTreat.NOT_BINNED
+        if (state == PadSheet.UnTreat.READY) model.unEraPad(slot)
         return when (change) {
             is Change.Render -> {
                 model.pedalPad(slot, change.board)
