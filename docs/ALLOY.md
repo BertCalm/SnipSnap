@@ -6,7 +6,7 @@ changes the phase of a four-operator tonal body. It uses no external samples or
 Yamaha operator/sample data. The supplied [engineering specification](ALLOY_ENGINE_SPEC.md)
 describes a proposed hybrid gesture, rather than a reconstruction of the SY77.
 
-The [factory audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/factory/)
+The [factory audition](https://snipsnap-alloy-factory-bank.bertcalm.chatgpt.site/factory/)
 contains 24 dry factory presets across BASS, KEY, PLUCK, BRASS, STRING and SOFT.
 Each voice has its existing first-preset reference and three distinct roles with
 explicit operator, routing and envelope configurations. The owner heard the

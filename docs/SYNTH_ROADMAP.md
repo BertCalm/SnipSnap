@@ -717,7 +717,7 @@ Held exports omit the initial attack and retain MATERIAL/FUSE through the same p
 The listening selection retains original BASS/SOFT and revised KEY/PLUCK/BRASS/
 STRING. The owner approved the distinct-role comparison and authorized a smaller
 24-preset factory bank, four per voice: the prior first preset and three complete
-authored configurations. The [factory audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/factory/)
+authored configurations. The [factory audition](https://snipsnap-alloy-factory-bank.bertcalm.chatgpt.site/factory/)
 contains those roles alongside register/velocity coverage, five-point sweeps,
 interactions, attack-port removals and held seams. Its sixteen-pad starter retains
 two earlier held sounds; the full MPC bank provides three eight-pad programs with
