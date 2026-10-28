@@ -3453,10 +3453,11 @@ class ConventionTest {
      *
      * Both look at a first statement only. A raise placed second in a launch
      * would pass; the sheet was read for that when the law was written and
-     * has none.
+     * has none. Comment-only lines between the opening brace and the raise are
+     * skipped, so a comment explaining the raise cannot hide it.
      */
-    private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n\s*(busy|working)\s*=\s*true""")
-    private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n\s*(busy|working)\s*=\s*true""")
+    private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
+    private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
 
     @Test
     fun `a busy guard is raised before its launch, not inside it`() {
@@ -3470,6 +3471,12 @@ class ConventionTest {
             guardRaisedInsideLaunch.containsMatchIn("scope.launch(Dispatchers.IO) {\n            working = true\n            try {"),
             "the launch scan no longer recognises a guard raised inside a launch that is given a dispatcher",
         )
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn(
+                "appScope.launch {\n            // The write outlives the tab.\n            busy = true\n            try {",
+            ),
+            "the launch scan no longer sees a guard raised after a comment line at the top of a launch",
+        )
         assertFalse(
             guardRaisedInsideLaunch.containsMatchIn("busy = true\n        appScope.launch {\n            try {"),
             "the launch scan flags a guard that is already raised before its launch",
@@ -3479,6 +3486,12 @@ class ConventionTest {
                 "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        working = true\n        try {",
             ),
             "the suspend-fun scan no longer recognises a guard raised as the first line of a suspend function",
+        )
+        assertTrue(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        // Up before the first read.\n        working = true\n        try {",
+            ),
+            "the suspend-fun scan no longer sees a guard raised after a comment line at the top of a suspend function",
         )
         assertFalse(
             guardRaisedInsideSuspendFun.containsMatchIn(
