@@ -86,6 +86,7 @@ class SurfaceScreenTest : ComposeScreenTest() {
         assertReadsInFull("VOICE")
         assertReadsInFull("SHAPE")
         assertReadsInFull("MOD")
+        assertReadsInFull("MIDI")
         assertReadsInFull("◄ PAD")
         assertReadsInFull("PAD ►")
         assertReadsInFull("RING")
@@ -165,6 +166,18 @@ class SurfaceScreenTest : ComposeScreenTest() {
         button("MOD A").assertExists()
         button("SET A").assertDoesNotExist()
         button("→ TAPE").assertExists()
+        button("PRINT").assertExists()
+    }
+
+    @Test
+    fun the_midi_panel_offers_the_four_learn_targets_and_forgets_nothing_unasked() {
+        show(entry = null)
+        tap("MIDI")
+        button("MIDI").assertIsSelected()
+        for (chip in listOf("X", "Y", "Z", "HOLD", "FORGET")) assertReadsInFull(chip)
+        button("LATCH").assertDoesNotExist()
+        // Nothing is waiting for a control, so there is nothing to forget.
+        button("FORGET").assertIsNotEnabled()
         button("PRINT").assertExists()
     }
 

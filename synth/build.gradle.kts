@@ -13,6 +13,26 @@ tasks.register<JavaExec>("generateFerryAudition") {
     args(providers.gradleProperty("ferryOutput").orNull ?: "${rootDir}/testkit/ferry-audition")
 }
 
+/** Explicit production-call measurements; timing never decides correctness. */
+tasks.register<JavaExec>("benchmarkScannedChain") {
+    group = "verification"
+    description = "Measure Scanned Chain fresh renders, completed-cache hits, knob misses, raw probes and finishing with PCM hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args("--casegroup=${providers.gradleProperty("scannedChainBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("scannedChainBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("scannedChainBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("scannedChainBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("scannedChainBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("scannedChainBenchmarkPaths").orNull?.let { args("--paths=$it") }
+    providers.gradleProperty("scannedChainBenchmarkStates").orNull?.let { args("--states=$it") }
+    providers.gradleProperty("scannedChainBenchmarkCancellation").orNull?.let { args("--cancellation=$it") }
+    providers.gradleProperty("scannedChainBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+}
+
 /** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
 tasks.register<JavaExec>("generateUprightAudition") {
     group = "distribution"
@@ -322,6 +342,17 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
         args(providers.gradleProperty("chamberRecipe").get(), providers.gradleProperty("chamberReplayOutput").get(),
             providers.gradleProperty("chamberReplayMode").orNull ?: "matched")
     }
+}
+
+/** A small, opt-in MPC keygroup trial built from the approved steady held bodies. */
+tasks.register<JavaExec>("generateOverlapHeldKeygroups") {
+    group = "distribution"
+    description = "Export four OVERLAP held keygroups, looped samples and a hardware-check package."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldKeygroupGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("overlapHeldKeygroupOutput").orNull ?: "${rootDir}/testkit/overlap-held-keygroup")
 }
 
 /** Separate steady sustain proof with real loop recurrence and passive note-off. */
@@ -1315,6 +1346,16 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
+/** Render SCOUR's R1 listening gate (raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
+tasks.register<JavaExec>("generateScourAudition") {
+    group = "distribution"
+    description = "Render SCOUR's SHOT x HARDEN gate, the ring-direction comparison, voices, sweeps and edges with a listening page under testkit/scour-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/scour-audition")
+}
+
 /** Render SUTURE's raw/matched mechanical and listening evidence locally. */
 tasks.register<JavaExec>("generateSutureAudition") {
     group = "distribution"
@@ -1755,7 +1796,7 @@ tasks.register<JavaExec>("generateAlloyAudition") {
 /** Current selected voices, separate from the frozen original and contrast references. */
 tasks.register<JavaExec>("generateAlloySelectedAudition") {
     group = "distribution"
-    description = "Render the selected ALLOY voice matrix, 36 factory patches and 16-pad MPC kit under testkit/alloy-selected/."
+    description = "Render the selected ALLOY voice matrix, current factory patches and 16-pad MPC kit under testkit/alloy-selected/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
     maxHeapSize = "768m"
@@ -1763,6 +1804,19 @@ tasks.register<JavaExec>("generateAlloySelectedAudition") {
     args(providers.gradleProperty("alloySelectedOutput").orNull ?: "${rootDir}/testkit/alloy-selected", "--selected")
     if (project.hasProperty("alloySelectedFull")) args("--full")
     if (project.hasProperty("alloySelectedRefreshPage")) args("--refresh-page")
+}
+
+/** Approved distinct-role factory release, preserving all earlier listening packs. */
+tasks.register<JavaExec>("generateAlloyFactoryAudition") {
+    group = "distribution"
+    description = "Render ALLOY's approved 24-patch factory bank, full-config listening matrix, 16-pad starter kit and three eight-pad MPC programs under testkit/alloy-factory/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AlloyAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("alloyFactoryOutput").orNull ?: "${rootDir}/testkit/alloy-factory", "--factory")
+    if (project.hasProperty("alloyFactoryFull")) args("--full")
+    if (project.hasProperty("alloyFactoryRefreshPage")) args("--refresh-page")
 }
 
 /** Separate candidate recipes; the released Alloy audition remains unchanged. */

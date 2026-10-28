@@ -25,7 +25,7 @@ import kotlin.random.Random
  * 1. **The charge** (CHARGE, STANDOFF): a pressure front (a 0.1 ms rise into a
  *    0.5 ms decay, the broadband edge) over a 48 Hz decaying sine (the weight),
  *    added to the pad [STANDOFF_MAX_SECONDS] or less after it starts.
- * 2. **The medium** (CHARGE): up to [MAX_SECTIONS] second-order all-passes.
+ * 2. **The medium** (CHARGE, DEPTH): second-order all-passes, as many as CHARGE asks of the medium DEPTH picks.
  *    They do not focus the hit (no all-pass can; it only delays each frequency
  *    differently, the brief's finding 1): they turn the click into a short
  *    rising sweep, which is what makes the folder below thick rather than thin.
@@ -73,6 +73,10 @@ object Forge {
         MacroSpec("YIELD", 0.5f, neutral = 1f),
         // The die: 0 stands above the blank and touches nothing; 1 is a hard stop at 0.4 of the peak.
         MacroSpec("ARREST", 0.5f),
+        // How deep the medium is: 0 TIGHT (the drums' pick), 0.5 SHORT (the bell's), 1 AS_BUILT (the chop's), each
+        // the owner's pick at the CHARGE gate (2026-10-27). 0 is the default and the neutral, so a recipe saved
+        // before DEPTH, and the FORGE chip, render exactly as before. Inert at CHARGE 0 (there is no medium).
+        MacroSpec("DEPTH", 0f),
     )
 
     /** The shock at CHARGE 1, re the pad's peak (shape). */
@@ -94,8 +98,7 @@ object Forge {
 
     /**
      * The medium's shape: how many second-order all-passes at CHARGE 1, the band their centres span,
-     * and their Q. Only [SHIPPED] reaches a pad; the others exist so a tuning audition can render
-     * candidates through the real section without a second copy of it.
+     * and their Q. DEPTH picks one ([forDepth]); a tuning audition may pass its own candidate instead.
      */
     internal data class Medium(val sections: Int, val loHz: Float, val hiHz: Float, val q: Float) {
         companion object {
@@ -109,6 +112,37 @@ object Forge {
 
             /** What passed the first gate (2026-10-26): 24 sections from 300 Hz to 6 kHz, a 14.0 ms sweep at CHARGE 1. */
             val AS_BUILT = Medium(24, 300f, 6_000f, 0.7f)
+
+            /** The bell's pick at the CHARGE gate: AS_BUILT's band with half its sections, a 7.8 ms sweep at CHARGE 1. */
+            val SHORT = Medium(12, 300f, 6_000f, 0.7f)
+
+            /**
+             * The medium at [depth]: [SHIPPED] (TIGHT) at 0, [SHORT] at 0.5, [AS_BUILT] at 1, each exactly the
+             * medium the owner heard there. From 0 to 0.5 the band slides down into the low end on a log scale
+             * (1.2 to 0.3 kHz at the bottom, 8 to 6 kHz at the top), twelve sections throughout; from 0.5 to 1
+             * the band holds and the sections double, 12 to 24, a whole section at a time.
+             */
+            fun forDepth(depth: Float): Medium {
+                val d = depth.coerceIn(0f, 1f)
+                return when {
+                    d <= 0f -> SHIPPED
+                    d == 0.5f -> SHORT
+                    d >= 1f -> AS_BUILT
+                    d < 0.5f -> {
+                        val u = (d / 0.5f).toDouble()
+                        Medium(
+                            SHIPPED.sections,
+                            (SHIPPED.loHz * (SHORT.loHz / SHIPPED.loHz).toDouble().pow(u)).toFloat(),
+                            (SHIPPED.hiHz * (SHORT.hiHz / SHIPPED.hiHz).toDouble().pow(u)).toFloat(),
+                            SHIPPED.q,
+                        )
+                    }
+                    else -> {
+                        val u = (d - 0.5f) / 0.5f
+                        SHORT.copy(sections = (SHORT.sections + u * (AS_BUILT.sections - SHORT.sections)).roundToInt())
+                    }
+                }
+            }
         }
     }
 
@@ -155,10 +189,11 @@ object Forge {
     /**
      * [oversample] false runs the stages at the snip's own rate: for the aliasing test, which proves its
      * probe sees fold-back, and the audition's fold-back A/B. The product always runs the 4x path with the
-     * [Medium.SHIPPED] medium; [medium] is for the tuning audition's candidates.
+     * medium DEPTH picks; [medium], when given, overrides it for the tuning audition's candidates.
      */
-    internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean, medium: Medium = Medium.SHIPPED): Snip {
+    internal fun process(snip: Snip, macros: Map<String, Float>, oversample: Boolean, medium: Medium? = null): Snip {
         val m = settled(macros)
+        val med = medium ?: Medium.forDepth(m.getValue("DEPTH"))
         val inPeak = snip.peak()
         if (inPeak <= 0f || snip.frameCount == 0) return Snip(snip.samples.copyOf(), snip.channels, snip.sampleRate)
 
@@ -178,7 +213,7 @@ object Forge {
         if (charge > 0f) {
             formed = Array(channels) { charged(formed[it], m, workRate) }
             normaliseTogether(formed)
-            formed = Array(channels) { medium(formed[it], charge, workRate, medium) }
+            formed = Array(channels) { medium(formed[it], charge, workRate, med) }
             normaliseTogether(formed)
         }
         val slews = Array(channels) { slew(formed[it], workRate) }

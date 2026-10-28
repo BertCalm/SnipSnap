@@ -106,10 +106,51 @@ class ForgeTest {
     // ---------- the contract ----------
 
     @Test
-    fun `the macros are the owner's four, with their neutrals`() {
-        assertEquals(listOf("CHARGE", "STANDOFF", "YIELD", "ARREST"), Forge.MACROS.map { it.name })
-        assertEquals(listOf(0f, 0f, 1f, 0f), Forge.MACROS.map { it.neutral })
-        assertTrue(Forge.MACROS.all { it.default == 0.5f })
+    fun `the macros are the owner's four and DEPTH, with their neutrals`() {
+        assertEquals(listOf("CHARGE", "STANDOFF", "YIELD", "ARREST", "DEPTH"), Forge.MACROS.map { it.name })
+        assertEquals(listOf(0f, 0f, 1f, 0f, 0f), Forge.MACROS.map { it.neutral })
+        assertEquals(listOf(0.5f, 0.5f, 0.5f, 0.5f, 0f), Forge.MACROS.map { it.default })
+    }
+
+    @Test
+    fun `DEPTH lands on the three media the owner picked, and 0 is the shipped sound`() {
+        // The CHARGE gate (2026-10-27): TIGHT on the kick and the snare, SHORT on the bell, AS_BUILT on the chop.
+        assertEquals(Forge.Medium.SHIPPED, Forge.Medium.forDepth(0f))
+        assertEquals(Forge.Medium.SHORT, Forge.Medium.forDepth(0.5f))
+        assertEquals(Forge.Medium.AS_BUILT, Forge.Medium.forDepth(1f))
+        // A recipe without DEPTH (every one saved before it, and the FORGE chip) renders the shipped medium.
+        for (pad in listOf(kick, snare)) {
+            assertContentEquals(
+                Forge.process(pad, mapOf("CHARGE" to 1f), true, Forge.Medium.SHIPPED).samples,
+                Forge.process(pad, mapOf("CHARGE" to 1f)).samples,
+                "a recipe without DEPTH left the shipped medium",
+            )
+        }
+    }
+
+    @Test
+    fun `DEPTH lengthens the sweep, and is inert without CHARGE`() {
+        val work = rate * Dsp.OVERSAMPLE
+        val click = FloatArray((0.04 * work).toInt()).also { for (i in 0 until 140) it[i] = (0.5 - 0.5 * cos(2 * PI * i / 140)).toFloat() }
+        fun width(depth: Float): Double {
+            val y = Forge.medium(click.copyOf(), 1f, work, Forge.Medium.forDepth(depth))
+            val total = y.sumOf { it.toDouble() * it }
+            var acc = 0.0
+            for (i in y.indices) {
+                acc += y[i].toDouble() * y[i]
+                if (acc >= 0.9 * total) return 1000.0 * i / work
+            }
+            return 1000.0 * y.size / work
+        }
+        val depths = listOf(0f, 0.25f, 0.5f, 0.75f, 1f)
+        val widths = depths.map { width(it) }
+        println("FORGE DEPTH, 90 % energy width of a 0.8 ms click at CHARGE 1: ${depths.zip(widths).joinToString { (d, w) -> "$d: %.2f ms".format(w) }}")
+        for (i in 1 until widths.size) assertTrue(widths[i] > widths[i - 1], "more DEPTH did not lengthen the sweep: $widths")
+        assertContentEquals(
+            forge(kick, "CHARGE" to 0f, "DEPTH" to 0f).samples,
+            forge(kick, "CHARGE" to 0f, "DEPTH" to 1f).samples,
+            "DEPTH moved the sound with no medium to deepen",
+        )
     }
 
     @Test
