@@ -61,6 +61,12 @@ indefinite HOLD.
 Actual waveform classifier checks remain
 separate from those declared export classes.
 
+The CLI accepts complete Alloy JSON through `--patch`, including retained held
+recipes and authored factory configurations. `--midi` and `--velocity` override
+only the saved root and energy; they keep the complete material, routing and
+envelope data. `--all` and numbered `--preset` selections use the active four
+factory patches per voice.
+
 Generate the current factory listening files with:
 
 ```sh

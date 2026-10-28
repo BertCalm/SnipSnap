@@ -10,6 +10,32 @@
     { id: "hold", title: "Hold", sources: ["hold"], description: "Settled, loop-only renders with restrained material excitation. The opening strike is omitted. Web Audio loops the complete rendered buffer without playback gaps." },
     { id: "stress", title: "Stress", sources: ["extremes", "stress"], description: "Difficult macro corners and high-drive combinations. Listen for pitch support, harsh sidebands, unexpected noise, and clean endings." }
   ];
+  const factoryRoleDescriptions = Object.freeze({
+    "Wooden Current": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Rounded Plug": "Muted bass anchor · Soft contact → nearly pure root → short rounded decay.",
+    "Elastic Touch": "Rubbery bass attack · Hard contact → bright phase bend → hollow octave body.",
+    "Hollow Rail": "Odd harmonic bass line · Firm onset → persistent hollow reed spectrum → deliberate release.",
+    "Tine Alloy": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Felt Relay": "Damped wooden key · Rounded hammer → warm harmonic body → compact tail.",
+    "Long Prism": "Ringing electric key · Sharp tine → strong upper harmonics → long glassy decay.",
+    "Reed Switch": "Hollow electric key · Soft click → odd harmonic reed tone → steady held body and release.",
+    "Muted Fusion": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Damped Pick": "Muted pluck · Small pick click → compact harmonic body → rapid damping.",
+    "Open Chime": "Ringing wire pluck · Bright wire impact → separated upper harmonics → long ring.",
+    "Nasal Snap": "Biting pluck lead · Hard narrow pick → strong decaying phase buzz → dry pitched finish.",
+    "Breath Metal": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Round Horn": "Warm sustained horn · Rounded swell → low harmonic body → soft breath-free release.",
+    "Hollow Copper": "Hollow reed horn · Clear tongue → pronounced odd harmonics → level sustained line.",
+    "Bright Stamp": "Brass stab · Fast bright tongue → nested phase bite → short punched release.",
+    "Drawn Wire": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Dark Bow": "Slow wooden string · Slow bow entrance → dark harmonic sustain → long soft release.",
+    "Picked Fibre": "Short picked string · Immediate pick → bright harmonic ping → fast damped finish.",
+    "Beating Glass": "Shimmering string sustain · Gentle onset → close detuned partial beating → long clear release.",
+    "Soft Forge": "Current factory reference · The first factory preset at the same C3 and velocity as every candidate.",
+    "Felt Drop": "Soft percussive key · Gentle tap → nearly pure warm note → compact felt decay.",
+    "Velvet Rise": "Soft slow pad · Slow rounded swell → warm even-harmonic sustain → long falling release.",
+    "Hollow Glow": "Soft odd harmonic pad · Soft bloom → hollow organ-like harmonic body → clear lingering release."
+  });
   const macroNames = ["MATERIAL", "FUSE", "EDGE", "BODY", "LENGTH", "HOLD"];
   const reviewKey = "snipsnap.alloy.factory-roles.reviews.v1";
   const selectedVoices = Object.freeze({ BASS: "original", KEY: "revised", PLUCK: "revised", BRASS: "revised", STRING: "revised", SOFT: "original" });
@@ -29,7 +55,7 @@
 
   function normalizeManifest(manifest) {
     const sourceSections = Array.isArray(manifest.sections) ? manifest.sections : [];
-    state.clips = sourceSections.flatMap(section => (section.clips || []).map((clip, index) => ({ ...clip, id: String(clip.id || `${section.id}-${index}`), title: clip.title || clip.name || `Render ${index + 1}`, file: clip.file || clip.src, voice: String(clip.voice || "ALLOY").toUpperCase(), note: String(clip.note || (clip.midi != null ? `MIDI ${clip.midi}` : "")).replace(/♯/g, "#").replace(/♭/g, "b"), group: String(clip.group || ""), duration: Number(clip.duration) || 0, sourceSection: String(section.id || "").toLowerCase(), loop: Boolean(clip.loop) })));
+    state.clips = sourceSections.flatMap(section => (section.clips || []).map((clip, index) => ({ ...clip, detail: String(section.id || "").toLowerCase() === "presets" ? factoryRoleDescriptions[clip.title || clip.name] || clip.detail : clip.detail, id: String(clip.id || `${section.id}-${index}`), title: clip.title || clip.name || `Render ${index + 1}`, file: clip.file || clip.src, voice: String(clip.voice || "ALLOY").toUpperCase(), note: String(clip.note || (clip.midi != null ? `MIDI ${clip.midi}` : "")).replace(/♯/g, "#").replace(/♭/g, "b"), group: String(clip.group || ""), duration: Number(clip.duration) || 0, sourceSection: String(section.id || "").toLowerCase(), loop: Boolean(clip.loop) })));
     state.sections = sectionDefinitions.map(definition => ({ ...definition, clips: state.clips.filter(clip => definition.sources.includes(clip.sourceSection)) }));
     for (const clip of state.clips) {
       if (Array.isArray(clip.waveform) && clip.waveform.length && clip.waveform.every(value => Number.isFinite(value) && value >= 0)) {
