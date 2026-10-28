@@ -466,3 +466,8 @@ testkit/obbligato-conversation-audition/
 
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
+
+# Regenerable, opt-in OVERLAP held keygroup hardware trial.
+testkit/overlap-held-keygroup/
+# Same-parent temporary staging is also generated output, including custom destinations.
+.overlap-held-keygroups-*/
