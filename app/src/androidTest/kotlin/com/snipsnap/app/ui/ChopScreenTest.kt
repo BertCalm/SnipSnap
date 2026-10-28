@@ -1,17 +1,20 @@
 package com.snipsnap.app.ui
 
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidedValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.TapeCommit
+import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
@@ -22,6 +25,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -91,9 +95,25 @@ class ChopScreenTest : ComposeScreenTest() {
         return KitShelf.Entry(dir, kit)
     }
 
-    private fun show(entry: KitShelf.Entry?, commit: TapeCommit?, shelf: KitShelf = KitShelf(folder("chop-test-shelf"))) {
-        setPhoneContent {
-            CompositionLocalProvider(LocalBusySink provides { told += it?.label }) {
+    /**
+     * [settleMillis] is how much of the frozen clock the first composition gets (see
+     * `setPhoneContent`): the test of the first frame takes none. [reduceMotion] is for a test
+     * that may have the loading panel's bar on screen under that frozen clock, as
+     * `ComposeScreenTest`'s KDoc asks.
+     */
+    private fun show(
+        entry: KitShelf.Entry?,
+        commit: TapeCommit?,
+        shelf: KitShelf = KitShelf(folder("chop-test-shelf")),
+        settleMillis: Long = 300,
+        reduceMotion: Boolean = false,
+    ) {
+        val locals = buildList<ProvidedValue<*>> {
+            add(LocalBusySink provides { told += it?.label })
+            if (reduceMotion) add(LocalReduceMotion provides true)
+        }
+        setPhoneContent(settleMillis) {
+            CompositionLocalProvider(*locals.toTypedArray()) {
                 ChopScreen(
                     entry = entry,
                     lastCommit = commit,
@@ -126,6 +146,10 @@ class ChopScreenTest : ComposeScreenTest() {
     private fun showing(text: String): Boolean =
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    /** Some node on screen is named [label], the way [LoadingPanel] names itself. */
+    private fun described(label: String): Boolean =
+        compose.onAllNodesWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
     private fun header(slices: Int, mode: String) = "${Copy.countOf(slices, "SLICE", "SLICES")} — $mode"
 
     /** The break, chopped and on screen: the header counts its four hits. */
@@ -155,6 +179,22 @@ class ChopScreenTest : ComposeScreenTest() {
         waitFor("the empty face") { showing(Copy.EMPTY_CHOP) }
         assertEquals("the read reached the dock first: $told", Copy.READING_RECORDING, told.firstOrNull())
         assertEquals("and the empty face took it back: $told", null, told.lastOrNull())
+    }
+
+    @Test
+    fun the_first_frame_of_a_read_has_no_words_to_flash() {
+        // No settle: the clock is frozen on the first frame, before the 200 ms show delay has
+        // run and before the decode's own state write has had a frame to recompose in. What is on
+        // screen then is the quiet lit panel - not the loading words, which a read that ends at
+        // once would flash, and not the empty face, which would say "nothing" over a read in flight.
+        show(entry = null, commit = tapeCommit(), settleMillis = 0, reduceMotion = true)
+        assertFalse(
+            "the first frame of a read drew \"${Copy.READING_RECORDING}\" before its 200 ms show delay",
+            described(Copy.READING_RECORDING),
+        )
+        assertFalse("the first frame of a read said there was nothing to chop", showing(Copy.EMPTY_CHOP))
+        // And the read goes on to its result: the first frame was the start of it, not the end.
+        waitFor("the break chopped", timeoutMillis = 60_000) { showing(header(4, "BY HITS")) }
     }
 
     @Test
