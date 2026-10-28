@@ -1,17 +1,12 @@
 package com.snipsnap.app.ui
 
-import android.app.Activity
 import android.content.Context
-import android.content.ContextWrapper
 import android.content.SharedPreferences
-import android.view.WindowManager
-import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,19 +23,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -49,12 +48,19 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.dismiss
@@ -66,6 +72,9 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.snipsnap.app.PREFS
 import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
@@ -84,9 +93,9 @@ import com.snipsnap.shell.filterEngines
 /*
  * The app's first bottom sheet, and the engine picker that fills it.
  *
- * [BottomSheet] is the reusable half: a scrim, a panel hung from the bottom edge
- * with a handle and a title, and the three ways out (the scrim, Back, a pull down
- * on the handle). [EnginePickerContent] is the picker: a search box, a row of
+ * [BottomSheet] is the reusable half: a window of its own with a scrim and a panel
+ * hung from the bottom edge, with a handle and a title, and the three ways out (the
+ * scrim, Back, a pull down on the handle). [EnginePickerContent] is the picker: a search box, a row of
  * sound-type chips and a list, drawn from the engine names and voices it is
  * handed, so a device test can drive it without SYNTH's private `Engine` enum.
  *
@@ -102,7 +111,7 @@ internal const val ENGINE_PICKER_TITLE = "CHOOSE AN ENGINE"
 /** The search box's hint, a message and so in sentence case. */
 internal const val ENGINE_SEARCH_HINT = "Search engines or sounds"
 
-/** How much of the area it is laid over the panel takes. For SYNTH that is the screen's body, so the LCD header still shows above the panel. */
+/** The share of the window's height the panel takes: the strip above it is the scrim, a tap on which dismisses. */
 private const val PANEL_HEIGHT_SHARE = 0.88f
 
 /** The dim behind the panel, the same as every other scrim in the app. */
@@ -115,26 +124,40 @@ private val DISMISS_PULL = 96.dp
 private val ROW_MIN_H = 64.dp
 
 /**
- * A sheet hung from the bottom of the area it is composed in. Not a window: it is
- * laid over whatever is there, as the app's other overlays are.
+ * A sheet hung from the bottom of the window, in a window of its own. The app's
+ * other overlays are laid over one screen's box; this one is a Compose `Dialog` at
+ * the full size of the display, so it covers the title bar, the places and the dock
+ * and not only the screen that opened it, and the keyboard leaves it room on every
+ * Android version.
  *
- *  - A scrim over everything, a tap on it dismisses. It is a layer of its own
- *    behind the panel and not the panel's parent, because a clickable parent
- *    merges its descendants' semantics and swallows a text field's SetText.
- *  - The panel takes [PANEL_HEIGHT_SHARE] of the height, anchored at the bottom,
- *    on the theme's raised surface. [content] fills what is under the handle and
- *    the [title], in a column it can give weights to.
+ * The window is edge to edge on purpose (`decorFitsSystemWindows = false`). A window
+ * that fits the system windows is told by the platform that the keyboard is zero tall,
+ * so `imePadding` has nothing to pad by before Android 15, and a resize of the whole
+ * app window to get round that squeezes the screen under the sheet as well. In its own
+ * edge to edge window the insets arrive as they do on Android 15, and the panel pads
+ * itself by them: it stays where it is, 88 percent of the window tall, with what is in
+ * it pushed up above the keys.
+ *
+ *  - A scrim over the whole window, drawn here (the window's own dim is turned off), a
+ *    tap on it dismisses. It is a layer of its own behind the panel and not the
+ *    panel's parent, because a clickable parent merges its descendants' semantics and
+ *    swallows a text field's SetText.
+ *  - The panel takes [PANEL_HEIGHT_SHARE] of the window's height, anchored at the
+ *    bottom, on the theme's raised surface. [content] fills what is under the handle
+ *    and the [title], in a column it can give weights to.
  *  - The handle can be pulled down: past [DISMISS_PULL] on release it dismisses,
  *    less and it springs back.
- *  - Back dismisses. The handler is registered unconditionally, like every
- *    overlay's, so Back never falls through to leaving the app.
- *  - The IME is met with `imePadding`: the panel rises with the keyboard, so the
- *    list is never behind it.
+ *  - Back is the dialog's own dismiss, so it reaches [onDismiss] and never falls
+ *    through to the screen under the sheet.
  *  - It slides up over [Motion.SHEET_SLIDE_MS], and under [LocalReduceMotion]
  *    it is simply there.
  *
  * [scrimLabel] is the scrim's accessible name: the one dismiss control a screen
- * reader can reach without a gesture.
+ * reader can reach without a gesture. A dialog is modal to a screen reader as well:
+ * what is under it is not reachable until it is gone.
+ *
+ * Reusable: nothing in it knows about engines. The menus the UI plan turns into
+ * sheets are meant to be given to this.
  */
 @Composable
 fun BottomSheet(
@@ -143,10 +166,33 @@ fun BottomSheet(
     scrimLabel: String = "CLOSE",
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        // The scrim is the outside; a window this size has none to click.
+        properties = DialogProperties(
+            dismissOnBackPress = true,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+        ),
+    ) {
+        BottomSheetWindow(title, onDismiss, scrimLabel, content)
+    }
+}
+
+/** What is inside [BottomSheet]'s window: the scrim and the panel. */
+@Composable
+private fun BottomSheetWindow(
+    title: String,
+    onDismiss: () -> Unit,
+    scrimLabel: String,
+    content: @Composable ColumnScope.() -> Unit,
+) {
     val scheme = LocalScheme.current
     val still = LocalReduceMotion.current
-    BackHandler(onBack = onDismiss)
-    ResizeForKeyboardWhileUp()
+    // The scrim is drawn below, so the window's own dim would darken it twice.
+    val window = (LocalView.current.parent as? DialogWindowProvider)?.window
+    SideEffect { window?.setDimAmount(0f) }
     val latestDismiss by rememberUpdatedState(onDismiss)
     // 0 is below the bottom edge, 1 is seated. Seated from the first frame when motion is off.
     val seated = remember { Animatable(if (still) 1f else 0f) }
@@ -154,7 +200,7 @@ fun BottomSheet(
         if (still) seated.snapTo(1f) else seated.animateTo(1f, tween(Motion.SHEET_SLIDE_MS, easing = LinearOutSlowInEasing))
     }
     var pulled by remember { mutableFloatStateOf(0f) }
-    Box(Modifier.fillMaxSize().imePadding()) {
+    Box(Modifier.fillMaxSize()) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -171,7 +217,11 @@ fun BottomSheet(
                 // Swallows a tap on the panel so it does not fall through to the scrim: a bare
                 // gesture detector, which registers no semantics node.
                 .pointerInput(Unit) { detectTapGestures { } }
-                .semantics { dismiss { latestDismiss(); true } },
+                .semantics { dismiss { latestDismiss(); true } }
+                // Inside the panel's own fill: the navigation bar's height, then the keyboard's
+                // beyond it, so the content stops above the keys and the fill runs on behind them.
+                .navigationBarsPadding()
+                .imePadding(),
         ) {
             Column(
                 Modifier
@@ -200,52 +250,6 @@ fun BottomSheet(
             content()
         }
     }
-}
-
-/**
- * Makes the window answer the keyboard by resizing for as long as the sheet is up, and
- * puts the mode back when it goes.
- *
- * `imePadding` only sees the keyboard when the window is edge to edge, which the app is
- * on Android 15 and later (the platform does it for targetSdk 35). Before that the
- * decor view takes the insets and Compose is told the keyboard is zero tall, so the
- * panel stayed put and the keys covered the lower half of the list (seen on an Android
- * 14 emulator). A resize shrinks the window itself, so the panel, which is a share of
- * the screen's body, is above the keyboard whichever way the platform delivers it. On a
- * window that is already edge to edge the mode has no effect and `imePadding` does the
- * work, so the two never add.
- *
- * Scoped to the sheet and not set in the manifest: the app's other screens have never
- * been looked at under a resizing window, and none of them needs it. The constant is
- * deprecated because the platform wants insets handled instead, which is the half that
- * does not work before Android 15; the suppression is for exactly that.
- */
-@Suppress("DEPRECATION")
-@Composable
-private fun ResizeForKeyboardWhileUp() {
-    val context = LocalContext.current
-    DisposableEffect(context) {
-        val window = context.hostActivity()?.window
-        val before = window?.attributes?.softInputMode
-        if (window != null && before != null) {
-            val resize = (before and WindowManager.LayoutParams.SOFT_INPUT_MASK_ADJUST.inv()) or
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE
-            window.setSoftInputMode(resize)
-        }
-        onDispose {
-            if (window != null && before != null) window.setSoftInputMode(before)
-        }
-    }
-}
-
-/** The activity under this context, through however many wrappers, or null when there is none. */
-private fun Context.hostActivity(): Activity? {
-    var ctx: Context = this
-    while (ctx is ContextWrapper) {
-        if (ctx is Activity) return ctx
-        ctx = ctx.baseContext
-    }
-    return null
 }
 
 /** The engine picker in its sheet: [EnginePickerContent] under the handle and [ENGINE_PICKER_TITLE]. */
@@ -335,24 +339,20 @@ internal fun EnginePickerContent(
 
     Column(modifier.fillMaxWidth()) {
         SearchField(query) { query = it }
+        val chipRow = rememberLazyListState()
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // Outside the scrolling row, so it is in view the moment the first chip goes on.
-            if (chips.isNotEmpty()) {
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        .tapeClick(label = "ALL") { chips = emptySet() }
-                        .padding(horizontal = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    TapeText("ALL", TapeType.pixel, scheme.accent.tape)
-                }
-            }
-            LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Pinned at the row's start and outside the scrolling list, so it is in view the
+            // moment the first chip goes on and never scrolls away. The list gives it the room.
+            if (chips.isNotEmpty()) AllChip { chips = emptySet() }
+            LazyRow(
+                Modifier.weight(1f).fadeEdges(chipRow),
+                state = chipRow,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
                 items(EngineCategory.entries, key = { it.name }) { category ->
                     val on = category in chips
                     CategoryChip(category.label, on) { chips = if (on) chips - category else chips + category }
@@ -376,14 +376,14 @@ internal fun EnginePickerContent(
                 if (recent.isNotEmpty()) {
                     item(key = "header:recent") { SectionHeader("RECENT") }
                     items(recent, key = { "recent:$it" }) { name ->
-                        EngineRow(name, voicesOf(name), name == current, onPick)
+                        EngineRow(name, voicesOf(name), query, name == current, onPick)
                     }
                 }
                 item(key = "header:all") {
                     SectionHeader(if (filtered) "RESULTS (${results.size})" else "ALL ENGINES (${results.size})")
                 }
                 items(results, key = { "all:$it" }) { name ->
-                    EngineRow(name, voicesOf(name), name == current, onPick)
+                    EngineRow(name, voicesOf(name), query, name == current, onPick)
                 }
             }
         }
@@ -451,8 +451,8 @@ private fun SearchField(query: String, onQuery: (String) -> Unit) {
  * every scheme and to anyone who cannot tell two colours apart.
  *
  * The touch target is [Layout.MIN_HIT_TARGET] tall and the chip is drawn inside
- * it. `tapeClick` makes every control a button; this one is a check box, and a
- * screen reader is told so, and told whether it is selected.
+ * it. `tapeClick` makes every control a button; this one is a check box (`toggleable`,
+ * so a screen reader is told it is one, and whether it is checked).
  */
 @Composable
 private fun CategoryChip(label: String, on: Boolean, onToggle: () -> Unit) {
@@ -461,16 +461,14 @@ private fun CategoryChip(label: String, on: Boolean, onToggle: () -> Unit) {
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-            .clickable(
+            .toggleable(
+                value = on,
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 role = Role.Checkbox,
-                onClick = onToggle,
+                onValueChange = { onToggle() },
             )
-            .semantics {
-                selected = on
-                contentDescription = label
-            }
+            .semantics { contentDescription = label }
             .padding(vertical = 6.dp)
             .let { if (on) it.background(scheme.ink.tape, shape) else it.border(1.dp, scheme.ink3.tape, shape) }
             .padding(horizontal = 12.dp),
@@ -479,6 +477,60 @@ private fun CategoryChip(label: String, on: Boolean, onToggle: () -> Unit) {
         TapeText(label, TapeType.pixel, if (on) scheme.gray.tape else scheme.ink.tape)
     }
 }
+
+/**
+ * ALL: clears the chips. A button and not a toggle, drawn as a chip (an outline, in the
+ * accent) so it reads as one of the row, and at least [Layout.MIN_HIT_TARGET] wide as well
+ * as tall: its three letters alone are about a third of that.
+ */
+@Composable
+private fun AllChip(onClear: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+            .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+            .tapeClick(label = "ALL", onClick = onClear)
+            .padding(vertical = 6.dp)
+            .border(1.dp, scheme.accent.tape, RoundedCornerShape(2.dp))
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText("ALL", TapeType.pixel, scheme.accent.tape)
+    }
+}
+
+/** How wide the fade is where a scrolling row runs on past its edge. */
+private val EDGE_FADE = 28.dp
+
+/**
+ * Fades the end of a scrolling row that has more beyond it, at the trailing edge and, once
+ * it has scrolled, the leading one, so that a chip cut off by the edge reads as "more this
+ * way" and not as a chip with its end missing. The fades are drawn only while there is
+ * something to scroll to, read in the draw phase so a scroll redraws and recomposes nothing.
+ */
+private fun Modifier.fadeEdges(state: LazyListState): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val width = EDGE_FADE.toPx()
+        if (state.canScrollForward) {
+            drawRect(
+                brush = Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - width, endX = size.width),
+                topLeft = Offset(size.width - width, 0f),
+                size = Size(width, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+        if (state.canScrollBackward) {
+            drawRect(
+                brush = Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = width),
+                topLeft = Offset.Zero,
+                size = Size(width, size.height),
+                blendMode = BlendMode.DstIn,
+            )
+        }
+    }
 
 /** A heading over a run of rows. */
 @Composable
@@ -493,12 +545,13 @@ private fun SectionHeader(text: String) {
 
 /**
  * One engine: its name (with ● CURRENT on the one SYNTH is on), what it is, and
- * the voices it has, the last in the quieter ink and smaller. At least [ROW_MIN_H]
- * tall, and a button named "name, description" so a screen reader gets both in
- * one breath. An engine the catalogue does not know shows its name alone.
+ * the voices it has, the last in the quieter ink and smaller, with the ones the
+ * [query] matched first. At least [ROW_MIN_H] tall, and a button named "name,
+ * description" so a screen reader gets both in one breath. An engine the catalogue
+ * does not know shows its name alone.
  */
 @Composable
-private fun EngineRow(name: String, voices: List<String>, isCurrent: Boolean, onPick: (String) -> Unit) {
+private fun EngineRow(name: String, voices: List<String>, query: String, isCurrent: Boolean, onPick: (String) -> Unit) {
     val scheme = LocalScheme.current
     val display = name.replace('_', ' ')
     val description = EngineCatalog.entry(name)?.description.orEmpty()
@@ -521,7 +574,7 @@ private fun EngineRow(name: String, voices: List<String>, isCurrent: Boolean, on
             if (description.isNotEmpty()) {
                 TapeText(description, TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
             }
-            val line = engineVoicesLine(voices)
+            val line = engineVoicesLine(voices, query = query)
             if (line.isNotEmpty()) {
                 TapeText(line, TapeType.pixel, scheme.ink2.tape, maxLines = 2)
             }

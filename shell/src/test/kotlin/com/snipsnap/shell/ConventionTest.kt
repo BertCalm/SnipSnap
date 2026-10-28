@@ -1274,13 +1274,12 @@ class ConventionTest {
     private fun pickerEngineConstants(source: String, where: String): List<String> {
         val open = Regex("""private enum class Engine \{""").find(source)
             ?: fail("could not find `private enum class Engine { ...; }` in $where; the picker moved, so move this law with it")
-        val tail = source.substring(open.range.last + 1)
+        // Comments out first, so a `;` or a `}` written in one cannot end the constants early.
+        val tail = stripCommentsAndStrings(source.substring(open.range.last + 1))
         val body = tail.substring(0, tail.indexOfFirst { it == ';' || it == '}' }.also {
             if (it < 0) fail("`private enum class Engine` in $where never ends its constants with `;` or `}`")
         })
-        val constants = body.replace(Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL), " ")
-            .replace(Regex("""//[^\n]*"""), " ")
-            .split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        val constants = body.split(',').map { it.trim() }.filter { it.isNotEmpty() }
         for (c in constants) {
             if (!Regex("""[A-Z][A-Z_0-9]*""").matches(c)) {
                 fail("`Engine` in $where has a constant this law cannot read: \"$c\". It reads plain names only; extend it before giving a constant arguments or a body.")
@@ -1361,6 +1360,26 @@ class ConventionTest {
         assertTrue(unreadable is AssertionError && "THUMP(1)" in unreadable.message.orEmpty(), "an argument must be refused by name: $unreadable")
         val moved = runCatching { pickerEngineConstants("enum class Elsewhere { THUMP; }", "synthetic") }.exceptionOrNull()
         assertTrue(moved is AssertionError, "a missing enum must fail, not read as empty: $moved")
+    }
+
+    /**
+     * The other positive control: a `;` or a `}` written inside a comment among the constants must
+     * not end the constants early. The parse used to cut at the first `;` it met and strip comments
+     * after, so an engine added below a comment with a semicolon in it would have been dropped from
+     * the list and so passed the law unread.
+     */
+    @Test
+    fun `law - the picker's constants are read through comments that hold a semicolon or a brace`() {
+        val commented = """
+            private enum class Engine {
+                THUMP, // a semicolon; in a line comment
+                SKIN, /* a brace } and a semicolon; in a block comment */
+                // GHOSTWHEEL is commented out, so it is not an engine
+                ONSET;
+                val displayName get() = name
+            }
+        """.trimIndent()
+        assertEquals(listOf("THUMP", "SKIN", "ONSET"), pickerEngineConstants(commented, "synthetic"))
     }
 
     // ---- Law: nobody takes a voice allocation and drops the casualties ----

@@ -1,13 +1,12 @@
 package com.snipsnap.app.ui
 
 import android.content.Context
-import androidx.activity.OnBackPressedDispatcher
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
+import android.view.KeyEvent
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.hasClickAction
@@ -30,7 +29,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -52,7 +50,6 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     private val shelf = File(context.cacheDir, "engine-header-${System.nanoTime()}").apply { mkdirs() }
     private val settings = mutableMapOf<String, String>()
     private val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-    private var dispatcher: OnBackPressedDispatcher? = null
 
     @Before
     fun startClean() {
@@ -70,8 +67,6 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
         if (engine != null) settings["engine"] = engine
         setPhoneContent {
             CompositionLocalProvider(LocalReduceMotion provides true) {
-                val owner = LocalOnBackPressedDispatcherOwner.current
-                SideEffect { dispatcher = owner?.onBackPressedDispatcher }
                 SynthScreen(
                     entry = null,
                     shelfRoot = shelf,
@@ -202,11 +197,30 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     fun backClosesTheListAndLeavesTheEngineAlone() {
         show()
         openList()
-        assertNotNull(dispatcher)
-        compose.runOnUiThread { dispatcher!!.onBackPressed() }
+        // The system's own Back key, to the window that has focus: the list's dialog. Not
+        // Espresso's pressBack, which waits for an idle this suite's frozen clock never gives.
+        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         pump()
         assertTrue(!listIsOpen())
         isOn("THUMP")
+    }
+
+    @Test
+    fun pickingTheEngineYouAreOnKeepsItsVoiceAndJustClosesTheList() {
+        // TINES on its second voice. A pick of TINES from the list used to arrive on it afresh: first voice, sound again.
+        settings["voice"] = "CHIME"
+        show("TINES")
+        isOn("TINES")
+        button("CHIME").assertIsSelected()
+        openList()
+        type("tines")
+        row("TINES").performClick()
+        pump()
+        assertTrue("the list closes", !listIsOpen())
+        isOn("TINES")
+        button("CHIME").assertIsSelected()
+        assertEquals("the voice was not reset", "CHIME", settings["voice"])
+        assertEquals("it is still recorded as picked", "TINES", prefs.getString(PREF_RECENT_ENGINES, null))
     }
 
     @Test
@@ -221,7 +235,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     }
 
     @Test
-    fun noEngineNameIsCutShortOnTheHeaderBesideItsVoiceChip() {
+    fun noEngineNameIsCutShortOnTheHeaderBesideItsFirstVoiceChip() {
         show("LATTICE")
         val seen = mutableListOf<String>()
         repeat(EngineCatalog.ENTRIES.size) {

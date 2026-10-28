@@ -1,12 +1,13 @@
 package com.snipsnap.app.ui
 
 import androidx.activity.OnBackPressedDispatcher
-import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
-import androidx.compose.runtime.CompositionLocalProvider
+import androidx.activity.findViewTreeOnBackPressedDispatcherOwner
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -14,15 +15,18 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsOff
+import androidx.compose.ui.test.assertIsOn
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.click
 import androidx.compose.ui.test.getBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
@@ -89,14 +93,19 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         dismissed = 0
         setPhoneContent(settleMillis) {
             CompositionLocalProvider(LocalReduceMotion provides still) {
-                val owner = LocalOnBackPressedDispatcherOwner.current
-                SideEffect { dispatcher = owner?.onBackPressedDispatcher }
                 BottomSheet("CHOOSE AN ENGINE", onDismiss = { dismissed++ }) {
+                    // The sheet is a dialog, with a back dispatcher of its own, which the activity's
+                    // is not: take it from the view this content is in.
+                    val view = LocalView.current
+                    SideEffect { dispatcher = view.findViewTreeOnBackPressedDispatcherOwner()?.onBackPressedDispatcher }
                     TapeText("the body of the sheet", TapeType.pixelSmall, LocalScheme.current.ink.tape)
                 }
             }
         }
     }
+
+    /** The sheet's own window: a dialog, so the activity's root is not the one to measure against. */
+    private fun dialogBounds() = compose.onNode(isDialog()).getBoundsInRoot()
 
     /** The engines listed now, top to bottom, read off the rows' names ("SCANNED CHAIN, Evolving ..."). */
     private fun rows(): List<String> =
@@ -175,14 +184,14 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         show()
         toggle("BASS")
         assertEquals(listOf("FATHOM", "VELVET"), rows())
-        button("BASS").assertIsSelected()
+        button("BASS").assertIsOn()
         toggle("DRUMS & PERCUSSION")
         // OR across the chips: the drums join the bass engines. TINES is tagged drums second.
         assertEquals(listOf("FATHOM", "ONSET", "THUMP", "TINES", "VELVET"), rows())
-        button("DRUMS & PERCUSSION").assertIsSelected()
+        button("DRUMS & PERCUSSION").assertIsOn()
         toggle("BASS")
         assertEquals(listOf("ONSET", "THUMP", "TINES"), rows())
-        button("BASS").assertIsNotSelected()
+        button("BASS").assertIsOff()
     }
 
     @Test
@@ -200,11 +209,19 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         show()
         assertTrue("no ALL chip with every chip off", compose.onAllNodes(hasContentDescription("ALL")).fetchSemanticsNodes().isEmpty())
         toggle("BASS")
+        // A thumb target both ways (its three letters alone are about a third of 48 dp wide), and
+        // pinned ahead of the chips, which scroll in the space it leaves.
+        button("ALL").assertWidthIsAtLeast(48.dp)
+        button("ALL").assertHeightIsAtLeast(48.dp)
+        assertTrue(
+            "ALL comes before the first chip",
+            button("ALL").getBoundsInRoot().right <= button("DRUMS & PERCUSSION").getBoundsInRoot().left,
+        )
         toggle("DRUMS & PERCUSSION")
         button("ALL").performClick()
         pump()
         assertEquals(aToZ, rows())
-        button("BASS").assertIsNotSelected()
+        button("BASS").assertIsOff()
         assertTrue(compose.onAllNodes(hasContentDescription("ALL")).fetchSemanticsNodes().isEmpty())
     }
 
@@ -214,9 +231,9 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         val chip = button("BASS")
         chip.assertHeightIsAtLeast(48.dp)
         assertEquals(Role.Checkbox, chip.fetchSemanticsNode().config[SemanticsProperties.Role])
-        chip.assertIsNotSelected()
+        chip.assertIsOff()
         toggle("BASS")
-        chip.assertIsSelected()
+        chip.assertIsOn()
     }
 
     // ---- no match ----
@@ -232,7 +249,7 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         pump()
         assertEquals(aToZ, rows())
         assertTrue(!exists("No engines match."))
-        button("BASS").assertIsNotSelected()
+        button("BASS").assertIsOff()
         assertTrue("the search box is empty again", exists("Search engines or sounds"))
     }
 
@@ -285,6 +302,29 @@ class EnginePickerSheetTest : ComposeScreenTest() {
     }
 
     @Test
+    fun theSearchFindsADescriptionAtTheStartOfAWordAndACategoryLabel() {
+        show()
+        // THUMP: "Analog-style kick, ..." in its description, in no voice or name.
+        type("analog")
+        assertEquals(listOf("THUMP"), rows())
+        type("nalog")
+        assertTrue("the middle of a word is no match", exists("No engines match."))
+        // The label of the DRUMS & PERCUSSION chip, which is on three engines' tags.
+        type("percussion")
+        assertEquals(listOf("ONSET", "THUMP", "TINES"), rows())
+    }
+
+    @Test
+    fun theVoicesAQueryHitComeFirstInTheVoicesLine() {
+        show()
+        // VELVET has six voices; ACID is the fifth, behind the "+2", until the query puts it first.
+        type("acid")
+        assertEquals(listOf("VELVET"), rows())
+        assertTrue(exists("ACID · BASS · BRASS · SQUELCH +2"))
+        assertTrue("the unfiltered line is unchanged", !exists("BASS · BRASS · SQUELCH · CHIP +2"))
+    }
+
+    @Test
     fun theCurrentEngineIsMarkedOnce() {
         show(current = "FATHOM")
         assertEquals(1, compose.onAllNodesWithText("● CURRENT", useUnmergedTree = true).fetchSemanticsNodes().size)
@@ -311,7 +351,7 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         showSheet()
         assertTrue(exists("CHOOSE AN ENGINE"))
         val panel = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).getBoundsInRoot()
-        val root = compose.onRoot().getBoundsInRoot()
+        val root = dialogBounds()
         val share = panel.height.value / root.height.value
         assertTrue("the panel is $share of the height", share in 0.85f..0.91f)
         assertEquals("the panel is anchored at the bottom", root.bottom.value, panel.bottom.value, 1f)
@@ -367,7 +407,7 @@ class EnginePickerSheetTest : ComposeScreenTest() {
     @Test
     fun withMotionAllowedTheSheetSlidesUpOver200Ms() {
         showSheet(still = false, settleMillis = 0)
-        val root = compose.onRoot().getBoundsInRoot()
+        val root = dialogBounds()
         val start = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).getBoundsInRoot()
         assertTrue("the panel starts below the bottom edge: ${start.top} of ${root.bottom}", start.top >= root.bottom - 1.dp)
         pump(100)
@@ -381,7 +421,7 @@ class EnginePickerSheetTest : ComposeScreenTest() {
     @Test
     fun withReducedMotionTheSheetIsSeatedFromTheFirstFrame() {
         showSheet(still = true, settleMillis = 0)
-        val root = compose.onRoot().getBoundsInRoot()
+        val root = dialogBounds()
         val panel = compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).getBoundsInRoot()
         assertEquals(root.bottom.value, panel.bottom.value, 1f)
     }

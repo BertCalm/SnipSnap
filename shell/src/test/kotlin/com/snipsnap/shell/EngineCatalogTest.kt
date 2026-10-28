@@ -118,7 +118,9 @@ class EngineCatalogTest {
 
     @Test
     fun `hat finds ONSET through HAT_CLOSED and HAT_OPEN`() {
-        assertEquals(listOf("ONSET"), filter("hat"))
+        assertTrue("ONSET" in filter("hat"), "hat must find ONSET: ${filter("hat")}")
+        // The voice alone is enough: an engine the catalogue has never heard of, so no description to help.
+        assertEquals(listOf("MYSTERY"), filterEngines(listOf("MYSTERY"), { listOf("HAT_CLOSED") }, "hat", emptySet()))
     }
 
     @Test
@@ -146,7 +148,57 @@ class EngineCatalogTest {
     fun `a query matches in the middle of a name or a voice, not only at the start`() {
         assertEquals(listOf("TINES"), filter("alim"))
         assertEquals(listOf("SCANNED_CHAIN"), filter("ned ch"))
-        assertEquals(listOf("RESIN", "VELVET"), filter("bass"))
+        assertEquals(listOf("MYSTERY"), filterEngines(listOf("MYSTERY"), { listOf("COWBELL") }, "bell", emptySet()))
+    }
+
+    @Test
+    fun `a description is searched at the start of a word, never in the middle of one`() {
+        // THUMP's "Analog-style kick" and RESIN's "Fat analog-style bass": a word after a hyphen is a word.
+        assertEquals(listOf("RESIN", "THUMP"), filter("analog"))
+        assertEquals(listOf("RESIN", "THUMP"), filter("ANALOG-STYLE"))
+        assertEquals(emptyList(), filter("nalog"), "the middle of a word in a description is not a match")
+        // "that" is in ORPHICA's, MERCURY's and FLOCK's descriptions; hat must not find them through it.
+        assertEquals(listOf("ORPHICA"), filterEngines(listOf("ORPHICA"), { emptyList() }, "that", emptySet()))
+        assertEquals(emptyList(), filterEngines(listOf("ORPHICA", "MERCURY", "FLOCK"), { emptyList() }, "hat", emptySet()))
+    }
+
+    @Test
+    fun `a category label is searched at the start of a word`() {
+        // "organs" is in no description in the fixture, only in the label of the KEYS & ORGANS chip.
+        assertEquals(listOf("TONEWHEEL"), filter("organs"), "KEYS & ORGANS must be found by organs")
+        assertEquals(listOf("ONSET", "THUMP", "TINES"), filter("percussion"), "DRUMS & PERCUSSION, and TINES's own words")
+        assertEquals(listOf("FATHOM", "RESIN", "VELVET"), filter("bass"), "the BASS label, the bass voices and the bass descriptions")
+        assertEquals(emptyList(), filter("ercussion"))
+    }
+
+    @Test
+    fun `the whole catalogue answers a search for a sound`() {
+        val all = EngineCatalog.ENTRIES.keys.toList()
+        // No voices: only the name, the description and the category labels speak, which is the part under test here.
+        fun find(query: String) = filterEngines(all, { emptyList() }, query, emptySet())
+
+        val bell = find("bell")
+        for (engine in listOf("THAW", "NIMBUS", "COROLLA", "MERCURY", "TESSERA")) {
+            assertTrue(engine in bell, "bell must find $engine; it found $bell")
+        }
+        val taggedBells = all.filter { EngineCategory.BELLS in EngineCatalog.entry(it)!!.categories }
+        assertTrue(bell.containsAll(taggedBells), "every BELLS & MALLETS engine is a bell: missing ${taggedBells - bell.toSet()}")
+
+        val bass = find("bass")
+        assertTrue("FATHOM" in bass, "bass must find FATHOM: $bass")
+        val taggedBass = all.filter { EngineCategory.BASS in EngineCatalog.entry(it)!!.categories }
+        assertTrue(bass.containsAll(taggedBass), "every BASS engine is a bass: missing ${taggedBass - bass.toSet()}")
+
+        val organ = find("organ")
+        for (engine in listOf("TONEWHEEL", "REGISTERS")) assertTrue(engine in organ, "organ must find $engine: $organ")
+        val taggedKeys = all.filter { EngineCategory.KEYS in EngineCatalog.entry(it)!!.categories }
+        assertTrue(organ.containsAll(taggedKeys), "every KEYS & ORGANS engine is an organ search hit: missing ${taggedKeys - organ.toSet()}")
+
+        val hat = find("hat")
+        assertEquals(listOf("ONSET", "SKIN", "THUMP"), hat, "the hats in the descriptions, and no that")
+        for (engine in listOf("ORPHICA", "MERCURY", "FLOCK", "NIMBUS", "OBBLIGATO", "RELAY", "SUTURE", "LATTICE")) {
+            assertFalse(engine in hat, "$engine says that, not hat: $hat")
+        }
     }
 
     @Test
@@ -196,9 +248,10 @@ class EngineCatalogTest {
         assertEquals(emptyList(), filter(of = emptyList()))
         assertEquals(emptyList(), filter("kick", of = emptyList()))
         assertEquals(emptyList(), filter(categories = setOf(EngineCategory.BASS), of = emptyList()))
-        // No voices at all: only the name can match.
-        assertEquals(emptyList(), filterEngines(names, { emptyList() }, "kick", emptySet()))
+        // No voices at all: the name, the description and the category labels can still match.
+        assertEquals(listOf("ONSET", "THUMP"), filterEngines(names, { emptyList() }, "kick", emptySet()), "kick is in two descriptions")
         assertEquals(listOf("THUMP"), filterEngines(names, { emptyList() }, "thump", emptySet()))
+        assertEquals(emptyList(), filterEngines(names, { emptyList() }, "zzqx", emptySet()))
     }
 
     @Test
@@ -241,6 +294,26 @@ class EngineCatalogTest {
     @Test
     fun `the voices line reads an underscore as a space`() {
         assertEquals("KICK · HAT CLOSED · HAT OPEN", engineVoicesLine(listOf("KICK", "HAT_CLOSED", "HAT_OPEN")))
+    }
+
+    @Test
+    fun `the voices a query hit come first, so a hit through a voice is not hidden in the count`() {
+        val thump = listOf("KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN", "CLAP", "TOM", "COWBELL", "RIM", "SPARK")
+        assertEquals("KICK · SNARE · HAT CLOSED · HAT OPEN +5", engineVoicesLine(thump))
+        // COWBELL was the seventh voice and so behind the "+5"; bell brings it to the front.
+        assertEquals("COWBELL · KICK · SNARE · HAT CLOSED +5", engineVoicesLine(thump, query = "bell"))
+        // Several hits keep their own order, ahead of the rest in theirs.
+        assertEquals("HAT CLOSED · HAT OPEN · KICK · SNARE +5", engineVoicesLine(thump, query = "hat"))
+        // Underscore and space are one character here too; case does not matter.
+        assertEquals("HAT CLOSED · KICK · SNARE · HAT OPEN +5", engineVoicesLine(thump, query = "Hat_Closed"))
+    }
+
+    @Test
+    fun `a query no voice answers leaves the voices line as it was`() {
+        val voices = listOf("KICK", "SNARE", "CLAP", "TOM", "RIM")
+        assertEquals(engineVoicesLine(voices), engineVoicesLine(voices, query = "analog"))
+        assertEquals(engineVoicesLine(voices), engineVoicesLine(voices, query = ""))
+        assertEquals(engineVoicesLine(voices), engineVoicesLine(voices, query = "   "))
     }
 
     // ---- RecentEngines ----

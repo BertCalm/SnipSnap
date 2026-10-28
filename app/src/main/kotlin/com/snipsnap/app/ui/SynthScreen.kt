@@ -3315,7 +3315,9 @@ fun SynthScreen(
                 recents = enginePicker.recents,
                 onPick = { name ->
                     enginePicker.open = false
-                    arrive(Engine.valueOf(name))
+                    // The engine it is already on is not an arrival: arriving resets the voice and
+                    // plays the sound again, and a pick that was a look at the list has asked for neither.
+                    if (name != engine.name) arrive(Engine.valueOf(name))
                     enginePicker.picked(name)
                 },
                 onDismiss = { enginePicker.open = false },
