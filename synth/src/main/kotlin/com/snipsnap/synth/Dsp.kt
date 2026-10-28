@@ -813,6 +813,23 @@ internal object Dsp {
     }
 
     /**
+     * [fadeTail] on a raised cosine over the last [seconds], per frame like it: gain 1 where the fade starts, falling
+     * smoothly to near 0 at the last frame. A long fade wants the cosine, not the line: it leaves the start of the window
+     * almost untouched and has no corner where the slope jumps, so a trail fades away rather than being turned down.
+     */
+    fun fadeTailCosine(buf: FloatArray, seconds: Float, rate: Int = RATE, channels: Int = 1) {
+        if (buf.isEmpty() || channels < 1) return
+        val frames = buf.size / channels
+        val n = min(frames, (seconds * rate).toInt())
+        if (n <= 0) return
+        val start = frames - n
+        for (f in start until frames) {
+            val g = (0.5 + 0.5 * cos(PI * (f - start) / n)).toFloat()
+            for (c in 0 until channels) buf[f * channels + c] *= g
+        }
+    }
+
+    /**
      * A variable-speed head: for each output frame, [headAt] says where to
      * read (fractional) and how loud. Linearly interpolated between
      * neighbours by default; a position at or past the last source frame, or a zero
