@@ -1882,6 +1882,20 @@ tasks.register<JavaExec>("generateSkitterDepthAudition") {
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 
+/** Focused BASS R8/R9 proof across C1/C2/C3, preserving normal depth processing. */
+tasks.register<JavaExec>("generateSkitterBassAudition") {
+    group = "distribution"
+    description = "Render BASS register pairs. Requires -PskitterProofSource=<full SHA> and -PskitterBassBaseline=<sealed R8 snapshot>."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterBassAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-bass")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterBassBaseline")) args("--baseline=${project.property("skitterBassBaseline")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"
