@@ -443,6 +443,12 @@ testkit/bellows-playback-audition/
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
 
+# OBLITERATE core prototype: reproducible Kotlin inputs and Python auditions.
+testkit/obliterate-core-inputs/
+testkit/obliterate-core-audition/
+testkit/obliterate-kotlin-audition/
+experiments/obliterate-core/__pycache__/
+
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
 testkit/thump-spark-audition/
 
