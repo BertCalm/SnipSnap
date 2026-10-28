@@ -894,10 +894,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, CHAMBER, PRISM and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, CHAMBER, PRISM, CAUSTIC and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is ChamberPatch ||
-            patch is PrismPatch ||
+            patch is PrismPatch || patch is CausticPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1503,12 +1503,12 @@ fun SynthScreen(
             rendering = false
             return@LaunchedEffect
         }
-        delay(MACRO_DEBOUNCE_MS)
-        val effectJob = coroutineContext[Job]
-        val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
-        try {
-            val previewJob = coroutineContext[Job]
-            val rendered = offMainInterruptible(Dispatchers.Default) {
+        val previewJob = coroutineContext[Job]
+        renderSynthPreview(
+            debounceMillis = MACRO_DEBOUNCE_MS,
+            shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
+            onRendering = { rendering = it },
+            render = {
                 val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.CHAMBER)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
@@ -1541,23 +1541,18 @@ fun SynthScreen(
                 // native OPENSKY renderer above keeps its cancellation hook.
                 if (activeRecipe != null) activeRecipe.process(dry)
                 else Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
-            }
-            coroutineContext.ensureActive()
-            if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) return@LaunchedEffect
-            snip = rendered
-            if (touched) audition(rendered, allowLoop = true)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.e("SynthScreen", "render: failed", e)
-            onToast(Copy.RENDER_FAILED)
-        } finally {
-            shimmerJob.cancel()
-            // A cancelled preview belongs to a screen that is already leaving.
-            // Writing rendering here reapplies the last frame and the engine
-            // control stays in the tree after the bench is hidden.
-            if (effectJob?.isCancelled == false) rendering = false
-        }
+            },
+            publish = { rendered ->
+                if (engine != Engine.PRISM || !prismMotionStudio.ownsPreview) {
+                    snip = rendered
+                    if (touched) audition(rendered, allowLoop = true)
+                }
+            },
+            onFailure = { failure ->
+                Log.e("SynthScreen", "render: failed", failure)
+                onToast(Copy.RENDER_FAILED)
+            },
+        )
     }
 
     // ---- SEND TO PAD ----

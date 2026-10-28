@@ -375,6 +375,9 @@ testkit/alloy-contrast/
 # Selected Alloy voices, full factory roster and replayable release diagnostics.
 testkit/alloy-selected/
 
+# Listening-approved Alloy role bank and regenerated MPC programs.
+testkit/alloy-factory/
+
 # Relay musical bank and starter-pad performance renders.
 testkit/relay-performance-audition/
 
@@ -474,3 +477,11 @@ testkit/crease-release-experiment/
 testkit/caustic-native-voices-audition/
 testkit/caustic-native-voices-kit/
 testkit/.caustic-native-*/
+
+# Regenerable, opt-in OVERLAP held keygroup hardware trial.
+testkit/overlap-held-keygroup/
+# Same-parent temporary staging is also generated output, including custom destinations.
+.overlap-held-keygroups-*/
+
+# SCOUR R1 listening gate; regenerate with ./gradlew :synth:generateScourAudition.
+testkit/scour-audition/

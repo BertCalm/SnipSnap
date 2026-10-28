@@ -160,14 +160,14 @@ class ScannedChainPatchTest {
     }
 
     @Test
-    fun `three factory presets are registered as finite dry tonal sounds`() {
+    fun `factory presets are registered as finite dry tonal sounds`() {
         val presets = ScannedChainPresets.all()
-        assertEquals(3, presets.size)
+        assertEquals(9, presets.size)
         assertEquals(ScannedChainVoice.entries.toSet(), presets.map { it.voice }.toSet())
         assertEquals(presets, Presets.all().filter { it.engine == ScannedChainPatch.ENGINE })
-        assertEquals(3, presets.map { it.name }.toSet().size)
+        assertEquals(9, presets.map { it.name }.toSet().size)
         for (patch in presets) {
-            assertEquals(listOf(patch), Presets.forVoice(patch.engine, patch.voiceName))
+            assertEquals(ScannedChainPresets.forVoice(patch.voice), Presets.forVoice(patch.engine, patch.voiceName))
             assertEquals(patch, Presets.byName(patch.engine, patch.voiceName, patch.name))
             assertEquals(setOf("MOTION", "DAMP", "BEND", "BLOOM"), patch.macros.keys)
             assertEquals(DrumClass.TONAL, ScannedChain.drumClassFor(patch.voice, patch.macros))

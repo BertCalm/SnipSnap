@@ -265,3 +265,15 @@ The picks split by source, and the three chosen media lie on one line (TIGHT, SH
 The last row is the one to re-hear. On the old medium, YIELD 0.25 was harsher on a kick's body than YIELD 0: the harsh middle the owner kept at the first gate. On the TIGHT medium that middle no longer reads harsher on this kick. The medium changes the peak the flow threshold is set against. This is disclosed, not fixed, because the owner heard TIGHT only at CHARGE 1 and on the chip, never at YIELD 0.25.
 
 The CHARGE 0 path is untouched: the neutral point, the folder's aliasing and the hat's classes measure as before. The chip (`forged`) now renders with the TIGHT medium, and `ForgeTest` still pins it sample for sample to `Forge.process` at its settings.
+
+## DEPTH, the fifth knob (2026-10-28)
+
+The owner asked for the DEPTH knob, the way back to the media the bell and the chop preferred at the CHARGE gate. `Forge.MACROS` gains `DEPTH`, appended after the owner's four. Its default and neutral are both 0, so a recipe saved before it, and the FORGE chip, render exactly as before. A hash over three pads at four settings matched with and without the change. DEPTH is inert at CHARGE 0, where there is no medium, as STANDOFF is inert without a shock.
+
+`Forge.Medium.forDepth` lands exactly on the three heard media: 0 is TIGHT (`Medium.SHIPPED`, the kick's and the snare's pick), 0.5 is SHORT (the bell's), and 1 is AS BUILT (the chop's). From 0 to 0.5 the band slides on a log scale from 1.2–8 kHz to 300 Hz–6 kHz, with twelve sections throughout. From 0.5 to 1 the band holds and the sections double, 12 to 24, a whole section at a time.
+
+| DEPTH | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| A 0.8 ms click's 90 % width at CHARGE 1 (`ForgeTest`) | 2.97 ms | 4.74 ms | 7.83 ms | 11.31 ms | 13.97 ms |
+
+The three endpoints were heard at the CHARGE gate; the steps between them were not. The tuning audition still renders its four named candidates directly.

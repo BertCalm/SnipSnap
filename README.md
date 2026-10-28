@@ -1143,8 +1143,8 @@ loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
 transient), FORGE (a hit formed against a die: a low shock, an all-pass
-sweep, the fast part folded and the slow part left, then a ceiling that
-closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
+sweep as deep as DEPTH asks, the fast part folded and the slow part left,
+then a ceiling that closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
 on the pedal row since its listening gate, see
 [`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
 RING (the sound multiplied by a sine — metal, bells, radio;

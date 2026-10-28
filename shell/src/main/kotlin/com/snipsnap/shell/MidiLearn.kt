@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.Scales
 import com.snipsnap.kit.MidiWire
 import kotlin.math.abs
 
@@ -156,14 +157,23 @@ class MidiLearn(bindings: List<MidiBinding> = emptyList()) {
     var armed: String? = null
         private set
 
-    /** The next learnable message binds to [target]. */
-    fun arm(target: String) {
+    /** The mode [armed]'s control gets, where its kind allows it. */
+    private var prefer: MidiBinding.Mode? = null
+
+    /**
+     * The next learnable message binds to [target]. [prefer] is the mode the
+     * target wants (a HOLD wants MOMENTARY, so a key holds rather than fires);
+     * a control whose kind cannot have it gets its kind's default instead.
+     */
+    fun arm(target: String, prefer: MidiBinding.Mode? = null) {
         require(target.isNotBlank()) { "a binding needs a target" }
         armed = target
+        this.prefer = prefer
     }
 
     fun disarm() {
         armed = null
+        prefer = null
     }
 
     /** Drop [target]'s binding, if it has one. */
@@ -203,10 +213,11 @@ class MidiLearn(bindings: List<MidiBinding> = emptyList()) {
     }
 
     private fun learn(target: String, source: MidiBinding.Source, event: MidiWire.Event): Result {
-        val binding = MidiBinding(source, target, MidiBinding.defaultMode(source.kind))
+        val mode = prefer?.takeIf { it in MidiBinding.modesFor(source.kind) } ?: MidiBinding.defaultMode(source.kind)
+        val binding = MidiBinding(source, target, mode)
         list.removeAll { it.target == target || it.source == source }
         list += binding
-        armed = null
+        disarm()
         caught += source
         val actions = when (binding.mode) {
             MidiBinding.Mode.TRIGGER -> emptyList()
@@ -324,6 +335,40 @@ class MidiLearn(bindings: List<MidiBinding> = emptyList()) {
             is MidiWire.Event.ChannelPressure -> event.value / 127f
             is MidiWire.Event.PolyPressure -> event.value / 127f
             else -> null
+        }
+
+        /**
+         * A source as the learn panel names it: `CC 74 CH 1`, `NOTE C3 CH 10`,
+         * `BEND CH 1`. Channels count from 1, as a keyboard's own screen does.
+         */
+        fun describe(source: MidiBinding.Source): String {
+            val ch = "CH ${source.channel + 1}"
+            return when (source.kind) {
+                MidiBinding.Kind.NOTE -> "NOTE ${Scales.nameOf(source.number)} $ch"
+                MidiBinding.Kind.CC -> "CC ${source.number} $ch"
+                MidiBinding.Kind.PITCH -> "BEND $ch"
+                MidiBinding.Kind.CHANNEL_PRESSURE -> "PRESSURE $ch"
+                MidiBinding.Kind.POLY_PRESSURE -> "PRESSURE ${Scales.nameOf(source.number)} $ch"
+                MidiBinding.Kind.PROGRAM -> "PROGRAM ${source.number + 1} $ch"
+            }
+        }
+
+        /**
+         * The last message heard, as the learn panel shows it live: the
+         * source and, for a continuous one, where it sits (`CC 74 CH 1  64`);
+         * null for the messages nothing can learn.
+         */
+        fun heard(event: MidiWire.Event): String? {
+            val source = sourceOf(event, null) ?: return null
+            val name = describe(source)
+            return when (event) {
+                is MidiWire.Event.Control -> "$name  ${event.value}"
+                is MidiWire.Event.PitchBend -> "$name  ${event.value}"
+                is MidiWire.Event.ChannelPressure -> "$name  ${event.value}"
+                is MidiWire.Event.PolyPressure -> "$name  ${event.value}"
+                is MidiWire.Event.NoteOff -> "$name  OFF"
+                else -> name
+            }
         }
 
         private fun scale(binding: MidiBinding, position: Float): Float =

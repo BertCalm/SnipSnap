@@ -188,13 +188,15 @@ object PedalListensGenerator {
         val capFrames = (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
         fun gate(source: String, dry: Snip, id: String, label: String, out: Snip) {
             write(source, id, label, out)
-            // The spec's tail-cap hazard, re-measured on the clips the owner hears: where the rack's cut lands, if it does.
+            // The spec's tail-cap hazard, re-measured on the clips the owner hears: how loud the trail is where the rack's
+            // cut begins, if it does. The window ends where the cut's fade starts (CAP_FADE_SECONDS from the end, 10 ms
+            // before 2026-10-28), so it reads the trail the fade meets, not the fade itself.
             if (out.frameCount >= dry.frameCount + capFrames) {
                 val r = out.sampleRate
-                val end = out.frameCount - (0.01f * r).toInt()
+                val end = out.frameCount - (FxChain.CAP_FADE_SECONDS * r).toInt()
                 var cut = 0f
                 for (i in (end - (0.02f * r).toInt()) * out.channels until end * out.channels) cut = maxOf(cut, kotlin.math.abs(out.samples[i]))
-                println("gate cap: $source/$id cut ${"%.1f".format(Locale.ROOT, 20 * kotlin.math.log10(out.peak() / maxOf(cut, 1e-12f)))} dB under the peak")
+                println("gate cap: $source/$id cut begins ${"%.1f".format(Locale.ROOT, 20 * kotlin.math.log10(out.peak() / maxOf(cut, 1e-12f)))} dB under the peak")
             } else println("gate cap: $source/$id ends before the cap")
         }
         for ((name, dry) in linkedMapOf("SNARE" to snare, "CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
