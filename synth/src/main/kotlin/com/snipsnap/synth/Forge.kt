@@ -99,8 +99,16 @@ object Forge {
      */
     internal data class Medium(val sections: Int, val loHz: Float, val hiHz: Float, val q: Float) {
         companion object {
-            /** As heard at the gate (shape; the prototype's 24 spread a 0.2 ms click to 12.5 ms). */
-            val SHIPPED = Medium(24, 300f, 6_000f, 0.7f)
+            /**
+             * TIGHT, the owner's pick at the CHARGE gate (2026-10-27): 12 sections from 1.2 to 8 kHz, a 0.8 ms
+             * click spread to 3.0 ms at CHARGE 1. The kick and the snare picked it, the bell SHORT and the chop
+             * AS_BUILT, and the owner chose one medium for every pad, the drums' (FORGE is for drum one-shots
+             * first). Kept out of the low end, so the bass no longer arrives late as a "pew".
+             */
+            val SHIPPED = Medium(12, 1_200f, 8_000f, 0.7f)
+
+            /** What passed the first gate (2026-10-26): 24 sections from 300 Hz to 6 kHz, a 14.0 ms sweep at CHARGE 1. */
+            val AS_BUILT = Medium(24, 300f, 6_000f, 0.7f)
         }
     }
 

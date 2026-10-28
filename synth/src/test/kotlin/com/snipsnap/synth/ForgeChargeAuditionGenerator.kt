@@ -27,10 +27,10 @@ import kotlin.math.log10
 object ForgeChargeAuditionGenerator {
 
     internal val CANDIDATES: List<Pair<String, Forge.Medium>> = listOf(
-        "AS_BUILT" to Forge.Medium.SHIPPED,
+        "AS_BUILT" to Forge.Medium.AS_BUILT,
         "SHORT" to Forge.Medium(12, 300f, 6_000f, 0.7f),
         "HIGH" to Forge.Medium(24, 1_200f, 8_000f, 0.7f),
-        "TIGHT" to Forge.Medium(12, 1_200f, 8_000f, 0.7f),
+        "TIGHT" to Forge.Medium(12, 1_200f, 8_000f, 0.7f), // shipped since the owner's pick: Forge.Medium.SHIPPED
     )
 
     private val CHIP = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1f)
