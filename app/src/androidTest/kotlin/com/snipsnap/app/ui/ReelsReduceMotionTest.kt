@@ -66,7 +66,8 @@ class ReelsReduceMotionTest : ComposeScreenTest() {
     }
 
     @Test
-    fun the_still_dub_reel_holds_its_spoke_upright() {
+    fun the_still_dub_reel_is_drawn_upright() {
+        // Pins the pose, not the stillness: a cross reads upright every quarter turn, so the test above holds that.
         showOnBlack { DubReel(spinning = true, scheme = scheme, modifier = Modifier.size(20.dp)) }
 
         // An upright cross: ink up the middle and along it, none out on the
