@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Port the approved passive handoff and compare actual Kotlin exports with its retained references. */
+tasks.register<JavaExec>("generateFerryAudition") {
+    group = "distribution"
+    description = "Render Ferry PASSAGE, approved reference comparisons, complete recipes and Kotlin timing evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryOutput").orNull ?: "${rootDir}/testkit/ferry-audition")
+}
+
 /** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
 tasks.register<JavaExec>("generateUprightAudition") {
     group = "distribution"
