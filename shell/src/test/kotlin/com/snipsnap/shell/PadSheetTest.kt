@@ -116,8 +116,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(37, PadSheet.ALL_SEGMENTS.size, "the card should draw 37 chips")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "the card should hold 38 segments")
     }
 
     /**
@@ -128,7 +128,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six and FORGE thirty-seven`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven and DELAY thirty-eight`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -153,32 +153,38 @@ class PadSheetTest {
             "WAH", "TOUCH", "ROCK",
             // the FORGE section's gate (2026-10-26)
             "FORGE",
+            // DELAY's gate (2026-10-28): on the slate, drawn on the default row and behind MORE
+            "DELAY",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(37, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
-    fun `row seven is the library's gated pedals, word for word and key for key`() {
+    fun `the slate is the library's gated pedals, word for word and key for key`() {
         val gated = com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }
-        assertEquals(gated.map { it.word }, PadSheet.PEDAL_SEGMENTS, "the row is not the library's gated pedals")
+        assertEquals(gated.map { it.word }, PadSheet.PEDAL_SEGMENTS, "the slate is not the library's gated pedals")
         for (e in gated) {
             assertEquals(PadSheet.Treatment.Character(e.key), PadSheet.treatmentFor(e.word), "${e.word} does not tap its own key")
         }
         for (e in com.snipsnap.synth.Pedals.entries.filter { !it.gated }) {
-            assertFalse(e.word in PadSheet.ALL_SEGMENTS, "${e.word} draws a chip before its gate")
+            assertFalse(e.word in PadSheet.ALL_SEGMENTS, "${e.word} is on the slate before its gate")
         }
     }
 
     @Test
-    fun `the pedals are the last row, and each chip draws a rack character`() {
-        assertEquals(PadSheet.PEDAL_SEGMENTS, PadSheet.ROWS.last())
+    fun `the pedals are the last row, and each slate pedal draws a rack character`() {
+        // Until the app draws the slate (its app round), row seven is the six it drew before DELAY:
+        // the slate's first six in library order, so no pedal leaves the phone before MORE exists.
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE"), PadSheet.ROWS.last())
+        assertEquals(PadSheet.PEDAL_SEGMENTS.take(PadSheet.MAX_ROW_CHIPS), PadSheet.ROWS.last())
         assertEquals(PadSheet.Treatment.Character("driven"), PadSheet.treatmentFor("DRIVE"))
         assertEquals(PadSheet.Treatment.Character("compressed"), PadSheet.treatmentFor("SUSTAIN"))
         assertEquals(PadSheet.Treatment.Character("wahed"), PadSheet.treatmentFor("WAH"))
         assertEquals(PadSheet.Treatment.Character("touchwahed"), PadSheet.treatmentFor("TOUCH"))
         assertEquals(PadSheet.Treatment.Character("rockwahed"), PadSheet.treatmentFor("ROCK"))
         assertEquals(PadSheet.Treatment.Character("forged"), PadSheet.treatmentFor("FORGE"))
+        assertEquals(PadSheet.Treatment.Character("delayed"), PadSheet.treatmentFor("DELAY"), "DELAY dispatches though today's row does not draw it")
         for (segment in PadSheet.PEDAL_SEGMENTS) {
             val t = PadSheet.treatmentFor(segment)!!
             assertEquals(segment, PadSheet.segmentFor(t), "segmentFor is not treatmentFor's inverse for $segment")
@@ -224,6 +230,42 @@ class PadSheetTest {
         // Row one earned a sixth chip (DUST) from the merged branch, so the
         // ceiling moved from 5 to 6 rather than the regroup's rows growing.
         assertTrue(PadSheet.ROWS.maxOf { it.size } <= 6, "a row wider than 6 makes every chip narrower")
+        assertEquals(6, PadSheet.MAX_ROW_CHIPS)
+        // The slate's card holds the same ceiling: five pedals and MORE.
+        assertTrue(PedalSlate.ROW_SIZE + 1 <= 6, "five pedals and MORE must fit one row")
+        val slateCard = PadSheet.rows(PedalSlate.DEFAULT.words)
+        assertTrue(slateCard.maxOf { it.size } <= 6, "the slate's row seven is wider than 6: ${slateCard.last()}")
+        assertEquals(slateCard.flatten().size, slateCard.flatten().toSet().size, "the slate's card draws a word twice")
+    }
+
+    // ---- the slate's card (docs/superpowers/specs/2026-10-28-pedal-slate-design.md) ----
+
+    @Test
+    fun `the slate's card keeps rows one to six and draws the row's five then MORE`() {
+        val card = PadSheet.rows(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY"))
+        assertEquals(PadSheet.ROWS.dropLast(1), card.dropLast(1), "rows one to six moved")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY", "MORE"), card.last())
+        assertEquals(listOf("TOUCH", "MORE"), PadSheet.rows(listOf("TOUCH")).last(), "a short slate still ends in MORE")
+    }
+
+    @Test
+    fun `the slate's card refuses a word off the slate, a duplicate, an empty row and one with no room for MORE`() {
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "PUNCH")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "RIG")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "MORE")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "DRIVE")) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(emptyList()) }
+        assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE")) }
+    }
+
+    @Test
+    fun `MORE is a sheet affordance, never a segment`() {
+        assertFalse(PadSheet.MORE in PadSheet.ALL_SEGMENTS, "MORE would dispatch as a treatment")
+        assertFalse(PadSheet.ROWS.flatten().contains(PadSheet.MORE), "today's card has no MORE to route")
+        assertFailsWith<IllegalArgumentException> { PadSheet.treatmentFor(PadSheet.MORE) }
+        assertFalse(com.snipsnap.synth.Pedals.entries.any { it.word == PadSheet.MORE }, "a pedal is called MORE")
+        assertEquals("MORE", PadSheet.displayLabel(PadSheet.MORE))
+        assertTrue(PadSheet.tappable(PadSheet.MORE, isNoneState = true), "MORE opens the slate on any pad")
     }
 
     @Test

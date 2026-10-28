@@ -22,8 +22,8 @@ enum class PedalSide(val id: String) {
  * PEDALS row, the CLI `treat --pedals` form, the replay and the tests all
  * read this list; adding a pedal is one [Entry] here plus its listening
  * gate. A pedal that has not passed its gate stays [Entry.gated] false: it
- * draws no chip and is reachable from the CLI and saved kits, the pedal
- * board spec's standing rule for a section that fails its gate.
+ * is not on the sheet's slate and is reachable from the CLI and saved kits,
+ * the pedal board spec's standing rule for a section that fails its gate.
  *
  * An entry's [Entry.chain] is the character in [Treatments.EXTRA] (or the
  * seeded bank) by reference, so `treat <character>` and a pick of the same
@@ -36,10 +36,11 @@ enum class PedalSide(val id: String) {
  * 2026-10-24); the WAH section's three moves (WAH, TOUCH, ROCK), which
  * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
  * first board, authored as a hypothesis for its own gate; FORGE, the
- * hydroforming section, gated on 2026-10-26. DELAY, added after its own
- * spec, awaits its gate. With FORGE the row holds six chips, the card's
- * ceiling (PadSheetTest), so DELAY's chip needs a layout decision when its
- * gate passes.
+ * hydroforming section, gated on 2026-10-26; DELAY, added after its own
+ * spec and gated on 2026-10-28. Seven pedals do not fit row seven's six
+ * chips, so the sheet draws a slate: five of the gated pedals on the row,
+ * the user's choice and the same everywhere, and every gated pedal behind
+ * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
  */
 object Pedals {
 
@@ -55,7 +56,7 @@ object Pedals {
         val side: PedalSide,
         /** Whether the user may flip it between PRE and POST. Never for the amp or a board. */
         val movable: Boolean,
-        /** Passed its owner listen: draws a chip. */
+        /** Passed its owner listen: on the sheet's slate, a chip on row seven or a line behind MORE. */
         val gated: Boolean,
     ) {
         /** The sections the chain sets, in rack order. */
@@ -136,9 +137,9 @@ object Pedals {
             PedalSide.AMP, movable = false, gated = false,
         ),
         // A delay pedal: the `delayed` character, ECHO's long, dark repeats. After the amp, where a rig puts a delay;
-        // not movable. Its sound passed its gate on 2026-10-28; the chip waits for the slate, because row seven is full at
-        // six and the owner chose a slate over a seventh chip (docs/superpowers/specs/2026-10-22-delay-head-design.md).
-        Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = false),
+        // not movable. Its sound passed its gate on 2026-10-28 (docs/superpowers/specs/2026-10-22-delay-head-design.md),
+        // and it is on the slate's default row (docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
+        Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

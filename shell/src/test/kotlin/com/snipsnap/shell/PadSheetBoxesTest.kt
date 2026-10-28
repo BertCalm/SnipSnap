@@ -60,6 +60,23 @@ class PadSheetBoxesTest {
         }
     }
 
+    @Test
+    fun `a pedal board names each pedal and its AMT on the strip, and marks the pad as treated`() {
+        fun pick(key: String, amount: Float) = com.snipsnap.synth.PedalBoard.Pick(key, amount)
+        val two = com.snipsnap.synth.PedalBoard(listOf(pick("wahed", 0.7f), pick("driven", 1f)))
+        val pad = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = two).toJsonValue())
+        assertEquals("WAH 70% · DRIVE 100%", PadSheetBoxes.summaries(pad, null)[PadSheetBoxes.Box.TREATMENT])
+        assertTrue(PadSheetBoxes.isTouched(pad), "a board pad was UNTOUCHED on the grid")
+        // Six pedals: the AMTs do not fit the strip, then the words do not either.
+        val six = com.snipsnap.synth.PedalBoard(
+            listOf("compressed", "driven", "touchwahed", "forged", "delayed", "rockwahed").map { pick(it, 1f) },
+        )
+        assertEquals("6 PEDALS", PadSheetBoxes.pedals(six))
+        val four = com.snipsnap.synth.PedalBoard(listOf("compressed", "driven", "touchwahed", "delayed").map { pick(it, 1f) })
+        assertEquals("SUSTAIN · DRIVE · TOUCH · DELAY", PadSheetBoxes.pedals(four))
+        for (b in listOf(two, four, six)) assertTrue(PadSheetBoxes.pedals(b).length <= PadSheetBoxes.SUMMARY_CHARS)
+    }
+
     /**
      * J36: KIT's grid showed nothing to tell a treated pad from a raw one,
      * so sixteen treated pads could only be told apart by holding each in

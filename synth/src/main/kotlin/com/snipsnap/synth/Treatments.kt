@@ -101,7 +101,7 @@ object Treatments {
         "touchwahed" to FxChain(wah = mapOf("TOUCH" to 1.0f)),
         // One heel-to-toe-to-heel gesture, then it waits. CLI and saved kits only.
         "rockwahed" to FxChain(wah = mapOf("ROCK" to 1.0f)),
-        // A delay pedal, DELAY in the pedal library (its chip waits for row seven's slate): ECHO's long, dark repeats, 350 ms apart at full and 206 at AMT 70 (feedback 0.66),
+        // A delay pedal, DELAY in the pedal library (on the slate's default row): ECHO's long, dark repeats, 350 ms apart at full and 206 at AMT 70 (feedback 0.66),
         // each repeat a pass darker, the whole note feeding them (HEAD off). Every number is the owner's: HEAD off, MIX 100
         // and the repeats further apart at the gate (2026-10-24), the DELAY on the snare, the choir and the jangle at the
         // confirm (2026-10-26), then TONE 0.45 and MIX 0.9 over the chug's low-mid wash, heard as good or better on the
