@@ -102,7 +102,7 @@
     view.matched.href = url(clip.matchedPath, clip.matchedSha256);
     view.patch.href = url(clip.patchPath, clip.patchSha256);
   }
-  function begin(row, clip, buffer, ticket, button, bounded) {
+  function begin(row, clip, buffer, ticket, button, bounded, onBoundedEnd, earliestStart = 0) {
     if (ticket !== generation) return;
     // A suspended tab can deliver timers late. Retire any earlier source before
     // starting another, including an earlier sequence step with a delayed stop.
@@ -112,13 +112,15 @@
     source.buffer = buffer; source.loop = clip.loop;
     if (clip.loop) { source.loopStart = 0; source.loopEnd = buffer.duration; }
     source.connect(gain); gain.connect(context.destination);
-    const now = context.currentTime;
+    const now = Math.max(context.currentTime, earliestStart);
     gain.gain.setValueAtTime(clip.loop ? 0 : 1, now);
     if (clip.loop) gain.gain.linearRampToValueAtTime(1, now + .005);
     const playing = {source, gain}; sources.add(playing);
     source.onended = () => {
       sources.delete(playing); source.disconnect(); gain.disconnect();
-      if (!bounded && ticket === generation) { activeKey = ''; resetButtons(); status.textContent = row.name + ' · note finished.'; }
+      if (ticket !== generation) return;
+      if (bounded) onBoundedEnd(now + 2.001);
+      else { activeKey = ''; resetButtons(); status.textContent = row.name + ' · note finished.'; }
     };
     setDownload(view, clip); view.card.classList.add('playing');
     for (const b of view.buttons) b.setAttribute('aria-pressed', String(b === button));
@@ -145,11 +147,15 @@
       const buffers = await Promise.all(clips.map(clip => load(clip, level)));
       if (ticket !== generation) return;
       if (clips.length === 1) { begin(row, clips[0], buffers[0], ticket, button, false); return; }
-      function step(index) {
+      function step(index, earliestStart = 0) {
         if (ticket !== generation) return;
-        begin(row, clips[index], buffers[index], ticket, button, true);
-        if (index + 1 < clips.length) later(() => step(index + 1), 2150);
-        else later(() => { if (ticket === generation) stop(row.name + ' · EDGE range finished.'); }, 2010);
+        // Audio rendering can advance more slowly than wall time under load.
+        // Wait for this complete scheduled tone to end before starting its gap.
+        begin(row, clips[index], buffers[index], ticket, button, true, endedAt => {
+          if (ticket !== generation) return;
+          if (index + 1 < clips.length) later(() => step(index + 1, endedAt + .15), 150);
+          else stop(row.name + ' · EDGE range finished.');
+        }, earliestStart);
       }
       step(0);
     } catch (error) {
