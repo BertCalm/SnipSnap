@@ -140,6 +140,10 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun aquariumSettings(): AquariumPerformanceSettings = aquariumWanted
 
+    /** Waiting for native queue space/preparation, not an audio-thread acknowledgement. */
+    @Synchronized
+    fun hasPendingAquariumControls(): Boolean = aquariumPending
+
     @Synchronized
     fun aquariumFaulted(): Boolean = open && NativePads.aquariumFaulted(handle)
 

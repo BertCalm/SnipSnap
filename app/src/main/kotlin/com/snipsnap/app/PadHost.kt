@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
+import com.snipsnap.shell.AquariumPerformance
+import com.snipsnap.synth.AquariumPerformanceSettings
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +80,30 @@ class PadHost(preferredSampleRate: Int) {
     private var lastLatencyAt = 0L
     private var closed = false
 
+    var performance by mutableStateOf(AquariumPerformanceSettings())
+        private set
+    var savedPerformance by mutableStateOf(AquariumPerformanceSettings())
+        private set
+    var performanceWarning by mutableStateOf<String?>(null)
+        private set
+    var performanceFaulted by mutableStateOf(false)
+        private set
+    var performancePending by mutableStateOf(false)
+        private set
+    var performanceLimitedFrames by mutableStateOf(0L)
+        private set
+    private var performanceLoaded = false
+
+    /** Live audition; false from the engine is retried by its ordinary drain. */
+    fun auditionPerformance(settings: AquariumPerformanceSettings, reset: Boolean = false) {
+        if (closed) return
+        performance = settings
+        engine.configureAquarium(settings, reset)
+        performancePending = engine.hasPendingAquariumControls()
+    }
+
+    fun revertPerformance() = auditionPerformance(savedPerformance)
+
     /** Start the stream. The result is [up]; a host that never got one still holds and plays nothing. */
     fun open() {
         if (closed) return
@@ -93,15 +119,25 @@ class PadHost(preferredSampleRate: Int) {
      *
      * Asking again with the kit it already has is nothing: a screen, the
      * beat and the App can all ask for the same entry and it loads once. A
-     * kit's identity changes on every real edit, which is why identity and
-     * not equality is the test.
+     * kit's identity changes on every real edit. Metadata-only copies still
+     * update live controls, but equal pad lists do not rebuild the bank.
      */
     fun request(entry: KitShelf.Entry) {
         if (closed) return
         engine.setAquariumTempo(entry.kit.tempoBpm?.toDouble() ?: 0.0)
         val prior = wanted
+        if (!performanceLoaded || prior?.kit?.aquariumPerformance != entry.kit.aquariumPerformance) {
+            val loaded = AquariumPerformance.read(entry.kit)
+            savedPerformance = loaded.settings
+            performanceWarning = loaded.warning
+            performanceLoaded = true
+            auditionPerformance(loaded.settings)
+        }
         if (prior != null && prior.kit === entry.kit && prior.dir == entry.dir) return
         wanted = entry
+        // Metadata/live controls cannot replace the bank: that would end
+        // every sounding voice and clear the very tails being adjusted.
+        if (prior != null && prior.dir == entry.dir && prior.kit.pads == entry.kit.pads) return
         loading?.cancel()
         val wait = if (prior == null) 0L else RELOAD_DEBOUNCE_MS
         loading = scope.launch {
@@ -130,6 +166,9 @@ class PadHost(preferredSampleRate: Int) {
         if (nowNanos - lastLatencyAt >= StreamFacts.POLL_NANOS) {
             lastLatencyAt = nowNanos
             latency = StreamFacts.latency(engine.latencyMillis(), engine.isShared())
+            performanceFaulted = engine.aquariumFaulted()
+            performancePending = engine.hasPendingAquariumControls()
+            performanceLimitedFrames = engine.aquariumLimitedFrames()
         }
     }
 

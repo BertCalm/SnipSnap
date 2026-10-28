@@ -3099,6 +3099,32 @@ fun App(shelf: KitShelf) {
     // and AUDITION. Over the open kit, read live; its settings stand in for
     // GROOVE's own only when the beat is started with GROOVE never opened.
     val hosts = remember { PadHosts(context) }
+
+    fun savePerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings, onResult: (String?) -> Unit) {
+        val source = open
+        if (source == null || busy != null) {
+            onResult("KIT IS BUSY · TRY SAVE AGAIN")
+            return
+        }
+        scope.launch {
+            val kit = try {
+                withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock { com.snipsnap.shell.AquariumPerformance.save(source.dir, settings) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "savePerformance: failed", e)
+                onResult("COULD NOT SAVE PERFORMANCE · TRY AGAIN")
+                return@launch
+            }
+            val entry = KitShelf.Entry(source.dir, kit)
+            // Saving stays with its original kit even if navigation moves.
+            hosts.peek(source.dir)?.request(entry)
+            if (open?.dir == source.dir) open = entry
+            onResult(null)
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+        }
+    }
+
     val grooveSettings by rememberUpdatedState(BeatPlayer.Settings(grooveProgIndex, grooveSwingPercent, grooveFeel, grooveSeed))
     val beat = remember {
         BeatPlayer(hosts = hosts, scope = scope, kitNow = { open }, settings = { grooveSettings })
@@ -3119,10 +3145,10 @@ fun App(shelf: KitShelf) {
     // The bank follows an edit made while no screen is holding the kit's
     // pads - the pad sheet's TUNE, heard on a beat that is playing under it.
     LaunchedEffect(open?.kit) { open?.let { beat.kitChanged(it) } }
-    // The clock, driven from here for the life of the app. Keyed as the
-    // screen's own loop always was: the transport, the kit's folder and the
-    // kit itself.
-    LaunchedEffect(beat.playing, open?.dir, open?.kit) { beat.run() }
+    // Drive one clock for the app's lifetime.
+    // Live-bus metadata does not cancel a running print, recording or beat clock.
+    // Actual pad/tempo edits retain the transport's existing restart policy.
+    LaunchedEffect(beat.playing, open?.dir, open?.kit?.pads, open?.kit?.tempoBpm) { beat.run() }
     // What the dock reads. The bar is written to the beat only when it
     // changes, so this follows at bar granularity and never reads the
     // position, which moves every frame.
@@ -3714,6 +3740,7 @@ fun App(shelf: KitShelf) {
                                         onTakesBin = { takesBinOpen = true },
                                         onTexture = ::texture,
                                         onSetKey = ::setKey,
+                                        onSavePerformance = ::savePerformance,
                                         onInKey = ::inKey,
                                         onTwins = ::evilTwins,
                                         onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
