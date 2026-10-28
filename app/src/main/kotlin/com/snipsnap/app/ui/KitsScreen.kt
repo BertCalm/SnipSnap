@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -53,6 +54,8 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Ages
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DubStamp
 import com.snipsnap.shell.Layout
@@ -109,6 +112,24 @@ fun KitsScreen(
      */
     onCatchFirst: () -> Unit,
     busy: Boolean,
+    /**
+     * A starter kit is being rendered (`App.kt`'s `pendingKit`): the NEW KIT
+     * ▸ STARTERS button is the control that started it, so it draws a spinner
+     * beside its label. It keeps the label; [busy] is what disables it, and
+     * is true for every job, this one included.
+     */
+    startingKit: Boolean = false,
+    /**
+     * One of the shelf's lists (kits, projects, rooms) has not come back from disk yet
+     * (`App.kt`'s `kitsLoaded` / `shelfListsLoaded`). An empty list then means
+     * "not read", not "nothing here": the shelf holds the list's place - an
+     * empty LCD panel for the first [BusyLatch.SHOW_AFTER_MS], then
+     * [Copy.LIBRARY_LOADING], which once shown stays at least
+     * [BusyLatch.MIN_VISIBLE_MS] - and none of the footer's buttons, so a
+     * populated library never opens on NOTHING TAPED YET and CATCH YOUR FIRST
+     * SOUND, and one that reads at once never flashes the words.
+     */
+    loading: Boolean = false,
     onOpen: (KitShelf.Entry) -> Unit,
     onFresh: (StarterKits.Starter) -> Unit,
     /** BACKUP (X3.3): every kit on one file, handed to the chooser. */
@@ -194,8 +215,22 @@ fun KitsScreen(
      */
     shelfSort: KitShelf.ShelfSort = KitShelf.ShelfSort.RECENT,
     onToggleSort: () -> Unit = {},
+    /**
+     * The clock, in ms and monotonic, that [loading]'s show delay and minimum
+     * linger run on. A device test hands it the compose test clock, because the
+     * latch sleeps on a coroutine `delay`, which runs on that clock's virtual
+     * time, and [SystemClock] would not move with it.
+     */
+    loadingClock: () -> Long = SystemClock::uptimeMillis,
 ) {
     val scheme = LocalScheme.current
+    // The loading screen's own rule, the dock bar's latch: no words for the
+    // first 200 ms of a read, and 500 ms of them once shown. [holding] is
+    // everything that is not the content yet - reading, or the panel lingering
+    // after the read - and what the footer waits on; [panelShown] is whether
+    // the words are up.
+    val panelShown = rememberBusyVisible(if (loading) Busy(Copy.LIBRARY_LOADING) else null, loadingClock)
+    val holding = loading || panelShown
     var menuOpen by remember { mutableStateOf(false) }
     // TOOLS door (oilslick followups): BACKUP/CHOP ALL/X-RAY/DOUBLES nested
     // behind one row instead of pinned individually — see [ToolsMenu]'s own
@@ -261,13 +296,13 @@ fun KitsScreen(
     // project list is not drawn (the empty panel is) and a kit is what is
     // missing.
     val picking = assigningSnip || breedingFrom != null || addingTo != null
-    val projectFirst = projects.isNotEmpty() && kits.isNotEmpty() && !picking
+    val projectFirst = !holding && projects.isNotEmpty() && kits.isNotEmpty() && !picking
     // The first run — no project and no kit — has a button of its own: the
     // way in that needs nothing made first is a sound, so CATCH YOUR FIRST
     // SOUND ▸ is the filled button, and NEW KIT ▸ STARTERS (the other honest
     // way in, a kit someone already composed) steps down to the outline row.
     // Once the first SNIP lands the shelf has both, and this is gone for good.
-    val coldShelf = projects.isEmpty() && kits.isEmpty() && !picking
+    val coldShelf = !holding && projects.isEmpty() && kits.isEmpty() && !picking
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -413,7 +448,16 @@ fun KitsScreen(
                 TapeText(Copy.BREED_PICK_HINT, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
             }
 
-            if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
+            if (holding) {
+                // Read, not empty: neither the empty state below nor the list.
+                // An empty lit panel, silent, until the read has run long
+                // enough to be worth a word.
+                if (panelShown) {
+                    LoadingPanel(Copy.LIBRARY_LOADING, Modifier.fillMaxWidth().weight(1f))
+                } else {
+                    Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme))
+                }
+            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty()) {
                 Box(
                     Modifier
                         .fillMaxWidth()
@@ -587,50 +631,58 @@ fun KitsScreen(
                 }
             }
 
-            if (coldShelf || projectFirst) {
-                if (coldShelf) {
-                    PrimaryAction(
-                        label = Places.CATCH_FIRST,
+            // While the library is still being read - and while the words that
+            // said so linger - the footer's way in is not offered either: which
+            // button is the primary one (CATCH YOUR FIRST SOUND, NEW PROJECT, or
+            // NEW KIT alone) is decided by what the lists hold, and they do not
+            // hold anything yet.
+            if (!holding) {
+                if (coldShelf || projectFirst) {
+                    if (coldShelf) {
+                        PrimaryAction(
+                            label = Places.CATCH_FIRST,
+                            enabled = !busy,
+                            onClick = onCatchFirst,
+                        )
+                    } else {
+                        PrimaryAction(
+                            label = "NEW PROJECT ▸",
+                            enabled = !busy,
+                            onClick = onNewProject,
+                        )
+                    }
+                    // Outline, one step down: a kit is made inside a project more
+                    // often than the other way round, and the menu it opens still
+                    // says PICK A STARTER as its own heading.
+                    ActionButton(
+                        "NEW KIT ▸ STARTERS",
+                        scheme,
                         enabled = !busy,
-                        onClick = onCatchFirst,
+                        working = startingKit,
+                        modifier = Modifier.fillMaxWidth(),
+                        onClick = { menuOpen = true },
                     )
                 } else {
+                    // Renamed from "FRESH TAPE": on a cold open this reads as
+                    // "start recording" (the persona walkthroughs' single most
+                    // costly misread), when what it actually opens is a menu of
+                    // starter kits — most of them pre-composed, only BLANK/START
+                    // EMPTY genuinely empty. The label now predicts that.
                     PrimaryAction(
-                        label = "NEW PROJECT ▸",
+                        // 18 chars, deliberately: this sits in a single-line
+                        // PrimaryAction whose longest proven-safe label is 22
+                        // ("WRITING — DO NOT EJECT"), and at 200% font scale a
+                        // longer one ellipsizes. "PICK A STARTER" was the honest
+                        // subtitle but pushed it to 24 and would have truncated
+                        // mid-word; the menu it opens says PICK A STARTER as its
+                        // own heading, so the word isn't lost, just moved to where
+                        // it always fits.
+                        label = "NEW KIT ▸ STARTERS",
                         enabled = !busy,
-                        onClick = onNewProject,
+                        working = startingKit,
+                        onClick = { menuOpen = true },
                     )
                 }
-                // Outline, one step down: a kit is made inside a project more
-                // often than the other way round, and the menu it opens still
-                // says PICK A STARTER as its own heading.
-                ActionButton(
-                    if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
-                    scheme,
-                    enabled = !busy,
-                    accessibilityLabel = "NEW KIT ▸ STARTERS",
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { menuOpen = true },
-                )
-            } else {
-                // Renamed from "FRESH TAPE": on a cold open this reads as
-                // "start recording" (the persona walkthroughs' single most
-                // costly misread), when what it actually opens is a menu of
-                // starter kits — most of them pre-composed, only BLANK/START
-                // EMPTY genuinely empty. The label now predicts that.
-                PrimaryAction(
-                    // 18 chars, deliberately: this sits in a single-line
-                    // PrimaryAction whose longest proven-safe label is 22
-                    // ("WRITING — DO NOT EJECT"), and at 200% font scale a
-                    // longer one ellipsizes. "PICK A STARTER" was the honest
-                    // subtitle but pushed it to 24 and would have truncated
-                    // mid-word; the menu it opens says PICK A STARTER as its
-                    // own heading, so the word isn't lost, just moved to where
-                    // it always fits.
-                    label = if (busy) "DUBBING…" else "NEW KIT ▸ STARTERS",
-                    enabled = !busy,
-                    onClick = { menuOpen = true },
-                )
             }
             // The capture pair (LISTEN / APP AUDIO, then SNIP / STOP) sat here
             // under NEW KIT until the dock took it (plan §1): capture state is
@@ -1021,7 +1073,7 @@ private fun KitRow(
             .let { if (revealActions) it.pressedBevel(scheme) else it.raisedBevel(scheme) }
             .then(
                 if (pickModeActive) {
-                    Modifier.tapeClick(label = "OPEN ${kit.name.uppercase()}") { onOpen(entry) }
+                    Modifier.tapeClick(label = "OPEN ${kit.name.uppercase()}", enabled = !busy) { onOpen(entry) }
                 } else {
                     // A plain tap/long-press pair with no drag — the
                     // sharpest instance the audit found (finding 1): with
@@ -1029,7 +1081,13 @@ private fun KitRow(
                     // way to open a kit from the normal shelf flow, and a
                     // switch-access/TalkBack user couldn't reach it.
                     // combinedClickable registers both as real actions.
+                    //
+                    // Closed to taps while a job is in flight, as the project
+                    // row is: opening kit X while a starter renders would land
+                    // on the starter's placeholders. An armed row stays open to
+                    // the tap that disarms it, which opens nothing.
                     Modifier.combinedClickable(
+                        enabled = !busy || armed,
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null,
                         onLongClickLabel = "RENAME OR DELETE",
@@ -1252,9 +1310,16 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
  * is not the same button dimmed: the accent rim and the dark fill are what
  * say "tap me", so both go, and it draws as a disabled [ActionButton] does
  * (the raised bevel, `ink3` text) at the primary's height.
+ *
+ * [working] marks the control that started the job in flight: a [Spinner]
+ * is drawn left of [label] and the node says [Copy.WORKING_BUSY] as its
+ * state. The label stays what it was - it is still the name of the thing
+ * pressed, and the dock says what the job is. It sits before [onClick] so a
+ * trailing-lambda caller still compiles, and it goes with `enabled = false`:
+ * the job being in flight is what disables the button.
  */
 @Composable
-fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
+fun PrimaryAction(label: String, enabled: Boolean, working: Boolean = false, onClick: () -> Unit) {
     val scheme = LocalScheme.current
     val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
@@ -1272,17 +1337,25 @@ fun PrimaryAction(label: String, enabled: Boolean, onClick: () -> Unit) {
             // screen reader is told this control is temporarily unavailable
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
-            .tapeClick(label = label, enabled = enabled, onClick = onClick),
+            .tapeClick(label = label, enabled = enabled, onClick = onClick)
+            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            label,
-            // Past 22 characters (the longest label proven to fit one line at
-            // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
-            // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
-            if (label.length > 22) TapeType.display else TapeType.displayBig,
-            if (enabled) scheme.lcdInk.tape else scheme.ink3.tape,
-        )
+        // Past 22 characters (the longest label proven to fit one line at
+        // 200% font scale is "WRITING — DO NOT EJECT") the next size down,
+        // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
+        val type = if (label.length > 22) TapeType.display else TapeType.displayBig
+        val ink = if (enabled) scheme.lcdInk.tape else scheme.ink3.tape
+        if (working) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spinner(scheme.accent.tape, size = 18.dp)
+                // Shrinks before it pushes the ring off, so a long label at a
+                // large font scale ellipsizes rather than overflowing.
+                TapeText(label, type, ink, Modifier.weight(1f, fill = false))
+            }
+        } else {
+            TapeText(label, type, ink)
+        }
     }
 }
 

@@ -14,9 +14,10 @@ package com.snipsnap.shell
  */
 object Copy {
 
+    /** HELP's banner heading. The app no longer boots behind a start-up overlay; this is HELP's alone (its wording is a later copy pass's to settle). */
     const val BOOT_READY = "SNIPSNAP — READY."
 
-    /** Boot screen progress lines, in order. */
+    /** The lines of HELP's banner, in order. They were the start-up overlay's, which is gone. */
     val BOOT_LINES = listOf(
         "CHECKING HEADS…",
         "DEMAGNETIZING…",
@@ -2777,12 +2778,31 @@ object Copy {
     /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
     fun xrayUnlabeledFields(count: Int): String =
         "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
-    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
-    fun dubbingBusy(name: String): String = "DUBBING $name…"
     /** EVIL TWINS' own busy overlay while every twin renders offline. */
     const val EVIL_TWINS_BUSY = "TWINNING…"
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
+    /**
+     * The dock's busy line while a kit loads, named so the wait is attributable
+     * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
+     * starter renders, and `PadPlaceholderGrid` heads itself with the same
+     * line, so the dock and the grid never word the one job two ways.
+     */
+    fun loadingBusy(name: String): String = "LOADING $name…"
+    /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
+    fun busyCount(done: Int, total: Int): String = "$done OF $total"
+    /** The dock's busy line while something loads and there is no name to give it. */
+    const val LOADING_BUSY = "LOADING…"
+    /**
+     * What a button says to TalkBack as its state while the job it started is
+     * running: its `stateDescription`, beside the label it keeps and the ring
+     * drawn at its edge. It is not a visible label and not the dock's line.
+     */
+    const val WORKING_BUSY = "WORKING…"
+    /** The KITS screen's placeholder line while the library is read from disk. */
+    const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** The dock's button to stop a job that can be stopped part-way. */
+    const val CANCEL_JOB = "CANCEL"
 
 
     // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----

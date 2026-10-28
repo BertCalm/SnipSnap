@@ -654,6 +654,15 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
+        // The dock's progress line when a job has a name to give, or only a
+        // generic one (LOADING_BUSY, WORKING_BUSY), and the KITS screen's
+        // placeholder while the library is read - the same `…`-suffixed
+        // shape as every other *_BUSY constant above. The named and counted
+        // forms are `loadingBusy` and `busyCount`, functions, which this
+        // reflective sweep never sees; BusyTest holds those.
+        "LOADING_BUSY", "WORKING_BUSY", "LIBRARY_LOADING",
+        // The dock's CANCEL control: a button label, not a landing.
+        "CANCEL_JOB",
     )
 
     /**
