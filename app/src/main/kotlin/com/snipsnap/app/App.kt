@@ -460,11 +460,14 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
-    // The job a screen is carrying on its own (a take being saved, a chop
-    // being cut), reported through `LocalBusySink` and gone when the screen
-    // is. It is kept apart from `busy` on purpose: `busy` is App's own job
-    // and gates App's own work (`if (busy != null) return`), and a screen's
-    // job must not lock App's actions out. The dock shows App's first.
+    // The job a screen is carrying on its own (the pad editor's jobs, Split,
+    // and a recording being read in TAPE and CHOP), reported through
+    // `LocalBusySink` and gone when the screen is: an `appScope` job that
+    // outlives its screen is not shown after it goes (a later app-owned job
+    // board covers that). It is kept apart from `busy` on purpose: `busy` is
+    // App's own job and gates App's own work (`if (busy != null) return`), and
+    // a screen's job must not lock App's actions out. The dock shows App's
+    // first.
     var screenBusy by remember { mutableStateOf<Busy?>(null) }
     // Remembered, so the sink the screens read is one object for the life of
     // the composition: a static local that changed would recompose all of it.
