@@ -9,8 +9,9 @@ import kotlin.test.assertTrue
 
 class KeygroupWriterTest {
 
-    private fun program() = KeygroupProgram(
+    private fun program(explicitNoteOn: Boolean = false) = KeygroupProgram(
         name = "Test Keys",
+        explicitNoteOn = explicitNoteOn,
         keygroups = listOf(
             Keygroup(33, 35, rootNote = 35, layers = listOf(VelocityLayer("Keys_A1", 44_100L, 1, 127))),
             Keygroup(
@@ -40,8 +41,12 @@ class KeygroupWriterTest {
     }
 
     @Test
-    fun `every keygroup explicitly uses note-on triggering for its release`() {
-        val xml = KeygroupWriter().write(program())
+    fun `opted-in keygroups declare note-on without changing default package bytes`() {
+        val original = KeygroupWriter().write(program())
+        assertFalse("<TriggerMode>" in original, "Existing keygroup serialization must remain unchanged")
+        val xml = KeygroupWriter().write(program(explicitNoteOn = true))
+        assertEquals(original, xml.replace("        <TriggerMode>2</TriggerMode>\n", ""),
+            "Opt-in may add only the explicit NoteOn declaration")
         val instruments = Regex("""<Instrument number="\d+">(.*?)</Instrument>""", RegexOption.DOT_MATCHES_ALL)
             .findAll(xml).toList()
         assertEquals(program().keygroups.size, instruments.size)
@@ -148,7 +153,7 @@ class KeygroupWriterTest {
         val realInstrument = corpus!!.flatMap { atInstrumentLevel(it.readText()) }.toSet()
         val realLayer = corpus.flatMap { atLayerLevel(it.readText()) }.toSet()
 
-        val ours = KeygroupWriter().write(program())
+        val ours = KeygroupWriter().write(program(explicitNoteOn = true))
         assertEquals(
             emptySet(), atInstrumentLevel(ours) - realInstrument,
             "instrument-level elements that appear in no real program",

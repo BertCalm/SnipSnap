@@ -366,8 +366,9 @@ fade at the start of the onset prevents an abrupt start; the second period is
 the sustain loop. Its positive loop-start frame avoids the exporter's zero
 sentinel for a sample with no loop. Loop endpoints come from the same program
 data in the native track, legacy program, WAV sampler chunk and phone sidecar.
-The legacy writer now explicitly emits instrument-level `TriggerMode=2`, the
+The trial opts into instrument-level `TriggerMode=2` in the legacy writer, the
 NoteOn mode already used by the native writer and sustained reference programs.
+Existing packages retain their original legacy serialization by default.
 
 The program's release value is `0.6` in the existing MPC envelope field. Its
 hardware time mapping has not been measured. A sampler fades the repeating

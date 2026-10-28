@@ -104,7 +104,7 @@ object OverlapHeldKeygroupGenerator {
                     val frames = note.result.diagnostics.periodFrames.toLong()
                     Keygroup(note.zone.low, note.zone.high, note.zone.root,
                         listOf(VelocityLayer(stems.getValue(note), 2 * frames, 0, 127, frames)))
-                }, volumeRelease = RELEASE_VALUE)
+                }, volumeRelease = RELEASE_VALUE, explicitNoteOn = true)
                 OneNote.writePackage(name, program, samples, work, overwrite = false)
                 val data = File(work, "${name}_[TrackData]")
                 val xpm = File(data, "$name.xpm")

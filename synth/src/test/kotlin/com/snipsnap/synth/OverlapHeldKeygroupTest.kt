@@ -115,7 +115,8 @@ class OverlapHeldKeygroupTest {
             val zone = instrument.zones.single()
             val stem = File(zone.sample).nameWithoutExtension
             val expected = KeygroupProgram(instrument.name, listOf(Keygroup(zone.lowNote, zone.highNote, zone.rootNote,
-                listOf(VelocityLayer(stem, zone.frameCount, 0, 127, zone.loopStartFrame)))), volumeRelease = .6f)
+                listOf(VelocityLayer(stem, zone.frameCount, 0, 127, zone.loopStartFrame)))),
+                volumeRelease = .6f, explicitNoteOn = true)
             val bad = File(directory, "one-shot.xpm")
             bad.writeText(File(output, entry.getValue("mpc2Program").str()).readText()
                 .replace("<TriggerMode>2</TriggerMode>", "<TriggerMode>0</TriggerMode>"))
