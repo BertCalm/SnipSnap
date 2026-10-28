@@ -2,6 +2,26 @@ plugins {
     kotlin("jvm")
 }
 
+/** Explicit production-call measurements; timing never decides correctness. */
+tasks.register<JavaExec>("benchmarkScannedChain") {
+    group = "verification"
+    description = "Measure Scanned Chain fresh renders, completed-cache hits, knob misses, raw probes and finishing with PCM hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScannedChainRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args("--casegroup=${providers.gradleProperty("scannedChainBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("scannedChainBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("scannedChainBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("scannedChainBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("scannedChainBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("scannedChainBenchmarkPaths").orNull?.let { args("--paths=$it") }
+    providers.gradleProperty("scannedChainBenchmarkStates").orNull?.let { args("--states=$it") }
+    providers.gradleProperty("scannedChainBenchmarkCancellation").orNull?.let { args("--cancellation=$it") }
+    providers.gradleProperty("scannedChainBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+}
+
 /** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
 tasks.register<JavaExec>("generateUprightAudition") {
     group = "distribution"
