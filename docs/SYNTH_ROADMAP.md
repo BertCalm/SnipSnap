@@ -715,16 +715,19 @@ balance; LENGTH and HOLD control finite gestures and settled periodic excitation
 Held exports omit the initial attack and retain MATERIAL/FUSE through the same port.
 
 The listening selection retains original BASS/SOFT and revised KEY/PLUCK/BRASS/
-STRING. Thirty-six factory presets provide six per voice, replacing the spec's
-uneven allocation. The [selected release audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/selected/)
-uses those configurations for presets, register/velocity coverage, five-point
-sweeps, interactions, attack-port removals and held seams. Its matching sixteen-pad
-MPC kit carries complete native recipes. Generate it with
-`./gradlew :synth:generateAlloySelectedAudition`; the original gallery and contrast
-audition remain frozen references. The selected control matrix extends the legacy
-tests without reinterpreting saved configurations. The voice choice has been heard;
-the expanded preset bank, phone performance, physical MPC playback and release
-naming remain separate acceptance work. [ALLOY](ALLOY.md) records the contracts.
+STRING. The owner approved the distinct-role comparison and authorized a smaller
+24-preset factory bank, four per voice: the prior first preset and three complete
+authored configurations. The [factory audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/factory/)
+contains those roles alongside register/velocity coverage, five-point sweeps,
+interactions, attack-port removals and held seams. Its sixteen-pad starter retains
+two earlier held sounds; the full MPC bank provides three eight-pad programs with
+complete native recipes. Generate it with
+`./gradlew :synth:generateAlloyFactoryAudition`. The original,
+contrast, selected and role-comparison publications remain references. Exact
+approved-patch fixtures protect the new bank without reinterpreting saved
+configurations or changing selected defaults. Phone performance and physical MPC
+playback remain device acceptance work. [ALLOY](ALLOY.md) records the contracts,
+the one display-name adjustment and the authored material-control limit.
 This is original synthesis, with no factory PCM imports or compatibility claim.
 
 ### CONTOUR — a stable body with a moving digital edge

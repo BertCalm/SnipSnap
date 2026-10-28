@@ -372,6 +372,9 @@ testkit/alloy-contrast/
 # Selected Alloy voices, full factory roster and replayable release diagnostics.
 testkit/alloy-selected/
 
+# Listening-approved Alloy role bank and regenerated MPC programs.
+testkit/alloy-factory/
+
 # Relay musical bank and starter-pad performance renders.
 testkit/relay-performance-audition/
 
