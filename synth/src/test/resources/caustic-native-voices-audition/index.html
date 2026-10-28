@@ -14,14 +14,14 @@
   <header class="wrap masthead"><a class="wordmark" href="./">SNIP<span>SNAP</span><i>/</i>CAUSTIC</a><a class="history-link back-link" data-history="prototype" href="../contrast/">Earlier character study →</a></header>
   <main class="wrap">
     <section class="intro" aria-labelledby="page-heading">
-      <div><p class="eyebrow">FOUR PERMANENT VOICES / NATIVE MODEL 1</p><h1 id="page-heading">Four ways<br>to set it singing<span>.</span></h1></div>
-      <div class="intro-copy"><p>Strike, knock, rub or catch the ringing body.</p><p class="muted">The chosen character-study directions now have native voice implementations. These are fresh Kotlin renders from editable Caustic patches.</p></div>
+      <div><p class="eyebrow">FOUR NATIVE VOICES / CAUSTIC</p><h1 id="page-heading">Four ways<br>to set it singing<span>.</span></h1></div>
+      <div class="intro-copy"><p>Strike, knock, rub or catch the ringing body.</p><p class="muted">The chosen character-study directions now have native voices. These recordings use the same editable patches as SnipSnap.</p></div>
     </section>
     <section class="listening-bench" aria-labelledby="player-name">
       <div class="bench-top"><div class="current-recording" aria-live="polite" aria-atomic="true"><p class="eyebrow" id="player-status">READY TO PLAY</p><h2 id="player-name">Alloy / C4</h2><p id="player-detail">Choose Play this sound on a card below.</p></div><div class="level-switch" role="group" aria-label="Playback level"><button type="button" id="matched-mode" aria-pressed="true">Level matched</button><button type="button" id="native-mode" aria-pressed="false">Renderer level</button></div></div>
       <audio id="audio" controls preload="none" aria-label="Selected native Caustic recording"></audio>
       <div class="bench-bottom"><span id="player-macros" class="muted"></span><div class="recording-links"><a id="current-recipe" hidden download>Download native patch</a><a id="current-wav" hidden download>WAV</a></div></div>
-      <p class="level-note" id="level-note">Level matched reduces loudness differences for comparing tone. Renderer level is exact native patch output, including the instrument's house finish.</p>
+      <p class="level-note" id="level-note">Level matched balances loudness so you can compare tone and timing. Renderer level preserves the instrument's original finished loudness.</p>
       <p id="playback-error" class="error" role="alert" hidden></p>
     </section>
     <section id="voices" class="directions" aria-labelledby="voices-heading">
@@ -34,7 +34,7 @@
       <p class="action-guide">Play this sound selects that recording. Compare plays its named reference. Download native patch saves editable settings. The filters organize the list.</p>
       <div id="control-cards" class="sound-grid"></div>
     </section>
-    <section class="study-notes" aria-label="About these recordings"><p><strong>Actual Kotlin native voices.</strong> Every WAV comes from CausticPatch.render(). The earlier Python listening prototypes remain a separate historical comparison. The new control positions are here for listening.</p><p><strong>Finite notes.</strong> HOLD stays at zero. These are fixed recordings, with no live browser synthesis or held-loop claim. The same saved model, note and velocity travel with every native patch.</p><div id="downloads" class="download-list"></div></section>
+    <section class="study-notes" aria-label="About these recordings"><p><strong>Native SnipSnap voices.</strong> Every WAV was rendered from its saved patch. The earlier listening prototypes remain a separate historical comparison. The new control positions are here for listening.</p><p><strong>Finite notes.</strong> HOLD stays at zero. The page plays fixed recordings. Each patch keeps its note and velocity.</p><div id="downloads" class="download-list"></div></section>
     <details class="provenance"><summary>Files, measurements and provenance</summary><div id="provenance-content"></div><p><a href="manifest.json" download>Manifest and hashes</a> · <a href="diagnostics.json" download>Diagnostics</a></p></details>
   </main>
   <footer class="wrap"><span>SNIPSNAP / CAUSTIC · FOUR NATIVE VOICES</span><nav aria-label="Related studies"><a class="history-link" data-history="prototype" href="../contrast/">Earlier character study</a><a class="history-link" data-history="alloy" href="../instrument/">Original Alloy instrument</a></nav></footer>

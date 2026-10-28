@@ -51,7 +51,7 @@
     if(state.mode===mode)return;const request=++state.request;const playing=state.handoff?.playing??!audio.paused;const offset=(state.handoff?.offset??audio.currentTime)||0;
     state.handoff?.abort();const handoff=new AbortController();handoff.playing=playing;handoff.offset=offset;state.handoff=handoff;state.mode=mode;$('playback-error').hidden=true;
     $('matched-mode').setAttribute('aria-pressed',String(mode==='matched'));$('native-mode').setAttribute('aria-pressed',String(mode==='native'));
-    $('level-note').textContent=mode==='matched'?'Level matched reduces loudness differences for comparing tone. Each copy uses AuditionLevel once.':'Renderer level is exactly CausticPatch.render() output, including its native house finish. No extra audition gain is applied.';
+    $('level-note').textContent=mode==='matched'?'Level matched balances loudness so you can compare tone and timing.':'Renderer level preserves the instrument’s original finished loudness.';
     if(state.active){audio.pause();audio.preload='auto';audio.src=address(path(state.active));audio.load();try{
       await ready(()=>audio.readyState>=3&&Number.isFinite(audio.duration),['canplay','loadeddata','progress'],handoff.signal);if(request!==state.request)return;
       const target=Math.min(offset,Math.max(0,audio.duration-.02));if(target>.01&&Math.abs(audio.currentTime-target)>.02){audio.currentTime=target;await ready(()=>!audio.seeking&&audio.readyState>=2&&Math.abs(audio.currentTime-target)<.08,['seeked','canplay'],handoff.signal);}
