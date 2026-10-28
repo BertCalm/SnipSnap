@@ -77,6 +77,7 @@ import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
+import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -459,6 +460,15 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
+    // The job a screen is carrying on its own (a take being saved, a chop
+    // being cut), reported through `LocalBusySink` and gone when the screen
+    // is. It is kept apart from `busy` on purpose: `busy` is App's own job
+    // and gates App's own work (`if (busy != null) return`), and a screen's
+    // job must not lock App's actions out. The dock shows App's first.
+    var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // Remembered, so the sink the screens read is one object for the life of
+    // the composition: a static local that changed would recompose all of it.
+    val busySink = remember { { reported: Busy? -> screenBusy = reported } }
     // The starter kit being rendered, by name, or null: while set, PADS draws
     // the placeholder grid for it and the shelf's NEW KIT button shows its
     // spinner. Set and cleared by `fresh`, alongside `busy`, and by nothing else.
@@ -3217,7 +3227,7 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion) {
+    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -4173,7 +4183,7 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy,
+                    busy = busy ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's

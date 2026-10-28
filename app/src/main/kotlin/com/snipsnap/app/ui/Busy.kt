@@ -16,12 +16,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -411,4 +413,35 @@ internal fun rememberBusyVisible(busy: Busy?, now: () -> Long): Boolean {
         }
     }
     return visible
+}
+
+/**
+ * Where a screen's own job goes to reach the dock. The app provides the
+ * sink at its root and the dock draws what it is handed; the default drops
+ * every report, so a screen shown on its own, in a test or a preview, has
+ * nowhere to send one and loses nothing by trying.
+ */
+val LocalBusySink = staticCompositionLocalOf<(Busy?) -> Unit> { {} }
+
+/**
+ * Tells the dock about [busy], a job this screen is carrying, for as long as
+ * it is given and as long as the screen is composed.
+ *
+ * The report is withdrawn (the sink is handed null) the moment [busy]
+ * changes and the moment this leaves the composition, so a screen that is
+ * navigated away from mid-job cannot leave its bar on the dock: the job
+ * belongs to the screen that reported it, and goes with it. A changed [busy]
+ * (the count moving on) is a withdrawal followed at once by the new report,
+ * so the sink's last word is always the job as it now stands.
+ *
+ * The sink is read as of the latest composition, so the withdrawal always
+ * reaches the sink the app has now.
+ */
+@Composable
+fun ReportBusy(busy: Busy?) {
+    val sink by rememberUpdatedState(LocalBusySink.current)
+    DisposableEffect(busy) {
+        sink(busy)
+        onDispose { sink(null) }
+    }
 }
