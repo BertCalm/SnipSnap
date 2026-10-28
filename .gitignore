@@ -477,3 +477,6 @@ testkit/overlap-held-keygroup/
 
 # SCOUR R1 listening gate; regenerate with ./gradlew :synth:generateScourAudition.
 testkit/scour-audition/
+
+# Generated OBBLIGATO player overlap comparison.
+testkit/obbligato-overlap-audition/

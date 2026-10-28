@@ -1,5 +1,48 @@
 # OBBLIGATO: a conversation that develops
 
+## Overlapping handoffs
+
+The next listening revision, model 9, keeps model 8 available. Genuine changes
+of player receive a 60 ms incoming pickup, the existing 140 ms central power
+crossover, and a 40 ms outgoing tail. A nominal .35 supporting presence makes
+the join and tail audible before returning to the normal .18 background floor.
+One common power correction bounds the overlap against the interpolated old/new
+gesture budget. It preserves the players' relative balance and introduces no
+new nonlinear shaping.
+
+Opening gestures, same-player renewals and settling retain their original
+curves. The 240 ms pass stays below the 320 ms ordinary dwell. The memory's
+body-contour window waits until that pass and 40 ms of meter settling have
+finished, so it does not copy the compulsory handoff as expressive intent.
+All earlier renderer recipes retain their original paths; five pre-edit model-8
+sum/stem and complete PCM24 receipts accompany the prior compatibility fixtures.
+
+The reason for the staged pass is musical: the answer joins while its partner
+still has a phrase to finish, with a brief central exchange that keeps the lead
+clear. The curve is a listening proposal; real mixed energy and actual source
+overlap must be checked in the rendered comparison.
+
+The overlap revision passed 30 focused checks, including exact raw sum/stem and
+PCM24 receipts for 43 earlier recipes across models 1–8, continuous replay,
+retained lead, the power budget, 18 rendered note/HOLD cases, Protect's opening
+and physical-response negative controls. All twelve model-8 comparison WAVs also
+match the previous published recordings byte for byte.
+
+Python analysis of the C4 recordings measured both actual stems above half their
+local foreground for an average 43.2 → 60.0 ms at Play passes and 44.7 → 62.0 ms
+at Fight passes. Main duet loudness remains .12 and roots remain within 1.5 cents.
+Mixed coda energy stays healthy. Brief mono interference remains a listening
+tradeoff: the first Fight crossing reaches .313 mixed/source RMS versus .413
+previously, with 22 ms below 35% of body-median level. The preceding Play crossing
+is slightly shallower. Longer simultaneous presence does not guarantee a more
+connected impression for every phase relationship.
+
+The 24-recording comparison includes both versions' actual stems, complete note
+and melody recipes, a portable page and a 15,066,676-byte ZIP. Browser checks cover
+playback, downloads, notes, mobile layout and offline playback; the 197 earlier
+non-navigation Site files retain their bytes. The broader suite is reported
+separately. No listening verdict is claimed for model 9.
+
 Status: model 8 rendered listening proof; broader checks and listening verdict pending.
 Baseline: `122c7c0c6486521951db33ffbf78aef32d7fb31f`. The owner described the
 gentler model-7 direction as better, then authorized this audition. Model 5

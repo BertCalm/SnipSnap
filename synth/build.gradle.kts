@@ -73,6 +73,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
 }
 
+/** A focused comparison of previous and overlapping duet handoffs. */
+tasks.register<JavaExec>("generateObbligatoOverlapAudition") {
+    group = "distribution"
+    description = "Compare previous and overlapping OBBLIGATO handoffs, melodies and actual player taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoOverlapAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoOverlapOutput").orNull ?: "${rootDir}/testkit/obbligato-overlap-audition")
+}
+
 /** Three relationship conversations beside their gentler reference performances. */
 tasks.register<JavaExec>("generateObbligatoConversationAudition") {
     group = "distribution"
