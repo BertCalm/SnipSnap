@@ -162,8 +162,13 @@ object NacrePlayableAuditionGenerator {
                 "The same model-3 PEARL defaults at MIDI $midi and velocity $velocity. Fixed production calibration preserves natural register and velocity level differences.", base, midi, velocity))
         }
         for (macro in listOf("VENUE", "CURRENT", "BLOOM")) for (value in listOf(0f, .25f, .5f, .75f, 1f)) {
+            // Seaweed exposes moving apertures; coral's CURRENT action is a restrained static
+            // early/late balance. Hold this venue context fixed across the whole CURRENT sweep.
+            val context = if (macro == "CURRENT") base + ("VENUE" to 1f) else base
+            val contextNote = if (macro == "CURRENT") "Seaweed VENUE 1 stays fixed; other controls use their reference settings."
+                else "Other macros remain at the reference settings."
             add(Request("sweep_${macro.lowercase()}_${tag(value)}", "$macro / $value", "controls",
-                "Change only $macro to $value at MIDI 48, velocity 1, seed 7. Other macros remain at model-3 defaults; the production output calibration stays fixed.", base + (macro to value)))
+                "Change only $macro to $value at MIDI 48, velocity 1, seed 7. $contextNote Production calibration stays fixed.", context + (macro to value)))
         }
     }
     private fun phrases(base: Map<String, Float>) = listOf(0f, .5f, 1f).map { venue ->

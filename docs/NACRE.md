@@ -51,7 +51,7 @@ Run `./gradlew --no-daemon :synth:generateNacrePlayableAudition`. Output in `tes
 
 - Three starting sounds.
 - MIDI 36, 48 and 60 at physical velocities 0.30, 0.65 and 1.00.
-- Five steps each of VENUE, CURRENT and BLOOM, with the remaining controls fixed.
+- Five steps each of VENUE, CURRENT and BLOOM, with the remaining controls fixed. CURRENT uses the seaweed endpoint to expose aperture motion; the other sweeps use the reference blend.
 - One eight-note phrase at three venue positions, retaining actual tail overlap.
 - Three short, explicitly trimmed control-sweep previews.
 
