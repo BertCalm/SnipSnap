@@ -198,15 +198,16 @@ storage key; earlier notes remain with the original page.
   judged with exchange disabled while the same exciters keep running.
 - Longer upper-partial memory leaves a different tail. Disabling it removes only
   that contribution, so a compensating dry-volume change cannot mimic its effect.
-- The original model stays replayable. This is a new acoustic candidate awaiting
-  Josh's verdict, with finite gestures and on-device performance still to be judged.
+- The original model stays replayable. The revised acoustic direction received
+  positive owner feedback; hardware response remains a separate listening check.
 
 **Verified/measured ledger:** numerical invariants, exact replay, pitch and audio
 measurements are recorded in the generated diagnostics and verification report.
 Browser QA checks switching, playback and signal/silence routing. Spectral residuals
 are not perceptual thresholds. Josh subsequently described the revised audition as
 "Sounds pretty good" and authorized the playable-bank round. That supports model 2
-as the sound-direction baseline; the new preset bank and hardware still need listening.
+as the sound-direction baseline. Owner feedback on the playable bank was also positive
+on 2026-10-26; physical phone and MPC acceptance remain pending.
 The trajectory cache avoids repeat solver work; audio rendering remains an offline
 prototype, and measured render times are disclosed per recording rather than a
 claimed phone latency budget.
