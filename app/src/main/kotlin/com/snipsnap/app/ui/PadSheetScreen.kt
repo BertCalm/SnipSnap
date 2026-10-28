@@ -3428,9 +3428,10 @@ fun PadSheetScreen(
                 maxLines = 1,
             )
             ActionButton(
-                if (busy) "MEASURING…" else "MAKE SYNTH ▸ REPLACES THE WAV",
+                "MAKE SYNTH ▸ REPLACES THE WAV",
                 scheme,
                 enabled = !busy,
+                working = busy && padJob == Copy.DESAMPLE_BUSY,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onDesample,
             )

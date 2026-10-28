@@ -469,10 +469,11 @@ fun SplitScreen(
             // it doesn't navigate or open a panel. "·" is the house
             // separator for a label-plus-detail pair (`PROG A · THE BREAK`,
             // GrooveScreen.kt) that replaces it here.
-            if (working) "WORKING…" else if (split == null) "SPLIT · TAKE THIS PAD APART" else "SPLIT AGAIN",
+            if (split == null) "SPLIT · TAKE THIS PAD APART" else "SPLIT AGAIN",
             scheme,
             enabled = !working && entry != null && sourceSlot != null,
             lit = split == null,
+            working = working && job == Copy.SPLIT_BUSY,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (working) return@ActionButton

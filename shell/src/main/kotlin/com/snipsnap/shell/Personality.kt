@@ -2795,9 +2795,12 @@ object Copy {
     /** The dock's busy line while something loads and there is no name to give it. */
     const val LOADING_BUSY = "LOADING…"
     /**
-     * What a button says to TalkBack as its state while the job it started is
-     * running: its `stateDescription`, beside the label it keeps and the ring
-     * drawn at its edge. It is not a visible label and not the dock's line.
+     * WORKING…, said in two places. On a button it is what TalkBack hears as
+     * the state while the job the button started is running: its
+     * `stateDescription`, beside the label it keeps and the ring drawn at its
+     * edge. On the dock it is the line a screen reports (`ReportBusy`) for a
+     * job it cannot name. It is never a visible label on a button: the
+     * button keeps its own words.
      */
     const val WORKING_BUSY = "WORKING…"
     // The dock's line for the jobs the pad editor and SPLIT start, each said
