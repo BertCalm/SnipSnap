@@ -336,6 +336,7 @@ object CausticCharactersAuditionGenerator {
             check(process.waitFor() == 0) { "cannot record CAUSTIC native-voices source provenance" }; return output
         }
         val roots = arrayOf("synth/src/main", "synth/src/test/kotlin/com/snipsnap/synth/CausticCharactersAuditionGenerator.kt",
+            "synth/src/test/kotlin/com/snipsnap/synth/AuditionLevel.kt",
             "synth/src/test/kotlin/com/snipsnap/synth/CausticKitGenerator.kt", "synth/src/test/resources/caustic-native-voices-audition",
             "audio/src/main", "kit/src/main", "mpc3/src/main", "xpm/src/main", "json/src/main", "synth/build.gradle.kts")
         val tracked = git("ls-files", "-z", "--", *roots).split('\u0000').filter { it.isNotBlank() }.toSet()
