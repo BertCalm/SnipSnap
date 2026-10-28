@@ -60,7 +60,7 @@ internal object PatchTypes {
      * deliberately kept out of [Presets] until the owner's listening verdict.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
-     * NACRE's finite PEARL duet likewise has provisional listening recipes only.
+     * NACRE's playable PEARL revision has three starting recipes while range acceptance is pending.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */

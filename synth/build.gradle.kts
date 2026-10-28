@@ -2156,3 +2156,14 @@ tasks.register<JavaExec>("generateNacrePresenceAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-presence-audition")
 }
+
+/** Ordinary saved patches across registers, strike strengths, controls and a short phrase. */
+tasks.register<JavaExec>("generateNacrePlayableAudition") {
+    group = "distribution"
+    description = "Render NACRE playable presets, register/velocity matrix, control sweeps and overlap phrases."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-playable-audition")
+}

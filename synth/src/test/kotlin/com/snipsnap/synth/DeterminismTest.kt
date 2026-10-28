@@ -11,6 +11,20 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `NACRE saved playable recipes reproduce across cold source caches`() {
+        for (voice in NacreVoice.entries) {
+            val patch = NacrePatch("Nacre canary", voice,
+                Nacre.defaults(voice) + mapOf("VENUE" to 1f, "BLOOM" to .65f),
+                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = 3)
+            Nacre.clearCoreCache()
+            val original = patch.render().samples
+            Nacre.clearCoreCache()
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(original, saved.render().samples)
+        }
+    }
+
+    @Test
     fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
             val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))

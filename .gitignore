@@ -55,6 +55,7 @@ design/*/*.html
 !design/nacre-audition/index.html
 !design/nacre-gentle-audition/index.html
 !design/nacre-presence-audition/index.html
+!design/nacre-playable-audition/index.html
 !design/*/*.dc.html
 
 # The PLUCK audition clips and page, rendered by :synth:generatePluckAudition
@@ -459,3 +460,6 @@ testkit/obbligato-conversation-audition/
 
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
+
+# Saved playable NACRE revision and musical comparison exports.
+testkit/nacre-playable-audition/
