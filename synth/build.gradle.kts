@@ -2,6 +2,17 @@ plugins {
     kotlin("jvm")
 }
 
+/** Port the approved passive handoff and compare actual Kotlin exports with its retained references. */
+tasks.register<JavaExec>("generateFerryAudition") {
+    group = "distribution"
+    description = "Render Ferry PASSAGE, approved reference comparisons, complete recipes and Kotlin timing evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryOutput").orNull ?: "${rootDir}/testkit/ferry-audition")
+}
+
 /** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
 tasks.register<JavaExec>("generateUprightAudition") {
     group = "distribution"
@@ -607,6 +618,17 @@ tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
     mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
     workingDir = projectDir
     args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
+}
+
+/** Separate vibrato from spread before choosing a calmer ensemble setting. */
+tasks.register<JavaExec>("generateRegistersEnsembleRefinementAudition") {
+    group = "distribution"
+    description = "Compare the current Rich Ensemble with less vibrato and calmer bank spread at three notes."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-ensemble-refinement", "--refine-ensemble")
 }
 
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
@@ -1868,6 +1890,20 @@ tasks.register<JavaExec>("generateSkitterDepthAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/skitter-depth")
     if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
+/** Focused BASS R8/R9 proof across C1/C2/C3, preserving normal depth processing. */
+tasks.register<JavaExec>("generateSkitterBassAudition") {
+    group = "distribution"
+    description = "Render BASS register pairs. Requires -PskitterProofSource=<full SHA> and -PskitterBassBaseline=<sealed R8 snapshot>."
+    maxHeapSize = "512m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterBassAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-bass")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterBassBaseline")) args("--baseline=${project.property("skitterBassBaseline")}")
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 

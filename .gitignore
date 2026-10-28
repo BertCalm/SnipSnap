@@ -14,6 +14,7 @@ testkit/crease-audition-r2/
 testkit/crease-keys-audition/
 testkit/crease-touch-audition/
 testkit/nacre-audition/
+testkit/ferry-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
 testkit/confluence-audition/
@@ -53,6 +54,7 @@ app/.cxx/
 design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
+!design/ferry-audition/index.html
 !design/nacre-gentle-audition/index.html
 !design/*/*.dc.html
 
@@ -277,6 +279,7 @@ testkit/registers-audition-r4/
 testkit/registers-audition-r5/
 testkit/registers-audition-r6/
 testkit/registers-depth-directions/
+testkit/registers-ensemble-refinement/
 testkit/SnipSnap Skitter Kit/
 
 # OBBLIGATO audition audio and playable kit are regenerated and hosted separately.
@@ -428,6 +431,7 @@ testkit/skitter-character-r6/
 testkit/skitter-quartet/
 # Generated R8 Skitter internal-interaction listening proof
 testkit/skitter-depth/
+testkit/skitter-bass/
 testkit/fade-law-audition/
 testkit/amp-front-audition/
 
@@ -439,6 +443,12 @@ testkit/bellows-playback-audition/
 
 # Reproducible experimental Murmur comparison audio.
 testkit/murmur-luthier-audition/
+
+# OBLITERATE core prototype: reproducible Kotlin inputs and Python auditions.
+testkit/obliterate-core-inputs/
+testkit/obliterate-core-audition/
+testkit/obliterate-kotlin-audition/
+experiments/obliterate-core/__pycache__/
 
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
 testkit/thump-spark-audition/

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "audition": "SnipSnap OBLITERATE 003",
+  "reportedDate": "2026-10-24",
+  "reportedBy": "Josh",
+  "evidence": "Owner-supplied listening-note export in the conversation",
+  "auditionUrl": "https://snipsnap-wide-audition.bertcalm.chatgpt.site/obliterate/",
+  "scope": "Python destruction-core proof; shimmer and Kotlin/Android integration excluded",
+  "heardSourceCommit": "9b55dc821787dc60827b49d48d927d0ced89d723",
+  "heardSourceTree": "acc0717e952371d321728ab6a539d9c133dc45de",
+  "listeningMode": null,
+  "levelMode": null,
+  "comparisonTreatment": null,
+  "notes": [
+    {"sourceId": "snare", "source": "Snare hit", "verdict": "keep", "preferredAmount": 0.7, "text": ""},
+    {"sourceId": "percussion", "source": "One-bar percussion phrase", "verdict": "keep", "preferredAmount": 0.35, "text": ""},
+    {"sourceId": "pluck", "source": "Stereo chopped nylon phrase", "verdict": "keep", "preferredAmount": 0.35, "text": ""},
+    {"sourceId": "bass", "source": "Decaying bass note", "verdict": "keep", "preferredAmount": 0.35, "text": ""}
+  ]
+}

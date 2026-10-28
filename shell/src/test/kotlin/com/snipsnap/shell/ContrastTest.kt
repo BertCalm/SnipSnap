@@ -194,6 +194,24 @@ class ContrastTest {
         }
     }
 
+    /**
+     * `warn` is text on the LCD as well as a needle: a binned row's days
+     * left turn `warn` at two days or fewer, on the row's `lcd` fill
+     * (`DeletedKitsSection`, `TakesBinScreen` and the rest). A paper
+     * scheme's `warn` is tuned for the dock, not the chrome, so the dock is
+     * where it must read.
+     */
+    @Test
+    fun `warn reads as text on the lcd in every scheme`() {
+        for (scheme in Schemes.ALL) {
+            val ratio = Scheme.contrastRatio(scheme.warn, scheme.lcd)
+            assertTrue(
+                ratio >= AA_TEXT,
+                "${scheme.id}: warn vs lcd = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
+            )
+        }
+    }
+
     // ==================== OPENSKY's ink3: a documented, measured gap ====================
 
     @Test

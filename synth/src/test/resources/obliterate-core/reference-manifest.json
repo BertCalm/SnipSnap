@@ -1,0 +1,944 @@
+{
+  "schema": 1,
+  "sampleRate": 44100,
+  "inputEncoding": "frame-major little-endian IEEE754 Float32",
+  "referencePolicy": "Input Float32 promoted exactly toFloat64 for immutable Python processor, result rounded toFloat32 at the Snip output boundary",
+  "pythonProcessorSha256": "8a96491067e1c96129d5340d37cadc8e0058c19d130a5877e4a4885ae54c9a42",
+  "generatorSha256": "a99f374e97e5ce2286773cf69c7af9971d94ef934d1edea004c834eb5f5304cb",
+  "numpyVersion": "2.3.5",
+  "scipyVersion": "1.17.0",
+  "cases": [
+    {
+      "id": "stereo-fuzz-100",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 1,
+      "outputFile": "expected/stereo-fuzz-100.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "6ceb98446ee4928116823745e1bf2bc9fa542496d7e8f2e6a9e669fa5e11ad18",
+      "grainEvents": [],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "stereo-fragments-100",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 2,
+      "outputFile": "expected/stereo-fragments-100.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "5e056b648de57bb72bcc7ae3ff55898eac06219403db3b0af0c5b57de9a22afc",
+      "grainEvents": [
+        {
+          "onset_frame": 2553,
+          "length_frames": 577,
+          "source_first_frame": 576.8342345986441,
+          "source_last_frame": 0.834234598644116,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.3150665087646656
+        },
+        {
+          "onset_frame": 5310,
+          "length_frames": 1665,
+          "source_first_frame": 2493.8255156560363,
+          "source_last_frame": 0.642539733238209,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.1667148276992136
+        },
+        {
+          "onset_frame": 7905,
+          "length_frames": 5954,
+          "source_first_frame": 5305.643408084607,
+          "source_last_frame": 2329.1434080846066,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.30781092768130935
+        },
+        {
+          "onset_frame": 10673,
+          "length_frames": 4158,
+          "source_first_frame": 0.7262920600605867,
+          "source_last_frame": 8314.72629206006,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": -0.16664120040442704
+        },
+        {
+          "onset_frame": 14253,
+          "length_frames": 5954,
+          "source_first_frame": 11422.193084418874,
+          "source_last_frame": 5469.193084418874,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.018608287452472394
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "stereo-full-035",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 0.35,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 3,
+      "outputFile": "expected/stereo-full-035.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "34b90b0e9c98da51fa3335a8ff3ebf491d8e098913768f218a090f176f18d6ae",
+      "grainEvents": [
+        {
+          "onset_frame": 2685,
+          "length_frames": 1650,
+          "source_first_frame": 1649.3619821095256,
+          "source_last_frame": 0.3619821095255702,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.11027327806763294
+        },
+        {
+          "onset_frame": 5442,
+          "length_frames": 3570,
+          "source_first_frame": 4112.358930479613,
+          "source_last_frame": 0.796976107253613,
+          "pitch_ratio": 1.1520207213147549,
+          "semitones": 2.4499999999999997,
+          "reverse": true,
+          "balance": -0.05835018969472476
+        },
+        {
+          "onset_frame": 8142,
+          "length_frames": 4234,
+          "source_first_frame": 6888.245192829612,
+          "source_last_frame": 3567.1007064326664,
+          "pitch_ratio": 0.7845840978967508,
+          "semitones": -4.199999999999999,
+          "reverse": true,
+          "balance": 0.10773382468845827
+        },
+        {
+          "onset_frame": 10902,
+          "length_frames": 4234,
+          "source_first_frame": 4337.409066778585,
+          "source_last_frame": 9732.62420222102,
+          "pitch_ratio": 1.274560627319262,
+          "semitones": 4.199999999999999,
+          "reverse": false,
+          "balance": -0.05832442014154946
+        },
+        {
+          "onset_frame": 13946,
+          "length_frames": 4234,
+          "source_first_frame": 12611.237579546605,
+          "source_last_frame": 8378.237579546605,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.0065129006083653376
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "stereo-full-070",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 0.7,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 3,
+      "outputFile": "expected/stereo-full-070.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "223d70dce9fc04a0896d2bb0347a9e3ff22bd8163f7272868f5df6b6a0833013",
+      "grainEvents": [
+        {
+          "onset_frame": 2614,
+          "length_frames": 1072,
+          "source_first_frame": 1071.923964219051,
+          "source_last_frame": 0.9239642190509585,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.2205465561352659
+        },
+        {
+          "onset_frame": 5371,
+          "length_frames": 2443,
+          "source_first_frame": 3240.9178609592254,
+          "source_last_frame": 0.013306168442795752,
+          "pitch_ratio": 1.327151742338568,
+          "semitones": 4.8999999999999995,
+          "reverse": true,
+          "balance": -0.11670037938944952
+        },
+        {
+          "onset_frame": 8014,
+          "length_frames": 5160,
+          "source_first_frame": 6035.690385659224,
+          "source_last_frame": 2859.9533714360127,
+          "pitch_ratio": 0.6155722066724582,
+          "semitones": -8.399999999999999,
+          "reverse": true,
+          "balance": 0.21546764937691654
+        },
+        {
+          "onset_frame": 10779,
+          "length_frames": 5160,
+          "source_first_frame": 588.628178838404,
+          "source_last_frame": 8969.448404442042,
+          "pitch_ratio": 1.624504792712471,
+          "semitones": 8.399999999999999,
+          "reverse": false,
+          "balance": -0.11664884028309892
+        },
+        {
+          "onset_frame": 14111,
+          "length_frames": 5160,
+          "source_first_frame": 11970.67515909321,
+          "source_last_frame": 6811.675159093211,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.013025801216730675
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "stereo-full-100",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 3,
+      "outputFile": "expected/stereo-full-100.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "331dbd17776438efca1714e5bed14c4a911b82bf391b8756f2d83c44ae223a73",
+      "grainEvents": [
+        {
+          "onset_frame": 2553,
+          "length_frames": 577,
+          "source_first_frame": 576.8342345986441,
+          "source_last_frame": 0.834234598644116,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.3150665087646656
+        },
+        {
+          "onset_frame": 5310,
+          "length_frames": 1665,
+          "source_first_frame": 2493.8255156560363,
+          "source_last_frame": 0.642539733238209,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.1667148276992136
+        },
+        {
+          "onset_frame": 7905,
+          "length_frames": 5954,
+          "source_first_frame": 5305.643408084607,
+          "source_last_frame": 2329.1434080846066,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.30781092768130935
+        },
+        {
+          "onset_frame": 10673,
+          "length_frames": 4158,
+          "source_first_frame": 0.7262920600605867,
+          "source_last_frame": 8314.72629206006,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": -0.16664120040442704
+        },
+        {
+          "onset_frame": 14253,
+          "length_frames": 5954,
+          "source_first_frame": 11422.193084418874,
+          "source_last_frame": 5469.193084418874,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.018608287452472394
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "mono-full-035",
+      "inputFile": "input-mono.f32",
+      "inputChannels": 1,
+      "inputFrames": 16384,
+      "inputSha256": "54019d3452eeac5e2048df19244f4257ac6e4e29845b767ec0556ed490806140",
+      "amount": 0.35,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "stages": 3,
+      "outputFile": "expected/mono-full-035.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "d65a5f75555c9cde1d44188fa376ff3197db4e2a1fba0eecda700d0a903a95b5",
+      "grainEvents": [
+        {
+          "onset_frame": 2685,
+          "length_frames": 1650,
+          "source_first_frame": 1649.3619821095256,
+          "source_last_frame": 0.3619821095255702,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.11027327806763294
+        },
+        {
+          "onset_frame": 5442,
+          "length_frames": 3570,
+          "source_first_frame": 4112.358930479613,
+          "source_last_frame": 0.796976107253613,
+          "pitch_ratio": 1.1520207213147549,
+          "semitones": 2.4499999999999997,
+          "reverse": true,
+          "balance": -0.05835018969472476
+        },
+        {
+          "onset_frame": 8142,
+          "length_frames": 4234,
+          "source_first_frame": 6888.245192829612,
+          "source_last_frame": 3567.1007064326664,
+          "pitch_ratio": 0.7845840978967508,
+          "semitones": -4.199999999999999,
+          "reverse": true,
+          "balance": 0.10773382468845827
+        },
+        {
+          "onset_frame": 10902,
+          "length_frames": 4234,
+          "source_first_frame": 4337.409066778585,
+          "source_last_frame": 9732.62420222102,
+          "pitch_ratio": 1.274560627319262,
+          "semitones": 4.199999999999999,
+          "reverse": false,
+          "balance": -0.05832442014154946
+        },
+        {
+          "onset_frame": 13946,
+          "length_frames": 4234,
+          "source_first_frame": 12611.237579546605,
+          "source_last_frame": 8378.237579546605,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.0065129006083653376
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.125
+    },
+    {
+      "id": "stereo-odd-clock",
+      "inputFile": "input-stereo.f32",
+      "inputChannels": 2,
+      "inputFrames": 16384,
+      "inputSha256": "269e731d5a2b864efb8b7c8795ee8ea07e40d26b2b00cbda90fee76b646b1437",
+      "amount": 1.0,
+      "bpm": 123.0,
+      "division": 32,
+      "seed": 4294967295,
+      "stages": 3,
+      "outputFile": "expected/stereo-odd-clock.f32",
+      "outputChannels": 2,
+      "outputFrames": 49459,
+      "outputSha256": "317768aa75da214ebb0d4bc1205d5daa108f79c0a080b59acdf3ac9aa637cbbd",
+      "grainEvents": [
+        {
+          "onset_frame": 1211,
+          "length_frames": 151,
+          "source_first_frame": 150.45591110622922,
+          "source_last_frame": 0.45591110622922315,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": -0.14890069569538086
+        },
+        {
+          "onset_frame": 4045,
+          "length_frames": 5696,
+          "source_first_frame": 2847.9202293769285,
+          "source_last_frame": 0.4202293769285461,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.18098639089320445
+        },
+        {
+          "onset_frame": 5527,
+          "length_frames": 1627,
+          "source_first_frame": 0.2702200121784699,
+          "source_last_frame": 3252.2702200121785,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": 0.2588953936489483
+        },
+        {
+          "onset_frame": 6478,
+          "length_frames": 5716,
+          "source_first_frame": 5715.332725764494,
+          "source_last_frame": 0.332725764494171,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.31823360039255866
+        },
+        {
+          "onset_frame": 8060,
+          "length_frames": 3952,
+          "source_first_frame": 5920.635398239259,
+          "source_last_frame": 0.8241374994904618,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.24934611277030572
+        },
+        {
+          "onset_frame": 9301,
+          "length_frames": 5954,
+          "source_first_frame": 7696.87033940967,
+          "source_last_frame": 4720.37033940967,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": -0.289824503027384
+        },
+        {
+          "onset_frame": 10512,
+          "length_frames": 4087,
+          "source_first_frame": 1.4548716783856435,
+          "source_last_frame": 8173.454871678386,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": 0.0460169038456863
+        },
+        {
+          "onset_frame": 12345,
+          "length_frames": 5954,
+          "source_first_frame": 11255.609266018526,
+          "source_last_frame": 5302.609266018526,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.11026249977604324
+        },
+        {
+          "onset_frame": 13636,
+          "length_frames": 5954,
+          "source_first_frame": 12853.665088856826,
+          "source_last_frame": 3934.243060209941,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": 0.01123604953441354
+        },
+        {
+          "onset_frame": 14651,
+          "length_frames": 5954,
+          "source_first_frame": 13349.86435247588,
+          "source_last_frame": 10373.36435247588,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": -0.26363547411230065
+        },
+        {
+          "onset_frame": 16353,
+          "length_frames": 5954,
+          "source_first_frame": 3282.1694714529913,
+          "source_last_frame": 15188.169471452991,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": 0.19781993716381496
+        }
+      ],
+      "guardGain": 1.0,
+      "clockStepSeconds": 0.06097560975609756
+    }
+  ],
+  "scheduleCases": [
+    {
+      "inputFrames": 16384,
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 0,
+      "grainEvents": [
+        {
+          "onset_frame": 2907,
+          "length_frames": 1724,
+          "source_first_frame": 1723.4323257657325,
+          "source_last_frame": 0.4323257657324575,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": -0.3213185332446637
+        },
+        {
+          "onset_frame": 4979,
+          "length_frames": 1654,
+          "source_first_frame": 2477.2130348197393,
+          "source_last_frame": 0.5114367425849196,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": 0.2889289040944052
+        },
+        {
+          "onset_frame": 8386,
+          "length_frames": 5954,
+          "source_first_frame": 6087.406091333311,
+          "source_last_frame": 3110.9060913333115,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.03053749402579603
+        },
+        {
+          "onset_frame": 11505,
+          "length_frames": 4499,
+          "source_first_frame": 0.9472044782232842,
+          "source_last_frame": 8996.947204478223,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": -0.34808304988089633
+        },
+        {
+          "onset_frame": 14175,
+          "length_frames": 5954,
+          "source_first_frame": 13564.338187096597,
+          "source_last_frame": 7611.338187096597,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.1607588125009608
+        }
+      ]
+    },
+    {
+      "inputFrames": 16384,
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 1,
+      "grainEvents": [
+        {
+          "onset_frame": 6007,
+          "length_frames": 3152,
+          "source_first_frame": 4721.452813148568,
+          "source_last_frame": 0.28721391014460096,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.053671485719197054
+        },
+        {
+          "onset_frame": 8630,
+          "length_frames": 5954,
+          "source_first_frame": 7108.287494736599,
+          "source_last_frame": 4131.787494736599,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.03471558137114167
+        },
+        {
+          "onset_frame": 10504,
+          "length_frames": 4074,
+          "source_first_frame": 1.153954909256754,
+          "source_last_frame": 8147.153954909257,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": 0.026700319253494753
+        },
+        {
+          "onset_frame": 13594,
+          "length_frames": 5954,
+          "source_first_frame": 11152.466179834406,
+          "source_last_frame": 5199.466179834406,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": -0.1377636194958485
+        }
+      ]
+    },
+    {
+      "inputFrames": 16384,
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 20261023,
+      "grainEvents": [
+        {
+          "onset_frame": 2553,
+          "length_frames": 577,
+          "source_first_frame": 576.8342345986441,
+          "source_last_frame": 0.834234598644116,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.3150665087646656
+        },
+        {
+          "onset_frame": 5310,
+          "length_frames": 1665,
+          "source_first_frame": 2493.8255156560363,
+          "source_last_frame": 0.642539733238209,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.1667148276992136
+        },
+        {
+          "onset_frame": 7905,
+          "length_frames": 5954,
+          "source_first_frame": 5305.643408084607,
+          "source_last_frame": 2329.1434080846066,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.30781092768130935
+        },
+        {
+          "onset_frame": 10673,
+          "length_frames": 4158,
+          "source_first_frame": 0.7262920600605867,
+          "source_last_frame": 8314.72629206006,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": -0.16664120040442704
+        },
+        {
+          "onset_frame": 14253,
+          "length_frames": 5954,
+          "source_first_frame": 11422.193084418874,
+          "source_last_frame": 5469.193084418874,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.018608287452472394
+        }
+      ]
+    },
+    {
+      "inputFrames": 16384,
+      "amount": 1.0,
+      "bpm": 120.0,
+      "division": 16,
+      "seed": 4294967295,
+      "grainEvents": [
+        {
+          "onset_frame": 2483,
+          "length_frames": 1423,
+          "source_first_frame": 1422.4559111062292,
+          "source_last_frame": 0.45591110622922315,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": -0.14890069569538086
+        },
+        {
+          "onset_frame": 5644,
+          "length_frames": 1901,
+          "source_first_frame": 2846.9276878947708,
+          "source_last_frame": 0.14424182907578142,
+          "pitch_ratio": 1.4983070768766815,
+          "semitones": 7.0,
+          "reverse": true,
+          "balance": -0.14282332419132973
+        },
+        {
+          "onset_frame": 8291,
+          "length_frames": 5954,
+          "source_first_frame": 7093.920229376929,
+          "source_last_frame": 4117.420229376929,
+          "pitch_ratio": 0.5,
+          "semitones": -12.0,
+          "reverse": true,
+          "balance": 0.18098639089320445
+        },
+        {
+          "onset_frame": 11330,
+          "length_frames": 4528,
+          "source_first_frame": 1.27022001217847,
+          "source_last_frame": 9055.270220012178,
+          "pitch_ratio": 2.0,
+          "semitones": 12.0,
+          "reverse": false,
+          "balance": 0.2588953936489483
+        },
+        {
+          "onset_frame": 13281,
+          "length_frames": 5954,
+          "source_first_frame": 12518.332725764494,
+          "source_last_frame": 6565.332725764494,
+          "pitch_ratio": 1.0,
+          "semitones": 0.0,
+          "reverse": true,
+          "balance": 0.31823360039255866
+        }
+      ]
+    },
+    {
+      "inputFrames": 2000,
+      "amount": 1.0,
+      "bpm": 240.0,
+      "division": 32,
+      "seed": 20261023,
+      "grainEvents": []
+    }
+  ],
+  "rngReference": {
+    "name": "NumPy PCG64 XSL RR128/64, not PCG64DXSM",
+    "uintToUnit": "(rawUnsigned64 >>>11)*2^-53",
+    "cases": [
+      {
+        "seed": 0,
+        "initialStateHex": "1aa1b5345996452d09585eb7a69561e3",
+        "incrementHex": "418ddadb3af71a82588133bc447873a9",
+        "seedSequenceUint64Hex": [
+          "db2cd7e7b0f478be",
+          "abf4641a2c71ba49",
+          "20c6ed6d9d7b8d41",
+          "2c4099de223c39d4"
+        ],
+        "rawUint64Hex": [
+          "a30febcfd9c2825f",
+          "4510bdf882d9d721",
+          "0a7d3da94ecde8b8",
+          "043b27b61342f01d",
+          "d0327a782cde513b",
+          "e9aa5979a6401c4e",
+          "9b4c7b7180edb27f",
+          "bac0495ff8829a45",
+          "8b2b01e7a1dc7fbf",
+          "ef60e8078f56bfed",
+          "d0dbc74d4700374c",
+          "00b37868abbe90b0",
+          "db7ed8bf64e6f5f0",
+          "089910738de7951f",
+          "bacab307c3cfd379",
+          "2cf7c449d8b927a6"
+        ],
+        "unitDoubles": [
+          0.6369616873214543,
+          0.2697867137638703,
+          0.04097352393619469,
+          0.016527635528529094,
+          0.8132702392002724,
+          0.9127555772777217,
+          0.6066357757671799,
+          0.7294965609839984,
+          0.5436249914654229,
+          0.9350724237877682,
+          0.8158535541215322,
+          0.002738500170148095,
+          0.8574042765875693,
+          0.033585575305464355,
+          0.7296554464299441,
+          0.17565562060255901
+        ]
+      },
+      {
+        "seed": 1,
+        "initialStateHex": "9c5b484bfedb756c2a6e7d6f320fbc7e",
+        "incrementHex": "922af2da2645f895a19857b95740937b",
+        "seedSequenceUint64Hex": [
+          "672d8ee56d6791ff",
+          "8ae19ca14eb1072c",
+          "4915796d1322fc4a",
+          "d0cc2bdcaba049bd"
+        ],
+        "rawUint64Hex": [
+          "8306bdf37922e4ff",
+          "f35196bbc152a866",
+          "24e7a4f608ec18cd",
+          "f2dab0aed2ac6fd2",
+          "4fd42fa03fcd72a9",
+          "6c5f1f45de787048",
+          "d3e4513345ee6d24",
+          "68c1464c41ca3aca",
+          "8cb22c02a4d1fa2a",
+          "070e1d3215f30262",
+          "c0e63c2edd973235",
+          "89c3c29ad67f9ca4",
+          "54694c3ad14a9948",
+          "c9d676a873e2d50a",
+          "4d9e2d241fb91945",
+          "7418700c1fda0c2e"
+        ],
+        "unitDoubles": [
+          0.5118216247002567,
+          0.9504636963259353,
+          0.14415961271963373,
+          0.9486494471372439,
+          0.31183145201048545,
+          0.42332644897257565,
+          0.8277025938204418,
+          0.4091991363691613,
+          0.5495936876730595,
+          0.027559113243068367,
+          0.7535131086748066,
+          0.5381433132192782,
+          0.32973171649909216,
+          0.7884287034284043,
+          0.303194829291645,
+          0.4534978894806515
+        ]
+      },
+      {
+        "seed": 20261023,
+        "initialStateHex": "8622205c72213f8d5fa60557c4023505",
+        "incrementHex": "7a38ffb652b3308180c9fcab84224d83",
+        "seedSequenceUint64Hex": [
+          "d551bb96eba21a3b",
+          "811285e3f5978d17",
+          "bd1c7fdb29599840",
+          "c064fe55c21126c1"
+        ],
+        "rawUint64Hex": [
+          "50bde53f8c5166fc",
+          "98b869966d7efee8",
+          "f3396d3edec516b8",
+          "50fe8900d1f9e9fa",
+          "f1611926ed8f580e",
+          "4307ae76f6589d2c",
+          "2b9bf9ae378cd6c2",
+          "da7ec4e28a857607",
+          "f092237558bd27c7",
+          "2e47b2efbed11227",
+          "c10ccf589bbb4e09",
+          "430e931f911deeec",
+          "ed89b632420278df",
+          "f2ec75dfff9df46b",
+          "86ce2939c68f3c55",
+          "d58d46003be0bbce"
+        ],
+        "unitDoubles": [
+          0.315397575392415,
+          0.596563910699384,
+          0.9500950125209509,
+          0.31638389844918147,
+          0.9428878517188058,
+          0.2618359604296948,
+          0.17034874442429104,
+          0.8534968426779608,
+          0.9397298966875849,
+          0.18078153947027809,
+          0.7541017142609522,
+          0.2619411422793899,
+          0.9278825638484792,
+          0.9489206001159045,
+          0.5265832677892462,
+          0.8341869116374053
+        ]
+      },
+      {
+        "seed": 4294967295,
+        "initialStateHex": "4c233832246aa48cc57a3ce19c86ba9a",
+        "incrementHex": "da9580daf0fe872cad12d969e7b701fb",
+        "seedSequenceUint64Hex": [
+          "2a05c5e276c1fe08",
+          "2032e40fc20e8198",
+          "ed4ac06d787f4396",
+          "56896cb4f3db80fd"
+        ],
+        "rawUint64Hex": [
+          "407f5fa930d8fd9f",
+          "3814b22eb9684802",
+          "498b7dcee8d8dc95",
+          "9e758f03369e8515",
+          "ef5cf72bb50c69e2",
+          "4bc478ea21bb26b3",
+          "853d3cefd8463fe3",
+          "467dd55290b5e238",
+          "c2307688706a48f4",
+          "c6e668e4c58ffcdb",
+          "b83b7ce08670b9d3",
+          "deae86c5b984e82a",
+          "0bcf0e5549a68583",
+          "18a43043a19e05ec",
+          "f461f05c3fc5411a",
+          "7c7cf0d2dc469491"
+        ],
+        "unitDoubles": [
+          0.2519435680449965,
+          0.21906579628685663,
+          0.28728472043517017,
+          0.6189813025326831,
+          0.9350122911173898,
+          0.2959666797266718,
+          0.5204656682547232,
+          0.2753575636458758,
+          0.758551986990292,
+          0.7769532736325003,
+          0.7196577118069766,
+          0.8698505623556404,
+          0.046128173658553706,
+          0.09625531817584232,
+          0.9546194291322267,
+          0.4862814440532708
+        ]
+      }
+    ]
+  },
+  "sampleMaxErrorLimit": 2e-07,
+  "sampleRmsErrorLimit": 2e-09,
+  "thresholdPolicy": "measured Float32 port tolerance; compact and full matrix max1.49e-8/RMS<=7.18e-11; not a bit-exact claim"
+}
