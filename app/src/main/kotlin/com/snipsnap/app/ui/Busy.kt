@@ -416,6 +416,25 @@ internal fun rememberBusyVisible(busy: Busy?, now: () -> Long): Boolean {
     return visible
 }
 
+/** The job a control's working ring stands for: held once so the key under [rememberRingUp] is one object. */
+private val RING_JOB = Busy(Copy.WORKING_BUSY)
+
+/**
+ * Whether the ring on the control that started a job should be on screen
+ * now: false for the first [BusyLatch.SHOW_AFTER_MS] after [working] turns
+ * true, so a job that is over by then draws nothing, and once it has shown,
+ * true for at least [BusyLatch.MIN_VISIBLE_MS] even if the job ends sooner.
+ * The same rule as the dock's bar and the loading card, on the same latch.
+ * [ActionButton] and [PrimaryAction] both ask here, and draw the ring and
+ * say [Copy.WORKING_BUSY] as their state only while it answers true.
+ *
+ * [now] is [rememberBusyVisible]'s clock: a device test hands it the compose
+ * test clock.
+ */
+@Composable
+internal fun rememberRingUp(working: Boolean, now: () -> Long = SystemClock::uptimeMillis): Boolean =
+    rememberBusyVisible(if (working) RING_JOB else null, now)
+
 /**
  * Where a screen's own job goes to reach the dock. The app provides the
  * sink at its root and the dock draws what it is handed; the default drops

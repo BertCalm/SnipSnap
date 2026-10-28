@@ -3,6 +3,7 @@ package com.snipsnap.app.ui
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,6 +95,7 @@ import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.Busy
+import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
@@ -4874,6 +4876,11 @@ internal fun ActionButton(
      * kept, not swapped for a "working" word - it is still the name of the
      * thing pressed, and the dock says what it is doing. Normally sits with
      * `enabled = false`: the job being in flight is what disables it.
+     *
+     * The ring and the state come up together and by the rule every loading
+     * drawing keeps ([rememberRingUp]): not in the first [BusyLatch.SHOW_AFTER_MS]
+     * of the job, so one that is over by then flashes nothing, and for at least
+     * [BusyLatch.MIN_VISIBLE_MS] once up.
      */
     working: Boolean = false,
     /**
@@ -4892,9 +4899,18 @@ internal fun ActionButton(
      */
     accessibilityLabel: String? = null,
     modifier: Modifier = Modifier,
+    /**
+     * The clock, in ms and monotonic, that the ring's 200 ms delay and 500 ms
+     * minimum run on. A device test hands it the compose test clock, because
+     * the latch sleeps on a coroutine `delay`, which runs on that clock's
+     * virtual time, and [SystemClock] would not move with it (the same seam
+     * as `KitsScreen.loadingClock`).
+     */
+    ringClock: () -> Long = SystemClock::uptimeMillis,
     onClick: () -> Unit,
 ) {
     val litNow = lit && enabled
+    val ringUp = rememberRingUp(working, ringClock)
     Box(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -4905,12 +4921,12 @@ internal fun ActionButton(
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
             .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
-            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
+            .let { if (ringUp) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
         val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
-        if (working) {
+        if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spinner(scheme.accent.tape)
                 TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 1)
