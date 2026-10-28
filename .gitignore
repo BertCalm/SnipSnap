@@ -456,3 +456,6 @@ testkit/obbligato-conversation-audition/
 
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
+
+# SCOUR R1 listening gate; regenerate with ./gradlew :synth:generateScourAudition.
+testkit/scour-audition/

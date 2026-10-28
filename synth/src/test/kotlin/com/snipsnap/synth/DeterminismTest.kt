@@ -489,4 +489,16 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
+
+    @Test
+    fun `SCOUR is byte-identical across renders, every voice, a saved recipe and a soft hit included`() {
+        for (voice in ScourVoice.entries) {
+            val patch = ScourPatch("Canary", voice, Scour.defaults(voice) + ("SHOT" to .8f))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
+            assertContentEquals(Scour.render(voice, patch.macros, velocity = .3f).samples,
+                Scour.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
+        }
+    }
 }
