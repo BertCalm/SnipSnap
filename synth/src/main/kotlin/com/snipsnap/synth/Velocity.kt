@@ -189,6 +189,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
         // intact and use the existing soften fallback.
@@ -263,6 +264,7 @@ object Velocity {
         is OrphicaPatch -> Orphica.macrosFor(patch.config.material)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
+        is CairnPatch -> Cairn.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
         is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
@@ -272,7 +274,7 @@ object Velocity {
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
-        is OhmPatch -> Ohm.MACROS
+        is OhmPatch -> Ohm.macrosFor(patch.model)
         is CausticPatch -> CausticInstrument.macrosFor(patch.voice, patch.model)
     }
 
@@ -295,12 +297,12 @@ object Velocity {
      */
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
-        // PICK is proven monotonic for every PLUCK voice by PluckTest's
+        // PICK is proven monotonic for the original five PLUCK voices by PluckTest's
         // `PICK moves the centroid at every step of its travel`. SILK's own
         // PICK is the same exciter-brightness macro (Strings.pluckExciter's
         // pick low-pass), registered here rather than left to the generic
         // scan for the same reason PLUCK's is.
-        patch is PluckPatch -> "PICK"
+        patch is PluckPatch && patch.voice != PluckVoice.UPRIGHT -> "PICK"
         patch is SilkPatch -> "PICK"
         // STRIKE moves the hammer's cutoff, its own t60 and the tine's
         // swing together - none of BRIGHTNESS_MACROS' generic names, but
@@ -372,6 +374,10 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is ApsisPatch -> patch.copy(velocity = v).render()
+        // UPRIGHT changes its released-string excitation. The existing five
+        // PLUCK voices retain their measured PICK/soften path below.
+        is PluckPatch -> if (patch.voice == PluckVoice.UPRIGHT) patch.copy(velocity = v).render() else null
         is FlotillaPatch -> Flotilla.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is MercuryPatch ->
             if (Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) {
@@ -416,6 +422,7 @@ object Velocity {
         is OrphicaPatch -> patch.copy(config = patch.config.copy(velocity = v)).render()
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
+        is CairnPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
         is FilamentPatch -> patch.copy(velocity = v).render()
         is ScannedChainPatch -> patch.copy(velocity = v).render()
@@ -432,7 +439,7 @@ object Velocity {
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
-        is MagnetPatch, is PluckPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
+        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
         is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null

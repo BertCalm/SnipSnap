@@ -74,7 +74,6 @@ import com.snipsnap.app.ShareInbox
 import com.snipsnap.app.theme.BinRedGlow
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
@@ -140,7 +139,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * How long a LEVEL/PAN/TUNE/ONE-SHOT/CHOKE edit waits, quiet, before it's
@@ -257,7 +255,7 @@ fun PadSheetScreen(
         // the same KitWrites.mutex.withLock every writer already uses means
         // this snapshot is always taken either fully before or fully after
         // that write, never mid-write — see Law 5 in ConventionTest.kt.
-        val opened = withContext(Dispatchers.IO) {
+        val opened = offMain {
             KitWrites.mutex.withLock { runCatching { KitBuilderModel.open(entry.dir) }.getOrNull() }
         }
         if (opened == null) loadFailed = true else model = opened
@@ -331,7 +329,7 @@ fun PadSheetScreen(
     var aquariumPreviewJob by remember(entry.dir) { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(model, slot, pad.recipe, pad.velocityLayers) {
-        boardUndoAvailable = withContext(Dispatchers.IO) {
+        boardUndoAvailable = offMain {
             KitWrites.mutex.withLock {
                 runCatching {
                     val fresh = KitBuilderModel.open(entry.dir)
@@ -339,7 +337,7 @@ fun PadSheetScreen(
                 }.getOrDefault(false)
             }
         }
-        aquariumUndoAvailable = withContext(Dispatchers.IO) {
+        aquariumUndoAvailable = offMain {
             KitWrites.mutex.withLock {
                 runCatching {
                     val fresh = KitBuilderModel.open(entry.dir)
@@ -444,7 +442,7 @@ fun PadSheetScreen(
             auditionOnRefresh = false
             return
         }
-        val (loadedSnip, daysLeft) = withContext(Dispatchers.IO) {
+        val (loadedSnip, daysLeft) = offMain {
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
@@ -541,7 +539,7 @@ fun PadSheetScreen(
         busy = true
         scope.launch {
             try {
-                val before = withContext(Dispatchers.IO) {
+                val before = offMain {
                     val take = KitWrites.mutex.withLock {
                         builtModel.binContents()
                             .filter { it.originalName == p.sampleFile }
@@ -877,7 +875,7 @@ fun PadSheetScreen(
             try {
                 val tapeFile = File(snipsDir, tape)
                 // AMT 0 takes dust off and needs no print; anything above needs the tape's.
-                val print = if (amount > 0f) withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) } else null
+                val print = if (amount > 0f) offMain { DustPrints.forTape(tapeFile) } else null
                 if (amount > 0f && print == null) {
                     onToast(if (tapeFile.isFile) Copy.DUST_NO_GHOSTS else Copy.dustTapeGone(tape))
                     return@launch
@@ -1195,7 +1193,7 @@ fun PadSheetScreen(
         voice = null
         scope.launch {
             try {
-                val rendered = withContext(Dispatchers.IO) {
+                val rendered = offMain {
                     KitWrites.mutex.withLock {
                         val fresh = KitBuilderModel.open(kitDir)
                         val current = fresh.kit.pad(targetSlot)
@@ -1308,7 +1306,7 @@ fun PadSheetScreen(
             try {
                 // KitWrites also serializes non-cancellable JNI calls. A newer
                 // request cancels this coroutine's delivery, not its native DSP.
-                val playable = withContext(Dispatchers.IO) {
+                val playable = offMain {
                     KitWrites.mutex.withLock {
                         val fresh = KitBuilderModel.open(kitDir)
                         val current = fresh.kit.pad(targetSlot)
@@ -1448,7 +1446,7 @@ fun PadSheetScreen(
             scope.launch {
                 val tapeFile = File(snipsDir, plan.tape)
                 val print = try {
-                    withContext(Dispatchers.IO) { DustPrints.forTape(tapeFile) }
+                    offMain { DustPrints.forTape(tapeFile) }
                 } catch (e: Exception) {
                     if (e is CancellationException) throw e
                     busy = false
@@ -1569,7 +1567,7 @@ fun PadSheetScreen(
     var otherPads by remember { mutableStateOf<List<Int>>(emptyList()) }
     LaunchedEffect(pickedKit) {
         val k = pickedKit
-        otherPads = if (k == null) emptyList() else withContext(Dispatchers.IO) {
+        otherPads = if (k == null) emptyList() else offMain {
             try {
                 MutateSheet.padsOf(k).map { it.slot }
             } catch (e: CancellationException) {
@@ -1582,7 +1580,7 @@ fun PadSheetScreen(
     var roomsRevision by remember { mutableIntStateOf(0) }
     LaunchedEffect(entry.dir, roomsRevision) {
         val root = entry.dir.parentFile ?: entry.dir
-        rooms = withContext(Dispatchers.IO) {
+        rooms = offMain {
             try {
                 Rooms.list(root)
             } catch (e: CancellationException) {
@@ -1591,7 +1589,7 @@ fun PadSheetScreen(
                 emptyList()
             }
         }
-        otherKits = withContext(Dispatchers.IO) {
+        otherKits = offMain {
             try {
                 MutateSheet.otherKits(root, entry.dir)
             } catch (e: CancellationException) {
@@ -1749,7 +1747,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val (rendered, padMs) = withContext(Dispatchers.IO) {
+                val (rendered, padMs) = offMain {
                     MutateSheet.preview(m, slot, who, move, fraction, becomeFraction) to MutateSheet.lengthMs(m, slot)
                 }
                 if (lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) {
@@ -1802,7 +1800,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val deal = withContext(Dispatchers.IO) { MutateSheet.deal(m, slot, root, seed) }
+                val deal = offMain { MutateSheet.deal(m, slot, root, seed) }
                 spins = seed + 1
                 partner = deal
             } catch (e: Exception) {
@@ -1947,7 +1945,7 @@ fun PadSheetScreen(
         scope.launch {
             busy = true
             try {
-                val held = withContext(Dispatchers.IO) {
+                val held = offMain {
                     val name = ShareInbox.displayName(context, uri)
                     val decoded = MediaDecode.decode(context, uri)
                     MutateSheet.hold(File(context.cacheDir, MutateSheet.PARENTS_DIR), name, decoded)
@@ -2007,7 +2005,7 @@ fun PadSheetScreen(
                 // name is decided by reading the folder, which is not work
                 // for the main thread, and deciding it any earlier widens the
                 // window in which something else could take it.
-                val made = withContext(Dispatchers.IO) {
+                val made = offMain {
                     val name = OneNote.freshName(destRoot, instrumentBase)
                     OneNote.export(name, currentSnip, destRoot, overwrite = false)
                     name
@@ -2047,7 +2045,7 @@ fun PadSheetScreen(
         spreadOpening = true
         scope.launch {
             try {
-                val midi = withContext(Dispatchers.Default) { Spread.detect(currentSnip) }
+                val midi = offMain(Dispatchers.Default) { Spread.detect(currentSnip) }
                 spreadSource = SpreadSource(currentSnip, midi, Spread.defaultRoot(midi, p.tuneCoarse, p.tuneFine))
             } finally {
                 spreadOpening = false
@@ -2194,7 +2192,7 @@ fun PadSheetScreen(
                 // model — fine, this only READS the pad's current audio) and
                 // the mic capture itself, which can run for seconds. Stays on
                 // `scope`, not `appScope`: see this function's own KDoc.
-                val returned = withContext(Dispatchers.IO) {
+                val returned = offMain {
                     val send = OutsideSheet.send(m, slot, move)
                     val preRoll = OutsideSheet.preRollFrames(send.sampleRate)
                     OutsideSession.run(context, send, preRoll, OutsideSheet.listenFrames(send)) {
@@ -2300,7 +2298,7 @@ fun PadSheetScreen(
         busy = true
         appScope.launch {
             try {
-                val kept = withContext(Dispatchers.IO) { OutsideSheet.keep(root, o, m.kit.name) }
+                val kept = offMain { OutsideSheet.keep(root, o, m.kit.name) }
                 measuredRoom = null
                 roomsRevision++
                 onShelfAssetWritten()
@@ -2354,7 +2352,7 @@ fun PadSheetScreen(
         if (!gatheringEligible) return@LaunchedEffect
         gatheringOpening = true
         try {
-            val opened = withContext(Dispatchers.IO) { ConfluenceWorkshop.open(entry.dir, pad) }
+            val opened = offMain { ConfluenceWorkshop.open(entry.dir, pad) }
             gatheringEditor = opened
             if (gatheringControls == null) gatheringControls = opened.initialControls
         } catch (e: Exception) {
@@ -2385,7 +2383,7 @@ fun PadSheetScreen(
         busy = true
         scope.launch {
             try {
-                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                val prepared = offMain(Dispatchers.Default) { editor.prepare(controls) }
                 if (scope.isActive && liveSlot == sourceSlot && liveKitDir == kitDir &&
                     model === sourceModel && gatheringEditor === editor &&
                     gatheringPreviewGeneration == previewGeneration &&
@@ -2439,7 +2437,7 @@ fun PadSheetScreen(
                     if (firstEmpty == null) "No empty pad. Make room before saving a variation."
                     else "The first empty pad changed. Reopen this pad before making a variation."
                 }
-                val prepared = withContext(Dispatchers.Default) { editor.prepare(controls) }
+                val prepared = offMain(Dispatchers.Default) { editor.prepare(controls) }
                 gatheringStatus = "WRITING ${padTag(destination)}…"
                 var made: KitPad? = null
                 val (fresh, _) = withFreshKit(kitDir) { current ->
@@ -2515,7 +2513,7 @@ fun PadSheetScreen(
                 // It matters more on this door: the seed above is fresh every
                 // press and is never kept, so a press that wrote over the
                 // last one destroyed a render nothing could make again.
-                val made = withContext(Dispatchers.IO) {
+                val made = offMain {
                     val name = OneNote.freshName(destRoot, padBase)
                     PadFromAnything.export(name, currentSnip, destRoot, spec, overwrite = false)
                     name
@@ -2811,7 +2809,7 @@ fun PadSheetScreen(
     var hitLabel by remember(entry.dir, slot) { mutableStateOf<DrumClass?>(null) }
     LaunchedEffect(entry.dir, slot, workshopOpen) {
         if (!workshopOpen) return@LaunchedEffect
-        hitLabel = withContext(Dispatchers.IO) { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
+        hitLabel = offMain { LabelledHits.labelOf(shelfRoot, entry.kit.name, padLabel) }
     }
 
     /**
@@ -2833,7 +2831,7 @@ fun PadSheetScreen(
         val taking = hitLabel == dc
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
+                offMain {
                     if (taking) LabelledHits.unlabel(shelfRoot, kitName, padLabel)
                     else LabelledHits.label(shelfRoot, wav, kitName, padLabel, dc)
                 }
@@ -2855,7 +2853,7 @@ fun PadSheetScreen(
     fun openDustFrom() {
         if (busy) return
         scope.launch {
-            val tapes = withContext(Dispatchers.IO) { SnipStore.list(context.filesDir) }
+            val tapes = offMain { SnipStore.list(context.filesDir) }
             if (tapes.isEmpty()) {
                 onToast(Copy.DUST_FROM_EMPTY)
                 return@launch
@@ -3569,7 +3567,7 @@ private fun aquariumAuditionPcm(source: Snip, pad: KitPad): Snip {
  * paired with whether a save actually happened.
  */
 private suspend fun withFreshKit(kitDir: File, block: (KitBuilderModel) -> Unit): Pair<KitBuilderModel, Boolean> {
-    return withContext(Dispatchers.IO) {
+    return offMain {
         KitWrites.mutex.withLock {
             val fresh = KitBuilderModel.open(kitDir)
             block(fresh)
@@ -4825,6 +4823,15 @@ internal fun ActionButton(
      */
     lit: Boolean = false,
     /**
+     * This is the control that started the job in flight: a [Spinner] is
+     * drawn left of [label], and the node says [Copy.WORKING_BUSY] as its
+     * state, so someone who cannot see the ring is still told. The label is
+     * kept, not swapped for a "working" word - it is still the name of the
+     * thing pressed, and the dock says what it is doing. Normally sits with
+     * `enabled = false`: the job being in flight is what disables it.
+     */
+    working: Boolean = false,
+    /**
      * Override for [label] as the accessible name — for the button whose
      * visible glyph is too short/acronym-shaped to trust TalkBack to read
      * as a word (e.g. SplitScreen's "M"/"S" mute/solo chips, or "▶"/"▲"
@@ -4847,21 +4854,25 @@ internal fun ActionButton(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .raisedBevel(scheme)
-            .let { if (litNow) it.border(2.dp, scheme.amberOnChrome, RoundedCornerShape(4.dp)) else it }
+            .let { if (litNow) it.border(2.dp, scheme.accent.tape, RoundedCornerShape(4.dp)) else it }
             // Always clickable, `enabled` forwarded rather than dropped:
             // a screen reader is told this control is temporarily
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
             .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
+            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(
-            label,
-            TapeType.pixel,
-            if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape,
-            maxLines = 1,
-        )
+        val ink = if (!enabled) scheme.ink3.tape else if (litNow) scheme.amber.tape else if (dimmed) scheme.ink2.tape else scheme.ink.tape
+        if (working) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spinner(scheme.accent.tape)
+                TapeText(label, TapeType.pixel, ink, Modifier.weight(1f, fill = false), maxLines = 1)
+            }
+        } else {
+            TapeText(label, TapeType.pixel, ink, maxLines = 1)
+        }
     }
 }
 

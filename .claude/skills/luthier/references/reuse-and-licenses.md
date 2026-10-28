@@ -9,8 +9,9 @@ before anything is copied).
 
 ## 0. One fact about SnipSnap first
 
-**The SnipSnap repository has no LICENSE file at its root** (only font licenses under
-`app/licenses/`). Josh intends it to be open source, but until a license is committed the code
+**The SnipSnap repository has no LICENSE file at its root** (the font licenses that once
+sat under `app/licenses/` went with the bundled fonts; the app uses system fonts, so no
+license file of any kind remains). Josh intends it to be open source, but until a license is committed the code
 is "all rights reserved" by default, and it is not yet clear whether copyleft code (GPL) could
 ever be mixed in. Two consequences for this skill:
 - Translating an **algorithm** from a GPL source into your own code is fine when you take the

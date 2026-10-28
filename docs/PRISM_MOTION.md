@@ -50,9 +50,9 @@ for all six default voices in both finite and held modes. The 12 reference
 hashes and their runtime are recorded in
 `synth/src/test/resources/audition/prism-motion-original-sha256.tsv`.
 
-## Current boundaries
+## Original audition boundaries
 
-This is a finite mono audition, with no new phone controls or factory presets.
+This original pack is a finite mono audition, with no phone controls or factory presets.
 Motion patches explicitly reject HOLD's loop region. A sustained cyclic
 trajectory and keygroup integration need their own implementation and listening
 checks. Existing PRISM held notes retain the original renderer.
@@ -68,3 +68,8 @@ PRISM. The roster remains a listening experiment pending the owner's verdict.
 The owner's first verdict heard the movement but did not favor the underlying
 source sounds. The [source-palette round](PRISM_PALETTE.md) auditions eight
 broader candidates as original source, static imprint and moving imprint.
+
+The preferred [body opening](PRISM_OPENING.md) subsequently became four factory
+presets. The [motion studio](PRISM_MOTION_STUDIO.md) adds amount/time editing,
+source selection and opt-in repeating HOLD; it preserves the earlier audition
+recipes and their finite rendering path.

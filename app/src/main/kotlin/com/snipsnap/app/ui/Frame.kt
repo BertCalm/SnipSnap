@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -45,7 +46,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.theme.BinRedOnLcd
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -53,6 +53,9 @@ import com.snipsnap.app.theme.pressedBevel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Bench
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.BusyLatch
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
 import com.snipsnap.shell.Door
 import com.snipsnap.shell.Layout
@@ -141,6 +144,13 @@ class NavState(private val model: Navigation = Navigation()) {
     /** The system Back: true when it moved. */
     fun back(): Boolean {
         val moved = model.back()
+        location = model.location
+        return moved
+    }
+
+    /** [Navigation.backOutOf]: leave [page] for [fallback] if it is still what is on screen; true when it moved. */
+    fun backOutOf(page: Location, fallback: Location): Boolean {
+        val moved = model.backOutOf(page, fallback)
         location = model.location
         return moved
     }
@@ -299,7 +309,7 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
             .padding(horizontal = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(label, TapeType.pixel, scheme.amberOnChrome)
+        TapeText(label, TapeType.pixel, scheme.accent.tape)
     }
 }
 
@@ -330,104 +340,175 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  *   toast gave a screen-reader user (audit finding 3), polite rather than
  *   assertive for the same reason the toast's was.
  *
- * [busy] is the status bar's old third cell: a line about a write in
- * flight, shown in place of the standing line while it runs.
+ * [busy] is the status bar's old third cell: the job in flight, shown in
+ * place of the standing line while it runs. Not at once: a job is held
+ * back for [BusyLatch.SHOW_AFTER_MS], so the many that finish in a blink
+ * draw nothing, and once drawn it stays for [BusyLatch.MIN_VISIBLE_MS], so
+ * it can be read. While it is drawn the dock carries four things:
+ *
+ *  - a [BusyBar] along the top edge of the panel, over the row and adding
+ *    no height: counted when the job can be counted, with no end when not;
+ *  - the job's own words in the line, which hold through the linger;
+ *  - the count (`5 OF 16`) after the line, outside the line's live region
+ *    so a progress tick is not announced, and never given to the line to
+ *    ellipsize: it is the line that gives way;
+ *  - CANCEL in the door's place, when the job can be stopped.
+ *
+ * A job owns the dock from the moment it starts, drawn or not, and the
+ * standing door waits until the job's bar has gone.
  */
 @Composable
 fun Dock(
     dock: DockState,
-    busy: String?,
+    busy: Busy?,
     onArm: () -> Unit,
     onPlayToggle: (() -> Unit)?,
     onSnip: () -> Unit,
     onEject: () -> Unit,
     onTakeDoor: () -> Unit,
     modifier: Modifier = Modifier,
+) = Dock(dock, busy, onArm, onPlayToggle, onSnip, onEject, onTakeDoor, modifier, SystemClock::uptimeMillis)
+
+/**
+ * [Dock] on a clock the caller supplies, in ms and monotonic, for the
+ * job's show delay. The device test hands it the compose test clock, for
+ * the reason [rememberBusyVisible]'s own overload has one: the delay is a
+ * coroutine `delay`, which runs on the test clock's virtual time, and
+ * [SystemClock] would not move with it. [clock] has no default so this
+ * cannot be mistaken for the public one at a call site.
+ */
+@Composable
+internal fun Dock(
+    dock: DockState,
+    busy: Busy?,
+    onArm: () -> Unit,
+    onPlayToggle: (() -> Unit)?,
+    onSnip: () -> Unit,
+    onEject: () -> Unit,
+    onTakeDoor: () -> Unit,
+    modifier: Modifier,
+    clock: () -> Long,
 ) {
     val scheme = LocalScheme.current
     val now = dock.now
     val armed = dock.capture is DockModel.Capture.Armed
-    val line = busy ?: now.text
+    val visible = rememberBusyVisible(busy, clock)
+    // The last job the dock was handed, so the bar's linger past the job's
+    // end still has its words and its count and not a blank.
+    val last = remember { LastBusy() }
+    if (busy != null) last.job = busy
+    val shown = if (visible) busy ?: last.job else null
+    val line = shown?.label ?: now.text
     // The old toast's rise: the line fades in when its words change, so a
     // replaced sentence reads as an event and not as a silent edit.
     val t = remember(line) { Animatable(0f) }
     LaunchedEffect(line) { t.animateTo(1f, tween(Motion.TOAST_IN_MS)) }
 
-    Row(
+    // The panel is a box so the bar can lie over the row's top edge: a
+    // sibling of the row, so it takes none of the row's height.
+    Box(
         modifier
             .fillMaxWidth()
             .heightIn(min = Layout.DOCK_H.dp)
-            .lcdPanel(scheme)
-            .padding(horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .lcdPanel(scheme),
     ) {
-        // Transport. A live chip that is stopped says ▶, what a tap does; the
-        // old ■ read as STOP on the one control that would start. Where the
-        // beat cannot run (no chip) a stopped beat has no readout at all: an
-        // inert ■ beside the capture light read as a button that did nothing.
-        val stopped = dock.transport is DockModel.Transport.Stopped
-        if (onPlayToggle != null) {
-            DockChip(
-                if (stopped) Places.PLAY_GLYPH else dock.transportLabel,
-                scheme.amber.tape,
-                onClick = onPlayToggle,
-                label = if (stopped) Places.PLAY_BEAT else Places.STOP_BEAT,
-            )
-        } else if (!stopped) {
-            TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
-        }
-        // Capture.
-        if (!armed) {
-            Row(
-                Modifier
-                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .widthIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .tapeClick(label = Places.LISTEN, onClick = onArm)
-                    // The light is an 8 dp dot: the state it shows, said.
-                    .semantics { stateDescription = if (dock.capture is DockModel.Capture.Snipped) "SNIPPED" else "MIC IDLE" }
-                    .padding(horizontal = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-            ) {
-                CaptureLight(lit = false)
-                TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = Layout.DOCK_H.dp)
+                .padding(horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            // Transport. A live chip that is stopped says ▶, what a tap does; the
+            // old ■ read as STOP on the one control that would start. Where the
+            // beat cannot run (no chip) a stopped beat has no readout at all: an
+            // inert ■ beside the capture light read as a button that did nothing.
+            val stopped = dock.transport is DockModel.Transport.Stopped
+            if (onPlayToggle != null) {
+                DockChip(
+                    if (stopped) Places.PLAY_GLYPH else dock.transportLabel,
+                    scheme.amber.tape,
+                    onClick = onPlayToggle,
+                    label = if (stopped) Places.PLAY_BEAT else Places.STOP_BEAT,
+                )
+            } else if (!stopped) {
+                TapeText(dock.transportLabel, TapeType.lcdSmall, scheme.lcdInk.tape)
             }
-        } else {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                // The light, the count and the meter, one node that says the
-                // state; SNIP and STOP stay their own, so they are not merged in.
+            // Capture.
+            if (!armed) {
                 Row(
-                    Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                    Modifier
+                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .widthIn(min = Layout.MIN_HIT_TARGET.dp)
+                        .tapeClick(label = Places.LISTEN, onClick = onArm)
+                        // The light is an 8 dp dot: the state it shows, said.
+                        .semantics { stateDescription = if (dock.capture is DockModel.Capture.Snipped) "SNIPPED" else "MIC IDLE" }
+                        .padding(horizontal = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
-                    CaptureLight(lit = true)
-                    Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
-                        CaptureMeter(Modifier.width(72.dp).height(6.dp))
-                    }
+                    CaptureLight(lit = false)
+                    TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
                 }
-                DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
-                DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    // The light, the count and the meter, one node that says the
+                    // state; SNIP and STOP stay their own, so they are not merged in.
+                    Row(
+                        Modifier.semantics(mergeDescendants = true) { stateDescription = "MIC ARMED" },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        CaptureLight(lit = true)
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            TapeText(dock.captureLabel, TapeType.pixelSmall, scheme.amber.tape)
+                            CaptureMeter(Modifier.width(72.dp).height(6.dp))
+                        }
+                    }
+                    DockChip(Places.SNIP, scheme.amber.tape, onClick = onSnip)
+                    DockChip(Places.STOP, BinRedOnLcd, onClick = onEject, border = BIN_RED_BORDER)
+                }
+            }
+            // Now: the line, then the job's count, then CANCEL or the standing door.
+            TapeText(
+                line,
+                TapeType.pixelSmall,
+                scheme.lcdInk.tape,
+                modifier = Modifier
+                    .weight(1f)
+                    .alpha(t.value)
+                    .semantics { liveRegion = LiveRegionMode.Polite },
+                maxLines = 2,
+            )
+            val total = shown?.total
+            if (shown != null && total != null) {
+                // No weight: the line above is the one that gives way.
+                TapeText(Copy.busyCount(shown.done, total), TapeType.pixelSmall, scheme.lcdInk.tape)
+            }
+            // CANCEL is for the live job: once it has ended and only its bar
+            // lingers there is nothing left to stop, and its lambda is stale.
+            val cancel = if (visible) busy?.cancel else null
+            val door = now.door
+            if (cancel != null) {
+                DockChip(Copy.CANCEL_JOB, scheme.amber.tape, onClick = cancel)
+            } else if (door != null && busy == null && !visible) {
+                DoorChip(door.label, onClick = onTakeDoor)
             }
         }
-        // Now: the line, then its door.
-        TapeText(
-            line,
-            TapeType.pixelSmall,
-            scheme.lcdInk.tape,
-            modifier = Modifier
-                .weight(1f)
-                .alpha(t.value)
-                .semantics { liveRegion = LiveRegionMode.Polite },
-            maxLines = 2,
-        )
-        val door = now.door
-        if (door != null && busy == null) {
-            DoorChip(door.label, onClick = onTakeDoor)
-        }
+        if (shown != null) BusyBar(shown, scheme.amber.tape, Modifier.align(Alignment.TopCenter))
     }
+}
+
+/**
+ * What a screen remembers of the job it last drew, so that the linger past
+ * the job's end still has its words and its count and not a blank ([Dock],
+ * and `KitLoading` for the kit's card). Plain memory, not state: it is only
+ * read when the job is null, on the composition that follows the last one to
+ * write it.
+ */
+internal class LastBusy {
+    var job: Busy? = null
 }
 
 /** The capture light: amber while the tape rolls, a dark dot otherwise. */
@@ -541,11 +622,15 @@ fun ChoiceSheet(rows: List<SheetRow>, onDismiss: () -> Unit) {
     }
 }
 
-/** Behind the gear in the title bar: SETUP ▸ and HELP ▸, one tap from every screen. */
+/** Behind the gear in the title bar: SETUP ▸, HELP ▸ and MIDI ▸, one tap from every screen. */
 @Composable
-fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onDismiss: () -> Unit) {
+fun GearSheet(onSetup: () -> Unit, onHelp: () -> Unit, onMidi: () -> Unit, onDismiss: () -> Unit) {
     ChoiceSheet(
-        listOf(SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup), SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp)),
+        listOf(
+            SheetRow("${Places.GEAR_SETUP} ▸", onClick = onSetup),
+            SheetRow("${Places.GEAR_HELP} ▸", onClick = onHelp),
+            SheetRow("${Places.GEAR_MIDI} ▸", onClick = onMidi),
+        ),
         onDismiss,
     )
 }

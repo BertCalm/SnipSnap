@@ -46,7 +46,6 @@ import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
-import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
@@ -57,7 +56,6 @@ import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadTape
-import com.snipsnap.shell.SchemeId
 import com.snipsnap.shell.SnipStore
 import java.io.File
 import kotlin.math.sqrt
@@ -408,12 +406,7 @@ private fun HeaderChip(
 private fun HoldRecordAction(label: String, enabled: Boolean, onPress: () -> Unit, onRelease: () -> Unit) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    val rim =
-        if (scheme.id == SchemeId.OILSLICK) {
-            Modifier.border(2.dp, oilslickSweep(), RoundedCornerShape(6.dp))
-        } else {
-            Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-        }
+    val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
         Modifier
             .fillMaxWidth()

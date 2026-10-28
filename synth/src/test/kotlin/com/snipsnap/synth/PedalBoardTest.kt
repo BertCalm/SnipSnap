@@ -55,7 +55,7 @@ class PedalBoardTest {
         val board = PedalBoard(listOf(pick("wahed", 0.7f, PedalSide.PRE), pick("compressed", 1f, PedalSide.PRE)))
         val folded = board.chainFor(PedalSide.PRE)!!
         assertEquals(Treatments.chain("wahed", 0.7f).wah, folded.wah)
-        assertEquals(Treatments.chain("compressed", 1f).squash, folded.squash)
+        assertEquals(Treatments.chain("compressed", 1f).compressor, folded.compressor)
         assertContentEquals(folded.process(snare).samples, board.process(snare).samples, "one side is one pass")
 
         // DRIVE then RIG both set valve: RIG, picked later, owns it.
@@ -177,5 +177,30 @@ class PedalBoardTest {
             val direct = Treatments.chain(name, 1f).process(snare)
             assertContentEquals(direct.samples, applied.samples, "$name is faded now and was not before")
         }
+    }
+
+    // ---------- around a synth pad's own landing chain (Stage 3) ----------
+
+    @Test
+    fun `around no landing chain is the board itself, and a bypassed board is the landing chain alone`() {
+        val board = PedalBoard(listOf(pick("wahed", 0.7f), pick("delayed", 0.7f)))
+        assertContentEquals(board.process(snare).samples, board.processAround(snare, null).samples)
+        val landing = Magnet.landingChain(MagnetVoice.JANGLE)
+        val off = PedalBoard(listOf(pick("wahed", 0f)))
+        assertContentEquals(landing.process(snare).samples, off.processAround(snare, landing).samples)
+    }
+
+    @Test
+    fun `around a landing amp the PRE pick reaches the amp and the POST pick follows it`() {
+        val dry = Magnet.render(MagnetVoice.JANGLE)
+        val landing = Magnet.landingChain(MagnetVoice.JANGLE)
+        // PRE alone: the pedal's chain, then the landing amp, two renders in a row.
+        val wah = PedalBoard(listOf(pick("wahed", 0.7f)))
+        val rig = landing.process(Treatments.chain("wahed", 0.7f).process(dry))
+        assertContentEquals(rig.samples, wah.processAround(dry, landing).samples, "WAH is not in front of the amp")
+        assertFalse(wah.process(landing.process(dry)).samples.contentEquals(rig.samples), "in front and after are the same sound")
+        // POST alone: after the landing chain, which is today's board on the baked pad.
+        val delay = PedalBoard(listOf(pick("delayed", 0.7f)))
+        assertContentEquals(delay.process(landing.process(dry)).samples, delay.processAround(dry, landing).samples, "DELAY left the back of the amp")
     }
 }

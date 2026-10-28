@@ -87,11 +87,17 @@ object Cli {
         |                        WAV + complete .patch; HOLD=1 exports a sustained loop)
         |                        (OBBLIGATO AIR_REED: --seed N sets players;
         |                        Harmony/Play/Fight/Protect; WAV + .patch recipe)
+        |                        (TIDAL PAIR/STREAM: --midi 36..84 --velocity 0..1;
+        |                         --macros HOLD=1 loops aftermath; --instrument [--release S] keeps encounter;
+        |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
-        |                        --velocity 0..1 --seed N)
-        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER; --midi 24..84 --velocity 0..1)
+        |                        --velocity 0..1 --seed N; --model 3 --macros HOLD=1;
+        |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
+        |                        --instrument [--release .02..3] exports C3..C5 held keys)
+        |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
+        |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;
         |                        --macros BODY=.8,EDGE=.6 edits named controls in 0..1;
         |                        --instrument [--release S] [--velocity 0..1] makes

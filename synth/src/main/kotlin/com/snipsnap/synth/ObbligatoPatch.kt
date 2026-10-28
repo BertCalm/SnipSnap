@@ -17,7 +17,7 @@ data class ObbligatoPatch(
         require(name.isNotBlank()) { "OBBLIGATO patch name must not be blank" }
         Obbligato.settled(macros)
         Obbligato.validateNote(midi, velocity)
-        require(model in 1..Obbligato.MODEL) { "unsupported OBBLIGATO model: $model" }
+        require(model in 1..Obbligato.MAX_MODEL) { "unsupported OBBLIGATO model: $model" }
     }
 
     override val engine get() = ENGINE
@@ -41,7 +41,7 @@ data class ObbligatoPatch(
         fun fromJsonValue(value: JsonValue): ObbligatoPatch {
             val obj = value.obj()
             val model = obj["model"]?.int() ?: Obbligato.MODEL
-            if (model !in 1..Obbligato.MODEL) throw JsonException("unsupported OBBLIGATO model: $model")
+            if (model !in 1..Obbligato.MAX_MODEL) throw JsonException("unsupported OBBLIGATO model: $model")
             val midi = obj["midi"]?.int() ?: Obbligato.DEFAULT_MIDI
             val velocity = obj["velocity"]?.num()?.toFloat() ?: Obbligato.DEFAULT_VELOCITY
             val seed = obj["seed"]?.int() ?: 0

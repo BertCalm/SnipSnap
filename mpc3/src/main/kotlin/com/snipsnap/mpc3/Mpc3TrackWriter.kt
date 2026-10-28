@@ -699,7 +699,8 @@ class Mpc3TrackWriter(
             lowNote = 0,
             highNote = 127,
             whichMuteGroup = pad?.muteGroup ?: 0,
-            synthSection = synthSection(filled, version = 15, shape = pad),
+            synthSection = synthSection(filled, version = 15, shape = pad,
+                sustained = pad?.loop == true && !pad.oneShot && pad.chain == null),
             // 0 = One Shot (the whole sample fires), 2 = Note On (sustains
             // while held) — a per-pad musical choice in real kits.
             triggerMode = if (pad?.oneShot != false) 0 else 2,
@@ -708,6 +709,7 @@ class Mpc3TrackWriter(
                     zones.getOrNull(slot), filledInstrument = filled, rootNote = 0,
                     humanize = pad?.humanize, chain = pad?.chain,
                     gridZone = gridZones?.getOrNull(slot),
+                    fullLoop = pad?.loop == true && !pad.oneShot && pad.chain == null,
                 )
             },
             keygroupExtras = false,
@@ -796,6 +798,7 @@ class Mpc3TrackWriter(
         zone: VelocityLayer?,
         filledInstrument: Boolean,
         rootNote: Int,
+        fullLoop: Boolean = false,
         /**
          * Per-hit randomization 0..1 (GG4). These random fields are the
          * format's "no two hits alike" mechanism, present (all zero) on
@@ -862,7 +865,7 @@ class Mpc3TrackWriter(
             // The sustain loop as PSK's rolls write it: LoopMode 1 +
             // LoopStart, looping to End.
             "LoopStart" to i(zone?.loopStartFrame ?: 0L),
-            "LoopMode" to i(if ((zone?.loopStartFrame ?: 0L) > 0L) 1 else 0),
+            "LoopMode" to i(if (zone != null && (fullLoop || zone.loopStartFrame > 0L)) 1 else 0),
             "PulsePosition" to i(0),
             "LoopCrossfadeLength" to i(if (filledInstrument) -1 else 0),
             "LoopCrossfadeType" to i(0),

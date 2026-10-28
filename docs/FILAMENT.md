@@ -71,7 +71,7 @@ processing a reopened pad cannot mutate a later preview. Effects run after
 the cache. Cache hits improve repeated previews; a newly edited patch still
 requires synthesis. Benchmark cold edits separately from cache hits.
 
-Model-3 THREAD also exposes MAKE INSTRUMENT. The pilot renders native C3,
+Model-3 THREAD, PULSE and CURL expose MAKE INSTRUMENT. Each renders native C3,
 C4 and C5 roots covering MIDI 48–72, with one velocity layer. It retains
 the actual zero-state onset of the periodically driven network and marks
 its settled final cycle for repetition. Independently advanced preceding
@@ -82,14 +82,15 @@ The existing keygroup host owns note-velocity gain and note-off release.
 The captured velocity still changes source articulation and routing; exported
 layers remove its separate native gain law once. Standalone previews retain
 native gain. The program release fades the whole note, including its halo;
-an independent post-release halo tail is outside this pilot.
+an independent post-release halo tail remains outside the held-instrument path.
 
 `FilamentKeys`, `FilamentPadMaker` and the phone's existing instrument sheet
 use the established `KeyNote`, `OneNote` and MPC 2/MPC 3 package paths. WAV
 sampler markers, native roots and loop boundaries accompany the audio.
 `TrackData/filament.patch.json` retains the original source recipe, while
-release remains a program property. Other voices and older saved models
-continue through their existing pad renderer.
+release remains a program property. Older saved models continue through their
+existing pad renderer. The capability is shared by the phone, package maker and
+renderer, so a voice cannot appear in the sheet and fail a different entry guard.
 
 A render-only Java 17 benchmark on this workspace's four-vCPU Linux host used
 separate before/after JVMs, two warmups and five complete renders per recipe.
@@ -119,6 +120,24 @@ three native attack/loop WAVs and a stereo reference-player demo. The demo
 loads the exported files, holds each root beyond its first wrap and checks
 note-off release. Its manifest labels the host gain and records sample
 markers and hashes. Hardware import and listening acceptance remain separate.
+
+Use `:shell:generateFilamentKeysAudition -PfilamentKeysVoice=ALL` for the complete
+held family. A fresh `testkit/filament-held-keys/` contains three ordinary program
+folders, individual ZIPs and `filament-held-keys.zip`. The combined ZIP has the
+three program folders directly at its root. Select `PULSE` or `CURL` instead of
+`ALL` to produce just that instrument; the default remains the original THREAD
+handoff. Each voice uses its first approved factory recipe at native velocity 1.
+The demos play only the exported files through wrapping and note-off release,
+with the reference player's gain labeled separately from native sample gain.
+
+PULSE keeps its recurring articulated arrivals and shorter activity-memory
+release; CURL keeps its slower exchanged bloom and shared escaped halo. They
+start their original voice-specific periodic drives from a quiet network. The
+retained onset and accepted sustain belong to that one continuously advanced
+network, with the approved source parameters and fixed native output gain.
+The three-root/one-layer scope and 0.1–1.5 s program release apply to every voice.
+The program fade includes the halo. Physical phone/MPC acceptance and listening
+acceptance of the new PULSE/CURL keygroups remain open.
 
 Why it is built this way:
 

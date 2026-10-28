@@ -83,6 +83,8 @@ Everything in the app is one of two surfaces, and the split is period-correct
 
 ## Schemes (themes, the Win95 way)
 
+> 2026-10-27: the owner retired CLASSIC; modern (VENT, OPENSKY) is the only look. See PR #704.
+
 TapeOS themes exactly like the classic Appearance control panel: a scheme is a
 **token swap and nothing else** — same bevels, same layout, same type. Because
 every control is built from the token set, a theme is one small table, and a

@@ -230,3 +230,8 @@ SDK. CI builds Android separately; JVM checks cannot validate future phone UI
 wiring. Native integration is checked through engine replay, registry/serialization,
 velocity, CLI, shelf import and app build validation. Device interaction still
 requires a phone or emulator.
+
+
+## Release motion experiment
+
+An isolated [release experiment](superpowers/specs/2026-10-26-crease-release-experiment.md) compares continued held pressure with pressure withdrawal at key-up, using the actual circuit and the same volume fade. Its fixed recordings and numerical gates pass; no live release-aware player mode or new instrument export is enabled. The production renderer, presets and existing instruments are unchanged.

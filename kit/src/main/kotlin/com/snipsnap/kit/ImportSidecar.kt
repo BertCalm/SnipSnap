@@ -45,6 +45,9 @@ internal object ImportSidecar {
                     drumClass = history.drumClass,
                     colorHex = pad.colorHex ?: history.colorHex,
                     recipe = history.recipe,
+                    velocityLayers = pad.velocityLayers.mapIndexed { index, layer ->
+                        layer.copy(displayName = history.velocityLayers[index].displayName)
+                    },
                     source = history.source + pad.source,
                 )
             },

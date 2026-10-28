@@ -38,6 +38,45 @@ repositories {
     mavenCentral()
 }
 
+// A stopgap for a JIT crash, not a tuning choice. On OpenJDK 21 (what cloud
+// sessions run), C2, the JVM's optimising compiler, dies with an internal
+// error (Type::typerr, ShouldNotReachHere) while compiling Filament.synthesize,
+// a 4,556-byte method, and takes the whole test process with it: Gradle
+// reports "There were failing tests" with no test named. Reproduced on
+// 21.0.12 in :cli and :shell on every run; not seen on CI's Temurin 17, whose
+// silent :shell failures were most likely the heap :shell's build file now sizes.
+// Excluding that one method from JIT runs it interpreted and leaves every
+// other method optimised; CI's jvm-tests was no slower with it. Remove this
+// once Filament.synthesize is split into methods C2 can compile; a JDK 21
+// test JVM that no longer crashes without the flag is the proof.
+subprojects {
+    tasks.withType<Test>().configureEach {
+        jvmArgs("-XX:CompileCommand=quiet", "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize")
+    }
+}
+
+// One test JVM per CPU, so a module's test classes share the runner rather
+// than queue on one core. CI's jvm-tests spent 87 of its 107 minutes in
+// :synth:test (#683's run, 2026-10-26), 410 classes run one after another
+// in a single JVM while the runner's second CPU sat mostly idle. A private
+// repository's ubuntu-latest has 2 CPUs and 8 GB, so this is two JVMs there.
+// Each keeps its module's own maxHeapSize (:synth 2g, :shell 1536m); two
+// :synth JVMs peaked at 4.4 GB resident together, measured on 2 pinned CPUs
+// locally. The same measurement put :synth at about 1.75 times faster: each
+// class runs a little slower beside another, but two run at once.
+//
+// Classes are split across JVMs, never the methods of one class, so a test
+// class's own shared state is untouched. Tests that write files write them
+// under temporary directories of their own; the two that write elsewhere
+// (GoldenSnapshotTest's missing goldens, UatSimTest's transcript) write a
+// file no other class reads. The timing asserts guard against hangs and
+// runaway cancellations, and every one passed with two JVMs on two CPUs.
+subprojects {
+    tasks.withType<Test>().configureEach {
+        maxParallelForks = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+    }
+}
+
 dependencyCheck {
     // High and Critical (CVSS 7.0+) fail the build; Medium/Low land in the
     // report without blocking anything. A scan that fails on every Low

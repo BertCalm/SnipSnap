@@ -26,7 +26,7 @@ data class TrioConfig(
     init {
         require(tempoBpm.isFinite() && tempoBpm in 60f..200f) { "TRIO tempo must be 60..200 BPM" }
         require(beats in 1..4) { "TRIO beats must be 1..4" }
-        require(beats * 60f / tempoBpm <= 2f) { "TRIO gestures must fit within two seconds" }
+        require(beats * 60f / tempoBpm <= 2f) { "TRIO beat grid must fit within two seconds" }
         require(press.isFinite() && press in 0f..1f) { "TRIO press must be 0..1" }
         require(tremoloHz.isFinite() && tremoloHz in 5f..25f) { "TRIO tremolo must be 5..25 Hz" }
         require(strumMs.isFinite() && strumMs in 1f..30f) { "TRIO strum must be 1..30 ms" }
@@ -56,7 +56,7 @@ object Trio {
     const val MAX_MIDI = 84
     const val DEFAULT_MIDI = 60
     const val LEGACY_MODEL_VERSION = 1
-    const val MODEL_VERSION = 5
+    const val MODEL_VERSION = 6
     // Model 3 changes only the companions' articulation and decay. Main-player
     // answers keep the model 2 seed namespace, independent of the latest model.
     private const val DRAMA_SEED_MODEL = 2
@@ -68,6 +68,10 @@ object Trio {
         MacroSpec("TOUCH", .55f), MacroSpec("DRAMA", 0f), MacroSpec("SIDES", 0f),
         MacroSpec("MOTION", 0f), MacroSpec("SPACE", .35f), MacroSpec("DAMP", .48f),
     )
+
+    /** Solo recipes retain all six values, but only these three controls act there. */
+    fun isMacroActive(voice: TrioVoice, name: String): Boolean =
+        voice == TrioVoice.ENSEMBLE || name !in setOf("DRAMA", "SIDES", "MOTION")
 
     fun defaults(voice: TrioVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
@@ -122,8 +126,10 @@ object Trio {
             listOf(Modes.fixed(245f, .4f, .15f), Modes.fixed(640f, 1f, .13f), Modes.fixed(2200f, .45f, .07f)), .24f)
     }
 
-    private class StringPart(val loop: Strings.Loop, val excitation: FloatArray, val ratio: Float)
-    private class Player(val actor: TrioActor, val shape: PlayerShape, val strings: List<StringPart>, val output: FloatArray)
+    private class StringPart(val loop: Strings.Loop, val excitation: TrioExcitation, val ratio: Float)
+    private class Player(val actor: TrioActor, val shape: PlayerShape, val strings: Array<StringPart>, val output: FloatArray) {
+        val courseDivisor = sqrt(strings.size.toFloat())
+    }
 
     private fun player(actor: TrioActor, root: Float, damp: Float, config: TrioConfig, rate: Int, frames: Int): Player {
         val baseShape = shape(actor)
@@ -137,10 +143,10 @@ object Trio {
         val start = if (actor == TrioActor.BERIMBAU) root / 2f.pow(config.press * 2f / 12f) else root
         val strings = shape.ratios.map { ratio ->
             val tuning = Strings.tune(start * ratio, damping.loopHz, rate, stiffness = shape.stiffness)
-            StringPart(Strings.Loop(tuning.n, tuning.a, damping.fb, damping.loopHz, rate, stiffness = shape.stiffness),
-                FloatArray(frames), ratio)
+            StringPart(Strings.Loop(tuning.n, tuning.a, damping.fb, damping.loopHz, rate, stiffness = shape.stiffness, cacheLoopFilter = true),
+                TrioExcitation(frames), ratio)
         }
-        return Player(actor, shape, strings, FloatArray(frames))
+        return Player(actor, shape, strings.toTypedArray(), FloatArray(frames))
     }
 
     /** Each family has a source distinction before the resonator/body, not only a gain change. */
@@ -174,18 +180,24 @@ object Trio {
         }
     }
 
-    fun renderProbe(
-        voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = 1f, config: TrioConfig = TrioConfig(),
-    ): TrioProbe {
-        if (config.model == 4) return TrioV4.renderProbe(voice, macros, midi, velocity, config)
-        if (config.model == 3) return TrioV3.renderProbe(voice, macros, midi, velocity, config)
-        if (config.model == 2) return TrioV2.renderProbe(voice, macros, midi, velocity, config)
-        if (config.model == LEGACY_MODEL_VERSION || voice != TrioVoice.ENSEMBLE || macros.getOrDefault("DRAMA", 0f) == 0f)
-            return TrioV1.renderProbe(voice, macros, midi, velocity, config.copy(model = LEGACY_MODEL_VERSION))
+    /** Immutable, bounded one-entry score cache. Audio buffers and live loops are never shared. */
+    private data class ScoreKey(val voice: TrioVoice, val macros: Map<String, Float>, val midi: Int,
+        val velocity: Float, val config: TrioConfig)
+    @Volatile private var cachedScore: Pair<ScoreKey, TrioScore>? = null
+
+    internal fun score(voice: TrioVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
+        config: TrioConfig): TrioScore {
+        require(config.model >= 5 && voice == TrioVoice.ENSEMBLE && (macros["DRAMA"] ?: 0f) > 0f)
+        TrioRenderSupport.checkCancelled()
+        val key = ScoreKey(voice, validated(voice, macros, midi, velocity).toMap(), midi, velocity, config)
+        cachedScore?.let { if (it.first == key) return it.second }
+        return buildScore(voice, key.macros, midi, velocity, config).also { cachedScore = key to it }
+    }
+
+    private fun buildScore(voice: TrioVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
+        config: TrioConfig): TrioScore {
         val m = validated(voice, macros, midi, velocity)
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        val frames = (SECONDS * rate).toInt()
         val root = Keys.midiHz(midi)
         val span = config.beats * 60f / config.tempoBpm
         val beatSeconds = 60f / config.tempoBpm
@@ -208,7 +220,11 @@ object Trio {
             TrioVoice.CHARANGO -> listOf(TrioActor.CHARANGO)
             TrioVoice.ENSEMBLE -> primary.toList() + if (drama > 0f) listOf(TrioActor.OUD, TrioActor.BOUZOUKI, TrioActor.PHIN) else emptyList()
         }
-        val players = selected.associateWith { player(it, root, m.getValue("DAMP"), config, rate, frames) }
+        val players = selected.associateWith {
+            val base = shape(it)
+            if (it !in primary) base.copy(loopHz = base.loopHz * 3f) else base
+        }
+        val courses = mutableListOf<TrioCourse>()
         val events = mutableListOf<TrioEvent>()
         val actorEventCounts = mutableMapOf<TrioActor, Int>()
         val responseEventCounts = mutableMapOf<TrioActor, Int>()
@@ -231,10 +247,15 @@ object Trio {
             val alliance = if (primary.contains(actor) && voice == TrioVoice.ENSEMBLE) 1.12f - .52f * alone else 1f
             val energy = effort * strength * alliance
             val companion = !primary.contains(actor)
-            val damping = Strings.damping(if (companion) m.getValue("DAMP") * .32f else m.getValue("DAMP"), p.shape.loopHz)
+            val damping = Strings.damping(if (companion) m.getValue("DAMP") * .32f else m.getValue("DAMP"), p.loopHz)
             val pickAmount = ((.2f + .8f * touch) * (.55f + .45f * velocity) +
                 if (primary.contains(actor)) tension * (.08f + .15f * alone) else drama * .10f).coerceIn(0f, 1f)
-            val pickHz = Dsp.expMap(pickAmount, p.shape.pickLo, p.shape.pickHi)
+            val basePickHz = Dsp.expMap(pickAmount, p.pickLo, p.pickHi)
+            // Model 5's tension can saturate pickAmount before TOUCH reaches 1.
+            // A smooth upper fifth adds contact brightness after that clamp;
+            // the accepted bank (TOUCH <= .8) and every older recipe stay exact.
+            val hardTouch = if (config.model >= 6) ((touch - .8f) / .2f).coerceIn(0f, 1f) else 0f
+            val pickHz = basePickHz * (1f + 2f * hardTouch * hardTouch * tension)
             // Ghost answers have their own seed namespace and ordinal. An arbitrarily
             // quiet new response must never reseed a later accepted baseline gesture.
             val counts = if (response) responseEventCounts else actorEventCounts
@@ -244,11 +265,11 @@ object Trio {
             val startHz = if (actor == TrioActor.BERIMBAU && !response && eventOrdinal == 0)
                 root / 2f.pow(config.press * 2f / 12f) else root
             var performedTime = time
-            for ((k, part) in p.strings.withIndex()) {
-                val courseIndex = if (reverse) (p.strings.size - 1 - k) / 2 else k / 2
+            for ((k, ratio) in p.ratios.withIndex()) {
+                val courseIndex = if (reverse) (p.ratios.size - 1 - k) / 2 else k / 2
                 val offset = if (companion) 0f else if (strummed) courseIndex * config.strumMs / 1000f * (1f + .8f * alone) /
                     (1f + tension * .45f) else k * .0008f
-                val hz = startHz * part.ratio
+                val hz = startHz * ratio
                 // The charango's repeated plectrum reinforces each ringing course at its
                 // nearest existing cycle, rather than injecting unrelated noise phases.
                 // This changes an onset by at most half a string period, retaining the
@@ -257,15 +278,14 @@ object Trio {
                     firstOnset + offset + Math.round((time - firstOnset) * hz) / hz else time + offset
                 if (k == 0) performedTime = onset else if (reverse) performedTime = min(performedTime, onset)
                 val at = (onset * rate).toInt()
-                val tuning = Strings.tune(hz, damping.loopHz, rate, stiffness = p.shape.stiffness)
+                val tuning = Strings.tune(hz, damping.loopHz, rate, stiffness = p.stiffness)
                 val textureOrdinal = if (actor == TrioActor.CHARANGO) 0 else eventOrdinal
                 val course = if (actor == TrioActor.CHARANGO) k / 2 else k
                 val seed = if ((!response && primary.contains(actor)) || actor == TrioActor.CHARANGO)
                     Dsp.seedFor("TRIO", LEGACY_MODEL_VERSION, config.seed, midi, actor.name, textureOrdinal, course)
                 else Dsp.seedFor("TRIO", "DRAMA", DRAMA_SEED_MODEL, config.seed, midi, actor.name, textureOrdinal, course)
-                val burst = exciter(actor, tuning.n, hz, pickHz, p.shape.position, seed, rate)
-                val gain = energy / sqrt(p.strings.size.toFloat())
-                for (j in burst.indices) if (at + j in part.excitation.indices) part.excitation[at + j] += burst[j] * gain
+                val gain = energy / sqrt(p.ratios.size.toFloat())
+                courses += TrioCourse(actor, k, at, tuning.n, hz, pickHz, p.position, seed, gain)
             }
             events += TrioEvent(actor, performedTime, kind, energy)
         }
@@ -321,7 +341,42 @@ object Trio {
             }
         }
 
+        return TrioScore(span, selected.toList(), events.sortedWith(
+            compareBy<TrioEvent> { it.timeSeconds }.thenBy { it.actor.ordinal }), courses.toList())
+    }
+
+    fun renderProbe(
+        voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = 1f, config: TrioConfig = TrioConfig(),
+    ): TrioProbe = renderScene(voice, macros, midi, velocity, config)
+
+    private fun renderScene(
+        voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = 1f, config: TrioConfig = TrioConfig(), keepActors: Boolean = true,
+    ): TrioProbe {
+        TrioRenderSupport.checkCancelled()
+        if (config.model == 4) return TrioV4.renderProbe(voice, macros, midi, velocity, config)
+        if (config.model == 3) return TrioV3.renderProbe(voice, macros, midi, velocity, config)
+        if (config.model == 2) return TrioV2.renderProbe(voice, macros, midi, velocity, config)
+        if (config.model == LEGACY_MODEL_VERSION || voice != TrioVoice.ENSEMBLE || macros.getOrDefault("DRAMA", 0f) == 0f)
+            return TrioV1.renderProbe(voice, macros, midi, velocity, config.copy(model = LEGACY_MODEL_VERSION))
+        val m = validated(voice, macros, midi, velocity)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val frames = (SECONDS * rate).toInt()
+        val root = Keys.midiHz(midi)
+        val score = score(voice, m, midi, velocity, config)
+        val span = score.gridSpanSeconds
+        val tension = m.getValue("DRAMA")
+        val players = score.actors.associateWith { player(it, root, m.getValue("DAMP"), config, rate, frames) }
+        for (course in score.courses) {
+            TrioRenderSupport.checkCancelled()
+            val burst = exciter(course.actor, course.n, course.hz, course.pickHz, course.position, course.seed, rate)
+            players.getValue(course.actor).strings[course.string].excitation.add(course.at, burst, course.gain)
+        }
+        for (p in players.values) for (part in p.strings) part.excitation.prepare()
+        val events = score.events
         val mainPlayers = primary.map { players[it] }
+        val orderedPlayers = players.values.toTypedArray()
         val reflected = FloatArray(3)
         var weights = isolation(m.getValue("SIDES"), m.getValue("MOTION"), 0f, span)
         val wire = players[TrioActor.BERIMBAU]
@@ -330,6 +385,7 @@ object Trio {
         val pressStart = root / 2f.pow(config.press * 2f / 12f)
         for (i in 0 until frames) {
             if (i % CONTROL_SAMPLES == 0) {
+                TrioRenderSupport.checkCancelled()
                 val time = i.toFloat() / rate
                 weights = isolation(m.getValue("SIDES"), m.getValue("MOTION"), time, span)
                 val pressElapsed = time - wirePressOnset
@@ -339,8 +395,8 @@ object Trio {
                 }
             }
             for (a in 0..2) reflected[a] = mainPlayers[a]?.strings?.get(0)?.loop?.reflected() ?: 0f
-            for ((actor, p) in players) {
-                val a = primary.indexOf(actor)
+            for (p in orderedPlayers) {
+                val a = if (p.actor.ordinal < 3) p.actor.ordinal else -1
                 var mainWave = if (a >= 0) reflected[a] else p.strings[0].loop.reflected()
                 if (voice == TrioVoice.ENSEMBLE && a >= 0) {
                     // e01=w2, e12=w0, e20=w1. Each row remains a convex mixture,
@@ -352,32 +408,44 @@ object Trio {
                 }
                 var sample = p.strings[0].loop.inject(mainWave + p.strings[0].excitation[i])
                 for (k in 1 until p.strings.size) sample += p.strings[k].loop.next(p.strings[k].excitation[i])
-                p.output[i] = sample * p.shape.gain / sqrt(p.strings.size.toFloat())
+                p.output[i] = sample * p.shape.gain / p.courseDivisor
             }
         }
 
         val taps = linkedMapOf<TrioActor, FloatArray>()
+        val samples = FloatArray((SECONDS * Dsp.RATE).toInt())
         for ((actor, p) in players) {
             val space = m.getValue("SPACE")
-            val body = Strings.bodyRing(p.output, p.shape.body, p.shape.bodyAmount * (.75f + .75f * space), rate, SECONDS)
-            val colored = Dsp.OnePole(rate)
-            val early = FloatArray(body.size)
+            TrioRenderSupport.checkCancelled()
+            val body = TrioRenderSupport.body(p.output, p.shape.body, p.shape.bodyAmount * (.75f + .75f * space), rate)
+            val colored = Dsp.FixedOnePole(3800f, rate)
             val delayA = ((.043f + actor.ordinal * .003f) * rate).toInt()
             val delayB = ((.087f + actor.ordinal * .005f) * rate).toInt()
+            // Only two past body samples are needed. Retain their original
+            // values in a short line while reusing the body buffer for arrivals.
+            val history = FloatArray(delayB + 1)
+            var write = 0
+            var readA = history.size - delayA
+            var readB = history.size - delayB
             for (i in body.indices) {
-                val reflection = (if (i >= delayA) body[i - delayA] * .21f else 0f) +
-                    (if (i >= delayB) body[i - delayB] * .13f else 0f)
-                early[i] = body[i] + space * colored.lp(reflection, 3800f)
+                if (i % 1024 == 0) TrioRenderSupport.checkCancelled()
+                val reflection = (if (i >= delayA) history[readA] * .21f else 0f) +
+                    (if (i >= delayB) history[readB] * .13f else 0f)
+                val original = body[i]
+                history[write] = original
+                if (++write == history.size) write = 0
+                if (++readA == history.size) readA = 0
+                if (++readB == history.size) readB = 0
+                body[i] = original + space * colored.lp(reflection)
             }
-            val mono = Dsp.decimate(early, Dsp.RATE)
+            val mono = Dsp.decimate(body, Dsp.RATE)
             // A finite recording always clears the tail, including very long body modes.
             val fade = (Dsp.RATE * .15f).toInt()
             for (j in 0 until fade) mono[mono.size - fade + j] *= (1f - j.toFloat() / fade).pow(2)
             Dsp.fadeTail(mono)
-            taps[actor] = mono
+            if (keepActors) taps[actor] = mono
+            for (i in samples.indices) samples[i] += mono[i]
         }
-        val samples = FloatArray((SECONDS * Dsp.RATE).toInt())
-        for (tap in taps.values) for (i in samples.indices) samples[i] += tap[i]
         check(samples.all { it.isFinite() }) { "TRIO produced a nonfinite sample" }
         return TrioProbe(samples, taps, events.sortedWith(compareBy<TrioEvent> { it.timeSeconds }.thenBy { it.actor.ordinal }))
     }
@@ -386,7 +454,7 @@ object Trio {
         voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: TrioConfig = TrioConfig(),
     ): Snip {
-        val output = renderProbe(voice, macros, midi, velocity, config).samples.copyOf()
+        val output = renderScene(voice, macros, midi, velocity, config, keepActors = false).samples
         Dsp.levelTo(output, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         // Shared loudness matching must not erase the requested playing velocity.
         for (i in output.indices) output[i] *= velocity

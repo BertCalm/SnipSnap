@@ -1,15 +1,46 @@
 # THUMP SPARK and related hit families
 
-Status: prototype built; focused JVM checks and final audition generation pass.
-The full JVM suite is unverified after environment interruptions; CI must finish
-that validation. Android compilation, phone/MPC hardware checks and the owner's
-listening verdict remain pending. Repository baseline read: `3ecbdb78`
-(2026-10-24). This adds a voice to THUMP; it does not add an engine or replace
-existing drum voices.
+Status: revision 2 built; 113 focused JVM tests and the final audition generator
+pass with exit code 0. The owner heard insufficient control movement in R1;
+the revised sound still awaits the owner's listen. The full JVM suite is running
+and has no final pass result. Repository baseline read: `fd791f58` (2026-10-26).
+This remains one THUMP voice. Android code is unchanged in this round; Android
+compilation and phone/MPC hardware checks remain pending.
 
 The characteristic gesture is strike → metallic flare → falling pitch → rounded
 body. A related family moves from darker, longer hits toward brighter, more
 metallic, shorter hits as separate editable snapshots.
+
+## What the first audition established
+
+The owner reported no audible PUNCH movement, and weak METAL/COLOR movement
+except when both reached 1. That is the revision 1 listening result. Passing
+numerical safety checks did not establish useful control travel.
+
+The implementing session's matched revision 1 audit measured these attack/body
+ratios. Each compares the RMS of 0–10 ms with 10–50 ms; one gain applied to the
+complete clip cancels out of that ratio.
+
+| PUNCH | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---:|---:|---:|---:|---:|
+| R1 attack/body ratio, dB | 3.442 | 3.647 | 3.748 | 4.064 | 4.835 |
+
+The total measured range was only 1.393 dB. The first 40 ms power centroid also
+showed how much the two timbre controls depended on their combined extreme:
+
+| Revision 1 setting | Early power centroid |
+|---|---:|
+| Default: METAL 0.25, COLOR 0.5 | 246 Hz |
+| METAL 1, COLOR 0.5 | 313 Hz |
+| METAL 0.25, COLOR 1 | 254 Hz |
+| METAL 1, COLOR 1 | 397 Hz |
+
+These rounded baseline measurements support the owner's report; they are not a
+new listening judgment. Revision 2 gives PUNCH a longer source articulation,
+gives COLOR body harmonics to filter even when METAL is 0, and raises the edge's
+authority at ordinary METAL settings. Its regression probes cover early
+normalized spectra and each quarter step of PUNCH, with an audition still
+required to judge the result.
 
 ## What carries over from the references
 
@@ -46,22 +77,22 @@ gesture. SPARK keeps a bounded one-way percussion model; it does not need
 TANGLE's reciprocal encounter and capture system. Within THUMP, COWBELL's
 two-tone source is the closest metallic voice; TINES' FM percussion is another
 useful audition comparison. A THUMP voice is the lighter landing:
-SPARK combines a stable sine body with an independently shaped metallic edge,
+SPARK combines a pitched harmonic body with an independently shaped metallic edge,
 then exposes a repeatable relationship between separate hits. A new engine
 registry, sequencer or general modulation matrix would not improve this first
 proof.
 
 ```text
-TUNE, DECAY, METAL, COLOR (constant during each hit)
+TUNE, DECAY, PUNCH, METAL, COLOR (constant during each hit)
                          |
                          v
-            bounded oscillator / envelope plan
+       oscillator plan + source PUNCH attack/body envelope
                          |
        +-----------------+-------------------------+
        |                                           |
        v                                           v
-  sine body                              phase-modulated edge
-  body decay                             + sine × triangle ring pair
+  seven-partial body                     phase-modulated edge
+  fundamental / harmonic decay           + sine × triangle ring pair
        |                                 faster modulation / edge decay
        v                                           |
   body low-pass                                    v
@@ -82,26 +113,44 @@ t60. The raw render lasts 1.4 times t60, so the duration is approximately
 0.224–1.4 seconds. There is no HOLD or seamless-loop claim. These mappings and
 the edge's irrational frequency ratio are shape decisions until listening.
 
-The body stays present as METAL rises. The edge combines phase modulation with
-ring modulation against a triangle source at a ratio derived from √2. The
-triangle uses seven odd harmonics, rather than a discontinuous waveform.
-The phase-modulation index starts at `0.8 + 3.2 × METAL`, up to 4 before its
-decay envelope. The dry body has fixed weight 0.55. Edge gain is
-`0.45 × sqrt(METAL) × (0.65 + 0.70 × COLOR)`, so low and middle METAL settings
-receive more travel and COLOR coordinates edge balance with spectral opening.
-These gains and indices remain shape choices. Separate `Dsp.TptSvf` low-pass
-filters preserve a dark body underneath a brighter edge. The body cutoff moves
-from 1.5 to 8 times the root; the edge cutoff moves from 200 to 5,000 Hz and
-closes as the modulation dies away.
+The following revision 2 mappings match the frozen `Thump.spark` implementation
+used for the passing focused run and regenerated audition. Their constants
+remain sound-design choices awaiting the owner's listening verdict.
+
+The body uses seven finite partials with weights
+`[1, 0.9, 0.8, 0.65, 0.5, 0.4, 0.3]`, divided by their sum. The fundamental
+decays at body t60; upper harmonics decay at 0.90 times body t60. This gives
+COLOR spectral material while letting the tail settle toward the root. Body
+gain is `0.80 - 0.28 × METAL`; it remains present as METAL rises.
+
+The edge combines sine phase modulation with ring modulation against a triangle
+source at a ratio derived from √2. The triangle uses seven odd harmonics. The
+phase-modulation index starts at `1.5 + 6 × METAL`, up to 7.5 before its decay
+envelope. Edge gain is `0.95 × sqrt(METAL)`. Its interaction remains 0.65 phase
+modulation plus 0.35 ring product. These gains and indices are shape choices.
+
+Separate `Dsp.TptSvf` low-pass filters treat the body and edge independently.
+COLOR moves body cutoff from 0.9 to 9 times the root and edge cutoff from 1.5
+to 24 times the root. The edge cutoff then follows
+`0.60 + 0.40 × modulation envelope`, retaining spectral motion as it decays.
+COLOR no longer relies on a direct edge-gain multiplier.
 
 Decay envelopes precede the filters. Edge t60 is
-`body t60 × (0.80 - 0.15 × METAL)`; modulation t60 is 0.90 times body t60.
-Both decay faster than the body without confining the metallic effect to the
-first instant. METAL also sets the initial pitch excess above the root through
+`body t60 × (0.55 - 0.10 × METAL)`; modulation t60 is 0.75 times body t60.
+METAL also sets the initial pitch excess above the root through
 `bendDepth = 0.08 + 0.92 × METAL`. COLOR sets that pitch fall's time constant
 through `bendTime = 0.012 + 0.012 × COLOR` seconds. The oscillator phase uses
 the exact integral of this exponentially falling frequency. There is no
 recursive oscillator feedback or event solver.
+
+PUNCH now acts in the source as well as through the existing THUMP finish. Its
+raised-cosine rise moves exponentially from 18 ms at 0 to 0.35 ms at 1. Both
+branches receive that rise times
+`0.25 × (1 + 3 × PUNCH × exp(-time / 0.018))`. This changes the attack/body
+relationship over a longer span of time; the fixed quarter scale bounds
+unfinished gain before later level matching. The new PUNCH regression compares
+independently defined 0–10 ms and 10–50 ms windows, so a uniformly louder copy
+cannot pass it.
 
 Only SPARK receives its new band-limit and DC-conditioning stages before the
 shared THUMP finish. Existing voices keep their existing rendering path. The
@@ -112,14 +161,14 @@ with the pitched-engine loudness stage described in the general conventions.
 
 | Control | Default | Changes | Required interaction / proof |
 |---|---:|---|---|
-| TUNE | 0.50 | Sine root, the edge/modulator frequency context and root-relative body cutoff | TUNE × METAL must retain a usable pitched body across the register. |
-| DECAY | 0.35 | Body t60, the shorter edge/modulation envelopes and render duration | DECAY × METAL must change how the edge gives way to the body; duration increases with DECAY. |
-| PUNCH | 0.50 | THUMP's existing attack/body shaping | PUNCH must move the envelope without replacing the source's identity. |
-| METAL | 0.25 | Edge blend through a square-root law, phase-modulation depth, ring contribution, initial pitch-drop depth and edge t60 ratio | METAL × COLOR must expose sidebands and ringing at matched level. |
-| COLOR | 0.50 | Body and edge low-pass response, edge/body balance and pitch-fall time constant | Spectral probes cover TUNE 0.5, METAL 0.65, PUNCH 0 at COLOR 0.25/0.5/0.75; low-METAL audibility remains a listening target. |
+| TUNE | 0.50 | Body root/partials, edge/modulator frequencies and both root-relative filter cutoffs | TUNE × METAL must retain a usable pitched body across the register. |
+| DECAY | 0.35 | Fundamental, harmonic, edge and modulation t60 values, plus render duration | DECAY × METAL must change how the edge gives way to the body; duration increases with DECAY. |
+| PUNCH | 0.50 | Source attack duration, 18 ms attack/body gain envelope and THUMP's existing finish shaping | Passed at least 1 dB per quarter step and 6 dB overall at METAL 0 and 0.25; measured full ranges 19.38 and 20.01 dB. |
+| METAL | 0.25 | Body/edge gain balance, phase-modulation depth, ring contribution, initial pitch-drop depth and edge t60 ratio | Passed early normalized spectral movement at low/middle values with COLOR 0.25 and 0.5, plus scoped post-attack off-harmonic growth. |
+| COLOR | 0.50 | Independent body/edge low-pass cutoffs and pitch-fall time constant | Passed quarter-step early centroid movement at METAL 0 and 0.25; measured full ratios 2.356× and 2.289×. |
 
-The numerical checks establish scoped spectral movement; they do not establish
-audibility across every combination. The listening pass must judge low and
+Revision 2 checks establish scoped early spectral movement and envelope contrast.
+They do not establish musical sufficiency. The listening pass must judge low and
 middle control settings as well as the extremes. Non-finite or missing
 control values fall back to this voice's defaults. Unknown controls do not add
 hidden synthesis behavior.
@@ -154,12 +203,12 @@ existing identity under the app's established policy.
 
 SPARK is appended to `ThumpVoice`, so existing enum names and saved patches
 keep their identity. `ThumpPresets.forVoice(SPARK)` returns an empty roster until
-the owner has heard the voice. Defaults and SCRAMBLE still provide editable
+the revision passes its listening gate. Defaults and SCRAMBLE still provide editable
 starting points. Existing factory presets are unchanged.
 
 The SYNTH picker receives the SPARK label and its existing THUMP macro/render
-path. The native screen changes require an Android build where an SDK is
-available. DE-SAMPLE deliberately excludes this prototype from its candidate
+path. Revision 2 does not change Android code. Android compilation and hardware
+checks remain separate from JVM validation. DE-SAMPLE deliberately excludes this prototype from its candidate
 grid, preserving the original THUMP search points and tie order. Search
 eligibility and factory presets follow a later listening verdict.
 
@@ -172,14 +221,21 @@ and should be generated as a batch, not inside the playback callback.
 Generate the listening bundle with:
 
 ```sh
-./gradlew --no-daemon :synth:generateThumpSparkAudition
+./gradlew --no-daemon :synth:generateThumpSparkAudition -PsparkBaseline=/path/to/preserved-r1-audition
 ```
 
 The default destination is `testkit/thump-spark-audition/`; override it with
 `-PsparkOutput=/absolute/folder`. The local `index.html` presents four expression
 positions, each control at 0/0.25/0.5/0.75/1, three registers and the four
-METAL × COLOR corners. PCM24 WAVs live under `audio/`, with both native THUMP
-output and audition-matched copies: 36 settings, 72 WAVs, plus two family strips.
+METAL × COLOR corners. Revision 2 also sweeps COLOR with METAL 0 and METAL with
+COLOR 0.25. The generated matrix contains 46 settings, 92 native/matched PCM24
+WAVs, plus two family strips.
+With a preserved revision 1 baseline, the page adds 15 matched R1/R2 comparisons:
+five positions each for PUNCH, METAL and COLOR, holding every other control fixed.
+The original baseline assets and page are copied under `previous/`, with their
+hashes checked. Current audio and recipe filenames have an `r2-` prefix to avoid
+reusing cached R1 assets. Re-rendering an old recipe through new DSP would not preserve
+the old sound. Omit `sparkBaseline` only when comparisons are not required.
 Matching applies one gain per clip through
 `AuditionLevel`, targeting 0.03 RMS in the loudest 200 ms window, with a 0.99
 peak guard. It does not change the patch recipes.
@@ -187,9 +243,9 @@ peak guard. It does not change the patch recipes.
 `recipes/` contains independently replayable `PadRecipe` JSON; `manifest.json`
 and `metrics.csv` identify settings, classes, durations and render observations.
 The manifest also hashes the renderer source files used to generate the bundle.
-`family-native.wav` and `family-matched.wav` compare the four related hits in
-sequence. `thump-spark-audition.zip` carries the listening bundle.
-`thump-spark-mpc-kit.zip` carries a 16-pad XPM kit: four TUNE rows at
+`family-r2-native.wav` and `family-r2-matched.wav` compare the four related hits
+in sequence. `thump-spark-r2-audition.zip` carries the listening bundle.
+`thump-spark-r2-mpc-kit.zip` carries a 16-pad XPM kit: four TUNE rows at
 0.15/0.40/0.65/0.90 by four expression columns, with actual rendered classes and
 complete recipes. MPC3/XTD export is outside this audition's scope. Device and
 MPC hardware validation remain pending.
@@ -204,29 +260,87 @@ repeatable benchmark.
 
 MOVE is deferred. A later intra-hit trajectory would require its own time law,
 phase/envelope behavior, deterministic recipe representation and listening
-comparisons. R1 does not promise a live controller or a motion sequencer.
+comparisons. Neither revision promises a live controller or a motion sequencer.
 
-## As built and verification ledger
+## Revision 2 verification ledger
 
-The JVM Kotlin production and test sources compile; this is not an Android
-compilation result. The focused Gradle test run and
+The focused Gradle run completed 113 tests across seven classes with zero
+failures, errors or skips: SPARK 10, families 5, THUMP 38, THUMP presets 6,
+DE-SAMPLE 5, PUNCH 6 and determinism 43. The final 46-clip generator also
+completed with exit code 0. The published R2 manifest contains all 15 R1/R2
+comparisons, and its four renderer source hashes match the current source.
+Both ZIPs pass CRC checks. These are JVM results; Android was not built.
+
+The harmonic body requires tests that distinguish its normal harmonics from
+METAL's inharmonic edge. The post-attack METAL probe reads 60–160 ms, ignores
+frequencies below 40 Hz and excludes bins within ±8% of the nearest integer
+harmonic. Its quarter-step off-harmonic power increments exceed the retained
+0.002 target in the specified range. COLOR's upper-band probe requires an
+absolute increase of at least 0.075 in normalized upper power per tested step,
+or 7.5 percentage points; a relative 3 dB test on R1's small upper-band floor
+would measure a different property. The new early-spectrum and PUNCH authority
+gates are retained alongside these mechanism-specific checks.
+
+| R2 probe | Measured result | Tested scope |
+|---|---:|---|
+| Maximum unfinished source peak | 0.9199232 | All 32 corners of the five-control space. |
+| Maximum absolute delivered mean | 0.00240994 | The same 32 corners, after THUMP's finish. |
+| Maximum absolute root error | 5.34122 cents | Nine TUNE × METAL conditions: 0/0.5/1 each, DECAY 1 and PUNCH 0; body read from 0.20 s over a 0.25 s window. |
+| Minimum pitch confidence | 0.8065 | The same nine root measurements. |
+| Maximum 4×/8× body residual, PUNCH 0 | 0.0171150 relative RMS | TUNE 0/0.5/1, METAL 1, COLOR 1; first 10 ms excluded. |
+| Maximum 4×/8× residual, PUNCH 1 | 0.0243008 relative RMS | Same tuning/timbre positions, including the onset. This includes filter/resampling differences, not pure alias power. |
+| PUNCH complete attack/body range | 19.384 / 20.014 dB | METAL 0 / 0.25, COLOR 0.5; 0–10 ms versus 10–50 ms RMS. Every quarter step exceeds 1 dB. |
+| COLOR complete early-centroid ratio | 2.356× / 2.289× | METAL 0 / 0.25, PUNCH 0.5; normalized first-80-ms power spectra. |
+| Minimum adjacent early METAL spectral distance | 0.3019 | METAL 0/0.25/0.5/0.75 at COLOR 0.25 and 0.5, PUNCH 0.5; normalized first-80-ms spectral amplitudes. |
+
+| R2 delivered audition observation | Measured result | Limit |
+|---|---:|---|
+| Current settings / matched R1–R2 comparisons | 46 / 15 | Preserved baseline included; two current family strips and 16-pad XPM kit. |
+| Maximum native PCM sample peak | 1.0 | Finished output after THUMP's peak ceiling. |
+| Maximum absolute native PCM mean | 0.00073667 | Across the 46 PCM24 settings. |
+| Local render observation median | 15.900 ms | Single warmed local JVM observation per setting, not a phone benchmark. |
+| Local render observation range | 10.001–54.701 ms | Same limited run. |
+
+The complete JVM suite remains running without a final result. The focused pass
+does not establish global regression success. The saved current report is
+`spark-r2-validation.json`; listening, Android compilation and hardware checks
+remain separate gates.
+
+| Claim | Status | Evidence |
+|---|---|---|
+| Owner heard inadequate PUNCH and weak ordinary METAL/COLOR travel in R1 | Heard by owner | Report above; this is the reason for revision 2. |
+| R2 source PUNCH articulation, harmonic body, separate filters and stronger edge balance | Built; source inspected | Frozen `Thump.spark` matches the current manifest's renderer hash. Constants remain shape choices until listening. |
+| R2 focused numerical and integration regressions | Passed | 113 tests in seven classes, zero failures/errors/skips; includes early-spectrum, quarter-step PUNCH, corner, pitch and render-rate checks. |
+| R2 audition, preserved R1 baseline and 15 matched comparisons | Generated and verified | 46 revised settings; generator exit code 0; matching source hashes and clean ZIP CRC checks. |
+| Full JVM regression suite | Running; no final result | Focused success does not establish a full pass. |
+| Android compilation and phone/MPC hardware checks | Pending | No Android code changes in this round; JVM checks cannot establish device behavior. |
+| R2 control travel and useful sound character | Not heard | Owner's revision 2 audition verdict pending. |
+
+## Revision 1 historical validation
+
+Everything in this section describes the earlier source and audition. These
+results remain useful as a baseline and do not establish revision 2 behavior.
+
+For revision 1, the JVM Kotlin production and test sources compiled; that was
+not an Android compilation result. Its focused Gradle test run and
 `:synth:generateThumpSparkAudition` completed with exit code 0. Its final-code
 bundle contains 36 settings, 72 PCM24
 WAVs, two family strips, independently replayable recipes and the 16-pad XPM kit.
-Recipe replay and delivered WAV readback checks passed. The manifest's four
-renderer source hashes match the current files, and both ZIPs pass CRC checks.
-All 110 audio/recipe SHA hashes match the earlier final-code pack byte for byte.
+Recipe replay and delivered WAV readback checks passed. Its four renderer
+source hashes matched the R1 files at export, and both ZIPs passed CRC checks.
+All 110 audio/recipe SHA hashes matched the earlier R1 pack byte for byte. These
+are historical integrity checks; the R1 renderer hashes do not match R2.
 
 All 90 focused tests passed with zero failures, errors or skips across six
 classes: SPARK 7, families 5, THUMP 38, THUMP presets 6, DE-SAMPLE 5 and
 determinism 29. Their measured corner, pitch and convergence observations are
 recorded below. The eight modules outside `synth` completed 2,896 tests with zero
 failures, errors or skips. Two environment restarts interrupted the full synth
-runs before a final Gradle result. The full JVM suite is therefore **unverified**;
-there is no global pass claim. CI must complete that regression gate. The saved
-validation report is `thump-spark-validation.json` alongside the delivered bundle.
+runs before a final Gradle result. That session left the full JVM suite
+**unverified**, with no global pass claim. The saved R1 validation report is
+`thump-spark-validation.json`; the new run is tracked in the R2 ledger above.
 
-Final bundle observations from `manifest.json` and `metrics.csv`:
+Revision 1 bundle observations from its `manifest.json` and `metrics.csv`:
 
 | Observation | Measured result | Limit of the claim |
 |---|---:|---|
@@ -238,7 +352,7 @@ Final bundle observations from `manifest.json` and `metrics.csv`:
 | Default family classes | PERC, PERC, PERC, PERC | Other settings can classify differently. |
 | Default family durations | 0.560, 0.466, 0.388, 0.323 s | Successive default expression positions. |
 
-Dedicated Kotlin probe observations from `ThumpSparkTest`:
+Revision 1 Kotlin probe observations from `ThumpSparkTest`:
 
 | Probe | Measured result | Tested scope |
 |---|---:|---|
@@ -259,26 +373,27 @@ the picker tint remains nominal.
 |---|---|---|
 | Existing THUMP preset dispatch, rendering and SYNTH screen integration points exist | Verified by source inspection | Baseline `3ecbdb78`; `Thump.kt`, `ThumpPresets.kt`, `SynthScreen.kt`, `Desample.kt`. |
 | The two references separate source synthesis from per-hit expression | Verified research | Maker-authored manuals and page references above. |
-| SPARK uses the oscillator/edge/filter structure above | Built; verified by source inspection | `Thump.kt` re-read after implementation, including SPARK's scoped conditioning and common THUMP finish. |
+| R1 used a sine body with a separately filtered metallic edge | Built; verified by source inspection at R1 | Original `Thump.kt`, scoped conditioning and common THUMP finish; superseded by R2's harmonic body and source PUNCH. |
 | Family recipes use resolved settings and actual render classification | Built; final-code replay verified | `ThumpFamilies.kt` and the generator's successful recipe/readback checks. |
 | Normal app SEND classifies delivered SPARK audio for new or fresh assignments | Built; verified by source inspection | `SynthScreen.kt`; reopened-pad identity policy remains in effect. |
 | JVM Kotlin production and test sources compile | Verified | Successful focused Gradle session; Android compilation remains pending. |
-| Final PCM24 audition bundle and 16-pad kit export | Verified by Gradle generator execution | `:synth:generateThumpSparkAudition` exit code 0; four renderer hashes and 110 audio/recipe hashes match; both ZIP checks pass and the kit contains 16 WAVs. |
-| Final audition peak, DC, class and timing observations | Measured | Final bundle `metrics.csv`; scoped results above. |
+| R1 PCM24 audition bundle and 16-pad kit export | Verified by its Gradle generator execution | `:synth:generateThumpSparkAudition` exit code 0; four renderer hashes and 110 audio/recipe hashes matched R1; both ZIP checks passed and the kit contained 16 WAVs. |
+| R1 audition peak, DC, class and timing observations | Measured | Preserved R1 bundle `metrics.csv`; scoped results above. |
 | Focused synthesis and integration regression checks | Passed | 90 tests across six classes, zero failures/errors/skips; includes all seven dedicated SPARK checks and family, THUMP, preset, DE-SAMPLE and determinism coverage. |
-| Full JVM regression suite and legacy compatibility | Unverified | Eight modules complete: 2,896 tests, zero failures/errors/skips. Two environment restarts interrupted the full synth runs; CI must finish. No global pass claim. |
+| R1 full JVM regression suite and legacy compatibility | Unverified in that session | Eight modules completed 2,896 tests, zero failures/errors/skips. Two environment restarts interrupted its full synth runs. No global pass claim. |
 | Render time meets the target on an Android device | Proposed target | Device benchmark pending. |
-| SPARK has useful character and each family retains one identity | Not heard | Owner's audition verdict pending. |
+| R1 control travel is musically sufficient | Rejected by owner's listen | PUNCH had no audible movement; METAL/COLOR were weak except at their combined maximum. |
 
 ## Why it is built this way
 
-- The sine body gives the hit a clear center. Removing it would leave the most
-  metallic settings with less pitch and weight to relate back to the soft ones.
-- The separate edge can brighten and die away faster without taking the body
-  with it. One shared filter would make that relationship harder to control.
-- Phase modulation and multiplication produce different spectral changes.
-  Keeping them bounded lets METAL add character without requiring a large
-  collection of synthesis controls.
+- The harmonic body gives COLOR something to filter while retaining a clear
+  fundamental. A sine-only body left much of COLOR's travel with little effect.
+- The separate edge combines phase modulation and multiplication for different
+  spectral changes, then brightens and dies away without taking the body with
+  it. One shared filter would make that relationship harder to control.
+- PUNCH changes source attack timing and a longer attack/body envelope. The
+  inherited finish alone passed safety checks but did not move enough in the
+  owner's first audition.
 - Related patches retain the expressive gesture after export: every hit can be
   edited and regenerated independently. A live wheel would require a different
   playback architecture.

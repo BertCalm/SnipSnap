@@ -545,6 +545,15 @@ class PersonalityTest {
         "SHARE_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
+        // SETUP's MIDI OUT heading and the two words beside a device's port
+        // (OUT / BUSY): labels, not landings.
+        "SETUP_MIDI_OUT_HEADING", "SETUP_MIDI_OUT_PORT_OK", "SETUP_MIDI_OUT_PORT_BUSY",
+        // The MIDI screen's CLOCK CHECK button and its label while it runs:
+        // button labels, not landings. The other three MIDI_CLOCK_* lines are
+        // sentences and keep their full stops.
+        "MIDI_CLOCK_CHECK", "MIDI_CLOCK_RUNNING",
+        // The two published MIDI port names SETUP and the LCD list: device names, not toasts.
+        "MIDI_PORT_OUT_NAME", "MIDI_PORT_IN_NAME",
         // DUST ALL's busy overlay line, like every other *_BUSY above.
         "DUSTING_BUSY", "CHOP_BENCH_BUSY",
         // LOOP's bounce, while the render runs — same shape as every other
@@ -645,6 +654,15 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
+        // The dock's progress line when a job has a name to give, or only a
+        // generic one (LOADING_BUSY, WORKING_BUSY), and the KITS screen's
+        // placeholder while the library is read - the same `…`-suffixed
+        // shape as every other *_BUSY constant above. The named and counted
+        // forms are `loadingBusy` and `busyCount`, functions, which this
+        // reflective sweep never sees; BusyTest holds those.
+        "LOADING_BUSY", "WORKING_BUSY", "LIBRARY_LOADING",
+        // The dock's CANCEL control: a button label, not a landing.
+        "CANCEL_JOB",
     )
 
     /**

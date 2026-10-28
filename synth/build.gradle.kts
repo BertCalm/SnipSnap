@@ -2,6 +2,79 @@ plugins {
     kotlin("jvm")
 }
 
+/** Saved production PLUCK/UPRIGHT notes, phrase comparisons and control probes. */
+tasks.register<JavaExec>("generateUprightAudition") {
+    group = "distribution"
+    description = "Render UPRIGHT native/matched WAVs, exact recipes, measurements and a listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("uprightReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("uprightReplayOutput").get(),
+            providers.gradleProperty("uprightReplayMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("uprightOutput").orNull ?: "${rootDir}/testkit/upright-audition")
+    }
+}
+
+/** The same finite bass voice on sixteen editable pads in both MPC formats. */
+tasks.register<JavaExec>("generateUprightKit") {
+    group = "distribution"
+    description = "Export sixteen UPRIGHT pads, complete recipes, MPC 3 track and MPC 2 program."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.UprightKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("uprightKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Finite two-voice CAIRN reconstruction, with raw audio and causal mechanics evidence. */
+tasks.register<JavaExec>("generateCairnAudition") {
+    group = "distribution"
+    description = "Render CAIRN KNOCK/ANSWER, common controls, sweeps, causes, recipes and render cost."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CairnAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("cairnOutput").orNull ?: "${rootDir}/testkit/cairn-reconstruction")
+    if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
+/** Three relationship conversations beside their gentler reference performances. */
+tasks.register<JavaExec>("generateObbligatoConversationAudition") {
+    group = "distribution"
+    description = "Compare OBBLIGATO Play, Fight and Protect conversations with their gentler reference notes and melodies."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoConversationAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoConversationOutput").orNull ?: "${rootDir}/testkit/obbligato-conversation-audition")
+}
+
+/** A focused comparison of reed voicing and tuning, with the accepted kit retained. */
+tasks.register<JavaExec>("generateObbligatoMusicalAudition") {
+    group = "distribution"
+    description = "Compare previous and gentler OBBLIGATO Fight single notes, melodies and actual source taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMusicalOutput").orNull ?: "${rootDir}/testkit/obbligato-musical-audition")
+}
+
+/** An opt-in listening comparison; the accepted model-five kit remains unchanged. */
+tasks.register<JavaExec>("generateObbligatoResponsiveAudition") {
+    group = "distribution"
+    description = "Compare accepted OBBLIGATO model 5 with responsive model 6 and causal source interventions."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoResponsiveAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoResponsiveOutput").orNull ?: "${rootDir}/testkit/obbligato-responsive-audition")
+}
+
 /** LATTICE source proof, native instrument phrases, periodic HOLD and MPC starter. */
 tasks.register<JavaExec>("generateLatticeAudition") {
     group = "distribution"
@@ -55,6 +128,37 @@ tasks.register<JavaExec>("benchmarkFilament") {
     providers.gradleProperty("filamentBenchmarkLabel").orNull?.let { args("--label=$it") }
 }
 
+/** Render-only measurements; timings never decide whether correctness tests pass. */
+tasks.register<JavaExec>("benchmarkTidal") {
+    group = "verification"
+    description = "Measure TIDAL cold, geometry-warm and completed-cache rendering with exact audio hashes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalRenderBenchmark")
+    minHeapSize = "256m"
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    providers.gradleProperty("tidalBenchmarkProcessors").orNull?.let { jvmArgs("-XX:ActiveProcessorCount=$it") }
+    args("--path=${providers.gradleProperty("tidalBenchmarkPath").orNull ?: "production"}")
+    args("--state=${providers.gradleProperty("tidalBenchmarkState").orNull ?: "all"}")
+    args("--cases=${providers.gradleProperty("tidalBenchmarkCases").orNull ?: "defaults"}")
+    args("--warmups=${providers.gradleProperty("tidalBenchmarkWarmups").orNull ?: "2"}")
+    args("--samples=${providers.gradleProperty("tidalBenchmarkSamples").orNull ?: "5"}")
+    providers.gradleProperty("tidalBenchmarkOutput").orNull?.let { args("--output=$it") }
+    providers.gradleProperty("tidalBenchmarkLabel").orNull?.let { args("--label=$it") }
+    providers.gradleProperty("tidalBenchmarkProfile").orNull?.let { args("--profile=$it") }
+}
+
+/** Sixteen finite TIDAL pads with complete saved recipes in both MPC formats. */
+tasks.register<JavaExec>("generateTidalKit") {
+    group = "distribution"
+    description = "Export sixteen finite TIDAL pads, editable recipes, and MPC 3/MPC 2 programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("tidalKitOutput").orNull ?: "${rootDir}/testkit/tidal-kit")
+}
+
 /** Finite TIDAL listening proof: two populations, encounter controls and causal comparisons. */
 tasks.register<JavaExec>("generateTidalAudition") {
     group = "distribution"
@@ -81,6 +185,23 @@ tasks.register<JavaExec>("generateOhmAudition") {
     workingDir = projectDir
     maxHeapSize = "1g"
     args("${rootDir}/testkit/ohm-audition")
+}
+
+/** Isolated model-3 additions, explicit capture provenance and actual held-region playback. */
+tasks.register<JavaExec>("generateOhmExpandedAudition") {
+    group = "distribution"
+    description = "Render OHM model-3 feature comparisons, phrases, held-loop studies and portable source recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmExpandedAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("ohmExpandedReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("ohmExpandedReplayOutput").get(),
+            providers.gradleProperty("ohmExpandedReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("ohmExpandedOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-audition")
+    }
 }
 
 /** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
@@ -115,6 +236,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** Accepted versus revised upper-TOUCH character with identical seeded scores. */
+tasks.register<JavaExec>("generateTrioTouchAudition") {
+    group = "distribution"
+    description = "Render twelve TRIO model 5/6 upper-TOUCH comparisons and a listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioTouchAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioTouchOutput").orNull ?: "${rootDir}/testkit/trio-touch")
+}
+
 /** The playable TRIO bank, musical phrases and sixteen-pad MPC acceptance kit. */
 tasks.register<JavaExec>("generateTrioMusicalBank") {
     group = "distribution"
@@ -126,7 +258,7 @@ tasks.register<JavaExec>("generateTrioMusicalBank") {
     args(providers.gradleProperty("trioMusicalOutput").orNull ?: "${rootDir}/testkit/trio-musical-bank")
 }
 
-/** First finite CHAMBER proof: a shared quartet, mixed boundaries and causal listening comparisons. */
+/** Finite CHAMBER listening studies, including the preserved timpani comparisons. */
 tasks.register<JavaExec>("generateChamberAudition") {
     group = "distribution"
     description = "Render CHAMBER raw/matched WAVs, complete room recipes and the first-listen audition page."
@@ -136,10 +268,36 @@ tasks.register<JavaExec>("generateChamberAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("chamberOutput").orNull ?: "${rootDir}/testkit/chamber-audition")
     providers.gradleProperty("chamberRevision").orNull?.let {
-        require(it in setOf("timpani", "timpani-boost")) { "chamberRevision must be timpani or timpani-boost" }
+        require(it in setOf("timpani", "timpani-boost", "finite")) {
+            "chamberRevision must be timpani, timpani-boost or finite"
+        }
         args("--$it")
     }
     providers.gradleProperty("chamberPrevious").orNull?.let { args("--previous=$it") }
+    providers.gradleProperty("chamberKit").orNull?.let { args("--kit=$it") }
+}
+
+/** Sixteen finite CHAMBER pads with exact recipes and both supported MPC formats. */
+tasks.register<JavaExec>("generateChamberKit") {
+    group = "distribution"
+    description = "Export the dry CHAMBER MPC 3 track, MPC 2 twin, recipes and SnipSnap-Chamber-Kit.zip."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Warm production misses and exact-recipe cache hits, with PCM compatibility hashes. */
+tasks.register<JavaExec>("benchmarkChamber") {
+    group = "verification"
+    description = "Measure finite CHAMBER production rendering and completed-recipe cache reuse."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberPerformanceBenchmark")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberBenchmarkOutput").orNull ?: "${rootDir}/testkit/chamber-performance")
+    args(providers.gradleProperty("chamberBenchmarkRounds").orNull ?: "3")
 }
 
 tasks.register<JavaExec>("replayChamberDiagnostic") {
@@ -152,6 +310,23 @@ tasks.register<JavaExec>("replayChamberDiagnostic") {
     doFirst {
         args(providers.gradleProperty("chamberRecipe").get(), providers.gradleProperty("chamberReplayOutput").get(),
             providers.gradleProperty("chamberReplayMode").orNull ?: "matched")
+    }
+}
+
+/** Separate steady sustain proof with real loop recurrence and passive note-off. */
+tasks.register<JavaExec>("generateOverlapHeldAudition") {
+    group = "distribution"
+    description = "Render the separate steady OVERLAP held proof, measured loops and note-off examples."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OverlapHeldAuditionGenerator")
+    workingDir = projectDir
+    val recipe = providers.gradleProperty("overlapHeldRecipe").orNull
+    if (recipe != null) {
+        args("--replay", recipe, providers.gradleProperty("overlapHeldWav").get(),
+            providers.gradleProperty("overlapHeldMode").orNull ?: "native")
+    } else {
+        args(providers.gradleProperty("overlapHeldOutput").orNull ?: "${rootDir}/testkit/overlap-held-audition")
     }
 }
 
@@ -293,7 +468,7 @@ tasks.register<JavaExec>("generateFlockRibbonSustainAudition") {
     args(providers.gradleProperty("flockSustainOutput").orNull ?: "${rootDir}/testkit/flock-ribbon-sustain")
 }
 
-/** Five-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
+/** Six-voice WICK milestone: dry audio, musical phrases and real held-loop evidence. */
 tasks.register<JavaExec>("generateWickAudition") {
     group = "distribution"
     description = "Render WICK native/raw/matched WAVs, exact phrase scores and patches, causal traces and the audition page under testkit/wick-audition/."
@@ -400,6 +575,29 @@ tasks.register<JavaExec>("generateRegistersTransistorDepthAudition") {
     project.findProperty("registersR4Baseline")?.toString()?.let { args("--baseline=$it") }
 }
 
+/** Actual keyboard attack-to-loop pairs with the complete accepted R5 archive retained. */
+tasks.register<JavaExec>("generateRegistersTransistorSustainAudition") {
+    group = "distribution"
+    description = "Preserve published REGISTERS R5 audio and reviews, then compare model-5/model-6 keyboard sustain."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersTransistorSustainAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-audition-r6")
+    project.findProperty("registersR5Baseline")?.toString()?.let { args("--baseline=$it") }
+}
+
+/** Stronger current-model recipe options for listening before any factory change. */
+tasks.register<JavaExec>("generateRegistersDepthDirectionsAudition") {
+    group = "distribution"
+    description = "Compare current TRANSISTOR, warmer body and stronger ensemble at three notes without changing factory settings."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RegistersDepthDirectionsAuditionGenerator")
+    workingDir = projectDir
+    args(project.findProperty("registersOutput")?.toString() ?: "${rootDir}/testkit/registers-depth-directions")
+}
+
 /** Twelve dry Rössler-trajectory comparisons with complete replayable recipes. */
 tasks.register<JavaExec>("generateVentAudition") {
     group = "distribution"
@@ -471,6 +669,17 @@ tasks.register<JavaExec>("generateMurmurLuthierAudition") {
     args(providers.gradleProperty("murmurLuthierOutput").orNull ?: "${rootDir}/testkit/murmur-luthier-audition")
 }
 
+/** Rebuild the six owner-preferred comparisons as ordinary saved production patches. */
+tasks.register<JavaExec>("generateMurmurApprovedAudition") {
+    group = "distribution"
+    description = "Render approved KEY and low CHOIR recipes and verify their published listening hashes."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MurmurApprovedAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("murmurApprovedOutput").orNull ?: "${rootDir}/testkit/murmur-approved-audition")
+}
+
 /** Export the sixteen first-listen pads through the standard MPC program pipeline. */
 tasks.register<JavaExec>("generateMurmurKit") {
     group = "distribution"
@@ -539,7 +748,7 @@ tasks.test {
     }
 }
 
-/** Stoop's dry pack; -PstoopQuick selects smoke, -PstoopBaselineDir adds original factory references. */
+/** Stoop's dry pack; preserve both published banks and the previous held-control references. */
 tasks.register<JavaExec>("generateStoopAudition") {
     group = "distribution"
     description = "Render STOOP presets, phrases, macro comparisons and held loops under testkit/stoop-audition/."
@@ -548,6 +757,7 @@ tasks.register<JavaExec>("generateStoopAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/stoop-audition")
     providers.gradleProperty("stoopBaselineDir").orNull?.let { args("--baseline-dir=$it") }
+    providers.gradleProperty("stoopOriginalBaselineDir").orNull?.let { args("--original-baseline-dir=$it") }
     if (project.hasProperty("stoopQuick")) args("--quick")
     if (project.hasProperty("stoopRefreshPage")) args("--refresh-page")
 }
@@ -1196,6 +1406,26 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeChargeAudition") {
+    group = "distribution"
+    description = "Render FORGE's CHARGE tuning gate under testkit/forge-charge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeChargeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-charge-audition", "${rootDir}")
+}
+
+/** Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/. See ForgeAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeAudition") {
+    group = "distribution"
+    description = "Render FORGE's listening gate (clips, manifest, page) under testkit/forge-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-audition", "${rootDir}")
+}
+
 /** Render the pedal board's Stage 0 listening clips and manifest under testkit/pedal-audition/. See PedalAuditionGenerator. */
 tasks.register<JavaExec>("generateFadeLawAudition") {
     group = "distribution"
@@ -1213,6 +1443,16 @@ tasks.register<JavaExec>("generatePedalAudition") {
     mainClass.set("com.snipsnap.synth.PedalAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/pedal-audition")
+}
+
+/** Render Stage 3's listen (the pedals on both guitar pads after and in front of the amp) under testkit/amp-front-audition/. See AmpFrontAuditionGenerator. */
+tasks.register<JavaExec>("generateAmpFrontAudition") {
+    group = "distribution"
+    description = "Render Stage 3's listen (pedals after and in front of a guitar pad's amp) under testkit/amp-front-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AmpFrontAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/amp-front-audition")
 }
 
 /** Render the WAH section's gate clips and manifest under testkit/wah-audition/. See WahAuditionGenerator. */
@@ -1607,6 +1847,19 @@ tasks.register<JavaExec>("generateSkitterQuartetAudition") {
     if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
 }
 
+/** Six R7/R8 comparisons with complete finite notes and explicit source provenance. */
+tasks.register<JavaExec>("generateSkitterDepthAudition") {
+    group = "distribution"
+    description = "Render six R7/R8 voice pairs. Requires -PskitterProofSource=<full Git SHA>."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SkitterDepthAudition")
+    workingDir = projectDir
+    args("${rootDir}/testkit/skitter-depth")
+    if (project.hasProperty("skitterProofSource")) args("--source-commit=${project.property("skitterProofSource")}")
+    if (project.hasProperty("skitterArchiveUrl")) args("--archive-url=${project.property("skitterArchiveUrl")}")
+}
+
 /** Render Relay's provisional dry identities, control matrix and actual repeated held loops. */
 tasks.register<JavaExec>("generateRelayAudition") {
     group = "distribution"
@@ -1768,6 +2021,17 @@ tasks.register<JavaExec>("generateCausticAudition") {
     args(providers.gradleProperty("causticOutput").orNull ?: "${rootDir}/testkit/caustic-audition")
 }
 
+/** One saved VENT orbit with an optional amplitude envelope for listening comparison. */
+tasks.register<JavaExec>("generateVentKnuckleAudition") {
+    group = "distribution"
+    description = "Render the original and optional decay Pulse Knuckle hits, identical rhythms, recipes and measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.VentKnuckleAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ventKnuckleOutput").orNull ?: "${rootDir}/testkit/vent-knuckle-audition")
+}
+
 /** Three model-1 clips, preserving the foreground and comparing only venue return. */
 tasks.register<JavaExec>("generateNacreGentleAudition") {
     group = "distribution"
@@ -1800,15 +2064,86 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** First dry SPARK voice and ordered expression-family listening gate. */
+/** SPARK revision-two control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
-    description = "Render SPARK native/matched hits, expression families, replayable recipes, measurements and a sixteen-pad XPM kit."
+    description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ThumpSparkAuditionGenerator")
     workingDir = projectDir
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
+    providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
+}
+
+/** Retained model-one/model-two Apsis listening history. */
+tasks.register<JavaExec>("generateApsisAudition") {
+    group = "distribution"
+    description = "Reproduce the retained APSIS model-one/model-two comparison set and orbital evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisOutput").orNull ?: "${rootDir}/testkit/apsis-audition")
+    if (providers.gradleProperty("apsisQuick").isPresent) args("--quick")
+}
+
+/** Native sixteen-pad bank, three-zone playing samples, and genuine held-loop metadata. */
+tasks.register<JavaExec>("generateApsisKit") {
+    group = "distribution"
+    description = "Export APSIS MPC 3/MPC 2 programs, exact dry PCM24 samples, recipes and verified pad map."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisPlayingEvidence") {
+    group = "distribution"
+    description = "Render model-three velocity and material-exchange comparisons at shared gain."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args("$bankOutput/performance", "--performance")
+}
+
+/** Musical evidence replays the actual exported samples, including zones and pad gates. */
+tasks.register<JavaExec>("generateApsisMusicalAudition") {
+    group = "distribution"
+    description = "Render APSIS bass, keys, chord answers, gesture pairs, held fields and layer comparisons from the exported bank."
+    dependsOn("generateApsisKit", "generateApsisPlayingEvidence")
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisMusicalAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val bankOutput = providers.gradleProperty("apsisMusicalOutput").orNull ?: "${rootDir}/testkit/apsis-musical"
+    args(bankOutput, "$bankOutput/SnipSnap Apsis Kit")
+}
+
+/** Actual editor/source selections, finite movement and independently verified repeating HOLD loops. */
+tasks.register<JavaExec>("generatePrismMotionStudioAudition") {
+    group = "distribution"
+    description = "Render PRISM motion editor and source comparisons with native/matched audio and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.PrismMotionStudioAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/prism-motion-studio-audition")
+}
+
+/** Held TIDAL listening evidence; the accepted finite audition remains separate. */
+tasks.register<JavaExec>("generateTidalHoldAudition") {
+    group = "distribution"
+    description = "Render TIDAL encounter-to-hold notes, eight-cycle loops, recipes and closure measurements."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TidalHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("tidalHoldOutput").orNull ?: "${rootDir}/testkit/tidal-hold-audition")
 }
 
 /** Original harp with two experimental timed venue returns and isolated-space previews. */

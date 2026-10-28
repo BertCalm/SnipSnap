@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged",
             ),
             Treatments.names,
         )
@@ -107,11 +107,12 @@ class TreatmentsTest {
     fun `the pedal recipes set only their own section, and none sits on a neutral`() {
         val expected = mapOf(
             "driven" to "valve",
-            "compressed" to "squash",
+            "compressed" to "compressor",
             "wahed" to "wah",
             "touchwahed" to "wah",
             "rockwahed" to "wah",
             "delayed" to "echo",
+            "forged" to "forge",
         )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)
@@ -238,33 +239,31 @@ class TreatmentsTest {
     }
 
     /**
-     * What makes COMP a compressor pedal: it leans on the body and lets the tail stand up. Two
-     * measures, both at AMT 1, for the owner's recipe (SQUASH AMOUNT 1.0, ATTACK 0.05). On the snare,
-     * the tail (100 to 200 ms) against the body (5 to 50 ms) rises 7.78 dB (-23.42 dry, -15.64
-     * compressed); the bar is 6 (the first recipe, AMOUNT 0.7 with ATTACK 0.55, rose 4.42). On the
-     * choir, whose body is held, the peak-to-RMS ratio falls from 10.64 to 7.28 (3.36); the bar is
-     * 2.35, about 70 percent of the drop (the first recipe fell to 9.46, a drop of 1.19). The
-     * snare's own peak-to-RMS ratio does NOT fall: it goes from 11.58 to 11.80 (14.58 for the first
-     * recipe), because a fast one-shot's 2 ms attack lets the hit through and SQUASH takes the body,
-     * so COMP on a drum is a punchier hit with a longer tail, not a flatter one. That is why the
-     * snare is measured by its tail and not by its crest.
+     * What makes SUSTAIN a sustain pedal: it leans on the body and lets the tail stand up. Two measures, both at
+     * AMT 1, for the recipe (COMPRESSOR at AMOUNT 1, ATTACK and RECOVER at their defaults). On the snare, the tail
+     * (100 to 200 ms) against the body (5 to 50 ms) rises 19.64 dB (-23.42 dry, -3.79 sustained); the bar is 15.
+     * The chip's earlier recipe, SQUASH at its strongest, rose 7.78 against a bar of 6, and the owner heard that
+     * as too little twice. On the choir, whose body is held, the peak-to-RMS ratio falls from 10.64 to 7.39
+     * (3.25); the bar stays 2.35 (SQUASH fell 3.36). The snare's own peak-to-RMS ratio does not fall (11.58 to
+     * 12.62): the hit keeps its headroom over the body (ATTACK's limiter) while the tail comes up, so on a drum
+     * the pedal is a longer ring, not a flatter hit. That is why the snare is measured by its tail.
      */
     @Test
-    fun `COMP lifts a snare's tail against its body and flattens a choir`() {
+    fun `SUSTAIN lifts a snare's tail against its body and flattens a choir`() {
         val snare = Thump.render(ThumpVoice.SNARE)
-        val squashed = Treatments.apply("compressed", snare, 1f).snip
+        val sustained = Treatments.apply("compressed", snare, 1f).snip
         val dryTail = rmsDb(snare, 100, 200) - rmsDb(snare, 5, 50)
-        val tail = rmsDb(squashed, 100, 200) - rmsDb(squashed, 5, 50)
+        val tail = rmsDb(sustained, 100, 200) - rmsDb(sustained, 5, 50)
         assertTrue(
-            tail - dryTail >= 6.0,
-            "COMP lifts the snare's tail against its body by ${pct(tail - dryTail)} dB (${pct(dryTail)} dry, ${pct(tail)} compressed), under the 6 dB bar (7.78 measured)",
+            tail - dryTail >= 15.0,
+            "SUSTAIN lifts the snare's tail against its body by ${pct(tail - dryTail)} dB (${pct(dryTail)} dry, ${pct(tail)} sustained), under the 15 dB bar (19.64 measured)",
         )
         val choir = Vox.render(VoxVoice.CHOIR)
         val dryCrest = crestFactor(choir)
         val crest = crestFactor(Treatments.apply("compressed", choir, 1f).snip)
         assertTrue(
             dryCrest - crest >= 2.35,
-            "COMP lowers the choir's peak-to-RMS by ${pct(dryCrest - crest)} (${pct(dryCrest)} dry, ${pct(crest)} compressed), under the 2.35 bar (3.36 measured)",
+            "SUSTAIN lowers the choir's peak-to-RMS by ${pct(dryCrest - crest)} (${pct(dryCrest)} dry, ${pct(crest)} sustained), under the 2.35 bar (3.25 measured)",
         )
     }
 

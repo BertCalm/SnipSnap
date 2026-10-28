@@ -61,7 +61,7 @@ class RegistersIntegrationReviewTest {
                 mapOf("HOLD" to 1f, "SPREAD" to .9f, "MOTION" to .9f), .8f, 254865,
                 "7a48aa787aa5f22c712fc5d0fd1a6fa264bb876160a2e312d395e7bca796a1d5", held = true, model = 4),
         )
-        assertEquals(5, Registers.MODEL_VERSION, "the current model adds a deeper TRANSISTOR registration")
+        assertEquals(6, Registers.MODEL_VERSION, "the current model retains subtle TRANSISTOR ensemble in held notes")
         for (case in cases) {
             val patch = RegistersPatch(case.id, case.voice, case.macros, midi = 60, velocity = case.velocity, model = case.model)
             val probe = patch.probe()
@@ -104,7 +104,7 @@ class RegistersIntegrationReviewTest {
             // Original audition JSON could save any explicit MIDI alongside TUNE .5.
             val imported = RegistersPatch("Saved A4", voice,
                 mapOf("TUNE" to .5f, "SPREAD" to 0f, "MOTION" to 0f), midi = 69, velocity = .7f,
-                model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3)
+                model = if (voice == RegistersVoice.TRANSISTOR) 6 else 3)
             val editable = imported.forEditing()
             assertEquals(69, editable.midi)
             for ((tune, midi) in listOf(0f to 48, 1f to 72)) {
@@ -124,7 +124,7 @@ class RegistersIntegrationReviewTest {
     fun `scramble stays bounded and finite when its starting recipe is held`() {
         for (voice in RegistersVoice.entries) {
             val held = RegistersPatch("Held A4", voice, mapOf("TUNE" to .5f, "HOLD" to 1f), midi = 69,
-                velocity = .6f, model = if (voice == RegistersVoice.TRANSISTOR) 5 else 3)
+                velocity = .6f, model = if (voice == RegistersVoice.TRANSISTOR) 6 else 3)
             for (temperature in listOf(-1f, 0f, .35f, 1f, 2f, Float.NaN, Float.POSITIVE_INFINITY)) {
                 val macros = Registers.scramble(voice, Random(37), temperature, held)
                 assertEquals(Registers.defaults(voice).keys, macros.keys)

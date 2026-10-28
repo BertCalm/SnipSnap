@@ -43,6 +43,8 @@ object Patches {
     fun fromJsonValue(value: JsonValue): Patch {
         val engine = value.obj()["engine"]?.str() ?: throw JsonException("patch has no engine")
         return when (engine) {
+            CairnPatch.ENGINE -> CairnPatch.fromJsonValue(value)
+            ApsisPatch.ENGINE -> ApsisPatch.fromJsonValue(value)
             ThumpPatch.ENGINE -> ThumpPatch.fromJsonValue(value)
             OnsetPatch.ENGINE -> OnsetPatch.fromJsonValue(value)
             SkinPatch.ENGINE -> SkinPatch.fromJsonValue(value)
@@ -172,21 +174,36 @@ data class PluckPatch(
     override val name: String,
     val voice: PluckVoice,
     override val macros: Map<String, Float>,
+    /** UPRIGHT's saved excitation strength. Legacy voices retain their original recipe shape. */
+    val velocity: Float = 1f,
 ) : Patch {
     init {
         Patches.validateMacros(this, Pluck.macrosFor(voice))
+        require(velocity.isFinite() && velocity in 0f..1f) { "PLUCK velocity must be finite and within 0..1" }
+        require(voice == PluckVoice.UPRIGHT || velocity == 1f) { "saved excitation velocity belongs to UPRIGHT" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Pluck.render(voice, macros)
+    override fun render() = Pluck.render(voice, macros, velocity)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
+
+    override fun toJsonValue(): JsonValue.Obj {
+        val common = Patches.toJsonValue(this)
+        if (voice != PluckVoice.UPRIGHT) return common
+        return JsonValue.Obj(LinkedHashMap(common.entries).apply {
+            put("velocity", JsonValue.Num(velocity.toDouble()))
+        })
+    }
 
     companion object {
         const val ENGINE = "PLUCK"
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> PluckVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
-                PluckPatch(name, voice, macros)
+                val velocity = if (voice == PluckVoice.UPRIGHT) {
+                    value.obj()["velocity"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat() ?: 1f
+                } else 1f
+                PluckPatch(name, voice, macros, velocity)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

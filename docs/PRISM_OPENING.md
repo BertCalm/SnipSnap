@@ -79,5 +79,6 @@ The release audition renders the actual factory presets at three notes and
 two velocities, with native and matched WAVs, complete saved recipes and a
 diagnostic manifest. JVM render and cancellation timings describe this
 machine, not Android performance. Phone interaction and MPC playback require
-device validation. Cyclic motion, a donor picker and additional motion
-controls remain separate work.
+device validation. The [motion studio](PRISM_MOTION_STUDIO.md) adds an editor,
+factory source selection and opt-in repeating motion. These four factory
+recipes retain their original finite opening until deliberately edited.

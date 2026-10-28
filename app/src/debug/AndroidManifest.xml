@@ -2,11 +2,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
     <application
-        android:label="SnipSnap Brass GROW"
+        android:label="SnipSnap Development"
         tools:replace="android:label">
         <service
             android:name="com.snipsnap.app.SnipTileService"
-            android:label="Brass GROW"
+            android:label="SnipSnap Development"
             tools:replace="android:label" />
     </application>
 </manifest>
