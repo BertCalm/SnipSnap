@@ -164,6 +164,13 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
+a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
+HANDOFF control, provisional CLI starting points and an actual-engine audition
+are available outside the factory roster and phone picker. Run
+`./gradlew :synth:generateFerryAudition`; [implementation notes](docs/FERRY.md)
+separate Python listening approval from Kotlin, tail, HOLD and phone acceptance.
+
 CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
 and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
 contact-aligned playback, a 243-point middle-control check and a 92-clip audition
@@ -1343,11 +1350,13 @@ The app's brain: every screen's state machine as tested pure Kotlin, so the
 Android app is Compose bound to proven logic instead of logic written in a
 UI layer. What lives here:
 
-- **`Schemes`/`Layout`/`Motion`** — the two TapeOS scheme token
+- **`Schemes`/`Layout`/`Motion`** — the eight TapeOS scheme token
   tables as data (VENT and OPENSKY, from the audition pages
   `docs/DIRECTION_2026_10.md` names — OPENSKY the first paper scheme,
-  which reopened the August cut of light shells; the schemes of the
-  classic look were retired on 2026-10-27), pad-label ink tables
+  which reopened the August cut of light shells — and the six
+  colourways chosen from the audition board on 2026-10-27: DUSK and
+  PHOSPHOR dark, TIDE, MEMO, RISO and SAGE paper; the schemes of the
+  classic look were retired the same day), pad-label ink tables
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.

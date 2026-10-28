@@ -65,7 +65,8 @@ object SkitterDepthAudition {
         for (voice in voices) {
             val rendered = listOf("R7", "R8").associateWith { revision -> velocities.map { (id, velocity) ->
                 val r = Skitter.renderProbe(voice, macros, midi = 48, velocity = velocity, seed = 0,
-                    seconds = null, oversample = 4, probe = SkitterProbe(depthDisabled = revision == "R7"))
+                    // Keep this archived R7/R8 comparison reproducible after the R9 readout revision.
+                    seconds = null, oversample = 4, probe = SkitterProbe(depthDisabled = revision == "R7", bassFoundationDisabled = true))
                 require(r.loopStart == -1 && r.raw.isNotEmpty() && r.raw.all { it.isFinite() } && stats(r.raw).peak <= 1.0) { "$voice/$revision/$id invalid raw PCM24" }
                 val last = r.raw.indexOfLast { abs(it.toDouble()) > QUIET }
                 Source(id, velocity, r, (last + 1 + TAIL_ALLOWANCE).coerceIn(1, r.raw.size))
@@ -101,7 +102,8 @@ object SkitterDepthAudition {
                         "probe" to obj("memoryFrozen" to bool(false), "agitationDisabled" to bool(false), "equalRecovery" to bool(false),
                             "noiseForcingDisabled" to bool(false), "articulationDisabled" to bool(false), "contactMemoryDisabled" to bool(false),
                             "bodyDisabled" to bool(false), "quartetDisabled" to bool(false), "depthDisabled" to bool(revision == "R7"),
-                            "filterReturnDisabled" to bool(false), "depthExchangeDisabled" to bool(false))),
+                            "filterReturnDisabled" to bool(false), "depthExchangeDisabled" to bool(false),
+                            "bassFoundationDisabled" to bool(true))),
                     "events" to arr(events), "sourceNotes" to arr(notes.map { note ->
                         val r = note.render
                         obj("id" to str(note.id), "velocity" to num(note.velocity), "rawFrames" to num(r.raw.size),

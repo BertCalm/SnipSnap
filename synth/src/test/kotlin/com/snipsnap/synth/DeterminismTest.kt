@@ -11,6 +11,14 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
+        val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
+        val samples = patch.render().samples
+        Ferry.clearCache()
+        assertContentEquals(samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `NACRE saved playable recipes reproduce across cold source caches`() {
         for (voice in NacreVoice.entries) {
             val patch = NacrePatch("Nacre canary", voice,
