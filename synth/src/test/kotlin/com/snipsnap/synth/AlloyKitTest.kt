@@ -34,9 +34,20 @@ class AlloyKitTest {
             }
             assertEquals(listOf(48, 51, 53, 55, 58, 60, 63, 65), patches.take(8).map { it.midi })
             assertTrue(patches.take(8).all { it.voice == AlloyVoice.KEY })
+            val key = AlloyPresets.forVoice(AlloyVoice.KEY).single { it.name == "Long Prism" }
+            assertEquals(patches.take(8).mapIndexed { i, patch ->
+                key.copy(name = "Alloy ${i + 1}", midi = patch.midi)
+            }, patches.take(8), "the scale must retain the approved ringing KEY configuration")
             assertEquals(AlloyVoice.entries.toSet(), patches.drop(8).take(6).map { it.voice }.toSet())
+            val roleNames = listOf("Hollow Rail", "Reed Switch", "Open Chime",
+                "Bright Stamp", "Beating Glass", "Velvet Rise")
+            assertEquals(roleNames.map { name -> AlloyPresets.all().single { it.name == name } },
+                patches.drop(8).take(6), "the starter kit must expose the approved authored roles")
             assertEquals(listOf(AlloyVoice.STRING, AlloyVoice.SOFT), patches.takeLast(2).map { it.voice })
             assertEquals(listOf("Held Filament", "Endless Ember"), patches.takeLast(2).map { it.name })
+            assertEquals(listOf("Held Filament", "Endless Ember").map { name ->
+                AlloyPresets.heldReferences().single { it.name == name }
+            }, patches.takeLast(2), "the existing held utility pads must keep their complete recipes")
             val kitDir = File(dir, "kit")
             val kit = KitAssembler.assembleArranged("Alloy Audition", pads, kitDir)
             assertTrue(!Preflight.check(kit, kitDir).blocked())

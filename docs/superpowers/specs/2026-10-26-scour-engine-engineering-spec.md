@@ -1,10 +1,10 @@
 # SCOUR Engine: Engineering Specification
 Version 1.2 · 2026-10-26 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table)
-Status: proposed engineering handoff. No Kotlin exists. Phase 0 was measured in the Python
+Status: R1 built in Kotlin (see "As built: R1" at the end). Phase 0 was measured in the Python
 harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of
-harness renders (HARDEN 0 against 1, section 20.1); the R1 probes and the Kotlin audition
-remain outstanding.
+harness renders (HARDEN 0 against 1, section 20.1); the Kotlin audition is generated and not yet
+heard. R2 (HOLD) to R4 remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -574,6 +574,8 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | a hardened plate should ring shorter, not longer | heard as shorter; preference not stated | 20.1; the owner's call at the R1 audition |
 | HARDEN is audible | heard (PLATE, SHOT .7, harness) | owner, 2026-10-26: "shorter/faster and higher resonance" (20.1) |
 | HARDEN is audible at the other corners and in PANE | heard? | not heard; audition SHOT × HARDEN corners |
+| "higher resonance" means more ring | heard (owner, 2026-10-28) | "I think more ring" |
+| the Kotlin R1 renders sound like the prototype | heard? | not heard; `generateScourAudition` |
 | PANE's springback reads as glass giving way | heard? | not heard; audition voices |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
@@ -598,3 +600,79 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
    ratios (now sourced from Leissa) sit on a grid that can make the note read a twelfth low
    in the tail. Fixing the root mode is necessary but not enough. The Kotlin audition decides
    whether this is a pitched instrument or a texture.
+
+## As built: R1 (2026-10-28)
+
+R1 is in Kotlin: `Scour.kt`, `ScourPatch.kt`, a provisional `ScourPresets.kt` (one default per
+voice), the `Patches` arm, both `Velocity.kt` arms, `PatchTypes.PROTOTYPES`, hand-built entries in
+`PatchesTest` and `PadRecipeTest`, a `DeterminismTest` canary, `ScourTest.kt` (12 tests), and the
+audition (`ScourAuditionGenerator.kt`, `generateScourAudition`, `scour-audition.html`, written to the
+gitignored `testkit/scour-audition/`). No kit, no app picker, no loop: those are R2 and R4.
+
+### What changed against the design
+
+- **Modes 1 and 2 are quieter and shorter.** In Kotlin, at the design's levels, the house
+  `Pitch.detect` misread the note in 59 of 162 PLATE corners at the onset window (often f0/3, as
+  section 8 warned) and 56 of 162 in the tail; PANE 53 and 56. Quieting the whole gain law fixed the
+  pitch but cost HARDEN a quarter of its reach (1.72 to 1.29 dB of log-spectral distance). Quieting
+  only (0,1) and (3,0), the pair whose ratios line up every three root periods, to 0.4 of the gain law
+  and 0.5 of their ring, fixed it without the cost: PLATE 162 of 162 at both windows, PANE 150 of 162
+  at the onset and 162 of 162 in the tail, HARDEN 1.80 dB (PLATE) and 1.78 dB (PANE). The 0.4 and 0.5
+  are shape. Reverting them alone fails `the requested note is the detected root...` at the first
+  corner (PLATE, everything at 0: 102 cents flat).
+- **The ratios are Leissa's own λ² values**, divided in the code, not the prototype's rounded table.
+- **Velocity is part of the length.** A softer hit leaves less coverage and rings longer, so
+  velocity 1 gives the shortest render. `drumClassFor` reads velocity 1, which keeps it right at
+  every velocity whenever it says LOOP; a test checks the soft render is never shorter.
+- **HOLD below its top lengthens the blast** (`W·(1 + 2·HOLD)`); the top step renders as the step
+  below it, GYRE's pattern, until R2 builds the loop.
+- **The mode ceiling ignores HARDEN**: a mode is dropped if its fully hardened frequency could pass
+  18 kHz at the note, so HARDEN can never switch a mode off halfway through a sweep.
+- **Draws**: three `kotlin.random.Random` streams seeded by `Dsp.seedFor("SCOUR", MODEL_VERSION,
+  voice, GAPS / LEVEL / AIM)` (the CISTERN habit), and the roughness table from `Dsp.Noise` given its
+  pink tilt by `Fft`. Turning SHOT keeps every shot's own draws (tested).
+- **An audition-only ring switch**, `Scour.RingLaw.OPENS`, renders the same blast with hardening
+  lengthening the ring instead of shortening it, so the owner's open question can be answered by ear.
+  No macro, patch or recipe can reach it.
+- **Raw level**: a fixed trim of 36. The first trim (60) let the loudest corner reach a raw peak of
+  1.016 after the output stage (PLATE, SHOT 0, TRAVERSE 0: the energy law makes each of the few shots
+  about three times heavier, and they pile onto the long ring), which the audition's raw export
+  refused. At 36 that corner peaks at 0.61 and the defaults at 0.21 (PLATE) and 0.11 (PANE).
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| Render, PLATE defaults, 2.95 s of audio | 50.5 ms warm; 112 ms for the first render (roughness table and JIT) |
+| Render, PANE defaults, 1.99 s | 45.8 ms, first render |
+| Mechanics share of a render | 0.46 ms (PANE, after PLATE had warmed the JIT) |
+| Audition, 68 renders | 3.5 s in all; median 38.8 ms per render, the first two slower while the JIT warms |
+| Root, house `Pitch.detect`, full 3-level cube (162 per voice) | PLATE 162/162 onset and tail; PANE 150/162 onset, 162/162 tail |
+| PANE's 12 onset misses | 53 to 106 cents, all at TUNE 0 with RPM 0 and SHOT .5, or TUNE .5 with RPM 1 and SHOT 0 |
+| Root, asserted in `ScourTest` | every corner of {0, 1} over all five timbral controls, and TUNE 0 to 1 in quarters, both windows, both voices |
+| Classifier over the test renders | every one LOOP, matching `drumClassFor` |
+| HARDEN's reach (log-spectral distance, HARDEN 0 against 1) | PLATE 1.80 dB, PANE 1.78 dB |
+| Other macros (same measure, 0 against 1) | RPM 6.12 / 8.29, SHOT 7.22 / 3.41, TRAVERSE 1.13 / 1.25 dB (PLATE / PANE) |
+| Coverage bound | the headroom term proven by reverting it alone: the bound test fails at PLATE SHOT 1 |
+| Gate, PLATE: coverage at close and top-mode rise at HARDEN 1 | SHOT 0: .068, +2.4 %; SHOT .7: .461, +16.1 %; SHOT 1: .925, +32.3 % |
+| Gate, PANE: the same | SHOT 0: .013, +0.3 % (one shot); SHOT .7: .582, +13.6 %; SHOT 1: .838, +21.2 % |
+| Ring switch, SHOT .8 HARDEN 1: length, ring shorter (R1) vs longer | PLATE 2.31 s vs 5.12 s (HARDEN 0: 3.30 s); PANE 1.72 s vs 2.68 s (2.12 s) |
+| Full JVM suite | green by exit code: `./gradlew --no-daemon test`, 5,547 tests in the second run (synth, cli, shell, xpm) and the remaining modules up to date from the first |
+| Audition page | 68 gestures, 136 24-bit WAVs, opened headless at phone width with no script errors |
+
+### Heard
+
+- The owner heard the Python prototype's HARDEN pair (2026-10-26): "1.0 harden is shorter/faster
+  and higher resonance", and on 2026-10-28 said "higher resonance" meant **more ring**. The law
+  shortens every mode's t60, so the ring the owner hears growing is most likely the upper partials
+  standing further apart, not a longer decay. Recorded as said; not interpreted further.
+- On whether a hardened plate should ring shorter or longer: "Idk". The audition's RING section
+  renders both.
+- The Kotlin renders: not heard.
+
+### Disclosed, not fixed
+
+- PANE's 12 onset near misses (above). Its tail window reads the note in all 162.
+- TRAVERSE is now the weakest control on PLATE (1.13 dB) and keeps the shape-law weights with the
+  root held at full weight, the departure section 8 names.
+- HOLD's loop, the kit, presets, docs and the app picker wait for R2 to R4.
