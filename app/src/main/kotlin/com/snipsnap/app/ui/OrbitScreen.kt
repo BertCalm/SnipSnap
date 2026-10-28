@@ -105,7 +105,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.concurrent.thread
 import kotlin.math.PI
 import kotlin.math.abs
@@ -323,7 +322,7 @@ fun OrbitScreen(
         playerUp = player.start()
         onDispose { player.close() }
     }
-    LaunchedEffect(kit) { withContext(Dispatchers.IO) { player.load(entry) } }
+    LaunchedEffect(kit) { offMain { player.load(entry) } }
 
     fun audition(slot: Int) {
         val pad = kit.pad(slot) ?: return
@@ -406,7 +405,7 @@ fun OrbitScreen(
         // fresh read, so a shelf that gained or lost a snip since the last
         // mount shows it rather than the stale list this mount would
         // otherwise inherit from nowhere (it isn't hoisted).
-        snips = withContext(Dispatchers.IO) { SnipStore.list(filesDir) }
+        snips = offMain { SnipStore.list(filesDir) }
         // Follow-up to the hoist above: `set` carries its own `sampleRate`,
         // stamped in from `rate` the moment it was ever (re)loaded. `rate`
         // itself is `remember(context) { deviceSampleRate(context) }` —
@@ -439,11 +438,11 @@ fun OrbitScreen(
             // see the KDoc on this function's parameters), so it always
             // needs rebuilding from whatever `set` already is.
             preparing = true
-            bank = withContext(Dispatchers.IO) { runCatching { OrbitBank.prepare(existing, source) }.getOrNull() }
+            bank = offMain { runCatching { OrbitBank.prepare(existing, source) }.getOrNull() }
             preparing = false
             return@LaunchedEffect
         }
-        val result = withContext(Dispatchers.IO) {
+        val result = offMain {
             runCatching {
                 val loaded = if (OrbitStore.exists(kitDir)) {
                     OrbitStore.load(kitDir)
@@ -460,7 +459,7 @@ fun OrbitScreen(
             // Prepare before PLAY: a snip ring's waveform and fit report
             // are worth seeing the moment the screen opens, not after.
             preparing = true
-            bank = withContext(Dispatchers.IO) { runCatching { OrbitBank.prepare(loaded, source) }.getOrNull() }
+            bank = offMain { runCatching { OrbitBank.prepare(loaded, source) }.getOrNull() }
             preparing = false
         }.onFailure { e ->
             set = null
@@ -526,7 +525,7 @@ fun OrbitScreen(
         set = next
         scope.launch {
             preparing = true
-            val saved = withContext(Dispatchers.IO) {
+            val saved = offMain {
                 val wrote = runCatching { OrbitStore.save(next, kitDir) }
                 wrote to OrbitBank.prepare(next, source, previous = bank)
             }
@@ -550,7 +549,7 @@ fun OrbitScreen(
         if (playing || preparing) return
         preparing = true
         scope.launch {
-            val prepared = withContext(Dispatchers.IO) { OrbitBank.prepare(s, source, previous = bank) }
+            val prepared = offMain { OrbitBank.prepare(s, source, previous = bank) }
             bank = prepared
             val audioSink = AndroidAudioSink(s.sampleRate)
             val e = OrbitEngine(s, prepared, audioSink, initialSolo = solo)
@@ -749,7 +748,7 @@ fun OrbitScreen(
             // The header alone says how long the snip is — no decode, no
             // size ceiling to worry about. The bank decodes (capped) when
             // the ring is actually prepared for playback.
-            val info = withContext(Dispatchers.IO) { runCatching { WavInfo.read(file) }.getOrNull() }
+            val info = offMain { runCatching { WavInfo.read(file) }.getOrNull() }
             if (info == null) { onToast(Copy.orbitFileUnreadable(file.name)); return@launch }
             val current = set ?: return@launch
             // Frames at the set's rate, since the bank resamples before it fits.
@@ -760,7 +759,7 @@ fun OrbitScreen(
             // What the snip thinks its tempo is, offered once if it differs
             // from the set's: a loop captured at 96 wrapped round a set at
             // 92 is sliced and squeezed for no reason anyone chose.
-            val guess = withContext(Dispatchers.IO) {
+            val guess = offMain {
                 runCatching { Tempo.estimate(WavReader.readCapped(file, TEMPO_MAX_SEC).snip) }.getOrNull()
             }
             if (guess != null && guess.confidence >= TEMPO_TRUST && guess.bpm.roundToInt() != current.bpm.roundToInt()) {
@@ -902,7 +901,7 @@ fun OrbitScreen(
         outOpen = false
         val what = heard(s)
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = offMain {
                 runCatching {
                     val prepared = OrbitBank.prepare(what, source, previous = bank)
                     // One turn of the TRANSPORT, which for an arranged
@@ -948,7 +947,7 @@ fun OrbitScreen(
         if (room <= 0) { onToast("EIGHT RINGS IS THE SKY — TAKE ONE OFF FIRST"); return }
         outOpen = false
         scope.launch {
-            val result = withContext(Dispatchers.IO) {
+            val result = offMain {
                 runCatching {
                     // E when there is one, else the captured base. E is what
                     // the player has been editing — `GrooveStore.load` hands
@@ -1022,7 +1021,7 @@ fun OrbitScreen(
         OrbitClip.clipRefusal(s)?.let { onToast(it); return }
         outOpen = false
         scope.launch {
-            val result = withContext(Dispatchers.IO) { runCatching { OrbitClip.save(kitDir, s) } }
+            val result = offMain { runCatching { OrbitClip.save(kitDir, s) } }
             result.onSuccess { clip ->
                 // GROOVE staleness fix — see [onGrooveWritten]'s own KDoc
                 // and this function's own KDoc above (on the staleness
