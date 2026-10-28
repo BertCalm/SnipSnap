@@ -220,6 +220,27 @@ Why it is built this way:
 - A named preset carries the selected sound into normal rendering and instrument
   export while saved patches continue to reproduce their own settings.
 
+## Calmer ensemble comparison
+
+Further listening found Rich Ensemble a bit annoying. The separate `ensemble/`
+study keeps its tone, drive and attack, and separates the two motion controls:
+Current is SPREAD .65 / MOTION .32; Less vibrato keeps SPREAD .65 and lowers
+MOTION to .08; Calmer ensemble uses SPREAD .40 / MOTION .08. These remain
+audition-only candidates, with the original preset and MPC download retained.
+
+Run `./gradlew :synth:generateRegistersEnsembleRefinementAudition` with optional
+`-PregistersOutput=<directory>`. It reuses the direction generator and actual
+keyboard playback path at C3/C4/C5. The current reference must remain identical
+to the published Rich Ensemble. The original direction-study task is preserved.
+
+Why it is built this way:
+
+- Reducing MOTION alone distinguishes common pitch vibrato from the slower
+  bank interference. Reducing SPREAD as a second step also reduces that pulse.
+- Matching tone controls and listening levels keeps this comparison about motion.
+- Separate candidates let the owner judge sustained comfort before changing the
+  named preset again. No new engine arithmetic is needed for this study.
+
 ## Playing and saving
 
 The shared controls are COLOR, AIR, EDGE, SPREAD and MOTION, plus TUNE and HOLD.

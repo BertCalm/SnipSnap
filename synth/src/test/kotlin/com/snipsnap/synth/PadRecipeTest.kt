@@ -76,6 +76,7 @@ class PadRecipeTest {
         CairnPatch("Stone Test", CairnVoice.ANSWER, mapOf("BODY" to .5f), midi = 55, velocity = .6f, startAtContact = false),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
+        FerryPatch("Passage Test", macros = mapOf("HANDOFF" to .7f), midi = 43, velocity = .6f, seed = Long.MIN_VALUE),
         // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
