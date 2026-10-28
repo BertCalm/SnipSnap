@@ -1099,8 +1099,9 @@ object SynthKits {
     fun chamber(): List<ArrangedPad?> = ChamberKits.build()
 
     /**
-     * Eight fuller Alloy notes in C minor pentatonic from C3, then eight starting
-     * positions. Every pad is finite and dry; a duration-based LOOP class is a
+     * Eight fuller Alloy notes in C minor pentatonic from C3, then the two heard
+     * Alloy anchors, three character voices, and sparse, short and low positions.
+     * Every pad is finite and dry; a duration-based LOOP class is a
      * filename/category, not a seamless sustain claim. All sixteen save their patch.
      */
     fun caustic(): List<ArrangedPad?> {
@@ -1110,7 +1111,9 @@ object SynthKits {
         val scale = PENTATONIC.take(8).mapIndexed { index, semitone ->
             arranged(fuller.copy(name = "Caustic Key ${index + 1}", midi = 48 + semitone))
         }
-        return scale + CausticPresets.all().map(::arranged)
+        val positions = listOf("Fuller Body", "Preferred Alloy", "Hollow Mallet", "Rubbed Ring",
+            "Travelling Catches", "Sparse Alloy", "Short Glint", "Low Vessel")
+        return scale + positions.map { name -> arranged(CausticPresets.all().single { it.name == name }) }
     }
 
     /**

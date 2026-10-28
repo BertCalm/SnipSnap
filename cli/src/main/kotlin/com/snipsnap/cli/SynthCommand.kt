@@ -197,7 +197,7 @@ import kotlin.random.Random
  * --midi and --macros TUNE/HOLD edits are refused in this mode.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
- * CAUSTIC ALLOY accepts `--model 1`, saved `--patch <json>` and `--macros` overrides,
+ * All four CAUSTIC voices accept `--model 1`, saved `--patch <json>` and `--macros` overrides,
  * retaining the patch's explicit note, velocity and native renderer model. It renders a
  * finite note; HOLD is reserved and must stay at zero.
  * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.

@@ -17,7 +17,7 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-enum class CausticVoice { ALLOY }
+enum class CausticVoice { ALLOY, HOLLOW_MALLET, RUBBED_RING, TRAVELLING_CATCHES }
 
 data class CausticInstrumentDiagnostics(
     val rawPeak: Double, val rawRms: Double, val rawDc: Double,
@@ -37,7 +37,8 @@ data class CausticInstrumentProbe(
 )
 
 /**
- * One finite Alloy instrument: coherent circular paths feed 24 damped resonances.
+ * Finite instruments sharing coherent circular source-to-pickup paths.
+ * ALLOY retains its original model-1 calculation; the other voices change contact and body.
  * BODY changes excitation pressure, attack and decay between the heard Alloy and Fuller-body
  * endpoints. LENGTH shortens source decay and modal release, rather than cutting an unchanged tail.
  * MIDI and velocity are explicit recipe fields. HOLD is reserved and positive values are refused.
@@ -72,6 +73,14 @@ object CausticInstrument {
             CausticVoice.ALLOY -> listOf(
                 MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
                 MacroSpec("BODY", 1f, 1f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
+            )
+            CausticVoice.HOLLOW_MALLET, CausticVoice.RUBBED_RING -> listOf(
+                MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
+                MacroSpec("BODY", .5f, .5f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
+            )
+            CausticVoice.TRAVELLING_CATCHES -> listOf(
+                MacroSpec("SOURCE", .5f, .5f), MacroSpec("FOCUS", .19f, .19f),
+                MacroSpec("BODY", 0f, 0f), MacroSpec("LENGTH", 1f, 1f), MacroSpec("HOLD", 0f, 0f),
             )
         }
     }
@@ -245,6 +254,49 @@ object CausticInstrument {
 
     private fun <K, V> TreeMap<K, V>.lastKeyOrNull(): K? = if (isEmpty()) null else lastKey()
 
+    /** Four spatial contacts excite one linear body before a single output stage.
+     * Their absolute force amplitudes sum to one. This bounds the contact-force budget;
+     * overlapping coherent contacts do not imply an acoustic-energy conservation claim.
+     * Whole-period launch times retain the root heard in the published listening study. */
+    private fun prepareTravelling(m: Map<String, Float>, midi: Int, velocity: Double, oversample: Int): Plan {
+        val started = System.nanoTime()
+        val hz = 440.0 * 2.0.pow((midi - 69) / 12.0)
+        val rate = RATE * oversample
+        val scale = (.5 + 7.5 * m.getValue("LENGTH")) / 8.0
+        val sources = floatArrayOf(0f, .25f, .6f, 1f)
+        val times = doubleArrayOf(0.0, .12, .28, .48)
+        val amplitudes = doubleArrayOf(.75, .65, .55, .45)
+        val budget = amplitudes.sumOf { abs(it) }
+        val schedule = TreeMap<Int, Pair<DoubleArray, DoubleArray>>()
+        var first: Plan? = null
+        var allCached = true
+        val expires = IntArray(POLES)
+        for (contact in sources.indices) {
+            stopIfUnwanted()
+            val source = (sources[contact] + (m.getValue("SOURCE") - .5f) * .7f).coerceIn(0f, 1f)
+            val plan = prepare(m + ("SOURCE" to source), midi, velocity, oversample)
+            if (first == null) first = plan
+            allCached = allCached && plan.cacheHit
+            val frame = ((times[contact] * scale * hz).roundToInt() / hz * rate).roundToInt()
+            val gain = amplitudes[contact] / budget
+            val initial = schedule.getOrPut(frame) { DoubleArray(POLES) to DoubleArray(POLES) }
+            for (i in 0 until POLES) initial.second[i] += plan.initialIm[i] * gain
+            for (event in plan.arrivals) {
+                val at = schedule.getOrPut(frame + event.frame) { DoubleArray(POLES) to DoubleArray(POLES) }
+                for (i in 0 until POLES) {
+                    at.first[i] += event.re[i] * gain
+                    at.second[i] += event.im[i] * gain
+                }
+            }
+            for (i in 0 until POLES) expires[i] = maxOf(expires[i],
+                if (plan.expires[i] == Int.MAX_VALUE) Int.MAX_VALUE else frame + plan.expires[i])
+        }
+        val body = checkNotNull(first)
+        return Plan(schedule.map { Arrival(it.key, it.value.first, it.value.second) },
+            body.rotateRe, body.rotateIm, expires, DoubleArray(POLES), body.frequencies,
+            body.output, allCached, System.nanoTime() - started)
+    }
+
     private data class Audio(val internal: FloatArray, val peak: Double, val nanos: Long)
     private fun evolve(plan: Plan, frames: Int, oversample: Int): Audio {
         val started = System.nanoTime()
@@ -336,8 +388,35 @@ object CausticInstrument {
         require(seconds == null || seconds.isFinite() && seconds in .005..duration) { "CAUSTIC diagnostic duration outside note" }
         val frames = ((seconds ?: duration) * RATE).roundToInt()
         val vel = (velocity.takeIf { it.isFinite() } ?: .75f).coerceIn(0f, 1f).toDouble()
-        val plan = prepare(m, midi, vel, oversample)
-        val audio = evolve(plan, frames, oversample)
+        val audio: Audio
+        val frequencies: DoubleArray
+        val cacheHit: Boolean
+        val prepareNanos: Long
+        when (voice) {
+            CausticVoice.ALLOY, CausticVoice.TRAVELLING_CATCHES -> {
+                val plan = if (voice == CausticVoice.ALLOY) prepare(m, midi, vel, oversample)
+                    else prepareTravelling(m, midi, vel, oversample)
+                audio = evolve(plan, frames, oversample)
+                frequencies = plan.frequencies
+                cacheHit = plan.cacheHit
+                prepareNanos = plan.prepareNanos
+            }
+            CausticVoice.HOLLOW_MALLET, CausticVoice.RUBBED_RING -> {
+                val preparationStarted = System.nanoTime()
+                val (prepared, cached) = geometry(m.getValue("SOURCE").toDouble(), m.getValue("FOCUS").toDouble())
+                cacheHit = cached
+                prepareNanos = System.nanoTime() - preparationStarted
+                val audioStarted = System.nanoTime()
+                val rendered = CausticCharacters.render(voice, m, midi, vel, frames, oversample, prepared)
+                var peak = 0.0
+                for (value in rendered.internal) {
+                    check(value.isFinite() && abs(value) < 8f) { "CAUSTIC character raw state exceeded its bound: $value" }
+                    peak = maxOf(peak, abs(value.toDouble()))
+                }
+                audio = Audio(rendered.internal, peak, System.nanoTime() - audioStarted)
+                frequencies = rendered.frequencies
+            }
+        }
         val internalRaw = if (record) audio.internal.copyOf() else FloatArray(0)
         val finishStarted = System.nanoTime()
         val decimated = decimate(audio.internal, oversample)
@@ -352,8 +431,8 @@ object CausticInstrument {
         if (record) for (x in prelevel) { peak = maxOf(peak, abs(x.toDouble())); sum += x; square += x.toDouble() * x }
         val n = prelevel.size.coerceAtLeast(1)
         val diagnostics = CausticInstrumentDiagnostics(peak, sqrt(square / n), sum / n, audio.peak,
-            440.0 * 2.0.pow((midi - 69) / 12.0), duration, plan.cacheHit, plan.prepareNanos, audio.nanos,
-            finishNanos, System.nanoTime() - started, plan.frequencies.copyOf(), model, oversample)
+            440.0 * 2.0.pow((midi - 69) / 12.0), duration, cacheHit, prepareNanos, audio.nanos,
+            finishNanos, System.nanoTime() - started, frequencies.copyOf(), model, oversample)
         return CausticInstrumentProbe(samples, prelevel, raw, internalRaw, RATE, diagnostics)
     }
 }

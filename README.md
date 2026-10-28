@@ -440,14 +440,16 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
-through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
-bounded static-geometry cache and exact linear modal response support editable
-finite notes. Native patches retain model, note and velocity through presets,
-pads and CLI edits. Eight presets and a dry sixteen-pad kit accompany
-the instrument; six positions are new listening candidates. HOLD is reserved.
-Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
-for the control study and dual-generation MPC starter. The archived listening
+CAUSTIC has four finite voices: ALLOY, HOLLOW_MALLET, RUBBED_RING and
+TRAVELLING_CATCHES. A metallic bloom, soft hollow knock, rough pressure swell
+and four spatial catches share SOURCE/FOCUS geometry, voice-specific BODY and
+.5–8-second LENGTH, with saved ROOT and VELOCITY. The owner chose all three
+character-study gestures for native development; the production ports and new
+control positions still need listening. Native model-1 ALLOY patches and
+archived study models 1–4 retain their interpretation. Eleven starting patches
+and a dry sixteen-pad kit include the four voices. HOLD is reserved.
+Run `./gradlew :synth:generateCausticCharactersAudition :synth:generateCausticKit`
+for the four-voice control study and dual-generation MPC starter. The archived listening
 studies remain unchanged. [Implementation notes](docs/CAUSTIC.md) distinguish
 finite duration classification from sustained-loop support.
 

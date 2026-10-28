@@ -8,6 +8,7 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -16,6 +17,9 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.KeySpec
+import com.snipsnap.audio.Scales
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.KitBuilderModel
@@ -100,10 +104,49 @@ class CausticSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun all_four_voice_chips_keep_their_own_preset_root_strike_and_body_after_recreation() {
+        val root = shelf()
+        val settings = mutableMapOf("engine" to "CAUSTIC", "voice" to "ALLOY")
+        show(root, settings)
+        val labels = mapOf(CausticVoice.ALLOY to "ALLOY", CausticVoice.HOLLOW_MALLET to "Hollow Mallet",
+            CausticVoice.RUBBED_RING to "Rubbed Ring", CausticVoice.TRAVELLING_CATCHES to "Travelling Catches")
+        for (label in labels.values) compose.onNodeWithContentDescription(label).assertIsDisplayed()
+        for ((index, voice) in CausticVoice.entries.withIndex()) {
+            press(labels.getValue(voice))
+            val preset = CausticPresets.forVoice(voice).first()
+            press("PRESET ${preset.name}")
+            assertFiniteControls()
+            assertEquals(preset.macros.getValue("BODY"), progress("BODY"), .00001f)
+            val midi = 48 + index * 3
+            val velocity = .3f + index * .1f
+            dial("ROOT", (midi - CausticInstrument.MIDI_MIN).toFloat() /
+                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN))
+            dial("VELOCITY", velocity)
+            dial("LENGTH", 0f)
+            waitFor("independent $voice draft") {
+                SynthDrafts.read(settings).any { it is CausticPatch && it.voice == voice &&
+                    it.midi == midi && it.velocity == velocity && it.macros["LENGTH"] == 0f }
+            }
+        }
+        compose.runOnIdle { generation++ }
+        pump()
+        for ((index, voice) in CausticVoice.entries.withIndex()) {
+            press(labels.getValue(voice))
+            val midi = 48 + index * 3
+            assertEquals((midi - CausticInstrument.MIDI_MIN).toFloat() /
+                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN), progress("ROOT"), .00001f)
+            assertEquals(.3f + index * .1f, progress("VELOCITY"), .00001f)
+            assertEquals(CausticPresets.forVoice(voice).first().macros.getValue("BODY"), progress("BODY"), .00001f)
+            assertEquals(0f, progress("LENGTH"), .00001f)
+            assertFiniteControls()
+        }
+    }
+
+    @Test
     fun picker_edits_save_recreation_and_pad_keep_the_finite_native_recipe() {
         val root = shelf()
         val kitDir = File(root, "kit").apply { mkdirs() }
-        val kit = Kit(name = "CAUSTIC UI", pads = emptyList())
+        val kit = Kit(name = "CAUSTIC UI", pads = emptyList(), key = KeySpec.parse("Cminpent"))
         KitStore.save(kit, kitDir)
         val settings = mutableMapOf("engine" to "OHM", "voice" to "STRING")
         show(root, settings, KitShelf.Entry(kitDir, kit))
@@ -125,9 +168,9 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         dial("VELOCITY", .43f)
         dial("SOURCE", .68f)
         dial("BODY", .62f)
-        dial("LENGTH", .3f)
+        dial("LENGTH", .1f)
         val changed = factory.copy(midi = 57, velocity = .43f,
-            macros = factory.macros + mapOf("SOURCE" to .68f, "BODY" to .62f, "LENGTH" to .3f))
+            macros = factory.macros + mapOf("SOURCE" to .68f, "BODY" to .62f, "LENGTH" to .1f))
 
         // Macro edits remove the preset highlight. The independent draft still
         // carries ROOT, VELOCITY and the native model when MAKE is recreated.
@@ -163,7 +206,18 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         val placed = recipe.patch as CausticPatch
         assertEquals(saved.copy(name = placed.name), placed)
         assertEquals(CausticInstrument.drumClassFor(saved.voice, saved.macros), pad.drumClass)
-        assertTrue("a duration-based LOOP class does not make a held loop", pad.oneShot)
+        assertEquals(DrumClass.TONAL, pad.drumClass)
+        assertEquals("57", pad.source["rootMidi"])
+        assertEquals(Scales.nameOf(saved.midi), pad.source["rootNote"])
+        assertEquals("authored", pad.source["rootOrigin"])
+        assertEquals("SYNTH", pad.source["from"])
+        // A3 is outside C minor pentatonic: key placement moves it one
+        // semitone to Bb3, while the saved source stays MIDI57 with no cent correction.
+        val expectedTune = KitBuilderModel.open(kitDir).tuningForKnownRoot(saved.midi)
+        assertEquals(1 to 0, expectedTune)
+        assertEquals(expectedTune.first, pad.tuneCoarse)
+        assertEquals(0, pad.tuneFine)
+        assertTrue("a finite note remains a one-shot", pad.oneShot)
         assertEquals(null, recipe.fx)
         assertTrue(File(kitDir, pad.sampleFile).length() > 44)
     }

@@ -1,4 +1,163 @@
-# Caustic: finite Alloy instrument
+# Caustic: four finite voices
+
+Caustic turns an ordinary source into a position-dependent singing body through
+reflected paths. The native instrument now develops four gestures within the
+same CAUSTIC engine: ALLOY, HOLLOW_MALLET, RUBBED_RING and
+TRAVELLING_CATCHES. SOURCE and FOCUS retain the circular geometry; BODY changes
+the contact or pressure appropriate to the voice, and LENGTH shapes a finite
+gesture. Root and excitation velocity remain explicit saved fields. HOLD is
+reserved. The working name has not been checked for release.
+
+## Native character expansion
+
+The owner heard the three character-study candidates as distinct and chose to
+develop all three. That verdict applies to the study recordings. The Kotlin
+ports, their intermediate controls and their native output conditioning still
+need the owner's listening verdict.
+
+| Native voice | Characteristic gesture | BODY reference position |
+| --- | --- | --- |
+| ALLOY | Metallic strike → tonal body grows → position-dependent ring → finite release. | 1 retains the approved Fuller-body excitation; 0 retains preferred Alloy. |
+| HOLLOW_MALLET | Soft contact → hollow low/odd-mode knock → short pitched decay. | .5 is the heard Python contact/body reference. |
+| RUBBED_RING | Rough contact → pressure swell → driven pitched body → finite release. | .5 is the heard Python pressure/noise reference. |
+| TRAVELLING_CATCHES | First contact → three spatial catches → shared metallic ring. | 0 retains the study's preferred-Alloy body for all four contacts. |
+
+These are voices because the exciter and material response change while the
+same coherent source-to-pickup mapping remains central. MERCURY already offers
+struck and rubbed modal objects with water loading. REVEL already combines
+scheduled skins and moving microphones. Caustic keeps one vessel's circular
+reflection paths as the excitation map. A new engine or an external rack
+effect would duplicate that shared work.
+
+### Signal path and model limits
+
+```text
+voice contact or pressure gesture
+  → circular reflected paths with signed modal participation and causal delays
+  → voice's damped modal body
+  → one shared native output stage
+  → finite mono 44.1 kHz sample
+```
+
+Hollow Mallet ports the study's soft finite contact and six low/odd modes.
+Rubbed Ring ports its shaped pressure rise, rough harmonic/noise drive, seven
+modes and quiet path-routed contact radiation. Rubbing remains a one-way driven
+approximation: the resonator does not feed friction back into the contact.
+Neither profile claims measured wood, glass or a particular physical vessel.
+
+Travelling Catches schedules four illumination contacts through different
+source positions. The four unconditioned responses combine before one output
+stage. Their absolute contact amplitudes share a fixed L1 budget; no contact
+receives its own loudness makeup. This is the superposition of one linear
+body's responses, not four independently leveled notes. The schedule is an
+authored musical gesture, not a collision solver or a moving-wave ORBIT model.
+Its reference launch times are rounded to periods of the requested note.
+
+The circular solver runs literally. The material tables, source gestures,
+modal participation and note-relative delay scale are sound-design choices.
+Geometry preparation stays outside the audio loop and uses the bounded
+SOURCE/FOCUS cache. Each render owns its source, delay and modal state.
+Additional catches reuse prepared geometry; mutable audio state is not cached.
+
+### Controls and compatibility
+
+| Control | Contract across the four voices |
+| --- | --- |
+| SOURCE | Illumination/source distance with the exact parallel limit. Catches shifts its four reference sources 0, .25, .6 and 1 by `.7 * (SOURCE - .5)`, clamped to 0–1. |
+| FOCUS | Position of the same finite pickup band; reception changes before the modal sum. |
+| BODY | ALLOY and catches: metallic tonal fullness. Hollow: contact character. Rubbed: pressure/contact character. The reference positions above anchor the heard studies. |
+| LENGTH | .5–8 seconds. Source/contact timing and modal release scale with the finite gesture; this is more than a crop of an unchanged eight-second recording. |
+| HOLD | 0 only. Positive values are refused until a real sustained source and independently checked loop exist. |
+| ROOT / VELOCITY | Saved outside the macro map. C2–C6, MIDI 36–84; velocity changes excitation before output conditioning. |
+
+Native ALLOY model 1 and its eight starter patches retain their interpretation.
+The archived `CausticRecipe` models 1–4 are a separate format and remain
+unchanged. The three added native voices also carry explicit native model 1;
+they are not aliases for the old audition-only Python recipes. A finite note
+longer than 1.5 seconds can carry LOOP class metadata without becoming a held
+or seamless sample.
+
+Hollow Mallet keeps a minimum root-mode T60 of twelve note periods, with
+the other modes' floors proportional to their reference T60. This prevents
+the shortest low note from losing its pitched body while preserving relative
+high-frequency loss. At LENGTH=1 the nine new-voice default recordings retain
+exact float-output hashes after this guard.
+
+The factory roster contains the unchanged eight ALLOY starting patches and
+one reference patch per added voice, eleven total. The dry sixteen-pad starter
+keeps eight ALLOY notes in C minor pentatonic, then the two ALLOY anchors,
+the three new voices, Sparse Alloy, Short Glint and Low Vessel. These additions
+do not increase the engine count or claim a held instrument export.
+
+### Why it is built this way
+
+- Each new voice changes the contact and audible main-note gesture. The earlier
+  tail-only extension did not give the owner a useful listening difference.
+- The same path map keeps SOURCE and FOCUS meaningful across all four voices.
+  It also lets a geometry fix be checked once against the shared reference.
+- Hollow and rubbed references have a defined BODY midpoint, so controls can
+  grow around the heard candidate without silently replacing its starting shape.
+- The catches mix their raw forces before finishing. Separate loudness makeup
+  would inflate quieter contacts and change the intended sequence.
+- Native output conditioning and control extremes can change the heard study.
+  Port agreement and listening therefore remain separate acceptance checks.
+
+### Expansion evidence ledger
+
+- **Heard:** the owner heard distinct Hollow Mallet, Rubbed Ring and Travelling
+  Catches study gestures and requested native development of all three. The
+  production ports and new control positions have not yet been heard.
+- **Verified:** the shared CAUSTIC geometry, saved root/velocity contract,
+  original native model 1 and archived models 1–4 were read at `53366f9c` before
+  this expansion. The main Kotlin classes compile cleanly. The registry exposes
+  four voices, eleven starting patches and a sixteen-pad finite starter.
+- **Measured:** the independent reference comparisons below cover the nine
+  new-voice defaults at C2/C4/C6. The first fourteen character checks pass,
+  including control authority, interactions, decay and the higher-rate
+  comparison below. Expanded corner validation, render cost, generated archives
+  and the full test gate remain pending. Historical results below apply only
+  to their named earlier packs.
+- **Proposed:** new profile constants away from the heard reference positions,
+  factory variations and all unlistened control extremes remain sound-design
+  choices rather than hearing approval or measured physical properties.
+
+| Expansion check | Current evidence |
+| --- | --- |
+| Original ALLOY preservation | Seventeen earlier cases retain exact SHA-256 agreement at internal raw, prelevel and native output: all 51 comparisons pass. |
+| Raw port agreement | Independent reference for all nine new-voice C2/C4/C6 defaults: worst relative RMS error `7.67e-8`, maximum absolute sample error `2.17e-8`. |
+| Finished port agreement | The reference uses the same Kotlin house finish and PCM24 path. Worst relative RMS error against native output is `8.90e-7`; fitted gain stays within `1.64e-7` of unity. |
+| Default native bounds | Across those nine comparisons, maximum native peak is `.8391` and maximum absolute mean is `1.32e-8`. These are default measurements, not all-control bounds. |
+| Low-note short gesture | With the twelve-period modal-release floor, C2/LENGTH=0/velocity=.75 passes the broad pitch probe at BODY 0, .5 and 1: 12.93–14.40 cents error, confidence .583–.595. Late raw/attack RMS is approximately `1e-6`, before the output fade. |
+| Control activity | The weakest measured adjacent-control normalized spectral L1 difference is .113. SOURCE × FOCUS interaction is .195–.742; BODY × LENGTH envelope interaction is .159–.755 across the three added voices. These are shape measurements, not an audibility verdict. |
+| Higher-rate comparison | At C6/hard effort, 4× versus 16× normalized spectral L1 differences are .000223, .00798 and .01916 for Hollow, Rubbed and Catches respectively. Maximum measured power above 20 kHz is `1.22e-8`; the noise realization differs between internal rates. |
+| Current pack and test gate | The generator defines 42 clips and six ZIPs: five portable listening packs and the sixteen-pad starter. A 25 MiB asset limit is enforced. Generation, archive sizes, expanded corner probes and the full test suite are pending. |
+
+The independent reports are `independent-reference-comparison.json` and
+`independent-finished-reference-comparison.json` from the native-capture probe.
+These numerical agreements establish port fidelity at the reference settings;
+they do not establish the owner's acceptance of the production instruments.
+
+### Disclosed limits
+
+Some soft, short C2 Hollow settings still return no result from the house
+autocorrelation pitch detector. The diagnosed cases have an unconstrained
+40–1200 Hz spectral maximum at 65.27–65.44 Hz, −3.55 to +.91 cents from C2,
+and note-period correlation .626–.656. The detector's relative-peak cutoff can
+reject that period. These checks support the authored root at those settings;
+they do not claim that every house pitch probe passes. The independent report
+is `caustic-short-hollow-pitch-diagnosis/diagnosis.json`.
+
+The audio-only classifier can call dark C2 Hollow notes TOM or KICK. The
+accepted Python prototype's first .5 seconds already receives TOM, so this
+heuristic does not distinguish a port regression from the heard low-register
+gesture. Native patches retain their saved MIDI and duration-derived
+TONAL/LOOP filing, following the existing authored-instrument approach used
+for low ARCO notes. The measured heuristic result remains in diagnostics;
+it is not presented as universally safe drum classification.
+
+The production ports still need listening, phone performance and MPC hardware
+load/play checks. HOLD, live moving geometry and held keygroup export remain
+outside this finite expansion.
 
 ## Character listening study
 
@@ -14,9 +173,9 @@ keeps Fuller Body byte-identical and auditions three new gestures at C2/C4/C6:
 
 | Candidate | Changed mechanism | Status |
 | --- | --- | --- |
-| Hollow Mallet | Softer finite contact, six low/odd modes and faster high-frequency loss. | Python modal reference. |
-| Rubbed Ring | A .34-second pressure rise, rough driven contact and a finite release replace the strike. | One-way rubbing approximation, without feedback friction. |
-| Travelling Catches | Four scheduled contacts illuminate different source paths into the same linear native body. | Sum unconditioned native responses; finish once. |
+| Hollow Mallet | Softer finite contact, six low/odd modes and faster high-frequency loss. | Heard Python reference, selected for native development. |
+| Rubbed Ring | A .34-second pressure rise, rough driven contact and a finite release replace the strike. | Heard one-way rubbing approximation, selected for native development. |
+| Travelling Catches | Four scheduled contacts illuminate different source paths into the same linear native body. | Heard raw-response sum, selected for native development. |
 
 The references use actual Kotlin geometry exports. Hollow and rubbed bodies use
 the uncoupled `Modes.Bank` rotate-then-kick recurrence through SciPy. Catches use
@@ -29,13 +188,15 @@ within 20 cents, confidence at least .3, finite samples and PCM headroom. The
 reference WAVs retain their hashes. Main-window spectral and envelope screens
 are reported separately; flux can count modal beating, so it does not prove
 physical contacts. **Proposed:** all new profile constants and gestures.
-**Heard:** the owner approved the earlier Fuller Body and rejected the native
-bank's degree of variation; these three candidates await listening.
+**Heard:** the owner approved the earlier Fuller Body, rejected the first native
+bank's degree of variation, then heard the three candidates as distinct and
+selected all three for native development.
 
 Reproduce with `python3 scripts/generate_caustic_character_study.py` after
 building the native audition. Requires NumPy, SciPy and JDK 17+. The download
 contains the complete study source snapshot and raw-input hashes. These are
-audition recipes, not new native patches or factory presets.
+archived audition recipes. The native ports use the separate saved patch
+contract above.
 
 ### Why it is built this way
 
@@ -45,31 +206,43 @@ audition recipes, not new native patches or factory presets.
 - Listening comes before another factory-bank expansion; measurements screen
   numerical failures and weak contrasts without deciding the owner's preference.
 
-Caustic turns an ordinary harmonic tone into a position-dependent singing body
-through reflected paths. The finite native milestone is implemented: one ALLOY
-voice, editable SOURCE/FOCUS/BODY/LENGTH controls, saved MIDI and velocity,
-eight starting patches, and a dry sixteen-pad kit for both MPC formats. The
-owner heard and approved the fuller-body direction after finding the Bloom/Deep
-tail variants indistinguishable. Earlier listening studies remain available
-for comparison; the broader moving-geometry design remains later work. The
-working name has not been checked for release.
+The original finite native milestone introduced ALLOY, editable
+SOURCE/FOCUS/BODY/LENGTH controls, saved MIDI and velocity, eight starting
+patches and a dry sixteen-pad kit for both MPC formats. The owner heard and
+approved the fuller-body direction after finding the Bloom/Deep tail variants
+indistinguishable. Those references remain available alongside the new voices;
+the broader moving-geometry design remains later work.
 
 ## Listen and reproduce
 
-The [native instrument audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/instrument/)
-provides twenty finite recordings, Native and Level matched playback, eight
-starting patches, portable JSON recipes, a compact comparison download and the
-sixteen-pad starter kit. The browser plays exported recordings; it does not
-render control changes in real time. Generate the native artifacts with:
+Generate the current four-voice comparison with:
+
+```text
+./gradlew --no-daemon :synth:generateCausticCharactersAudition
+./gradlew --no-daemon :synth:generateCausticKit
+```
+
+The voice generator writes `testkit/caustic-native-voices-audition/` separately
+from every earlier pack. Its 42 cases include twelve defaults across four voices
+at C2/C4/C6, then SOURCE, FOCUS, BODY, LENGTH and two control-pair comparisons.
+Native WAVs are the complete saved patch render. Matched copies apply
+`AuditionLevel` once. The compact comparison download contains all twelve
+defaults; each voice has a separate download with its control cases and native
+JSON patches. A sixth ZIP carries the sixteen-pad MPC starter. Every generated
+asset and ZIP must stay below 25 MiB. The browser
+plays fixed recordings and does not synthesize live knob changes.
+
+The earlier [ALLOY instrument audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/instrument/)
+retains twenty finite recordings, eight original starting patches, portable
+JSON recipes and its original starter download. Reproduce that comparison with:
 
 ```text
 ./gradlew --no-daemon :synth:generateCausticInstrumentAudition
 ./gradlew --no-daemon :synth:generateCausticKit
 ```
 
-These tasks write `testkit/caustic-instrument-audition/` and
-`testkit/caustic-kit/`. Native playback is the saved patch's complete house
-output; Level matched copies apply `AuditionLevel` once for comparison.
+The original voice task writes `testkit/caustic-instrument-audition/`; the kit
+task writes the current starter to `testkit/caustic-kit/`.
 
 The [archived private audition](https://caustic-snipsnap-audition.bertcalm.chatgpt.site/)
 retains the earlier circular studies on ChatGPT Sites: a suggested listening
@@ -181,7 +354,7 @@ The existing source and pickup controls still determine coherent excitation.
 No output reverb or extra oscillators create this contrast. Model 4 requires
 ALLOY and zero bloom; recipe schema 4 stores that explicit fixed model choice.
 
-## Native finite instrument contract
+## Original ALLOY native model-1 contract
 
 The characteristic gesture is **metallic strike → tonal body grows beneath it
 → position-dependent ringing → finite release**. The core uses literal circular
@@ -192,7 +365,7 @@ loading and REVEL mixes a circular ensemble through moving microphones;
 Caustic's distinguishing controls move source illumination and coherent pickup
 paths through one shared body.
 
-The first native voice is ALLOY. `CausticInstrument` is the production control
+The first native voice was ALLOY. `CausticInstrument` is the production control
 and rendering API; `CausticPatch` stores the name, voice, complete macro map,
 explicit MIDI root, excitation velocity and native model version. Native model
 1 is a separate format from the archived `CausticRecipe` models 1–4. Archived
@@ -231,8 +404,8 @@ The archived renderer remains the reference, not a mutable production preset.
 
 ### Why it is built this way
 
-- One voice keeps the heard metallic identity central while the controls are
-  tested; the earlier Body and Reed studies remain available as references.
+- One voice kept the heard metallic identity central while the original controls
+  were tested; the earlier Body and Reed studies remain available as references.
 - BODY changes energy entering the resonant body during the audible main note.
   Extending only a quiet tail failed to provide a useful listening choice.
 - Static path preparation is shared, while each note owns its modal state.
@@ -274,14 +447,14 @@ phone budgets or a sonic acceptance verdict.
 
 ## Later work
 
-Deformation, SCATTER, exact-stop ORBIT, verified sustained HOLD, additional
+Deformation, SCATTER, exact-stop ORBIT, verified sustained HOLD, further
 voices, the broader preset bank and held keygroup export remain later work.
 The finite instrument includes native patch/kit registration and the phone
 picker. Phone latency and the new kit's hardware load/play check remain
 device verification, separate from JVM and export-reader checks. No real-time
 ray-traced engine is required for this sample workflow.
 
-## As built and evidence
+## Original native model-1 evidence
 
 - **Heard:** the owner preferred Alloy, could not distinguish Bloom/Deep in normal
   listening, then heard and approved Fuller body's main-note change. Native

@@ -1640,6 +1640,7 @@ fun SynthScreen(
                     is TidalPatch -> patch.midi
                     is OhmPatch -> patch.midi
                     is ChamberPatch -> patch.midi
+                    is CausticPatch -> patch.midi
                     else -> null
                 }
                 val authoredSource = authoredMidi?.let {
@@ -5221,7 +5222,7 @@ private val GlintVoice.drumClass: DrumClass
 /**
  * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations
  * (`HAT_CLOSED` → "HAT CL", `HAT_OPEN` → "HAT OP" — the rest are already
- * short enough as-is); every other engine's voice names are already one
+ * short enough as-is). CAUSTIC keeps the full heard character names; other voice names are one
  * short word (BELL, SQUELCH, KALIMBA, …) with no underscore to break up, so
  * the raw enum name reads fine unmodified. Without this, this picker's
  * one-line visible label and TalkBack announcement both fall back to the
@@ -5238,6 +5239,12 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
     }
     Engine.OBBLIGATO -> "AIR + REED"
     Engine.BALLAST -> (voice as BallastVoice).displayName
+    Engine.CAUSTIC -> when (voice as CausticVoice) {
+        CausticVoice.ALLOY -> "ALLOY"
+        CausticVoice.HOLLOW_MALLET -> "Hollow Mallet"
+        CausticVoice.RUBBED_RING -> "Rubbed Ring"
+        CausticVoice.TRAVELLING_CATCHES -> "Travelling Catches"
+    }
     else -> voice.name
 }
 
@@ -5299,9 +5306,9 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
-    // Small voice rosters fit one row. Larger ones, including THAW's six,
-    // split evenly across two rows.
-    val rows = if (voices.size <= 4) {
+    // CAUSTIC's four full character names need two rows on a phone. Other
+    // small rosters fit one row; larger rosters split evenly across two.
+    val rows = if (voices.size <= 4 && engine != Engine.CAUSTIC) {
         listOf(voices)
     } else {
         val half = (voices.size + 1) / 2

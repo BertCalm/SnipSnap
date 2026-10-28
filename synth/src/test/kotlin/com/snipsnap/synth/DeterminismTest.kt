@@ -142,10 +142,13 @@ class DeterminismTest {
 
     @Test
     fun `native Caustic saved finite notes are byte identical across renders`() {
-        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
-            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
-            midi = 57, velocity = .63f, model = 1)
-        assertContentEquals(patch.render().samples, patch.render().samples)
+        for (voice in CausticVoice.entries) {
+            val patch = CausticPatch("Native finite canary", voice,
+                mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+                midi = 57, velocity = .63f, model = 1)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, voice.name)
+        }
     }
 
     @Test
