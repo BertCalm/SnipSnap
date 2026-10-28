@@ -56,7 +56,9 @@ class ChopScreenTest : ComposeScreenTest() {
     private val landed = CopyOnWriteArrayList<Triple<KitShelf.Entry, Int, String>>()
     // What the screen told the dock about its own job, label by label; null is "no job".
     private val told = CopyOnWriteArrayList<String?>()
-    // A read the test keeps open: the screen's worker blocks on it, once it has chopped, until released.
+    // A read the test keeps open: the screen's worker counts down `reached` once it has decoded and
+    // chopped, then blocks on `release` until the test lets it go.
+    private val reached = CountDownLatch(1)
     private val release = CountDownLatch(1)
 
     @After
@@ -103,8 +105,9 @@ class ChopScreenTest : ComposeScreenTest() {
      * The screen under the compose test clock and with reduced motion on (the loading panel's bar
      * under a frozen clock is the hazard [ComposeScreenTest] names). [settleMillis] is how much of
      * the frozen clock the first composition gets (see `setPhoneContent`): the tests of the first
-     * 200 ms take none. [hold] keeps the read open until [release] is counted down, because a real
-     * decode of the break ends in a few milliseconds and the clock does not move on its own.
+     * 200 ms take none. [hold] keeps the read open until [release] is counted down: a real decode
+     * of the break ends in its own real time, which the test clock does not wait for, so without
+     * the hold a read could not be made to end at a chosen moment of the clock.
      */
     private fun show(
         entry: KitShelf.Entry?,
@@ -128,7 +131,10 @@ class ChopScreenTest : ComposeScreenTest() {
                     onNavigateKits = {},
                     loadingClock = { compose.mainClock.currentTime },
                     holdRead = {
-                        if (hold) check(release.await(30, TimeUnit.SECONDS)) { "the held read was never released" }
+                        if (hold) {
+                            reached.countDown()
+                            check(release.await(30, TimeUnit.SECONDS)) { "the held read was never released" }
+                        }
                     },
                 )
             }
@@ -137,12 +143,17 @@ class ChopScreenTest : ComposeScreenTest() {
 
     /**
      * Lets a held read finish and gives the screen the first frame after it: the read ends at that
-     * frame, whatever the real time it took, because the clock is the test's. The sleep is the
-     * worker's hop back to the main thread, which is real time and which nothing on screen shows;
-     * the sink hearing "no job" is what says the read was seen to end, so a hop that was not done
-     * fails here and not as a hold that was vacuously kept.
+     * frame, whatever the real time it took, because the clock is the test's.
+     *
+     * It first waits for the worker to reach its hold ([reached], 60 s like the file's other waits),
+     * so the decode and the chop, whose real time depends on the emulator, are done before the
+     * release and are not covered by any sleep. What the sleep covers is only what follows the
+     * release: the worker handing its result to the main thread, a hop of milliseconds that nothing
+     * on screen shows. The sink hearing "no job" says the read was seen to end, so a hop that was
+     * not done fails here and not as a hold that was vacuously kept.
      */
     private fun endTheRead() {
+        assertTrue("the read never reached its hold", reached.await(60, TimeUnit.SECONDS))
         release.countDown()
         Thread.sleep(HOP_MS)
         pump(16)
@@ -244,14 +255,16 @@ class ChopScreenTest : ComposeScreenTest() {
         pump(250)
         assertWords(up = true, why = "a read still open after 200 ms did not say it was reading")
         // The read ends at about 300 ms (the first frame after the release). The words showed at
-        // about 208 ms, so they are owed until about 708: the chop waits behind them.
+        // about 208 ms at the soonest, so they are owed until about 708 at the soonest: the chop
+        // waits behind them, frame by frame to just under 700, so a minimum cut short by even
+        // a few tens of ms would fail.
         pump(34)
         endTheRead()
         assertTrue("the read ended too late for this test to mean anything", compose.mainClock.currentTime < 400)
-        while (compose.mainClock.currentTime < 650) {
+        while (compose.mainClock.currentTime < 690) {
             assertWords(up = true, why = "the words went before their 500 ms minimum was up")
             assertFalse("the chop was drawn under the words", showing(header(4, "BY HITS")))
-            pump(50)
+            pump(16)
         }
         // Past the minimum: the words give way, and what they held is on screen.
         pump(150)

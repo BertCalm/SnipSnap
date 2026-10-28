@@ -332,10 +332,9 @@ fun TapeScreen(
             // open TAPE flow, the in-flight load effect is still running
             // (failed=false) when this replay lands; gating on `loaded ==
             // null` would bump reloadToken right then and cancel/restart
-            // that in-flight load for no reason (a double decode, with the
-            // reading panel and the dock's job starting over). Waiting for
-            // `failed` means this only nudges a reload once the deck has
-            // genuinely settled on
+            // that in-flight load for no reason (a double decode for
+            // nothing). Waiting for `failed` means this only nudges a
+            // reload once the deck has genuinely settled on
             // nothing — at which point the in-flight load has already
             // picked up the replayed snip on its own, or a later, truly
             // new snip arrives. Once a tape is loaded, TapeDeckContent's
