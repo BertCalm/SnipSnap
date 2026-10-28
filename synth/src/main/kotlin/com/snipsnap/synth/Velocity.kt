@@ -237,6 +237,7 @@ object Velocity {
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is ScourPatch -> Scour.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
@@ -397,6 +398,8 @@ object Velocity {
         is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
         is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
         is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+        // SCOUR's velocity is shot speed: each shot lands harder and leaves more coverage.
+        is ScourPatch -> Scour.render(patch.voice, patch.macros, velocity = v)
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
