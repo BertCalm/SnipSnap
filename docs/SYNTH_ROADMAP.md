@@ -1,5 +1,15 @@
 # Synth roadmap — generate kits, not just capture them
 
+**Ferry first Kotlin port (2026-10-27).** PASSAGE ports the approved Python
+wood-to-wire handoff and nine register/speed references to one passive 22-state
+network. An independent quiet root and full-network fundamental cap preserve
+the reference tuning design. Compiled block readouts retain actual state exchange
+while reducing per-sample work. Saved model/note/velocity/exact seed, recipe replay,
+velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
+Kotlin listening, production tail termination, MATCH/SPAN/LOSS/BODY, HOLD, further
+voices, factory presets, kits and phone/MPC acceptance remain separate gates.
+See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
+
 Capture is the headline; synthesis is the second leg. The goal: dial in drum
 sounds (and eventually keys) inside SnipSnap, render them to WAVs, and ship
 them through the exact same kit → preflight → export pipeline as captured

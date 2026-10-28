@@ -1,0 +1,460 @@
+{
+  "title": "Ferry: Kotlin port",
+  "model": 1,
+  "sample_rate": 44100,
+  "entries": [
+    {
+      "id": "low-slow",
+      "register": "low",
+      "speed": "slow",
+      "midi": 36,
+      "handoff": 0.25,
+      "native": "native/low-slow.wav",
+      "kotlin_comparison": "comparison/kotlin-low-slow.wav",
+      "approved_comparison": "comparison/reference-low-slow.wav",
+      "recipe": "recipes/low-slow.json",
+      "approved_source_sha256": "2795c1b3ad6e1328f80023e75a57b96e558646316499ec23148d6d6444a483ab",
+      "native_wav_sha256": "fa1bc902cda6c9c630a6ed1bc84e2d9e26c24384d3ffd8eca27ea8a21bef5703",
+      "cold_render_ms": 126.880214,
+      "warm_render_ms": 46.724794,
+      "peak": 0.7402536273002625,
+      "dc": 1.3437913994273436e-05,
+      "loudness": 0.1834000200033188,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -3.790421237736905,
+        -0.8150341139482762,
+        0,
+        4.587215448859203
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 65.50922393798828,
+          "confidence": 0.9387651085853577,
+          "cents": 2.719726855450507
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 65.47476196289062,
+          "confidence": 0.9348494410514832,
+          "cents": 1.8087491408323433
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 65.51260375976562,
+          "confidence": 0.9390000104904175,
+          "cents": 2.8090442256144397
+        }
+      ],
+      "eigen_residual": 2.2130953041494605e-15,
+      "orthogonality_error": 5.773159728050814e-15
+    },
+    {
+      "id": "low-standard",
+      "register": "low",
+      "speed": "standard",
+      "midi": 36,
+      "handoff": 0.5,
+      "native": "native/low-standard.wav",
+      "kotlin_comparison": "comparison/kotlin-low-standard.wav",
+      "approved_comparison": "comparison/reference-low-standard.wav",
+      "recipe": "recipes/low-standard.json",
+      "approved_source_sha256": "b34b12bf3f6015eb9113b2bdeb3d9661fd673e34dba32afd9a6a986b95ac4c3c",
+      "native_wav_sha256": "851f6be412adb140d4300eebaebedf989246597da46a01c448fed5638b5a62cb",
+      "cold_render_ms": 65.339968,
+      "warm_render_ms": 44.135427,
+      "peak": 0.7034687399864197,
+      "dc": 9.860120473402847e-06,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -4.307819649926907,
+        -0.7069333924549767,
+        0,
+        4.9999999999947295
+      ],
+      "cap_scale": 0.5090778380863412,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 65.5139389038086,
+          "confidence": 0.9390662908554077,
+          "cents": 2.8443263414468145
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 65.5997314453125,
+          "confidence": 0.9353297352790833,
+          "cents": 5.109948069671893
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 65.58979034423828,
+          "confidence": 0.9382242560386658,
+          "cents": 4.847573872966643
+        }
+      ],
+      "eigen_residual": 2.351413760658802e-15,
+      "orthogonality_error": 3.552713678800501e-15
+    },
+    {
+      "id": "low-fast",
+      "register": "low",
+      "speed": "fast",
+      "midi": 36,
+      "handoff": 1,
+      "native": "native/low-fast.wav",
+      "kotlin_comparison": "comparison/kotlin-low-fast.wav",
+      "approved_comparison": "comparison/reference-low-fast.wav",
+      "recipe": "recipes/low-fast.json",
+      "approved_source_sha256": "66391dc6fe61477bc8e7cc64fefa7749b8da3f16c3b4576b14457af2cb6e7d4e",
+      "native_wav_sha256": "4f3f163a56187b0fcdb03cb5d377fc1458a366fcf6a773a52335a7259a8ebf52",
+      "cold_render_ms": 57.407499,
+      "warm_render_ms": 42.016025,
+      "peak": 0.7423107028007507,
+      "dc": 5.618326732386954e-06,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -4.7753731164910285,
+        -0.23864887211751137,
+        0,
+        4.999999999980931
+      ],
+      "cap_scale": 0.1592304100831825,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 65.64202117919922,
+          "confidence": 0.9371167421340942,
+          "cents": 6.225651392745705
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 65.94539642333984,
+          "confidence": 0.9272422194480896,
+          "cents": 14.20839765277968
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 65.88993072509766,
+          "confidence": 0.936641275882721,
+          "cents": 12.75166958004381
+        }
+      ],
+      "eigen_residual": 2.2130953041494605e-15,
+      "orthogonality_error": 3.1086244689504383e-15
+    },
+    {
+      "id": "middle-slow",
+      "register": "middle",
+      "speed": "slow",
+      "midi": 48,
+      "handoff": 0.25,
+      "native": "native/middle-slow.wav",
+      "kotlin_comparison": "comparison/kotlin-middle-slow.wav",
+      "approved_comparison": "comparison/reference-middle-slow.wav",
+      "recipe": "recipes/middle-slow.json",
+      "approved_source_sha256": "39a598ce64fb098de6b4ae17e9728c0a68009c15a8c65faf4abbb19964bdb95c",
+      "native_wav_sha256": "933e1912a08e6e76333bb84dc34ba86237ed3aeb4fbccd3919c1f3025e503c21",
+      "cold_render_ms": 42.34431,
+      "warm_render_ms": 42.349289,
+      "peak": 0.5277017951011658,
+      "dc": -3.0789663092322295e-06,
+      "loudness": 0.1834000200033188,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -1.89373207217066,
+        -0.40649260278153393,
+        0,
+        2.295664130735422
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 130.9287872314453,
+          "confidence": 0.9693762063980103,
+          "cents": 1.5345754514125247
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 130.89337158203125,
+          "confidence": 0.9672173857688904,
+          "cents": 1.066221063172612
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 130.92337036132812,
+          "confidence": 0.9694178104400635,
+          "cents": 1.4629482395245414
+        }
+      ],
+      "eigen_residual": 2.0747768476401194e-15,
+      "orthogonality_error": 3.3306690738754696e-15
+    },
+    {
+      "id": "middle-standard",
+      "register": "middle",
+      "speed": "standard",
+      "midi": 48,
+      "handoff": 0.5,
+      "native": "native/middle-standard.wav",
+      "kotlin_comparison": "comparison/kotlin-middle-standard.wav",
+      "approved_comparison": "comparison/reference-middle-standard.wav",
+      "recipe": "recipes/middle-standard.json",
+      "approved_source_sha256": "c790e38e8b458925aaccf78528fcf2f976b94ca2a4669bd284e539715b041729",
+      "native_wav_sha256": "b205b2332f914852a976969e4ed3f94fe58aabed51ab30a0e315c4ffd73ab8ea",
+      "cold_render_ms": 41.54059,
+      "warm_render_ms": 41.56809,
+      "peak": 0.5208353400230408,
+      "dc": -4.778006051781058e-06,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -4.230908867607031,
+        -0.694293973050328,
+        0,
+        4.910971184056062
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 130.95361328125,
+          "confidence": 0.9699707627296448,
+          "cents": 1.8628121161926332
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 130.97991943359375,
+          "confidence": 0.9703445434570312,
+          "cents": 2.2105500046449853
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 130.96749877929688,
+          "confidence": 0.9674391746520996,
+          "cents": 2.04637156155704
+        }
+      ],
+      "eigen_residual": 1.4523437933480834e-15,
+      "orthogonality_error": 2.4424906541753444e-15
+    },
+    {
+      "id": "middle-fast",
+      "register": "middle",
+      "speed": "fast",
+      "midi": 48,
+      "handoff": 1,
+      "native": "native/middle-fast.wav",
+      "kotlin_comparison": "comparison/kotlin-middle-fast.wav",
+      "approved_comparison": "comparison/reference-middle-fast.wav",
+      "recipe": "recipes/middle-fast.json",
+      "approved_source_sha256": "e87609c3984d6c6f7be140fc77d5e1bb00839ef27de94c3bed07063e304f679b",
+      "native_wav_sha256": "ae08fc578e918488e937aa688e2ef1fd6c4e1f570a8ab8d0f7a6f13db713560c",
+      "cold_render_ms": 50.34452,
+      "warm_render_ms": 42.496076,
+      "peak": 0.5630145072937012,
+      "dc": -2.4898859571495393e-06,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -4.77537311641933,
+        -0.23864887097565277,
+        0,
+        4.999999999997029
+      ],
+      "cap_scale": 0.31846082016272703,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 131.0962371826172,
+          "confidence": 0.9697485566139221,
+          "cents": 3.7473037745629703
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 131.21286010742188,
+          "confidence": 0.969790518283844,
+          "cents": 5.286721154385547
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 131.42575073242188,
+          "confidence": 0.9615795016288757,
+          "cents": 8.093342604824059
+        }
+      ],
+      "eigen_residual": 1.6598214781120955e-15,
+      "orthogonality_error": 2.886579864025407e-15
+    },
+    {
+      "id": "high-slow",
+      "register": "high",
+      "speed": "slow",
+      "midi": 72,
+      "handoff": 0.25,
+      "native": "native/high-slow.wav",
+      "kotlin_comparison": "comparison/kotlin-high-slow.wav",
+      "approved_comparison": "comparison/reference-high-slow.wav",
+      "recipe": "recipes/high-slow.json",
+      "approved_source_sha256": "967da91f5dc87ba8aaad7e920c18ed7e23f30a58c7e79b2c07f3b3411f6520b5",
+      "native_wav_sha256": "d550d4264c903158aafcd21b85ede630040f37373e8368bbd698c67adc09d957",
+      "cold_render_ms": 41.13039,
+      "warm_render_ms": 41.382665,
+      "peak": 0.4115113914012909,
+      "dc": -3.1760271019159976e-08,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -0.4731561222708196,
+        -0.10143102313142713,
+        0,
+        0.5743020842102281
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 523.4655151367188,
+          "confidence": 0.9921125769615173,
+          "cents": 0.7091696003677859
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 523.3209228515625,
+          "confidence": 0.9910884499549866,
+          "cents": 0.23089995566726007
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 523.3767700195312,
+          "confidence": 0.9921460151672363,
+          "cents": 0.41564196758091243
+        }
+      ],
+      "eigen_residual": 3.319642956224191e-15,
+      "orthogonality_error": 3.1086244689504383e-15
+    },
+    {
+      "id": "high-standard",
+      "register": "high",
+      "speed": "standard",
+      "midi": 72,
+      "handoff": 0.5,
+      "native": "native/high-standard.wav",
+      "kotlin_comparison": "comparison/kotlin-high-standard.wav",
+      "approved_comparison": "comparison/reference-high-standard.wav",
+      "recipe": "recipes/high-standard.json",
+      "approved_source_sha256": "07b0ab0b0dc370861ee19a08d5e4ee0c2cf93383623b581b7d3ee8cbb8833067",
+      "native_wav_sha256": "8fd9c66b61abed775c9887e3e2e365ae668aebec182bd810860df8f568351bdc",
+      "cold_render_ms": 41.397588,
+      "warm_render_ms": 40.992907,
+      "peak": 0.4106661379337311,
+      "dc": -2.933884232294716e-08,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -1.056757007426611,
+        -0.1732282968333886,
+        0,
+        1.2290956035359057
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 523.4736328125,
+          "confidence": 0.9921614527702332,
+          "cents": 0.7360166176743508
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 523.4118041992188,
+          "confidence": 0.9923788905143738,
+          "cents": 0.5315247088956727
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 523.5408325195312,
+          "confidence": 0.9917300939559937,
+          "cents": 0.9582454882614
+        }
+      ],
+      "eigen_residual": 2.0747768476401194e-15,
+      "orthogonality_error": 3.1086244689504383e-15
+    },
+    {
+      "id": "high-fast",
+      "register": "high",
+      "speed": "fast",
+      "midi": 72,
+      "handoff": 1,
+      "native": "native/high-fast.wav",
+      "kotlin_comparison": "comparison/kotlin-high-fast.wav",
+      "approved_comparison": "comparison/reference-high-fast.wav",
+      "recipe": "recipes/high-fast.json",
+      "approved_source_sha256": "b47e27ab5dfffee056798e709c892e82b7f9e018f0f3a2a1bd9e5f9b0ef96842",
+      "native_wav_sha256": "98251e595fc688c17ed866a08720368f2dd0d9aaeb712b1c02be0b5f2b833e44",
+      "cold_render_ms": 42.32978,
+      "warm_render_ms": 40.057952,
+      "peak": 0.50367271900177,
+      "dc": -1.1790020168009423e-07,
+      "loudness": 0.1834000051021576,
+      "classification": "LOOP",
+      "fundamental_cents": [
+        -3.747679121254932,
+        -0.18731182214997266,
+        0,
+        3.926349435126608
+      ],
+      "cap_scale": 1,
+      "pitch_windows": [
+        {
+          "start_seconds": 0.05000000074505806,
+          "hz": 523.67431640625,
+          "confidence": 0.9891248345375061,
+          "cents": 1.3995909962555275
+        },
+        {
+          "start_seconds": 1.2999999523162842,
+          "hz": 523.9761352539062,
+          "confidence": 0.9886317253112793,
+          "cents": 2.397097520192529
+        },
+        {
+          "start_seconds": 3.200000047683716,
+          "hz": 523.885986328125,
+          "confidence": 0.992451012134552,
+          "cents": 2.0992169365360316
+        }
+      ],
+      "eigen_residual": 2.7663691301868257e-15,
+      "orthogonality_error": 2.886579864025407e-15
+    }
+  ],
+  "heard": [
+    "Python first listen: Yes, clearly.",
+    "Python second listen: Clear throughout."
+  ],
+  "pending": [
+    "Kotlin listening approval",
+    "Phone render timings",
+    "MATCH/SPAN/LOSS/BODY",
+    "HOLD",
+    "Production tail cutoff"
+  ],
+  "timing_scope": "Complete render including house output conditioning; warmed desktop JVM, not phone timing.",
+  "measured_on": "2026-10-27",
+  "jvm": "Temurin JDK 17.0.21, four active processors; server measurements only",
+  "base_commit": "bf17f4561bda7418cc4ebf7bae8e78d7c8c45329",
+  "source_sha256": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Ferry.kt": "82cce061c56bd161100fd5714004e1f716e9ff1f0c7144eaba0f60c4c856e734",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryNetwork.kt": "28e4b5f673a9b7ff452fa935bfd23dff11144a63384ad51ee80ebd3fe5b7d9f5",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryPatch.kt": "50aeab9cedcb049c6c7a890c5157fb2a94d988971bd2aea2c34ad9417bf48e97",
+    "synth/src/main/kotlin/com/snipsnap/synth/FerryPresets.kt": "f005d7fb5c8eb25e6da6e424fdcb4e423a8b1e098c5a431a163aca759ca5e7cb"
+  }
+}
