@@ -33,6 +33,7 @@ data class SkitterProbe(
     val depthDisabled: Boolean = false,
     val filterReturnDisabled: Boolean = false,
     val depthExchangeDisabled: Boolean = false,
+    val bassFoundationDisabled: Boolean = false,
 )
 
 /** Control traces include every 5 ms and the final frame, before loudness matching. Offsets are cents. */
@@ -54,6 +55,9 @@ data class SkitterTrace(
     val depth2Imag: Double = 0.0,
     val depthReturn: Double = 0.0,
     val depthExchange: Double = 0.0,
+    val depthFilterReturn: Double = 0.0,
+    val depthPhaseLag: Double = 0.0,
+    val depthPhaseAlign: Double = 0.0,
 )
 
 data class SkitterDiagnostics(
@@ -100,6 +104,9 @@ data class SkitterRender(
  * R8 adds two short, coupled spectral loads inside the source/filter feedback path. Their
  * four bounded audio-rate states return amplitude and phase-lag memory to the upper bodies;
  * the protected roots, oscillator frequency integrals and coherent VENT filter stay intact.
+ * R9 gives BASS a parallel carrier/second-harmonic readout, leaving the R8 excitation,
+ * filter and spectral-memory feedback unchanged. Only the audible mix and its DC removal
+ * follow that foundation; the added tap is derived from existing phases and load readouts.
  *
  * HOLD's approximation is explicit: gestures replay a seeded, irregular periodic schedule,
  * stochastic forcing is reduced to 70%, and noise repeats a smoothly interpolated seeded
@@ -319,6 +326,7 @@ object Skitter {
         var return1=0.0; private set
         var return2=0.0; private set
         var phaseLag=0.0; private set
+        var phaseAlign=0.0; private set
         var exchange=0.0; private set
         // Port A taps the pre-load R7 upper excitation in FLUTTER/CHIRP/FRAY, avoiding
         // their immediate source-load self-loop. Other voices tap their loaded source.
@@ -366,7 +374,9 @@ object Skitter {
             // Regularize EACH branch: a quiet load must not amplify the other branch's
             // phase jitter. Each normalized-vector Jacobian is bounded by 1/.02; when
             // the two norms match, this retains the former balanced-load lag exactly.
-            phaseLag=(ar*bi-ai*br)/sqrt((.0004+n1*n1)*(.0004+n2*n2))
+            val phaseNorm=sqrt((.0004+n1*n1)*(.0004+n2*n2))
+            phaseLag=(ar*bi-ai*br)/phaseNorm
+            phaseAlign=(ar*br+ai*bi)/phaseNorm
         }
     }
 
@@ -472,6 +482,7 @@ object Skitter {
                 val compression=.70+.50*buzz+.25*memory+2.0*motion
                 if(bridge==null) {
                     val signal=1.6*sinA+aperture*(charge+balance*sin(b))*square+compression*cubic
+                    if(circuit.bassFoundation) circuit.bassBody=bassBody(sinA,square,aperture,charge)
                     -signal/sqrt(1.6*1.6+aperture*aperture*(.25*charge*charge+.0625*balance*balance)+.0625*compression*compression)
                 } else {
                     val loadedAperture=(aperture*(1.0+bridge.depth*(.80*bridge.return1+1.35*bridge.phaseLag))).coerceIn(.10,2.60)
@@ -479,6 +490,7 @@ object Skitter {
                     val upper=loadedAperture*(charge+balance*sin(b))*square+loadedCubic*cubic
                     val scale=sqrt(1.6*1.6+loadedAperture*loadedAperture*(.25*charge*charge+.0625*balance*balance)+.0625*loadedCubic*loadedCubic)
                     bridge.upperSource=-upper/scale
+                    if(circuit.bassFoundation) circuit.bassBody=bassBody(sinA,square,loadedAperture,charge,bridge)
                     -(1.6*sinA+upper)/scale
                 }
             }
@@ -603,15 +615,40 @@ object Skitter {
         }
     }
 
+    /**
+     * A root-led readout with a bounded, centered second harmonic. The coefficient reads
+     * existing source load, so its growl develops with the note without another clock or
+     * recursive state. A fixed coefficient gives the root at least 1.6^2/(1.6^2+1.1^2)
+     * of this tap's harmonic power; time-varying loading can also create sidebands.
+     */
+    private fun bassBody(sinA: Double, square: Double, aperture: Double, charge: Double,
+                         bridge: SpectralBridge? = null): Double {
+        // Cross/dot coherence has norm <= 1. Its double-angle vector has that norm
+        // squared; a 45-degree pickup retains phase sensitivity near the lag's extrema
+        // without weakening the middle-touch body. Weak loads fade the readout naturally.
+        // This never feeds the circuit, and bounds the signed second to (-.25,1.10).
+        val load=if(bridge==null) 0.0 else {
+            val u=2.0*bridge.phaseLag*bridge.phaseAlign
+            val v=bridge.phaseAlign*bridge.phaseAlign-bridge.phaseLag*bridge.phaseLag
+            .65*bridge.agitate*((u-v)*.7071067811865476)
+        }
+        val second=.40+.05*tanh(.75*aperture*charge)+load
+        return -(1.6*sinA+2.0*second*square)/sqrt(1.6*1.6+second*second)
+    }
+
     /** All recursive state, including coefficient smoothing and the noise/DC detectors. */
     private class Circuit(val s: Shape, val c: Character, val m: Map<String,Float>, val rate: Int,
                           val probe: SkitterProbe, val held: Boolean, val contact: ContactEnvelope?,
-                          voice: SkitterVoice, hz: Double) {
+                          voice: SkitterVoice, hz: Double, val bassFoundation: Boolean) {
         // Force and depth both depend on AGITATE. Square-root mapping keeps their product
         // responsive near zero instead of reserving the defining reaction for the top half.
         val agitate=if(probe.agitationDisabled) 0.0 else sqrt(m.getValue("AGITATE").toDouble())
         val depth=if(probe.depthDisabled || agitate==0.0) null else SpectralBridge(voice,hz,rate,agitate,probe)
         val buzz=m.getValue("BUZZ").toDouble(); val static=m.getValue("STATIC").toDouble(); val vent=m.getValue("VENT").toDouble()
+        private val foundationWeight=.80*(1.0-.60*vent)
+        // Recomputed by the source before each step. This readout never enters the filter,
+        // source detector or either spectral-memory drive, so it is not recursive state.
+        var bassBody=0.0
         var ic1=0.0; var ic2=0.0; var band=0.0
         var history=0.0; var signed=0.0; var position=0.0; var velocity=0.0
         var noiseLow=0.0; var noiseSlow=0.0; var noiseEnergy=0.0; var noiseVariance=0.0
@@ -677,7 +714,11 @@ object Skitter {
             val mixed=if(vent<=.5) v2*(1.0-2.0*vent)+v1*1.24*(2.0*vent)
                 else v1*1.24*(2.0-2.0*vent)+high*.90*(2.0*vent-1.0)
             // The quiet root path keeps the high-pass end useful without hiding the filter's voice.
-            val y=.68*mixed+support*root
+            // Restore STATIC's quiet presence through the body blend using the existing
+            // colored stream, which already carries note excitation and velocity.
+            val y=if(bassFoundation)
+                .68*((1.0-foundationWeight)*mixed+foundationWeight*(bassBody*sourceScale+.11*static*noiseAudio2))+support*root
+                else .68*mixed+support*root
             dc+=dcSlew*(y-dc)
             val bridge=depth
             if(bridge!=null) bridge.step(bridge.upperSource*sourceScale,v1,position,history,gesture)
@@ -984,7 +1025,11 @@ object Skitter {
             ContactEnvelope(voice,rate,vel,probe) else null
         val body=!probe.bodyDisabled && (voice==SkitterVoice.LEAD || voice==SkitterVoice.HOLLOW)
         val quartet=!probe.quartetDisabled && voice!=SkitterVoice.LEAD && voice!=SkitterVoice.HOLLOW
-        val circuit=Circuit(s,c,m,rate,probe,held,contact,voice,hz); val stats=Stats(); val trace=ArrayList<SkitterTrace>()
+        // Historical source/depth probes keep their earlier readout; the new flag restores
+        // R8 exactly. Foundation remains available at AGITATE zero as a BASS voicing.
+        val bassFoundation=voice==SkitterVoice.BASS && !probe.bassFoundationDisabled &&
+            !probe.depthDisabled && !probe.quartetDisabled
+        val circuit=Circuit(s,c,m,rate,probe,held,contact,voice,hz,bassFoundation); val stats=Stats(); val trace=ArrayList<SkitterTrace>()
         val contextSeed=Dsp.seedFor("SKITTER",voice.name,midi,seed)
         val buzz=m.getValue("BUZZ").toDouble(); val skitter=m.getValue("SKITTER").toDouble()
         val vent=m.getValue("VENT").toDouble()
@@ -1003,7 +1048,9 @@ object Skitter {
                 contact?.contact ?: 0.0,if(body) 1.0 else contact?.gain ?: 1.0,
                 circuit.depth?.r1 ?: 0.0,circuit.depth?.i1 ?: 0.0,
                 circuit.depth?.r2 ?: 0.0,circuit.depth?.i2 ?: 0.0,
-                circuit.depth?.return1 ?: 0.0,circuit.depth?.exchange ?: 0.0))
+                circuit.depth?.return1 ?: 0.0,circuit.depth?.exchange ?: 0.0,
+                circuit.depth?.return2 ?: 0.0,circuit.depth?.phaseLag ?: 0.0,
+                circuit.depth?.phaseAlign ?: 0.0))
         }
         var periods=0; var converged=!held; var stateError=0.0; var loopStart=-1
         val rawInternal: FloatArray

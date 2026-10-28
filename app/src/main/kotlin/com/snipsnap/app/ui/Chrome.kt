@@ -246,7 +246,7 @@ fun TitleBar(
         // true one on, and a hardcoded tag is exactly what went stale before.
         // `weight(1f, fill = false)`: the right-hand cluster is measured first
         // and the wordmark takes what it leaves, so a long project name
-        // ellipsises itself and never pushes SNIPSNAP.EXE to an ellipsis.
+        // ellipsises itself and never pushes SNIPSNAP to an ellipsis.
         Row(
             Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically,
@@ -254,7 +254,7 @@ fun TitleBar(
         ) {
             // `.wordmark-square`: the page's tilted square before the name.
             Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
-            TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+            TapeText("SNIPSNAP", TapeType.displayBig, scheme.titleInk.tape)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {

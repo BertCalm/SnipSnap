@@ -1,0 +1,34 @@
+// Retained R1 source/reference renderer. No production source sets are changed.
+// From repository root, JDK17: ./gradlew -I experiments/obliterate-core/sources.init.gradle :synth:generateObliterateInputs
+// Add --offline when dependencies are already cached.
+gradle.projectsEvaluated {
+    def synth = gradle.rootProject.project(':synth')
+    def runtime = synth.sourceSets.main.runtimeClasspath
+    def compiler = synth.configurations.create('obliterateInputCompiler')
+    synth.dependencies.add(compiler.name, 'org.jetbrains.kotlin:kotlin-compiler-embeddable:2.0.21')
+    def repo = gradle.rootProject.projectDir
+    def classes = new File(repo, 'build/obliterate-input-helper-classes')
+    def output = new File(gradle.startParameter.projectProperties.get('obliterateInputsOut') ?: new File(repo, 'testkit/obliterate-core-inputs').path)
+    synth.tasks.register('compileObliterateInputs', JavaExec) {
+        dependsOn synth.tasks.named('classes')
+        classpath compiler, runtime
+        mainClass.set('org.jetbrains.kotlin.cli.jvm.K2JVMCompiler')
+        maxHeapSize = '1g'
+        doFirst {
+            classes.mkdirs()
+            args '-jvm-target', '17', '-no-stdlib', '-no-reflect',
+                '-classpath', runtime.asPath,
+                '-Xfriend-paths=' + new File(repo, 'synth/build/classes/kotlin/main').path,
+                '-d', classes.path,
+                new File(repo, 'experiments/obliterate-core/SourcesAndBaseline.kt').path
+        }
+    }
+    synth.tasks.register('generateObliterateInputs', JavaExec) {
+        dependsOn synth.tasks.named('compileObliterateInputs')
+        classpath classes, runtime
+        mainClass.set('com.snipsnap.synth.SourcesAndBaseline')
+        maxHeapSize = '1g'
+        workingDir repo
+        args repo.path, output.path
+    }
+}
