@@ -310,7 +310,7 @@ class BusyBarTest : ComposeScreenTest() {
     }
 
     @Test
-    fun a_job_that_ends_after_the_delay_but_before_the_bar_was_drawn_never_draws_it() {
+    fun a_job_that_ends_after_the_delay_but_before_the_bar_went_up_never_shows_it() {
         var busy by mutableStateOf<Busy?>(null)
         showLatched { busy }
 
@@ -367,22 +367,23 @@ class BusyBarTest : ComposeScreenTest() {
         // that can draw the bar comes late. The 500 ms is owed from that frame
         // (spec 7.6: once shown, it stays 500 ms), not from the schedule.
         //
-        // The numbers. The job starts on the frame the effect launches on, F.
-        // The latch is started on the clock at F, so the bar is scheduled for
-        // S = F + 200 on the latch's clock. [skew] jumps the latch's clock 150 ms
-        // ahead of the frames right after that, so the delay still wakes on the
-        // frozen clock at F + 200 but reads S + 150 there, and the first frame
-        // after it - the test clock's next 16 ms boundary, F + 208 - reads S + 158.
-        // That frame is when the bar is first drawn, so the bar is due to go at
-        // S + 658: the delay for it wakes at F + 708 (S + 658 on the latch's
-        // clock, which runs 150 ahead), and the frame that recomposes it away is
-        // F + 720, which is S + 670 on the latch's clock. Counted from the
-        // schedule the bar would go at S + 500.
+        // The numbers. The job starts on the frame the effect launches on, F, and
+        // the latch is started on the clock there, so the bar is scheduled for
+        // S = F + 200 on the latch's clock. Advancing exactly SHOW_AFTER_MS with
+        // the frame rounding off runs the delay's wake-up, which reads S, and
+        // stops short of the next frame. [skew] is jumped only then, so what it
+        // moves is the read inside the frame and nothing before it. The frame
+        // reads S + 166: S + 150, plus the 16 ms from the wake-up to the next
+        // frame boundary on the test clock (read off the device log: the wake-up
+        // read S, the frame read S + 166). That frame is when the bar is first
+        // drawn, so the bar is due to go at S + 666. Counted from the wake-up (a
+        // clock read taken when the delay woke, and not in a frame) or from the
+        // schedule, the bar would go at S + 500 and be gone by S + 600.
         //
-        // So on the latch's clock: still there at S + 600 (the old count had
-        // dropped it a hundred milliseconds before), and gone by S + 650 plus two
-        // frames - two and not one, because the delay's wake and the frame that
-        // recomposes it away are separate boundaries.
+        // So on the latch's clock: still there at S + 600, and gone by S + 650
+        // plus three frames. The delay for the hide wakes at S + 666 (the log
+        // showed it) and the frame that recomposes the bar away is the next
+        // boundary, at most a frame after; the three frames leave one to spare.
         var busy by mutableStateOf<Busy?>(null)
         showLatched { busy }
 
@@ -390,10 +391,12 @@ class BusyBarTest : ComposeScreenTest() {
         pump(1)
         val scheduled = compose.mainClock.currentTime + BusyLatch.SHOW_AFTER_MS
         compose.onNodeWithTag(BAR).assertDoesNotExist()
+
+        compose.mainClock.advanceTimeBy(BusyLatch.SHOW_AFTER_MS, ignoreFrameDuration = true)
         skew = JANK_MS
 
-        // Past the wake and its frame; the job is over a moment after the bar is up.
-        pump(BusyLatch.SHOW_AFTER_MS + 40)
+        // Past the frame that draws the bar; the job is over a moment after it is up.
+        pump(3 * FRAME_MS)
         compose.onNodeWithTag(BAR).assertExists("the bar is up once its first frame has come, at ${compose.mainClock.currentTime}")
         busy = null
 
@@ -402,7 +405,7 @@ class BusyBarTest : ComposeScreenTest() {
             "600 ms after the scheduled show the bar is still in its 500 ms from the first drawn frame " +
                 "(frame clock ${compose.mainClock.currentTime}, latch clock ${compose.mainClock.currentTime + skew}, scheduled $scheduled)",
         )
-        pumpToLatchTime(scheduled + 650 + 2 * FRAME_MS)
+        pumpToLatchTime(scheduled + 650 + 3 * FRAME_MS)
         compose.onNodeWithTag(BAR).assertDoesNotExist()
     }
 
@@ -412,12 +415,11 @@ class BusyBarTest : ComposeScreenTest() {
         // that draws the bar, and the minimum still counts from that frame, not
         // from the schedule it missed.
         //
-        // Same jumped clock as above, but the delay is woken without its frame:
-        // advancing exactly SHOW_AFTER_MS with the frame rounding off runs the
-        // wake-up and stops short of the next frame boundary, where the job is
-        // ended. The frames that follow are the late first ones, and the numbers
-        // are the first test's, within a frame or two: the anchor is one of
-        // those frames, S + 150 plus up to two of them, so the bar goes by
+        // Same clock as above, jumped only after the wake-up so that the wake-up
+        // reads S and only the frame reads late; the job is ended there, before
+        // the frame. The frames that follow are the late first ones, and the
+        // numbers are the first test's, within a frame or two: the anchor is one
+        // of those frames, S + 150 plus up to two of them, so the bar goes by
         // S + 650 plus four frames.
         //
         // What this does not separate: ending the job replaces the effect that
@@ -432,9 +434,9 @@ class BusyBarTest : ComposeScreenTest() {
         busy = Busy("X")
         pump(1)
         val scheduled = compose.mainClock.currentTime + BusyLatch.SHOW_AFTER_MS
-        skew = JANK_MS
 
         compose.mainClock.advanceTimeBy(BusyLatch.SHOW_AFTER_MS, ignoreFrameDuration = true)
+        skew = JANK_MS
         busy = null
         pump(2 * FRAME_MS)
         compose.onNodeWithTag(BAR).assertExists("the bar is up from its first frame, at ${compose.mainClock.currentTime}")

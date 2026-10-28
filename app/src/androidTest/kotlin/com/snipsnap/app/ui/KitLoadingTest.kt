@@ -160,7 +160,7 @@ class KitLoadingTest : ComposeScreenTest() {
     }
 
     @Test
-    fun a_kit_that_lands_after_the_delay_but_before_the_card_was_drawn_never_gets_one() {
+    fun a_kit_that_lands_after_the_delay_but_before_the_card_went_up_never_gets_one() {
         showPage()
 
         pending = "TIDAL"
