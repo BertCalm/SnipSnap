@@ -7,6 +7,7 @@
 <meta name="theme-color" content="#f5f1e9">
 <title>Contour — starter instruments</title>
 <style>
+[hidden]{display:none!important}.filters{display:flex;gap:14px;flex-wrap:wrap;margin:24px 0}.filters label{font-size:12px;display:flex;flex-direction:column;gap:6px}.filters select{padding:9px 12px;background:#fffdf8;border:1px solid #9ca591;border-radius:8px;color:#22291f;font:14px system-ui}.filters select:focus-visible{outline:3px solid #a9482f;outline-offset:4px}
 :root{color-scheme:light;--paper:#f5f1e9;--ink:#22291f;--muted:#687063;--green:#254f3a;--line:#dedfd4}
 *{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:32px 28px 64px}a{color:var(--green)}h1,h2{font-family:Georgia,serif;font-weight:400;line-height:1.12;letter-spacing:-.035em}h1{font-size:clamp(48px,8vw,88px);margin:28px 0 20px;max-width:850px}h2{font-size:26px;margin:0 0 12px}.eyebrow{font-size:12px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;color:var(--green)}.intro{max-width:720px;font-size:19px}.muted{color:var(--muted);font-size:13px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin:28px 0}.card{border:1px solid var(--line);background:#fffdf8;border-radius:16px;padding:22px;min-width:0}.meta{font-size:13px;color:var(--muted)}button{font:inherit;font-size:14px;cursor:pointer;border:1px solid var(--green);border-radius:9px;padding:10px 14px;background:var(--green);color:white}button[aria-pressed=true]{background:#d9eeac;color:var(--ink)}button:disabled{opacity:.6;cursor:wait}a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #a9482f;outline-offset:4px}.actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-top:18px}.actions a{font-size:13px}.note{padding:18px 22px;border-radius:12px;background:#e9efdd;max-width:850px}details{border-top:1px solid var(--line);padding:20px 0}summary{cursor:pointer;font-weight:600}pre{white-space:pre-wrap;overflow-wrap:anywhere;padding:16px;border:1px solid var(--line);border-radius:9px;font-size:12px}code{overflow-wrap:anywhere}li{margin:7px 0}footer{border-top:1px solid var(--line);margin-top:25px;padding-top:20px;overflow-wrap:anywhere}#status{min-height:1.6em}#stop{background:transparent;color:var(--green)}@media(max-width:860px){.grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:560px){main{padding:24px 18px 48px}.grid{grid-template-columns:1fr}.intro{font-size:17px}.card{padding:20px}}
 </style>
@@ -15,11 +16,12 @@
 <main>
 <nav><a href="../">← Contour listening room</a></nav>
 <header>
-<p class="eyebrow">SnipSnap / nine starter instruments</p>
+<p class="eyebrow">SnipSnap / 36 starter instruments</p>
 <h1>The settled side of Contour.</h1>
-<p class="intro">Contour's nine starter recipes, ready to hold across a keyboard. Hear the middle sample of each instrument below, then make the full instrument in SnipSnap.</p>
+<p class="intro">Contour's 36 recipes, ready to hold across a keyboard. Hear the middle sample of each instrument below, then make the full instrument in SnipSnap. The nine original recipes keep their saved settings; the 27 additions are new listening proposals.</p>
 <p class="note">Each instrument has 17 sample roots over four octaves. These are <strong>settled tones</strong>: the original key or pluck attack is omitted. A short, gentle entry leads into the repeating sustain.</p>
 </header>
+<section class="filters" aria-label="Filter instruments"><label>Voice<select id="voice"><option value="all">All voices</option></select></label><label>Recipes<select id="set"><option value="all">All 36</option><option value="new">27 new</option><option value="original">Original nine</option></select></label></section>
 <div class="actions"><button type="button" id="stop">Stop playback</button><a href="../">Compare finite sounds and control ranges ↗</a></div>
 <p id="status" class="muted" role="status" aria-live="polite">Loading the starter instruments…</p>
 <section id="instruments" class="grid" aria-label="Starter instruments"></section>
@@ -29,7 +31,7 @@
 <p>For the CLI, download a recipe above and use the matching voice shown on its card:</p>
 <pre>java -jar snipsnap.jar synth CONTOUR KEY --patch "Copper Scan.json" --instrument --release .6 --out contour-keys</pre>
 <p>Keep the exported <code>.xty</code> track and <code>.instrument.json</code> phone metadata beside the matching <code>_[TrackData]/</code> folder. That folder contains the shared WAVs and MPC 2 <code>.xpm</code> twin.</p>
-<p>To regenerate all nine programs and the checked ZIP from the source checkout:</p>
+<p>To regenerate all 36 programs and the checked ZIP from the source checkout:</p>
 <pre>./gradlew :shell:generateContourStarter</pre>
 </details>
 <details>
@@ -42,7 +44,7 @@
 <li>Export checks read back sample roots, keyboard ranges, loop markers, native track data and compatibility programs. Physical Android and MPC playback remain unchecked.</li>
 </ul>
 </details>
-<footer class="muted">Source: <a id="source" href="https://github.com/BertCalm/SnipSnap">SnipSnap</a> · <span id="count">Nine recipes</span> · <a href="manifest.json" download>Preview manifest</a></footer>
+<footer class="muted">Source: <a id="source" href="https://github.com/BertCalm/SnipSnap">SnipSnap</a> · <span id="count">36 recipes</span> · <a href="manifest.json" download>Preview manifest</a></footer>
 </main>
 <script>
 (() => {
@@ -50,7 +52,22 @@
   const status = document.getElementById('status');
   const grid = document.getElementById('instruments');
   const cache = new Map();
+  const cards = new Map();
   let context, active, request = 0;
+  let manifest;
+  const versioned = (path, hash) => path + '?v=' + hash;
+  function load(path) {
+    let entry = cache.get(path);
+    if (entry) { cache.delete(path); cache.set(path, entry); return entry; }
+    entry = (async () => {
+      const response = await fetch(path);
+      if (!response.ok) throw new Error('The preview could not be loaded. Please retry.');
+      return context.decodeAudioData(await response.arrayBuffer());
+    })().catch(error => { if (cache.get(path) === entry) cache.delete(path); throw error; });
+    cache.set(path, entry);
+    while (cache.size > 24) cache.delete(cache.keys().next().value);
+    return entry;
+  }
   const note = midi => ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][midi % 12] + (Math.floor(midi / 12) - 1);
   const element = (tag, text, cls) => { const node = document.createElement(tag); node.textContent = text; if (cls) node.className = cls; return node; };
   function stop() {
@@ -79,12 +96,8 @@
       if (!Audio) throw new Error('Audio playback is unavailable. Download the WAV to listen.');
       context ||= new Audio();
       await context.resume();
-      if (!cache.has(row.preview)) cache.set(row.preview, (async () => {
-        const response = await fetch(row.preview);
-        if (!response.ok) throw new Error('The preview could not be loaded. Please retry.');
-        return context.decodeAudioData(await response.arrayBuffer());
-      })().catch(error => { cache.delete(row.preview); throw error; }));
-      const buffer = await cache.get(row.preview);
+      const path = versioned(row.preview, row.previewSha256);
+      const buffer = await load(path);
       if (id !== request) return;
       const source = context.createBufferSource(), gain = context.createGain();
       source.buffer = buffer; source.loop = true; source.loopStart = 0; source.loopEnd = buffer.duration;
@@ -102,25 +115,44 @@
   }
   document.getElementById('stop').addEventListener('click', stop);
   window.addEventListener('pagehide', stop);
-  fetch('manifest.json').then(response => { if (!response.ok) throw new Error('The instrument list could not be loaded.'); return response.json(); }).then(manifest => {
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') stop(); });
+  function filter() {
+    if (!manifest) return;
+    stop();
+    let shown = 0;
+    for (const row of manifest.instruments) {
+      const visible = (document.getElementById('voice').value === 'all' || row.voice === document.getElementById('voice').value) &&
+        (document.getElementById('set').value === 'all' || row.retained === (document.getElementById('set').value === 'original'));
+      cards.get(row.name).hidden = !visible;
+      if (visible) shown++;
+    }
+    status.textContent = shown + ' instruments shown. Playback continues until stopped.';
+  }
+  for (const id of ['voice','set']) document.getElementById(id).addEventListener('change', filter);
+  fetch('manifest.json', {cache:'no-cache'}).then(response => { if (!response.ok) throw new Error('The instrument list could not be loaded.'); return response.json(); }).then(data => {
+    manifest = data;
+    for (const voice of [...new Set(manifest.instruments.map(row => row.voice))]) {
+      const option = element('option', voice); option.value = voice; document.getElementById('voice').append(option);
+    }
     for (const row of manifest.instruments) {
       const card = element('article', '', 'card');
       card.append(element('p', row.voice + ' / ' + note(row.rootMidi), 'eyebrow'), element('h2', row.name));
+      card.append(element('p', row.gesture));
       card.append(element('p', note(row.lowMidi) + '–' + note(row.highMidi) + ' · 17 sample roots', 'meta'));
       const button = element('button', 'Play held tone');
       button.type = 'button'; button.setAttribute('aria-pressed', 'false'); button.setAttribute('aria-label', 'Play ' + row.name + ' held tone');
       button.addEventListener('click', () => play(row, button));
       card.append(button);
       const actions = element('div', '', 'actions');
-      for (const [label, path] of [['Recipe JSON', row.recipe], ['Root WAV', row.preview]]) {
+      for (const [label, path] of [['Recipe JSON', versioned(row.recipe, row.recipeSha256)], ['Root WAV', versioned(row.preview, row.previewSha256)]]) {
         const link = element('a', label); link.href = path; link.download = ''; actions.append(link);
       }
-      card.append(actions); grid.append(card);
+      card.append(actions); grid.append(card); cards.set(row.name, card);
     }
     const source = document.getElementById('source');
     source.textContent = manifest.sourceCommit.slice(0, 12);
     source.href = 'https://github.com/BertCalm/SnipSnap/commit/' + manifest.sourceCommit;
-    document.getElementById('count').textContent = manifest.instruments.length + ' instruments · 153 zones in the full bank';
+    document.getElementById('count').textContent = manifest.instruments.length + ' instruments · ' + manifest.instruments.reduce((sum,row) => sum + row.zoneCount, 0) + ' zones in the full bank';
     status.textContent = 'Choose a tone. Playback continues until stopped.';
   }).catch(error => { status.textContent = error.message + ' Reload the page to retry.'; });
 })();

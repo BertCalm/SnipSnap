@@ -89,10 +89,33 @@ side loads nine pinned complete recipes from `47809ba2d`, the preceding audition
 Each page card can play 0%, 50% and 100% in sequence; finite notes retain their
 whole attack and held steps repeat for two seconds each.
 
-Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
+The nine original dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
-Contour. Their table pairs and contours differ; the proposed 36-preset expansion
-waits for the owner's sonic verdict.
+Contour. The owner accepted the wider EDGE revision and requested the preset
+expansion on 28 October. Those nine complete recipes and their numeric preset
+positions remain intact in the expanded bank.
+
+The factory bank now contains 36 dry recipes: ten BASS, four KEY, four PLUCK,
+eight LEAD, six SWELL and four HOLLOW. Added recipes change the saved table pair,
+layer relationship, movement and envelopes rather than duplicating a sound at
+different macro settings. The rounded root, modest drive and the approved EDGE
+response remain the starting point. New recipes are authored candidates for the
+owner's listening decision; the earlier acceptance applies to the original nine.
+
+`./gradlew :synth:generateContourPresetAudition` writes the full-bank audition
+under `testkit/contour-presets/`. It offers each recipe's finite articulation and
+settled sustain, plus held EDGE at zero, halfway and maximum. Native WAVs replay
+the complete downloadable patch; matched WAVs apply only a scalar listening gain.
+The older matrix and EDGE comparison deliberately retain their original nine
+reference recipes.
+
+The native expanded-bank tests cover all 36 finite and held center notes and
+real held continuations. A separate 64-case matrix checks the eight octave-edge,
+bell-body and band-pass additions at full EDGE, BODY extremes and two registers,
+finite and held: maximum detected error 1.20 cents, minimum confidence 0.935.
+The focused engine, preset-dispatch and starter-layout run passes all 92 tests.
+These measurements establish stable roots and reproducible content, not a
+listening verdict on the new presets.
 
 R03 reauthored those nine recipes around rounded bass entrances, mellow key blooms,
 a softer pluck, slower lead and hollow gestures, and an evolving held tone.
@@ -116,7 +139,8 @@ bank's heavy use of SOFT_SAW. Independent layer and articulation settings, octav
 edge intervals in selected recipes and a band-pass hollow recipe provide more
 distinct spectra and gestures while keeping modest drive. The audition isolates
 each added control at 0, .5 and 1 so its effect can be judged directly; these are
-rendered choices from the native engine. The nine recipes remain provisional.
+rendered choices from the native engine. The nine recipes were subsequently
+accepted after the wider EDGE revision.
 
 `SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
 and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
@@ -175,14 +199,14 @@ share the exported PCM24 WAVs: a native `.xty` track sits beside its
 `.instrument.json` sidecar sits beside that folder. Keep each track and sidecar
 with their matching folder.
 
-The starter task packages the current nine recipes and 153 zones under
+The starter task packages the current 36 recipes and 612 zones under
 `testkit/contour-starter/`, with editable patch JSON, source fingerprints, file
 hashes and a ZIP. It reads back the native JSON, XPM XML, phone sidecars and WAV
 sampler sheets before packaging. Commit the source before running it so the bank
 identifies its exact implementation. The Android panel groups all fourteen
 controls into Tone, Envelope, Movement, Filter and Play.
 
-The bank task also writes `web/` with nine exact root-loop previews and recipe
+The bank task also writes `web/` with 36 exact root-loop previews and recipe
 downloads. Copy it into an existing audition's `instruments/` directory and
 refresh that audition's page to show its instrument link. The published page
 includes this companion listening view; its R05 matrix audio stays unchanged.
