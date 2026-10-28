@@ -43,14 +43,18 @@ data class Busy(
  *    operations that are nearly instant do not strobe a bar at the user.
  *  - **Minimum linger.** Once it has shown, it stays for [MIN_VISIBLE_MS]
  *    even if the job ends a moment later, so a bar that appeared is a bar
- *    that could be read.
+ *    that could be read. The minimum counts from the scheduled show
+ *    (`start` + [SHOW_AFTER_MS]) until the caller says when the first frame
+ *    that draws the bar actually came, with [markShown]; from then on it
+ *    counts from that frame. A caller that cannot tell keeps the scheduled
+ *    anchor, which is the earlier of the two, so the bar goes sooner.
  *
  * The latch owns no clock and schedules nothing: every call is handed `now`
  * in milliseconds on one monotonic clock (the app passes
  * `SystemClock.uptimeMillis()`), which keeps the timing testable on the JVM.
- * [visible] answers for any `now` from the recorded start and stop alone,
- * and [nextChangeAt] says when to ask again, so the dock can sleep until
- * then instead of polling. Not thread-safe; it belongs to the UI thread.
+ * [visible] answers for any `now` from the recorded start, stop and draw
+ * alone, and [nextChangeAt] says when to ask again, so the dock can sleep
+ * until then instead of polling. Not thread-safe; it belongs to the UI thread.
  */
 class BusyLatch {
 
@@ -59,6 +63,14 @@ class BusyLatch {
 
     /** When the job stopped; null while it is running or before any [start]. */
     private var endedAt: Long? = null
+
+    /**
+     * When the caller said the first frame that drew the bar came
+     * ([markShown]); null until it does, and again from a fresh run's start or
+     * a [discard]. When set it replaces the scheduled show as the start of the
+     * minimum.
+     */
+    private var shownAt: Long? = null
 
     /**
      * The job began. A second call while one is already running changes
@@ -72,7 +84,10 @@ class BusyLatch {
      */
     fun start(now: Long) {
         if (startedAt != null && endedAt == null) return
-        if (!visible(now)) startedAt = now
+        if (!visible(now)) {
+            startedAt = now
+            shownAt = null
+        }
         endedAt = null
     }
 
@@ -87,15 +102,37 @@ class BusyLatch {
      * delay.
      *
      * For a job that ended after its show delay but whose bar the caller never
-     * managed to draw: the delay and the draw are two moments, and a job can end
-     * between them (the frame that would have drawn the bar came after the job's
-     * result had landed). By [stop] and [visible] alone such a run owes a bar for
-     * [MIN_VISIBLE_MS], and drawing it then would put a loading screen over the
+     * put up: the delay and the bar are two moments, and a job can end between
+     * them (the caller had not yet acted on [visible] when the job's result
+     * landed). By [stop] and [visible] alone such a run owes a bar for
+     * [MIN_VISIBLE_MS], and showing it then would put a loading screen over the
      * thing that was loading. A bar that was never up has no minimum to serve.
      */
     fun discard() {
         startedAt = null
         endedAt = null
+        shownAt = null
+    }
+
+    /**
+     * The first frame that draws the bar came at [now]: the minimum counts from
+     * here and not from the scheduled show.
+     *
+     * [visible] turns true at the scheduled show, but a bar needs a frame to be
+     * drawn in, and under load (a cold start's first frames) that frame can
+     * arrive well after the schedule. Counting from the schedule would leave
+     * the bar on screen for less than [MIN_VISIBLE_MS]; counting from the frame
+     * leaves it the whole of it.
+     *
+     * Ignored unless the bar is [visible] at [now]: a mark from before the show
+     * delay, or from after the bar has gone, describes a bar that was not
+     * there to be drawn. The first mark of a run is the one that counts; a
+     * later call changes nothing. A mark may come after the job has [stop]ped,
+     * while the bar still lingers - the frame that draws it can land after the
+     * job's result has - and the minimum then runs from the mark.
+     */
+    fun markShown(now: Long) {
+        if (shownAt == null && visible(now)) shownAt = now
     }
 
     /** Whether the bar should be on screen at [now]. */
@@ -132,20 +169,22 @@ class BusyLatch {
 
     /**
      * The moment a finished run goes away: the stop, or the end of the
-     * minimum linger counted from the show, whichever is later. Null while
-     * the job is still running, because it has no end yet. Only meaningful
-     * for a run that showed; callers rule out [neverShown] first.
+     * minimum linger, whichever is later. The linger counts from the first
+     * drawn frame when the caller reported one ([markShown]), and from the
+     * scheduled show ([showAt]) when it did not. Null while the job is still
+     * running, because it has no end yet. Only meaningful for a run that
+     * showed; callers rule out [neverShown] first.
      */
     private fun hideAt(showAt: Long): Long? {
         val ended = endedAt ?: return null
-        return maxOf(ended, showAt + MIN_VISIBLE_MS)
+        return maxOf(ended, (shownAt ?: showAt) + MIN_VISIBLE_MS)
     }
 
     companion object {
         /** How long a job runs before its bar first appears. */
         const val SHOW_AFTER_MS = 200L
 
-        /** How long a bar that has appeared stays up, at the least. */
+        /** How long a bar that has appeared stays up, at the least: from the frame that first drew it, once [markShown] says when that was. */
         const val MIN_VISIBLE_MS = 500L
     }
 }

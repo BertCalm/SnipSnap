@@ -77,6 +77,7 @@ import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
+import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -459,6 +460,18 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
+    // The job a screen is carrying on its own (the pad editor's jobs, Split,
+    // and a recording being read in TAPE and CHOP), reported through
+    // `LocalBusySink` and gone when the screen is: an `appScope` job that
+    // outlives its screen is not shown after it goes (a later app-owned job
+    // board covers that). It is kept apart from `busy` on purpose: `busy` is
+    // App's own job and gates App's own work (`if (busy != null) return`), and
+    // a screen's job must not lock App's actions out. The dock shows App's
+    // first.
+    var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // Remembered, so the sink the screens read is one object for the life of
+    // the composition: a static local that changed would recompose all of it.
+    val busySink = remember { { reported: Busy? -> screenBusy = reported } }
     // The starter kit being rendered, by name, or null: while set, PADS draws
     // the placeholder grid for it and the shelf's NEW KIT button shows its
     // spinner. Set and cleared by `fresh`, alongside `busy`, and by nothing else.
@@ -1276,9 +1289,9 @@ fun App(shelf: KitShelf) {
      * A starter kit, rendered and landed on PADS. The render takes a few
      * seconds (a minute, on a slow phone), so the user is taken to PADS at
      * once and finds the shape of the grid there ([pendingKit] makes `KitLoading`
-     * draw `PadPlaceholderGrid` for the starter's name, with the loading card
-     * over it once the job has run 200 ms), with the dock's bar saying the same
-     * job; the kit replaces the placeholders when it lands.
+     * draw `PadPlaceholderGrid`, which takes no name, with the loading card over
+     * it once the job has run 200 ms; the card and the dock's bar carry the
+     * starter's name); the kit replaces the placeholders when it lands.
      *
      * Moved with [landOn], not `goToScreen`: that one also clears the
      * transient state, `pendingSnipAssign` among it, and the snip waiting
@@ -3217,7 +3230,7 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion) {
+    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -4173,7 +4186,7 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy,
+                    busy = busy ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's

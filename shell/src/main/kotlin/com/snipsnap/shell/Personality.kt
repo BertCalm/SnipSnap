@@ -2785,8 +2785,9 @@ object Copy {
     /**
      * The dock's busy line while a kit loads, named so the wait is attributable
      * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
-     * starter renders, and `PadPlaceholderGrid` heads itself with the same
-     * line, so the dock and the grid never word the one job two ways.
+     * starter renders, and the loading card over the pad grid (`LoadingCard`)
+     * carries the same line, so the dock and the card never word the one job
+     * two ways.
      */
     fun loadingBusy(name: String): String = "LOADING $name…"
     /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
@@ -2794,13 +2795,34 @@ object Copy {
     /** The dock's busy line while something loads and there is no name to give it. */
     const val LOADING_BUSY = "LOADING…"
     /**
-     * What a button says to TalkBack as its state while the job it started is
-     * running: its `stateDescription`, beside the label it keeps and the ring
-     * drawn at its edge. It is not a visible label and not the dock's line.
+     * WORKING…, said in two places. On a button it is what TalkBack hears as
+     * the state while the job the button started is running: its
+     * `stateDescription`, beside the label it keeps and the ring drawn at its
+     * edge. On the dock it is the line a screen reports (`ReportBusy`) for a
+     * job it cannot name. It is never a visible label on a button: the
+     * button keeps its own words.
      */
     const val WORKING_BUSY = "WORKING…"
+    // The dock's line for the jobs the pad editor and SPLIT start, each said
+    // in the word of the control that started it. A treatment says its own
+    // name through `treatmentBusy`; a job with no word at all (SAVE, a file
+    // decode, the mic trip, UNDO) falls back to WORKING_BUSY.
+    /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
+    const val MUTATE_BUSY = "MUTATING…"
+    /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
+    const val DESAMPLE_BUSY = "DE-SAMPLING…"
+    /** The dock's line while MAKE PAD renders a new pad out of one hit. */
+    const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
+    const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
+    /** The dock's line while SPREAD writes the pad's sound across a bank. */
+    const val SPREAD_BUSY = "SPREADING…"
+    /** The dock's line while SPLIT takes a pad apart into its three parts. */
+    const val SPLIT_BUSY = "SPLITTING…"
     /** The KITS screen's placeholder line while the library is read from disk. */
     const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */
+    const val READING_RECORDING = "READING THE RECORDING…"
     /** The dock's button to stop a job that can be stopped part-way. */
     const val CANCEL_JOB = "CANCEL"
 

@@ -522,7 +522,11 @@ object Layout {
  * still when the system has animations off (`LocalReduceMotion`).
  */
 object Motion {
-    /** Reel rotation period while playing, ms per revolution. */
+    /**
+     * Reel rotation period, ms per revolution: the deck's reels while
+     * playing, and the two loading reels (Export's dub reel and the strip
+     * beside a trip's words), which stand still when animations are off.
+     */
     const val REEL_SPIN_MS = 1200
     /**
      * The dock line's fade-in when its words change, ms, ease-out. The

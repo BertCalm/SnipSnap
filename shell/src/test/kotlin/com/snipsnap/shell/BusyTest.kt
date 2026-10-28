@@ -144,9 +144,9 @@ class BusyTest {
 
     @Test
     fun `a discarded run shows nothing, now or later, and schedules nothing`() {
-        // The job ran past the show delay but its bar was never drawn (the frame
-        // that would have drawn it had not come when the job ended), so the
-        // caller forgets the run: showing the bar after the job's result has
+        // The job ran past the show delay but its bar was never put up (the
+        // caller had not yet acted on the show moment when the job ended), so
+        // the caller forgets the run: showing the bar after the job's result has
         // landed would be a loading screen over the thing it was loading.
         val latch = BusyLatch()
         latch.start(0)
@@ -179,6 +179,112 @@ class BusyTest {
         assertNull(latch.nextChangeAt(0))
         latch.start(10)
         assertTrue(latch.visible(210), "and the next job runs as normal")
+    }
+
+    // markShown: the minimum counts from the first frame that drew the bar,
+    // which a caller under load can reach later than the scheduled show. The
+    // latch is told when, on the same clock as everything else.
+
+    @Test
+    fun `a bar first drawn at 260 stays 500 ms from the draw`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(260)
+        latch.stop(300)
+        assertTrue(latch.visible(759), "drawn at 260, so it lingers to 760 even though the job ended at 300")
+        assertFalse(latch.visible(760), "the 500 ms minimum, counted from the draw, is over")
+        assertEquals(760L, latch.nextChangeAt(300), "and the caller is told to look again then, not at 700")
+    }
+
+    @Test
+    fun `without markShown the minimum counts from the scheduled show as before`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.stop(300)
+        assertTrue(latch.visible(699), "scheduled to show at 200, so it lingers to 700")
+        assertFalse(latch.visible(700), "the minimum counts from the scheduled show")
+        assertEquals(700L, latch.nextChangeAt(300))
+    }
+
+    @Test
+    fun `markShown after the job has stopped but while the bar lingers still moves the anchor`() {
+        // The frame that draws the bar can land after the job's result has:
+        // the job ends at 210, the bar's first frame is at 360, and the bar
+        // must still be readable for 500 ms from that frame.
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.stop(210)
+        latch.markShown(360)
+        assertTrue(latch.visible(859), "drawn at 360, so it lingers to 860")
+        assertFalse(latch.visible(860))
+    }
+
+    @Test
+    fun `markShown before the show delay is ignored`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(150)
+        latch.stop(300)
+        assertTrue(latch.visible(699), "nothing was up at 150, so the minimum still counts from the scheduled show")
+        assertFalse(latch.visible(700), "and it is gone at 700, not 650")
+    }
+
+    @Test
+    fun `markShown after the bar has gone is ignored`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.stop(250)
+        latch.markShown(800)
+        assertFalse(latch.visible(800), "gone at 700: a late mark must not bring a bar back")
+        assertNull(latch.nextChangeAt(800), "and schedules nothing")
+    }
+
+    @Test
+    fun `a second markShown does not move the anchor`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(260)
+        latch.markShown(400)
+        latch.stop(450)
+        assertTrue(latch.visible(759), "the first drawn frame is the anchor")
+        assertFalse(latch.visible(760), "and a later call does not push it out to 900")
+    }
+
+    @Test
+    fun `a restart while lingering keeps the drawn anchor`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(260)
+        latch.stop(300)
+        latch.start(400)
+        latch.stop(450)
+        assertTrue(latch.visible(759), "the bar was up the whole time, so its run continues from the draw at 260")
+        assertFalse(latch.visible(760))
+    }
+
+    @Test
+    fun `a fresh run after a drawn one has an anchor of its own`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(260)
+        latch.stop(300)
+        latch.start(1000)
+        latch.stop(1250)
+        assertTrue(latch.visible(1699), "shown from 1200 by its own schedule, so it lingers to 1700, not to 1250")
+        assertFalse(latch.visible(1700))
+    }
+
+    @Test
+    fun `a job after a discarded drawn one has an anchor of its own`() {
+        val latch = BusyLatch()
+        latch.start(0)
+        latch.markShown(260)
+        latch.stop(300)
+        latch.discard()
+        latch.start(1000)
+        latch.stop(1250)
+        assertTrue(latch.visible(1699), "the discarded run's anchor is forgotten with the run")
+        assertFalse(latch.visible(1700))
     }
 
     @Test

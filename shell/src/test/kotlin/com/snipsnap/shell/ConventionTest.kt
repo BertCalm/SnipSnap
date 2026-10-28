@@ -3430,4 +3430,89 @@ class ConventionTest {
         assertEquals(0, insertCalls, "the app calls Inserts.write directly; go through ExportWizardModel, which hands the renderer in")
     }
 
+    // ---- Law: a busy guard is raised before its launch, not inside it ----
+
+    private val splitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SplitScreen.kt")
+
+    /**
+     * A control is guarded by a flag (`busy`, `working`) that its handler
+     * checks and its job clears when it ends. If the job raises the flag as
+     * the first line of the coroutine it launches, the handler's check has a
+     * hole in front of it: `launch` only schedules, the body runs a beat
+     * later, and a second tap in that beat finds the flag still down and
+     * starts the job again. SplitScreen carried a comment conceding it ("a
+     * fast second tap beats it"). The flag goes up in the handler, before
+     * the `launch`, and comes down in the `finally` inside it.
+     *
+     * Two shapes leave the hole, and each has its own pattern:
+     *  - a `launch {` (or `launch(Dispatchers.X) {`) whose first statement
+     *    is `busy = true` or `working = true`;
+     *  - a `suspend fun` whose first statement is that, which a one-line
+     *    `launch { thatFun() }` calls (SplitScreen's `loadSource` was this).
+     * Each names the lines, so the next one is found by reading the failure.
+     *
+     * Both look at a first statement only. A raise placed second in a launch
+     * would pass; the sheet was read for that when the law was written and
+     * has none. Comment-only lines between the opening brace and the raise are
+     * skipped, so a comment explaining the raise cannot hide it.
+     */
+    private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
+    private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
+
+    @Test
+    fun `a busy guard is raised before its launch, not inside it`() {
+        // Each scan has to be able to see the shape it forbids, and to let the
+        // raised form pass; otherwise a clean result would mean nothing.
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn("appScope.launch {\n            busy = true\n            try {"),
+            "the launch scan no longer recognises a guard raised as the first line of a launch",
+        )
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn("scope.launch(Dispatchers.IO) {\n            working = true\n            try {"),
+            "the launch scan no longer recognises a guard raised inside a launch that is given a dispatcher",
+        )
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn(
+                "appScope.launch {\n            // The write outlives the tab.\n            busy = true\n            try {",
+            ),
+            "the launch scan no longer sees a guard raised after a comment line at the top of a launch",
+        )
+        assertFalse(
+            guardRaisedInsideLaunch.containsMatchIn("busy = true\n        appScope.launch {\n            try {"),
+            "the launch scan flags a guard that is already raised before its launch",
+        )
+        assertTrue(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        working = true\n        try {",
+            ),
+            "the suspend-fun scan no longer recognises a guard raised as the first line of a suspend function",
+        )
+        assertTrue(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        // Up before the first read.\n        working = true\n        try {",
+            ),
+            "the suspend-fun scan no longer sees a guard raised after a comment line at the top of a suspend function",
+        )
+        assertFalse(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        val pad = entry?.kit?.pad(slot)\n        try {",
+            ),
+            "the suspend-fun scan flags a suspend function that raises no guard",
+        )
+        val offending = listOf(padSheetScreen, splitScreen).flatMap { file ->
+            val src = file.readText(Charsets.UTF_8)
+            // The line of the `busy = true` itself, which is where the match ends.
+            fun lineOf(m: MatchResult) = "${file.name}:${src.take(m.range.last).count { it == '\n' } + 1}"
+            guardRaisedInsideLaunch.findAll(src).map { "launch at ${lineOf(it)}" }.toList() +
+                guardRaisedInsideSuspendFun.findAll(src).map { "suspend fun at ${lineOf(it)}" }.toList()
+        }
+        assertTrue(
+            offending.isEmpty(),
+            "a busy guard is raised inside the coroutine it guards, so a second tap in the gap before the " +
+                "coroutine starts runs the job twice. Raise the flag in the handler, before the `launch`, and " +
+                "keep the `finally` that clears it inside (a suspend function leaves the flag to its caller). " +
+                "At: ${offending.joinToString(", ")}",
+        )
+    }
+
 }
