@@ -37,6 +37,18 @@ fun filterEngines(
         .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.replace('_', ' ') })
 }
 
+/**
+ * The quiet line under an engine's row: its first [shown] voice names, underscores read
+ * as spaces and joined with " · ", then " +n" for the n it left out. Empty for no voices.
+ * Four fit a phone's row without wrapping for the voice names the picker has, and the
+ * count says there is more behind them, which is what the search finds.
+ */
+fun engineVoicesLine(voices: List<String>, shown: Int = 4): String {
+    val names = voices.map { it.replace('_', ' ') }
+    val head = names.take(shown).joinToString(" · ")
+    return if (names.size > shown) "$head +${names.size - shown}" else head
+}
+
 /** A name or voice as the query is compared with it: lower case, underscores read as spaces. */
 private fun fold(s: String): String = s.replace('_', ' ').lowercase()
 

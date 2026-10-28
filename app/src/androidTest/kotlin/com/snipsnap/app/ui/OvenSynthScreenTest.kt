@@ -105,7 +105,7 @@ class OvenSynthScreenTest : ComposeScreenTest() {
     @Test
     fun four_articulations_expose_all_ten_complete_factory_recipes_and_six_macros() {
         show()
-        compose.onNodeWithContentDescription("ENGINE OVEN · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE OVEN. CHOOSE ENGINE").assertExists()
         for (voice in OvenVoice.entries) {
             invokeClick(voice.name)
             waitFor("${voice.name} selection") { settings["voice"] == voice.name }

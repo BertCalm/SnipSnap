@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -2221,58 +2222,35 @@ fun SynthScreen(
 
     val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
+    // The engine list's sheet and the engines picked from it lately, in one holder: this
+    // composable is at the limit of what the toolchain verifies (see `embouchureRestore`).
+    val enginePicker = rememberEnginePicker(ENGINE_NAME_SET)
+
+    // Arriving on an engine, whichever way: ◄, ► or a row of the engine list. It is exactly
+    // what the tap-to-cycle header did, so the new engine is touched (and so auditioned, as
+    // every touch is) and starts on its first voice.
+    fun arrive(next: Engine) {
+        touched = true
+        engine = next
+        voice = next.voices().first()
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    // `Layout.LCD_HEADER_H` (40dp) is less than
-                    // `Layout.MIN_HIT_TARGET` (44dp) — every other header in
-                    // the app can get away with that because nothing in it
-                    // is tappable. This one now has a cycler in it, and the
-                    // brief is explicit that the cycler keeps the standing
-                    // hit-target rule, so this screen's own header grows to
-                    // whichever constant is taller rather than clipping the
-                    // cycler's touch target to a shared constant this file
-                    // isn't allowed to change. Local, minimal, and it only
-                    // affects SYNTH's own header row.
-                    .height(max(Layout.LCD_HEADER_H, Layout.MIN_HIT_TARGET).dp)
-                    .lcdPanel(scheme)
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                // ENGINE cycler — tap advances to the next entry, wrapping,
-                // on the LCD header's title in place of a static "THUMP"
-                // label. Long-press is not used, per the brief.
-                //
-                // EXPORT's format row used to be the same idiom and is now a
-                // picker instead (September UAT, finding 7), because eight
-                // one-way states with no back step is a walk. This cycler is
-                // deliberately left alone: each tap auditions the next engine.
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        // States which engine is current and what the tap
-                        // does, the same shape as KitsScreen's SORT/SHOW
-                        // cyclers (a real word name, not a glyph, but the
-                        // TapeText below still doesn't merge into this
-                        // node for free).
-                        .tapeClick(label = "ENGINE ${engine.displayName} · TAP FOR NEXT") {
-                            touched = true
-                            val next = engine.next()
-                            engine = next
-                            voice = next.voices().first()
-                        },
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    // Batch 3, Task 4: no ▸ — the tap cycles to the next
-                    // engine in place, same as the cyclers below; it doesn't
-                    // navigate or open a panel.
-                    TapeText(engine.displayName, TapeType.lcdHeader, scheme.lcdInk.tape)
-                }
-                TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
-            }
+            // ENGINE header: ◄ NAME ▾ ►. The owner asked for "a better way to search, scroll
+            // through, select engines. Click to cycle takes too much": 63 engines, one way
+            // round and no way back from an overshoot. The name opens the engine list (search,
+            // sound-type chips, recents); ◄ and ► are the old tap, one engine either side and
+            // wrapping, kept because stepping is still the quickest way to audition neighbours.
+            // All three arrive the same way, through `arrive`. See [EngineHeader].
+            EngineHeader(
+                engine = engine,
+                voice = voice,
+                scheme = scheme,
+                onOpen = { enginePicker.open = true },
+                onPrevious = { arrive(engine.previous()) },
+                onNext = { arrive(engine.next()) },
+            )
 
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -3329,6 +3307,21 @@ fun SynthScreen(
             }
         }
 
+        if (enginePicker.open) {
+            EnginePickerSheet(
+                names = ENGINE_NAMES,
+                voicesOf = ::engineVoiceNames,
+                current = engine.name,
+                recents = enginePicker.recents,
+                onPick = { name ->
+                    enginePicker.open = false
+                    arrive(Engine.valueOf(name))
+                    enginePicker.picked(name)
+                },
+                onDismiss = { enginePicker.open = false },
+            )
+        }
+
         if (showChooser) {
             val cancelChooser = { if (!sendBusy) { showChooser = false; sendToSurface = false } }
             SlotChooserOverlay(
@@ -3763,6 +3756,80 @@ private fun macroReadout(
 @Composable
 private fun SynthOverlayBackHandler(onBack: () -> Unit) {
     BackHandler(true, onBack)
+}
+
+// ---------- ENGINE header and list ----------
+
+/** Every picker engine by constant name, in the enum's own order: what the engine list is handed. */
+private val ENGINE_NAMES = Engine.entries.map { it.name }
+
+/** The same, as a set: what the saved recents are checked against. */
+private val ENGINE_NAME_SET = ENGINE_NAMES.toSet()
+
+/** The voice names of the engine called [name], for the engine list's search and its voices line. */
+private fun engineVoiceNames(name: String): List<String> = Engine.valueOf(name).voices().map { it.name }
+
+/**
+ * SYNTH's LCD header: `◄  NAME ▾  ►` at the left and the voice's chip at the right.
+ *
+ * The name opens the engine list ([onOpen]); the ▾ says it opens a sheet. ◄ and ►
+ * ([onPrevious], [onNext]) step to the engine either side, wrapping, and each is a
+ * 48 dp target named for what it does. Stepping is the old tap-to-cycle, kept because
+ * walking a few neighbours is still the quickest way to audition them; the list is
+ * for the other times, when 63 engines are too many to walk.
+ *
+ * The row is as tall as the standing hit-target rule asks, not the 40 dp LCD header
+ * height, which nothing else tappable in an LCD header was ever held to.
+ */
+@Composable
+private fun EngineHeader(
+    engine: Engine,
+    voice: Enum<*>,
+    scheme: Scheme,
+    onOpen: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(max(Layout.LCD_HEADER_H, Layout.MIN_HIT_TARGET).dp)
+            .lcdPanel(scheme)
+            .padding(start = 2.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        // The cluster gives way to the voice chip, never the other way round: the chip is
+        // the shorter, and a name that is cut still opens the list.
+        Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+            EngineStep("◄", "PREVIOUS ENGINE", scheme, onPrevious)
+            Box(
+                Modifier
+                    .weight(1f, fill = false)
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    // Says which engine is current and what the tap does: the words, not the
+                    // ▾, which a screen reader would read as a symbol.
+                    .tapeClick(label = "ENGINE ${engine.displayName}. CHOOSE ENGINE", onClick = onOpen)
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TapeText("${engine.displayName} ▾", TapeType.lcdHeader, scheme.lcdInk.tape)
+            }
+            EngineStep("►", "NEXT ENGINE", scheme, onNext)
+        }
+        TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
+    }
+}
+
+/** One of the header's arrows: a [Layout.MIN_HIT_TARGET] square, named for the step it takes. */
+@Composable
+private fun EngineStep(glyph: String, label: String, scheme: Scheme, onClick: () -> Unit) {
+    Box(
+        Modifier.size(Layout.MIN_HIT_TARGET.dp).tapeClick(label = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(glyph, TapeType.lcdReadout, scheme.lcdInk.tape)
+    }
 }
 
 // ---------- FORGET → BIN: the ask, and the bin's door ----------
@@ -4608,8 +4675,11 @@ private enum class Engine {
     THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
     val displayName: String get() = name.replace('_', ' ')
 
-    /** Cycle through the registered synth engines, wrapping back to THUMP. */
+    /** The engine after this one in the enum's order, wrapping from the last back to the first. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
+
+    /** The engine before this one, wrapping from the first round to the last. */
+    fun previous(): Engine = entries[(ordinal + entries.size - 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
         THUMP -> ThumpVoice.entries

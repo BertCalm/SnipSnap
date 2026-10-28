@@ -221,6 +221,28 @@ class EngineCatalogTest {
         assertEquals(listOf("THUMP"), filterEngines(listOf("THUMP", "THUMP"), ::voicesOf, "", emptySet()))
     }
 
+    // ---- engineVoicesLine ----
+
+    @Test
+    fun `the voices line joins up to four names with a middle dot`() {
+        assertEquals("", engineVoicesLine(emptyList()))
+        assertEquals("KICK", engineVoicesLine(listOf("KICK")))
+        assertEquals("KICK · SNARE · CLAP", engineVoicesLine(listOf("KICK", "SNARE", "CLAP")))
+        assertEquals("A · B · C · D", engineVoicesLine(listOf("A", "B", "C", "D")))
+    }
+
+    @Test
+    fun `the voices line counts what it leaves out`() {
+        assertEquals("A · B · C · D +1", engineVoicesLine(listOf("A", "B", "C", "D", "E")))
+        assertEquals("A · B · C · D +8", engineVoicesLine(('A'..'L').map { it.toString() }))
+        assertEquals("A · B +2", engineVoicesLine(listOf("A", "B", "C", "D"), shown = 2))
+    }
+
+    @Test
+    fun `the voices line reads an underscore as a space`() {
+        assertEquals("KICK · HAT CLOSED · HAT OPEN", engineVoicesLine(listOf("KICK", "HAT_CLOSED", "HAT_OPEN")))
+    }
+
     // ---- RecentEngines ----
 
     @Test

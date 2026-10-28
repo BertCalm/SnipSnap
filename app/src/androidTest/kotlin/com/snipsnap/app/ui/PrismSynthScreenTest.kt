@@ -144,7 +144,7 @@ class PrismSynthScreenTest : ComposeScreenTest() {
     @Test
     fun every_factory_opening_clamps_accessibility_hold_and_preserves_its_spectral_recipe() {
         show()
-        compose.onNodeWithContentDescription("ENGINE PRISM · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE PRISM. CHOOSE ENGINE").assertExists()
         val openings = PrismOpeningPresets.all()
         assertEquals(setOf("Soft Arrival", "Wire Bloom", "Bowed Bloom", "Hollow Rise"), openings.map { it.name }.toSet())
         for (factory in openings) {
