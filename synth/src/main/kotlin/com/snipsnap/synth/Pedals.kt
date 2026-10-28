@@ -56,7 +56,7 @@ object Pedals {
         val side: PedalSide,
         /** Whether the user may flip it between PRE and POST. Never for the amp or a board. */
         val movable: Boolean,
-        /** Passed its owner listen: on the sheet's slate, a chip on row seven or a line behind MORE. */
+        /** Passed its owner listen: on the sheet, a line in MORE and, for a pedal (not a board), a chip row seven can draw. */
         val gated: Boolean,
     ) {
         /** The sections the chain sets, in rack order. */

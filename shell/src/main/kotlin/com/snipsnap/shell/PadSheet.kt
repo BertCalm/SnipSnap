@@ -138,12 +138,10 @@ object PadSheet {
     /**
      * The slate's card: rows one to six as they are, then row seven as [pedals] (the words of the
      * user's [PedalSlate.Row]) and [MORE]. Refuses a word off the slate, a duplicate, or a row too wide
-     * to leave room for MORE.
+     * to leave room for MORE. A library with no gated pedals draws MORE alone.
      */
     fun rows(pedals: List<String>): List<List<String>> {
-        require(pedals.isNotEmpty() && pedals.size < MAX_ROW_CHIPS) {
-            "row seven draws 1 to ${MAX_ROW_CHIPS - 1} pedals and MORE, got ${pedals.size}"
-        }
+        require(pedals.size < MAX_ROW_CHIPS) { "row seven draws at most ${MAX_ROW_CHIPS - 1} pedals and MORE, got ${pedals.size}" }
         require(pedals.distinct().size == pedals.size) { "row seven draws a pedal twice: $pedals" }
         for (word in pedals) require(word in PEDAL_SEGMENTS) {
             "'$word' is not on the slate - it holds: ${PEDAL_SEGMENTS.joinToString(", ")}"

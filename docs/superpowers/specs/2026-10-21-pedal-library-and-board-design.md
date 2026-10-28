@@ -218,9 +218,13 @@ The owner set what row seven's window is (`2026-10-28-pedal-slate-design.md`), a
 - MORE lights with a count when the pad carries pedals the row does not show.
 - The width law is five pedals and MORE, which is six chips.
 
-The gestures are this design's (section 3): tap to add, tap a lit chip to remove, AMT on the marked pick. Two additions:
+The gestures are this design's (section 3): tap to add, tap a lit chip to remove, AMT on the marked pick. Four changes, all from one law, that a lit pedal is one you hear:
 
-- AMT 0 takes the marked pick off, because a lit chip always sounds.
+- A new pedal goes on at 70, not at the sheet's AMT. The sheet's AMT is the marked pedal's, and copying it would move the old pedal under the "set AMT, then tap" habit.
+- AMT 0 takes the marked pick off.
+- Decision 4's "the later pick wins that section and the sheet names the owner" becomes: the later pick takes the earlier one's place, and the toast names it. WAH then TOUCH on one side would otherwise light two chips for one wah.
 - A pad whose own pedals the bin cannot restore refuses a change instead of stacking, because a board re-renders whole (that spec's D5).
+
+MORE lists boards once one is gated (decision 6), without PUT ON ROW.
 
 The logic is built in `shell` (`PedalSlate`, `PadSheet.rows`), DELAY turned `gated`, and R2 is now the screens' wiring, listed in that spec's section 6.

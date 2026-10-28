@@ -144,6 +144,13 @@ class RetrimTest {
             ),
         )
         assertEquals("SMEAR", Retrim.treatmentLeft(smeared), "PadSheet.read can't see SMEAR on purpose; this must")
+        // A pedal board rides its own key, which PadSheet.read does not see either: one pedal by its word, several as PEDALS.
+        fun pedals(vararg keys: String) = bare.copy(
+            recipe = com.snipsnap.synth.PadRecipe(pedals = com.snipsnap.synth.PedalBoard(keys.map { com.snipsnap.synth.PedalBoard.Pick(it, 0.7f) })).toJsonValue(),
+        )
+        assertEquals("DELAY", Retrim.treatmentLeft(pedals("delayed")))
+        assertEquals("PEDALS", Retrim.treatmentLeft(pedals("driven", "delayed")))
+        assertEquals("A02 RE-CUT. THE PEDALS STAYED WITH THE OLD ONE - IT'S IN THE BIN.", Copy.retrimLanded("A02", Retrim.treatmentLeft(pedals("driven", "delayed"))))
         assertEquals(
             "A02 RE-CUT. THE SMEAR STAYED WITH THE OLD ONE - IT'S IN THE BIN.",
             Copy.retrimLanded("A02", Retrim.treatmentLeft(smeared)),

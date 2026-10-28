@@ -249,12 +249,12 @@ class PadSheetTest {
     }
 
     @Test
-    fun `the slate's card refuses a word off the slate, a duplicate, an empty row and one with no room for MORE`() {
+    fun `the slate's card refuses a word off the slate, a duplicate and a row with no room for MORE`() {
+        assertEquals(listOf("MORE"), PadSheet.rows(emptyList()).last(), "a library with no gated pedals draws MORE alone")
         assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "PUNCH")) }
         assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "RIG")) }
         assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "MORE")) }
         assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "DRIVE")) }
-        assertFailsWith<IllegalArgumentException> { PadSheet.rows(emptyList()) }
         assertFailsWith<IllegalArgumentException> { PadSheet.rows(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE")) }
     }
 

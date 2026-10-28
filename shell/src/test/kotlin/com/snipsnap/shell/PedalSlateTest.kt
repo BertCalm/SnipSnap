@@ -41,8 +41,9 @@ class PedalSlateTest {
     private fun recipeOf(board: PedalBoard): JsonValue.Obj = PadRecipe(pedals = board).toJsonValue()
     private fun row(vararg keys: String) = PedalSlate.Row(keys.toList())
 
-    /** A single-chip recipe as `characterPad` leaves it: the name and the AMT (the fx beside them is not read here). */
-    private fun chip(name: String, amount: Double) = JsonValue.Obj(linkedMapOf("treatment" to JsonValue.Str(name), "amount" to JsonValue.Num(amount)))
+    /** A single-chip recipe as `characterPad` leaves it: the character's chain at the AMT, its name and the AMT. */
+    private fun chip(name: String, amount: Float): JsonValue.Obj =
+        PadRecipe(fx = com.snipsnap.synth.Treatments.chain(name, amount), treatment = name, amount = amount).toJsonValue()
 
     // ---------- the slate and the row ----------
 
@@ -111,6 +112,11 @@ class PedalSlateTest {
             listOf("delayed", "forged", "rockwahed", "touchwahed", "wahed"),
             PedalSlate.repair(listOf("delayed", "forged", "rockwahed", "touchwahed", "wahed", "compressed", "driven")).keys,
         )
+        // A good key past the cut fills a hole before the defaults do.
+        assertEquals(
+            listOf("delayed", "forged", "rockwahed", "touchwahed", "wahed"),
+            PedalSlate.repair(listOf("sparkled", "forged", "rockwahed", "touchwahed", "wahed", "delayed")).keys,
+        )
         // A hole takes the first default pedal the row lacks. (The slate in library order comes next, which
         // only a build missing a default pedal reaches: five places, five defaults.)
         assertEquals(
@@ -174,13 +180,43 @@ class PedalSlateTest {
         val b = board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST), PedalBoard.Pick("driven", 1f))
         assertEquals(b, PedalSlate.boardOf(recipeOf(b)))
         assertNull(PedalSlate.boardOf(null))
-        val chip = chip("compressed", 0.7)
-        assertEquals(board(PedalBoard.Pick("compressed", 0.7f, PedalSide.PRE)), PedalSlate.boardOf(chip))
-        assertNull(PedalSlate.boardOf(chip("washed", 0.7)), "WASH is not a pedal")
-        assertNull(PedalSlate.boardOf(JsonValue.Obj(linkedMapOf("era" to JsonValue.Str("crush"), "amount" to JsonValue.Num(0.5)))))
+        assertEquals(board(PedalBoard.Pick("compressed", 0.7f, PedalSide.PRE)), PedalSlate.boardOf(chip("compressed", 0.7f)))
+        assertNull(PedalSlate.boardOf(chip("washed", 0.7f)), "WASH is not a pedal")
+        assertNull(PedalSlate.boardOf(JsonValue.Obj(linkedMapOf("era" to JsonValue.Str("sp1200"), "amount" to JsonValue.Num(0.5)))))
         assertNull(PedalSlate.boardOf(JsonValue.Obj(linkedMapOf("verb" to JsonValue.Str("smear"), "amount" to JsonValue.Num(0.5)))))
         val damaged = JsonValue.Obj(linkedMapOf("treatment" to JsonValue.Str("driven"), "amount" to JsonValue.Num(1.5)))
         assertNull(PedalSlate.boardOf(damaged), "a chip AMT out of range is no board, not a crash")
+    }
+
+    @Test
+    fun `an old chip whose chain is not the pedal's today is an older treatment, not that pedal`() {
+        // SUSTAIN was the SQUASH section until 2026-10-24: a chip from then carries another chain under the same
+        // name, and re-rendering it as today's SUSTAIN beside a new pedal would change a sound the user never touched.
+        val stale = PadRecipe(fx = com.snipsnap.synth.Treatments.chain("punched", 0.7f), treatment = "compressed", amount = 0.7f).toJsonValue()
+        assertNull(PedalSlate.boardOf(stale))
+        assertNull(PedalSlate.boardOf(JsonValue.Obj(linkedMapOf("treatment" to JsonValue.Str("compressed"), "amount" to JsonValue.Num(0.7)))), "no chain, no claim")
+        assertNull(PedalSlate.boardOf(chip("driven", 0f)), "a chip at AMT 0 is no pedal")
+    }
+
+    @Test
+    fun `a lit pedal is a pedal you hear - picks at AMT 0 and picks a later one silences are not read`() {
+        // WAH then TOUCH on one side: both set the wah section, the later replaces it whole, so TOUCH alone plays.
+        val shadowed = board(PedalBoard.Pick("wahed", 0.7f), PedalBoard.Pick("touchwahed", 0.7f), PedalBoard.Pick("driven", 0f), PedalBoard.Pick("delayed", 0.5f))
+        assertEquals(board(PedalBoard.Pick("touchwahed", 0.7f), PedalBoard.Pick("delayed", 0.5f)), PedalSlate.boardOf(recipeOf(shadowed)))
+        val heard = DrumSynth.snare()
+        assertContentEquals(
+            shadowed.process(heard).samples,
+            board(PedalBoard.Pick("touchwahed", 0.7f), PedalBoard.Pick("delayed", 0.5f)).process(heard).samples,
+            "dropping the silent picks must change no sample",
+        )
+        // On opposite sides both wahs play.
+        val both = board(PedalBoard.Pick("wahed", 0.7f, PedalSide.POST), PedalBoard.Pick("touchwahed", 0.7f))
+        assertEquals(both, PedalSlate.boardOf(recipeOf(both)))
+        // RIG after DRIVE takes the amp; RIG before DRIVE keeps its compressor and slapback, so both are heard.
+        assertEquals(board(PedalBoard.Pick("rig", 0.7f)), PedalSlate.boardOf(recipeOf(board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("rig", 0.7f)))))
+        val rigFirst = board(PedalBoard.Pick("rig", 0.7f), PedalBoard.Pick("driven", 0.7f))
+        assertEquals(rigFirst, PedalSlate.boardOf(recipeOf(rigFirst)))
+        assertNull(PedalSlate.boardOf(recipeOf(board(PedalBoard.Pick("driven", 0f), PedalBoard.Pick("wahed", 0.7f))))?.picks?.firstOrNull { it.key == "driven" })
     }
 
     @Test
@@ -215,6 +251,7 @@ class PedalSlateTest {
         assertEquals(0, card.moreCount, "both pedals are on the row")
         assertEquals("delayed", card.marked)
         assertEquals(1f, card.amount)
+        assertEquals("AMT · DELAY", Copy.pedalAmt("DELAY"))
         val drive = PedalSlate.card(PedalSlate.DEFAULT, recipeOf(b), "driven")
         assertEquals(0.7f, drive.amount, "DRIVE tapped last takes the AMT")
         assertEquals(listOf("DRIVE"), drive.chips.filter { it.marked }.map { it.word })
@@ -241,12 +278,10 @@ class PedalSlateTest {
 
     @Test
     fun `MORE counts every pedal the row hides, an old chip and a board from the CLI included`() {
-        val oldTouch = chip("touchwahed", 0.7)
-        assertEquals(1, PedalSlate.card(PedalSlate.DEFAULT, oldTouch, null).moreCount)
-        val withRig = board(PedalBoard.Pick("rig", 0.7f), PedalBoard.Pick("rockwahed", 0.5f), PedalBoard.Pick("wahed", 1f))
+        assertEquals(1, PedalSlate.card(PedalSlate.DEFAULT, chip("touchwahed", 0.7f), null).moreCount)
+        val withRig = board(PedalBoard.Pick("rig", 0.7f), PedalBoard.Pick("rockwahed", 0.5f, PedalSide.POST), PedalBoard.Pick("wahed", 1f))
         assertEquals(2, PedalSlate.card(PedalSlate.DEFAULT, recipeOf(withRig), null).moreCount, "RIG and ROCK sit behind MORE")
-        val washed = chip("washed", 0.7)
-        val none = PedalSlate.card(PedalSlate.DEFAULT, washed, null)
+        val none = PedalSlate.card(PedalSlate.DEFAULT, chip("washed", 0.7f), null)
         assertEquals(0, none.moreCount)
         assertNull(none.marked, "WASH is not a pedal; AMT keeps the chip's own target")
         assertEquals("MORE · 3", Copy.pedalMore(3))
@@ -255,41 +290,44 @@ class PedalSlateTest {
     // ---------- MORE's list ----------
 
     @Test
-    fun `MORE lists the whole slate, says which are on, on the row, movable, and which can go on the row`() {
+    fun `MORE lists the whole library, says which are on, on the row, movable, and which can go on the row`() {
         val idle = PedalSlate.more(PedalSlate.DEFAULT, null, null)
         assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), idle.map { it.word })
+        assertEquals(Pedals.gated().map { it.word }, idle.map { it.word }, "MORE is the library's gated entries, boards included once one is gated")
         assertTrue(idle.none { it.on || it.marked || it.canFlip })
+        assertTrue(idle.all { it.inLibrary && it.onSlate })
         assertEquals(listOf("TOUCH", "ROCK"), idle.filter { it.canPutOnRow }.map { it.word })
         assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "FORGE", "DELAY"), idle.filter { it.onRow }.map { it.word })
 
         val b = board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST), PedalBoard.Pick("driven", 1f), PedalBoard.Pick("rig", 0.7f))
         val listed = PedalSlate.more(PedalSlate.DEFAULT, recipeOf(b), "wahed")
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "RIG"), listed.map { it.word }, "an off-slate pick comes last")
+        // RIG after DRIVE takes the amp, so DRIVE is silent and not read as on.
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "RIG"), listed.map { it.word }, "a pick the library does not offer comes last")
         val wah = listed.single { it.word == "WAH" }
         assertTrue(wah.on && wah.marked && wah.canFlip)
         assertEquals(PedalSide.POST, wah.side)
         assertEquals(0.5f, wah.amount)
-        val drive = listed.single { it.word == "DRIVE" }
-        assertTrue(drive.on && !drive.canFlip, "the amp cannot move")
+        assertFalse(listed.single { it.word == "DRIVE" }.on, "DRIVE under RIG's amp is silent, so not lit")
         val rig = listed.single { it.word == "RIG" }
-        assertTrue(rig.on && !rig.onSlate && !rig.canPutOnRow && !rig.canFlip, "a pick off the slate can only come off")
+        assertTrue(rig.on && !rig.inLibrary && !rig.onSlate && !rig.canPutOnRow && !rig.canFlip, "a pick off the library can be moved and taken off, nothing else")
         assertFalse(listed.single { it.word == "FORGE" }.canFlip, "FORGE is off and fixed")
+        val drive = PedalSlate.more(PedalSlate.DEFAULT, recipeOf(board(PedalBoard.Pick("driven", 1f))), null).single { it.word == "DRIVE" }
+        assertTrue(drive.on && !drive.canFlip, "the amp cannot move")
     }
 
     // ---------- the gesture rule ----------
 
     @Test
-    fun `a tap puts a pedal on at the AMT on screen, on its own side, after the ones already on`() {
-        val first = PedalSlate.change(null, PedalSlate.Gesture.Tap("delayed", 0.7f))
-        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("delayed", 0.7f, PedalSide.POST))), first)
-        val second = PedalSlate.change((first as PedalSlate.Change.Render).board, PedalSlate.Gesture.Tap("wahed", 0.4f))
-        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("delayed", 0.7f), PedalBoard.Pick("wahed", 0.4f, PedalSide.PRE))), second)
+    fun `a tap puts a pedal on at 70, on its own side, after the ones already on`() {
+        val first = PedalSlate.change(null, PedalSlate.Gesture.On("delayed"))
+        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("delayed", PadSheet.DEFAULT_AMOUNT, PedalSide.POST))), first)
+        val b = board(PedalBoard.Pick("delayed", 0.3f))
         assertEquals(
-            PedalSlate.Change.Render(board(PedalBoard.Pick("driven", PadSheet.DEFAULT_AMOUNT))),
-            PedalSlate.change(null, PedalSlate.Gesture.Tap("driven", 0f)),
-            "a tap at AMT 0 lands at 70, so it is heard",
+            PedalSlate.Change.Render(board(PedalBoard.Pick("delayed", 0.3f), PedalBoard.Pick("wahed", PadSheet.DEFAULT_AMOUNT, PedalSide.PRE))),
+            PedalSlate.change(b, PedalSlate.Gesture.On("wahed")),
+            "70, not the marked pedal's AMT: setting AMT then tapping must not have moved the old pedal",
         )
-        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("driven", 1f))), PedalSlate.change(null, PedalSlate.Gesture.Tap("driven", 1.2f)))
+        assertEquals(PedalSlate.Change.Same, PedalSlate.change(b, PedalSlate.Gesture.On("delayed")), "a second tap that lands after the first does nothing")
     }
 
     @Test
@@ -297,23 +335,54 @@ class PedalSlateTest {
         val b = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("wahed", 0.4f), PedalBoard.Pick("delayed", 1f))
         assertEquals(
             PedalSlate.Change.Render(board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 1f))),
-            PedalSlate.change(b, PedalSlate.Gesture.Tap("wahed", 0.9f)),
+            PedalSlate.change(b, PedalSlate.Gesture.Off("wahed")),
         )
-        assertEquals(PedalSlate.Change.Clear, PedalSlate.change(board(PedalBoard.Pick("driven", 0.7f)), PedalSlate.Gesture.Tap("driven", 0.7f)))
+        assertEquals(PedalSlate.Change.Clear, PedalSlate.change(board(PedalBoard.Pick("driven", 0.7f)), PedalSlate.Gesture.Off("driven")))
+        assertEquals(PedalSlate.Change.Same, PedalSlate.change(b, PedalSlate.Gesture.Off("touchwahed")))
+        assertEquals(PedalSlate.Change.Same, PedalSlate.change(null, PedalSlate.Gesture.Off("touchwahed")))
         val withRig = board(PedalBoard.Pick("rig", 0.7f), PedalBoard.Pick("wahed", 0.4f))
         assertEquals(
             PedalSlate.Change.Render(board(PedalBoard.Pick("wahed", 0.4f))),
-            PedalSlate.change(withRig, PedalSlate.Gesture.Tap("rig", 0.7f)),
-            "a pick off the slate can still come off",
+            PedalSlate.change(withRig, PedalSlate.Gesture.Off("rig")),
+            "a pick the library does not offer can still come off",
         )
     }
 
     @Test
-    fun `a seventh pedal is refused, and a full board still takes one off`() {
-        val six = PedalBoard(listOf("driven", "compressed", "wahed", "touchwahed", "rockwahed", "forged").map { PedalBoard.Pick(it, 0.7f) })
-        assertEquals(PedalBoard.MAX_PICKS, six.picks.size)
-        assertEquals(PedalSlate.Change.Full, PedalSlate.change(six, PedalSlate.Gesture.Tap("delayed", 0.7f)))
-        assertIs<PedalSlate.Change.Render>(PedalSlate.change(six, PedalSlate.Gesture.Tap("forged", 0.7f)))
+    fun `one wah section per side - TOUCH on a pad with WAH replaces it, and says so`() {
+        val b = board(PedalBoard.Pick("wahed", 0.5f), PedalBoard.Pick("delayed", 0.7f))
+        assertEquals(
+            PedalSlate.Change.Render(board(PedalBoard.Pick("delayed", 0.7f), PedalBoard.Pick("touchwahed", PadSheet.DEFAULT_AMOUNT)), replaced = listOf("wahed")),
+            PedalSlate.change(b, PedalSlate.Gesture.On("touchwahed")),
+        )
+        // On the other side it is a second wah, and both play.
+        val post = board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST))
+        assertEquals(
+            PedalSlate.Change.Render(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST), PedalBoard.Pick("touchwahed", PadSheet.DEFAULT_AMOUNT))),
+            PedalSlate.change(post, PedalSlate.Gesture.On("touchwahed")),
+        )
+    }
+
+    /** Six heard at once: RIG (a board, from the CLI) at the amp, SUSTAIN, WAH before the amp, TOUCH after it, FORGE and DELAY. */
+    private val sixHeard = PedalBoard(
+        listOf(
+            PedalBoard.Pick("rig", 0.7f), PedalBoard.Pick("compressed", 0.7f), PedalBoard.Pick("wahed", 0.7f),
+            PedalBoard.Pick("touchwahed", 0.7f, PedalSide.POST), PedalBoard.Pick("forged", 0.7f), PedalBoard.Pick("delayed", 0.7f),
+        ),
+    )
+
+    @Test
+    fun `a seventh pedal is refused, a pedal that replaces one fits, and a full board still takes one off`() {
+        assertEquals(PedalBoard.MAX_PICKS, sixHeard.picks.size)
+        assertEquals(sixHeard, PedalSlate.boardOf(recipeOf(sixHeard)), "all six are heard")
+        // DRIVE takes RIG's amp, but RIG keeps its compressor and slapback: seven heard, one too many.
+        assertEquals(PedalSlate.Change.Full, PedalSlate.change(sixHeard, PedalSlate.Gesture.On("driven")))
+        // ROCK before the amp replaces WAH: still six, so it fits.
+        val rock = PedalSlate.change(sixHeard, PedalSlate.Gesture.On("rockwahed"))
+        assertIs<PedalSlate.Change.Render>(rock)
+        assertEquals(listOf("wahed"), rock.replaced)
+        assertEquals(PedalBoard.MAX_PICKS, rock.board.picks.size)
+        assertIs<PedalSlate.Change.Render>(PedalSlate.change(sixHeard, PedalSlate.Gesture.Off("forged")))
     }
 
     @Test
@@ -336,11 +405,20 @@ class PedalSlateTest {
     }
 
     @Test
-    fun `a movable pick flips sides, and the amp and FORGE refuse`() {
+    fun `a movable pick flips sides and goes last there, replacing a wah it now silences, and the amp and FORGE refuse`() {
         val b = board(PedalBoard.Pick("wahed", 0.4f), PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("forged", 0.5f))
         val flipped = PedalSlate.change(b, PedalSlate.Gesture.Flip("wahed"))
-        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("wahed", 0.4f, PedalSide.POST), PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("forged", 0.5f))), flipped)
-        assertEquals(PedalSlate.Change.Render(b), PedalSlate.change((flipped as PedalSlate.Change.Render).board, PedalSlate.Gesture.Flip("wahed")))
+        assertEquals(PedalSlate.Change.Render(board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("forged", 0.5f), PedalBoard.Pick("wahed", 0.4f, PedalSide.POST))), flipped)
+        assertEquals(
+            PedalSlate.Change.Render(board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("forged", 0.5f), PedalBoard.Pick("wahed", 0.4f))),
+            PedalSlate.change((flipped as PedalSlate.Change.Render).board, PedalSlate.Gesture.Flip("wahed")),
+        )
+        // WAH flipped onto TOUCH's side wins there, so TOUCH comes off rather than stay lit and silent.
+        val apart = board(PedalBoard.Pick("wahed", 0.4f), PedalBoard.Pick("touchwahed", 0.6f, PedalSide.POST))
+        assertEquals(
+            PedalSlate.Change.Render(board(PedalBoard.Pick("wahed", 0.4f, PedalSide.POST)), replaced = listOf("touchwahed")),
+            PedalSlate.change(apart, PedalSlate.Gesture.Flip("wahed")),
+        )
         assertFailsWith<IllegalArgumentException> { PedalSlate.change(b, PedalSlate.Gesture.Flip("driven")) }
         assertFailsWith<IllegalArgumentException> { PedalSlate.change(b, PedalSlate.Gesture.Flip("forged")) }
     }
@@ -348,9 +426,8 @@ class PedalSlateTest {
     @Test
     fun `the rule refuses in words what no screen should send`() {
         val b = board(PedalBoard.Pick("driven", 0.7f))
-        assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.Tap("rig", 0.7f)) }
-        assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.Tap("sparkled", 0.7f)) }
-        assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.Tap("driven", Float.NaN)) }
+        assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.On("rig")) }
+        assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.On("sparkled")) }
         assertFailsWith<IllegalArgumentException> { PedalSlate.change(b, PedalSlate.Gesture.Amount("wahed", 0.5f)) }
         assertFailsWith<IllegalArgumentException> { PedalSlate.change(b, PedalSlate.Gesture.Amount("driven", Float.NaN)) }
         assertFailsWith<IllegalArgumentException> { PedalSlate.change(null, PedalSlate.Gesture.Amount("driven", 0.5f)) }
@@ -370,10 +447,10 @@ class PedalSlateTest {
         m.save()
         val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
 
-        val on = PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("driven", 0.7f))
+        val on = PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven"), m.pad(1)!!.sampleFile)
         assertEquals(PedalSlate.Landed.Applied(board(PedalBoard.Pick("driven", 0.7f)), stacked = false), on)
-        val both = PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("delayed", 1f))
-        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 1f))
+        val both = PedalSlate.land(m, 1, PedalSlate.Gesture.On("delayed"))
+        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 0.7f))
         assertEquals(PedalSlate.Landed.Applied(expected, stacked = false), both)
         m.save()
         assertEquals(expected, PadSheet.readPedals(m.pad(1)!!.recipe), "the recipe is the whole board")
@@ -381,15 +458,19 @@ class PedalSlateTest {
         m.save()
         assertContentEquals(samples(m, dir, 2), samples(m, dir, 1), "DRIVE then DELAY is the board over the original, not DELAY over DRIVE's audio")
 
+        // A second tap that reaches the door after the first changes nothing at all.
+        val bytes = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        assertEquals(PedalSlate.Landed.Unchanged, PedalSlate.land(m, 1, PedalSlate.Gesture.On("delayed")))
+        assertContentEquals(bytes, File(dir, m.pad(1)!!.sampleFile).readBytes())
+
         // DELAY off: DRIVE alone, from the original, exactly as a one-pick board.
-        val off = PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("delayed", 1f))
+        val off = PedalSlate.land(m, 1, PedalSlate.Gesture.Off("delayed"))
         assertEquals(PedalSlate.Landed.Applied(board(PedalBoard.Pick("driven", 0.7f)), stacked = false), off)
         m.pedalPad(3, board(PedalBoard.Pick("driven", 0.7f)))
         m.save()
         assertContentEquals(samples(m, dir, 3), samples(m, dir, 1), "taking DELAY off left the drive exactly as before")
 
-        val cleared = PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("driven", 0.7f))
-        assertEquals(PedalSlate.Landed.Cleared, cleared)
+        assertEquals(PedalSlate.Landed.Cleared, PedalSlate.land(m, 1, PedalSlate.Gesture.Off("driven")))
         m.save()
         assertNull(m.pad(1)!!.recipe, "the pad is itself again")
         assertContentEquals(original, File(dir, m.pad(1)!!.sampleFile).readBytes(), "the original, byte for byte")
@@ -404,7 +485,7 @@ class PedalSlateTest {
         m.assign(2, snare, DrumClass.SNARE)
         m.save()
         val original = File(dir, m.pad(1)!!.sampleFile).readBytes()
-        PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("compressed", 0.7f))
+        PedalSlate.land(m, 1, PedalSlate.Gesture.On("compressed"))
         assertEquals(
             PedalSlate.Landed.Applied(board(PedalBoard.Pick("compressed", 0.3f)), stacked = false),
             PedalSlate.land(m, 1, PedalSlate.Gesture.Amount("compressed", 0.3f)),
@@ -425,8 +506,9 @@ class PedalSlateTest {
         for (slot in 1..4) m.assign(slot, snare, DrumClass.SNARE)
         m.save()
         m.characterPad(1, "driven", 0.7f)
-        val grown = PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("wahed", 0.5f))
-        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("wahed", 0.5f, PedalSide.PRE))
+        assertEquals(board(PedalBoard.Pick("driven", 0.7f)), PedalSlate.boardOf(m.pad(1)!!.recipe), "the chip's own recipe reads as today's DRIVE")
+        val grown = PedalSlate.land(m, 1, PedalSlate.Gesture.On("wahed"))
+        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("wahed", 0.7f, PedalSide.PRE))
         assertEquals(PedalSlate.Landed.Applied(expected, stacked = false), grown)
         m.pedalPad(2, expected)
         m.save()
@@ -435,7 +517,7 @@ class PedalSlateTest {
         m.eraPad(3, PadSheet.eraFor("CRUSH")!!, 0.5f)
         assertEquals(
             PedalSlate.Landed.Applied(board(PedalBoard.Pick("delayed", 0.7f)), stacked = false),
-            PedalSlate.land(m, 3, PedalSlate.Gesture.Tap("delayed", 0.7f)),
+            PedalSlate.land(m, 3, PedalSlate.Gesture.On("delayed")),
         )
         m.pedalPad(4, board(PedalBoard.Pick("delayed", 0.7f)))
         m.save()
@@ -451,22 +533,22 @@ class PedalSlateTest {
         m.assign(1, snare, DrumClass.SNARE)
         m.assign(2, snare, DrumClass.SNARE)
         m.save()
-        PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("driven", 0.7f))
+        PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven"))
         m.eraPad(2, PadSheet.eraFor("CRUSH")!!, 0.5f)
         m.save()
         m.emptyBin()
         val before = File(dir, m.pad(1)!!.sampleFile).readBytes()
-        assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("delayed", 0.7f)))
-        assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("driven", 0.7f)), "nor can DRIVE come off: it is in the audio")
+        assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.On("delayed")))
+        assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.Off("driven")), "nor can DRIVE come off: it is in the audio")
         assertContentEquals(before, File(dir, m.pad(1)!!.sampleFile).readBytes(), "nothing touched")
         assertEquals(board(PedalBoard.Pick("driven", 0.7f)), PadSheet.readPedals(m.pad(1)!!.recipe))
 
-        val stacked = PedalSlate.land(m, 2, PedalSlate.Gesture.Tap("delayed", 0.7f))
+        val stacked = PedalSlate.land(m, 2, PedalSlate.Gesture.On("delayed"))
         assertEquals(PedalSlate.Landed.Applied(board(PedalBoard.Pick("delayed", 0.7f)), stacked = true), stacked)
     }
 
     @Test
-    fun `a printed board pad, ghosts after the treatment and a full board each refuse without touching the pad`() {
+    fun `a printed board pad, a changed sample, ghosts after the treatment and a full board each refuse without touching the pad`() {
         val dir = File(temp, "Refuse")
         val m = KitBuilderModel.create("Refuse", dir)
         val snare = DrumSynth.snare()
@@ -476,22 +558,25 @@ class PedalSlateTest {
         BoardSheet.apply(m, 1, 0.7f, BoardType.WIDE)
         m.save()
         val wide = File(dir, m.pad(1)!!.sampleFile).readBytes()
-        assertEquals(PedalSlate.Landed.Printed("WIDE"), PedalSlate.land(m, 1, PedalSlate.Gesture.Tap("driven", 0.7f)))
+        assertEquals(PedalSlate.Landed.Printed("WIDE"), PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")))
         assertContentEquals(wide, File(dir, m.pad(1)!!.sampleFile).readBytes())
 
-        PedalSlate.land(m, 2, PedalSlate.Gesture.Tap("driven", 0.7f))
+        val untouched = m.pad(2)!!
+        assertEquals(PedalSlate.Landed.Gone, PedalSlate.land(m, 2, PedalSlate.Gesture.On("driven"), sampleFile = "not-this-one.wav"))
+        assertEquals(untouched, m.pad(2), "the screen's pad is gone; nothing touched")
+
+        PedalSlate.land(m, 2, PedalSlate.Gesture.On("driven"))
         m.addGhostLayers(2)
         m.save()
         val ghosted = m.pad(2)!!
-        assertEquals(PedalSlate.Landed.GhostsPostdate, PedalSlate.land(m, 2, PedalSlate.Gesture.Tap("delayed", 0.7f)))
+        assertEquals(PedalSlate.Landed.GhostsPostdate, PedalSlate.land(m, 2, PedalSlate.Gesture.On("delayed")))
         assertEquals(ghosted, m.pad(2), "nothing touched")
 
-        val six = PedalBoard(listOf("driven", "compressed", "wahed", "touchwahed", "rockwahed", "forged").map { PedalBoard.Pick(it, 0.7f) })
-        m.pedalPad(3, six)
+        m.pedalPad(3, sixHeard)
         m.save()
         val full = File(dir, m.pad(3)!!.sampleFile).readBytes()
         val binned = m.binContents().size
-        assertEquals(PedalSlate.Landed.Full, PedalSlate.land(m, 3, PedalSlate.Gesture.Tap("delayed", 0.7f)))
+        assertEquals(PedalSlate.Landed.Full, PedalSlate.land(m, 3, PedalSlate.Gesture.On("driven")))
         assertContentEquals(full, File(dir, m.pad(3)!!.sampleFile).readBytes())
         assertEquals(binned, m.binContents().size, "nothing restored, nothing binned")
     }
@@ -500,21 +585,33 @@ class PedalSlateTest {
 
     @Test
     fun `every landing says what happened, in the chip's word`() {
-        val tap = PedalSlate.Gesture.Tap("delayed", 0.7f)
+        val on = PedalSlate.Gesture.On("delayed")
+        val off = PedalSlate.Gesture.Off("delayed")
         val withDelay = PedalSlate.Landed.Applied(board(PedalBoard.Pick("delayed", 0.7f)), stacked = false)
-        val withoutDelay = PedalSlate.Landed.Applied(board(PedalBoard.Pick("driven", 0.7f)), stacked = false)
-        assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(tap, withDelay, "A01"))
-        assertEquals(Copy.treatedStacked("DELAY", "A01"), PedalSlate.toast(tap, withDelay.copy(stacked = true), "A01"))
-        assertEquals("DELAY OFF A01. THE OTHER PEDALS PLAY ON.", PedalSlate.toast(tap, withoutDelay, "A01"))
+        val withoutDelay = PedalSlate.Landed.Applied(board(PedalBoard.Pick("compressed", 0.7f), PedalBoard.Pick("driven", 0.7f)), stacked = false)
+        assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(on, withDelay, "A01"))
+        assertEquals(Copy.treatedStacked("DELAY", "A01"), PedalSlate.toast(on, withDelay.copy(stacked = true), "A01"))
+        assertEquals("DELAY OFF A01. AMT NOW MOVES DRIVE.", PedalSlate.toast(off, withoutDelay, "A01"))
+        assertEquals("DELAY OFF A01. AMT NOW MOVES DRIVE.", PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0f), withoutDelay, "A01"))
         assertEquals(Copy.treated("DELAY", "A01"), PedalSlate.toast(PedalSlate.Gesture.Amount("delayed", 0.4f), withDelay, "A01"))
+        val touch = PedalSlate.Landed.Applied(board(PedalBoard.Pick("touchwahed", 0.7f)), stacked = false, replaced = listOf("wahed"))
+        assertEquals("TOUCH ON A01 IN PLACE OF WAH. ORIGINAL SLEEPS IN THE BIN.", PedalSlate.toast(PedalSlate.Gesture.On("touchwahed"), touch, "A01"))
         val flip = PedalSlate.Gesture.Flip("wahed")
         assertEquals("WAH NOW AFTER THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false), "A01"))
         assertEquals("WAH NOW BEFORE THE AMP ON A01.", PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f)), false), "A01"))
-        assertEquals(Copy.unTreated("A01"), PedalSlate.toast(tap, PedalSlate.Landed.Cleared, "A01"))
-        assertEquals("A BOARD HOLDS 6 PEDALS. TAP ONE OFF FIRST.", PedalSlate.toast(tap, PedalSlate.Landed.Full, "A01"))
-        assertEquals("REMOVE WIDE BEFORE ADDING PEDALS.", PedalSlate.toast(tap, PedalSlate.Landed.Printed("WIDE"), "A01"))
-        assertEquals(Copy.RETREAT_REFUSED, PedalSlate.toast(tap, PedalSlate.Landed.GhostsPostdate, "A01"))
-        assertEquals(Copy.PEDALS_NOT_BINNED, PedalSlate.toast(tap, PedalSlate.Landed.NotBinned, "A01"))
-        assertEquals("TOUCH ON THE ROW IN EVERY KIT. FORGE WAITS BEHIND MORE.", Copy.rowSwapped("TOUCH", "FORGE"))
+        assertEquals(
+            "WAH NOW AFTER THE AMP ON A01, IN PLACE OF TOUCH.",
+            PedalSlate.toast(flip, PedalSlate.Landed.Applied(board(PedalBoard.Pick("wahed", 0.5f, PedalSide.POST)), false, listOf("touchwahed")), "A01"),
+        )
+        assertEquals(Copy.unTreated("A01"), PedalSlate.toast(on, PedalSlate.Landed.Cleared, "A01"))
+        assertNull(PedalSlate.toast(on, PedalSlate.Landed.Unchanged, "A01"), "nothing happened; nothing to say")
+        assertEquals(Copy.BIN_ITEM_GONE, PedalSlate.toast(on, PedalSlate.Landed.Gone, "A01"))
+        assertEquals("A PAD HOLDS 6 PEDALS. TAP ONE OFF FIRST.", PedalSlate.toast(on, PedalSlate.Landed.Full, "A01"))
+        assertEquals("REMOVE WIDE BEFORE ADDING PEDALS.", PedalSlate.toast(on, PedalSlate.Landed.Printed("WIDE"), "A01"))
+        assertEquals(Copy.RETREAT_REFUSED, PedalSlate.toast(on, PedalSlate.Landed.GhostsPostdate, "A01"))
+        assertEquals(Copy.PEDALS_NOT_BINNED, PedalSlate.toast(on, PedalSlate.Landed.NotBinned, "A01"))
+        assertTrue("VERSIONS" !in Copy.PEDALS_NOT_BINNED, "VERSIONS cannot bring back audio the bin let go of")
+        assertEquals("TOUCH ON THE ROW IN EVERY KIT. FORGE MOVES BEHIND MORE.", Copy.rowSwapped("TOUCH", "FORGE"))
+        assertEquals("NOW TAP THE ROW CHIP TO SWAP FOR TOUCH.", Copy.putOnRowPrompt("TOUCH"))
     }
 }
