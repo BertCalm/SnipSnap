@@ -90,6 +90,7 @@ internal object ScannedChainModelV2 {
         private val force1 = DoubleArray(MASSES)
         private val drive0 = DoubleArray(MASSES)
         private val drive1 = DoubleArray(MASSES)
+        private val bondForces = DoubleArray(MASSES)
         private val phases = driver.phases
         private val driveShape = driver.shape
         private val omega = 2 * PI * config.mechanicalHz * config.motion
@@ -101,6 +102,16 @@ internal object ScannedChainModelV2 {
         private val dt = 1.0 / config.physicsRate
         private val halfDamping = exp(-config.dampingPerSecond * config.motion * dt * .5)
         private val immobile = config.frozen || config.motion == 0f
+        private val driveLength = (config.seconds - config.releaseSeconds).toDouble().coerceIn(.05, 2.0)
+        private val driveAngularRate = 2 * PI * config.driveHz * config.motion
+        private val secondaryDriveAngularRate = 2 * PI * config.driveHz * config.motion * .618
+        private val driveAmplitude = (headroom.sourceDriveScale * headroom.initialGain * omega * omega
+            * config.drive * config.velocity)
+        // These bounds depend on the saved model and controls, never on moving state.
+        private val tangentBound = k * (1 + 1.125 * stiffnessGain)
+        private val omegaSquaredBound = 4 * tangentBound + center
+        private val courantBound = omegaSquaredBound * dt * dt / 4
+        private val modeHzBound = sqrt(omegaSquaredBound) / (2 * PI)
         var steps = 0; private set
         var time = 0.0; private set
         var dampingLoss = 0.0; private set
@@ -125,25 +136,25 @@ internal object ScannedChainModelV2 {
         }
 
         private fun forces(state: DoubleArray, t: Double, forces: DoubleArray, external: DoubleArray) {
-            val driveLength = (config.seconds - config.releaseSeconds).toDouble().coerceIn(.05, 2.0)
             val driveWindow = if (!immobile && t < driveLength) sin(PI * t / driveLength).let { it * it } else 0.0
-            val driveSignal = (sin(2 * PI * config.driveHz * config.motion * t + phases[0])
-                + .22 * sin(2 * PI * config.driveHz * config.motion * .618 * t + phases[1]))
-            val amplitude = (headroom.sourceDriveScale * headroom.initialGain * omega * omega
-                * config.drive * config.velocity * driveWindow * driveSignal)
+            val driveSignal = (sin(driveAngularRate * t + phases[0])
+                + .22 * sin(secondaryDriveAngularRate * t + phases[1]))
+            val amplitude = driveAmplitude * driveWindow * driveSignal
+            // Each right-hand bond is also the next mass's left-hand bond. Reuse its
+            // identical subtraction and spring evaluation without changing force order.
             for (i in 0 until MASSES) {
                 val right = state[(i + 1) % MASSES] - state[i]
-                val left = state[i] - state[(i + MASSES - 1) % MASSES]
+                bondForces[i] = ScannedChainHeadroom.spring(k, stiffnessGain, referenceStrain, right)
+            }
+            for (i in 0 until MASSES) {
                 external[i] = amplitude * driveShape[i]
-                forces[i] = (ScannedChainHeadroom.spring(k, stiffnessGain, referenceStrain, right)
-                    - ScannedChainHeadroom.spring(k, stiffnessGain, referenceStrain, left)
+                forces[i] = (bondForces[i] - bondForces[(i + MASSES - 1) % MASSES]
                     - center * (state[i] - original[i]) + external[i])
             }
         }
 
         private fun measureBounds(state: DoubleArray) {
             // dF/dr <= k*(1+1.125*g) for every displacement, not just at initialization.
-            val tangent = k * (1 + 1.125 * stiffnessGain)
             for (i in 0 until MASSES) {
                 val displacement = abs(state[i])
                 check(state[i].isFinite() && displacement <= STATE_LIMIT) {
@@ -152,13 +163,10 @@ internal object ScannedChainModelV2 {
                 maxDisplacement = max(maxDisplacement, displacement)
             }
             // Gershgorin bound for the periodic spring tangent matrix plus centering springs.
-            val omegaSquaredBound = 4 * tangent + center
-            val courant = omegaSquaredBound * dt * dt / 4
-            maxCourant = max(maxCourant, courant)
-            check(courant < COURANT_LIMIT) { "scanned-chain conservative Verlet stability bound failed: $courant" }
-            val modeHz = sqrt(omegaSquaredBound) / (2 * PI)
-            maxLinearizedModeHz = max(maxLinearizedModeHz, modeHz)
-            check(immobile || modeHz < config.snapshotRate * .35) {
+            maxCourant = max(maxCourant, courantBound)
+            check(courantBound < COURANT_LIMIT) { "scanned-chain conservative Verlet stability bound failed: $courantBound" }
+            maxLinearizedModeHz = max(maxLinearizedModeHz, modeHzBound)
+            check(immobile || modeHzBound < config.snapshotRate * .35) {
                 "snapshot rate has insufficient headroom for the chain's linearized mechanical modes"
             }
         }
@@ -221,14 +229,19 @@ internal object ScannedChainModelV2 {
         fun project(into: Projection): Projection {
             val a = into.cosine; val b = into.sine
             val av = into.cosineVelocity; val bv = into.sineVelocity
-            a.fill(0.0); b.fill(0.0); av.fill(0.0); bv.fill(0.0)
+            val positions = chain.x; val velocities = chain.v
             for (h in 0 until harmonics) {
+                val cosines = basisCos[h]; val sines = basisSin[h]
+                // Keep each dot product's original sequential addition order. Locals
+                // avoid four array read/write pairs per mass and remain render-private.
+                var cosine = 0.0; var sine = 0.0
+                var cosineVelocity = 0.0; var sineVelocity = 0.0
                 for (i in 0 until MASSES) {
-                    a[h] += chain.x[i] * basisCos[h][i]; b[h] += chain.x[i] * basisSin[h][i]
-                    av[h] += chain.v[i] * basisCos[h][i]; bv[h] += chain.v[i] * basisSin[h][i]
+                    cosine += positions[i] * cosines[i]; sine += positions[i] * sines[i]
+                    cosineVelocity += velocities[i] * cosines[i]; sineVelocity += velocities[i] * sines[i]
                 }
-                a[h] *= 2.0 / MASSES; b[h] *= 2.0 / MASSES
-                av[h] *= 2.0 / MASSES; bv[h] *= 2.0 / MASSES
+                a[h] = cosine * (2.0 / MASSES); b[h] = sine * (2.0 / MASSES)
+                av[h] = cosineVelocity * (2.0 / MASSES); bv[h] = sineVelocity * (2.0 / MASSES)
             }
             return into
         }
@@ -262,15 +275,22 @@ internal object ScannedChainModelV2 {
             val f2 = fraction * fraction; val f3 = f2 * fraction
             val h00 = 2 * f3 - 3 * f2 + 1; val h10 = f3 - 2 * f2 + fraction
             val h01 = -2 * f3 + 3 * f2; val h11 = f3 - f2
+            val h10dt = h10 * snapshotDt; val h11dt = h11 * snapshotDt
+            val leftCosine = left.cosine; val leftSine = left.sine
+            val leftCosineVelocity = left.cosineVelocity; val leftSineVelocity = left.sineVelocity
+            val rightCosine = right.cosine; val rightSine = right.sine
+            val rightCosineVelocity = right.cosineVelocity; val rightSineVelocity = right.sineVelocity
             var sample = 0.0
             for (h in 0 until harmonics) {
-                val a = (h00 * left.cosine[h] + h10 * snapshotDt * left.cosineVelocity[h]
-                    + h01 * right.cosine[h] + h11 * snapshotDt * right.cosineVelocity[h])
-                val b = (h00 * left.sine[h] + h10 * snapshotDt * left.sineVelocity[h]
-                    + h01 * right.sine[h] + h11 * snapshotDt * right.sineVelocity[h])
-                sample += a * cosPhase[h] + b * sinPhase[h]
-                val nextCos = cosPhase[h] * cosStep[h] - sinPhase[h] * sinStep[h]
-                sinPhase[h] = sinPhase[h] * cosStep[h] + cosPhase[h] * sinStep[h]
+                val a = (h00 * leftCosine[h] + h10dt * leftCosineVelocity[h]
+                    + h01 * rightCosine[h] + h11dt * rightCosineVelocity[h])
+                val b = (h00 * leftSine[h] + h10dt * leftSineVelocity[h]
+                    + h01 * rightSine[h] + h11dt * rightSineVelocity[h])
+                val phaseCosine = cosPhase[h]; val phaseSine = sinPhase[h]
+                val stepCosine = cosStep[h]; val stepSine = sinStep[h]
+                sample += a * phaseCosine + b * phaseSine
+                val nextCos = phaseCosine * stepCosine - phaseSine * stepSine
+                sinPhase[h] = phaseSine * stepCosine + phaseCosine * stepSine
                 cosPhase[h] = nextCos
             }
             val attack = if (config.attackSeconds == 0f) 1.0 else smooth(time / config.attackSeconds)
