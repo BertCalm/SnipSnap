@@ -61,7 +61,8 @@ object SynthKits {
         val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }
         return voices.mapIndexed { index, voice ->
             val scaleIndex = when { index < 8 -> index; index < 12 -> index - 8; else -> index - 12 }
-            val patch = ScannedChainPresets.forVoice(voice).single().copy(name = "Chain ${index + 1}", midi = 48 + PENTATONIC[scaleIndex])
+            // Keep the starter's original default sounds as the editable preset bank grows.
+            val patch = ScannedChainPatch("Chain ${index + 1}", voice, midi = 48 + PENTATONIC[scaleIndex])
             pad(patch, DrumClass.TONAL)
         }
     }

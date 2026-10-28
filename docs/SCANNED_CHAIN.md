@@ -17,7 +17,22 @@ starting points.
    SAVE AS PRESET retains the patch for another kit; the recall control loads a
    scanned-chain pad's settings back into the editor.
 
-The three presets are Spring Pluck, Metallic Trace and Evolving Bloom.
+The original starting points are Spring Pluck, Metallic Trace and Evolving Bloom.
+Six more presets provide shorter plucks, metallic accents and evolving bodies:
+
+| Voice | Preset | Starting role |
+| --- | --- | --- |
+| PLUCK | Short Pluck | A short rhythmic note at C4. |
+| PLUCK | Low Pluck | A lower pluck at C3 with a longer release. |
+| METAL | Bright Strike | A short high accent at C5. |
+| METAL | Long Ring | A less damped metallic note at C4. |
+| BLOOM | Slow Bloom | A longer C3 swell with a softened onset. |
+| BLOOM | Round Bloom | A C4 bloom starting from an authored sine shape. |
+
+These are complete editable recipes, including their note, length, envelope and
+shape. Their roles are proposed for listening; the original three presets and
+the existing 16-pad starter keep their settings.
+
 BLOOM uses the quieter bright strike established in the listening
 experiment, giving its delayed low-mode force room to emerge. New patches use
 the calibrated model-two response. Recalled model-one patches retain their
@@ -106,6 +121,18 @@ owned samples. Exact repeats and preview-to-pad placement can reuse the dry
 clip, with effects applied separately. Physical edits still require a fresh
 render; this cache does not claim fast knob-to-audio response on a phone.
 
+The responsiveness pass reduces repeated arithmetic in model two without
+changing its saved response. In matched desktop JVM measurements, fresh
+three-second C4 renders fell from about 500–512 ms to 271–283 ms. Exact raw and
+finished PCM, states, diagnostics and headroom match an untouched 27-case
+baseline. These are host render times, excluding the editor's 100 ms debounce;
+phone latency remains unmeasured. See the
+[performance report](SCANNED_CHAIN_PERFORMANCE.md) for method and reproduction.
+
+Rapid editor changes cancel the previous interruptible render. Only the active
+request may replace the preview, report a render error or clear its loading
+indicator. Playback and SEND TO PAD still use the complete finished sample.
+
 ## Why it is built this way
 
 - Saving the coordinates makes a pad independent of its original recording.
@@ -121,6 +148,8 @@ The original [listening experiment](SCANNED_CHAIN_EXPERIMENT.md), audited
 prototype and its published recordings remain separate from the production
 model. The original comparison is still available at the
 [private audition](https://snipsnap-scanned-chain-audition.bertcalm.chatgpt.site).
+The [refined listening page](https://snipsnap-scanned-chain-refined.bertcalm.chatgpt.site)
+provides BEND/BLOOM comparisons and the current preset auditions.
 
 Production checks cover saved-shape ownership, version and bounds rejection,
 exact patch/recipe recall, deterministic synthesis, note and velocity edits,
