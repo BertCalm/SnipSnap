@@ -152,7 +152,7 @@ Reordering within a side (saved, not honoured); drag gestures; a user-saved boar
 | Claim | Status | Evidence |
 |---|---|---|
 | Any subset of sections may be set on one `FxChain`; `withSection`, `section`, `SECTION_NAMES`, `macrosOf`, `MAX_CHAIN_TAIL_SECONDS` exist | verified | `FxChain.kt:49-71, 150-230` |
-| `FxChain.process` runs TRANSPORT and ARRIVAL, then the rack, then caps the tail at 1.0 s with a 10 ms fade (since 2026-10-28 a 300 ms raised cosine, `FxChain.capTail`, shared with the board) | verified | `FxChain.kt:88-122` |
+| `FxChain.process` runs TRANSPORT and ARRIVAL, then the rack, then caps the tail at 1.0 s with a 10 ms fade (since 2026-10-28 a 300 ms raised cosine, `FxChain.capTail`, shared with the board) | verified | `FxChain.kt:88-122` at the time; now `FxChain.process`, `head`, `finish` and the companion's `capTail` |
 | `Treatments.EXTRA`, `chain`, `fade`, `apply`, `endFaded`, `PRE_AMP_FADE` keyed on `"driven"` | verified | `Treatments.kt` |
 | `PadRecipe(patch, fx, treatment, amount, alias, board, terminalFadeMs)`, `VERSION = 2`, reads named keys only | verified | `PadRecipe.kt:21-60, 110-146` |
 | `board` is WIDE's (`BoardRecipe`, `BoardType.WIDE`), the sheet wraps it as `boardPad`, a WIDE pad refuses chips | verified | `BoardRecipe.kt`, `BoardSheet.kt:153`, `PadSheetScreen.kt:902`, `docs/WIDE.md` |

@@ -81,14 +81,7 @@ data class PedalBoard(val picks: List<Pick>) {
 
     fun process(snip: Snip): Snip {
         if (isBypass || snip.frameCount == 0) return snip
-        var out = snip
-        chainFor(PedalSide.PRE)?.let { out = it.process(out) }
-        chainFor(PedalSide.AMP)?.let { amp ->
-            val full = owner(PedalSide.AMP, "valve")?.entry?.chain ?: amp
-            out = amp.process(Treatments.endFaded(out, amp, full))
-        }
-        chainFor(PedalSide.POST)?.let { out = it.process(out) }
-        return FxChain.capTail(snip, out)
+        return render(snip, null)
     }
 
     /**
@@ -102,15 +95,32 @@ data class PedalBoard(val picks: List<Pick>) {
     fun processAround(dry: Snip, landing: FxChain?): Snip {
         if (landing == null || landing.isBypass) return process(dry)
         if (isBypass || dry.frameCount == 0) return landing.process(dry)
+        return render(dry, landing)
+    }
+
+    /**
+     * The passes in order (PRE, the pre-amp end fade and AMP, [landing] when there is one, POST), then the board's one
+     * tail budget. The budget runs from the sound as the passes' own TRANSPORT and ARRIVAL stages leave it, the rule
+     * [FxChain.process] keeps for one pass: a landing chain that pitches the pad down or swells in front of the hit makes
+     * the note longer, and that length is the note, not tail. Measured from [dry] alone (as it was until 2026-10-28) the
+     * cut, now a 300 ms fade, could land on the note.
+     */
+    private fun render(dry: Snip, landing: FxChain?): Snip {
         var out = dry
-        chainFor(PedalSide.PRE)?.let { out = it.process(out) }
+        var grown = 0
+        fun pass(chain: FxChain, input: Snip): Snip {
+            val head = chain.head(input)
+            grown += head.frameCount - input.frameCount
+            return chain.finish(head)
+        }
+        chainFor(PedalSide.PRE)?.let { out = pass(it, out) }
         chainFor(PedalSide.AMP)?.let { amp ->
             val full = owner(PedalSide.AMP, "valve")?.entry?.chain ?: amp
-            out = amp.process(Treatments.endFaded(out, amp, full))
+            out = pass(amp, Treatments.endFaded(out, amp, full))
         }
-        out = landing.process(out)
-        chainFor(PedalSide.POST)?.let { out = it.process(out) }
-        return FxChain.capTail(dry, out)
+        landing?.let { out = pass(it, out) }
+        chainFor(PedalSide.POST)?.let { out = pass(it, out) }
+        return FxChain.capTail(dry.frameCount + grown, out)
     }
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(

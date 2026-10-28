@@ -97,15 +97,20 @@ data class FxChain(
     val isBypass: Boolean
         get() = !reverse && SECTIONS.all { it.get(this) == null }
 
-    fun process(snip: Snip): Snip {
-        // TRANSPORT then ARRIVAL: the tail budget is measured from what they leave behind.
+    fun process(snip: Snip): Snip = finish(head(snip))
+
+    /** [snip] through the TRANSPORT and ARRIVAL stages only: the sound the tail budget is measured from. */
+    internal fun head(snip: Snip): Snip {
         var head = snip
         for (sec in SECTIONS) {
             if (sec.stage == Stage.RACK) continue
             sec.get(this)?.let { head = sec.run(head, it) }
         }
-        return capTail(head, processRest(head))
+        return head
     }
+
+    /** The rack over a [head] (what [head] left), then the tail budget measured from it. */
+    internal fun finish(head: Snip): Snip = capTail(head, processRest(head))
 
     private fun processRest(snip: Snip): Snip {
         var s = snip
@@ -166,19 +171,24 @@ data class FxChain(
          * How long the budget's cut fades, seconds, on a raised cosine. A trail still sounding at the cut fades away
          * over its last 300 ms instead of stopping in 10 ms: the owner heard DELAY's trail stop on held notes at the DELAY confirm
          * listen (2026-10-26) and chose this fade for every pad (2026-10-27; docs/superpowers/specs/2026-10-22-delay-head-design.md).
-         * It is shorter than [MAX_CHAIN_TAIL_SECONDS], so it always falls inside the added tail, never on the sound itself.
+         * The fade is the last 300 ms of the one-second budget, measured from the sound as TRANSPORT and ARRIVAL leave
+         * it, so it lands after the sound ends unless a RACK section moves the sound later than 0.7 s: MOTION's START
+         * can, by up to 0.75 s, which puts at most the sound's last 50 ms in the fade, under 1 dB down.
          */
         const val CAP_FADE_SECONDS = 0.3f
+
+        /** [capTail] measured from [input]'s length. */
+        internal fun capTail(input: Snip, output: Snip): Snip = capTail(input.frameCount, output)
 
         /**
          * The tail budget, one for the rack and the pedal board. ECHO and SPRING each bound their own tail, but stacked
          * they add up: a hit through the full rack grew past the loop threshold and stopped reading as a hit at all. So
-         * whatever the sections did, [output] never gains more than [MAX_CHAIN_TAIL_SECONDS] over [input], and when it
-         * would, its last [CAP_FADE_SECONDS] fade on a raised cosine (per frame, so a stereo frame keeps one gain). An
-         * output already inside the budget comes back untouched.
+         * whatever the sections did, [output] never runs more than [MAX_CHAIN_TAIL_SECONDS] past [soundFrames], the
+         * sound's own length, and when it would, its last [CAP_FADE_SECONDS] fade on a raised cosine (per frame, so a
+         * stereo frame keeps one gain). An output already inside the budget comes back untouched.
          */
-        internal fun capTail(input: Snip, output: Snip): Snip {
-            val maxFrames = input.frameCount + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
+        internal fun capTail(soundFrames: Int, output: Snip): Snip {
+            val maxFrames = soundFrames + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
             if (output.frameCount <= maxFrames) return output
             val out = output.samples.copyOfRange(0, maxFrames * output.channels)
             Dsp.fadeTailCosine(out, CAP_FADE_SECONDS, rate = output.sampleRate, channels = output.channels)
