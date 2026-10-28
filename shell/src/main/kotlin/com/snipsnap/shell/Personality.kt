@@ -2821,6 +2821,8 @@ object Copy {
     const val SPLIT_BUSY = "SPLITTING…"
     /** The KITS screen's placeholder line while the library is read from disk. */
     const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */
+    const val READING_RECORDING = "READING THE RECORDING…"
     /** The dock's button to stop a job that can be stopped part-way. */
     const val CANCEL_JOB = "CANCEL"
 

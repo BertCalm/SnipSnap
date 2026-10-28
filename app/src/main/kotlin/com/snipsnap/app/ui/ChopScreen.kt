@@ -69,6 +69,7 @@ import com.snipsnap.audio.PitchEstimate
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.ChopReviewModel
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.CutRatings
@@ -172,11 +173,32 @@ fun ChopScreen(
 
     val file = sourceFile
     val loadedModel = model
+    val reason = emptyReason
+    // The decode in flight (TapeScreen's call, and its comment): the dock
+    // says so for as long as it runs, and the screen's place says so by the
+    // dock bar's latch, nothing for the first 200 ms and then its words for
+    // at least 500. Asked once, above the early return.
+    val decoding = file == null && loadedModel == null && reason == null
+    val reading = remember(decoding) { if (decoding) Busy(Copy.READING_RECORDING) else null }
+    ReportBusy(reading)
+    val panelShown = rememberBusyVisible(reading)
+    if (decoding || panelShown) {
+        // Still decoding, or the words are up and owed their minimum: held
+        // ahead of the empty face and the chop, so a read that ends a moment
+        // after the words show does not leave them a flash. Until then the
+        // place is a quiet lit panel, because an empty face said over a
+        // decode that is about to finish would be a lie.
+        if (panelShown) {
+            LoadingPanel(Copy.READING_RECORDING, Modifier.fillMaxSize())
+        } else {
+            Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        }
+        return
+    }
     if (file == null || loadedModel == null) {
-        // Either still decoding, or nothing readable was found — the empty
-        // face covers both; a blank LCD for the moment it takes to read a
-        // file is the honest state to show in between (TapeScreen's call).
-        val reason = emptyReason
+        // Nothing readable was found: the empty face says which kind of
+        // nothing. (A half-set pair with no reason, which nothing writes,
+        // draws the same quiet panel the decode does.)
         if (reason != null) {
             EmptyChop(reason, onNavigateTape, onNavigateKits)
         } else {

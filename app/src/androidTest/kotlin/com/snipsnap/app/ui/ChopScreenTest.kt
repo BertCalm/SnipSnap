@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
@@ -48,6 +49,8 @@ class ChopScreenTest : ComposeScreenTest() {
     private val toasts = CopyOnWriteArrayList<String>()
     private val sent = CopyOnWriteArrayList<Pair<KitShelf.Entry, String>>()
     private val landed = CopyOnWriteArrayList<Triple<KitShelf.Entry, Int, String>>()
+    // What the screen told the dock about its own job, label by label; null is "no job".
+    private val told = CopyOnWriteArrayList<String?>()
 
     @After
     fun cleanUp() {
@@ -90,18 +93,20 @@ class ChopScreenTest : ComposeScreenTest() {
 
     private fun show(entry: KitShelf.Entry?, commit: TapeCommit?, shelf: KitShelf = KitShelf(folder("chop-test-shelf"))) {
         setPhoneContent {
-            ChopScreen(
-                entry = entry,
-                lastCommit = commit,
-                shelf = shelf,
-                teachEnabled = false,
-                workshopOpen = false,
-                onToast = { toasts += it },
-                onSentToGrid = { e, line -> sent += e to line },
-                onLandedOnto = { e, bank, line -> landed += Triple(e, bank, line) },
-                onNavigateTape = {},
-                onNavigateKits = {},
-            )
+            CompositionLocalProvider(LocalBusySink provides { told += it?.label }) {
+                ChopScreen(
+                    entry = entry,
+                    lastCommit = commit,
+                    shelf = shelf,
+                    teachEnabled = false,
+                    workshopOpen = false,
+                    onToast = { toasts += it },
+                    onSentToGrid = { e, line -> sent += e to line },
+                    onLandedOnto = { e, bank, line -> landed += Triple(e, bank, line) },
+                    onNavigateTape = {},
+                    onNavigateKits = {},
+                )
+            }
         }
     }
 
@@ -133,6 +138,23 @@ class ChopScreenTest : ComposeScreenTest() {
     fun with_no_tape_and_no_kit_it_says_there_is_nothing_to_chop() {
         show(entry = null, commit = null)
         waitFor("the empty face") { showing(Copy.EMPTY_CHOP) }
+    }
+
+    @Test
+    fun the_decode_is_told_to_the_dock_and_taken_back_when_the_chop_is_up() {
+        showChopped()
+        // The first thing the screen said about itself was the read, and the
+        // last is that there is no job: a chop on screen is not a job.
+        assertEquals("the read reached the dock first: $told", Copy.READING_RECORDING, told.firstOrNull())
+        assertEquals("and the chop being up took it back: $told", null, told.lastOrNull())
+    }
+
+    @Test
+    fun a_chop_with_nothing_to_read_takes_the_read_back_and_shows_the_empty_face() {
+        show(entry = null, commit = null)
+        waitFor("the empty face") { showing(Copy.EMPTY_CHOP) }
+        assertEquals("the read reached the dock first: $told", Copy.READING_RECORDING, told.firstOrNull())
+        assertEquals("and the empty face took it back: $told", null, told.lastOrNull())
     }
 
     @Test
