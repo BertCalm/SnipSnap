@@ -60,6 +60,7 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.ShareOut
 import com.snipsnap.app.theme.BinRedGlow
+import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.etchedBox
@@ -1503,9 +1504,25 @@ private fun DubProgressCard(model: ExportWizardModel, filesShown: Int, writing: 
  * private to `TapeScreen.kt` and extracting it would mean surgery on a
  * file outside this task's scope, so this is a standalone single spoke
  * rather than the wound-tape-disc treatment.
+ *
+ * It is a loading mark, not a position: with animations off it holds one
+ * frame, the spoke upright, whether or not [spinning] (the bar under it is
+ * what says how far the write has got). The turning form is a composable of
+ * its own, so the still branch composes no infinite transition at all.
+ * `internal` so the device test can draw it on its own.
  */
 @Composable
-private fun DubReel(spinning: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
+internal fun DubReel(spinning: Boolean, scheme: Scheme, modifier: Modifier = Modifier) {
+    if (LocalReduceMotion.current) {
+        DubReelFace(0f, scheme, modifier)
+    } else {
+        TurningDubReel(spinning, scheme, modifier)
+    }
+}
+
+/** The reel's moving form; composed only when motion is allowed. */
+@Composable
+private fun TurningDubReel(spinning: Boolean, scheme: Scheme, modifier: Modifier) {
     val infiniteTransition = rememberInfiniteTransition(label = "dubReel")
     val cycleAngle by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -1517,13 +1534,18 @@ private fun DubReel(spinning: Boolean, scheme: Scheme, modifier: Modifier = Modi
     // same trick TapeScreen's own reels use.
     var frozenAngle by remember { mutableStateOf(0f) }
     if (spinning) frozenAngle = cycleAngle
+    DubReelFace(frozenAngle, scheme, modifier)
+}
 
+/** The ring and its two-armed spoke, turned [degrees] about the centre. */
+@Composable
+private fun DubReelFace(degrees: Float, scheme: Scheme, modifier: Modifier) {
     Canvas(modifier) {
         val strokeWidth = 1.5.dp.toPx()
         val c = Offset(size.width / 2f, size.height / 2f)
         val radius = size.minDimension / 2f
         drawCircle(color = scheme.ink2.tape, radius = radius, center = c, style = Stroke(width = strokeWidth))
-        rotate(degrees = frozenAngle, pivot = c) {
+        rotate(degrees = degrees, pivot = c) {
             val spoke = radius * 0.75f
             drawLine(scheme.ink2.tape, Offset(c.x - spoke, c.y), Offset(c.x + spoke, c.y), strokeWidth = strokeWidth)
             drawLine(scheme.ink2.tape, Offset(c.x, c.y - spoke), Offset(c.x, c.y + spoke), strokeWidth = strokeWidth)
