@@ -275,14 +275,18 @@ class ResidencyTest {
         // to prevent. Moving the call to a background dispatcher looked like
         // a fix and was not: it moved the enqueue, not the wait.
         val s = session(1, 1, 1, 1, 1, 1)
-        val source = CountingSource(s.intervalFrames)
+        val faster = s.copy(bpm = 100f)
+        // This tests waiting, not transient analysis during tempo fitting.
+        // Already-fitting source audio keeps bake cost out of warm's bounded
+        // deadline; the real two-thread queue and 40ms delay below still make
+        // returning after submission fail the count and cold-cache assertions.
+        val source = CountingSource(faster.intervalFrames)
         val pool = Executors.newFixedThreadPool(2)
         // Every bake made slow enough that a warm which does not wait is
         // certain to return first, rather than racing the assertion.
         val slow = Executor { task -> pool.execute { Thread.sleep(40); task.run() } }
         try {
             val r = Residency(s, source, slow)
-            val faster = s.copy(bpm = 100f)
             assertTrue(faster.intervalFrames != s.intervalFrames, "a tempo change has to resize the interval")
 
             r.warm(faster, 1)
