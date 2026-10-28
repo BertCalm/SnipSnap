@@ -135,8 +135,9 @@ object Pedals {
             ),
             PedalSide.AMP, movable = false, gated = false,
         ),
-        // A delay pedal: the `delayed` character, ECHO's repeats fed by the note's head. After the amp, where a rig
-        // puts a delay; not movable. Gate pending (docs/superpowers/specs/2026-10-22-delay-head-design.md).
+        // A delay pedal: the `delayed` character, ECHO's long, dark repeats. After the amp, where a rig puts a delay;
+        // not movable. Its sound passed its gate on 2026-10-28; the chip waits for the slate, because row seven is full at
+        // six and the owner chose a slate over a seventh chip (docs/superpowers/specs/2026-10-22-delay-head-design.md).
         Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = false),
     )
 

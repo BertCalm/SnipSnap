@@ -545,9 +545,8 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
-long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
-120 ms so a held
-note's attack comes back as a repeat) and `forged` (a hit formed against a die:
+long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
+whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
 peak).
@@ -566,15 +565,16 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), and
-`rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip
-until their gates — e.g.
+`rig` (a board: compressor, drive, slapback); `delayed` draws no chip until
+row seven's slate is built (the row is full at six) and `rig` none until its
+gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
 six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
 refused by name. `--undo` restores as for a character.
  On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision) and `delayed` (the DELAY chip
-waits for its listening gate), sit on the PAD SHEET's
+`amped` (its chip is a later layout decision) and `delayed` (its sound passed
+its listening gate; the DELAY chip waits for row seven's slate), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
