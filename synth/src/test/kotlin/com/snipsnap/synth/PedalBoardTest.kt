@@ -102,13 +102,13 @@ class PedalBoardTest {
         val out = board.process(snare)
         val budget = snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
         assertTrue(out.frameCount <= budget, "two tail-making picks ran past the board's budget")
-        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and up to the board's own
-        // 10 ms fade the pair is DELAY's chain on RIG's render.
+        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and the pair is DELAY's
+        // chain on RIG's render cut by the board's budget, sample for sample, the fade included: the board cuts with the
+        // rack's own capTail.
         val rigOnly = PedalBoard(listOf(pick("rig", 1f))).process(snare)
         assertTrue(rigOnly.frameCount < budget, "RIG alone already fills the budget, so this test proves nothing")
         assertEquals(budget, out.frameCount, "the board's cap did not engage: DELAY did not run on RIG's output")
-        val keep = (budget - (0.02f * snare.sampleRate).toInt()) * out.channels
-        assertContentEquals(Treatments.chain("delayed").process(rigOnly).samples.copyOfRange(0, keep), out.samples.copyOfRange(0, keep))
+        assertContentEquals(FxChain.capTail(snare, Treatments.chain("delayed").process(rigOnly)).samples, out.samples)
     }
 
     @Test

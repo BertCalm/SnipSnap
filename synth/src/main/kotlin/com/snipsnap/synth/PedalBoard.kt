@@ -13,7 +13,7 @@ import com.snipsnap.json.JsonValue
  * the AMP pick, then the POST picks folded likewise. Within a pass a later
  * pick wins a section both set. The board owns one tail budget over the
  * original ([FxChain.MAX_CHAIN_TAIL_SECONDS]), as WIDE does, because each
- * pass caps only its own.
+ * pass caps only its own; it cuts with the rack's own [FxChain.capTail].
  *
  * A board with every pick on one side renders sample for sample as
  * [Treatments.apply] of the folded chain: a one-pick board is exactly a
@@ -88,7 +88,7 @@ data class PedalBoard(val picks: List<Pick>) {
             out = amp.process(Treatments.endFaded(out, amp, full))
         }
         chainFor(PedalSide.POST)?.let { out = it.process(out) }
-        return capTail(snip, out)
+        return FxChain.capTail(snip, out)
     }
 
     /**
@@ -110,16 +110,7 @@ data class PedalBoard(val picks: List<Pick>) {
         }
         out = landing.process(out)
         chainFor(PedalSide.POST)?.let { out = it.process(out) }
-        return capTail(dry, out)
-    }
-
-    /** The board's own budget: never more than [FxChain.MAX_CHAIN_TAIL_SECONDS] over the original, faded so the cut never clicks. */
-    private fun capTail(input: Snip, output: Snip): Snip {
-        val maxFrames = input.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
-        if (output.frameCount <= maxFrames) return output
-        val out = output.samples.copyOfRange(0, maxFrames * output.channels)
-        Dsp.fadeTail(out, ms = 10f, rate = output.sampleRate, channels = output.channels)
-        return Snip(out, output.channels, output.sampleRate)
+        return FxChain.capTail(dry, out)
     }
 
     fun toJsonValue(): JsonValue.Obj = JsonValue.Obj(
