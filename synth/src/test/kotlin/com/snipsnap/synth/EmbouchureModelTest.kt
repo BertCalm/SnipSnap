@@ -49,18 +49,36 @@ class EmbouchureModelTest {
     }
 
     @Test
-    fun `new factory patches use model two while unknown models are refused`() {
+    fun `ordinary new patches and original factory patches stay on model two`() {
         assertEquals(2, Embouchure.MODEL_VERSION)
-        assertTrue(EmbouchurePresets.all().all { it.model == 2 })
+        assertEquals(8, EmbouchurePresets.legacy().size)
+        assertTrue(EmbouchurePresets.legacy().all { it.model == 2 })
         for (voice in EmbouchureVoice.entries) {
             val fresh = EmbouchurePatch("New player", voice, Embouchure.defaults(voice))
             assertEquals(2, fresh.model)
             assertEquals(fresh, Patches.fromJsonText(fresh.toJsonText()))
-            for (model in listOf(-1, 0, 3, 99)) {
+            for (model in listOf(-1, 0, 4, 99)) {
                 assertRefused<IllegalArgumentException>("unsupported embouchure model $model") { fresh.copy(model = model) }
                 val unsupported = JsonValue.Obj(fresh.toJsonValue().entries + ("model" to JsonValue.Num(model.toDouble())))
                 assertRefused<JsonException>("unsupported embouchure model $model") { Patches.fromJsonValue(unsupported) }
             }
+        }
+    }
+
+    @Test
+    fun `model two nondefault brass notes and held material keep pre prototype PCM`() {
+        val stream = requireNotNull(javaClass.getResourceAsStream("/embouchure-model2-brass-golden.json"))
+        val clips = Json.parse(stream.bufferedReader().use { it.readText() }).obj().getValue("clips").arr()
+        assertEquals(8, clips.size)
+        for (entry in clips) {
+            val clip = entry.obj()
+            val patch = assertIs<EmbouchurePatch>(Patches.fromJsonValue(clip.getValue("recipe")))
+            assertEquals(2, patch.model)
+            val snip = patch.render()
+            assertEquals(clip.getValue("frames").int(), snip.frameCount, patch.name)
+            val bytes = ByteArrayOutputStream().also { WavWriter.write(it, snip, WavWriter.BitDepth.PCM_16) }.toByteArray()
+            val hash = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
+            assertEquals(clip.getValue("sha256").str(), hash, patch.name)
         }
     }
 

@@ -34,6 +34,8 @@
         android:name=".SnipSnapApplication"
         android:label="SnipSnap"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <!-- singleTask: a share while the app is open lands in the running
@@ -119,6 +121,23 @@
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
+        </service>
+
+        <!-- SnipSnap as a MIDI device other apps can open: a SnipSnap In
+             port (they play it) and a SnipSnap Out port (it plays them).
+             The system binds it on first open and unbinds after last
+             close; the manufacturer and product in the XML must match
+             MidiOut.kt so the app never listens to itself. -->
+        <service
+            android:name=".SnipSnapMidiService"
+            android:exported="true"
+            android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE">
+            <intent-filter>
+                <action android:name="android.media.midi.MidiDeviceService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.media.midi.MidiDeviceService"
+                android:resource="@xml/midi_device_info" />
         </service>
     </application>
 

@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <exception>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -289,6 +290,45 @@ Java_com_snipsnap_app_NativePads_stop(JNIEnv*, jobject, jlong handle) {
     pads(handle)->stop();
 }
 
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_configureAquarium(
+    JNIEnv* env, jobject, jlong handle, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset) {
+    using namespace snipsnap::aquarium;
+    if (!handle || !values || seed < 0 ||
+        seed > static_cast<jlong>(std::numeric_limits<std::uint32_t>::max()) ||
+        model != static_cast<jint>(kRenderModelVersion) ||
+        (enabled != JNI_FALSE && enabled != JNI_TRUE) ||
+        (reset != JNI_FALSE && reset != JNI_TRUE)) return JNI_FALSE;
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    const jsize count = env->GetArrayLength(values);
+    if (env->ExceptionCheck() || count != static_cast<jsize>(kParameterCount)) return JNI_FALSE;
+    PerformanceSettings settings;
+    env->GetFloatArrayRegion(values, 0, count, settings.parameters.values.data());
+    if (env->ExceptionCheck()) return JNI_FALSE;
+    settings.seed = static_cast<std::uint32_t>(seed);
+    settings.model = static_cast<std::uint32_t>(model);
+    settings.bpm = bpm;
+    settings.outputGain = gain;
+    settings.enabled = enabled == JNI_TRUE;
+    return pads(handle)->configureAquarium(settings, reset == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlong handle) {
+    return handle && pads(handle)->aquariumFaulted() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(pads(handle)->aquariumLimitedFrames()) : 0;
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject) {
+    return snipsnap::aquarium::PerformanceBus::kOutputCeiling;
+}
+
 JNIEXPORT jint JNICALL
 Java_com_snipsnap_app_NativePads_sampleRate(JNIEnv*, jobject, jlong handle) {
     return pads(handle)->sampleRate();
@@ -420,21 +460,49 @@ Java_com_snipsnap_app_NativePads_setVoiceGain(
     pads(handle)->pushCommand(c);
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the stop was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::Stop;
     c.voiceId = voiceId;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the all-off was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::AllOff;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jlong>(pads(handle)->framesRendered());
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv* env, jobject, jlong handle, jlongArray out) {
+    if (out == nullptr || env->GetArrayLength(out) < 2) return JNI_FALSE;
+    int64_t frame = 0;
+    int64_t nanos = 0;
+    if (!pads(handle)->hardwarePosition(&frame, &nanos)) return JNI_FALSE;
+    const jlong values[2] = {static_cast<jlong>(frame), static_cast<jlong>(nanos)};
+    env->SetLongArrayRegion(out, 0, 2, values);
+    return JNI_TRUE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->framesPerBurst());
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_audioApi(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->audioApi());
 }
 
 JNIEXPORT jintArray JNICALL

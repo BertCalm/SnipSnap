@@ -15,6 +15,12 @@ class TrefoilIntegrationTest {
                 UserPresets.save(root,p,model.toLong())
                 val restored=UserPresets.read(root).single { it.name==p.name }.patch
                 assertEquals(p,restored)
+                val settings=mutableMapOf("engine" to "TREFOIL", "voice" to p.voiceName)
+                SynthDrafts.write(settings,listOf(p))
+                val draft=SynthDrafts.read(settings).single()
+                val edited=Patches.edited(draft,"Edited",p.macros+("WEAVE" to .61f))
+                assertEquals(p.copy(name="Edited",macros=p.macros+("WEAVE" to .61f)),edited)
+                assertEquals("TREFOIL",settings["engine"])
                 val line=UserPresets.rosterLine(restored)
                 assertTrue(line.startsWith("TrefoilPatch.fromJsonText("))
                 val literal=line.removePrefix("TrefoilPatch.fromJsonText(").removeSuffix("),").replace("\\\$","\$")

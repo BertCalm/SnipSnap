@@ -101,6 +101,26 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     }
 
     /**
+     * Leave [page], a place that turned out to have nothing to show (the
+     * placeholders of a starter kit that failed to render), but only if that
+     * is still what the user is looking at. Someone who went to TAPE while it
+     * rendered is where they chose to be, and nothing moves; the caller says
+     * what happened wherever they are. True when it moved the user.
+     *
+     * From the page it is [back], not a new landing, so the entry the page
+     * pushed is popped and not left in the history: the shelf it was asked for
+     * from is where Back lands. [fallback] is landed on only when Back did not
+     * reach its place (a history that did not hold it, or the user's own
+     * wandering since). The caller moves the dock after a true.
+     */
+    fun backOutOf(page: Location, fallback: Location): Boolean {
+        if (location != page) return false
+        back()
+        if (location.place != fallback.place) goTo(fallback)
+        return true
+    }
+
+    /**
      * Whether [back] has anywhere to go. The app's root Back handler reads
      * this to decide whether to take the press or leave it to the system,
      * which finishes the Activity: the true root of a session is having
@@ -111,7 +131,7 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     /**
      * The label the top bench's back chip reads, or null on a bare stage.
      *
-     * SETUP and HELP are behind the gear, which opens over anything, so
+     * SETUP, HELP and MIDI are behind the gear, which opens over anything, so
      * their [Bench.backChip] can only say BACK; here they name where back
      * goes: the bench under them, if one is stacked, else the stage showing,
      * else the place. A bench under the gear is named by its place, not its
@@ -120,10 +140,10 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     val backChip: String?
         get() {
             val top = location.benches.lastOrNull() ?: return null
-            if (top != Bench.SETUP && top != Bench.HELP) return top.backChip
+            if (!top.behindGear) return top.backChip
             val below = location.benches.getOrNull(location.benches.size - 2)
             val where = when {
-                below == Bench.SETUP || below == Bench.HELP -> below.label
+                below != null && below.behindGear -> below.label
                 below != null -> location.place.label
                 else -> location.stage?.label ?: location.place.label
             }
@@ -197,6 +217,12 @@ enum class Bench(val home: Place, val label: String, val backChip: String) {
     // [Navigation.backChip] names the place the gear was opened over.
     SETUP(Place.SHELF, "SETUP", "◄ BACK"),
     HELP(Place.SHELF, "HELP", "◄ BACK"),
+    /** What is plugged in and what it sends: the MIDI diagnostics screen. */
+    MIDI(Place.SHELF, "MIDI", "◄ BACK"),
+    ;
+
+    /** Opened from the gear, over whatever is showing, rather than from a place of its own. */
+    val behindGear: Boolean get() = this == SETUP || this == HELP || this == MIDI
 }
 
 /** Where you are: a place, its stage if it has stages, and the benches stacked on it. */

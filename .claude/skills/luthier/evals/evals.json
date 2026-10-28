@@ -1,0 +1,23 @@
+{
+  "skill_name": "luthier",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I want a new SnipSnap engine that sounds like a sitar played through a guitar amp, a slicer pedal, a gated fuzz, and a delay that remembers what you played earlier and brings it back. Give me a design brief with three directions and tell me which one you'd build. The SnipSnap repo is at /home/claude/bertcalm/snipsnap.",
+      "expected_output": "A design brief: a gesture line, each reference distilled to a mechanism without brand words in any engine/voice/preset name, a sibling check naming PLUCK/SILK and the rack's VALVE/CRUNCH/ECHO, three directions with different operators and a scored Strong, an ASCII signal-flow diagram, a macro contract table, a landing decision (recipe plus section vs engine voice), risks including render time, and a 'Why it is built this way' section for Josh.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Review this engineering spec for my SnipSnap project and tell me what to fix before I hand it to an implementing session. Repo at /home/claude/bertcalm/snipsnap.",
+      "expected_output": "Findings in Fix now / Try next / Big idea / Disclosed / What I measured format; catches that siblingPatches does not exist, that Gyre is rosterless and Mercury/Bore are the loop references, that no render budget is stated for the quaternion solver, that six voices and 36 presets exceed the house R1 shape; reviews the mechanics on their own terms (contact phase vs body phase, bounded energy budget) with the lens letters and a why for each.",
+      "files": ["/mnt/user-data/uploads/51-Skirl-Engine-Engineering-Spec.md"]
+    },
+    {
+      "id": 3,
+      "prompt": "What's missing from my SnipSnap synth roster? I want gaps that would complement what I have, extend it, or add a new value proposition for someone making kits for an MPC. Repo at /home/claude/bertcalm/snipsnap, Omnibus at /home/claude/bertcalm/xo_ox-xomnibus.",
+      "expected_output": "A gap scan in the rubric's four groups, each gap naming nearest engines, what they cannot do, the cheapest proof, and a kit slot; ranked by producer value per build round; draws on the inventory's thin areas and Omnibus's unmined engines without re-proposing engines already ported; says what it would not build.",
+      "files": []
+    }
+  ]
+}

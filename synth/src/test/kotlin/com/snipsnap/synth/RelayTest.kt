@@ -588,19 +588,21 @@ class RelayTest {
 
     @Test
     fun `a render nobody wants any more after its frame loop stops after the band limit too`() {
-        // A finite phrase has no warm-up, so after one look before the wavetables the frame loop looks once per 8192
-        // frames of its raw buffer and the conditioning pass looks once on entry; an interrupt that lands after those
-        // looks must still stop the render before its decimation, its level and its seam instead of finishing unwanted.
-        // An uninterrupted render looks exactly five times outside the loop: before the wavetables, on entry to the
-        // conditioning pass, after the band limit, before the level and before the seam. Removing any one changes the count.
+        // Warm every bank first: a cache hit checks once before lookup, while a miss also checks after building.
+        // Keeping both measured renders on the hit path makes the late interrupt land after the band limit.
+        Relay.inspect(RelayVoice.KEY)
+        val tableLooks = 2 * Relay.phraseFor(RelayVoice.KEY).sources.size
+        // A finite phrase has no synthesis preroll. Besides the bank checks, the frame loop checks once per 8192
+        // raw frames and there are five checks around the render passes: before banks, on entry to conditioning,
+        // after the band limit, before level and before seam. Removing any pass check must still fail this guard.
         val clear = LateInterrupt(clearLooks = Int.MAX_VALUE)
         val whole = clear.run { Relay.inspect(RelayVoice.KEY) }
         assertFalse(whole.loop, "the default phrase is finite")
         val loopLooks = (whole.raw.size + 8191) / 8192
-        assertEquals(loopLooks + 5, clear.looks,
-            "an uninterrupted finite render looks before the wavetables, $loopLooks times in its frame loop, " +
+        assertEquals(tableLooks + loopLooks + 5, clear.looks,
+            "an uninterrupted finite render looks before the wavetables, $tableLooks times at bank lookup, $loopLooks times in its frame loop, " +
                 "then on entry to the conditioning pass, after the band limit, before the level and before the seam")
-        val late = LateInterrupt(clearLooks = 1 + loopLooks + 1)
+        val late = LateInterrupt(clearLooks = 1 + tableLooks + loopLooks + 1)
         assertFailsWith<java.util.concurrent.CancellationException>(
             "RELAY finite render did not stop on the interrupt at its look after the band limit, before the decimation",
         ) { late.run { Relay.inspect(RelayVoice.KEY) } }

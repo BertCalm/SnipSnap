@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Presets
 import java.io.File
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -453,12 +454,14 @@ class ConventionTest {
     private val justifiedReads = listOf(
         ReadAllow(
             file = "MediaDecode.kt",
-            line = "return WavReader.read(bytes)",
-            justification = "`bytes` is already gated a few lines up by " +
-                "`require(bytes.size <= MAX_WAV_BYTES)` (96 MB, MediaDecode.MAX_WAV_BYTES) before this line runs. " +
-                "WavReader.readCapped(file: File, maxDurationSec: Float, ...) (audio/.../WavReader.kt:148) only " +
-                "has a File-based overload — there is no capped entry point for an in-memory ByteArray — so this " +
-                "IS the correct call for this input shape, not a gap the guardrail should chase.",
+            line = "return WavReader.read(bytes, DecodeLimits.MAX_FRAMES)",
+            justification = "`bytes` is gated a few lines up by " +
+                "`require(bytes.size <= MAX_WAV_BYTES)` (96 MB, MediaDecode.MAX_WAV_BYTES), and the call itself " +
+                "is the frame-capped ByteArray overload: the header's frame count is refused past " +
+                "DecodeLimits.MAX_FRAMES before the float buffer is allocated, because 96 MB of 8-bit mono " +
+                "is ~96M frames (~384 MB decoded) — the byte gate alone did not bound the allocation. " +
+                "WavReader.readCapped (audio/.../WavReader.kt) has only a File-based overload, so this " +
+                "capped in-memory call IS the correct shape for this input, not a gap the guardrail should chase.",
         ),
     )
 
@@ -1142,6 +1145,122 @@ class ConventionTest {
                 "\nEither the sentence is stale (fix the number) or the roster genuinely changed and the " +
                 "surrounding prose needs rewriting too — finding 22 was a count that was wrong AND a list " +
                 "of names that no longer existed. Check the names, not just the number.",
+        )
+    }
+
+    // ---- Law: prose that lists the picker's engines lists exactly the picker's engines ----
+
+    /**
+     * The phone's SYNTH picker is `Engine` in `app/.../SynthScreen.kt`: one enum, one
+     * line of constants, grown by one PR per engine. Four sentences restate it as prose,
+     * and they are the sentences a reader uses to learn what the phone can make:
+     * `app/README.md`'s "The SYNTH source picker has N engines: ...", the root README's
+     * "That writeup is the engines on SYNTH's picker (...): ...", its "N engines in the
+     * `Engine` picker", and its complement, the engines `Presets` rosters that the picker
+     * does not show ("... have preset rosters, so `snipsnap synth` renders them").
+     *
+     * The count law above cannot see any of them. "Engine" is too common a noun for a
+     * count-near-noun scan to police without crying wolf (two engines under Oboe, two
+     * engines on one kit, "revision 3 on unchanged engine model 2"), and a count is the
+     * weaker check anyway: the drift this law was written against (2026-10-22) was a list
+     * that named 48 of 53 engines beside a count that said 53. ONSET, ORPHICA, FLOCK,
+     * ORIGAMI and OHM had each been added to the enum by a PR that did not touch the
+     * paragraph. So this law reads the names, and the number too.
+     *
+     * Names: a constant's display name is the constant with `_` read as a space
+     * (`Engine.displayName`, so `SCANNED CHAIN`), while `Patch.engine` keeps the
+     * underscore. The roster comparison is on the constant and the prose comparison on
+     * the display name. Order is not checked; the READMEs may group as they like.
+     */
+    @Test
+    fun `law - prose that lists the picker's engines lists exactly the picker's engines`() {
+        val synthScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt")
+        require(synthScreen.isFile) { "expected ${synthScreen.path}; fix the path rather than deleting the check" }
+        val enumBody = Regex("""private enum class Engine \{\s*([A-Z_][A-Z_0-9]*(?:\s*,\s*[A-Z_][A-Z_0-9]*)*)\s*;""")
+            .find(synthScreen.readText(Charsets.UTF_8))
+            ?: fail("could not find `private enum class Engine { ...; }` in ${synthScreen.path}; the picker moved, so move this law with it")
+        val picker = enumBody.groupValues[1].split(',').map { it.trim() }
+        require(picker.size > 40) { "parsed only ${picker.size} picker engines; the parse is broken, not the picker" }
+        val pickerNames = picker.map { it.replace('_', ' ') }.toSet()
+        val rostered = Presets.all().map { it.engine }.toSet()
+        val rosteredNotShown = (rostered - picker.toSet()).map { it.replace('_', ' ') }.toSet()
+
+        fun prose(file: File): String {
+            require(file.isFile) { "expected ${file.path}; fix the path rather than deleting the check" }
+            return file.readText(Charsets.UTF_8).replace(Regex("""\s+"""), " ")
+        }
+        fun names(list: String): Set<String> =
+            list.split(',').flatMap { it.split(" and ") }.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+
+        val problems = mutableListOf<String>()
+        fun compare(where: String, stated: Set<String>, actual: Set<String>) {
+            val missing = actual - stated
+            val extra = stated - actual
+            if (missing.isNotEmpty() || extra.isNotEmpty()) {
+                problems += "$where is missing ${missing.sorted()} and names ${extra.sorted()} that do not belong"
+            }
+        }
+        // "53" or "fifty-three": the root README wrote the picker's count in words until 2026-10-23.
+        val ones = numberWords + mapOf(
+            "thirteen" to 13, "fourteen" to 14, "fifteen" to 15, "sixteen" to 16, "seventeen" to 17,
+            "eighteen" to 18, "nineteen" to 19,
+        )
+        val tens = mapOf("twenty" to 20, "thirty" to 30, "forty" to 40, "fifty" to 50, "sixty" to 60, "seventy" to 70, "eighty" to 80, "ninety" to 90)
+        fun readCount(token: String): Int? {
+            val t = token.lowercase()
+            t.toIntOrNull()?.let { return it }
+            ones[t]?.let { return it }
+            tens[t]?.let { return it }
+            val parts = t.split('-')
+            if (parts.size == 2) {
+                val a = tens[parts[0]]
+                val b = ones[parts[1]]
+                if (a != null && b != null && b < 10) return a + b
+            }
+            return null
+        }
+        fun count(where: String, stated: String, actual: Int) {
+            val n = readCount(stated)
+            if (n == null) problems += "$where says \"$stated\", which this law cannot read as a number; write it in digits"
+            else if (n != actual) problems += "$where says $stated but the code has $actual"
+        }
+
+        val appReadme = prose(File("../app/README.md"))
+        val appList = Regex("""The SYNTH source picker has ([\w-]+) engines: ([^.]+)\.""").find(appReadme)
+        if (appList == null) {
+            problems += "app/README.md no longer says \"The SYNTH source picker has N engines: ...\"; move this law with the sentence"
+        } else {
+            count("app/README.md's picker count", appList.groupValues[1], picker.size)
+            compare("app/README.md's picker list", names(appList.groupValues[2]), pickerNames)
+        }
+
+        val readme = prose(File("../README.md"))
+        val rootList = Regex("""That writeup is the engines on SYNTH's picker \(`Engine` in `SynthScreen`\): (.+?), plus GRAINS, SNAP and DRAW""")
+            .find(readme)
+        if (rootList == null) {
+            problems += "README.md no longer lists the engines on SYNTH's picker in the sentence this law reads; move this law with the sentence"
+        } else {
+            compare("README.md's picker list", names(rootList.groupValues[1]), pickerNames)
+        }
+        val rootCount = Regex("""([\w-]+) engines in the `Engine` picker""").find(readme)
+        if (rootCount == null) {
+            problems += "README.md no longer says \"N engines in the `Engine` picker\"; move this law with the sentence"
+        } else {
+            count("README.md's picker count", rootCount.groupValues[1], picker.size)
+        }
+        val complement = Regex("""holds engines that picker does not show\. (.+?) have preset rosters""").find(readme)
+        if (complement == null) {
+            problems += "README.md no longer names the rostered engines the picker does not show; move this law with the sentence"
+        } else {
+            compare("README.md's rostered-but-not-shown list", names(complement.groupValues[1]), rosteredNotShown)
+        }
+
+        assertTrue(
+            problems.isEmpty(),
+            "the READMEs disagree with `Engine` in SynthScreen.kt or with the `Presets` roster:\n  " +
+                problems.joinToString("\n  ") +
+                "\nRe-render each list from the code (the enum's order is the house order) and recompute the " +
+                "count; a PR that adds a picker entry owns these sentences too.",
         )
     }
 
@@ -2607,11 +2726,14 @@ class ConventionTest {
     fun `law - KIT hits a pad at the velocity the touch asked for`() {
         val src = kitScreen.readText(Charsets.UTF_8)
         assertTrue(
-            Regex("""onTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+            Regex("""val currentOnTap by rememberUpdatedState\(onTap\)""").containsMatchIn(src),
+            "KIT's pointer coroutine must use the current callback after a kit or strip owner changes.",
+        )
+        assertTrue(
+            Regex("""currentOnTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
                 .containsMatchIn(src),
-            "the pad grid is not reading velocity from where the finger landed. A tap on glass carries no " +
-                "force, so position is the only thing it does carry - without it the grid has nothing to pass " +
-                "and SOFT HITS goes back to being audible nowhere.",
+            "the pad grid is not passing touch-position velocity to its current callback. With STRIKE off, " +
+                "position must still reach SOFT HITS; a fixed value would make the other layers unreachable.",
         )
         assertTrue(
             !Regex("""player\.hit\(pad,\s*1f""").containsMatchIn(src) &&
@@ -3306,6 +3428,91 @@ class ConventionTest {
             Regex("""\bInserts\.write\(""").containsMatchIn(stripCommentsAndStrings(it.readText()))
         }
         assertEquals(0, insertCalls, "the app calls Inserts.write directly; go through ExportWizardModel, which hands the renderer in")
+    }
+
+    // ---- Law: a busy guard is raised before its launch, not inside it ----
+
+    private val splitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SplitScreen.kt")
+
+    /**
+     * A control is guarded by a flag (`busy`, `working`) that its handler
+     * checks and its job clears when it ends. If the job raises the flag as
+     * the first line of the coroutine it launches, the handler's check has a
+     * hole in front of it: `launch` only schedules, the body runs a beat
+     * later, and a second tap in that beat finds the flag still down and
+     * starts the job again. SplitScreen carried a comment conceding it ("a
+     * fast second tap beats it"). The flag goes up in the handler, before
+     * the `launch`, and comes down in the `finally` inside it.
+     *
+     * Two shapes leave the hole, and each has its own pattern:
+     *  - a `launch {` (or `launch(Dispatchers.X) {`) whose first statement
+     *    is `busy = true` or `working = true`;
+     *  - a `suspend fun` whose first statement is that, which a one-line
+     *    `launch { thatFun() }` calls (SplitScreen's `loadSource` was this).
+     * Each names the lines, so the next one is found by reading the failure.
+     *
+     * Both look at a first statement only. A raise placed second in a launch
+     * would pass; the sheet was read for that when the law was written and
+     * has none. Comment-only lines between the opening brace and the raise are
+     * skipped, so a comment explaining the raise cannot hide it.
+     */
+    private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
+    private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
+
+    @Test
+    fun `a busy guard is raised before its launch, not inside it`() {
+        // Each scan has to be able to see the shape it forbids, and to let the
+        // raised form pass; otherwise a clean result would mean nothing.
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn("appScope.launch {\n            busy = true\n            try {"),
+            "the launch scan no longer recognises a guard raised as the first line of a launch",
+        )
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn("scope.launch(Dispatchers.IO) {\n            working = true\n            try {"),
+            "the launch scan no longer recognises a guard raised inside a launch that is given a dispatcher",
+        )
+        assertTrue(
+            guardRaisedInsideLaunch.containsMatchIn(
+                "appScope.launch {\n            // The write outlives the tab.\n            busy = true\n            try {",
+            ),
+            "the launch scan no longer sees a guard raised after a comment line at the top of a launch",
+        )
+        assertFalse(
+            guardRaisedInsideLaunch.containsMatchIn("busy = true\n        appScope.launch {\n            try {"),
+            "the launch scan flags a guard that is already raised before its launch",
+        )
+        assertTrue(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        working = true\n        try {",
+            ),
+            "the suspend-fun scan no longer recognises a guard raised as the first line of a suspend function",
+        )
+        assertTrue(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        // Up before the first read.\n        working = true\n        try {",
+            ),
+            "the suspend-fun scan no longer sees a guard raised after a comment line at the top of a suspend function",
+        )
+        assertFalse(
+            guardRaisedInsideSuspendFun.containsMatchIn(
+                "suspend fun loadSource(dir: File, slot: Int, name: String) {\n        val pad = entry?.kit?.pad(slot)\n        try {",
+            ),
+            "the suspend-fun scan flags a suspend function that raises no guard",
+        )
+        val offending = listOf(padSheetScreen, splitScreen).flatMap { file ->
+            val src = file.readText(Charsets.UTF_8)
+            // The line of the `busy = true` itself, which is where the match ends.
+            fun lineOf(m: MatchResult) = "${file.name}:${src.take(m.range.last).count { it == '\n' } + 1}"
+            guardRaisedInsideLaunch.findAll(src).map { "launch at ${lineOf(it)}" }.toList() +
+                guardRaisedInsideSuspendFun.findAll(src).map { "suspend fun at ${lineOf(it)}" }.toList()
+        }
+        assertTrue(
+            offending.isEmpty(),
+            "a busy guard is raised inside the coroutine it guards, so a second tap in the gap before the " +
+                "coroutine starts runs the job twice. Raise the flag in the handler, before the `launch`, and " +
+                "keep the `finally` that clears it inside (a suspend function leaves the flag to its caller). " +
+                "At: ${offending.joinToString(", ")}",
+        )
     }
 
 }

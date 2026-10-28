@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -36,6 +37,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -62,17 +64,19 @@ import com.snipsnap.app.BeatPlayer
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.LocalHaptics
 import com.snipsnap.app.MidiInput
+import com.snipsnap.app.MidiOut
+import com.snipsnap.app.PREFS
 import com.snipsnap.app.PadEngine
 import com.snipsnap.app.PadHosts
 import com.snipsnap.app.rememberPadHost
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Copy
@@ -81,7 +85,9 @@ import com.snipsnap.shell.KeyPicker
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
-import com.snipsnap.shell.Look
+import com.snipsnap.shell.MidiDeviceId
+import com.snipsnap.shell.MidiGate
+import com.snipsnap.shell.MidiPadMaps
 import com.snipsnap.shell.MidiPads
 import com.snipsnap.shell.Motion
 import com.snipsnap.shell.MutateSheet
@@ -283,6 +289,8 @@ fun KitScreen(
     }
 
     val kit = entry.kit
+    val strike = rememberSaveable(entry.dir.absolutePath, saver = StrikeState.Saver) { StrikeState() }
+    LaunchedEffect(kit) { strike.lastHit = null }
 
     // The glow the pad cells cannot draw for themselves: a hit that did not
     // arrive as a finger on a cell (a MIDI note, the fullscreen grid) has no
@@ -304,7 +312,13 @@ fun KitScreen(
         scope.launch { anim.snapTo(0f) }
     }
 
-    fun hit(slot: Int, velocity: Float = 1f) {
+    // Declared above hit/playHeld/release: they send under the current map.
+    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
+    // The map each controller was last played with, keyed by its fingerprint.
+    // Saved when MIDI MAP is tapped, brought back when it connects.
+    val padMapPrefs = remember(engineContext) { engineContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
+
+    fun hit(slot: Int, velocity: Float = 1f, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
         if (!host.up || !player.isUp()) return
         // oneShot forced true, not read off the pad: this screen has no
@@ -317,14 +331,35 @@ fun KitScreen(
         // be built and never heard.
         val allocation = allocator.noteOn(slot, velocity, pad.muteGroup, oneShot = true)
         for (voice in allocation.choked + allocation.stolen) player.stop(voice.id)
-        if (!player.hit(pad, velocity, allocation.started.id)) allocator.voiceEnded(allocation.started.id)
+        val sounded = player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)
+        if (sounded) {
+            strike.recordHit(pad, velocity)
+        } else allocator.voiceEnded(allocation.started.id)
+        // Out over MIDI (touch only), and only for a hit that made local sound.
+        // No release gesture here, so MidiOut schedules the note-off one step
+        // later; the window grid sends under PLAY's current map, like fullscreen.
+        // The wire carries the layer-picking velocity; gainVelocity is local feel.
+        if (sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                MidiOut.drumOnGated(note, velocity, System.nanoTime(), MidiGate.stepNanos(KitPreview.playedBpm(kit.tempoBpm)))
+            }
+        }
     }
+
+    // slot -> the note the wire's on named. The wire's off must name the note the wire's on named,
+    // and must not wait for an allocator voice that a one-shot pad never has.
+    val sentNotes = remember(entry.dir) { HashMap<Int, Int>() }
 
     // The two paths below are PLAY's, folded in (section 5, decision 4): a
     // MIDI key and the fullscreen grid both HAVE a release, so a gate pad
     // honours its own metadata here - noteOn reads `pad.oneShot` and
     // `release` calls noteOff - where the window's tap cannot.
-    fun playHeld(slot: Int, velocity: Float) {
+    //
+    // [fromMidi] is true when the note arrived over MIDI (MidiPads.handle):
+    // it plays locally but is never sent back out, so a keyboard that echoes
+    // its input cannot loop. Touch passes false and is sent. It has no
+    // default on purpose: every new caller has to say which it is.
+    fun playHeld(slot: Int, velocity: Float, fromMidi: Boolean, gainVelocity: Float = velocity) {
         val pad = kit.pad(slot) ?: return
         // No stream, no voice: with no callback running nothing would ever
         // report an ending, and the voice count would climb and stick.
@@ -341,15 +376,29 @@ fun KitScreen(
             // decide the pad's opening glow value.
             if (voice.padSlot != slot) extinguish(voice.padSlot)
         }
-        if (!player.hit(pad, velocity, allocation.started.id)) {
+        val sounded = player.hit(pad, velocity, allocation.started.id, gainVelocity = gainVelocity)
+        if (!sounded) {
             // Nothing loaded for this pad (or nothing yet): the allocator
             // must not count a voice that never sounded.
             allocator.voiceEnded(allocation.started.id)
+        } else {
+            strike.recordHit(pad, velocity)
         }
         flash(slot)
+        if (!fromMidi && sounded) {
+            MidiPads.noteForSlot(slot, midiMap)?.let { note ->
+                val now = System.nanoTime()
+                // Retrigger while held: end the note that went out before the new one.
+                sentNotes.remove(slot)?.let { MidiOut.drumOff(it, now) }
+                MidiOut.drumOn(note, velocity, now)
+                sentNotes[slot] = note
+            }
+        }
     }
 
-    fun release(slot: Int) {
+    fun release(slot: Int, fromMidi: Boolean) {
+        // Before the early return: the off never depends on the allocator.
+        if (!fromMidi) sentNotes.remove(slot)?.let { MidiOut.drumOff(it, System.nanoTime()) }
         val stopped = allocator.noteOff(slot)
         if (stopped.isEmpty()) return
         for (voice in stopped) player.stop(voice.id)
@@ -357,7 +406,10 @@ fun KitScreen(
     }
 
     fun panic() {
+        strike.releaseTouch()
         host.allOff()
+        MidiOut.allNotesOff()
+        sentNotes.clear()
         for (slot in glow.keys) extinguish(slot)
     }
     // Read through rememberUpdatedState wherever something outlives one
@@ -375,16 +427,30 @@ fun KitScreen(
     // listener. The keyboard itself is opened and closed with the
     // lifecycle, below, so no note can reach `playHeld` after ON_STOP's
     // panic.
-    var midiMap by remember(entry.dir) { mutableStateOf(MidiPads.Map.MPC) }
-    var midiDevices by remember(entry.dir) { mutableStateOf<List<String>>(emptyList()) }
+    var midiDevices by remember(entry.dir) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     val onMidi by rememberUpdatedState<(MidiWire.Event) -> Unit>({ event ->
-        MidiPads.handle(event, midiMap, onHit = ::playHeld, onRelease = ::release, onPanic = ::panic)
+        MidiPads.handle(event, midiMap, onHit = { s, v -> playHeld(s, v, fromMidi = true) }, onRelease = { s -> release(s, fromMidi = true) }, onPanic = ::panic)
     })
+    // The listener outlives a composition; compare against the live map, not a captured one.
+    val midiMapNow by rememberUpdatedState<() -> MidiPads.Map>({ midiMap })
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event) = onMidi(event)
-            override fun onDevicesChanged(names: List<String>) { midiDevices = names }
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event)
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) {
+                midiDevices = devices
+                // A controller seen before brings its pad map back. Panic FIRST:
+                // a note held under the old map would otherwise release under the
+                // new one, land on a different slot and leave a local voice ringing.
+                // The most recently connected hardware device wins; the virtual
+                // port is not a controller to remember. Nothing saved leaves the
+                // map the screen is showing.
+                val restored = MidiPadMaps.restore(devices) { padMapPrefs.getString(it, null) }
+                if (restored != null && restored != midiMapNow()) {
+                    onPanic()
+                    midiMap = restored
+                }
+            }
             // The cable is out: a gated pad it held would ring until PANIC.
             override fun onDeviceRemoved() = onPanic()
         }
@@ -424,6 +490,8 @@ fun KitScreen(
             lifecycleOwner.lifecycle.removeObserver(observer)
             AudioFocus.release(audioVoice)
             midi.close()
+            // Leaving the screen: whatever this screen turned on must end on the wire.
+            MidiOut.allNotesOff()
         }
     }
 
@@ -459,7 +527,13 @@ fun KitScreen(
     // manifest, so flipping `requestedOrientation` at runtime reflows the
     // window instead of recreating the Activity.
     var fullscreen by remember { mutableStateOf(false) }
-    val exitFullscreen = { fullscreen = false }
+    val exitFullscreen = {
+        // A pad held when the popup closes never gets its release gesture: end its note here.
+        val now = System.nanoTime()
+        for (note in sentNotes.values) MidiOut.drumOff(note, now)
+        sentNotes.clear()
+        fullscreen = false
+    }
 
     // The beat lights the pads it plays. The clock's notes are not fingers
     // and not MIDI, so they have no cell gesture to light them: they come
@@ -556,7 +630,7 @@ fun KitScreen(
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
-                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.amberOnChrome, maxLines = 1)
+                    TapeText(Places.ADD_KIT, TapeType.pixel, scheme.accent.tape, maxLines = 1)
                 }
                 // PLAY's FULL, at the header's right end (section 3.3):
                 // the fullscreen grid is the part of PLAY that was
@@ -645,34 +719,46 @@ fun KitScreen(
             }
         }
 
-        Column(
-            Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
-        ) {
-            for (row in gridRows(showing)) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
-                ) {
-                    for (slot in row) {
-                        PadCell(
-                            slot = slot,
-                            pad = kit.pad(slot),
-                            peaks = padPeaks[slot],
-                            selected = slot == selectedSlot,
-                            echo = glow[slot],
-                            // A tap on a filled pad plays it AND selects it,
-                            // so the strip below names what was just heard.
-                            onTap = { s, v -> hit(s, v); haptics.pad(v); onSelectSlot(s) },
-                            onLongPress = onLongPress,
-                            onEmptyLongPress = onEmptyLongPress,
-                            // An empty pad is selectable too: its strip is
-                            // where CAPTURE and FROM SNIPS live. The hint
-                            // toast still fires - it is the same early
-                            // release - so the old discovery is kept.
-                            onEmptyTapHint = { s -> onEmptyTapHint(s); onSelectSlot(s) },
-                            modifier = Modifier.weight(1f),
-                        )
+        StrikeControls(strike, Modifier.fillMaxWidth())
+        StrikeLayerFeedback(strike, Modifier.fillMaxWidth())
+        if (strike.enabled && kit.pads.none { it.velocityLayers.isNotEmpty() || it.chain?.zones?.isNotEmpty() == true }) {
+            TapeText("FOR TONE CHANGES: ADD SOFT HITS IN PAD SHEET", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        }
+        StrikePadArea(strike, Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
+            ) {
+                for (row in gridRows(showing)) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(Layout.PAD_GAP.dp),
+                    ) {
+                        for (slot in row) {
+                            PadCell(
+                                slot = slot,
+                                pad = kit.pad(slot),
+                                peaks = padPeaks[slot],
+                                selected = slot == selectedSlot,
+                                echo = glow[slot],
+                                // A tap on a filled pad plays it AND selects it,
+                                // so the strip below names what was just heard.
+                                onTap = { s, v ->
+                                    val touch = strike.hit(v)
+                                    hit(s, touch.velocity, touch.gainVelocity)
+                                    haptics.pad(touch.velocity)
+                                    onSelectSlot(s)
+                                },
+                                onLongPress = onLongPress,
+                                onEmptyLongPress = onEmptyLongPress,
+                                // An empty pad is selectable too: its strip is
+                                // where CAPTURE and FROM SNIPS live. The hint
+                                // toast still fires - it is the same early
+                                // release - so the old discovery is kept.
+                                onEmptyTapHint = { s -> onEmptyTapHint(s); onSelectSlot(s) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                 }
             }
@@ -1012,7 +1098,19 @@ fun KitScreen(
                         Modifier
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = "MIDI MAP ${midiMap.label}") { panic(); midiMap = midiMap.next() }
+                            .tapeClick(label = "MIDI MAP ${midiMap.label}") {
+                                // Panic before the switch: a held note must release under the map it struck under.
+                                panic()
+                                midiMap = midiMap.next()
+                                // Remembered for every connected hardware controller, not the virtual port.
+                                val chosen = midiMap.name
+                                val keys = MidiPadMaps.keysToSave(midiDevices)
+                                if (keys.isNotEmpty()) {
+                                    val editor = padMapPrefs.edit()
+                                    for (k in keys) editor.putString(k, chosen)
+                                    editor.apply()
+                                }
+                            }
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -1038,8 +1136,12 @@ fun KitScreen(
                 kit = kit,
                 glow = glow,
                 status = StreamFacts.playStatus(host.up, host.voiceCount, PadEngine.MAX_VOICES, host.latency),
-                onHit = { s, v, _ -> playHeld(s, v) },
-                onRelease = { s, _ -> release(s) },
+                strike = strike,
+                onHit = { s, v, _ ->
+                    val touch = strike.hit(v)
+                    playHeld(s, touch.velocity, fromMidi = false, gainVelocity = touch.gainVelocity)
+                },
+                onRelease = { s, _ -> release(s, fromMidi = false) },
                 onExit = exitFullscreen,
             )
         }
@@ -1245,12 +1347,23 @@ private fun TexturePanel(
             onFractionCommit = {},
         )
 
+        // Whether the job in flight is this button's own. `busy` is every
+        // job's, so on its own it would put the spinner on this button for
+        // a job started from the grid or the shelf; the dock says what the
+        // job is, and the ring belongs on the control that was pressed.
+        // Set on the press, cleared when the app is idle again.
+        var startedHere by remember { mutableStateOf(false) }
+        LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            if (busy) "DUBBING…" else "$kind ▸ NEW TAPE",
+            "$kind ▸ NEW TAPE",
             scheme,
             enabled = !busy,
+            working = busy && startedHere,
             modifier = Modifier.fillMaxWidth(),
-            onClick = onGo,
+            onClick = {
+                startedHere = true
+                onGo()
+            },
         )
     }
 }
@@ -1287,6 +1400,9 @@ private fun PadCell(
     modifier: Modifier = Modifier,
 ) {
     val scheme = LocalScheme.current
+    // A held pointer coroutine survives recomposition, including switching
+    // kits. Its next hit must use the current kit's strip and playback path.
+    val currentOnTap by rememberUpdatedState(onTap)
     val shape = RoundedCornerShape(Layout.PAD_RADIUS.dp)
     // The pad's own name. This said "A%02d".format(slot), which was true
     // only while this grid could not show slot 17 - see the bank switch
@@ -1298,8 +1414,8 @@ private fun PadCell(
         Box(
             modifier
                 .height(Layout.KIT_PAD_H.dp)
-                .then(if (selected) Modifier.border(2.dp, (if (scheme.look == Look.MODERN) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
+                .then(if (selected) Modifier.border(2.dp, scheme.accent.tape, shape).padding(2.dp) else Modifier)
+                .padSkin(scheme, null, shape, 0f)
                 // The raw pointerInput below fires onTap on release
                 // (a hint, not an action) and starts a hand-rolled
                 // long-press timer on down — neither registers a
@@ -1386,26 +1502,18 @@ private fun PadCell(
     // a brighter fill than a fresh hit produces.
     val lit = maxOf(0.35f * glow.value, 0.35f * (echo?.value ?: 0f), if (held) PAD_HELD_ALPHA else 0f)
 
-    val modern = scheme.look == Look.MODERN
     Box(
         modifier
             .height(Layout.KIT_PAD_H.dp)
-            // The selection ring, OUTSIDE the class rim with the rim inset
-            // under it: the rim's width is the held state and its hue the
-            // drum class, so the ring takes the one thing neither already
-            // says. It used to be a 1dp line drawn over the rim's outer
-            // pixel, which the first run on a phone could not see at all.
-            .then(if (selected) Modifier.border(2.dp, (if (modern) scheme.accent else scheme.amber).tape, shape).padding(2.dp) else Modifier)
-            // The face is PadGrid's `padSkin`, shared with PlayPad. Classic
-            // is this cell's own chain: the held rim is 3dp, and the hit's
-            // flash is drawn over the border.
-            .padSkin(
-                scheme, cls, shape, lit,
-                classic = Modifier
-                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                    .border(if (held) 3.dp else 2.dp, cls.tape, shape)
-                    .background(cls.tape.copy(alpha = lit), shape),
-            )
+            // The selection ring, OUTSIDE the face with the face inset
+            // under it: the face's bottom edge is the drum class and its
+            // flash is the hit and the hold, so the ring takes the one thing
+            // neither already says. It used to be a 1dp line drawn over the
+            // pad's outer pixel, which the first run on a phone could not
+            // see at all.
+            .then(if (selected) Modifier.border(2.dp, scheme.accent.tape, shape).padding(2.dp) else Modifier)
+            // The face is PadGrid's `padSkin`, shared with PlayPad.
+            .padSkin(scheme, cls, shape, lit)
             // TalkBack could already focus this cell and read its name
             // (the pointerInput below registers no click action), but a
             // double-tap did nothing — a false affordance, arguably
@@ -1446,7 +1554,7 @@ private fun PadCell(
                 while (true) {
                     val down = awaitPointerEventScope { awaitFirstDown(requireUnconsumed = false) }
                     held = true
-                    onTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
+                    currentOnTap(slot, PadHit.velocityAt(down.position.y, size.height.toFloat()))
                     scope.launch {
                         glow.snapTo(1f)
                         glow.animateTo(0f, tween(Motion.PAD_GLOW_MS))

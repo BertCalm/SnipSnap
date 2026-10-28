@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 1,
+  "engine": "TIDAL",
+  "label": "frozen-baseline-profile-only",
+  "generatedAt": "2026-10-24T19:00:27.373373475Z",
+  "checkoutRevision": "5e953da5493d08112f10fcd1bd2b000bd7946b92",
+  "clock": "System.nanoTime; render call only",
+  "jfrRecording": "/workspace/scratch/tidal-performance/baseline-profile.jfr",
+  "jfrNote": "Use a separate profiling run; primary before/after timing runs leave JFR disabled.",
+  "timedScope": "Excludes cache reset, explicit GC, validation, hashes, logging, JSON and file I/O.",
+  "states": {
+    "cold": "Clear geometry and finished audio before each call; JVM/classes/JIT are already warm.",
+    "warm": "Keep geometry but clear finished audio before each call; a fresh complete render is required.",
+    "repeat": "Repeat the same complete recipe with caches retained; old code has no finished-audio cache."
+  },
+  "memoryDefinitions": {
+    "allocatedBytesCurrentThread": "HotSpot ThreadMXBean allocation counter delta around the render call; null if unsupported.",
+    "heapUsedBeforeBytes": "MemoryMXBean heap used after explicit GC immediately before the timer.",
+    "heapUsedAfterBytes": "MemoryMXBean heap used immediately after the timer; includes garbage not yet collected.",
+    "sumOfHeapPoolPeakUsedBytes": "Sum of per-heap-pool peak used after reset immediately before render. Upper envelope, not simultaneous live heap or process RSS."
+  },
+  "floatHashEncoding": "Float.toRawBits, little-endian four bytes per sample",
+  "runtime": {
+    "javaVersion": "21.0.12.1",
+    "vm": "OpenJDK 64-Bit Server VM",
+    "os": "Linux",
+    "architecture": "amd64",
+    "processors": 4,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "heapMaximumBytes": 805306368,
+    "vmArguments": [
+      "-Xms256m",
+      "-Xmx768m",
+      "-XX:ActiveProcessorCount=4"
+    ],
+    "loadedBenchmark": {
+      "path": "/workspace/scratch/tidal-performance/benchmark-classes",
+      "classSha256": "44a8532cf09be374dee8ff4b1cd6075e920971fd2dfc31fa7db8f662e99913eb",
+      "jarSha256": null
+    },
+    "loadedEngine": {
+      "path": "/workspace/scratch/tidal-performance/baseline-main.jar",
+      "classSha256": "3d47c55e019fede5ff7c7f67f820d3abdbcbbf7300b9af1e9f2fc989ed39373f",
+      "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f"
+    },
+    "loadedDynamics": {
+      "path": "/workspace/scratch/tidal-performance/baseline-main.jar",
+      "classSha256": "d9c78c4626644ed87021be83af3e63e6987725ccb0b7ab13fc85b5264f591298",
+      "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f"
+    },
+    "loadedAudio": {
+      "path": "/workspace/scratch/tidal-performance/baseline-main.jar",
+      "classSha256": "de54634f85afcfa7b8a8910dd3ceaa2bebe9edda644cffbf3fb0dfe347298bf9",
+      "jarSha256": "6271674405afdc9c0103f7f834a678d8b85e3947afd63bbddf5bb5e3fb0d421f"
+    }
+  },
+  "benchmarkWallMs": 10447.182573,
+  "cases": [
+    {
+      "id": "pair-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model2-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "warm",
+      "cacheHooksPresent": false,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        2812.29019
+      ],
+      "minMs": 2812.29019,
+      "medianMs": 2812.29019,
+      "p90Ms": 2812.29019,
+      "maxMs": 2812.29019,
+      "allocatedBytesCurrentThread": [
+        68962400
+      ],
+      "heapUsedBeforeBytes": [
+        5628536
+      ],
+      "heapUsedAfterBytes": [
+        83223160
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        83223160
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "3ddafc853441469113534840b4e54213494a6147ed53ab603cb93e7125d69b85",
+      "prelevelFloat32Sha256": null,
+      "cache": null,
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model2-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "warm",
+      "cacheHooksPresent": false,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        2057.112811
+      ],
+      "minMs": 2057.112811,
+      "medianMs": 2057.112811,
+      "p90Ms": 2057.112811,
+      "maxMs": 2057.112811,
+      "allocatedBytesCurrentThread": [
+        87032544
+      ],
+      "heapUsedBeforeBytes": [
+        5880352
+      ],
+      "heapUsedAfterBytes": [
+        101300768
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        101300768
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "1b34cb45b29a180bf6b3914dac60702b1bca0ca946a22ab2f307c31fcafdcd69",
+      "prelevelFloat32Sha256": null,
+      "cache": null,
+      "profileOutsideTimedSamples": null
+    }
+  ]
+}

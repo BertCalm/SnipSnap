@@ -1,11 +1,14 @@
 package com.snipsnap.app
 
+import android.util.Log
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.PadHit
+import com.snipsnap.synth.AquariumPerformanceSettings
+import com.snipsnap.synth.AquariumRecipe
 import java.io.File
 
 /**
@@ -58,6 +61,15 @@ class PadEngine(preferredSampleRate: Int) {
      */
     private val bankLock = Any()
 
+    // Stops the command ring refused; only touched under @Synchronized.
+    private val pendingStops = ArrayDeque<Pair<Int, Float>>()
+    private var pendingAllOff: Float? = null
+    private var keptWarned = false
+    private var aquariumWanted = AquariumPerformanceSettings()
+    private var aquariumBpm = 0.0
+    private var aquariumPending = false
+    private var aquariumResetPending = false
+
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
     private val hits = HashMap<Int, Int>()
@@ -94,7 +106,61 @@ class PadEngine(preferredSampleRate: Int) {
     @Synchronized
     fun start(): Boolean {
         running = open && NativePads.start(handle)
+        if (running) flushAquarium()
         return running
+    }
+
+    /**
+     * Stage this instance's live bus. True queued now; false keeps the latest
+     * request for the existing frame-rate drain to retry, unless already closed.
+     * Sound edits fade the wet branch; bypass alone retains effect time.
+     * A reset request stays sticky across newer edits until it is queued.
+     */
+    @Synchronized
+    fun configureAquarium(settings: AquariumPerformanceSettings, reset: Boolean = false): Boolean {
+        if (!open) return false
+        aquariumWanted = settings
+        aquariumPending = true
+        aquariumResetPending = aquariumResetPending || reset
+        return flushAquarium()
+    }
+
+    /** Kit tempo drives the shared Tide clock. Zero means free time. */
+    @Synchronized
+    fun setAquariumTempo(bpm: Double): Boolean {
+        require(bpm.isFinite() && bpm in 0.0..1000.0) { "Aquarium host BPM must be finite and in 0..1000: $bpm" }
+        if (!open) return false
+        if (aquariumBpm != bpm) {
+            aquariumBpm = if (bpm == 0.0) 0.0 else bpm
+            aquariumPending = true
+        }
+        return flushAquarium()
+    }
+
+    @Synchronized
+    fun aquariumSettings(): AquariumPerformanceSettings = aquariumWanted
+
+    @Synchronized
+    fun aquariumFaulted(): Boolean = open && NativePads.aquariumFaulted(handle)
+
+    @Synchronized
+    fun aquariumLimitedFrames(): Long = if (open) NativePads.aquariumLimitedFrames(handle) else 0L
+
+    private fun flushAquarium(): Boolean {
+        if (!open) return false
+        if (!aquariumPending) return true
+        val parameters = FloatArray(AquariumRecipe.PARAMETERS.size) { index ->
+            aquariumWanted.settings.parameters.getValue(AquariumRecipe.PARAMETERS[index].id)
+        }
+        val accepted = NativePads.configureAquarium(
+            handle, parameters, aquariumWanted.settings.seed, aquariumWanted.settings.model,
+            aquariumBpm, aquariumWanted.outputGain, aquariumWanted.enabled, aquariumResetPending,
+        )
+        if (accepted) {
+            aquariumPending = false
+            aquariumResetPending = false
+        }
+        return accepted
     }
 
     @Synchronized
@@ -277,8 +343,15 @@ class PadEngine(preferredSampleRate: Int) {
      * takes a lock of its own belongs on the caller's side of this call.
      */
     @Synchronized
-    fun hit(pad: KitPad, velocity: Float, voiceId: Int, swap: ((PadHit.Hit) -> PadHit.Hit?)? = null): Boolean {
+    fun hit(
+        pad: KitPad,
+        velocity: Float,
+        voiceId: Int,
+        gainVelocity: Float = velocity,
+        swap: ((PadHit.Hit) -> PadHit.Hit?)? = null,
+    ): Boolean {
         if (!isUp()) return false
+        flushPending()
         val n = hits[pad.slot] ?: 0
         hits[pad.slot] = n + 1
         // Resolved as the pad always resolves - round-robin counter, velocity
@@ -288,12 +361,12 @@ class PadEngine(preferredSampleRate: Int) {
         // auditioning for instead of a default. A swap that declines (its
         // audio never loaded) leaves the pad's own hit untouched, which is
         // the right fallback: the kit still plays.
-        val resolved = PadHit.resolve(pad, velocity, n) { framesOf[it] } ?: return false
+        val resolved = PadHit.resolve(pad, velocity, n, gainVelocity) { framesOf[it] } ?: return false
         val hit = swap?.invoke(resolved) ?: resolved
         val sample = sampleIndex[hit.sampleFile] ?: return false
         return NativePads.noteOn(
             handle, voiceId, sample,
-            hit.startFrame, hit.endFrameExclusive, -1L, hit.gainLeft, hit.gainRight, hit.pitchRatio,
+            hit.startFrame, hit.endFrameExclusive, hit.loopStartFrame, hit.gainLeft, hit.gainRight, hit.pitchRatio,
             reverse = false,
         )
     }
@@ -310,7 +383,9 @@ class PadEngine(preferredSampleRate: Int) {
      */
     @Synchronized
     fun hitLayers(layers: List<Layer>, startFrame: Long, endFrame: Long, loopStart: Long, pitch: Double): Boolean {
-        if (!isUp() || layers.isEmpty()) return false
+        if (!isUp()) return false
+        flushPending()
+        if (layers.isEmpty()) return false
         // The native side refuses a group larger than the engine has voices;
         // saying so here means four arrays are never built for it.
         if (layers.size > MAX_VOICES) return false
@@ -387,21 +462,99 @@ class PadEngine(preferredSampleRate: Int) {
         if (open) NativePads.setVoiceGain(handle, voiceId, gainLeft, gainRight, glideMs)
     }
 
-    /** Stop one voice with a short fade: a choke, a steal, a gate's release. */
+    /**
+     * Stop one voice with a short fade: a choke, a steal, a gate's release.
+     *
+     * The command ring drops on full by design, which is right for a fader
+     * (the next value supersedes the lost one) and wrong for a stop: a dropped
+     * stop is a stuck pad until PANIC. So a refused stop is kept and retried
+     * from [drainEnded], which PadHost and BeatPlayer pump at screen rate (SPLIT
+     * and ORBIT own engines that do not; a later hit flushes it there); no
+     * new loop. Returns true when queued now, false when kept to retry.
+     */
     @Synchronized
-    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS) {
-        if (open) NativePads.stopVoice(handle, voiceId, fadeMs)
+    fun stop(voiceId: Int, fadeMs: Float = CHOKE_FADE_MS): Boolean {
+        if (!open) return true
+        if (NativePads.stopVoice(handle, voiceId, fadeMs)) return true
+        noteKept()
+        // A kept all-off already covers this voice; a stop behind it must never replay after it.
+        if (pendingAllOff == null) pendingStops.add(Pair(voiceId, fadeMs))
+        return false
     }
 
-    /** Everything, with a slightly longer fade (leaving PLAY, the panic). */
+    /**
+     * Everything, with a slightly longer fade (leaving PLAY, the panic).
+     *
+     * Kept and retried from [drainEnded] when the ring refuses it, for the
+     * reason [stop] gives. A kept all-off supersedes any kept stops, which are
+     * cleared, so they can never replay after it. Returns true when queued
+     * now, false when kept to retry. A kept all-off is retried before any later
+     * hit is queued, so nothing played after PANIC is cut by it.
+     */
     @Synchronized
-    fun allOff(fadeMs: Float = PANIC_FADE_MS) {
-        if (open) NativePads.allOff(handle, fadeMs)
+    fun allOff(fadeMs: Float = PANIC_FADE_MS): Boolean {
+        if (!open) return true
+        if (NativePads.allOff(handle, fadeMs)) {
+            // This all-off covers whatever was kept; replaying it later would cut notes started since.
+            pendingAllOff = null
+            pendingStops.clear()
+            return true
+        }
+        noteKept()
+        pendingAllOff = fadeMs
+        pendingStops.clear()
+        return false
     }
 
-    /** The ids of voices that ended since the last call; drain at screen rate. */
+    /** Retries what the ring refused, then returns the ids of voices that ended since the last call; drain at screen rate. */
     @Synchronized
-    fun drainEnded(): IntArray = if (open) NativePads.drainEnded(handle) else IntArray(0)
+    fun drainEnded(): IntArray {
+        if (!open) return IntArray(0)
+        flushPending()
+        return NativePads.drainEnded(handle)
+    }
+
+    /** The all-off first, then the stops from the front, until the ring refuses one. */
+    private fun flushPending() {
+        val fade = pendingAllOff
+        if (fade != null) {
+            if (!NativePads.allOff(handle, fade)) return
+            pendingAllOff = null
+        }
+        while (pendingStops.isNotEmpty()) {
+            val (voiceId, stopFade) = pendingStops.first()
+            if (!NativePads.stopVoice(handle, voiceId, stopFade)) return
+            pendingStops.removeFirst()
+        }
+        flushAquarium()
+    }
+
+    /** One warning the first time anything is kept; never per frame. */
+    private fun noteKept() {
+        if (keptWarned) return
+        keptWarned = true
+        Log.w(TAG, "command ring full: keeping a refused stop or all-off to retry at screen rate")
+    }
+
+    /** Frames the audio callback has rendered since this engine was created; 0 when closed. For diagnostics. */
+    @Synchronized
+    fun framesRendered(): Long = if (open) NativePads.framesRendered(handle) else 0L
+
+    /**
+     * The hardware's reported playback position, written into [out] (two longs the caller owns):
+     * `[framePosition, timeNanos]` on CLOCK_MONOTONIC. False, leaving [out] alone, when closed, when
+     * the stream has no timestamp yet, or when [out] is too small. Main thread, never the audio callback.
+     */
+    @Synchronized
+    fun hardwarePosition(out: LongArray): Boolean = open && NativePads.hardwarePosition(handle, out)
+
+    /** Frames per hardware burst; 0 when closed or no stream. */
+    @Synchronized
+    fun framesPerBurst(): Int = if (open) NativePads.framesPerBurst(handle) else 0
+
+    /** Oboe's AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio); -1 when closed or no stream. */
+    @Synchronized
+    fun audioApi(): Int = if (open) NativePads.audioApi(handle) else -1
 
     // ---- the resample tap -------------------------------------------------
 
@@ -510,6 +663,8 @@ class PadEngine(preferredSampleRate: Int) {
     }
 
     companion object {
+        private const val TAG = "PadEngine"
+
         /** The engine's polyphony; the VoiceAllocator in PLAY is built at the same number. */
         const val MAX_VOICES = 32
 

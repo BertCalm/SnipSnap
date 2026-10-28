@@ -692,9 +692,9 @@ class FxTest {
     // ---------- VALVE ----------
 
     @Test
-    fun `VALVE sits after SQUASH and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
+    fun `VALVE sits after FORGE and before CRUNCH, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
-        assertEquals(names.indexOf("squash") + 1, names.indexOf("valve"), "VALVE is not right after SQUASH: $names")
+        assertEquals(names.indexOf("forge") + 1, names.indexOf("valve"), "VALVE is not right after FORGE: $names")
         assertEquals(names.indexOf("valve") + 1, names.indexOf("crunch"), "VALVE is not right before CRUNCH: $names")
 
         val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
@@ -721,10 +721,10 @@ class FxTest {
     // ---------- WAH ----------
 
     @Test
-    fun `WAH sits right after CONTOUR and before SQUASH, and an absent section keeps old recipes byte-stable`() {
+    fun `WAH sits right after CONTOUR and before COMPRESSOR, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("contour") + 1, names.indexOf("wah"), "WAH is not right after CONTOUR: $names")
-        assertEquals(names.indexOf("wah") + 1, names.indexOf("squash"), "WAH is not right before SQUASH: $names")
+        assertEquals(names.indexOf("wah") + 1, names.indexOf("compressor"), "WAH is not right before COMPRESSOR: $names")
 
         val without = FxChain(squash = mapOf("AMOUNT" to 0.5f))
         assertTrue(!without.toJsonText().contains("wah"), "no wah key unless the section is set")
@@ -1210,6 +1210,32 @@ class FxTest {
             out.frameCount > long.frameCount * 1.5,
             "capTail truncated an octave-down hit to ${out.frameCount} from ${long.frameCount}",
         )
+    }
+
+    @Test
+    fun `a trail that reaches the tail budget fades away over its last 300 ms instead of stopping`() {
+        // The owner heard DELAY's trail stop while still sounding on held notes (the DELAY confirm listen, 2026-10-26) and
+        // chose a 300 ms raised-cosine fade at the budget for every pad (2026-10-27). A held note through ECHO's longest trail
+        // reaches the budget with the trail still sounding, so every frame of the fade can be checked against ECHO's own.
+        val rate = kick.sampleRate
+        val held = Snip(FloatArray(rate / 2) { 0.5f * sin(2.0 * PI * 220.0 * it / rate).toFloat() }, 1, rate)
+        val macros = mapOf("TIME" to 1f, "REPEAT" to 1f, "TONE" to 1f, "MIX" to 1f)
+        val trail = Echo.process(held, macros)
+        val out = FxChain(echo = macros).process(held)
+        val cut = held.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * rate).toInt()
+        assertTrue(trail.frameCount > cut, "ECHO's longest trail no longer reaches the budget, so this test proves nothing")
+        assertEquals(cut, out.frameCount, "the budget did not cut at one second past the note")
+        val n = (FxChain.CAP_FADE_SECONDS * rate).toInt()
+        val start = cut - n
+        assertContentEquals(trail.samples.copyOfRange(0, start), out.samples.copyOfRange(0, start), "the cut touched the sound before its fade")
+        var checked = 0
+        for (f in start until cut) {
+            if (abs(trail.samples[f]) < 1e-3f) continue
+            val g = 0.5 + 0.5 * cos(PI * (f - start) / n)
+            assertEquals(g, (out.samples[f] / trail.samples[f]).toDouble(), 1e-4, "frame ${f - start} of the fade is not the raised cosine")
+            checked++
+        }
+        assertTrue(checked > n / 2, "only $checked of the fade's $n frames carried enough trail to check")
     }
 
     @Test

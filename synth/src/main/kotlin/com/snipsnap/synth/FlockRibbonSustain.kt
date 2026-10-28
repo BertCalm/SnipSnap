@@ -164,7 +164,7 @@ object FlockRibbonSustain {
         val raw = source.rawSamples
         check(raw.size == total)
         val targetStart = intro - blend
-        val (candidate, search) = selectEndpoint(raw, intro, nominalLength, blend, searchRadius, held)
+        val (candidate, search) = selectEndpoint(raw, intro, nominalLength, blend, searchRadius, held, cancelled)
         val length = candidate.frames
         val tailStart = intro + length - blend
         val correlation = candidate.correlation
@@ -234,10 +234,11 @@ object FlockRibbonSustain {
         return if (aa * bb > 1e-24) (dot / sqrt(aa * bb)).coerceIn(-1.0, 1.0) else 0.0
     }
 
-    private data class Candidate(val frames: Int, val correlation: Double, val blend: FloatArray, val minDb: Double, val maxDb: Double)
+    internal data class Candidate(val frames: Int, val correlation: Double, val blend: FloatArray, val minDb: Double, val maxDb: Double)
 
     /** Change only the captured endpoint; never alter the source's flock, carriers or playback gain. */
-    private fun selectEndpoint(source: FloatArray, intro: Int, nominal: Int, blend: Int, radius: Int, held: Int): Pair<Candidate, EndpointSearch> {
+    internal fun selectEndpoint(source: FloatArray, intro: Int, nominal: Int, blend: Int, radius: Int, held: Int,
+        cancelled: () -> Boolean = { false }): Pair<Candidate, EndpointSearch> {
         val low = max(nominal - radius, 2 * blend)
         val high = minOf(nominal + radius, (held - intro - 1) / 3, source.size - intro - 1)
         val aWeight = DoubleArray(blend)
@@ -249,6 +250,8 @@ object FlockRibbonSustain {
         }
         val evaluated = mutableSetOf<Int>()
         fun candidate(frames: Int): Candidate {
+            if (Thread.currentThread().isInterrupted || cancelled())
+                throw java.util.concurrent.CancellationException("FLOCK endpoint search no longer wanted")
             evaluated += frames
             val tail = intro + frames - blend
             val target = intro - blend

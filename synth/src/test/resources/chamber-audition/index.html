@@ -21,10 +21,10 @@
   <main>
     <section class="hero wrap" aria-labelledby="page-title">
       <div class="hero-copy">
-        <p class="eyebrow"><span class="status-dot"></span> A WORKING SOUND EXPERIMENT</p>
+        <p class="eyebrow" id="hero-eyebrow"><span class="status-dot"></span> A WORKING SOUND EXPERIMENT</p>
         <h1 id="page-title">One strike.<br>Four <em>answers.</em></h1>
-        <p class="lede">A membrane, a bar, a cowbell, a triangle.<br>Then the room joins the instrument.</p>
-        <p class="hero-note">CHAMBER explores a pitched quartet inside a modeled room. Wood, glass, and placement shape how a single strike unfolds.</p>
+        <p class="lede">A timpani-like membrane, a bar, a cowbell, a triangle.<br>Then the room joins the instrument.</p>
+        <p class="hero-note" id="hero-note">CHAMBER explores a pitched quartet inside a modeled room. Wood, glass, and placement shape how a single strike unfolds.</p>
         <a class="text-link hero-link" href="#first-listen">Step into the listening room <span aria-hidden="true">↓</span></a>
       </div>
       <figure class="room-figure" aria-labelledby="room-caption">
@@ -58,14 +58,15 @@
 
     <div class="instrument-strip wrap" aria-label="The four sound sources">
       <span class="strip-label">THE QUARTET</span>
-      <span><b>01</b> Membrane <small>the body</small></span>
+      <span><b>01</b> Membrane <small>timpani / the body</small></span>
       <span><b>02</b> Bar <small>the pitch</small></span>
       <span><b>03</b> Cowbell <small>the edge</small></span>
       <span><b>04</b> Triangle <small>the air</small></span>
     </div>
 
     <section class="listening-section wrap" id="first-listen" aria-labelledby="first-title">
-      <div class="section-heading"><div><p class="eyebrow">01 / START HERE</p><h2 id="first-title">A quartet.<br>Two different rooms.</h2></div><p>Start with these two rooms. Listen beyond the attack: where does the brightness linger, and what answers the quartet?</p></div>
+      <div class="section-heading"><div><p class="eyebrow">01 / START HERE</p><h2 id="first-title">A quartet.<br>Two different rooms.</h2></div><p id="first-intro">Start with these two rooms. Listen beyond the attack: where does the brightness linger, and what answers the quartet?</p></div>
+      <a id="previous-audition" class="text-link previous-audition" hidden>Open the original audition</a>
       <div class="listening-settings">
         <div class="mode-setting"><span id="level-label">Listening level</span><div class="segmented" role="group" aria-labelledby="level-label"><button type="button" class="mode-button active" data-mode="matched" aria-pressed="true">Matched</button><button type="button" class="mode-button" data-mode="raw" aria-pressed="false">Raw</button></div></div>
         <p id="normalization-note">Matched levels use the supplied audition gain. Raw preserves render levels.</p>
@@ -75,7 +76,7 @@
     </section>
 
     <section class="comparison-section wrap" id="comparisons" aria-labelledby="compare-title">
-      <div class="section-heading"><div><p class="eyebrow">02 / CHANGE ONE THING</p><h2 id="compare-title">Listen for the difference.</h2></div><p>Rooms, source positions, and the returning energy. These comparisons make the experiment audible.</p></div>
+      <div class="section-heading"><div><p class="eyebrow">02 / CHANGE ONE THING</p><h2 id="compare-title">Listen for the difference.</h2></div><p id="comparison-intro">Rooms, source positions, and the returning energy. These comparisons make the experiment audible.</p></div>
       <div class="filter-bar"><div class="filter-control"><label for="section-filter">Study</label><select id="section-filter"><option value="all">All studies</option></select></div><div class="filter-control search-control"><label for="clip-search">Find a sound</label><input id="clip-search" type="search" placeholder="Room, note, source…" autocomplete="off"></div><span id="clip-count" class="clip-count"></span></div>
       <div id="comparison-clips"><p class="loading-copy">Loading comparisons…</p></div>
       <p id="no-results" hidden>No sounds match this selection. Try another study or search.</p>
@@ -86,7 +87,7 @@
       <div class="bench-evidence"><h3>What this audition contains</h3><dl id="render-facts"><div><dt>Engine</dt><dd>CHAMBER prototype</dd></div></dl><div id="checks-panel"></div><div id="limitations-panel"></div></div>
     </div></section>
 
-    <section class="takeaway-section wrap" aria-labelledby="takeaway-title"><div><p class="eyebrow">TAKE IT WITH YOU</p><h2 id="takeaway-title">Your ears. Your notes.</h2><p>Use each clip’s listening notes to record what you hear. Notes and ratings stay in this browser on this device. Export them to keep or share a copy.</p><div class="download-actions"><button type="button" id="export-notes" class="button button-dark">Export listening notes <span aria-hidden="true">↗</span></button><span id="note-count">No notes saved yet</span></div><p id="storage-notice" class="storage-notice" hidden>Browser storage is unavailable. Notes will remain here until you close or reload the page; export them to keep a copy.</p></div><div class="download-box"><span class="eyebrow">THE RENDER PACKAGE</span><h3>Keep listening.</h3><p>Download the WAV renders and the recipes behind them.</p><a id="zip-download" class="text-link" hidden>Starter listening pack <span aria-hidden="true">↓</span></a><a id="manifest-download" class="text-link" href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a></div></section>
+    <section class="takeaway-section wrap" aria-labelledby="takeaway-title"><div><p class="eyebrow">TAKE IT WITH YOU</p><h2 id="takeaway-title">Your ears. Your notes.</h2><p>Use each clip’s listening notes to record what you hear. Notes and ratings stay in this browser on this device. Export them to keep or share a copy.</p><div class="download-actions"><button type="button" id="export-notes" class="button button-dark">Export listening notes <span aria-hidden="true">↗</span></button><span id="note-count">No notes saved yet</span></div><p id="storage-notice" class="storage-notice" hidden>Browser storage is unavailable. Notes will remain here until you close or reload the page; export them to keep a copy.</p></div><div class="download-box"><span class="eyebrow">THE RENDER PACKAGE</span><h3>Keep listening.</h3><p>Download the WAV renders and the recipes behind them.</p><a id="kit-download" class="text-link" hidden>MPC 3 / MPC 2 kit <span aria-hidden="true">↓</span></a><a id="zip-download" class="text-link" hidden>Starter listening pack <span aria-hidden="true">↓</span></a><a id="manifest-download" class="text-link" href="manifest.json" download>Render manifest <span aria-hidden="true">↓</span></a></div></section>
   </main>
 
   <footer class="footer wrap"><span>SNIPSNAP / CHAMBER</span><span>A listening room for an engine in progress.</span><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noreferrer">Explore SnipSnap ↗</a></footer>

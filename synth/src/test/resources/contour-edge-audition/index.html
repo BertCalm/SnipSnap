@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#f5f1e9">
+<meta name="description" content="Hear Contour EDGE from 0 to 100 percent, comparing the previous and revised recipes at matched levels.">
+<link rel="icon" href="data:,">
+<title>Contour · EDGE response audition</title>
+<style>
+:root{color-scheme:light;--paper:#f5f1e9;--card:#fffdf8;--ink:#22291f;--muted:#687063;--line:#dedfd4;--green:#254f3a;--lime:#d9eeac;--warm:#a9482f}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.6 system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:30px 32px 64px}a{color:var(--green)}button,select,textarea{font:inherit}button,select,textarea{border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink)}button{cursor:pointer;padding:10px 16px;font-size:14px;font-weight:650}button:disabled{opacity:.55;cursor:wait}button:hover{border-color:var(--green)}button[aria-pressed=true]{background:var(--lime);border-color:#abc87c}button.primary{background:var(--green);border-color:var(--green);color:white}button.primary[aria-pressed=true]{background:var(--lime);color:var(--ink)}a:focus-visible,button:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:3px solid var(--warm);outline-offset:4px}h1,h2{font-family:Georgia,serif;font-weight:400;line-height:1.12;letter-spacing:-.035em}h1{font-size:clamp(52px,8vw,92px);margin:30px 0 20px;max-width:850px}h2{font-size:32px;margin:0 0 14px}p{margin:0 0 14px}.eyebrow{font-size:11px;font-weight:750;letter-spacing:.14em;text-transform:uppercase;color:var(--green)}.intro{font-size:19px;max-width:750px}.muted{color:var(--muted);font-size:13px}.toolbar{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;margin-top:28px}label,.legend{display:block;font-size:12px;font-weight:700;letter-spacing:.04em}select,textarea{display:block;width:100%;margin-top:7px;padding:10px 12px}textarea{resize:vertical;min-height:86px}fieldset{min-inline-size:0;border:0;padding:0;margin:22px 0 0}legend{padding:0;font-size:12px;font-weight:700}.steps{display:flex;gap:8px;margin-top:9px}.steps button{flex:1;min-width:0;padding:11px 6px;font-variant-numeric:tabular-nums}.context{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding:22px 0 16px}.context p{margin:0}.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;min-width:0}.card.revised{border-color:#b7caa7}.card .range,.card .play{width:100%;margin:8px 0 10px}.card .play{margin-bottom:18px}.downloads{display:flex;flex-wrap:wrap;gap:10px 18px;font-size:13px}.downloads a{font-weight:600}.note{background:#e9efdd;border:1px solid #dbe2ce;border-radius:12px;padding:16px 20px;font-size:14px;margin:22px 0}.status{min-height:1.6em;margin-top:14px}.status.error{color:var(--warm)}details{border-top:1px solid var(--line);padding:18px 0}summary{cursor:pointer;font-weight:600}.detail-body{padding-top:16px;max-width:850px}.metrics{font-size:12px;overflow-wrap:anywhere}.feedback{display:grid;grid-template-columns:1fr 1.5fr;gap:18px;margin:16px 0}.actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.actions small{font-size:12px;color:var(--muted)}footer{border-top:1px solid var(--line);padding-top:20px;margin-top:22px;font-size:12px;color:var(--muted);overflow-wrap:anywhere}.skip{position:absolute;left:12px;top:-80px;padding:10px;background:white;z-index:2}.skip:focus{top:10px}
+@media(max-width:620px){main{padding:24px 18px 44px}.toolbar,.grid,.feedback{grid-template-columns:1fr}.toolbar{gap:14px}.card{padding:21px}.intro{font-size:17px}h2{font-size:29px}.steps{gap:6px}.steps button{font-size:13px}.context{align-items:flex-start}}
+</style>
+</head>
+<body>
+<a class="skip" href="#listen">Skip to comparison</a>
+<main>
+<nav><a href="https://snipsnap-contour-audition.bertcalm.chatgpt.site">← Earlier Contour listening room</a></nav>
+<header><p class="eyebrow" style="margin-top:30px">SnipSnap / EDGE across its whole range</p><h1>Hear the whole range.</h1><p class="intro">Play EDGE at 0%, 50% and 100% in sequence, then compare the previous and revised recipes. Listen for a useful change in character while the sound keeps its rounded body.</p><p class="muted">Previous is the version you last auditioned. The note, velocity and other macro settings stay fixed. Playback starts at matched level.</p></header>
+<section id="listen" aria-label="EDGE comparison" tabindex="-1">
+<div class="toolbar"><label for="preset">Recipe<select id="preset" disabled></select></label><label for="mode">Note shape<select id="mode"><option value="held">Held tone · repeating</option><option value="finite">Finite note · original attack</option></select></label></div>
+<fieldset><legend>EDGE setting</legend><div id="steps" class="steps" role="group" aria-label="EDGE setting"></div></fieldset>
+<div class="context"><p id="context" class="muted">Loading the comparison…</p><button id="stop" type="button">Stop playback</button></div>
+<div class="grid">
+<article class="card" id="previousCard"><p class="eyebrow">A / previous recipe</p><h2>Previous EDGE</h2><p class="muted">The response from the last audition.</p><button type="button" class="range primary" id="rangePrevious" aria-pressed="false" disabled>Play 0 → 50 → 100%</button><button type="button" class="play" id="playPrevious" aria-pressed="false" disabled>Play previous</button><div class="downloads"><a id="previousMatched" download>Matched WAV</a><a id="previousRaw" download>Raw WAV</a><a id="previousRecipe" download>Recipe JSON</a></div></article>
+<article class="card revised" id="revisedCard"><p class="eyebrow">B / revised recipe</p><h2>Revised EDGE</h2><p class="muted">A wider range for the seven subtler recipes.</p><button type="button" class="range primary" id="rangeRevised" aria-pressed="false" disabled>Play 0 → 50 → 100%</button><button type="button" class="play" id="playRevised" aria-pressed="false" disabled>Play revised</button><div class="downloads"><a id="revisedMatched" download>Matched WAV</a><a id="revisedRaw" download>Raw WAV</a><a id="revisedRecipe" download>Recipe JSON</a></div></article>
+</div>
+<p id="status" class="status muted" role="status" aria-live="polite">Loading recordings…</p>
+<p class="note">This round targets EDGE’s full 0–100% range. The sequence plays body only, midpoint and maximum at matched levels. Soft Digital and Bright Margin keep their previous response.</p>
+</section>
+<details><summary>Your listening notes</summary><div class="detail-body"><div class="feedback"><label for="verdict">This recipe and note shape<select id="verdict"><option value="">Not reviewed</option><option value="clearer">Useful, clearer control range</option><option value="still-weak">Still too little change</option><option value="too-harsh">Too harsh or forward</option><option value="prefer-previous">Prefer the previous response</option></select></label><label for="notes">What changes, or needs work?<textarea id="notes" placeholder="Try neighboring EDGE settings. Note body, edge, softness or loop behavior…"></textarea></label></div><div class="actions"><button id="export" type="button">Export listening notes</button><small id="storageNote">Answers stay in this browser.</small></div></div></details>
+<details><summary>Level policy and measurements</summary><div class="detail-body"><p class="muted">Matched files use gain only, targeting SnipSnap loudness 0.12 with a 0.90 peak ceiling. A peak-limited recording may remain below the loudness target. Raw downloads preserve native synthesis levels. Revised recipes need the updated Contour build. No rack effects are added.</p><p class="muted">Held recordings contain one settled period, repeated by the browser with a 5 ms entry and stop fade. A range sequence plays each held step for two seconds, with a 150 ms gap. Finite sequences play each complete rendered note, preserving its attack, with the same gap. Start with your listening volume low.</p><p id="metrics" class="metrics muted"></p><p class="muted">Measurements check the implementation; listening decides whether each step is useful. These recordings do not establish physical Android or MPC playback.</p></div></details>
+<footer>Source <a id="source" href="https://github.com/BertCalm/SnipSnap">loading…</a> · Previous behavior <a id="baseline" href="https://github.com/BertCalm/SnipSnap">loading…</a> · <a href="manifest.json" download>Render manifest</a></footer>
+</main>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id), buffers = new Map();
+  const labels = {previous:'previous', revised:'revised'};
+  let manifest, edge = .5, context, active = null, playback = null, generation = 0;
+  let tailUntil = 0, feedback = {}, storageKey = '';
+  const note = midi => ['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B'][midi % 12] + (Math.floor(midi / 12) - 1);
+  const fmt = value => Number.isFinite(value) ? value.toFixed(4) : '—';
+  const playButton = (response, range = false) => $(range ? 'range' + (response === 'previous' ? 'Previous' : 'Revised') : 'play' + (response === 'previous' ? 'Previous' : 'Revised'));
+  function announce(text, error = false) { $('status').textContent = text; $('status').classList.toggle('error', error); }
+  function chosen(response, value = edge) { return manifest?.clips.find(clip => clip.presetId === $('preset').value && clip.mode === $('mode').value && clip.edge === value && clip.response === response); }
+  function resetButtons() {
+    for (const response of ['previous','revised']) for (const range of [false,true]) {
+      const button = playButton(response, range);
+      button.textContent = range ? 'Play 0 → 50 → 100%' : 'Play ' + labels[response];
+      button.setAttribute('aria-label', range ? 'Play ' + labels[response] + ' EDGE at 0, 50 and 100 percent' : 'Play ' + labels[response] + ' response');
+      button.setAttribute('aria-pressed', 'false'); button.disabled = !manifest;
+    }
+  }
+  function stop(announceStop = true) {
+    generation++;
+    if (playback?.timer) clearTimeout(playback.timer);
+    playback = null; resetButtons();
+    if (announceStop) announce('Playback stopped.');
+    const now = context?.currentTime || 0;
+    if (!active) return Math.max(now, tailUntil);
+    const old = active; active = null;
+    if (old.gain.gain.cancelAndHoldAtTime) old.gain.gain.cancelAndHoldAtTime(now);
+    else {
+      old.gain.gain.cancelScheduledValues(now);
+      let value = old.loop ? Math.min(1, Math.max(0, (now - old.startedAt) / .005)) : 1;
+      if (old.endsAt) value *= Math.min(1, Math.max(0, (old.endsAt - now) / .005));
+      old.gain.gain.setValueAtTime(value, now);
+    }
+    old.gain.gain.linearRampToValueAtTime(0, now + .005);
+    try { old.source.stop(now + .006); } catch (_) { /* A finished source needs no stop. */ }
+    tailUntil = Math.max(tailUntil, now + .006);
+    return tailUntil;
+  }
+  function load(clip) {
+    const path = clip.matchedPath + '?v=' + encodeURIComponent(clip.matchedSha256 || manifest.sourceCommit);
+    if (!buffers.has(path)) buffers.set(path, (async () => {
+      const result = await fetch(path); if (!result.ok) throw new Error('The recording could not be loaded. Try Play again.');
+      return context.decodeAudioData(await result.arrayBuffer());
+    })().catch(error => { buffers.delete(path); throw error; }));
+    return buffers.get(path);
+  }
+  function selection() {
+    for (const button of $('steps').children) button.setAttribute('aria-pressed', String(Number(button.dataset.edge) === edge));
+    const preset = manifest.presets.find(row => row.id === $('preset').value);
+    $('context').textContent = preset.name + ' · ' + preset.voice + ' / ' + note(preset.rootMidi) + ' · EDGE ' + Math.round(edge * 100) + '%';
+    const metrics = [];
+    for (const response of ['previous','revised']) {
+      const clip = chosen(response); if (!clip) throw new Error('This comparison is missing a recording.');
+      for (const [suffix, path, hash] of [['Matched',clip.matchedPath,clip.matchedSha256],['Raw',clip.rawPath,clip.rawSha256],['Recipe',clip.patchPath,clip.patchSha256]]) $(response + suffix).href = path + '?v=' + encodeURIComponent(hash || manifest.sourceCommit);
+      metrics.push(labels[response] + ': raw loudness ' + fmt(clip.rawLoudness) + ', matched ' + fmt(clip.matchedLoudness) + ', gain ' + fmt(clip.matchGain));
+    }
+    $('metrics').textContent = metrics.join(' · ');
+  }
+  function startStep(run, index) {
+    if (playback !== run || run.ticket !== generation) return;
+    run.timer = null;
+    const clip = run.clips[index], buffer = run.audio[index];
+    edge = clip.edge; selection();
+    const source = context.createBufferSource(), gain = context.createGain();
+    const start = Math.max(context.currentTime, run.after, tailUntil);
+    source.buffer = buffer; source.loop = clip.loop; source.loopStart = 0; source.loopEnd = buffer.duration;
+    source.connect(gain); gain.connect(context.destination);
+    gain.gain.setValueAtTime(clip.loop ? 0 : 1, start);
+    if (clip.loop) gain.gain.linearRampToValueAtTime(1, start + .005);
+    const endsAt = run.range && clip.loop ? start + 2 : null;
+    if (endsAt) {
+      gain.gain.setValueAtTime(1, endsAt - .005);
+      gain.gain.linearRampToValueAtTime(0, endsAt);
+    }
+    active = {source, gain, clip, loop:clip.loop, startedAt:start, endsAt};
+    source.onended = () => {
+      source.disconnect(); gain.disconnect();
+      if (active?.source !== source || playback !== run || run.ticket !== generation) return;
+      active = null;
+      if (index + 1 < run.clips.length) {
+        run.timer = setTimeout(() => startStep(run, index + 1), 150);
+      } else {
+        playback = null; resetButtons(); announce(run.range ? 'Range finished: 0%, 50%, 100%.' : 'Finite note finished.');
+      }
+    };
+    run.button.textContent = run.range ? 'Stop range' : 'Stop ' + labels[run.response];
+    run.button.setAttribute('aria-label', 'Stop ' + labels[run.response] + (run.range ? ' range' : ' response'));
+    run.button.setAttribute('aria-pressed', 'true');
+    source.start(start); if (endsAt) source.stop(endsAt + .001);
+    announce(labels[run.response][0].toUpperCase() + labels[run.response].slice(1) + ' · EDGE ' + Math.round(edge * 100) + '%' + (run.range ? ' · step ' + (index + 1) + ' of 3' : clip.loop ? ' · repeating held tone' : ' · finite note'));
+  }
+  async function play(response, range = false) {
+    if (!manifest) return;
+    if (playback?.response === response && playback.range === range) { stop(); return; }
+    const clips = range ? [0,.5,1].map(value => chosen(response, value)) : [chosen(response)];
+    if (clips.some(clip => !clip)) { announce('This comparison is missing a recording.', true); return; }
+    const after = stop(false), button = playButton(response, range);
+    const run = {response, range, button, clips, after, ticket:generation, timer:null}; playback = run;
+    button.disabled = true; announce('Loading ' + labels[response] + (range ? ' range…' : ' response…'));
+    try {
+      const Audio = window.AudioContext || window.webkitAudioContext;
+      if (!Audio) throw new Error('Audio playback is unavailable. Download a WAV to listen.');
+      context ||= new Audio();
+      const ready = await Promise.all([context.resume(), Promise.all(clips.map(load))]);
+      run.audio = ready[1];
+      if (playback !== run || run.ticket !== generation) return;
+      button.disabled = false; startStep(run, 0);
+    } catch (error) {
+      if (playback === run && run.ticket === generation) { playback = null; resetButtons(); announce(error.message, true); }
+    }
+  }
+  function feedbackKey() { return $('preset').value + '/' + $('mode').value; }
+  function update() {
+    stop(false); selection();
+    const saved = feedback[feedbackKey()] || {}; $('verdict').value = saved.verdict || ''; $('notes').value = saved.notes || '';
+    announce('Play a range sequence, or compare the selected EDGE setting.');
+  }
+  function saveFeedback() {
+    feedback[feedbackKey()] = {verdict:$('verdict').value, notes:$('notes').value, updatedAt:new Date().toISOString()};
+    try { localStorage.setItem(storageKey, JSON.stringify(feedback)); }
+    catch (_) { $('storageNote').textContent = 'Browser storage is unavailable. Export notes to keep them.'; }
+  }
+  $('playPrevious').addEventListener('click', () => play('previous')); $('playRevised').addEventListener('click', () => play('revised'));
+  $('rangePrevious').addEventListener('click', () => play('previous', true)); $('rangeRevised').addEventListener('click', () => play('revised', true));
+  $('stop').addEventListener('click', () => stop()); window.addEventListener('pagehide', () => stop(false));
+  $('preset').addEventListener('change', update); $('mode').addEventListener('change', () => { if (manifest) update(); });
+  $('verdict').addEventListener('change', saveFeedback); $('notes').addEventListener('input', saveFeedback);
+  $('export').addEventListener('click', () => {
+    if (!manifest) return;
+    const value = {engine:'CONTOUR',kind:manifest.kind,sourceCommit:manifest.sourceCommit,baselineCommit:manifest.baselineCommit,exportedAt:new Date().toISOString(),answers:feedback};
+    const url = URL.createObjectURL(new Blob([JSON.stringify(value,null,2)], {type:'application/json'})), link = document.createElement('a');
+    link.href = url; link.download = 'contour-edge-' + manifest.sourceCommit.slice(0,12) + '-notes.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url),1000); announce('Listening notes exported.');
+  });
+  fetch('manifest.json', {cache:'no-store'}).then(result => { if (!result.ok) throw new Error('The render manifest could not be loaded. Reload the page to retry.'); return result.json(); }).then(data => {
+    if (data.engine !== 'CONTOUR' || !data.presets?.length || !data.clips?.length || !Array.isArray(data.values)) throw new Error('The render manifest is incomplete.');
+    manifest = data; storageKey = 'snipsnap-contour-edge:' + data.sourceCommit;
+    try { feedback = JSON.parse(localStorage.getItem(storageKey) || '{}'); if (!feedback || typeof feedback !== 'object' || Array.isArray(feedback)) feedback = {}; }
+    catch (_) { feedback = {}; $('storageNote').textContent = 'Browser storage is unavailable. Export notes to keep them.'; }
+    for (const preset of data.presets) { const option = document.createElement('option'); option.value = preset.id; option.textContent = preset.name + ' · ' + preset.voice; $('preset').append(option); }
+    $('preset').value = data.presets.find(row => row.name === 'Moving Corner')?.id || data.presets[0].id; $('preset').disabled = false;
+    for (const value of data.values) { const button = document.createElement('button'); button.type = 'button'; button.dataset.edge = value; button.textContent = Math.round(value * 100) + '%'; button.setAttribute('aria-label', 'EDGE ' + Math.round(value * 100) + '%'); button.addEventListener('click', () => { edge = value; update(); }); $('steps').append(button); }
+    for (const [id, commit] of [['source',data.sourceCommit],['baseline',data.baselineCommit]]) { $(id).textContent = commit.slice(0,12); $(id).href = 'https://github.com/BertCalm/SnipSnap/commit/' + commit; }
+    update();
+  }).catch(error => announce(error.message, true));
+})();
+</script>
+</body>
+</html>

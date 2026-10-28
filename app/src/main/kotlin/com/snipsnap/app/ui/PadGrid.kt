@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -39,7 +41,6 @@ import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.shell.Layout
-import com.snipsnap.shell.Look
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Scheme
@@ -131,25 +132,18 @@ internal fun classTint(rgb: Int): Color {
  * semantics and scale where they were, because the laws that pin the
  * literal tap code read those files.
  *
- * Under `Look.MODERN` (`docs/MODERN_LOOK.md` §3): the raised fill, a 1dp
- * hairline, the class colour as a 4dp bottom edge - no rim, no glow - and
- * the hit's flash [lit] over the top, because the flash is feedback and
- * not decoration. A blank slot ([cls] null) is the raised card with no
- * edge, the same bevel everything else blank wears.
- *
- * Under the classic look each site's own chain stands in [classic],
- * untouched: KIT's has a held rim (3dp, then 2dp) and lit drawn after the
- * border, PLAY's a resting wash and lit drawn before it, and merging the
- * two would reorder layers one of them has shipped.
+ * The skin (`docs/MODERN_LOOK.md` §3): the raised fill, a 1dp hairline, the
+ * class colour as a 4dp bottom edge - no rim, no glow - and the hit's flash
+ * [lit] over the top, because the flash is feedback and not decoration. A
+ * blank slot ([cls] null) is the raised card with no edge, the same bevel
+ * everything else blank wears.
  */
 internal fun Modifier.padSkin(
     scheme: Scheme,
     cls: Int?,
     shape: Shape,
     lit: Float,
-    classic: Modifier,
 ): Modifier {
-    if (scheme.look != Look.MODERN) return this.then(classic)
     if (cls == null) return this.raisedBevel(scheme, Layout.PAD_RADIUS.dp)
     return this
         .background(scheme.raised.tape, shape)
@@ -302,15 +296,13 @@ private fun Modifier.padGesture(
 
 /**
  * PLAY's own pad cell — mirrors KitScreen's `PadCell` (same tag/name
- * layout, same class-colour source) but implements the handoff's actual
- * two pad states instead of KIT's single hit-flash: *assigned* (a resting
- * outer wash) and *lit* (a stronger inset wash, scaled down 3%). Compose
- * has no free-standing blurred box-shadow to match the handoff's literal
- * "14px"/"26px" glow radii; both states are flat alpha fills over the pad
- * itself, same approximation KitScreen's own cell already uses for its
- * hit flash. No long-press here — PLAY is for playing, not the pad
- * inspector — and release fires `onRelease` so gate (non-one-shot) pads
- * actually stop.
+ * layout, same class-colour source, same `padSkin` face) but is lit by the
+ * trigger/choke glow alone, and scales down 3% while it is. Compose has no
+ * free-standing blurred box-shadow to match the handoff's literal
+ * "14px"/"26px" glow radii; the flash is a flat alpha fill over the pad
+ * itself, same approximation KitScreen's own cell uses for its hit flash.
+ * No long-press here — PLAY is for playing, not the pad inspector — and
+ * release fires `onRelease` so gate (non-one-shot) pads actually stop.
  */
 @Composable
 internal fun PlayPad(
@@ -335,14 +327,17 @@ internal fun PlayPad(
     // A tick under the finger, on every hit this cell makes - assigned, or
     // an empty one CATCH A HIT can land on. The hit itself is the caller's.
     val haptics = LocalHaptics.current
-    val hitWithFeel: (Int, Float, Long) -> Unit = { s, v, t -> onHit(s, v, t); haptics.pad(v) }
+    val currentOnHit by rememberUpdatedState(onHit)
+    val currentOnRelease by rememberUpdatedState(onRelease)
+    val hitWithFeel: (Int, Float, Long) -> Unit = { s, v, t -> currentOnHit(s, v, t); haptics.pad(v) }
+    val releaseCurrent: (Int, Long) -> Unit = { s, t -> currentOnRelease(s, t) }
 
     if (pad == null || glow == null) {
         Box(
             modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .padSkin(scheme, null, shape, 0f, Modifier.raisedBevel(scheme, Layout.PAD_RADIUS.dp))
-                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", hitWithFeel, onRelease) else Modifier),
+                .padSkin(scheme, null, shape, 0f)
+                .then(if (emptyHits) Modifier.padGesture(slot, "EMPTY PAD $tag", hitWithFeel, releaseCurrent) else Modifier),
             contentAlignment = Alignment.TopEnd,
         ) {
             // Full-opacity ink2, not a dimmed copy — the alpha reduction
@@ -362,31 +357,21 @@ internal fun PlayPad(
         modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .scale(1f - 0.03f * g)
-            .padSkin(
-                scheme, cls, shape, 0.40f * g,
-                classic = Modifier
-                    .background(Schemes.darken(scheme.gray, 0.30f).tape, shape)
-                    // assigned: resting outer wash (~class@60%, flattened — see KDoc above)
-                    .background(cls.tape.copy(alpha = 0.12f), shape)
-                    // lit: inset wash at class@40%, driven by the trigger/choke glow
-                    .background(cls.tape.copy(alpha = 0.40f * g), shape)
-                    .border(2.dp, cls.tape, shape),
-            )
+            .padSkin(scheme, cls, shape, 0.40f * g)
             // No long-press here (see this composable's own KDoc — PLAY
             // is for playing): the press-and-release gesture and its
             // accessibility floor live in `padGesture`, shared with the
             // empty slot CATCH can land on.
-            .padGesture(slot, "PAD $tag: ${pad.displayName}", hitWithFeel, onRelease)
+            .padGesture(slot, "PAD $tag: ${pad.displayName}", hitWithFeel, releaseCurrent)
             .padding(5.dp),
     ) {
         // Full-opacity ink2 on its own solid backing chip, not a dimmed
         // copy drawn straight over the cell (audit finding 5). The chip
-        // matters here specifically: this cell carries a persistent
-        // class-colour wash (`cls.tape.copy(alpha = 0.12f)`, above) under
-        // the tag at all times, not just while lit — so without an opaque
-        // backdrop the tag's real background is class-colour-dependent
-        // and can fall to ~3.9:1 for a bright class like HAT_OPEN even
-        // with ink2 itself fixed — see ContrastTest.
+        // matters here specifically: while the pad is lit its class-colour
+        // flash (`padSkin`'s `lit`, up to 40%) is drawn under the tag, so
+        // without an opaque backdrop the tag's real background is
+        // class-colour-dependent and can fall below AA for a bright class
+        // like HAT_OPEN even with ink2 itself fixed — see ContrastTest.
         Box(
             Modifier
                 .align(Alignment.TopEnd)

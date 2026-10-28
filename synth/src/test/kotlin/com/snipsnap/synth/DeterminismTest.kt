@@ -17,6 +17,171 @@ class DeterminismTest {
     }
 
     @Test
+    fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
+        val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
+        val samples = patch.render().samples
+        Ferry.clearCache()
+        assertContentEquals(samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
+    fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
+        for (voice in CairnVoice.entries) {
+            val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
+            val a = patch.render().samples
+            Cairn.clearMotionCache()
+            assertContentEquals(a, patch.render().samples)
+        }
+    }
+
+    @Test
+    fun `UPRIGHT preserves the saved excitation and both damping endpoints`() {
+        for (damp in listOf(.18f, 1f)) {
+            val patch = PluckPatch("Upright canary", PluckVoice.UPRIGHT,
+                Pluck.defaults(PluckVoice.UPRIGHT) + ("DAMP" to damp), velocity = .65f)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples)
+        }
+    }
+
+    @Test
+    fun `TIDAL finite factory voices retain saved performance and seed across regeneration`() {
+        for (voice in TidalVoice.entries) {
+            val patch = TidalPresets.forVoice(voice).first().copy(
+                midi = 57, velocity = .41f, seed = 9_007_199_254_740_993L,
+            )
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recalled.render().samples,
+                "$voice must retain the finite encounter through its complete recipe")
+        }
+    }
+
+    @Test
+    fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
+        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+            midi = 67, velocity = .6f, seed = 17, model = 5)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `CHAMBER factory room recipes regenerate the authored note velocity and exact seed`() {
+        val patch = ChamberPresets.forVoice(ChamberVoice.AQUARIUM).first().copy(
+            midi = 57, velocity = .42f, seed = Long.MIN_VALUE + 1,
+            configuration = ChamberConfig.aquarium().copy(splitHeight = .67f),
+        )
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch.copy(
+            macros = patch.macros.entries.reversed().associate { it.toPair() },
+        )).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples,
+            "factory promotion must preserve the complete coupled room through saved recipe replay")
+    }
+
+    @Test
+    fun `CREASE touch keys reproduce every independent layer and its own loop marker`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = CreaseTouchKeys.render(patch, midi = 60)
+        val second = CreaseTouchKeys.render(patch.copy(
+            macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        for ((a, b) in first.zip(second)) {
+            assertTrue(a.loopStartFrame > 0 && a.loopStartFrame == b.loopStartFrame)
+            assertContentEquals(a.snip.samples, b.snip.samples)
+        }
+    }
+
+    // The attack, slow pressure memory and streaming output filters all survive to the
+    // same loop boundary. No state from the previous key render may enter a fresh note.
+    @Test
+    fun `CREASE speaking keys reproduce the same attack and measured loop boundary`() {
+        val patch = CreasePresets.patches().single { it.name == "Paper Keys" }
+        val first = Keys.creasePad(patch, midi = 60)
+        val second = Keys.creasePad(patch.copy(macros = patch.macros.entries.reversed().associate { it.toPair() }), midi = 60)
+        assertTrue(first.loopStartFrame > 0)
+        assertTrue(first.loopStartFrame == second.loopStartFrame, "fresh convergence picked another loop boundary")
+        assertContentEquals(first.snip.samples, second.snip.samples, "source state or macro iteration order changed the note")
+    }
+
+    @Test
+    fun `RELAY saved phrases stay byte identical through finite and held cache reuse`() {
+        for (voice in RelayVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = RelayPresets.forVoice(voice).first().let { source ->
+                source.copy(macros = source.macros + mapOf(
+                    "TUNE" to .25f, "ORDER" to .4f, "PULSE" to .3f, "HOLD" to hold,
+                ), velocity = .55f)
+            }
+            val saved = RelayPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice HOLD$hold")
+        }
+    }
+
+    @Test
+    fun `LATTICE native finite and held patches regenerate the saved note and excitation exactly`() {
+        val finite = LatticePresets.patchesForVoice(LatticeVoice.WARM)
+            .first { !Lattice.isLoop(it.macros.getValue("HOLD")) }
+        val held = LatticePresets.patchesForVoice(LatticeVoice.HOLLOW)
+            .first { Lattice.isLoop(it.macros.getValue("HOLD")) }
+        for (preset in listOf(finite, held)) {
+            val patch = preset.copy(midi = 55, velocity = .63f, model = 2)
+            val reopened = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, reopened.render().samples,
+                "${patch.voice} must retain native model, note, velocity and HOLD through its saved patch")
+        }
+    }
+
+    @Test
+    fun `ORIGAMI once-only fold gestures survive saved recipe replay byte for byte`() {
+        for (gesture in listOf(OrigamiGesture.BLOOM, OrigamiGesture.UNFOLD)) {
+            val patch = OrigamiPatch("Fold gesture canary", OrigamiVoice.STILL,
+                Origami.defaults(OrigamiVoice.STILL) + ("MOTION" to .65f),
+                midi = 60, velocity = .7f, seed = Long.MIN_VALUE + 20261023L, gesture = gesture)
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
+        }
+    }
+
+    @Test
+    fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
+        for (model in listOf(1, 2)) {
+            val p = FlockPatch("Held canary", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + ("FLOW" to .35f), midi = 57, velocity = .4f,
+                seed = Long.MIN_VALUE + 1, model = model, playback = FlockPlayback.HELD, releaseSeconds = 1.2f)
+            FlockHeld.clearCache()
+            val a = p.render().samples
+            FlockHeld.clearCache()
+            val restored = FlockPatch.fromJsonText(p.toJsonText())
+            val b = restored.render().samples
+            assertContentEquals(a, b, "saved held model$model regenerated a different capture")
+        }
+        FlockHeld.clearCache()
+    }
+
+    @Test
+    fun `native Caustic saved finite notes are byte identical across renders`() {
+        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
+            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+            midi = 57, velocity = .63f, model = 1)
+        assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `THUMP SPARK regenerates its metallic hit from the saved recipe exactly`() {
+        val patch = ThumpPatch("Spark canary", ThumpVoice.SPARK,
+            Thump.defaults(ThumpVoice.SPARK) + mapOf("METAL" to .8f, "COLOR" to .65f))
+        val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+        assertContentEquals(patch.render().samples, saved.render().samples)
+        assertContentEquals(saved.render().samples, saved.render().samples)
+    }
+
+    @Test
+    fun `CIRCUIT ROOT call and listening presets regenerate finite and held audio exactly`() {
+        for (name in listOf("FIRE CIRCLE", "EMBER PULSE")) {
+            val patch = CircuitPresets.forVoice(CircuitVoice.ROOT).single { it.name == name }
+            val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, recipe.render().samples,
+                "$name must recover the same gestures and settled acoustic state from its saved recipe")
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,
@@ -71,6 +236,15 @@ class DeterminismTest {
     fun `RESIN is byte-identical across renders`() {
         val patch = ResinPatch("Canary", ResinVoice.LEAD, Resin.defaults(ResinVoice.LEAD))
         assertContentEquals(patch.render().samples, patch.render().samples)
+    }
+
+    @Test
+    fun `VENT saved clean recipes keep note touch and trajectory history across replay`() {
+        for (entry in VentKitPresets.entries.filter { it.role == "Percussive hit" }) {
+            val patch = entry.patch
+            val restored = VentPatch.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, restored.render().samples, "${entry.id} recipe replay changed its sound")
+        }
     }
 
     // TIDE seeds WANDER from the recipe itself (Tide.seedFor), so this is
@@ -291,8 +465,8 @@ class DeterminismTest {
         }
     }
 
-    // FLOTILLA seeds geometry from the voice, the note and the hull knobs, and the
-    // aquatic noise from a second seed. A saved recipe has to come back bit for bit.
+    // FLOTILLA keeps vessel identities stable across its hull controls and uses
+    // a separate aquatic noise stream. Saved recipes still return bit for bit.
     @Test
     fun `FLOTILLA is byte-identical across renders, every voice`() {
         for (voice in FlotillaVoice.entries) {
@@ -310,6 +484,35 @@ class DeterminismTest {
             val a = TremorPatch("Canary", voice, Tremor.defaults(voice))
             val b = TremorPatch("Canary", voice, Tremor.defaults(voice))
             assertContentEquals(a.render().samples, b.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `AEROSTAT is byte-identical across renders in both lifecycles`() {
+        for (hold in listOf(0f, 1f)) {
+            val macros = Aerostat.defaults(AerostatVoice.FLOAT) + ("HOLD" to hold)
+            val patch = AerostatPatch("Canary", AerostatVoice.FLOAT, macros)
+            assertContentEquals(patch.render().samples, patch.render().samples, "HOLD $hold")
+        }
+    }
+
+    @Test
+    fun `BALLAST is byte-identical across renders, every voice`() {
+        for (voice in BallastVoice.entries) {
+            val patch = BallastPatch("Canary", voice, Ballast.defaults(voice))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `SCOUR is byte-identical across renders, every voice, a saved recipe and a soft hit included`() {
+        for (voice in ScourVoice.entries) {
+            val patch = ScourPatch("Canary", voice, Scour.defaults(voice) + ("SHOT" to .8f))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
+            assertContentEquals(Scour.render(voice, patch.macros, velocity = .3f).samples,
+                Scour.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
         }
     }
 }

@@ -33,6 +33,9 @@ object SfzImporter {
     /** A text sidecar should never be this big; past it we refuse to parse. */
     const val MAX_TEXT_BYTES = 4_000_000L
 
+    /** The most sample bytes one import may copy in total — the same 512 MB the archive doors hold. */
+    const val MAX_SAMPLE_BYTES = 512L * 1024 * 1024
+
     private val TOKEN = Regex("<([a-zA-Z0-9_]+)>|([a-zA-Z0-9_]+)=")
 
     fun import(sfzFile: File, destRoot: File, overwrite: Boolean = false): Result {
@@ -63,10 +66,16 @@ object SfzImporter {
         val used = HashSet<String>()
         val copied = HashMap<String, Pair<String, Long>>() // resolved path -> stem.wav to frames
         val planned = LinkedHashMap<String, File>() // stem.wav -> the sample it copies
+        var copiedBytes = 0L
         fun bringSample(r: Map<String, String>): Pair<String, Long>? {
             val ref = r["sample"] ?: return null
             val resolved = resolve(sfzFile.parentFile, defaultPath, ref) ?: return null
             copied[resolved.path]?.let { return it }
+            // One budget for the whole import, not per sample: a package
+            // naming hundreds of large WAVs must not fill the volume one
+            // legal-looking copy at a time.
+            copiedBytes += resolved.length()
+            if (copiedBytes > MAX_SAMPLE_BYTES) return null
             val frames = try {
                 WavInfo.read(resolved).frameCount
             } catch (e: Exception) {
@@ -288,6 +297,12 @@ object SfzImporter {
         val rel = (defaultPath + ref).replace('\\', '/')
         if (rel.startsWith("/") || rel.split('/').any { it == ".." }) return null
         val f = File(root, rel)
-        return f.takeIf { it.isFile }
+        if (!f.isFile) return null
+        // The textual checks above judge the spelling, not the target: a
+        // symlink inside the folder pointing out of it spells clean and
+        // lands elsewhere. Canonical containment is the actual rule the
+        // comment above promises.
+        val rootPath = root.canonicalFile.toPath()
+        return f.takeIf { it.canonicalFile.toPath().startsWith(rootPath) }
     }
 }

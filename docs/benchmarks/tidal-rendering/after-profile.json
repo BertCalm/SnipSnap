@@ -1,0 +1,186 @@
+{
+  "schemaVersion": 1,
+  "engine": "TIDAL",
+  "label": "final-stage-profile-only",
+  "generatedAt": "2026-10-24T19:13:41.175251660Z",
+  "checkoutRevision": "5e953da5493d08112f10fcd1bd2b000bd7946b92",
+  "clock": "System.nanoTime; render call only",
+  "jfrRecording": "/workspace/scratch/tidal-performance/after-profile.jfr",
+  "jfrNote": "Use a separate profiling run; primary before/after timing runs leave JFR disabled.",
+  "timedScope": "Excludes cache reset, explicit GC, validation, hashes, logging, JSON and file I/O.",
+  "states": {
+    "cold": "Clear geometry and finished audio before each call; JVM/classes/JIT are already warm.",
+    "warm": "Keep geometry but clear finished audio before each call; a fresh complete render is required.",
+    "repeat": "Repeat the same complete recipe with caches retained; old code has no finished-audio cache."
+  },
+  "memoryDefinitions": {
+    "allocatedBytesCurrentThread": "HotSpot ThreadMXBean allocation counter delta around the render call; null if unsupported.",
+    "heapUsedBeforeBytes": "MemoryMXBean heap used after explicit GC immediately before the timer.",
+    "heapUsedAfterBytes": "MemoryMXBean heap used immediately after the timer; includes garbage not yet collected.",
+    "sumOfHeapPoolPeakUsedBytes": "Sum of per-heap-pool peak used after reset immediately before render. Upper envelope, not simultaneous live heap or process RSS."
+  },
+  "floatHashEncoding": "Float.toRawBits, little-endian four bytes per sample",
+  "runtime": {
+    "javaVersion": "21.0.12.1",
+    "vm": "OpenJDK 64-Bit Server VM",
+    "os": "Linux",
+    "architecture": "amd64",
+    "processors": 4,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "heapMaximumBytes": 805306368,
+    "vmArguments": [
+      "-Xms256m",
+      "-Xmx768m",
+      "-XX:ActiveProcessorCount=4"
+    ],
+    "loadedBenchmark": {
+      "path": "/workspace/scratch/tidal-performance/benchmark-classes-profile",
+      "classSha256": "12ea87d1f9d043af5f093964cad31ae5b5e9d70719a6679d60952b419468bc09",
+      "jarSha256": null
+    },
+    "loadedEngine": {
+      "path": "/workspace/SnipSnap-tidal-playability/synth/build/classes/kotlin/main",
+      "classSha256": "867f82ea0e1fd8efb5e771cb51659eec7df952c5293e766400fc7e93c1df2401",
+      "jarSha256": null
+    },
+    "loadedDynamics": {
+      "path": "/workspace/SnipSnap-tidal-playability/synth/build/classes/kotlin/main",
+      "classSha256": "d9c78c4626644ed87021be83af3e63e6987725ccb0b7ab13fc85b5264f591298",
+      "jarSha256": null
+    },
+    "loadedAudio": {
+      "path": "/workspace/SnipSnap-tidal-playability/audio/build/classes/kotlin/main",
+      "classSha256": "f4fa5da26e18cccb1bc4b6d7b93b5e374706212887f80eb0a91749c2aebf7719",
+      "jarSha256": null
+    }
+  },
+  "benchmarkWallMs": 9723.674941,
+  "cases": [
+    {
+      "id": "pair-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model2-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "uncached",
+      "state": "warm",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1124.449061
+      ],
+      "minMs": 1124.449061,
+      "medianMs": 1124.449061,
+      "p90Ms": 1124.449061,
+      "maxMs": 1124.449061,
+      "allocatedBytesCurrentThread": [
+        38970432
+      ],
+      "heapUsedBeforeBytes": [
+        5480112
+      ],
+      "heapUsedAfterBytes": [
+        50568880
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        50568880
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "3ddafc853441469113534840b4e54213494a6147ed53ab603cb93e7125d69b85",
+      "prelevelFloat32Sha256": null,
+      "cache": {
+        "bytes": 0,
+        "entries": 0,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": {
+        "conditioningMillis": 589.416609,
+        "controlsMillis": 34.389074,
+        "finishingMillis": 10.017901,
+        "oversampledWorkBytes": 6914880,
+        "preparationMillis": 0.237872,
+        "synthesisMillis": 634.615762,
+        "totalMillis": 1269.112055
+      }
+    },
+    {
+      "id": "stream-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model2-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "uncached",
+      "state": "warm",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1287.040048
+      ],
+      "minMs": 1287.040048,
+      "medianMs": 1287.040048,
+      "p90Ms": 1287.040048,
+      "maxMs": 1287.040048,
+      "allocatedBytesCurrentThread": [
+        57041472
+      ],
+      "heapUsedBeforeBytes": [
+        5749288
+      ],
+      "heapUsedAfterBytes": [
+        68663848
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        68663848
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "1b34cb45b29a180bf6b3914dac60702b1bca0ca946a22ab2f307c31fcafdcd69",
+      "prelevelFloat32Sha256": null,
+      "cache": {
+        "bytes": 0,
+        "entries": 0,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": {
+        "conditioningMillis": 837.692659,
+        "controlsMillis": 15.90611,
+        "finishingMillis": 6.703067,
+        "oversampledWorkBytes": 6914880,
+        "preparationMillis": 0.059584,
+        "synthesisMillis": 895.577251,
+        "totalMillis": 1756.169816
+      }
+    }
+  ]
+}

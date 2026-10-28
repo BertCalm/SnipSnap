@@ -1,4 +1,4 @@
-# CHAMBER — first listening prototype
+# CHAMBER — finite quartet instrument
 
 CHAMBER is a finite pitched quartet whose room participates in its decay.
 A membrane, bar, cowbell and triangle receive one shared strike timestamp.
@@ -6,16 +6,193 @@ Their positions determine direct arrivals, first reflections, boundary
 excitation and energy returning to the instruments. Material names describe
 designed musical responses, rather than measured building materials.
 
-This stage implements **HYBRID and AQUARIUM**, six provisional presets, complete
-patch replay and a sixteen-pad prototype kit. The supplied
+This stage implements **HYBRID and AQUARIUM**, six factory recipes, complete
+patch replay, phone controls and a sixteen-pad dry MPC kit. The supplied
 [engineering specification](CHAMBER_SPEC.md) remains the unchanged proposal.
 Its other four voices, 36-preset library, expanded room editor and sustained
-HOLD operation remain later work, subject to the owner's listening verdict.
+HOLD operation remain later work. The owner accepted the revised membrane
+direction and reported the model-3 mix was better; the wider preset and control
+matrix still needs listening acceptance.
 
 The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is published with **114 clips**, raw and matched playback, mechanism comparisons,
-WAV/recipe downloads and a 16-clip starter pack. The owner's listening verdict
-remains open; numerical checks do not establish sonic acceptance.
+provides raw/matched playback, replayable downloads and the finite instrument's
+current control study. Earlier timpani comparisons remain archived. The
+[original 114-clip study](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/archive/model-1/index.html)
+remains available unchanged. Numerical checks do not establish sonic acceptance.
+
+## Finite instrument integration
+
+The phone SYNTH picker exposes both rooms, five physical controls, native ROOT
+and excitation VELOCITY. HOLD stays hidden because only finite strikes are
+supported. Complete recipes retain room dimensions, source/listener positions,
+material assignments, tuning, enabled strikes, model and exact seed through
+control edits, preset recall, draft restoration and delivery to a pad. SPREAD
+uses the saved MIDI root instead of asking a detector to choose between the
+membrane, bar and higher metal partials.
+
+Preview rendering runs away from the UI thread. A bounded per-screen cache keeps
+only complete full-quality recordings for exact recipe repeats, including
+preview followed by delivery to a pad. Its eighteen-second mono PCM budget is
+about 3.2 MB; returned arrays are independent copies. New settings still run the
+coupled simulation. Superseded work checks cancellation, and cancelled or stale
+work cannot replace the current preview. Cache keys include the physical room,
+resolved controls, note, velocity, seed and sound-model version.
+
+The production renderer caches unchanged modal-port observations, prepares fixed
+listener-delay interpolation and primitive path data once, and skips incremental
+waveguide-energy bookkeeping when diagnostics are disabled. Diagnostic renders
+retain their complete energy ledger. Four captured model-3 production recordings
+(both voices at C3/C4) retain every Float32 bit after these changes; earlier
+published model-1/model-2 WAVs have separate compatibility guards.
+
+Desktop production measurements use 4.5-second mono renders, 4x internal
+processing, velocity .75, seed zero and default rooms at C3/C4. After two warmup
+rounds, twelve fresh recordings took **1.759–2.944 seconds** (median 1.935 s);
+twelve exact-recipe cache hits took **0.448–0.781 ms** (median 0.580 ms).
+These are Temurin 21.0.13+9 JVM measurements, not phone playback latency.
+The pre-change baseline used another JDK patch version and warmup sequence, so
+these numbers do not establish a controlled percentage speedup. Fresh settings
+remain above the house tens-of-milliseconds goal and require background work;
+fast cache hits do not close that remaining render-budget gap.
+
+Reproduce absolute production timings and Float32 hashes with
+`./gradlew --no-daemon :synth:benchmarkChamber`. The task writes timings,
+preparation/synthesis/output stages and its measurement conditions under
+`testkit/chamber-performance/`. The Android regression suite separately logs
+cold, warm-fresh and cached times under `ChamberPerformance`, without imposing
+a brittle timing assertion or claiming physical-device acceptance.
+
+The six current recipes join the factory roster and FRESH TAPE starter menu.
+They keep their existing settings while the refreshed study exposes the wider
+listening decision. `ChamberKits` supplies one shared sixteen-pad recipe bank:
+eight native HYBRID notes in C minor pentatonic, six factory rooms and two
+boundary/placement contrasts. Each pad is a dry tonal one-shot without a choke
+group, transposition, effects or sustained loop.
+
+`generateChamberKit` exports the actual native MPC 3 track and MPC 2 program,
+PCM24 samples, saved recipes, manifest and checksums in
+`SnipSnap-Chamber-Kit.zip`. Automated export read-back and preflight checks
+cover file structure and sample references. Physical MPC loading and listening
+remain separate acceptance steps.
+
+```sh
+./gradlew --no-daemon :synth:generateChamberKit -PchamberKitOutput=/tmp/chamber-kit
+./gradlew --no-daemon :synth:generateChamberAudition -PchamberRevision=finite -PchamberOutput=/tmp/chamber-finite -PchamberPrevious=/absolute/model-3-mix-audition -PchamberKit='/tmp/chamber-kit/SnipSnap Chamber Kit'
+python3 scripts/package_chamber_site.py /tmp/chamber-finite /tmp/chamber-hosting
+```
+
+The final command prepares static hosting within the provider's 256 MiB expanded
+archive limit and requires `ffmpeg`. The full generated study remains in WAV.
+Hosting converts selected raw diagnostics to lossless FLAC, verifies every
+decoded PCM16 frame, and records original/container/PCM hashes in
+`hosting-audio.json`. Matched WAVs, featured raw WAVs, starter/MPC downloads and
+all historical files retain their bytes. The original manifest is retained as
+`manifest-rendered.json`; the hosting manifest names each delivered format.
+
+The finite study uses the current model across registers, velocities, presets,
+macro sweeps and interacting-control corners. Musical context clips use the same
+exported recordings as the MPC kit. Each finite event includes its attack and
+decay; neither context playback nor page Repeat demonstrates HOLD. Previous
+model-1, model-2 and model-3 comparison assets remain available separately.
+
+### Why it is built this way
+
+- Preserve the accepted membrane voicing while improving the path from controls
+  to a saved sampler sound. Render compatibility is checked independently of UI.
+- Cache complete recordings because instrument and room states are coupled.
+  Geometry caching alone does not remove the expensive synthesis loop.
+- Keep native note rendering and sample transposition explicit: the former
+  preserves the physical room, while the latter shifts the recorded room too.
+- Keep HOLD as a separate DSP milestone. A stable decaying room needs recurring
+  excitation and settled state before it can supply a sustained loop.
+
+### Hardware acceptance still required
+
+On a phone, measure fresh and repeated preview latency, change controls rapidly,
+leave and restore SYNTH, then send an edited room to a pad and verify its saved
+recipe. On MPC 2 and MPC 3, load the exported program, check all sixteen pads,
+root notes, overlapping tails and the membrane balance at soft and hard playing
+levels. Software builds, emulator checks and format read-back do not establish
+these physical-device results.
+
+## Timpani mix lift — model 3
+
+The owner heard model 2 and approved its sound, then asked for a little more
+presence in the quartet. Model 3 applies **+3.000 dB** to the membrane listener
+pickup (`10^(3/20)`), preserving model 2's tuning, modal weights, excitation,
+decay and physical room coupling. Before the shared output levelling, other
+source pickups and the surface/late network observers retain their levels.
+The complete network energy states are unchanged.
+
+All **39 focused CHAMBER checks pass**, including measured 3 dB membrane gain,
+waveform-shape preservation, identical room-energy ledgers and exact published
+model-1/model-2 WAV replay. The full-room pitch checks pass at MIDI 36/48/60/84
+in both rooms.
+
+New patches use model 3. Saved model-1 and model-2 recipes continue to reproduce
+their original sounds; captured published WAV hashes guard both versions.
+The page compares accepted model 2 with boosted model 3 at C3 and C4, including
+full quartets and dry timpani solos at one shared gain per room/note group.
+The accepted page remains archived separately, with its original audio, recipes
+and source records. Its archive-navigation link is relocated to the preserved
+model-1 study; the original model-2 manifest is retained alongside it.
+
+```sh
+./gradlew --no-daemon :synth:generateChamberAudition -PchamberRevision=timpani-boost -PchamberOutput=/tmp/chamber-timpani-boost -PchamberPrevious=/absolute/model-2-audition
+```
+
+The original model-1 study stays at its existing archive URL. The previous
+model-1/model-2 comparison remains reproducible with `chamberRevision=timpani`.
+
+## Timpani revision — model 2
+
+The owner heard model 1 and reported: **“The timpani doesn't come through at all.”**
+Its direct membrane body was about 21 dB below the bar over 50–500 ms, and its
+pitched decay disappeared rapidly. The 12/s acoustic port load overwhelmed the
+membrane's intrinsic decay; sharing the bar's root made the weak body easier to mask.
+
+Model 2 reduces that load to 0.5/s, lengthens intrinsic membrane decay from 1.15
+seconds to 1.65 seconds, and gives the near-integer upper modes more presence.
+Half-integer modes remain at lower participation to avoid octave ambiguity.
+A separate 24× membrane radiation calibration restores its listener level. This observer
+calibration affects direct and reflected pickup, never feedback energy or strike
+work. The other three dry source banks and random realizations remain unchanged;
+room returns respond to the revised membrane coupling. The tuning ratios remain
+1×, 1×, 2× and 4×; no hidden octave shift supplies the improvement.
+
+At default C3/C4 settings, the direct membrane body over 50–500 ms is now
+about **2.9 dB below the bar in HYBRID** and **2.1 dB below it in AQUARIUM**,
+including source-distance pickup gains. It was about 21 dB below before.
+Full-room pitch probes at MIDI 36, 48, 60 and 84 retain the requested root in
+both rooms; the largest detected deviation is 17.8 cents. These measurements
+verify level and tuning guards, rather than replacing the owner's listening verdict.
+
+Model 2 introduced this voicing. **Saved model-1 recipes retain model 1** through decoding,
+macro edits, native velocity and CLI replay. Two captured model-1 recipes and
+published raw-WAV SHA-256 values guard exact reproduction of the original sounds.
+
+All **38 focused CHAMBER checks pass** for this revision, covering DSP, room
+geometry, patch/preset/CLI replay, original model-1 WAV hashes, dry-source isolation
+and the new membrane body guard. The ensemble pitch check now also covers C3.
+
+The revised page features C3 quartets and provides C3/C4 comparisons in each room.
+Each four-clip group uses one gain derived from its revised full quartet. Previous
+quartets and both membrane solos receive that same gain and tail fade. Solos keep
+their actual quartet strike strength and balance; they are never independently
+boosted. Revision-specific IDs preserve the original listening notes and avoid
+reusing old audio URLs. The complete original page, audio, recipes and rendering
+source snapshots are archived separately.
+
+Reproduce the focused revision from a retained original render directory:
+
+```sh
+./gradlew --no-daemon :synth:generateChamberAudition -PchamberRevision=timpani -PchamberOutput=/tmp/chamber-timpani -PchamberPrevious=/absolute/model-1-audition
+```
+
+Omit `chamberPrevious` for the standalone 16-clip revision without the archive.
+The default generator still produces the complete control matrix using the current
+model. The compact starter ZIP contains the 16 revision clips and their sources;
+it excludes the archived original matrix.
 
 ## Controls and complete recipes
 
@@ -49,10 +226,10 @@ edits preserve that authored configuration. Derived delays, filters, modal state
 and traveling energy are rebuilt deterministically.
 
 `ChamberPresets` contains **Four Answers**, **Soft Split**, **Glass Corners**,
-**Aquarium Ceiling**, **Quiet Canopy** and **High Water**. The prototypes are
+**Aquarium Ceiling**, **Quiet Canopy** and **High Water**. The recipes are
 available to the CLI, patch and recipe decoders, user presets, native velocity
-adapter and `SynthKits.chamber()`. They remain outside the shared factory roster,
-Android engine picker and FRESH TAPE menus while listening is open.
+adapter, shared factory roster, Android engine picker, FRESH TAPE and
+`SynthKits.chamber()`. Their broader musical acceptance remains open.
 
 ## Geometry and material policy
 
@@ -126,14 +303,14 @@ From the repository root:
 `--patch` requires the requested voice to match the saved recipe. Optional
 `--midi`, `--velocity` and `--seed` overrides retain its complete room. The audition
 task writes generated audio, recipes, diagnostics and a listening page under
-`testkit/chamber-audition/`; those outputs and the prototype kit are ignored by
+`testkit/chamber-audition/`; those outputs and the generated MPC kit are ignored by
 Git. The page source is retained with the test resources so regeneration can
 reproduce the listening interface. No phone or MPC hardware acceptance is claimed.
 
 
-## Recorded validation (2026-10-18)
+## Original model-1 validation (2026-10-18)
 
-The published audio was rendered from clean engine commit
+The original audio was rendered from clean engine commit
 `4621959c5b66869f9aaeb04cecb8669a6faabd08`. All **114 requested cases passed**.
 A second, separate JVM render reproduced all **228 raw/matched WAVs byte for
 byte**. The manifest records each recipe and WAV hash; `source-provenance.json`
@@ -143,7 +320,9 @@ identify the published page, whose browser icon was added after audio rendering.
 All **35 CHAMBER checks** passed across DSP, geometry, complete patch replay,
 diagnostic PCM replay, saved presets and CLI integration. Six other module
 suites passed **1,344 tests**. The Android debug build and native CI tests passed;
-the full JVM regression gate is tracked in [PR #574](https://github.com/BertCalm/SnipSnap/pull/574).
+the full JVM, Android and native baseline subsequently passed at commit `d49f0b26`
+in [CI run 39339176543](https://github.com/BertCalm/SnipSnap/actions/runs/39339176543).
+The original implementation landed through [PR #574](https://github.com/BertCalm/SnipSnap/pull/574).
 
 Default full mixes at MIDI 36, 60 and 84 pass the existing melodic classifier
 guard for both voices. At the maximum-control MIDI-84 comparison, the 4× versus

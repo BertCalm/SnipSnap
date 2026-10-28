@@ -47,6 +47,15 @@ class MidiKeysTest {
     }
 
     @Test
+    fun `clock and start reach no voice`() {
+        val log = Log()
+        val keys = MidiKeys(log)
+        keys.handle(Event.Clock())
+        keys.handle(Event.Start())
+        assertEquals(emptyList(), log.calls)
+    }
+
+    @Test
     fun `the switch threshold is the spec's 64, and a repeated pedal value changes nothing`() {
         val log = Log()
         val keys = MidiKeys(log)

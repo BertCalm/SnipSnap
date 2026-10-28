@@ -251,3 +251,153 @@ The listening pages start silent and play one clip at a time. Keep/revise/pass
 decisions and notes stay in browser storage and export as JSON. The musical bank
 uses its own note key, separate from both earlier auditions. Earlier notes remain
 accessible on the retained first- and second-listen pages.
+
+## Separate steady held proof
+
+The held experiment is an opt-in Kotlin prototype, separate from saved engine
+models and the approved factory bank. Its gesture is excitation builds → the
+network settles into sustain → note-off withdraws the drive → stored energy
+rings out. It keeps the six delay proportions, fractional-delay tuning, passive
+scattering and pickup of model 2. A periodic six-node excitation replaces the
+finite rubbing source. This is a driven adaptation, not an indefinite replay of
+the original finite gesture.
+
+```text
+./gradlew :synth:generateOverlapHeldAudition
+```
+
+`OverlapHeldPrototype` is not registered as a patch or connected to the phone
+picker. `generateOverlapHeldAudition` writes reproducible listening assets under
+`testkit/overlap-held-audition/`, with source in
+`prototype/overlap-held-audition/`. The original bank and both earlier auditions
+remain the listening references. The experiment introduces no new factory presets.
+
+This first proof requires HOLD=1, PULSE=0 and GLOW=0. KNOT changes geometry and
+scattering as in model 2; it remains inactive in SELF. RING changes the nominal
+low-frequency T60. LOCK is accepted but inactive while PULSE is off. Reference
+MIDI and velocity remain explicit. These limitations avoid presenting unsupported
+controls as finished sound design. In particular, a short loop of freely drifting
+breathing phases would require changing their rates or repeating a constrained
+control trajectory, and needs its own listening decision.
+
+The source period fits an integer number of requested note cycles to whole output
+frames. The resonator geometry still uses the requested reference frequency. The
+finite source grid can change which nearby resonance receives the most energy;
+reference note and perceived pitch remain separate listening questions. The
+solver must verify full-state and full-period audio recurrence, then check a
+further independently evolved period. Delay memories are compared in cursor
+order. Decimation uses continuous physical audio before and after the kept
+period. The seam is measured against genuine preceding and following audio,
+using `Keys.seamError`, not against two copies of an exported loop.
+
+Release withdraws excitation over a smooth transition while the same delay and
+filter states continue. The prototype exposes causal internal audio for exact
+prefix checks because the shared offline decimator looks ahead. It applies no
+late output fade to disguise residual energy. The default tail budget follows
+RING; explicitly shortened captures disclose their final measured energy.
+
+The page contains four settled periods repeated eight times and four note-off
+examples. Each topology's loop and release share one matched-level scalar, so
+their level relationship survives the comparison. Native playback uses the
+prototype's house leveling with one additional, collection-wide only-down
+safety gain. Capture-dependent house leveling means exact note-off prefix tests
+use the prelevel causal signal, not separately normalized native WAVs.
+
+Downloads include one-period native loops, both preview levels, complete
+experimental recipes, diagnostics, source/WAV hashes and a deterministic ZIP.
+These recipes cannot be imported as ordinary `PadRecipe` files. Replay a downloaded
+recipe with the audition task's `-PoverlapHeldRecipe=/absolute/path/recipe.json`,
+`-PoverlapHeldWav=/absolute/path/replay.wav` and optional
+`-PoverlapHeldMode=matched` properties. Replay verifies the recorded WAV hash.
+
+The focused Kotlin verification passed all 18 tests across `OverlapTest`,
+`OverlapV2ModalTest` and `OverlapHeldPrototypeTest`. Checks include low/middle/high
+modal identities, held register/loss edges, full-state recurrence, both real
+neighbouring seams, causal prefix invariance, quiet passive continuation and
+monotonic source withdrawal for a key released during its attack. A scratch
+mutation replacing every topology's scattering with SELF made the new modal test
+fail; the approved source was restored afterward.
+
+The generator records uncached setup, settling and conditioning milliseconds in
+`metrics-runtime.json`, outside the deterministic download archive. Settling is
+capped by a T60-derived budget and an absolute 192-period limit, with cancellation
+checks during simulation. Those host timings do not establish phone performance.
+Josh has approved the steady held listening proof. Moving-breath loops and an
+engine-specific aliasing bound remain unverified.
+
+### Why it is built this way
+
+- A separate entry point protects existing recipes while the sustain is judged.
+- Periodic excitation lets the entire passive network settle to a repeatable
+  state. Deterministic noise alone would not guarantee a short seamless loop.
+- Withdrawing the drive preserves the resonator's own release instead of
+  replacing it with an arbitrary output envelope.
+- The bounded settling search is export/prototype work. A future interactive
+  path needs a bounded cache keyed by topology, KNOT, RING, reference MIDI,
+  period frames, excitation seed and prototype revision. Matrix and geometry
+  setup already happen once per render; caching those alone will not remove
+  repeated network simulation. Phone timing and a cache implementation are not
+  established by this proof.
+
+## Held keygroup hardware trial
+
+The next handoff packages those steady settings as four playable instruments,
+one per topology, using the existing keygroup export path. Generate it with:
+
+```text
+./gradlew :synth:generateOverlapHeldKeygroups
+```
+
+The generated, ignored `testkit/overlap-held-keygroup/` contains
+`overlap-held-keygroups.zip`, four native MPC 3 `.xty` tracks, four matching
+legacy `.xpm` programs, twelve mono 44.1-kHz PCM24 WAVs, instrument sidecars,
+experimental source recipes, a manifest and checksums. Extract the whole ZIP
+and keep its folder structure. MPC 3 loads a top-level `.xty`; older MPC
+versions load its matching `.xpm` from the `_[TrackData]` folder.
+
+Each topology uses reference MIDI 36, 48 and 60. The three inclusive zones are
+30–42, 43–54 and 55–66; notes outside 30–66 deliberately have no zone. Roots are
+the synthesis reference notes, not a claim that each topology's strongest
+partial is that note. The lower and upper references extend the settings heard
+in the approved MIDI-48 proof and still need listening acceptance.
+
+Each WAV has an onset period followed by one untouched settled period. A short
+fade at the start of the onset prevents an abrupt start; the second period is
+the sustain loop. Its positive loop-start frame avoids the exporter's zero
+sentinel for a sample with no loop. Loop endpoints come from the same program
+data in the native track, legacy program, WAV sampler chunk and phone sidecar.
+The trial opts into instrument-level `TriggerMode=2` in the legacy writer, the
+NoteOn mode already used by the native writer and sustained reference programs.
+Existing packages retain their original legacy serialization by default.
+
+The program's release value is `0.6` in the existing MPC envelope field. Its
+hardware time mapping has not been measured. A sampler fades the repeating
+body after note-off; this differs from withdrawing excitation and allowing
+the prototype's resonator state to decay. This trial tests that handoff. It
+does not export a separately triggered physical release tail. PULSE and GLOW
+remain off; LOCK is inactive. No new saved engine model or phone controls are
+introduced by this package.
+
+`README.txt` carries the hardware checklist: load each program, hold each
+sampled reference through several repeats, tap and release early, play across
+zone boundaries, try a small chord and check final note-off. Record the MPC
+model/firmware and any clicks, unexpected pitch jumps, missing notes or stuck
+voices. Hardware loading, envelope timing, polyphony and playability remain
+pending until that check is performed.
+
+The package records deterministic audio and source hashes separately from
+host render-time measurements. Generation is an offline, bounded export job;
+it does not establish interactive phone performance. Saved held recipes,
+phone controls, completed-note caching, loopable breathing and GLOW remain
+subsequent integration work.
+
+### Why it is built this way
+
+- Three source notes keep the hardware trial small while exposing register and
+  zone-boundary changes.
+- The onset and steady loop share one waveform and gain, so the transition does
+  not depend on matching independently normalized captures.
+- Native and legacy programs use the same central packaging path and sample
+  bounds, reducing format-specific disagreements.
+- The sampler release is a deliberate approximation to test on the MPC before
+  making it part of the phone workflow.

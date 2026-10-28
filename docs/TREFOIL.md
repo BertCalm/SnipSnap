@@ -261,3 +261,40 @@ SnipSnap preview velocity law. Matched demo WAVs add only a saved scalar gain.
   listening result or on-device render performance.
 - The earlier studies and their browser notes keep their own locations and storage
   keys. The playable bank is a new listening round, not a replacement verdict.
+
+## Release handoff and hardware audition
+
+Owner feedback on the published playable bank was positive on 2026-10-26.
+This is listening feedback on the browser bank, not evidence of a phone or MPC
+hardware pass. The integration now includes the current SnipSnap picker and
+starter catalog, with the authored root retained when sending a sound to a pad.
+The finite acoustic renderer and all twelve preset recipes are unchanged.
+
+Download the [MPC kit](https://trefoil-snipsnap-audition.bertcalm.chatgpt.site/playable/SnipSnap-Trefoil-Kit.zip)
+and extract it before copying it to the MPC. Keep `SnipSnap Trefoil Kit.xtd`
+beside `SnipSnap Trefoil Kit_[TrackData]`. For MPC 2, open the `.xpm` inside that
+data folder. These are finite one-shot samples; their endings continue after a
+short tap. HOLD is a separate future design.
+
+1. Open the program and check all sixteen pads for missing samples. A01-A12 are
+   the twelve colors on repeating C4/Eb4/F4/G4; A13-A16 are lower First Weave on
+   C3/Eb3/F3/G3. Compare the pad names with `pad-map.json` in the kit folder.
+2. On the same pad, play soft, medium and hard strikes. The saved zones cover
+   MIDI velocities 1-41, 42-84 and 85-127. If recording a test sequence, include
+   41/42 and 84/85 to hear the boundaries. Judge the contact change and level
+   transition separately: native soft samples are peak-matched, and the host
+   controls playback level.
+3. Overlap neighboring notes and low notes with the upper rows. Listen for
+   unintended choking, clipped chords and a pad that dominates the others.
+4. Let A11 Afterglow and A12 Long Arc end completely, then retrigger them during
+   the tail. Check the ending and the overlap for a click or an abrupt cutoff.
+5. On MPC 3, play Weave Study at 96 BPM and Crossings at 104 BPM. Set project
+   tempo for each pattern. The browser performances select the same sample
+   zones, but their disclosed monitor gain and velocity law are not a claim
+   that the hardware mix is identical.
+
+Record the MPC model, firmware, MPC 2/3 import path, affected pad/velocity and
+whether each issue also occurs in the browser. Physical MPC import, velocity
+transitions, polyphony and release endings remain pending until that check.
+On the phone, separately check ROOT/VELOCITY/CONTACT editing, navigation,
+YOURS and SEND TO PAD; compiler checks do not establish device responsiveness.

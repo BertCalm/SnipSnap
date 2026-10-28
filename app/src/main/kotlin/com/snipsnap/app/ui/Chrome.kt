@@ -23,7 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -39,14 +38,11 @@ import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
-import com.snipsnap.app.theme.oilslickSweep
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Layout
-import com.snipsnap.shell.Look
 import com.snipsnap.shell.Places
-import com.snipsnap.shell.SchemeId
 
 /**
  * The screens `App.kt` navigates by name. Under the four-place shape
@@ -94,6 +90,8 @@ enum class AppScreen(val label: String) {
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),
+    /** Behind the gear with SETUP and HELP: what MIDI is plugged in and what it sends. */
+    MIDI("MIDI"),
     /** A MAKE bench: reached from the INSTRUMENTS list there, left by ◄ MAKE. */
     KEYS("KEYS"),
 
@@ -229,22 +227,14 @@ fun TitleBar(
     onGear: () -> Unit,
 ) {
     val scheme = LocalScheme.current
-    val modern = scheme.look == Look.MODERN
-    val brush =
-        if (modern) {
-            // `.masthead`: a flat bar, a hairline under it, no gradient.
-            SolidColor(scheme.title1.tape)
-        } else if (scheme.id == SchemeId.OILSLICK) {
-            oilslickSweep()
-        } else {
-            Brush.horizontalGradient(listOf(scheme.title1.tape, scheme.title2.tape))
-        }
+    // `.masthead`: a flat bar, a hairline under it, no gradient.
+    val brush = SolidColor(scheme.title1.tape)
     Row(
         modifier = modifier
             .fillMaxWidth()
             .height(Layout.TITLEBAR_H.dp)
-            .background(brush, RoundedCornerShape(if (modern) 2.dp else 4.dp))
-            .let { if (modern) it.drawBehind { drawRect(scheme.grayEdge.tape, topLeft = Offset(0f, size.height - 1.dp.toPx()), size = Size(size.width, 1.dp.toPx())) } else it }
+            .background(brush, RoundedCornerShape(2.dp))
+            .drawBehind { drawRect(scheme.grayEdge.tape, topLeft = Offset(0f, size.height - 1.dp.toPx()), size = Size(size.width, 1.dp.toPx())) }
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -256,17 +246,15 @@ fun TitleBar(
         // true one on, and a hardcoded tag is exactly what went stale before.
         // `weight(1f, fill = false)`: the right-hand cluster is measured first
         // and the wordmark takes what it leaves, so a long project name
-        // ellipsises itself and never pushes SNIPSNAP.EXE to an ellipsis.
+        // ellipsises itself and never pushes SNIPSNAP to an ellipsis.
         Row(
             Modifier.weight(1f, fill = false),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            if (modern) {
-                // `.wordmark-square`: the page's tilted square before the name.
-                Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
-            }
-            TapeText("SNIPSNAP.EXE", TapeType.displayBig, scheme.titleInk.tape)
+            // `.wordmark-square`: the page's tilted square before the name.
+            Box(Modifier.size(9.dp).rotate(45f).background(scheme.accent.tape))
+            TapeText("SNIPSNAP", TapeType.displayBig, scheme.titleInk.tape)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             if (projectName != null) {
@@ -284,7 +272,7 @@ fun TitleBar(
             }
             // The gear's accessible name says what is behind it; the glyph
             // alone would be read as a symbol name or not at all.
-            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP}", onClick = onGear)
+            TitleChip("⚙", label = "${Places.GEAR_SETUP} · ${Places.GEAR_HELP} · ${Places.GEAR_MIDI}", onClick = onGear)
         }
     }
 }

@@ -457,6 +457,17 @@ internal object Dsp {
         }
     }
 
+    /** A fixed-cutoff [OnePole]: identical state arithmetic, with its coefficient computed once. */
+    class FixedOnePole(cutoffHz: Float, rate: Int = RATE) {
+        private val a = (1.0 - exp(-2.0 * PI * min(cutoffHz, rate * 0.45f) / rate)).toFloat()
+        private var state = 0f
+
+        fun lp(input: Float): Float {
+            state += a * (input - state)
+            return state
+        }
+    }
+
     /**
      * One interpolated tap off a circular delay line, [delay] samples behind
      * [writePos] — the slot just written. The integer index is wrapped rather
@@ -798,6 +809,23 @@ internal object Dsp {
             val g = i.toFloat() / n
             val frame = frames - 1 - i
             for (c in 0 until channels) buf[frame * channels + c] *= g
+        }
+    }
+
+    /**
+     * [fadeTail] on a raised cosine over the last [seconds], per frame like it: gain 1 where the fade starts, falling
+     * smoothly to near 0 at the last frame. A long fade wants the cosine, not the line: it leaves the start of the window
+     * almost untouched and has no corner where the slope jumps, so a trail fades away rather than being turned down.
+     */
+    fun fadeTailCosine(buf: FloatArray, seconds: Float, rate: Int = RATE, channels: Int = 1) {
+        if (buf.isEmpty() || channels < 1) return
+        val frames = buf.size / channels
+        val n = min(frames, (seconds * rate).toInt())
+        if (n <= 0) return
+        val start = frames - n
+        for (f in start until frames) {
+            val g = (0.5 + 0.5 * cos(PI * (f - start) / n)).toFloat()
+            for (c in 0 until channels) buf[f * channels + c] *= g
         }
     }
 
