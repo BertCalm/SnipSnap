@@ -368,6 +368,17 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
+/** A listening-only contact-profile trial over the unchanged TRIO score and engine. */
+tasks.register<JavaExec>("generateTrioContactAudition") {
+    group = "distribution"
+    description = "Render full-range controls, upper TOUCH contact experiments and quick comparison sweeps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrioContactAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("trioContactOutput").orNull ?: "${rootDir}/testkit/trio-contact")
+}
+
 /** Accepted versus revised upper-TOUCH character with identical seeded scores. */
 tasks.register<JavaExec>("generateTrioTouchAudition") {
     group = "distribution"

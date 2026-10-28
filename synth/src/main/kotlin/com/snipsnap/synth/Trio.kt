@@ -350,9 +350,22 @@ object Trio {
         velocity: Float = 1f, config: TrioConfig = TrioConfig(),
     ): TrioProbe = renderScene(voice, macros, midi, velocity, config)
 
+    /** Audition seam: transforms fresh contact buffers without changing saved sound mappings. */
+    internal fun renderContactProbe(
+        macros: Map<String, Float>, midi: Int = DEFAULT_MIDI, velocity: Float = 1f,
+        config: TrioConfig = TrioConfig(), transform: (TrioCourse, FloatArray) -> FloatArray,
+    ): TrioProbe {
+        require(config.model == 6 && (macros["DRAMA"] ?: 0f) > 0f) {
+            "TRIO contact diagnostic requires model 6 and positive DRAMA"
+        }
+        return renderScene(TrioVoice.ENSEMBLE, macros, midi, velocity, config,
+            excitationTransform = transform)
+    }
+
     private fun renderScene(
         voice: TrioVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = 1f, config: TrioConfig = TrioConfig(), keepActors: Boolean = true,
+        excitationTransform: ((TrioCourse, FloatArray) -> FloatArray)? = null,
     ): TrioProbe {
         TrioRenderSupport.checkCancelled()
         if (config.model == 4) return TrioV4.renderProbe(voice, macros, midi, velocity, config)
@@ -370,7 +383,8 @@ object Trio {
         val players = score.actors.associateWith { player(it, root, m.getValue("DAMP"), config, rate, frames) }
         for (course in score.courses) {
             TrioRenderSupport.checkCancelled()
-            val burst = exciter(course.actor, course.n, course.hz, course.pickHz, course.position, course.seed, rate)
+            val original = exciter(course.actor, course.n, course.hz, course.pickHz, course.position, course.seed, rate)
+            val burst = excitationTransform?.invoke(course, original) ?: original
             players.getValue(course.actor).strings[course.string].excitation.add(course.at, burst, course.gain)
         }
         for (p in players.values) for (part in p.strings) part.excitation.prepare()
