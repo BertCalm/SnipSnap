@@ -22,6 +22,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -346,9 +347,18 @@ fun LoadingCard(busy: Busy, modifier: Modifier = Modifier) {
  * progress update is a new value for the same job and leaves the latch
  * alone.
  *
- * The minimum is owed to a bar that was drawn. A job that ends after the
- * delay but before the bar was up (the frame had not come) shows none: the
- * latch forgets the run ([BusyLatch.discard]).
+ * The minimum is owed to a bar that went up: one this has returned true for
+ * by the time its job ended. A job that ends after the delay but before that
+ * (the delay's wake-up had not yet run) shows none: the latch forgets the run
+ * ([BusyLatch.discard]).
+ *
+ * It counts from the first frame that draws the bar, not from the moment the
+ * latch schedules it. This turns true at the schedule, but the bar needs a
+ * frame to be drawn in, and a cold start's first frames can come about 160 ms
+ * late: counted from the schedule, the bar would then be on screen for less
+ * than [BusyLatch.MIN_VISIBLE_MS]. So when this turns true it waits for the
+ * next frame, the one that composes the bar, reads the clock at its start and
+ * hands that to [BusyLatch.markShown].
  */
 @Composable
 fun rememberBusyVisible(busy: Busy?): Boolean = rememberBusyVisible(busy, SystemClock::uptimeMillis)
@@ -370,17 +380,32 @@ internal fun rememberBusyVisible(busy: Busy?, now: () -> Long): Boolean {
             running -> latch.start(clock())
             // The bar is up: it stays its minimum.
             visible -> latch.stop(clock())
-            // It never was. The delay and the draw are two moments, and a job
-            // can end between them: the latch alone would say a bar is owed for
-            // a job that is over, and drawing it then would put a loading screen
-            // over the result it was loading (the device showed exactly that
-            // for a starter that took about 250 ms). A bar that was not up has no
-            // minimum to serve.
+            // It never was: `visible` has not turned true. The delay's wake-up
+            // and the job's end are two moments, and a job can end between them:
+            // the latch alone would say a bar is owed for a job that is over,
+            // and showing it then would put a loading screen over the result it
+            // was loading (the device showed exactly that for a starter that took
+            // about 250 ms). A bar that was not up has no minimum to serve.
             else -> latch.discard()
         }
+        var told = false
         while (true) {
             val t = clock()
-            visible = latch.visible(t)
+            val shown = latch.visible(t)
+            visible = shown
+            if (shown && !told) {
+                // The bar is due, so the next frame composes it and draws it:
+                // the minimum counts from that frame (the clock read in it), and
+                // not from the schedule the frame may have missed. Every effect
+                // asks for its own frame and does not rely on an earlier one's:
+                // a job that ends while a frame is awaited replaces this effect
+                // and cancels the wait, and the next one finds the bar up and
+                // asks again. The latch keeps the first mark of a run and ignores
+                // the rest, so asking again costs a frame's wait and nothing else.
+                latch.markShown(withFrameNanos { clock() })
+                told = true
+                continue
+            }
             val next = latch.nextChangeAt(t) ?: break
             delay(next - t)
         }

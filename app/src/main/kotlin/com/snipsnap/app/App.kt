@@ -1276,9 +1276,9 @@ fun App(shelf: KitShelf) {
      * A starter kit, rendered and landed on PADS. The render takes a few
      * seconds (a minute, on a slow phone), so the user is taken to PADS at
      * once and finds the shape of the grid there ([pendingKit] makes `KitLoading`
-     * draw `PadPlaceholderGrid` for the starter's name, with the loading card
-     * over it once the job has run 200 ms), with the dock's bar saying the same
-     * job; the kit replaces the placeholders when it lands.
+     * draw `PadPlaceholderGrid`, which takes no name, with the loading card over
+     * it once the job has run 200 ms; the card and the dock's bar carry the
+     * starter's name); the kit replaces the placeholders when it lands.
      *
      * Moved with [landOn], not `goToScreen`: that one also clears the
      * transient state, `pendingSnipAssign` among it, and the snip waiting

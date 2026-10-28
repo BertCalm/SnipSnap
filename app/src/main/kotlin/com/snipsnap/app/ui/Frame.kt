@@ -343,8 +343,9 @@ fun DoorChip(label: String, onClick: () -> Unit, modifier: Modifier = Modifier) 
  * [busy] is the status bar's old third cell: the job in flight, shown in
  * place of the standing line while it runs. Not at once: a job is held
  * back for [BusyLatch.SHOW_AFTER_MS], so the many that finish in a blink
- * draw nothing, and once drawn it stays for [BusyLatch.MIN_VISIBLE_MS], so
- * it can be read. While it is drawn the dock carries four things:
+ * draw nothing, and once drawn it stays for [BusyLatch.MIN_VISIBLE_MS] from
+ * the frame that first drew it, so it can be read. While it is drawn the dock
+ * carries four things:
  *
  *  - a [BusyBar] along the top edge of the panel, over the row and adding
  *    no height: counted when the job can be counted, with no end when not;

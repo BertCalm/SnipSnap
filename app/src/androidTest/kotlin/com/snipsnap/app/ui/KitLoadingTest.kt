@@ -54,7 +54,8 @@ class KitLoadingTest : ComposeScreenTest() {
     /**
      * Added to the page's clock, so a test can make the latch believe time
      * passed that the compose clock (which the latch's `delay` runs on) has not
-     * run: the race between "the delay is up" and "the frame that draws it".
+     * run: the race between the delay's wake-up (which puts the card up) and the
+     * end of the job.
      */
     private var skew = 0L
 
@@ -168,8 +169,8 @@ class KitLoadingTest : ComposeScreenTest() {
 
         // By the latch's clock 230 ms have gone, so the card is owed; by the
         // compose clock the delay that would have put it up has not run, so it
-        // was never drawn. The kit lands now. The card must not arrive after it
-        // and cover it for the 500 ms a drawn card is owed: that is a loading
+        // never went up. The kit lands now. The card must not arrive after it
+        // and cover it for the 500 ms a card that went up is owed: that is a loading
         // screen over the thing that was loading, and it is what the device
         // showed for a starter that took about 250 ms (EMPTY GRID).
         skew = 230

@@ -2785,8 +2785,9 @@ object Copy {
     /**
      * The dock's busy line while a kit loads, named so the wait is attributable
      * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
-     * starter renders, and `PadPlaceholderGrid` heads itself with the same
-     * line, so the dock and the grid never word the one job two ways.
+     * starter renders, and the loading card over the pad grid (`LoadingCard`)
+     * carries the same line, so the dock and the card never word the one job
+     * two ways.
      */
     fun loadingBusy(name: String): String = "LOADING $name…"
     /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
