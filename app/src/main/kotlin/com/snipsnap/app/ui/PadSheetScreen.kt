@@ -3458,6 +3458,7 @@ fun PadSheetScreen(
                 scheme,
                 enabled = !busy,
                 dimmed = pad.drumClass != DrumClass.TONAL,
+                working = busy && padJob == Copy.MAKE_INSTRUMENT_BUSY,
                 modifier = Modifier.fillMaxWidth(),
                 onClick = ::onMakeInstrument,
             )
