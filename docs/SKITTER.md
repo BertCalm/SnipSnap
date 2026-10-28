@@ -6,6 +6,13 @@ multimode filter. History and flutter are new proposals, not a reconstruction of
 the historical circuit. The [supplied specification](superpowers/specs/2026-10-11-skitter-engine-engineering-spec.md)
 is retained alongside this implementation.
 
+## Bass foundation correction (R9 listening candidate)
+
+The owner's R8 BASS feedback was that it sounds like brass. R9 tests a lower
+fundamental/second-harmonic readout while preserving the original circuit and
+its spectral interaction. [R9 design and validation](SKITTER_R9.md)
+records the focused C1/C2/C3 comparison and compatibility paths.
+
 ## Source and filter interaction (R8 listening candidate)
 
 R8 develops sustained interaction across all six voices. Two damped spectral

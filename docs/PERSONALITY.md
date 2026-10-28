@@ -29,7 +29,7 @@ terse, a little smug, never cutesy-apologetic.
 
 | Moment | Copy |
 |---|---|
-| Boot | `SNIPSNAP.EXE — READY.` |
+| Boot | `SNIPSNAP — READY.` |
 | Empty shelf | `NOTHING TAPED YET. GO STEAL A SOUND (LEGALLY).` |
 | Empty kit | `16 EMPTY PADS. TERRIFYING.` |
 | Capture blocked | message box: `TAPE JAM — SPOTIFY BLOCKS THE TAPE. USE THE SCREEN RECORDER, I'LL PULL THE AUDIO OUT.` + [FINE] |

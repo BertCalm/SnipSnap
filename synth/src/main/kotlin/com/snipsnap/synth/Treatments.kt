@@ -106,8 +106,9 @@ object Treatments {
         // (docs/superpowers/specs/2026-10-22-delay-head-design.md). The DELAY chip is this character once its gate passes.
         "delayed" to FxChain(echo = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1.0f)),
         // A hit formed against a die (the FORGE chip): every macro at FORGE's own default with the die shut, ARREST 1,
-        // which is exactly the clip the owner heard as "loud and solid" at the gate (2026-10-26), the heat
-        // at impact heard as heat, not a click; the defaults heard as fine on a hat. AMT walks all four
+        // the clip the owner heard as "loud and solid" at the gate (2026-10-26), the heat at impact heard as heat,
+        // not a click; the defaults heard as fine on a hat. Its medium is TIGHT since the CHARGE gate (2026-10-27),
+        // the chip the owner picked on the kick and the snare there. AMT walks all four
         // toward their neutrals, YIELD's being 1 (nothing flows), so a lower AMT is a softer die over less shock
         // and less fold. docs/superpowers/specs/2026-10-25-forge-section-design-brief.md, "Heard".
         "forged" to FxChain(forge = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1.0f)),
