@@ -21,13 +21,11 @@ import com.snipsnap.shell.MidiFingerprint
 /**
  * Whether an event is worth a hop to the main thread, where the screens
  * listen. The clock belongs to the future follower, which will read it on
- * the MIDI thread; bend and pressure belong to MIDI learn (step 4), which
- * removes the second clause. Until something consumes them each would be a
- * posted lambda thrown away, and a pressure pad or touch strip sends them
- * continuously. The raw-byte monitor is fed before parsing and is unaffected.
+ * the MIDI thread; until it exists each tick would be a posted lambda thrown
+ * away, 24 times a beat. Bend and pressure do reach the screens: MIDI learn
+ * binds them. The raw-byte monitor is fed before parsing and is unaffected.
  */
-internal fun MidiWire.Event.reachesScreens(): Boolean =
-    this !is MidiWire.Event.RealTime && this !is MidiWire.Event.Expression
+internal fun MidiWire.Event.reachesScreens(): Boolean = this !is MidiWire.Event.RealTime
 
 /**
  * A keyboard plugged into the phone, as events on the main thread.
@@ -75,7 +73,12 @@ internal fun MidiWire.Event.reachesScreens(): Boolean =
 class MidiInput(context: Context, private val tapRaw: Boolean = false) {
 
     interface Listener {
-        fun onEvent(event: MidiWire.Event)
+        /**
+         * One parsed message, and the [device] that sent it (null only if
+         * the sender is not known), so MIDI learn can tell two keyboards'
+         * CC 74 apart.
+         */
+        fun onEvent(event: MidiWire.Event, device: MidiDeviceId?)
         fun onDevicesChanged(devices: List<MidiDeviceId>)
 
         /**
@@ -113,7 +116,7 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
     /** SnipSnap's own published port: notes from another app, and its being bound as a device. */
     private val virtualListener = object : VirtualMidi.Listener {
         override fun onEvent(event: MidiWire.Event) {
-            listener?.onEvent(event)
+            listener?.onEvent(event, VirtualMidi.boundId)
         }
 
         override fun onBound(id: MidiDeviceId) {
@@ -283,8 +286,6 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
             // the follower that will read it on this thread (roadmap P1.3/P1.8);
             // until that exists each 0xF8 would be a posted lambda thrown away
             // 24 times a beat.
-            // Bend and pressure are filtered with it, for the same reason, until
-            // MIDI learn reads them.
             // The raw copy is taken before parsing, here, because the service
             // may reuse msg once onSend returns.
             val raw = if (tapRaw && count > 0) msg.copyOfRange(offset, offset + count) else null
@@ -294,7 +295,7 @@ class MidiInput(context: Context, private val tapRaw: Boolean = false) {
                 if (!alive) return@post
                 val l = listener ?: return@post
                 if (raw != null) l.onRaw(device, portName, raw, timestamp)
-                events.forEach(l::onEvent)
+                events.forEach { l.onEvent(it, device) }
             }
         }
     }
