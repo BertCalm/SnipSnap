@@ -4,6 +4,7 @@ import android.content.Context
 import android.view.KeyEvent
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.platform.ViewRootForTest
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsSelected
@@ -94,6 +95,12 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
 
     private fun listIsOpen() = compose.onAllNodesWithText("CHOOSE AN ENGINE", useUnmergedTree = true)
         .fetchSemanticsNodes().isNotEmpty()
+
+    /** The list is its own dialog window; this asks whether that window holds input focus yet. */
+    private fun listHasFocus(): Boolean {
+        val title = compose.onAllNodesWithText("CHOOSE AN ENGINE", useUnmergedTree = true).fetchSemanticsNodes().firstOrNull()
+        return (title?.root as? ViewRootForTest)?.view?.hasWindowFocus() == true
+    }
 
     private fun type(text: String) {
         compose.onNode(hasSetTextAction()).performTextReplacement(text)
@@ -197,6 +204,11 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     fun backClosesTheListAndLeavesTheEngineAlone() {
         show()
         openList()
+        // The window manager hands the new dialog window focus asynchronously, and a key sent before
+        // it arrives goes to the window behind. This test sent it at once, and has failed on every CI
+        // run since NACRE joined the engines, while the list's other tests, which click through
+        // semantics rather than the window, pass; what made the focus later is not pinned down.
+        waitFor("the list's window to take focus", timeoutMillis = 10_000) { listHasFocus() }
         // The system's own Back key, to the window that has focus: the list's dialog. Not
         // Espresso's pressBack, which waits for an idle this suite's frozen clock never gives.
         InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
