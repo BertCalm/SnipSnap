@@ -114,8 +114,9 @@ class ApsisSynthScreenTest : ComposeScreenTest() {
 
     @Test fun picker_exposes_six_presets_and_independent_playing_controls() {
         show(fromPicker = true)
-        press("ENGINE FILAMENT · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE APSIS · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE APSIS. CHOOSE ENGINE").assertExists()
         for (preset in ApsisPresets.all()) {
             press("PRESET ${preset.name}")
             assertEquals(.5f, progress("ROOT"), 1e-6f)

@@ -112,7 +112,7 @@ class TidalSynthScreenTest : ComposeScreenTest() {
     @Test
     fun bothVoicesExposeFiniteControlsAndFactoryRecipes() {
         show()
-        button("ENGINE TIDAL · TAP FOR NEXT").assertExists()
+        button("ENGINE TIDAL. CHOOSE ENGINE").assertExists()
         for (voice in TidalVoice.entries) {
             activate(voice.name)
             for (macro in listOf("APPROACH", "PASSAGE", "TILT", "BIND", "TAIL")) button(macro).assertExists()
