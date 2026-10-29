@@ -46,6 +46,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.Schemes
 import com.snipsnap.synth.AquariumControls
@@ -343,6 +344,7 @@ class AquariumPanelTest : ComposeScreenTest() {
                 onBack = {}, onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
                 onKitUpdated = { updated = it }, onShelfAssetWritten = {}, appScope = appScope,
                 workshopOpen = false, openBox = openBox, onOpenBox = { openBox = it },
+                pedalRow = PedalSlate.DEFAULT, onPedalRowChange = {},
                 aquariumRenderer = renderer,
             )
         }

@@ -53,6 +53,7 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.setProgress
 import androidx.compose.ui.semantics.stateDescription
@@ -99,6 +100,7 @@ import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.Pedals
 import com.snipsnap.synth.AquariumEditor
 import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRecipe
@@ -118,6 +120,7 @@ import com.snipsnap.shell.PadMaker
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Provenance
 import com.snipsnap.shell.RecipeReplay
@@ -200,6 +203,15 @@ fun PadSheetScreen(
     clipboard: RecipeReplay.Clip? = null,
     /** DO IT AGAIN: COPY LAST TREATMENT hands the clip up here; the caller keeps it. */
     onRecipeCopied: (RecipeReplay.Clip) -> Unit = {},
+    /**
+     * Row seven's slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md): the five pedals
+     * the row draws, the user's choice for every kit, held by the caller, which keeps it in the
+     * app's preferences. No default, for the reason [workshopOpen] has none: one call site, and a
+     * default would let a second one silently draw the default row forever.
+     */
+    pedalRow: PedalSlate.Row,
+    /** PUT ON ROW hands the new row up here; the caller keeps it and writes it to the preferences. */
+    onPedalRowChange: (PedalSlate.Row) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
     /**
      * Bug fix (shelf staleness): [onKeepRoom] (`OutsideSheet.keep`),
@@ -970,6 +982,14 @@ fun PadSheetScreen(
         if (!busy) applyingSegment = null
     }
 
+    // Row seven's slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md). What the pad
+    // carries, which chips light and which pedal AMT moves are the shell's (`PedalSlate.card`); the
+    // sheet remembers only the pedal last tapped on this pad (the mark), whether MORE's list is open,
+    // and a PUT ON ROW in waiting. The last two end on a change of pad, as DUST FROM's list does.
+    var pedalLastTapped by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var pedalMoreOpen by remember(slot) { mutableStateOf(false) }
+    var pedalPlacing by remember(slot) { mutableStateOf<String?>(null) }
+
     /**
      * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
      * handled separately — see [applySmear] above). Both whole-pad doors
@@ -1033,6 +1053,9 @@ fun PadSheetScreen(
             applyDust(m, p, amount, padName)
             return
         }
+        // MORE opens the slate's list and is never a treatment (`treatmentFor` refuses it, outside any
+        // try): the card routes it before here, and this keeps a missed route from crashing the tap.
+        if (segment == PadSheet.MORE) return
         val treatment = PadSheet.treatmentFor(segment) ?: return
         val staleSampleFile = p.sampleFile
         val kitDir = m.kitDir
@@ -1044,6 +1067,7 @@ fun PadSheetScreen(
             try {
                 var applied = false
                 var stacked = false
+                var pedalsBaked = false
                 var keyLabel = ""
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
@@ -1069,7 +1093,16 @@ fun PadSheetScreen(
                             // new treatment stacks, the way `treat` always has
                             // — and the toast says so, since the card will
                             // light one segment while the sound carries two.
-                            PadSheet.UnTreat.NOT_BINNED -> stacked = amount > 0f
+                            PadSheet.UnTreat.NOT_BINNED -> {
+                                // Pedals with no original behind them are part of the sound now: a chip
+                                // over them would wipe them off the card while the audio keeps every one
+                                // (the slate design's D5, kept for the whole card).
+                                if (PedalSlate.boardOf(freshPad.recipe) != null) {
+                                    pedalsBaked = true
+                                    return@withFreshKit
+                                }
+                                stacked = amount > 0f
+                            }
                             PadSheet.UnTreat.NOTHING -> Unit
                         }
                         when (treatment) {
@@ -1088,7 +1121,9 @@ fun PadSheetScreen(
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
-                if (applied) {
+                if (pedalsBaked) {
+                    onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied) {
                     onToast(
                         when {
                             stacked -> Copy.treatedStacked(PadSheet.displayLabel(segment), padName)
@@ -1111,6 +1146,57 @@ fun PadSheetScreen(
                     e is KitBuilderModel.Unpitched -> onToast(Copy.notANote(e.message ?: "not a note"))
                     else -> failure("TREATMENT", e)
                 }
+            } finally {
+                busy = false
+                padJob = null
+            }
+        }
+    }
+
+    /**
+     * Row seven's pedals (docs/superpowers/specs/2026-10-28-pedal-slate-design.md): a tap on a row
+     * chip or a line in MORE, AMT on the marked pedal, or a before/after-the-amp flip. Every rule is
+     * the shell's: [PedalSlate.land] reads the pad as it is now, refuses in words before any file
+     * moves, restores through the bin and renders the whole board from the original, so pedals never
+     * stack; [PedalSlate.toast] says what happened. This is [applyTreatment]'s shape (busy raised
+     * before the launch, the fresh-kit block, the model swap, the refresh audition) around that one
+     * call, launched into [appScope] for the same tab-switch reason.
+     */
+    fun applyPedal(gesture: PedalSlate.Gesture) {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            applyingSegment = null
+            onToast(boardRemoveFirst(p.recipe))
+            return
+        }
+        val padName = p.displayName
+        val staleSampleFile = p.sampleFile
+        val kitDir = m.kitDir
+        val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
+        val word = Pedals.byKey(gesture.key).word
+        pedalLastTapped = gesture.key
+        applyingSegment = word
+        busy = true
+        padJob = Copy.treatmentBusy(word)
+        appScope.launch {
+            try {
+                var landed: PedalSlate.Landed = PedalSlate.Landed.Gone
+                val (fresh, _) = withFreshKit(kitDir) { f ->
+                    reapplyPendingMetadataFields(f, stalePads)
+                    // A slot emptied underneath the sheet is the same answer as a changed sample.
+                    if (f.kit.pad(slot) != null) landed = PedalSlate.land(f, slot, gesture, staleSampleFile)
+                }
+                val result = landed
+                if (result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared) auditionOnRefresh = true
+                model = fresh
+                pendingMetadataSlots = emptySet()
+                onKitUpdated(fresh.kit)
+                PedalSlate.toast(gesture, result, padName)?.let(onToast)
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                failure("PEDALS", e)
             } finally {
                 busy = false
                 padJob = null
@@ -2789,22 +2875,31 @@ fun PadSheetScreen(
     // DUST rides its own shape too (`{"verb":"dust","amount","tape"}`), read the same way.
     val dustAmount = PadSheet.readDust(pad.recipe)?.amount
     val applied = if (smearAmount != null || dustAmount != null) null else PadSheet.read(pad.recipe)
+    // Row seven lights from the slate's card, never from `applied`: the card reads a pedal board, and
+    // an old pedal chip as a board of one, and says which pedal AMT moves. A pad with no pedals has no
+    // mark (`card.marked` is null), and the card's other rows keep their one lit chip.
+    val pedalCard = remember(pad.recipe, pedalRow, pedalLastTapped) { PedalSlate.card(pedalRow, pad.recipe, pedalLastTapped) }
+    val hasPedals = pedalCard.marked != null
+    val pedalChip = applied?.segment?.takeIf { it in PadSheet.PEDAL_SEGMENTS }
     val activeSegment = when {
         smearAmount != null -> PadSheet.SMEAR
         dustAmount != null -> PadSheet.DUST
+        pedalChip != null -> null
         else -> applied?.segment
     }
-    val isNoneState = !PrintedPads.has(pad.recipe) && smearAmount == null && dustAmount == null && applied == null
+    val isNoneState = !PrintedPads.has(pad.recipe) && smearAmount == null && dustAmount == null && applied == null && !hasPedals
     // The phone ruling, whichever row: a treatment no segment draws is
-    // named on the provenance line, never shown as NONE.
-    val unmappedLabel = applied?.takeIf { it.segment == null }?.let { a ->
+    // named on the provenance line, never shown as NONE. So is an old pedal
+    // chip whose chain is not its pedal's today (the slate design's D11):
+    // the card lights no pedal for it.
+    val unmappedLabel = applied?.takeIf { it.segment == null || (pedalChip != null && !hasPedals) }?.let { a ->
         when (a.treatment) {
             is PadSheet.Treatment.Era -> "AGED: ${a.treatment.name.uppercase()}"
             is PadSheet.Treatment.Character -> "TREATED: ${a.treatment.name.uppercase()}"
             is PadSheet.Treatment.Keyed -> "IN KEY: ${a.treatment.name.uppercase()}"
         }
     }
-    val amount = smearAmount ?: dustAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
+    val amount = pedalCard.amount ?: smearAmount ?: dustAmount ?: applied?.amount ?: PadSheet.DEFAULT_AMOUNT
 
     val assignedSlots = kit.pads.map { it.slot }.sorted()
     val idx = assignedSlots.indexOf(slot)
@@ -2819,7 +2914,10 @@ fun PadSheetScreen(
     var pendingTuneSemis by remember(slot, pad.tuneCoarse) {
         mutableIntStateOf(pad.tuneCoarse.coerceIn(-12, 12))
     }
-    var pendingAmt by remember(slot, amount) { mutableFloatStateOf(amount) }
+    // Keyed on the marked pedal too: two pedals at the same AMT is the usual case, and when AMT 0
+    // takes one off and hands the mark on, an amount-only key would keep reading 0 over a pedal
+    // playing at 70.
+    var pendingAmt by remember(slot, amount, pedalCard.marked) { mutableFloatStateOf(amount) }
     // SHAPE's four: null on the pad means "the format's own default", drawn
     // at the position that default sounds like (no ramp, full length, open,
     // no ring) — and a knob committed *at* that position writes null back,
@@ -2839,6 +2937,8 @@ fun PadSheetScreen(
     val openBoxKind = openBox?.let { PadSheetBoxes.boxFor(it) }
     fun tapBox(box: PadSheetBoxes.Box) {
         if (busy) return
+        pedalMoreOpen = false
+        pedalPlacing = null
         if (aquariumOpen) closeAquarium()
         onOpenBox(PadSheetBoxes.toggle(openBoxKind, box)?.name)
     }
@@ -3091,6 +3191,8 @@ fun PadSheetScreen(
                 onClick = {
                     stopAquariumPreview()
                     aquariumError = null
+                    pedalMoreOpen = false
+                    pedalPlacing = null
                     aquariumOpen = true
                 },
             )
@@ -3130,10 +3232,18 @@ fun PadSheetScreen(
             // that returns early without ever starting cannot leave a chip
             // claiming to be in flight.
             TreatmentCard(
-                rows = PadSheet.ROWS,
+                // Row seven is the user's five and MORE (`PedalSlate.Row`, the same in every kit).
+                rows = PadSheet.rows(pedalRow.words),
                 noneSegment = PadSheet.NONE,
                 activeSegment = activeSegment,
                 isNoneState = isNoneState,
+                pedalLit = pedalCard.chips.filter { it.lit }.map { it.word }.toSet(),
+                pedalMarked = if (pedalCard.moreMarked) PadSheet.MORE else pedalCard.chips.firstOrNull { it.marked }?.word,
+                moreText = Copy.pedalMore(pedalCard.moreCount),
+                moreLit = pedalCard.moreLit,
+                placing = pedalPlacing?.let { Pedals.byKey(it).word },
+                amountLabel = pedalCard.marked?.let { Copy.pedalAmt(Pedals.byKey(it).word) } ?: "AMT",
+                amountEnabled = activeSegment != null || hasPedals,
                 amountFraction = pendingAmt,
                 amountText = "${(pendingAmt * 100).roundToInt()}%",
                 padColor = classColor,
@@ -3141,29 +3251,84 @@ fun PadSheetScreen(
                 busy = busy,
                 applying = applyingSegment.takeIf { busy },
                 onSegmentTap = { seg ->
-                    if (seg == PadSheet.NONE) {
+                    val placing = pedalPlacing
+                    pedalPlacing = null
+                    when {
+                        // A PUT ON ROW in waiting: a tap on one of the row's five swaps it in that
+                        // place, and any other tap only cancels the wait.
+                        placing != null -> {
+                            if (seg in pedalRow.words) {
+                                val outgoing = pedalRow.keys[pedalRow.words.indexOf(seg)]
+                                runCatching { PedalSlate.putOnRow(pedalRow, placing, outgoing) }.onSuccess { row ->
+                                    onPedalRowChange(row)
+                                    onToast(Copy.rowSwapped(Pedals.byKey(placing).word, seg))
+                                }
+                            }
+                        }
+                        seg == PadSheet.MORE -> {
+                            pedalMoreOpen = !pedalMoreOpen
+                        }
                         // No `applyingSegment` for NONE: the busy header reads
                         // "TREATMENT · <segment>…", and a restore out of the bin
                         // is a file copy, not the second-and-a-bit of DSP that
                         // header exists to explain. `busy` still greys the card.
-                        unTreat()
-                    } else {
-                        applyingSegment = seg
-                        applyTreatment(seg, pendingAmt)
+                        seg == PadSheet.NONE -> {
+                            unTreat()
+                        }
+                        // A pedal on the row: on if the card shows it off, off if lit. Said as
+                        // On or Off rather than a toggle, so a late second tap does nothing.
+                        seg in pedalRow.words -> {
+                            val chip = pedalCard.chips.first { it.word == seg }
+                            applyPedal(if (chip.lit) PedalSlate.Gesture.Off(chip.key) else PedalSlate.Gesture.On(chip.key))
+                        }
+                        else -> {
+                            applyingSegment = seg
+                            applyTreatment(seg, pendingAmt)
+                        }
                     }
                 },
                 onAmountChange = { f -> pendingAmt = (f * 20f).roundToInt() / 20f },
                 // AMT re-runs the treatment at the new amount, which is the
                 // same second-and-a-bit of work a chip tap starts - so it
                 // records the segment too. Finding 14 is about the treatment
-                // path, not only the taps that begin at a chip.
+                // path, not only the taps that begin at a chip. On a pad with
+                // pedals it moves the marked pedal alone, and 0 takes it off.
                 onAmountCommit = {
-                    activeSegment?.let { seg ->
-                        applyingSegment = seg
-                        applyTreatment(seg, pendingAmt)
+                    val marked = pedalCard.marked
+                    if (marked != null) {
+                        applyPedal(PedalSlate.Gesture.Amount(marked, pendingAmt))
+                    } else {
+                        activeSegment?.let { seg ->
+                            applyingSegment = seg
+                            applyTreatment(seg, pendingAmt)
+                        }
                     }
                 },
             )
+            // MORE's list: every pedal, ON or OFF, the AMT mark, the side, and PUT ON ROW.
+            if (pedalMoreOpen) {
+                PedalMoreList(
+                    listed = PedalSlate.more(pedalRow, pad.recipe, pedalLastTapped),
+                    placing = pedalPlacing,
+                    scheme = scheme,
+                    busy = busy,
+                    onToggle = { line ->
+                        pedalPlacing = null
+                        applyPedal(if (line.on) PedalSlate.Gesture.Off(line.key) else PedalSlate.Gesture.On(line.key))
+                    },
+                    onMark = { key ->
+                        pedalPlacing = null
+                        pedalLastTapped = key
+                    },
+                    onFlip = { line ->
+                        pedalPlacing = null
+                        val side = line.side
+                        val to = line.sides.firstOrNull { it != side }
+                        if (side != null && to != null) applyPedal(PedalSlate.Gesture.Flip(line.key, to))
+                    },
+                    onPutOnRow = { key -> pedalPlacing = if (pedalPlacing == key) null else key },
+                )
+            }
             // The tape this pad's dust comes from — or would come from — and
             // the door to borrow another's.
             DustFromRow(
@@ -4219,6 +4384,19 @@ private fun TreatmentCard(
     noneSegment: String,
     activeSegment: String?,
     isNoneState: Boolean,
+    /** Row seven's pedals the pad carries, by chip word: lit from the slate's card, never from [activeSegment]. */
+    pedalLit: Set<String>,
+    /** The chip AMT moves: a row-seven word, or [PadSheet.MORE] when that pedal sits behind MORE; null with no pedals. */
+    pedalMarked: String?,
+    /** MORE's visible text, [Copy.pedalMore] of the pad's pedals the row hides; its spoken name stays MORE. */
+    moreText: String,
+    moreLit: Boolean,
+    /** A PUT ON ROW in waiting names its pedal's word: the header asks for the chip it swaps with, and the row's five wear the mark. */
+    placing: String?,
+    /** The stepper's name: AMT, or [Copy.pedalAmt] of the marked pedal, so the stepper says which pedal it moves. */
+    amountLabel: String,
+    /** Whether AMT has a target: the one lit chip on rows one to six, or the marked pedal. */
+    amountEnabled: Boolean,
     amountFraction: Float,
     amountText: String,
     padColor: Color,
@@ -4241,9 +4419,14 @@ private fun TreatmentCard(
             // cards' lines have been cut back to their gloss alone for the
             // same reason. The busy branch is unchanged - it names the
             // segment in flight, which no legend can.
-            if (applying != null) Copy.treatmentBusy(PadSheet.displayLabel(applying)) else "ERAS AND CHARACTERS · ONE PER PAD",
+            when {
+                applying != null -> Copy.treatmentBusy(PadSheet.displayLabel(applying))
+                placing != null -> Copy.putOnRowPrompt(placing)
+                // One recipe per pad, except row seven: pedals stack on one pad (the slate design).
+                else -> "ONE PER PAD · PEDALS STACK"
+            },
             TapeType.pixelSmall,
-            if (applying != null) scheme.amber.tape else scheme.ink3.tape,
+            if (applying != null || placing != null) scheme.amber.tape else scheme.ink3.tape,
             maxLines = 1,
         )
         // Row one is the eras; most of the rest are the rack's characters,
@@ -4255,7 +4438,16 @@ private fun TreatmentCard(
         for (row in rows) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (seg in row) {
-                    val selected = if (seg == noneSegment) isNoneState else seg == activeSegment
+                    val isPedal = seg in PadSheet.PEDAL_SEGMENTS
+                    val selected = when {
+                        seg == PadSheet.MORE -> moreLit
+                        isPedal -> seg in pedalLit
+                        seg == noneSegment -> isNoneState
+                        else -> seg == activeSegment
+                    }
+                    // The pedal AMT moves wears the accent rim, MORE when it sits behind MORE; so do
+                    // the row's five while a PUT ON ROW waits for the one it swaps with.
+                    val marked = seg == pedalMarked || (placing != null && isPedal)
                     // NONE takes the treatment back off (September UAT,
                     // finding 13). Which chips are live is PadSheet's rule,
                     // not this card's, so it can be asserted without a phone.
@@ -4276,6 +4468,9 @@ private fun TreatmentCard(
                                     else -> null
                                 },
                             )
+                            .let { if (marked) it.border(2.dp, scheme.accent.tape, RoundedCornerShape(4.dp)) else it }
+                            // Lit is said, not only drawn, so a screen reader (and a device test) can tell.
+                            .semantics { this.selected = selected }
                             // Always clickable, `tappable` forwarded rather
                             // than dropped so a non-tappable segment still
                             // announces itself instead of vanishing from the
@@ -4285,7 +4480,7 @@ private fun TreatmentCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         TapeText(
-                            PadSheet.displayLabel(seg),
+                            if (seg == PadSheet.MORE) moreText else PadSheet.displayLabel(seg),
                             TapeType.pixel,
                             when {
                                 working || selected -> scheme.titleInk.tape
@@ -4303,15 +4498,89 @@ private fun TreatmentCard(
             }
         }
         StepperSlider(
-            label = "AMT",
+            label = amountLabel,
             fraction = amountFraction,
             valueText = amountText,
             fillColor = padColor,
             scheme = scheme,
-            enabled = !busy && activeSegment != null,
+            enabled = !busy && amountEnabled,
             onFractionChange = onAmountChange,
             onFractionCommit = onAmountCommit,
+            // "AMT · SUSTAIN" needs more room than AMT alone.
+            labelWidth = if (pedalMarked != null) 96.dp else 44.dp,
         )
+    }
+}
+
+/**
+ * MORE's list (docs/superpowers/specs/2026-10-28-pedal-slate-design.md): every pedal the library
+ * offers, then any pick on the pad it does not. Each line is its pedal, lit when the pad carries it
+ * (a tap puts it on or takes it off); AMT, which gives it the AMT without changing its sound; the side
+ * of the amp, where it can move; and PUT ON ROW, where the row does not draw it. Inline under the
+ * card, the bench's convention, as DUST FROM is.
+ */
+@Composable
+private fun PedalMoreList(
+    listed: List<PedalSlate.Listed>,
+    /** The pedal a PUT ON ROW waits on, or null: its button is lit until the swap or a cancel. */
+    placing: String?,
+    scheme: Scheme,
+    busy: Boolean,
+    onToggle: (PedalSlate.Listed) -> Unit,
+    onMark: (String) -> Unit,
+    onFlip: (PedalSlate.Listed) -> Unit,
+    onPutOnRow: (String) -> Unit,
+) {
+    Column(Modifier.fillMaxWidth().testTag("pedal-more-list"), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        TapeText(Copy.PEDAL_MORE_HEADING, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
+        for (line in listed) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                ActionButton(
+                    line.word,
+                    scheme,
+                    enabled = !busy && (line.on || line.inLibrary),
+                    lit = line.on,
+                    accessibilityLabel = "${line.word}, ${if (line.on) "ON" else "OFF"}",
+                    modifier = Modifier.weight(1.2f).testTag("pedal-more-${line.key}"),
+                    onClick = { onToggle(line) },
+                )
+                ActionButton(
+                    "AMT",
+                    scheme,
+                    enabled = !busy && line.on,
+                    lit = line.marked,
+                    accessibilityLabel = "AMT FOR ${line.word}",
+                    modifier = Modifier.weight(0.7f).testTag("pedal-more-${line.key}-amt"),
+                    onClick = { onMark(line.key) },
+                )
+                if (line.canFlip) {
+                    val before = line.side == com.snipsnap.synth.PedalSide.PRE
+                    ActionButton(
+                        if (before) "PRE" else "POST",
+                        scheme,
+                        enabled = !busy,
+                        accessibilityLabel = "${line.word} ${if (before) "BEFORE" else "AFTER"} THE AMP",
+                        modifier = Modifier.weight(0.8f).testTag("pedal-more-${line.key}-side"),
+                        onClick = { onFlip(line) },
+                    )
+                } else {
+                    Spacer(Modifier.weight(0.8f))
+                }
+                if (line.canPutOnRow) {
+                    ActionButton(
+                        Copy.PUT_ON_ROW,
+                        scheme,
+                        enabled = true,
+                        lit = placing == line.key,
+                        accessibilityLabel = "${Copy.PUT_ON_ROW}: ${line.word}",
+                        modifier = Modifier.weight(1.3f).testTag("pedal-more-${line.key}-row"),
+                        onClick = { onPutOnRow(line.key) },
+                    )
+                } else {
+                    Spacer(Modifier.weight(1.3f))
+                }
+            }
+        }
     }
 }
 
