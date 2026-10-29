@@ -277,3 +277,19 @@ The owner asked for the DEPTH knob, the way back to the media the bell and the c
 | A 0.8 ms click's 90 % width at CHARGE 1 (`ForgeTest`) | 2.97 ms | 4.74 ms | 7.83 ms | 11.31 ms | 13.97 ms |
 
 The three endpoints were heard at the CHARGE gate; the steps between them were not. The tuning audition still renders its four named candidates directly.
+
+## The DEPTH gate (opened 2026-10-28)
+
+Two claims were still unheard after DEPTH shipped: YIELD 0.25's harsh middle on the TIGHT medium, and DEPTH's in-between steps. Before building anything for the first one, a measure: is the harsh middle still on the knobs?
+
+It is. DEPTH 1 is the AS BUILT medium the middle was heard on, so at the default CHARGE it comes back exactly. The kick's body share over 200 Hz after 50 ms, with ARREST 0 (`ForgeTest` asserts the DEPTH 1 row):
+
+| Kick, CHARGE 0.5 | YIELD 0 | YIELD 0.25 | YIELD 0.5 |
+|---|---|---|---|
+| DEPTH 0 (TIGHT, shipped) | 0.038 | 0.021 | 0.022 |
+| DEPTH 0.75 | 0.033 | 0.053 | 0.009 |
+| DEPTH 1 (AS BUILT) | 0.021 | 0.087 | 0.004 |
+
+The snare never lost it: its body share at YIELD 0.25 sits above YIELD 0 at every DEPTH (0.765 against 0.714 at DEPTH 0, 0.635 against 0.609 at DEPTH 1). At CHARGE 1 the kick's harsh row moves to YIELD 0 at DEPTH 0.5 and 0.75 (0.095), a reminder that CHARGE and DEPTH both set the peak the flow threshold is measured against.
+
+So restoring the middle on the shipped medium is a change to propose only if the owner's ear asks for it. `ForgeDepthAuditionGenerator` (`./gradlew :synth:generateForgeDepthAudition`, 24 clips) puts four questions to it: the kick at YIELD 0.25 across DEPTH 0, 0.75 and 1; the snare's surviving harsh middle; and CHARGE 1 at DEPTH 0, 0.25, 0.5, 0.75 and 1 on the bell and the chop. One level trap is recorded on the page: on the kick, YIELD 0.25 at DEPTH 1 plays 1.7 dB louder than at DEPTH 0, and louder can pass for better. Nothing in FORGE changes until the answers are in.
