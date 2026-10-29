@@ -49,9 +49,22 @@ repositories {
 // other method optimised; CI's jvm-tests was no slower with it. Remove this
 // once Filament.synthesize is split into methods C2 can compile; a JDK 21
 // test JVM that no longer crashes without the flag is the proof.
+//
+// CausticInstrument.synthesize (696 bytes) trips the same internal error,
+// at type.cpp:1283, on 21.0.12 and 21.0.13. It is intermittent where
+// Filament's was every run, but each time it kills a test JVM: it stopped
+// #690's full local run, one of #723's, and the serial baseline #703 was
+// measured against, each worked round by hand. Running it interpreted costs
+// nothing measurable: its own classes and StarterKitsTest, which renders
+// CAUSTIC instruments, took 572 s with the exclude and 585 s without, on the
+// same machine. Remove it on the same proof as Filament's.
 subprojects {
     tasks.withType<Test>().configureEach {
-        jvmArgs("-XX:CompileCommand=quiet", "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize")
+        jvmArgs(
+            "-XX:CompileCommand=quiet",
+            "-XX:CompileCommand=exclude,com.snipsnap.synth.Filament::synthesize",
+            "-XX:CompileCommand=exclude,com.snipsnap.synth.CausticInstrument::synthesize",
+        )
     }
 }
 
