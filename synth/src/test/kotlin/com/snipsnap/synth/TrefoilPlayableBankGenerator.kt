@@ -20,8 +20,16 @@ object TrefoilPlayableBankGenerator {
     }
     private fun write(root: File,path: String,x: Any?) { File(root,path).also { it.parentFile.mkdirs() }.writeText(Json.write(json(x))+"\n") }
     private fun sha(file: File)=MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
-    private fun git(repo: File,vararg args: String): String=ProcessBuilder(listOf("git")+args).directory(repo).start().let { p ->
-        val text=p.inputStream.bufferedReader().readText().trim();check(p.waitFor()==0);text }
+    private fun git(repo: File,vararg args: String): String=ProcessBuilder(listOf("git")+args).directory(repo).redirectErrorStream(true).start().let { p ->
+        val text=p.inputStream.bufferedReader().readText().trim();val exit=p.waitFor()
+        check(exit==0) { "git ${args.joinToString(" ")} failed ($exit): $text" };text }
+    /** Detached CI checkouts may have no remote HEAD or ancestor history. Their
+     * recorded commit already contains the source; its diff captures local edits. */
+    internal fun replayBase(repo: File): String = try {
+        git(repo,"merge-base","HEAD","origin/HEAD")
+    } catch (_: IllegalStateException) {
+        git(repo,"rev-parse","HEAD")
+    }
     data class Demo(val id: String,val title: String,val description: String,val bpm: Float,val clip: Mpc3Clip)
     fun demos(): List<Demo> {
         fun note(beat: Double,slot: Int,velocity: Float)=Mpc3Note(Mpc3Note.noteFor(slot),(beat*960).roundToLong(),velocity,960L)
@@ -142,11 +150,11 @@ object TrefoilPlayableBankGenerator {
             val stream=TrefoilPlayableBankGenerator::class.java.getResourceAsStream("/trefoil-bank/$name") ?: error("missing bank page $name")
             stream.use { input -> File(root,name).outputStream().use { input.copyTo(it) } }
         }
-        val base=git(repo,"merge-base","HEAD","origin/HEAD")
+        val base=replayBase(repo)
         val patch=ProcessBuilder("git","diff",base,"--","synth","shell","app","README.md","docs/TREFOIL.md","docs/SYNTH_ROADMAP.md","scripts/trefoil_bank_browser_check.py",".gitignore")
             .directory(repo).start().let { process -> val value=process.inputStream.bufferedReader().readText();check(process.waitFor()==0);value }
         File(root,"source").mkdirs();File(root,"source/trefoil-playable.patch").writeText(patch)
-        File(root,"REPLAY.txt").writeText("Public SnipSnap base: $base\nSource revision: $revision\nApply source/trefoil-playable.patch at that base.\nRun ./gradlew --no-daemon :synth:generateTrefoilPlayableBank\nThe engine remains acoustic model 2. Full recipes include note, duration, contact time, seed and velocity.\n")
+        File(root,"REPLAY.txt").writeText("Replay base: $base\nSource revision: $revision\nCheck out the recorded replay base, then apply source/trefoil-playable.patch with git apply --allow-empty.\nAn empty patch means the base already contains the committed source and there are no local edits.\nRun ./gradlew --no-daemon :synth:generateTrefoilPlayableBank\nThe engine remains acoustic model 2. Full recipes include note, duration, contact time, seed and velocity.\n")
         val files=root.walkTopDown().filter { it.isFile && !it.relativeTo(root).path.startsWith(".kit-work") && it.name !in setOf("manifest.json","source-provenance.json") }.associate { it.relativeTo(root).invariantSeparatorsPath to sha(it) }
         val sourcePaths=listOf("synth/src/main/kotlin/com/snipsnap/synth/Trefoil.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilModelTwo.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/TrefoilPatch.kt","synth/src/main/kotlin/com/snipsnap/synth/TrefoilTrajectory.kt",
@@ -157,7 +165,9 @@ object TrefoilPlayableBankGenerator {
             "shell/src/main/kotlin/com/snipsnap/shell/StarterKits.kt","shell/src/main/kotlin/com/snipsnap/shell/UserPresets.kt",
             "app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt","scripts/trefoil_bank_browser_check.py")+
             listOf("index.html","styles.css","app.js").map { "synth/src/test/resources/trefoil-bank/$it" }
-        write(root,"source-provenance.json",mapOf("revision" to revision,"dirty" to dirty,"model" to 2,"sourceSha256" to sourcePaths.associateWith { sha(File(repo,it)) }))
+        write(root,"source-provenance.json",mapOf("revision" to revision,"dirty" to dirty,"model" to 2,"replayBase" to base,
+            "replayMode" to if(base==revision) "commit-plus-working-tree-delta" else "public-base-patch",
+            "sourceSha256" to sourcePaths.associateWith { sha(File(repo,it)) }))
         write(root,"manifest.json",mapOf("model" to 2,"revision" to revision,"dirty" to dirty,"presets" to clips,"pads" to padRows,"demos" to demoRows,
             "kitZip" to archive.name,"assets" to files,"nativeVelocities" to TrefoilKits.velocities,"hardwareAudition" to "pending"))
         work.deleteRecursively();println("TREFOIL BANK complete: 12 presets, 16 pads, 48 native kit layers, 2 performances")

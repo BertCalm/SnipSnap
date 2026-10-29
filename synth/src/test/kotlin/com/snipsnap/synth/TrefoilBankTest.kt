@@ -74,6 +74,39 @@ class TrefoilBankTest {
                 assertTrue(wav.samples.all(Float::isFinite) && wav.peak() in .001f.. .99f)
                 assertTrue(wav.durationSeconds>16f*60f/d.getValue("bpm").num().toFloat(),"musical tail cut off")
             }
+            assertTrue("git apply --allow-empty" in File(temp,"REPLAY.txt").readText())
+
+            // Exercise the same missing-ref and truncated-history conditions as
+            // actions/checkout, without fetching history or relaxing the audio checks.
+            val repo=File(temp,"source-checkout").apply { mkdirs() }
+            val hooks=File(repo,"empty-hooks").apply { mkdirs() }
+            fun git(vararg args: String): String {
+                val process=ProcessBuilder(listOf("git","-c","core.hooksPath=${hooks.absolutePath}")+args)
+                    .directory(repo).redirectErrorStream(true).start()
+                val text=process.inputStream.bufferedReader().readText().trim()
+                assertEquals(0,process.waitFor(),text)
+                return text
+            }
+            fun commit()=git("-c","user.name=Trefoil replay test","-c","user.email=replay-test@example.invalid",
+                "-c","commit.gpgsign=false","commit","-qm","Source fixture")
+            git("init","-q");git("config","core.autocrlf","false")
+            val source=File(repo,"source.txt").apply { writeText("base\n") }
+            git("add","source.txt");commit();val publicBase=git("rev-parse","HEAD")
+            source.writeText("committed\n");git("add","source.txt");commit()
+            val revision=git("rev-parse","HEAD")
+            git("update-ref","refs/remotes/origin/main",publicBase)
+            git("symbolic-ref","refs/remotes/origin/HEAD","refs/remotes/origin/main")
+            assertEquals(publicBase,TrefoilPlayableBankGenerator.replayBase(repo))
+            git("symbolic-ref","--delete","refs/remotes/origin/HEAD")
+            File(repo,".git/shallow").writeText("$revision\n")
+            assertEquals("true",git("rev-parse","--is-shallow-repository"))
+            assertEquals(revision,TrefoilPlayableBankGenerator.replayBase(repo))
+            assertEquals("",git("diff",revision),"clean shallow replay needs no invented source delta")
+            source.writeText("local edit\n")
+            val delta=File(temp,"source-delta.patch").apply { writeText(git("diff",revision)+"\n") }
+            git("checkout","--","source.txt")
+            git("apply","--allow-empty",delta.absolutePath)
+            assertEquals("local edit\n",source.readText(),"the recorded commit plus delta restores local source")
         } finally { temp.deleteRecursively() }
     }
 }
