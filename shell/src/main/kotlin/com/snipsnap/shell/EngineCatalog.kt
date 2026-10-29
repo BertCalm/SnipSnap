@@ -107,6 +107,9 @@ object EngineCatalog {
         "VENT" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.SYNTH), "Unpredictable chaotic tones: round, wire, tearing, pulsing"),
         "CREASE" to EngineEntry(listOf(EngineCategory.SYNTH), "Synth tones that bend and relax: round, pinched, rubbery"),
         "TRIO" to EngineEntry(listOf(EngineCategory.STRINGS), "Tres, berimbau and charango plucks, solo or together"),
+        // NACRE (#722) reached the picker as the catalogue's law landed (#730). Classified from its own KDoc
+        // (a played string duet with sympathetic, watery returns), not from a listen.
+        "NACRE" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.PADS), "A plucked string duet with shimmering, watery returns"),
         "ORIGAMI" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Metallic keys and soft sustained tones with folded overtones"),
         "OHM" to EngineEntry(listOf(EngineCategory.STRINGS), "Warm plucked string with octave and glassy companions"),
         "MERCURY" to EngineEntry(listOf(EngineCategory.BELLS), "Glass and steel tones that are tapped, rubbed and bent"),
