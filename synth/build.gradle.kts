@@ -1469,6 +1469,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render FORGE's DEPTH gate (YIELD 0.25 against DEPTH, DEPTH's in-between values, manifest, page) under testkit/forge-depth-audition/. See ForgeDepthAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeDepthAudition") {
+    group = "distribution"
+    description = "Render FORGE's DEPTH gate clips, manifest and listening page under testkit/forge-depth-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeDepthAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-depth-audition", "${rootDir}")
+}
+
 /** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeChargeAudition") {
     group = "distribution"
