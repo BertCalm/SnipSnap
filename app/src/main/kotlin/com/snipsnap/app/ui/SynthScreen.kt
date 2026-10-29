@@ -2226,7 +2226,8 @@ fun SynthScreen(
     // composable is at the limit of what the toolchain verifies (see `embouchureRestore`).
     val enginePicker = rememberEnginePicker(ENGINE_NAME_SET)
 
-    // Arriving on an engine, whichever way: ◄, ► or a row of the engine list. It is exactly
+    // Arriving on a different engine, whichever way: ◄, ► or a row of the engine list other than
+    // the current engine's (that row only closes the list, see the sheet's onPick). It is exactly
     // what the tap-to-cycle header did, so the new engine is touched (and so auditioned, as
     // every touch is) and starts on its first voice.
     fun arrive(next: Engine) {

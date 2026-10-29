@@ -13,6 +13,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
@@ -205,10 +207,13 @@ class EnginePickerSheetTest : ComposeScreenTest() {
     }
 
     @Test
-    fun theAllChipIsThereOnlyWhileAChipIsOnAndClearsThem() {
+    fun theAllChipIsAlwaysThereAndWorksOnlyWhileAChipIsOnAndClearsThem() {
         show()
-        assertTrue("no ALL chip with every chip off", compose.onAllNodes(hasContentDescription("ALL")).fetchSemanticsNodes().isEmpty())
+        // Always in the row, so the chips beside it never move; but with every chip off it has nothing to clear.
+        button("ALL").assertExists()
+        button("ALL").assertIsNotEnabled()
         toggle("BASS")
+        button("ALL").assertIsEnabled()
         // A thumb target both ways (its three letters alone are about a third of 48 dp wide), and
         // pinned ahead of the chips, which scroll in the space it leaves.
         button("ALL").assertWidthIsAtLeast(48.dp)
@@ -222,7 +227,25 @@ class EnginePickerSheetTest : ComposeScreenTest() {
         pump()
         assertEquals(aToZ, rows())
         button("BASS").assertIsOff()
-        assertTrue(compose.onAllNodes(hasContentDescription("ALL")).fetchSemanticsNodes().isEmpty())
+        button("DRUMS & PERCUSSION").assertIsOff()
+        button("ALL").assertIsNotEnabled()
+    }
+
+    @Test
+    fun theChipsStayWhereTheyAreWhenAChipGoesOnAndOff() {
+        show()
+        // A chip pressed near the right edge must be under the thumb for a second press: the chip row
+        // is the same width with ALL idle and with ALL live, so nothing slides when the first chip goes on.
+        val chips = listOf("DRUMS & PERCUSSION", "BASS")
+        val before = chips.map { button(it).getBoundsInRoot().left }
+        toggle("BASS")
+        val on = chips.map { button(it).getBoundsInRoot().left }
+        toggle("BASS")
+        val off = chips.map { button(it).getBoundsInRoot().left }
+        for ((i, chip) in chips.withIndex()) {
+            assertEquals("$chip moved when BASS went on", before[i].value, on[i].value, 2f)
+            assertEquals("$chip moved when BASS went off", before[i].value, off[i].value, 2f)
+        }
     }
 
     @Test

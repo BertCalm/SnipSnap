@@ -345,9 +345,11 @@ internal fun EnginePickerContent(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            // Pinned at the row's start and outside the scrolling list, so it is in view the
-            // moment the first chip goes on and never scrolls away. The list gives it the room.
-            if (chips.isNotEmpty()) AllChip { chips = emptySet() }
+            // Pinned at the row's start and outside the scrolling list, so it never scrolls away.
+            // Always in the row, dim and inert while no chip is on: a chip that came and went
+            // would narrow the list beside it by its own width, and every chip would jump that
+            // far sideways under a thumb that had just pressed one.
+            AllChip(enabled = chips.isNotEmpty()) { chips = emptySet() }
             LazyRow(
                 Modifier.weight(1f).fadeEdges(chipRow),
                 state = chipRow,
@@ -482,21 +484,26 @@ private fun CategoryChip(label: String, on: Boolean, onToggle: () -> Unit) {
  * ALL: clears the chips. A button and not a toggle, drawn as a chip (an outline, in the
  * accent) so it reads as one of the row, and at least [Layout.MIN_HIT_TARGET] wide as well
  * as tall: its three letters alone are about a third of that.
+ *
+ * It is there whether or not [enabled] (that is, whether or not any chip is on) and so takes
+ * the same room either way. While no chip is on it is in the quiet ink, with nothing to
+ * clear, and reads to a screen reader as unavailable, which it is.
  */
 @Composable
-private fun AllChip(onClear: () -> Unit) {
+private fun AllChip(enabled: Boolean, onClear: () -> Unit) {
     val scheme = LocalScheme.current
+    val ink = if (enabled) scheme.accent.tape else scheme.ink3.tape
     Box(
         Modifier
             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
             .widthIn(min = Layout.MIN_HIT_TARGET.dp)
-            .tapeClick(label = "ALL", onClick = onClear)
+            .tapeClick(label = "ALL", enabled = enabled, onClick = onClear)
             .padding(vertical = 6.dp)
-            .border(1.dp, scheme.accent.tape, RoundedCornerShape(2.dp))
+            .border(1.dp, ink, RoundedCornerShape(2.dp))
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText("ALL", TapeType.pixel, scheme.accent.tape)
+        TapeText("ALL", TapeType.pixel, ink)
     }
 }
 
