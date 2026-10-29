@@ -2,7 +2,6 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.FeatureExtractor
 import com.snipsnap.audio.Fft
-import com.snipsnap.audio.Loudness
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
@@ -192,6 +191,26 @@ class ThumpSparkTest {
     }
 
     @Test
+    fun `punch spans a rounded onset and a hard strike rather than only a submillisecond spike`() {
+        for (metal in listOf(0f, .25f)) {
+            val positions = listOf(0f, .25f, .5f, .75f, 1f)
+            val medianMs = positions.map { punch ->
+                medianEnergyMs(render("PUNCH" to punch, "METAL" to metal, "COLOR" to .5f))
+            }
+            println("SPARK PUNCH articulation METAL=$metal medianEnergyMs=$medianMs")
+            // A gain-independent attack/body ratio can still pass when all
+            // useful movement sits inside a very short click. The soft end
+            // must also move the delivered hit's energy into a rounded onset.
+            assertTrue(medianMs.first() >= 30.0,
+                "PUNCH 0 needs a rounded onset, not another short strike: $medianMs ms")
+            assertTrue(medianMs.last() <= 12.0,
+                "PUNCH 1 lost its hard strike: $medianMs ms")
+            assertTrue(medianMs.first() >= medianMs.last() * 3.0,
+                "PUNCH's complete articulation range collapsed: $medianMs ms")
+        }
+    }
+
+    @Test
     fun `color moves early power centroid without needing a metallic endpoint`() {
         val positions = listOf(0f, .25f, .5f, .75f, 1f)
         for (metal in listOf(0f, .25f)) {
@@ -216,7 +235,7 @@ class ThumpSparkTest {
 
     @Test
     fun `low and middle metal moves early spectral shape with moderate color`() {
-        val positions = listOf(0f, .25f, .5f, .75f)
+        val positions = listOf(0f, .25f, .5f, .75f, 1f)
         for (color in listOf(.25f, .5f)) {
             val spectra = positions.map { metal ->
                 earlySpectrum(render("METAL" to metal, "COLOR" to color))
@@ -233,6 +252,51 @@ class ThumpSparkTest {
             // rather than requiring both controls at their extreme endpoint.
             assertTrue(distances.all { it >= .15 },
                 "METAL COLOR=$color lost low/middle spectral shape movement: $distances")
+        }
+    }
+
+    @Test
+    fun `metal changes substantial body inharmonicity beyond the first forty milliseconds`() {
+        val positions = listOf(0f, .25f, .5f, .75f, 1f)
+        for (decay in listOf(.35f, .7f)) for (color in listOf(.5f, .75f)) {
+            val sounds = positions.map { metal ->
+                render("METAL" to metal, "COLOR" to color, "DECAY" to decay)
+            }
+            val fractions = sounds.map { offHarmonicFraction(it, 220f) }
+            val spectra = sounds.map { windowSpectrum(it, .060f, .100f) }
+            val distances = spectra.zipWithNext().map { (a, b) -> spectralDistance(a, b) }
+            println("SPARK METAL body DECAY=$decay COLOR=$color offHarmonicPower60to160ms=$fractions quarterDistances=$distances")
+            // Tiny off-harmonic fractions and an onset-only spectral change
+            // passed the previous audition. Require a substantial late-body
+            // redistribution too. FM need not grow monotonically at every
+            // frequency, so quarter steps use normalized spectral distance.
+            assertTrue(fractions.last() >= fractions.first() + .15,
+                "METAL needs at least 15 percentage points of body inharmonic range: $fractions")
+            assertTrue(distances.all { it >= .15 },
+                "METAL has a dead quarter after the strike: $distances")
+        }
+    }
+
+    @Test
+    fun `color retains a broad quarter step range through the body without requiring metal`() {
+        val positions = listOf(0f, .25f, .5f, .75f, 1f)
+        for (decay in listOf(.35f, .7f)) for (metal in listOf(0f, .25f)) {
+            val sounds = positions.map { color ->
+                render("COLOR" to color, "METAL" to metal, "DECAY" to decay)
+            }
+            for ((from, duration) in listOf(0f to .080f, .060f to .100f)) {
+                val centroids = sounds.map { spectralCentroid(windowSpectrum(it, from, duration)) }
+                val adjacent = centroids.zipWithNext().map { (a, b) -> b / a }
+                val fullRatio = centroids.last() / centroids.first()
+                println("SPARK COLOR body DECAY=$decay METAL=$metal from=$from centroids=$centroids quarterRatios=$adjacent fullRatio=$fullRatio")
+                // The expanded range must survive past the contact and work
+                // on the harmonic body itself. A changed onset or a new
+                // default timbre cannot establish this independent sweep.
+                assertTrue(adjacent.all { it >= 1.12 },
+                    "COLOR has a weak quarter in the delivered body: $adjacent")
+                assertTrue(fullRatio >= 3.0,
+                    "COLOR's dark-to-bright body range is too narrow: $fullRatio")
+            }
         }
     }
 
@@ -256,24 +320,15 @@ class ThumpSparkTest {
                 raw[i] = centered - dc.lp(centered)
             }
             Dsp.normalize(raw)
-            // At PUNCH 1, match the unshaped reference's delivered loudness
-            // using the finer source rate too. The production 4x shaper is
-            // compared with shared saturation/boost evaluated at 8x, before
-            // this independent sequence of 2:1 conversions.
-            val targetLoudness = if (punch > 0f) {
-                val unshaped = downsampleReference(raw.copyOf(), referenceRate)
-                Dsp.normalizeByAverageFold(unshaped)
-                Loudness.of(Snip(unshaped, 1, Dsp.RATE))
-            } else {
-                0f
-            }
-            Punch.saturate(raw, punch, referenceRate)
-            Punch.boostEnvelope(raw, punch, referenceRate)
+            // SPARK owns PUNCH articulation in its source. Its finish uses
+            // shared Punch amount 0, avoiding a second submillisecond boost.
+            // Keep this reference independent of that production wrapper.
             val expected = downsampleReference(raw, referenceRate)
-            // PUNCH 0 skips nonlinear shaping and loudness matching, but its
-            // shared finish still restores the post-decimation peak target.
             Dsp.normalize(expected)
-            Punch.rescaleToLoudness(expected, punch, targetLoudness)
+            // The source articulation has a wider crest-factor range than
+            // the old shared shaper. Match the finished instrument's one
+            // uniform loudness gain before the common clipping safety net.
+            Dsp.levelTo(expected, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
             Dsp.limitPeak(expected)
             Dsp.fadeTail(expected)
             val count = minOf(actual.size, expected.size)
@@ -296,6 +351,26 @@ class ThumpSparkTest {
 
     private fun rms(samples: FloatArray, from: Int, until: Int): Double =
         sqrt((from until until).sumOf { samples[it].toDouble() * samples[it] } / (until - from))
+
+    private fun medianEnergyMs(snip: Snip): Double {
+        val halfway = snip.samples.sumOf { it.toDouble() * it } * .5
+        assertTrue(halfway > 1e-12, "a silent hit cannot establish attack timing")
+        var cumulative = 0.0
+        for (i in snip.samples.indices) {
+            cumulative += snip.samples[i].toDouble() * snip.samples[i]
+            if (cumulative >= halfway) return 1000.0 * i / snip.sampleRate
+        }
+        error("a silent hit cannot establish attack timing")
+    }
+
+    private fun spectralDistance(a: DoubleArray, b: DoubleArray): Double =
+        sqrt(a.indices.sumOf { i ->
+            val delta = sqrt(a[i]) - sqrt(b[i])
+            delta * delta
+        })
+
+    private fun spectralCentroid(spectrum: DoubleArray): Double =
+        spectrum.withIndex().sumOf { (bin, power) -> bin.toDouble() * Dsp.RATE / 8192 * power }
 
     private fun highFraction(snip: Snip, boundaryHz: Float): Double =
         upperPower(postAttackSpectrum(snip), boundaryHz)

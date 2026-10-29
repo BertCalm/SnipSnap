@@ -5,6 +5,7 @@ import com.snipsnap.synth.Dsp.RATE
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.exp
+import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
@@ -176,7 +177,10 @@ object Thump {
                 }
             }
         }
-        val punch = m.getValue("PUNCH")
+        // SPARK's longer source articulation already owns PUNCH. Applying
+        // the legacy 2 ms shaper again added a separate spike at its upper
+        // endpoint rather than extending the source control's useful range.
+        val punch = if (voice == ThumpVoice.SPARK) 0f else m.getValue("PUNCH")
         // Only SNARE carries a WIDTH macro (m["WIDTH"] is absent, hence 0f,
         // for every other voice) - this is the one place `render()` needs
         // to know whether `raw` came back interleaved stereo or mono.
@@ -212,6 +216,13 @@ object Thump {
         // saturate/boostEnvelope) rather than SNARE needing to know that
         // here.
         val buf = Punch.applyOversampled(raw, punch, RATE, channels)
+        if (voice == ThumpVoice.SPARK) {
+            // Its source changes contact duration, hence crest factor. Match
+            // perceived level with one gain after decimation so softer and
+            // harder contacts remain comparable, keeping peak headroom as
+            // the final limit rather than compressing the articulation.
+            Dsp.levelTo(buf, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
+        }
         // The actual clipping safety net, run last: only steps in if the
         // transient boost pushed a sample past what's safe, same as
         // normalize always did for PUNCH amount 0.
@@ -244,27 +255,49 @@ object Thump {
         val root = Dsp.expMap(m.getValue("TUNE"), 110f, 440f).toDouble()
         val t60 = Dsp.expMap(m.getValue("DECAY"), 0.16f, 1f).toDouble()
         val metal = m.getValue("METAL").toDouble()
-        val color = m.getValue("COLOR")
+        // Give the rounded end enough filter travel to open new partials.
+        // Pin the midpoint so this low-quarter correction preserves the
+        // default's brightness and its contact/body level relationship.
+        val colorPosition = m.getValue("COLOR")
+        val color = if (colorPosition <= 0.5f) {
+            0.5f * (2f * colorPosition).pow(0.85f)
+        } else colorPosition
         val punch = m.getValue("PUNCH").toDouble()
-        // A sine gave COLOR almost nothing to filter, and a quiet edge only
-        // became useful with both controls fully open. Give the body real
-        // harmonics and bring the edge alongside it at ordinary METAL values.
-        // Their envelopes still leave the settled fundamental underneath.
-        val bodyGain = 0.80 - 0.28 * metal
+        // Each control owns a different part of the gesture: PUNCH sets the
+        // contact time, METAL changes the material beyond the attack, COLOR
+        // opens the available spectrum. Pitch fall is fixed, so moving a
+        // material or tone control cannot turn into another pitch sweep.
+        val bodyGain = 0.52 - 0.18 * metal
         val edgeGain = 0.95 * sqrt(metal)
-        val edgeT60 = t60 * (0.55 - 0.10 * metal)
-        val bendDepth = 0.08 + 0.92 * metal
-        val bendTime = 0.012 + 0.012 * color
-        val bodyCutoff = Dsp.expMap(color, (root * 0.9).toFloat(), (root * 9.0).toFloat())
-        val edgeCutoff = Dsp.expMap(color, (root * 1.5).toFloat(), (root * 24.0).toFloat())
-        // The shared PUNCH stage protects legacy drums with a tiny 2 ms
-        // window. SPARK needs a source articulation that lasts long enough
-        // to hear: a rounded 18 ms rise to a hard 0.35 ms strike, plus a
-        // linear-depth 18 ms attack/body envelope. The fixed quarter scale
-        // bounds unfinished gain without changing the later level matching.
-        val attackSeconds = Dsp.expMap(punch.toFloat(), 0.018f, 0.00035f).toDouble()
-        val harmonicWeights = doubleArrayOf(1.0, 0.9, 0.8, 0.65, 0.5, 0.4, 0.3)
-        val harmonicScale = harmonicWeights.sum()
+        // The previous edge was already down roughly 23 dB by 60 ms at the
+        // default patch. Keep the material through the body, then let its
+        // modulation resolve to a stable-pitched tail even at long DECAY.
+        val edgeT60 = t60 * (0.80 + 0.15 * metal)
+        val modulationT60 = minOf(t60 * 1.25, 0.45)
+        val bendDepth = 0.35
+        val bendTime = 0.018
+        val bodyCutoff = Dsp.expMap(color, (root * 0.9).toFloat(), minOf(root * 28.0, 14_000.0).toFloat())
+        val edgeCutoff = Dsp.expMap(color, root.toFloat(), minOf(root * 16.0, 16_000.0).toFloat())
+        // A soft mallet-like rise now occupies tens of milliseconds, while
+        // the hard endpoint reaches the first cycle. One source envelope,
+        // followed only by linear conditioning and delivery normalization,
+        // keeps that contrast after the audition applies one matching gain.
+        // Squaring the contact control keeps its softer half open and gives
+        // the last quarter real rise-time travel, instead of spending most
+        // of the knob on sub-cycle attacks that barely differ.
+        val hardness = punch * punch
+        val attackSeconds = Dsp.expMap(hardness.toFloat(), 0.060f, 0.00060f).toDouble()
+        // Seven partials capped COLOR's available brightness before the
+        // filter opened. Thirty-one finite partials reach the upper band
+        // even at the bottom TUNE, without a discontinuous saw oscillator.
+        // At the largest initial pitch all remain below output Nyquist.
+        val harmonicWeights = DoubleArray(31) { 1.0 / sqrt((it + 1).toDouble()) }
+        // Match the body's RMS capacity to the edge, rather than dividing
+        // by the sum of 31 partial gains and burying it under the PM layer.
+        // A fixed scale on both branches bounds their summed source below
+        // 0.6 before filtering; delivery normalization removes that scale.
+        val harmonicScale = sqrt(harmonicWeights.sumOf { it * it })
+        val sourceScale = 0.20
         val body = FloatArray(frames((t60 * 1.4).toFloat(), RATE) * (rate / RATE))
         val edge = FloatArray(body.size)
         val edgeFilter = Dsp.TptSvf(rate)
@@ -281,11 +314,11 @@ object Thump {
             val modulator = sin(modPhase)
             val dry = sin(phase)
             val edgeEnvelope = exp(-6.9078 * t / edgeT60)
-            val modEnvelope = exp(-6.9078 * t / (t60 * 0.75))
+            val modEnvelope = exp(-6.9078 * t / modulationT60)
             val pm = sin(phase + (1.5 + 6.0 * metal) * modEnvelope * modulator)
 
             // Finite harmonics, at the same falling root. The recurrence
-            // avoids six more sin calls per frame. The upper partials lose
+            // avoids thirty more sin calls per frame. The upper partials lose
             // energy a little faster than the fundamental, so the strike
             // resolves toward a body rather than leaving a static bright tone.
             val twiceCos = 2.0 * cos(phase)
@@ -320,10 +353,13 @@ object Thump {
             }
             triangle /= triangleScale
             val attack = 0.5 - 0.5 * cos(PI * (t / attackSeconds).coerceAtMost(1.0))
-            val strike = 0.25 * attack * (1.0 + 3.0 * punch * exp(-t / 0.018))
-            body[i] = (bodyGain * bodyWave * strike).toFloat()
-            val interaction = 0.65 * pm + 0.35 * dry * triangle
-            val edgeInput = (edgeGain * interaction * strike * edgeEnvelope).toFloat()
+            val strike = 0.10 * attack * (1.0 + 9.0 * hardness * exp(-t / 0.018))
+            body[i] = (sourceScale * bodyGain * bodyWave * strike).toFloat()
+            // The ring pair needs its own loss as the PM depth resolves.
+            // Otherwise its sidebands persist under the settled tail and
+            // pull the body's perceived period away from the requested root.
+            val interaction = 0.65 * pm + 0.35 * dry * triangle * modEnvelope
+            val edgeInput = (sourceScale * edgeGain * interaction * strike * edgeEnvelope).toFloat()
             // Independent spectral decay on the edge, with fixed positive
             // damping. The root branch never inherits this moving cutoff.
             edgeFilter.process(edgeInput, edgeCutoff * (0.60f + 0.40f * modEnvelope.toFloat()), 1.4142135f)
