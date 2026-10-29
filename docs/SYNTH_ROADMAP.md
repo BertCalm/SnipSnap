@@ -1,5 +1,16 @@
 # Synth roadmap — generate kits, not just capture them
 
+**CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
+EDGE response, the nine complete original recipes stay intact and 27 new dry
+recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six
+swells and four hollow textures. Saved table pairings, scan relationships and
+envelopes establish different musical roles on the unchanged model-1 engine.
+The app/CLI preset lists expand; the existing sixteen-pad starter and historical
+comparison auditions keep their original layouts. `generateContourPresetAudition`
+provides finite attacks, settled holds and held EDGE endpoints; the instrument
+bank expands to 36 programs / 612 roots. New presets await listening, and physical
+Android/MPC playback remains a separate check. See [CONTOUR.md](CONTOUR.md).
+
 **Ferry first Kotlin port (2026-10-27).** PASSAGE ports the approved Python
 wood-to-wire handoff and nine register/speed references to one passive 22-state
 network. An independent quiet root and full-network fundamental cap preserve

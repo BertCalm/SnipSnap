@@ -24,7 +24,8 @@ class ContourEdgeResponseTest {
     @Test
     fun `factory range revision changes only the saved response of the seven affected recipes`() {
         val unchanged = setOf("Soft Digital", "Bright Margin")
-        val presets = ContourPresets.all()
+        // This is the nine-recipe listening revision, not the later bank expansion.
+        val presets = ContourPresets.original()
         assertEquals(9, presets.size)
         assertEquals(9, presets.map { it.name }.distinct().size)
         assertEquals(unchanged, presets.map { it.name }.filter { it in unchanged }.toSet())

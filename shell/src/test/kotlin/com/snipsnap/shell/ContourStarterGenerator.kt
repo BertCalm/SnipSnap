@@ -25,7 +25,7 @@ import java.util.zip.ZipOutputStream
 import kotlin.math.abs
 import kotlin.math.sqrt
 
-/** Package the current nine recipes as held instruments, with source and file read-back evidence. */
+/** Package all 36 factory recipes as held instruments, with source and file read-back evidence. */
 object ContourStarterGenerator {
     private const val BANK = "SnipSnap Contour Starter"
 
@@ -57,8 +57,9 @@ object ContourStarterGenerator {
             "xpm/src/main/kotlin/com/snipsnap/xpm/KeygroupWriter.kt",
             "mpc3/src/main/kotlin/com/snipsnap/mpc3/Mpc3TrackWriter.kt",
         )
-        val patches = ContourPresets.all().also { require(it.size == 9) }
+        val patches = ContourPresets.all().also { require(it.size == 36) }
         val rows = patches.map { patch ->
+            val description = ContourPresets.description(patch)
             val name = "Contour ${patch.name}"
             val spec = ContourPadMaker.Spec(patch)
             val midis = ContourPadMaker.zoneMidis(spec)
@@ -76,7 +77,9 @@ object ContourStarterGenerator {
                 loop, WavWriter.BitDepth.PCM_16)
             File(web, "root-loops/${preview.name}").apply { parentFile.mkdirs(); preview.copyTo(this) }
             File(web, "recipes/${recipe.name}").apply { parentFile.mkdirs(); recipe.copyTo(this) }
-            linkedMapOf("name" to patch.name, "voice" to patch.voice.name, "recipe" to relative(bundle, recipe),
+            linkedMapOf("name" to patch.name, "voice" to patch.voice.name,
+                "role" to description.role, "gesture" to description.gesture, "retained" to description.retained,
+                "recipe" to relative(bundle, recipe),
                 "recipeSha256" to sha(recipe), "canonicalPatchSha256" to sha(patch.toJsonText().toByteArray()),
                 "nativeTrack" to "mpc/$name.xty", "compatibilityProgram" to "mpc/${name}_[TrackData]/$name.xpm",
                 "releaseSeconds" to spec.releaseSeconds, "capturedVelocity" to patch.velocity,
@@ -91,11 +94,15 @@ object ContourStarterGenerator {
         writeJson(File(web, "manifest.json"), linkedMapOf("sourceCommit" to sourceCommit, "hardwareVerified" to false,
             "instruments" to patches.zip(rows).map { (patch, row) ->
                 val midis = Keys.contourPadMidis(patch.voice)
+                val description = ContourPresets.description(patch)
                 linkedMapOf("name" to patch.name, "voice" to patch.voice.name,
+                    "role" to description.role, "gesture" to description.gesture, "retained" to description.retained,
                     "rootMidi" to ContourEngine.rootMidi(patch.voice), "lowMidi" to midis.first(), "highMidi" to midis.last(),
                     "releaseSeconds" to row.getValue("releaseSeconds"),
                     "preview" to "root-loops/${patch.name.lowercase(Locale.ROOT).replace(' ', '_')}.wav",
-                    "recipe" to "recipes/${patch.name}.json")
+                    "previewSha256" to (row.getValue("preview") as Map<*, *>)["sha256"],
+                    "recipe" to "recipes/${patch.name}.json", "recipeSha256" to row.getValue("recipeSha256"),
+                    "zoneCount" to midis.size)
             }))
         File(bundle, "README.txt").writeText(readme())
         val manifest = File(bundle, "manifest.json")
@@ -121,7 +128,11 @@ object ContourStarterGenerator {
         }
         writeJson(File(output, "handoff-manifest.json"), linkedMapOf("archive" to archive.name, "bytes" to archive.length(),
             "sha256" to sha(archive), "manifestSha256" to sha(manifest), "hardwareVerified" to false))
-        println("Verified ${rows.size} instruments / 153 zones; ${archive.path}: ${archive.length()} bytes, SHA-256 ${sha(archive)}")
+        require(git(repo, "rev-parse", "HEAD") == sourceCommit && git(repo, "status", "--porcelain").isBlank()) {
+            "Source changed while rendering; regenerate the complete bank."
+        }
+        val zoneCount = rows.sumOf { (it.getValue("zones") as List<*>).size }
+        println("Verified ${rows.size} instruments / $zoneCount zones; ${archive.path}: ${archive.length()} bytes, SHA-256 ${sha(archive)}")
         println("Android and MPC hardware playback remain unverified.")
     }
 
@@ -175,8 +186,8 @@ object ContourStarterGenerator {
     }
 
     private fun readme() = """
-        CONTOUR STARTER — FOREGROUND EDGE RECIPES
-        Nine current recipes, each captured as 17 minor-third sample roots over
+        CONTOUR STARTER — 36 COMPLETE RECIPES
+        Thirty-six recipes, each captured as 17 minor-third sample roots over
         its voice's four-octave range. Each program covers the inclusive range of
         its lowest to highest root. The samples hold the settled tone and omit
         the original finite attack. ATTACK, DECAY and filter-envelope transients
@@ -199,6 +210,8 @@ object ContourStarterGenerator {
         WAV hashes and software read-back checks. Saved source recipes are retained;
         no bank gain or effects are added. Read-back is not a hardware pass.
         Android phone playback, MPC loading, sustain and release are unverified.
+        The nine original recipes retain their previous complete configurations;
+        the 27 additions are proposals for owner listening, not approved sounds.
         Regenerate with ./gradlew :shell:generateContourStarter from a clean HEAD.
     """.trimIndent() + "\n"
 

@@ -36,7 +36,9 @@ object ContourEdgeAuditionGenerator {
         for (directory in listOf("raw", "matched", "patches")) {
             File(root, directory).apply { require(!exists() || deleteRecursively()); require(mkdirs()) }
         }
-        val presets = ContourPresets.all().also { require(it.size == 9) }
+        // This historical comparison has nine pinned preceding recipes. The
+        // expanded factory bank has its own audition, without invented baselines.
+        val presets = ContourPresets.original().also { require(it.size == 9) }
         val baselinePaths = presets.associate { it.name to
             "synth/src/test/resources/contour-edge-audition/baseline/${slug(it.name)}.json" }
         val baselineRecipeSha256 = linkedMapOf<String, String>()

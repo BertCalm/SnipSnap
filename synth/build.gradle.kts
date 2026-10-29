@@ -144,6 +144,17 @@ tasks.register<JavaExec>("generateContourEdgeAudition") {
     args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
 }
 
+/** All 36 complete factory recipes, with finite attacks and independently measured settled tones. */
+tasks.register<JavaExec>("generateContourPresetAudition") {
+    group = "distribution"
+    description = "Render 36 Contour presets, native/matched finite and held WAVs, held EDGE ranges and exact replay JSON."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourPresetAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourPresetOutput").orNull ?: "${rootDir}/testkit/contour-presets")
+}
+
 /** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
 tasks.register<JavaExec>("generateFilamentAudition") {
     group = "distribution"
