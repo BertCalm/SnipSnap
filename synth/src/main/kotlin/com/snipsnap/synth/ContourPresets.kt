@@ -6,6 +6,10 @@ package com.snipsnap.synth
  * Complete saved configurations keep these recipes independent of voice defaults.
  */
 object ContourPresets {
+    // Saved-preset promotion emits calls to this helper, then copies the full configuration.
+    private fun p(voice: ContourVoice, name: String, vararg macros: Pair<String, Float>) =
+        ContourPatch(name, voice, ContourEngine.defaults(voice) + macros.toMap())
+
     private fun recipe(voice: ContourVoice, name: String, config: ContourConfig,
         scan: Float, offset: Float, motion: Float, filter: Float, drive: Float,
         body: Float, edge: Float, attack: Float, decay: Float, rate: Float, reso: Float, env: Float,
