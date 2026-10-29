@@ -153,7 +153,7 @@
     source.textContent = manifest.sourceCommit.slice(0, 12);
     source.href = 'https://github.com/BertCalm/SnipSnap/commit/' + manifest.sourceCommit;
     document.getElementById('count').textContent = manifest.instruments.length + ' instruments · ' + manifest.instruments.reduce((sum,row) => sum + row.zoneCount, 0) + ' zones in the full bank';
-    status.textContent = 'Choose a tone. Playback continues until stopped.';
+    filter();
   }).catch(error => { status.textContent = error.message + ' Reload the page to retry.'; });
 })();
 </script>
