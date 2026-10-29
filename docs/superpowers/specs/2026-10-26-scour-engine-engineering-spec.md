@@ -1,10 +1,10 @@
 # SCOUR Engine: Engineering Specification
-Version 1.2 · 2026-10-26 (adapts the 2026-10-25 draft, version 1.0, to the repository;
-1.2 records the first listen and sources the plate table)
-Status: R1 built in Kotlin (see "As built: R1" at the end). Phase 0 was measured in the Python
-harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of
-harness renders (HARDEN 0 against 1, section 20.1); the Kotlin audition is generated and not yet
-heard. R2 (HOLD) to R4 remain.
+Version 1.3 · 2026-10-29 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1)
+Status: R1 and R1.1 built in Kotlin (see "As built: R1" and "As built: R1.1" at the end). Phase 0 was
+measured in the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one
+pair of harness renders (section 20.1) and the R1 Kotlin audition (As built: R1.1, "Heard"); the R1.1
+audition is published and not yet heard. R2 (HOLD) to R4 remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -295,7 +295,8 @@ limiter on the excitation.
 | RPM | .30 | roller start speed `v0 = lin(RPM, .15, 1)`; stop time `v0/a` | RPM × HOLD: a held loop runs the roller at `v0` | trace: stop time equals `v0/a` to the tick; audio: roller-phase energy and bandwidth rise with RPM. Harness activity 6.04 dB lo↔hi |
 | SHOT | .50 | shot rate `λ = expMap(SHOT, 3, 300)`; per-shot amplitude law (section 7) | SHOT × HARDEN: no shots, no hardening | trace: shot count rises and `S` at close rises monotonically (measured .021 / .293 / .835); realised shot power within ±1 dB when `λW ≥ 20`. Harness activity 3.67 dB |
 | HARDEN | .60 | how far coverage moves the modes and shortens the ring (section 6.4) | needs SHOT > 0 | trace: upper-mode frequencies at close rise with HARDEN at fixed SHOT, root unchanged to the cent; audio: a tracked upper partial rises (measured 4.110 → 4.372 at HARDEN .6, SHOT .7). Harness activity 1.69 dB, the second weakest |
-| TRAVERSE | .20 | where the blast lands: strike participation at `x = lin(TRAVERSE, .05, .95)` | TRAVERSE × SHOT: aim matters only while shots land | modal spectrum changes; root probe at both ends. Harness activity 0.87 dB, the weakest; TRAVERSE 0 read f0/3 at the house window |
+| TRAVERSE (R1 only) | .20 | where the blast lands: strike participation at `x = lin(TRAVERSE, .05, .95)` | TRAVERSE × SHOT: aim matters only while shots land | modal spectrum changes; root probe at both ends. Harness activity 0.87 dB, the weakest; TRAVERSE 0 read f0/3 at the house window. Heard: "Traverse makes no difference"; replaced by RING in R1.1 |
+| RING (R1.1) | .75 | which way and how far hardening moves every mode's t60: `× (1 + damp·HARDEN·S)^(2(2·RING − 1))`; .25 is R1's law, .5 none, .75 the owner's "longer" | RING × HARDEN × SHOT: nothing hardened, nothing to move | render length rises with RING at fixed blast; RING .5 equals HARDEN 0's length; with HARDEN 0, RING 0 and 1 are the same render to the bit (see "As built: R1.1") |
 | HOLD | 0 | below the top step: the blast stays open longer, `W·(1 + 2·HOLD)` (shape); top step: the loop (section 11) | HOLD × SHOT: longer blast, more coverage | render length grows with HOLD below the top; the top step's seam passes; `drumClassFor` agrees with the length |
 
 Velocity (the `Velocity.kt` arms): shot speed, so per-shot amplitude and coverage per shot
@@ -571,12 +572,14 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | every render files LOOP | measured (house Classifier on harness WAVs) | section 20 |
 | the circular plate ratios | verified | Leissa, NASA SP-160, Table 2.5 (section 8) |
 | the root is the perceived pitch in the tail | not met in the harness | 10 of 22, section 20 |
-| a hardened plate should ring shorter, not longer | heard as shorter; preference not stated | 20.1; the owner's call at the R1 audition |
+| a hardened plate should ring shorter, not longer | heard: longer, both voices | the R1 audition (As built: R1.1); RING .75, adjustable |
 | HARDEN is audible | heard (PLATE, SHOT .7, harness) | owner, 2026-10-26: "shorter/faster and higher resonance" (20.1) |
-| HARDEN is audible at the other corners and in PANE | heard? | not heard; audition SHOT × HARDEN corners |
+| HARDEN is audible at the other corners and in PANE | heard (Kotlin, both voices) | the R1 audition gate: "yes, clearly" for PLATE and PANE |
 | "higher resonance" means more ring | heard (owner, 2026-10-28) | "I think more ring" |
-| the Kotlin R1 renders sound like the prototype | heard? | not heard; `generateScourAudition` |
-| PANE's springback reads as glass giving way | heard? | not heard; audition voices |
+| the Kotlin R1 renders sound like the prototype | heard (owner did not say otherwise) | the R1 audition |
+| PANE's springback reads as glass giving way | not met in R1 ("sounds the same as plate"); heard? for R1.1 | R1.1 gives PANE the square pane's own body |
+| the square plate values (PANE) | verified (solve) | the companion script against Leissa Table 4.65 and the ν = 0.225 bounds (As built: R1.1) |
+| SCOUR earns a place in a phrase | heard? | the R1.1 audition's phrases |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -676,3 +679,118 @@ gitignored `testkit/scour-audition/`). No kit, no app picker, no loop: those are
 - TRAVERSE is now the weakest control on PLATE (1.13 dB) and keeps the shape-law weights with the
   root held at full weight, the departure section 8 names.
 - HOLD's loop, the kit, presets, docs and the app picker wait for R2 to R4.
+
+## As built: R1.1 (2026-10-29)
+
+The owner's first Kotlin listen (the published audition page, 2026-10-28) answered every question
+and left three requests. R1.1 answers them before R2 starts. It changes `Scour.kt`, `ScourTest.kt`,
+`ScourAuditionGenerator.kt`, `scour-audition.html` and the Gradle task's description, and adds
+`2026-10-26-scour-engine-square-plate.py` beside this spec. The registry rows are unchanged: no
+macro name appears in them, and no saved SCOUR sound can exist (the engine is a prototype, outside
+the picker), so nothing needed a migration.
+
+### Heard (the owner, R1 audition, 2026-10-28)
+
+| Question | Answer | Note |
+|---|---|---|
+| PLATE: can you hear the hardening? | yes, clearly | "I don't know if I get the use case fully. We may need to see what a phrase would sound like." |
+| PANE: can you hear the hardening? | yes, clearly | "Sounds the same as plate though" |
+| PLATE: which hardened ring? | longer | "Probably would be adjustable" |
+| PANE: which hardened ring? | longer | |
+| Each control swept | | "Traverse makes no difference" |
+| Edges | | "That are different from each other" (read as: the extremes reach distinct places) |
+
+The R1 gate passes for both voices. The open ring question (section 21) is answered: longer.
+
+### What changed
+
+- **RING replaces TRAVERSE.** TRAVERSE was the weakest control by measurement (1.13 dB, R1) and by ear.
+  RING sets which way and how far hardening moves every mode's t60: `× f^(2(2·RING − 1))` with
+  `f = 1 + damp·HARDEN·S`. RING .25 is R1's law, .5 leaves the ring alone, .75 (the default) is the
+  "longer" clip the owner picked, and the ends double either way. A negative exponent is taken as a
+  reciprocal so .25 is R1's `1 / f` exactly; before the (1,1) change below, RING .25 rendered R1's
+  PLATE byte for byte (SHA-256 of the default and of SHOT .8 HARDEN 1, measured). The blast now lands
+  where R1's TRAVERSE default put it, through R1's own float law, and `MODEL_VERSION` stays 1 so every
+  shot keeps its draws.
+- **A floor on the render length**, 1.6 s. RING 0 can tighten PANE to 1.33 s in all (RING 0, HARDEN 1,
+  SHOT 1), under the classifier's 1.5 s, where its feature rules could file a plate as a drum. Every
+  SCOUR render is still LOOP. Because the length now moves with velocity one way or the other
+  depending on RING, `drumClassFor` reads velocity 0 and 1 and takes the shorter.
+- **PANE has its own body: a square glass pane, heard at one point on its diagonal.** R1's PANE used
+  PLATE's circular-plate table less two modes, which is why it sounded like PLATE. The free square plate
+  at ν = 0.225 (the Poisson's ratio of Leissa's square-plate tables, close to glass's) has a different
+  series, but in full it reads badly: its overtones sit near half-integer ratios (1.444, 2.549, 4.347,
+  4.650, 5.489...), so with the root they look like harmonics of the octave below, and the house
+  `Pitch.detect` misread the note, mostly an octave low, in 132 of 243 grid corners at the onset. Listening on the
+  diagonal hears only the modes symmetric about it (every other mode of a square is exactly still
+  there), which drops 1.444; listening .7205 of the way from the centre to the corner sits on the nodes
+  of 4.347 (.7202) and 5.489 (.7208) as well, the mallet maker's strike-at-the-node move turned round.
+  What is left, with each mode's motion at that point: 1 (1.000), 1.692 (.615), 2.549 (.574), 4.650
+  (.362), 8.659 (.580), 9.413 (.429); 7.657 moves a tenth as much as the root there and is left out.
+- **The square plate is solved here, not read from a table.** Leissa's ν = 0.225 tables (SP-160,
+  4.62 to 4.67) survive the NTRS scan only in part: Table 4.63 has no readable frequencies, and two
+  entries of 4.62 (266.0 and 316.1, Ritz's own few-term upper bounds) sit below the converged values
+  (269.3 and 320.7 in the same units), which an upper bound cannot do, so they are read as scan errors.
+  The companion script solves the plate by Rayleigh-Ritz with products of Legendre polynomials,
+  converges to 4.1e-7 between 14 and 20 terms a side, reproduces eight entries of Leissa's complete
+  ν = 0.3 table (4.65: 19.5961 to 131.4697) to within 2.9e-5, and lands inside his ν = 0.225 bounds on
+  the fundamental (14.1028 to 14.1165, Ritz 14.1161). It prints `SQUARE` and `SQUARE_HEARD` as
+  `Scour.kt` carries them.
+- **PANE's pair (1.692, 2.549) at .5 of the gain law and .7 of its ring**, measured the way R1 measured
+  PLATE's: of the 37 corners `ScourTest` asserts ({0, 1} over the five timbral controls, and TUNE in
+  quarters at the defaults), full level read 34 at the onset and 31 in the tail; .7 and .7 read 36
+  and 36 (missing the defaults at C3 and C4); .5 and .7 read all 37 at both windows.
+- **PLATE's (1,1) mode, 3.906, heard at .6.** R1's tightening ring had kept it short. At a longer ring
+  and a full blast it is stretched toward 4.4 and pulled the tail reading sharp: with R1's voicing and
+  RING, 3 of the 37 corners missed (+116 to +139 cents, all SHOT 1, HARDEN 1, RING 1); silencing it alone
+  fixed them. At the onset, unstretched near 4, it supports the root, so too little costs a default:
+  at .5 the F♯4 default's onset read +54 cents. At .7 one corner still read +107 cents; at .6 all 37 read
+  at both windows. Quieting (1,1) and (4,0) together was worse at every level tried.
+- **The audition leads with the owner's three requests**: SCOUR in a phrase (a riff, an impact over
+  THUMP's beat, a chord bed, both voices, at 90 BPM, each the engine's own pad renders summed at their
+  trigger times), PLATE beside PANE, and RING at five settings; then the gate, the sweeps and the edges.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| Root, the 37 corners `ScourTest` asserts ({0, 1} over RPM, SHOT, HARDEN, RING and TUNE; TUNE in quarters at the defaults), both windows | PLATE 37 and 37; PANE 37 and 37 |
+| Root, a 324-corner grid (TUNE, RPM, SHOT, HARDEN at 0, .5, 1; RING at 0, .5, .75, 1) | PLATE 324 at the onset, 312 in the tail; PANE 312 and 314 |
+| PLATE's 12 grid misses | all in the tail, all at SHOT 1 with HARDEN .5 or 1: +59 to +133 cents, −181 to −189, and two far off (−1841 and −2772) at C4 with RPM 0 |
+| PANE's 22 grid misses | all at C3 with RPM 0 and SHOT .5, where R1's PANE was weak too: 12 onset reads at +53 or +54 cents, 10 tail reads at −54 to −102 cents and one at −1847 (HARDEN 1, RING 1) |
+| The two bodies, tail at HARDEN 0, dB under the root (C4) | PLATE at its own 2.328 / 3.906 / 4.112: −44 / −33 / −30; at PANE's 2.549 / 4.650 / 8.659: −145 / −172 / −173. PANE at its own: −39 / −69 / −75 (1.692: −29); at PLATE's: −154 / −147 / −169 |
+| RING, length at SHOT .8 and HARDEN 1, RING 0 / .25 / .5 / .75 / 1 | PLATE 1.76 / 2.31 / 3.30 / 5.12 / 8.43 s; PANE 1.60 (the floor) / 1.72 / 2.12 / 2.68 / 3.48 s. .25 and .75 match R1's "shorter" and "longer" clips to the hundredth |
+| Macro activity (log-spectral distance, 0 against 1, other macros at defaults) | PLATE RPM 6.22, SHOT 5.29, HARDEN 1.93, RING 0.79, HOLD 5.13 dB; PANE 8.43, 2.67, 1.72, 1.22, 1.51. RING's reach is mostly in length, which this measure (over the shorter render) does not count |
+| Raw peak after the output stage, over the grid and the corners | PLATE 0.596 (C3, RPM .5, SHOT 0, HARDEN 1, RING 1), defaults 0.207; PANE 0.320, defaults 0.101. The fixed trim of 36 stands |
+| Render length over the grid | PLATE 1.60 to 12.04 s; PANE 1.60 to 4.87 s |
+| Render time, warm | PLATE defaults 53 ms (3.71 s of audio), the longest corner (SHOT, HARDEN, RING 1, HOLD .98) 182 ms for 13.05 s; PANE 35 ms (2.26 s) and 67 ms (5.11 s) |
+| Audition | 6 phrases and 74 gestures, 154 24-bit WAVs, 6.8 s to render; the published page carries 80 16-bit clips at one shared gain of 11.5 dB (the impact phrase's kick sets the headroom) |
+
+### Disclosed, not fixed
+
+- The grid misses above. Both voices read every asserted corner; outside them, PLATE at a full blast
+  and PANE at C3 with a slow roller are where the note gets loose.
+- RING 1 can make a 13-second render (PLATE, every blast control at its top, HOLD .98); 182 ms here.
+- PANE's strike weights are still R1's shape law, written for a round plate's radius; only where it is
+  heard is solved. The roller still runs "on the rim".
+- PLATE at RING .25 is no longer R1 byte for byte: its (1,1) mode is heard at .6.
+- HOLD's loop, the kit, presets, docs and the app picker wait for R2 to R4.
+
+### Why R1.1 is built this way
+
+1. **RING is one number with two named points on it.** .25 is exactly the "shorter" clip and .75 exactly
+   the "longer" clip the owner picked, so the first listen's answer is a setting, not a guess, and
+   turning the knob either way from it stays on the same law. It does nothing until the plate is
+   hardened, the same way HARDEN does nothing without shots.
+2. **PANE sounds different because it is a different shape.** A square plate rings with a different
+   set of overtones than a round one. The catch is that a square's overtones nearly line up with the
+   harmonics of a note an octave down, so heard everywhere it sounds like the wrong note.
+3. **Where you listen is a physical choice, not a filter.** Along the diagonal, and 72 % of the way to
+   the corner, three of the troublesome modes are perfectly still, so a pickup there simply does not
+   hear them. Instrument makers do the same with where they strike a bar or a string.
+4. **The quieter overtones are measured, not guessed.** PLATE's (1,1) mode at .6 and PANE's pair at .5
+   are the gentlest settings at which every asserted corner still plays the note it was asked for;
+   one step gentler, a corner (or a default) goes out of tune.
+5. **The risky decision is still the plate's pitch.** Both voices are in tune where the tests look; at
+   a full blast (PLATE) and a slow roller at C3 (PANE) the note can still wander. The phrases on the
+   audition are where that either matters or does not.

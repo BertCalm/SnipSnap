@@ -6,6 +6,8 @@ import com.snipsnap.audio.Fft
 import com.snipsnap.audio.Pitch
 import com.snipsnap.json.JsonException
 import kotlin.math.abs
+import kotlin.math.log10
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 import kotlin.random.Random
 import kotlin.test.Test
@@ -15,13 +17,13 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Mechanics, plate and house audio evidence for SCOUR R1; the audition supplies the listening verdict. */
+/** Mechanics, plate and house audio evidence for SCOUR R1.1; the audition supplies the listening verdict. */
 class ScourTest {
     private val drums = setOf(
         DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP,
         DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM,
     )
-    private val timbral = listOf("RPM", "SHOT", "HARDEN", "TRAVERSE", "HOLD")
+    private val timbral = listOf("RPM", "SHOT", "HARDEN", "RING", "HOLD")
 
     private fun closeTick(trace: Scour.Trace) =
         ((trace.closeSeconds * Scour.INTERNAL_RATE).toInt() / Scour.CTRL).coerceAtMost(trace.smoothed.lastIndex)
@@ -133,7 +135,8 @@ class ScourTest {
 
     @Test
     fun `the plate rings down once the blast and the roller stop, and the check can fail`() {
-        for (voice in ScourVoice.entries) for (macros in listOf(emptyMap(), mapOf("SHOT" to 1f, "RPM" to 1f, "HARDEN" to 1f))) {
+        val cases = listOf(emptyMap(), mapOf("SHOT" to 1f, "RPM" to 1f, "HARDEN" to 1f), mapOf("SHOT" to 1f, "HARDEN" to 1f, "RING" to 1f))
+        for (voice in ScourVoice.entries) for (macros in cases) {
             val trace = Scour.mechanics(voice, macros)
             val out = Scour.render(voice, macros).samples
             val quiet = ((maxOf(trace.closeSeconds, trace.stopSeconds) + .01) * Dsp.RATE).toInt()
@@ -148,8 +151,10 @@ class ScourTest {
         val cases = ScourVoice.entries.flatMap { voice ->
             listOf(
                 emptyMap(), mapOf("TUNE" to 0f), mapOf("TUNE" to 1f),
-                mapOf("TUNE" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "TRAVERSE" to 1f),
-                mapOf("TUNE" to 0f, "RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f, "TRAVERSE" to 0f),
+                mapOf("TUNE" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "RING" to 1f),
+                mapOf("TUNE" to 0f, "RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f, "RING" to 0f),
+                // The shortest ring there is: RING 0 at full hardening, which the floor holds at 1.6 s.
+                mapOf("TUNE" to 1f, "RPM" to 0f, "SHOT" to 1f, "HARDEN" to 1f, "RING" to 0f),
                 mapOf("HOLD" to .98f, "SHOT" to 1f),
             ).map { voice to it }
         }
@@ -165,9 +170,22 @@ class ScourTest {
             val heard = Classifier.classify(snip).drumClass
             assertTrue(heard !in drums && filed !in drums, "$voice $macros heard $heard, filed $filed")
             assertEquals(filed, heard, "$voice $macros: the classifier and drumClassFor disagree")
-            assertEquals(DrumClass.LOOP, filed, "$voice $macros: R1 voices always pass 1.5 s")
-            // Velocity 1 is the shortest render, so a softer hit never changes the class.
-            assertTrue(Scour.renderFrames(voice, macros, .2f) >= snip.samples.size, "$voice $macros: a soft hit is shorter")
+            assertEquals(DrumClass.LOOP, filed, "$voice $macros: every SCOUR render passes 1.5 s")
+            // The class is filed from velocity 1 and 0; a soft hit's own render must agree with it.
+            val soft = Scour.render(voice, macros, .2f)
+            assertEquals(filed, Classifier.classify(soft).drumClass, "$voice $macros: a soft hit changes the class")
+            assertTrue(soft.samples.size >= Dsp.RATE * Scour.MIN_RENDER_SECONDS - 1, "$voice $macros: a soft hit falls under the floor")
+        }
+    }
+
+    @Test
+    fun `the render length moves with velocity one way only and RING decides which way`() {
+        for (voice in ScourVoice.entries) for (ring in listOf(0f, .25f, .75f, 1f)) {
+            val m = mapOf("SHOT" to .8f, "HARDEN" to 1f, "RING" to ring)
+            val frames = listOf(0f, .2f, .4f, .6f, .8f, 1f).map { Scour.renderFrames(voice, m, it) }
+            val steps = frames.zipWithNext { a, b -> b - a }
+            if (ring < .5f) assertTrue(steps.all { it <= 0 } && frames.first() > frames.last(), "$voice RING $ring: a harder hit is not shorter: $frames")
+            else assertTrue(steps.all { it >= 0 } && frames.last() > frames.first(), "$voice RING $ring: a harder hit is not longer: $frames")
         }
     }
 
@@ -176,7 +194,7 @@ class ScourTest {
         val corners = listOf(0f, 1f)
         for (voice in ScourVoice.entries) {
             val cases = corners.flatMap { tune -> corners.flatMap { rpm -> corners.flatMap { shot -> corners.flatMap { harden ->
-                corners.map { traverse -> mapOf("TUNE" to tune, "RPM" to rpm, "SHOT" to shot, "HARDEN" to harden, "TRAVERSE" to traverse) }
+                corners.map { ring -> mapOf("TUNE" to tune, "RPM" to rpm, "SHOT" to shot, "HARDEN" to harden, "RING" to ring) }
             } } } } + listOf(0f, .25f, .5f, .75f, 1f).map { mapOf("TUNE" to it) }
             for (macros in cases) {
                 val snip = Scour.render(voice, macros)
@@ -211,17 +229,56 @@ class ScourTest {
     }
 
     @Test
-    fun `the audition's ring switch only flips which way hardening moves the ring`() {
+    fun `RING needs hardening, moves only the ring, and lengthens it in order`() {
         for (voice in ScourVoice.entries) {
             val bare = mapOf("SHOT" to .8f, "HARDEN" to 0f)
-            assertContentEquals(Scour.play(voice, bare).raw, Scour.play(voice, bare, ring = Scour.RingLaw.OPENS).raw,
-                "$voice: with nothing hardened, both ring laws must be the same sound")
+            assertContentEquals(Scour.render(voice, bare + ("RING" to 0f)).samples, Scour.render(voice, bare + ("RING" to 1f)).samples,
+                "$voice: with nothing hardened, RING must change nothing")
             val hard = mapOf("SHOT" to .8f, "HARDEN" to 1f)
-            val shorter = Scour.play(voice, hard)
-            val longer = Scour.play(voice, hard, ring = Scour.RingLaw.OPENS)
-            assertContentEquals(shorter.trace.shotFrames, longer.trace.shotFrames, "$voice: the ring law moved the shots")
-            assertTrue(longer.raw.size > shorter.raw.size, "$voice: the opened ring does not ring longer")
-            assertEquals(Scour.renderFrames(voice, hard) * Dsp.OVERSAMPLE, shorter.raw.size, "$voice: R1 ships the tightening ring")
+            val rings = listOf(0f, .25f, .5f, .75f, 1f)
+            val lengths = rings.map { Scour.lengthSeconds(voice, hard + ("RING" to it)) }
+            assertTrue(lengths.zipWithNext().all { (a, b) -> b > a || a == Scour.MIN_RENDER_SECONDS }, "$voice: RING does not lengthen the ring in order: $lengths")
+            assertEquals(Scour.lengthSeconds(voice, bare), Scour.lengthSeconds(voice, hard + ("RING" to .5f)), "$voice: RING .5 must leave the ring alone")
+            assertContentEquals(Scour.mechanics(voice, hard + ("RING" to 0f)).shotFrames, Scour.mechanics(voice, hard + ("RING" to 1f)).shotFrames,
+                "$voice: RING moved the shots")
+            val shortest = Scour.play(voice, hard + ("RING" to 0f), record = true)
+            val longest = Scour.play(voice, hard + ("RING" to 1f), record = true)
+            val tick = closeTick(shortest.trace)
+            assertEquals(requireNotNull(shortest.modeHz).map { it[tick] }, requireNotNull(longest.modeHz).map { it[tick] }, "$voice: RING moved the tuning")
+        }
+    }
+
+    /** Power at each ratio of the note, in dB under the root, in the tail of a render at [tune] with HARDEN 0. */
+    private fun partials(voice: ScourVoice, tune: Float, ratios: List<Double>): List<Double> {
+        val m = mapOf("HARDEN" to 0f, "TUNE" to tune)
+        val out = Scour.render(voice, m).samples
+        val size = 1 shl 15
+        val start = ((Scour.mechanics(voice, m).closeSeconds + .05) * Dsp.RATE).toInt()
+        val re = FloatArray(size) { if (start + it < out.size) out[start + it] * (0.5f - 0.5f * kotlin.math.cos(2 * Math.PI * it / (size - 1)).toFloat()) else 0f }
+        val im = FloatArray(size)
+        Fft.forward(re, im)
+        val f0 = Scour.frequencyFor(voice, tune).toDouble()
+        fun power(ratio: Double): Double {
+            val bin = (f0 * ratio * size / Dsp.RATE).roundToInt()
+            return (bin - 2..bin + 2).maxOf { re[it].toDouble() * re[it] + im[it].toDouble() * im[it] }
+        }
+        val root = power(1.0)
+        return ratios.map { 10 * log10(power(it) / root) }
+    }
+
+    @Test
+    fun `PLATE and PANE ring with different bodies, each heard and neither in the other`() {
+        // Three partials of each body, as ratios to its root. The two bodies' nearest pair, PLATE's 1.729 and
+        // PANE's 1.692 (2 % apart), is left out: one would leak into the other's bins.
+        val round = listOf(2.328, 3.906, 4.112)
+        val square = listOf(2.549, 4.650, 8.659)
+        for (tune in listOf(.5f, 1f)) {
+            for ((voice, own, other) in listOf(Triple(ScourVoice.PLATE, round, square), Triple(ScourVoice.PANE, square, round))) {
+                val mine = partials(voice, tune, own)
+                val theirs = partials(voice, tune, other)
+                assertTrue(mine.max() > -45.0, "$voice TUNE $tune: its own body is not heard: $mine")
+                assertTrue(theirs.max() < mine.max() - 20.0, "$voice TUNE $tune: rings at the other voice's partials: $theirs against $mine")
+            }
         }
     }
 
@@ -261,7 +318,7 @@ class ScourTest {
     @Test
     fun `patch editing recipes scramble and the provisional roster hold together`() {
         for (voice in ScourVoice.entries) {
-            assertEquals(setOf("TUNE", "RPM", "SHOT", "HARDEN", "TRAVERSE", "HOLD"), Scour.macrosFor(voice).map { it.name }.toSet())
+            assertEquals(listOf("TUNE", "RPM", "SHOT", "HARDEN", "RING", "HOLD"), Scour.macrosFor(voice).map { it.name })
             val patch = ScourPatch("Test ${voice.name}", voice, Scour.defaults(voice))
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
             val edited = Patches.edited(patch, "Edited", patch.macros + ("SHOT" to .73f))
