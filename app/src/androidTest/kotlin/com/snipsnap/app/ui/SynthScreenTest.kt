@@ -220,7 +220,7 @@ class SynthScreenTest : ComposeScreenTest() {
     private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
         compose.runOnIdle { screenVisible = false }
         pump()
-        button("ENGINE ONSET · TAP FOR NEXT").assertDoesNotExist()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertDoesNotExist()
         compose.runOnIdle {
             currentEntry = entry
             screenVisible = true
@@ -261,12 +261,13 @@ class SynthScreenTest : ComposeScreenTest() {
     @Test
     fun onset_follows_skin_and_all_four_voices_expose_their_six_live_controls() {
         show(shelfRoot())
-        tap("ENGINE THUMP · TAP FOR NEXT")
-        button("ENGINE SCANNED CHAIN · TAP FOR NEXT").assertExists()
-        tap("ENGINE SCANNED CHAIN · TAP FOR NEXT")
-        button("ENGINE SKIN · TAP FOR NEXT").assertExists()
-        tap("ENGINE SKIN · TAP FOR NEXT")
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE THUMP. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE SCANNED CHAIN. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE SKIN. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
 
         val voices = listOf(
             "KICK" to OnsetVoice.KICK,
@@ -344,7 +345,7 @@ class SynthScreenTest : ComposeScreenTest() {
         // Start on THUMP and let the imported recipe select ONSET itself.
         activate("REOPEN PAD RECIPE")
         activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button("KICK").assertIsSelected()
         for ((macro, value) in patch.macros) {
             assertEquals("reopened $macro", value, macroValue(macro), 0f)
@@ -358,7 +359,7 @@ class SynthScreenTest : ComposeScreenTest() {
         // Leaving SYNTH must flush the complete working recipe, not just its
         // sliders. The UPDATE target and legacy rack survive a fresh mount.
         leaveAndReturn()
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button("KICK").assertIsSelected()
         button(updateLabel).assertExists()
         for ((macro, value) in expectedPatch.macros) {
@@ -397,7 +398,7 @@ class SynthScreenTest : ComposeScreenTest() {
         val otherKit = Kit("OTHER KIT", emptyList())
         KitStore.save(otherKit, otherDir)
         leaveAndReturn(KitShelf.Entry(otherDir, otherKit))
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button(updateLabel).assertDoesNotExist()
         assertEquals(otherKit, KitStore.load(otherDir))
         assertEquals(saved, KitStore.load(dir))

@@ -1176,10 +1176,7 @@ class ConventionTest {
     fun `law - prose that lists the picker's engines lists exactly the picker's engines`() {
         val synthScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt")
         require(synthScreen.isFile) { "expected ${synthScreen.path}; fix the path rather than deleting the check" }
-        val enumBody = Regex("""private enum class Engine \{\s*([A-Z_][A-Z_0-9]*(?:\s*,\s*[A-Z_][A-Z_0-9]*)*)\s*;""")
-            .find(synthScreen.readText(Charsets.UTF_8))
-            ?: fail("could not find `private enum class Engine { ...; }` in ${synthScreen.path}; the picker moved, so move this law with it")
-        val picker = enumBody.groupValues[1].split(',').map { it.trim() }
+        val picker = pickerEngineConstants(synthScreen.readText(Charsets.UTF_8), synthScreen.path)
         require(picker.size > 40) { "parsed only ${picker.size} picker engines; the parse is broken, not the picker" }
         val pickerNames = picker.map { it.replace('_', ' ') }.toSet()
         val rostered = Presets.all().map { it.engine }.toSet()
@@ -1262,6 +1259,127 @@ class ConventionTest {
                 "\nRe-render each list from the code (the enum's order is the house order) and recompute the " +
                 "count; a PR that adds a picker entry owns these sentences too.",
         )
+    }
+
+    // ---- Law: every engine in the picker is catalogued ----
+
+    /**
+     * The constants of `private enum class Engine { ...; }` in [source], in order. Read by the two
+     * laws about the picker's engines, so they cannot disagree about what the picker has.
+     *
+     * Only plain constants are understood: anything else (a constructor argument, a body) is
+     * refused by name instead of being skipped, because a parse that quietly drops an engine
+     * would let that engine pass every law that reads this.
+     */
+    private fun pickerEngineConstants(source: String, where: String): List<String> {
+        val open = Regex("""private enum class Engine \{""").find(source)
+            ?: fail("could not find `private enum class Engine { ...; }` in $where; the picker moved, so move this law with it")
+        // Comments out first, so a `;` or a `}` written in one cannot end the constants early.
+        val tail = stripCommentsAndStrings(source.substring(open.range.last + 1))
+        val body = tail.substring(0, tail.indexOfFirst { it == ';' || it == '}' }.also {
+            if (it < 0) fail("`private enum class Engine` in $where never ends its constants with `;` or `}`")
+        })
+        val constants = body.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+        for (c in constants) {
+            if (!Regex("""[A-Z][A-Z_0-9]*""").matches(c)) {
+                fail("`Engine` in $where has a constant this law cannot read: \"$c\". It reads plain names only; extend it before giving a constant arguments or a body.")
+            }
+        }
+        return constants
+    }
+
+    /**
+     * Where the picker's engines and the catalogue's keys part company, as sentences naming each
+     * engine; empty when they agree exactly. The law and its positive control both ask this.
+     */
+    private fun catalogueProblems(pickerEngines: List<String>, catalogued: Set<String>): List<String> {
+        val problems = mutableListOf<String>()
+        val uncatalogued = pickerEngines.filter { it !in catalogued }
+        if (uncatalogued.isNotEmpty()) {
+            problems += "the picker has engines with no EngineCatalog entry: ${uncatalogued.joinToString()}"
+        }
+        val orphaned = catalogued.filter { it !in pickerEngines }.sorted()
+        if (orphaned.isNotEmpty()) {
+            problems += "EngineCatalog has entries for engines the picker does not have: ${orphaned.joinToString()}"
+        }
+        return problems
+    }
+
+    /**
+     * The picker filters by sound type and shows a one-line description under every engine, and
+     * both come from `EngineCatalog`. An engine added to `Engine` without an entry would show a
+     * bare row and appear under no chip, the quiet way a filter goes stale; this is what makes the
+     * filters safe to grow. The other direction is held too, so a retired engine does not leave
+     * its tags behind to be found by a search for nothing.
+     */
+    @Test
+    fun `law - every engine in the picker is catalogued`() {
+        val synthScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt")
+        require(synthScreen.isFile) { "expected ${synthScreen.path}; fix the path rather than deleting the check" }
+        val picker = pickerEngineConstants(synthScreen.readText(Charsets.UTF_8), synthScreen.path)
+        require(picker.size > 40) { "parsed only ${picker.size} picker engines; the parse is broken, not the picker" }
+        require("SCANNED_CHAIN" in picker && "THUMP" in picker) { "the parse lost a constant it should have read" }
+
+        val problems = catalogueProblems(picker, EngineCatalog.ENTRIES.keys)
+        assertTrue(
+            problems.isEmpty(),
+            problems.joinToString("\n  ", prefix = "`Engine` in SynthScreen.kt and `EngineCatalog` disagree:\n  ") +
+                "\nGive every new engine an entry in EngineCatalog.kt: one or two categories and a description " +
+                "of at most 60 characters. Remove the entry of an engine that is gone.",
+        )
+    }
+
+    /**
+     * The positive control for the law above: the same two helpers, fed synthetic text, must report
+     * what is wrong and name it. A law that passes on the real source proves nothing until it is
+     * seen to fail on a source that is wrong.
+     */
+    @Test
+    fun `law - the catalogue law fails on an engine with no entry, and on an entry with no engine`() {
+        val catalogued = EngineCatalog.ENTRIES.keys
+        fun enumOf(vararg names: String) = "private enum class Engine {\n    ${names.joinToString(", ")};\n    val displayName get() = name\n}"
+
+        // The catalogue's own keys, as a picker: the clean case, so a failure below is the extra or missing name.
+        val exact = pickerEngineConstants(enumOf(*catalogued.toTypedArray()), "synthetic")
+        assertEquals(catalogued.toList(), exact)
+        assertEquals(emptyList(), catalogueProblems(exact, catalogued))
+
+        // An engine the catalogue has never heard of.
+        val ghost = catalogueProblems(pickerEngineConstants(enumOf(*catalogued.toTypedArray(), "GHOSTWHEEL"), "synthetic"), catalogued)
+        assertEquals(1, ghost.size, "only the extra engine should be reported: $ghost")
+        assertTrue("GHOSTWHEEL" in ghost.single() && "no EngineCatalog entry" in ghost.single(), "the report must name the engine: $ghost")
+
+        // A catalogue entry whose engine left the picker.
+        val without = catalogued.filter { it != "OHM" }.toTypedArray()
+        val orphan = catalogueProblems(pickerEngineConstants(enumOf(*without), "synthetic"), catalogued)
+        assertEquals(1, orphan.size, "only the orphaned entry should be reported: $orphan")
+        assertTrue("OHM" in orphan.single() && "does not have" in orphan.single(), "the report must name the entry: $orphan")
+
+        // The parse refuses what it cannot read, rather than dropping it and letting an engine through.
+        val unreadable = runCatching { pickerEngineConstants("private enum class Engine { THUMP(1), SKIN; }", "synthetic") }.exceptionOrNull()
+        assertTrue(unreadable is AssertionError && "THUMP(1)" in unreadable.message.orEmpty(), "an argument must be refused by name: $unreadable")
+        val moved = runCatching { pickerEngineConstants("enum class Elsewhere { THUMP; }", "synthetic") }.exceptionOrNull()
+        assertTrue(moved is AssertionError, "a missing enum must fail, not read as empty: $moved")
+    }
+
+    /**
+     * The other positive control: a `;` or a `}` written inside a comment among the constants must
+     * not end the constants early. The parse used to cut at the first `;` it met and strip comments
+     * after, so an engine added below a comment with a semicolon in it would have been dropped from
+     * the list and so passed the law unread.
+     */
+    @Test
+    fun `law - the picker's constants are read through comments that hold a semicolon or a brace`() {
+        val commented = """
+            private enum class Engine {
+                THUMP, // a semicolon; in a line comment
+                SKIN, /* a brace } and a semicolon; in a block comment */
+                // GHOSTWHEEL is commented out, so it is not an engine
+                ONSET;
+                val displayName get() = name
+            }
+        """.trimIndent()
+        assertEquals(listOf("THUMP", "SKIN", "ONSET"), pickerEngineConstants(commented, "synthetic"))
     }
 
     // ---- Law: nobody takes a voice allocation and drops the casualties ----
