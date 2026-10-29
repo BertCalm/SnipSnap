@@ -31,6 +31,7 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiExpression
 import com.snipsnap.synth.OrigamiGesture
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.OrigamiVoice
@@ -48,7 +49,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 
-/** The phone glue: saved gestures, finite recipes and the separate FAN/STILL held-keys door. */
+/** The phone glue: saved expression, preview hits, finite recipes and FAN/STILL held keys. */
 @RunWith(AndroidJUnit4::class)
 class OrigamiSynthScreenTest {
     @get:Rule
@@ -154,6 +155,7 @@ class OrigamiSynthScreenTest {
         val pad = KitStore.load(entry!!.dir).pad(slot)!!
         assertEquals(DrumClass.TONAL, pad.drumClass)
         assertTrue(pad.oneShot)
+        assertTrue(pad.velocityLayers.isEmpty())
         assertEquals(0, pad.tuneFine)
         val patch = PadRecipe.fromJsonValue(pad.recipe!!).patch as OrigamiPatch
         val root = patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
@@ -171,9 +173,15 @@ class OrigamiSynthScreenTest {
                 compose.onNodeWithContentDescription(macro).assertExists()
             }
             compose.onNodeWithContentDescription("ORIGAMI STEADY").assertIsSelected()
+            compose.onNodeWithContentDescription("ORIGAMI VELOCITY LEVEL").assertIsSelected()
+            compose.onNodeWithContentDescription("ORIGAMI PREVIEW FULL").assertIsSelected()
             compose.onNodeWithContentDescription("HOLD").assertDoesNotExist()
             compose.onNodeWithContentDescription("TIME").assertDoesNotExist()
+            compose.onNodeWithContentDescription("VELOCITY").assertDoesNotExist()
             val before = controls.associateWith(::macroValue)
+            click("ORIGAMI VELOCITY FOLD")
+            compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+            assertEquals(before, controls.associateWith(::macroValue))
             for (gesture in listOf("BLOOM", "UNFOLD")) {
                 click("ORIGAMI $gesture")
                 compose.onNodeWithContentDescription("ORIGAMI $gesture").assertIsSelected()
@@ -211,6 +219,92 @@ class OrigamiSynthScreenTest {
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         // Opening the maker and changing its release needs no zone rendering.
         // The nine-zone render/export itself is covered by the maker's JVM tests.
+    }
+
+    @Test
+    fun foldExpressionMakerExplainsTouchLayersWithoutRenderingZones() {
+        show()
+        click("FAN")
+        click("ORIGAMI VELOCITY FOLD")
+        compose.onNodeWithText("SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE.").assertExists()
+        compose.onNodeWithText("PADS: USE SOFT HITS FOR VELOCITY COLOR").assertExists()
+        click("ORIGAMI PREVIEW SOFT")
+        click("MAKE INSTRUMENT")
+        compose.onNodeWithText("C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithContentDescription("RELEASE").assertExists()
+        compose.onNodeWithContentDescription("ATTACK").assertDoesNotExist()
+        compose.onNodeWithText("RELEASE 0.60 s").assertExists()
+        val source = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN"))
+        assertEquals(OrigamiExpression.FOLD, source.expression)
+        assertEquals(1f, source.velocity)
+        // Reading the maker's current spec and changing its controls renders no zones.
+    }
+
+    @Test
+    fun expressionAndGestureEditsShareAFrameAndSurviveImmediateNavigation() {
+        val saved = OrigamiPatch(
+            "COLOR SOURCE", OrigamiVoice.FAN,
+            mapOf("TUNE" to 0f, "CREASE" to .39f, "FOLD" to .82f, "TURN" to .26f, "WARP" to .43f, "MOTION" to .73f),
+            midi = 67, velocity = .42f, seed = 9_007_199_254_740_993L, model = 4,
+            gesture = OrigamiGesture.BLOOM,
+        )
+        show(saved)
+        loadSavedPreset(saved)
+        val controls = listOf("TUNE", "CREASE", "FOLD", "TURN", "WARP", "MOTION")
+        val before = controls.associateWith(::macroValue)
+        val expression = compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD")
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        val gesture = compose.onNodeWithContentDescription("ORIGAMI UNFOLD")
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action!!
+        lateinit var written: OrigamiPatch
+        compose.runOnIdle {
+            assertTrue(expression.invoke())
+            assertTrue(gesture.invoke())
+            showing = false
+            written = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN"))
+            assertFalse(settings.containsKey("preset.ORIGAMI.FAN"))
+        }
+        assertEquals(OrigamiExpression.FOLD, written.expression)
+        assertEquals(OrigamiGesture.UNFOLD, written.gesture)
+        assertEquals(saved.model, written.model)
+        assertEquals(saved.seed, written.seed)
+        assertEquals(saved.midi, written.midi)
+        assertEquals(saved.velocity, written.velocity)
+        assertEquals(before, written.macros)
+        pump()
+        compose.runOnIdle { showing = true }
+        pump()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI UNFOLD").assertIsSelected()
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
+        assertEquals(before, controls.associateWith(::macroValue))
+        assertEquals(written, OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.FAN")))
+    }
+
+    @Test
+    fun previewHitChangesNeitherSavedCeilingNorPresetAndResetsAfterNavigation() {
+        val saved = OrigamiPatch(
+            "SOFT SOURCE", OrigamiVoice.FAN, Origami.defaults(OrigamiVoice.FAN),
+            midi = 67, velocity = .42f, seed = Long.MIN_VALUE + 17,
+            gesture = OrigamiGesture.BLOOM, expression = OrigamiExpression.FOLD,
+        )
+        show(saved)
+        loadSavedPreset(saved)
+        val before = settings.getValue("patch.ORIGAMI.FAN")
+        for (hit in listOf("SOFT", "MID", "FULL", "SOFT")) {
+            click("ORIGAMI PREVIEW $hit")
+            compose.onNodeWithContentDescription("ORIGAMI PREVIEW $hit").assertIsSelected()
+            assertEquals(before, settings.getValue("patch.ORIGAMI.FAN"))
+            assertEquals(saved.name, settings["preset.ORIGAMI.FAN"])
+        }
+        compose.runOnIdle { showing = false }
+        pump()
+        compose.runOnIdle { showing = true }
+        pump()
+        compose.onNodeWithContentDescription("ORIGAMI PREVIEW FULL").assertIsSelected()
+        compose.onNodeWithContentDescription("ORIGAMI VELOCITY FOLD").assertIsSelected()
+        assertEquals(before, settings.getValue("patch.ORIGAMI.FAN"))
+        assertEquals(saved.velocity, OrigamiPatch.fromJsonText(before).velocity)
     }
 
     @Test
@@ -263,13 +357,20 @@ class OrigamiSynthScreenTest {
             for (gesture in OrigamiGesture.entries) {
                 compose.onNodeWithContentDescription("ORIGAMI ${gesture.name}").assertDoesNotExist()
             }
-            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES.").assertExists()
+            for (expression in OrigamiExpression.entries) {
+                compose.onNodeWithContentDescription("ORIGAMI VELOCITY ${expression.name}").assertDoesNotExist()
+            }
+            for (hit in listOf("SOFT", "MID", "FULL")) {
+                compose.onNodeWithContentDescription("ORIGAMI PREVIEW $hit").assertDoesNotExist()
+            }
+            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.").assertExists()
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
             assertEquals(.31f, macroValue("FOLD"), .0001f)
             val restored = OrigamiPatch.fromJsonText(settings.getValue("patch.ORIGAMI.${voice.name}"))
             assertEquals(index + 1, restored.model)
             assertEquals(Long.MIN_VALUE + index, restored.seed)
             assertEquals(OrigamiGesture.STEADY, restored.gesture)
+            assertEquals(OrigamiExpression.LEVEL, restored.expression)
         }
     }
 
@@ -329,12 +430,14 @@ class OrigamiSynthScreenTest {
         if (model == Origami.MODEL_VERSION) {
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
             click("ORIGAMI BLOOM")
+            click("ORIGAMI VELOCITY FOLD")
+            click("ORIGAMI PREVIEW SOFT")
         } else {
             compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
             for (gesture in OrigamiGesture.entries) {
                 compose.onNodeWithContentDescription("ORIGAMI ${gesture.name}").assertDoesNotExist()
             }
-            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES.").assertExists()
+            compose.onNodeWithText("THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.").assertExists()
         }
         assertEquals(19f / 24f, macroValue("TUNE"), .0001f)
         // Sparse older recipes must use their frozen defaults, not R4's
@@ -349,6 +452,7 @@ class OrigamiSynthScreenTest {
         assertEquals(saved.seed, first.seed)
         assertEquals(saved.model, first.model)
         assertEquals(if (model == 4) OrigamiGesture.BLOOM else OrigamiGesture.STEADY, first.gesture)
+        assertEquals(if (model == 4) OrigamiExpression.FOLD else OrigamiExpression.LEVEL, first.expression)
         assertEquals(.9f, first.macros.getValue("FOLD"))
 
         dial("TUNE", .5f)
@@ -358,6 +462,7 @@ class OrigamiSynthScreenTest {
         assertEquals(saved.seed, transposed.seed)
         assertEquals(saved.model, transposed.model)
         assertEquals(first.gesture, transposed.gesture)
+        assertEquals(first.expression, transposed.expression)
         assertEquals(.9f, transposed.macros.getValue("FOLD"))
         val replaced = KitStore.load(entry!!.dir).pad(2)!!
         assertEquals(0, replaced.tuneCoarse)

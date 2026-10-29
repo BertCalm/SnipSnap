@@ -2,6 +2,8 @@ package com.snipsnap.synth
 
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
@@ -130,6 +132,27 @@ class DeterminismTest {
             val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(patch.render().samples, saved.render().samples, "$gesture recipe replay")
         }
+    }
+
+    @Test
+    fun `ORIGAMI soft fold expression reproduces its saved gesture after cold recipe replay`() {
+        val patch = OrigamiPatch("Soft fold canary", OrigamiVoice.STILL,
+            Origami.defaults(OrigamiVoice.STILL) + mapOf("FOLD" to .83f, "MOTION" to .65f),
+            midi = 60, velocity = .43f, seed = Long.MIN_VALUE + 20261028L,
+            gesture = OrigamiGesture.UNFOLD, expression = OrigamiExpression.FOLD)
+        val text = PadRecipe(patch).toJsonText()
+        OrigamiGestureRenderer.clearCache()
+        val expected = patch.render().samples
+        OrigamiGestureRenderer.clearCache()
+        val saved = PadRecipe.fromJsonText(text)
+        val recalled = assertIs<OrigamiPatch>(saved.patch)
+        assertEquals(patch, recalled, "cold recipe replay must retain the complete expressive gesture")
+        assertEquals(OrigamiExpression.FOLD, recalled.expression)
+        assertEquals(.43f, recalled.velocity)
+        assertEquals(patch.seed, recalled.seed)
+        assertContentEquals(expected, saved.render().samples,
+            "saved soft FOLD expression changed its gesture, excitation or sound after cache eviction")
+        OrigamiGestureRenderer.clearCache()
     }
 
     @Test

@@ -383,8 +383,10 @@ internal object OrigamiHeld {
         return if (energy <= 1e-30) 0.0 else sqrt(error / energy)
     }
 
-    fun probe(patch: OrigamiPatch, midi: Int, cancelled: () -> Boolean): Probe {
+    fun probe(recipe: OrigamiPatch, midi: Int, cancelled: () -> Boolean): Probe {
         stop(cancelled)
+        // Resolve touch once so the accepted attack and periodic body share the same fold depth.
+        val patch = OrigamiExpressions.appliedPatch(recipe)
         val bodyPatch = OrigamiGestures.settledPatch(patch)
         val m = Origami.defaults(patch.voice).mapValues { (key, default) ->
             (bodyPatch.macros[key]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f)

@@ -237,3 +237,14 @@ tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("bellowsPlaybackOutput").orElse("${rootDir}/testkit/bellows-playback-audition").get())
 }
+
+/** Compare ORIGAMI strike expression and production three-layer held instruments. */
+tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
+    group = "distribution"
+    description = "Render ORIGAMI strike comparisons, sibling instrument banks and a portable C4 listening page."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiExpressionAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
+}

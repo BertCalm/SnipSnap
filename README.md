@@ -1263,6 +1263,11 @@ once between the source and folded color; MOTION sets their duration. STEADY
 retains existing audio and JSON. The new gesture is saved with its own version,
 and held keys finish it before the sustain loop. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
+Optional `VELOCITY: FOLD` adds hit-dependent folded color without changing pitch
+or gesture timing. The preview offers soft/mid/full touches. MAKE INSTRUMENT
+writes three touch layers per pitch zone in this mode; pads use the existing
+SOFT HITS action after SEND. LEVEL preserves existing recipes and audio.
+The CLI accepts `--expression LEVEL|FOLD` alongside `--velocity`.
 
 ### `:mpc3`
 
