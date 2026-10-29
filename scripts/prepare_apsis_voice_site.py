@@ -27,7 +27,11 @@ def main(study, site):
             if name and (dist / name).is_file():
                 before['hashes'][name] = hashlib.sha256((dist / name).read_bytes()).hexdigest()
     (study / 'reports/preserved-passage.json').write_text(json.dumps(before, indent=2) + '\n')
-    shutil.copytree(study, dist / 'voices', dirs_exist_ok=True)
+    # The independent preservation ledger is local QA evidence. Publishing its
+    # duplicate of the entire old manifest needlessly exceeds the hosting limit.
+    shutil.copytree(study, dist / 'voices', dirs_exist_ok=True,
+                    ignore=shutil.ignore_patterns('preserved-passage.json'))
+    (dist / 'voices/reports/preserved-passage.json').unlink(missing_ok=True)
     old.update(title='Apsis / Voice identities', clips=new['clips'] + legacy,
                clipCount=143, voiceStudy=new['report'],
                voiceStudyScope='Python/Numba candidates, not new Android voices. Study PASSAGE is an approximation; the existing Kotlin PASSAGE bank is preserved separately.')
