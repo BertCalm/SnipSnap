@@ -827,6 +827,7 @@ fun PadSheetScreen(
                 var applied = false
                 var stacked = false
                 var noop = false
+                var pedalsBaked = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
@@ -845,8 +846,15 @@ fun PadSheetScreen(
                         // `smearPad` restores first when it can; when the
                         // original is not in the bin it stacks (amount 0 is
                         // a no-op, never a stack), and the toast says so.
-                        stacked = amount > 0f &&
+                        val notBinned =
                             PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
+                        // Pedals with no original behind them are part of the sound now: this over them
+                        // would wipe them off the card while the audio keeps every one (the slate design's D5).
+                        if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
+                            pedalsBaked = true
+                            return@withFreshKit
+                        }
+                        stacked = amount > 0f && notBinned
                         // The rewrite itself lives in the model now
                         // (`smearPad`: restore-first, then replaceAudio,
                         // stereo kept stereo) so DO IT AGAIN can replay it.
@@ -858,7 +866,9 @@ fun PadSheetScreen(
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
-                if (applied) {
+                if (pedalsBaked) {
+                    onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied) {
                     val label = PadSheet.displayLabel(PadSheet.SMEAR)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
                 } else if (noop) {
@@ -925,6 +935,7 @@ fun PadSheetScreen(
                 var applied = false
                 var stacked = false
                 var noop = false
+                var pedalsBaked = false
                 val (fresh, _) = withFreshKit(kitDir) { f ->
                     reapplyPendingMetadataFields(f, stalePads)
                     val freshPad = f.kit.pad(slot)
@@ -944,8 +955,15 @@ fun PadSheetScreen(
                             noop = true
                             return@withFreshKit
                         }
-                        stacked = amount > 0f &&
+                        val notBinned =
                             PadSheet.unTreatState(freshPad, f.binContents().map { it.originalName }.toSet()) == PadSheet.UnTreat.NOT_BINNED
+                        // Pedals with no original behind them are part of the sound now: this over them
+                        // would wipe them off the card while the audio keeps every one (the slate design's D5).
+                        if (notBinned && PedalSlate.boardOf(freshPad.recipe) != null) {
+                            pedalsBaked = true
+                            return@withFreshKit
+                        }
+                        stacked = amount > 0f && notBinned
                         f.dustPad(slot, amount, tape, print)
                         applied = true
                     }
@@ -954,7 +972,9 @@ fun PadSheetScreen(
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
-                if (applied) {
+                if (pedalsBaked) {
+                    onToast(Copy.PEDALS_NOT_BINNED)
+                } else if (applied) {
                     val label = if (from != null) Copy.dustFromLabel(SnipStore.displayName(tapeFile)) else PadSheet.displayLabel(PadSheet.DUST)
                     onToast(if (stacked) Copy.treatedStacked(label, padName) else Copy.treated(label, padName))
                 } else if (noop) {
@@ -984,11 +1004,14 @@ fun PadSheetScreen(
 
     // Row seven's slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md). What the pad
     // carries, which chips light and which pedal AMT moves are the shell's (`PedalSlate.card`); the
-    // sheet remembers only the pedal last tapped on this pad (the mark), whether MORE's list is open,
-    // and a PUT ON ROW in waiting. The last two end on a change of pad, as DUST FROM's list does.
+    // sheet remembers only the pedal last tapped on this pad that landed (the mark), whether MORE's
+    // list is open (kept from pad to pad, so a board can be built across a kit), and a PUT ON ROW in
+    // waiting, which a change of pad ends. [pedalRefusals] counts refused pedal changes, so the AMT
+    // stepper lets go of a value that never landed.
     var pedalLastTapped by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
-    var pedalMoreOpen by remember(slot) { mutableStateOf(false) }
-    var pedalPlacing by remember(slot) { mutableStateOf<String?>(null) }
+    var pedalMoreOpen by remember(entry.dir) { mutableStateOf(false) }
+    var pedalPlacing by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
+    var pedalRefusals by remember(entry.dir, slot) { mutableIntStateOf(0) }
 
     /**
      * TREATMENT: picking a segment on either row, or moving AMT (SMEAR is
@@ -1168,7 +1191,7 @@ fun PadSheetScreen(
         val p = m.kit.pad(slot) ?: return
         if (PrintedPads.has(p.recipe)) {
             applyingSegment = null
-            onToast(boardRemoveFirst(p.recipe))
+            onToast(Copy.pedalsPrinted(PrintedPads.label(p.recipe)))
             return
         }
         val padName = p.displayName
@@ -1176,7 +1199,6 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         val word = Pedals.byKey(gesture.key).word
-        pedalLastTapped = gesture.key
         applyingSegment = word
         busy = true
         padJob = Copy.treatmentBusy(word)
@@ -1189,13 +1211,19 @@ fun PadSheetScreen(
                     if (f.kit.pad(slot) != null) landed = PedalSlate.land(f, slot, gesture, staleSampleFile)
                 }
                 val result = landed
-                if (result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared) auditionOnRefresh = true
+                val changed = result is PedalSlate.Landed.Applied || result == PedalSlate.Landed.Cleared
+                if (changed) auditionOnRefresh = true
+                // The mark moves only with a change that landed: a refused tap leaves AMT on the
+                // pedal it was on, and a refused AMT lets the stepper go back to what plays.
+                if (result is PedalSlate.Landed.Applied) pedalLastTapped = gesture.key
+                if (!changed) pedalRefusals++
                 model = fresh
                 pendingMetadataSlots = emptySet()
                 onKitUpdated(fresh.kit)
                 PedalSlate.toast(gesture, result, padName)?.let(onToast)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
+                pedalRefusals++
                 failure("PEDALS", e)
             } finally {
                 busy = false
@@ -2917,7 +2945,7 @@ fun PadSheetScreen(
     // Keyed on the marked pedal too: two pedals at the same AMT is the usual case, and when AMT 0
     // takes one off and hands the mark on, an amount-only key would keep reading 0 over a pedal
     // playing at 70.
-    var pendingAmt by remember(slot, amount, pedalCard.marked) { mutableFloatStateOf(amount) }
+    var pendingAmt by remember(slot, amount, pedalCard.marked, pedalRefusals) { mutableFloatStateOf(amount) }
     // SHAPE's four: null on the pad means "the format's own default", drawn
     // at the position that default sounds like (no ramp, full length, open,
     // no ring) — and a knob committed *at* that position writes null back,
@@ -3294,6 +3322,7 @@ fun PadSheetScreen(
                 // path, not only the taps that begin at a chip. On a pad with
                 // pedals it moves the marked pedal alone, and 0 takes it off.
                 onAmountCommit = {
+                    pedalPlacing = null
                     val marked = pedalCard.marked
                     if (marked != null) {
                         applyPedal(PedalSlate.Gesture.Amount(marked, pendingAmt))
@@ -3337,9 +3366,13 @@ fun PadSheetScreen(
                 tapes = dustFromTapes,
                 scheme = scheme,
                 busy = busy,
-                onOpen = ::openDustFrom,
+                onOpen = {
+                    pedalPlacing = null
+                    openDustFrom()
+                },
                 onClose = { dustFromOpen = false },
                 onPick = { file ->
+                    pedalPlacing = null
                     dustFromOpen = false
                     applyDustFrom(file.name)
                 },
@@ -3366,7 +3399,10 @@ fun PadSheetScreen(
                     enabled = !busy,
                     dimmed = pad.recipe == null,
                     modifier = Modifier.weight(1f),
-                    onClick = ::onCopyRecipe,
+                    onClick = {
+                        pedalPlacing = null
+                        onCopyRecipe()
+                    },
                 )
                 ActionButton(
                     clipboard?.let { "PASTE · ${it.word}" } ?: "PASTE",
@@ -3374,7 +3410,10 @@ fun PadSheetScreen(
                     enabled = !busy,
                     dimmed = clipboard == null,
                     modifier = Modifier.weight(1f),
-                    onClick = ::onPasteRecipe,
+                    onClick = {
+                        pedalPlacing = null
+                        onPasteRecipe()
+                    },
                 )
             }
             TapeText(

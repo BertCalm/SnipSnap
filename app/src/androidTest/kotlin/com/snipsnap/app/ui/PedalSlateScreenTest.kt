@@ -24,10 +24,12 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.Copy
+import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PedalSlate
+import com.snipsnap.synth.PedalSide
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -50,8 +52,8 @@ import kotlin.math.sin
  * (docs/superpowers/specs/2026-10-28-pedal-slate-design.md, section 6). The rules are
  * PedalSlateTest's; these tests check the wiring: a row chip puts a pedal on and takes it off,
  * AMT moves the marked pedal and hands the mark on at 0, MORE lights with a count and its list
- * puts on what the row hides, PUT ON ROW swaps the app-wide row, and a tap on MORE treats
- * nothing.
+ * puts on what the row hides and moves a pedal across the amp, PUT ON ROW swaps the app-wide row,
+ * a tap on MORE treats nothing, and a pad whose original the bin let go keeps its pedals.
  *
  * WidePadSheetScreenTest's harness: TREATMENT open from the start, semantic clicks rather than
  * scrolled taps, every wait on something observable. Pads carry no recipe, so taking the last
@@ -284,6 +286,44 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         waitForToast(Copy.treated("FORGE", pad))
         assertEquals(listOf("forged"), savedKeys(entry))
         assertFalse(toasts.any { it == Copy.rowSwapped("ROCK", "FORGE") })
+    }
+
+    @Test
+    fun the_side_toggle_moves_a_pedal_to_the_other_side_of_the_amp() {
+        val entry = kit()
+        show(entry)
+        val pad = padName(entry)
+        activate("SUSTAIN")
+        waitForToast(Copy.treated("SUSTAIN", pad))
+        activate(PadSheet.MORE)
+        activateTag("pedal-more-compressed-side")
+        waitForToast(Copy.pedalSide("SUSTAIN", false, pad))
+        val pick = PedalSlate.boardOf(KitStore.load(entry.dir).pad(1)?.recipe)?.picks?.single()
+        assertEquals(PedalSide.POST, pick?.side)
+        selected("SUSTAIN").assertIsSelected()
+    }
+
+    @Test
+    fun a_pad_whose_original_the_bin_let_go_keeps_its_pedals_and_says_so() {
+        val entry = kit()
+        show(entry)
+        val pad = padName(entry)
+        activate("DRIVE")
+        waitForToast(Copy.treated("DRIVE", pad))
+        // What 30 days do to the bin: the original DRIVE rendered from is gone.
+        KitBuilderModel.open(entry.dir).emptyBin()
+        val before = files(entry.dir)
+
+        activate("DELAY")
+        waitForToast(Copy.PEDALS_NOT_BINNED)
+        assertEquals(listOf("driven"), savedKeys(entry))
+        toasts.clear()
+        // A chip from another row refuses too, rather than wipe DRIVE off the card while the audio keeps it.
+        activate("CRUSH")
+        waitForToast(Copy.PEDALS_NOT_BINNED)
+        assertEquals(listOf("driven"), savedKeys(entry))
+        assertEquals("nothing was touched", before, files(entry.dir))
+        selected("DRIVE").assertIsSelected()
     }
 
     @Test

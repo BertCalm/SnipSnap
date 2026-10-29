@@ -203,20 +203,22 @@ The owner chose to build the screens in this cloud session, with CI's `android-b
   - NONE (as before);
   - a row pedal (`On` or `Off` from what the card shows, through `applyPedal`).
 
-  `applyPedal` is `applyTreatment`'s shape around one `PedalSlate.land` call: busy and the dock's job raised before the launch, the fresh-kit block, the model swap, the refresh audition and `PedalSlate.toast`. `applyTreatment` returns early on MORE. On a pad whose pedals the bin cannot restore it refuses with `Copy.PEDALS_NOT_BINNED` instead of stacking.
-- **AMT.** With a marked pedal the stepper is named `Copy.pedalAmt(word)` (a wider label), reads the pedal's AMT, and commits `Gesture.Amount`. `pendingAmt` is keyed on the marked key as well as the amount.
+  `applyPedal` is `applyTreatment`'s shape around one `PedalSlate.land` call: busy and the dock's job raised before the launch, the fresh-kit block, the model swap, the refresh audition and `PedalSlate.toast`. The AMT mark moves only with a change that landed, so a refused tap leaves AMT where it was. `applyTreatment` returns early on MORE. On a pad whose pedals the bin cannot restore, `applyTreatment`, SMEAR, DUST and DUST FROM refuse with `Copy.PEDALS_NOT_BINNED` instead of stacking, so D5 holds across the whole card.
+- **AMT.** With a marked pedal the stepper is named `Copy.pedalAmt(word)` (a wider label), reads the pedal's AMT, and commits `Gesture.Amount`. `pendingAmt` is keyed on the marked key, the amount and a count of refused pedal changes, so the stepper reloads when the mark moves and lets go of a value that never landed.
 - **MORE's list** (`PedalMoreList`) sits under the card, as DUST FROM does. Each line has:
   - the pedal (lit when on, a tap puts it on or takes it off);
   - AMT (gives it the mark);
   - PRE or POST where it can move (sends `Flip` to the other side);
   - PUT ON ROW where the row does not draw it (lit while it waits).
 
-  The list, and a PUT ON ROW in waiting, close on a change of pad, a box toggle, or Aquarium opening. Each control carries a test tag (`pedal-more-<key>`, `-amt`, `-side`, `-row`), and its spoken name differs from the row chip's ("TOUCH, ON" beside the chip "TOUCH").
-- **androidTest:** `PedalSlateScreenTest`, six tests:
+  The list stays open from pad to pad (keyed on the kit), so a board can be built across a kit, and closes on a box toggle or Aquarium opening. A PUT ON ROW in waiting ends on a change of pad, a box toggle, Aquarium, any other tap on the card, AMT, DUST FROM, COPY or PASTE. Each control carries a test tag (`pedal-more-<key>`, `-amt`, `-side`, `-row`), and its spoken name differs from the row chip's ("TOUCH, ON" beside the chip "TOUCH").
+- **androidTest:** `PedalSlateScreenTest`, eight tests:
   - on and off, with the last pedal off giving the original back byte for byte;
   - AMT 0 handing the mark on, and the stepper then reading 70 for the next pedal;
   - TOUCH from MORE replacing WAH, with MORE · 1;
   - PUT ON ROW swapping FORGE and writing no file;
   - a PUT ON ROW in waiting cancelled by the next tap, and MORE treating nothing;
-  - NONE over a board.
+  - NONE over a board;
+  - the PRE/POST toggle moving SUSTAIN after the amp;
+  - a pad whose original the bin let go: a pedal tap and a CRUSH tap both refuse, and nothing is written.
 - **Not built:** a Back gesture that closes MORE's list (DUST FROM's has none either), and a per-line AMT readout in the list (the stepper shows the marked pedal's).
