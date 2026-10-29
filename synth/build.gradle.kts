@@ -2235,3 +2235,25 @@ tasks.register<JavaExec>("generateTidalHoldAudition") {
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("tidalHoldOutput").orNull ?: "${rootDir}/testkit/tidal-hold-audition")
 }
+
+/** Original harp with two experimental timed venue returns and isolated-space previews. */
+tasks.register<JavaExec>("generateNacrePresenceAudition") {
+    group = "distribution"
+    description = "Render the model-1 reference, coral echoes, moving seaweed and space-only comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePresenceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-presence-audition")
+}
+
+/** Ordinary saved patches across registers, strike strengths, controls and a short phrase. */
+tasks.register<JavaExec>("generateNacrePlayableAudition") {
+    group = "distribution"
+    description = "Render NACRE playable presets, register/velocity matrix, control sweeps and overlap phrases."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-playable-audition")
+}
