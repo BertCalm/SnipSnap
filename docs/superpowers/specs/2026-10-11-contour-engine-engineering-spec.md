@@ -152,3 +152,27 @@ stay fixed. The 180-case audition now pins complete preceding FOREGROUND recipes
 from `47809ba2d`, and adds 0 → 50 → 100% playback on both sides. See
 [the review follow-up](../../CONTOUR_EDGE_REVIEW.md#full-range-follow-up-2026-10-24)
 for measurements, shape laws and unverified listening claims.
+
+## As built: preset expansion, 2026-10-28
+
+The owner accepted the wider EDGE revision and requested the planned bank
+expansion. The nine original complete patches retain their settings and global
+and per-voice ordering. Twenty-seven additions bring the roster to ten BASS,
+four KEY, four PLUCK, eight LEAD, six SWELL and four HOLLOW recipes. New saved
+table pairs, edge relationships, envelopes and scan gestures supply different
+roles without changing render model 1, oscillator/filter DSP or voice defaults.
+The new plucks retain the foreground law; the other additions use contrast.
+
+The original sixteen-pad kit remains seven notes plus the nine original recipes.
+The phone and CLI expose the full roster through the existing preset dispatcher.
+The full-bank audition is separate from the historical nine-recipe comparisons:
+180 complete native cases cover finite/held articulation and held EDGE at
+0%, 50% and 100%, with exact replay patches and scalar-matched listening copies.
+The starter instrument exporter supplies 36 programs with seventeen roots each.
+
+These are authored sound candidates, not new engine mechanisms. Different
+spectral paths and envelopes are cheaper and more predictable than changing DSP
+to fill preset roles; low drive preserves the rounded direction; keeping the
+original recipes and layouts makes the expanded bank additive. Numerical probes
+and source/asset fingerprints establish reproducibility. Only the owner can
+accept the new sounds, and Android/MPC physical playback remains unverified.

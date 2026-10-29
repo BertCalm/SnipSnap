@@ -144,6 +144,17 @@ tasks.register<JavaExec>("generateContourEdgeAudition") {
     args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
 }
 
+/** All 36 complete factory recipes, with finite attacks and independently measured settled tones. */
+tasks.register<JavaExec>("generateContourPresetAudition") {
+    group = "distribution"
+    description = "Render 36 Contour presets, native/matched finite and held WAVs, held EDGE ranges and exact replay JSON."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourPresetAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourPresetOutput").orNull ?: "${rootDir}/testkit/contour-presets")
+}
+
 /** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
 tasks.register<JavaExec>("generateFilamentAudition") {
     group = "distribution"
@@ -1357,10 +1368,10 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
-/** Render SCOUR's R1 listening gate (raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
+/** Render SCOUR's R1.1 listen (phrases, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
 tasks.register<JavaExec>("generateScourAudition") {
     group = "distribution"
-    description = "Render SCOUR's SHOT x HARDEN gate, the ring-direction comparison, voices, sweeps and edges with a listening page under testkit/scour-audition/."
+    description = "Render SCOUR's phrases, PLATE beside PANE, the RING settings, the SHOT x HARDEN gate, sweeps and edges with a listening page under testkit/scour-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
     workingDir = projectDir
@@ -1478,6 +1489,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/valve-audition")
+}
+
+/** Render FORGE's DEPTH gate (YIELD 0.25 against DEPTH, DEPTH's in-between values, manifest, page) under testkit/forge-depth-audition/. See ForgeDepthAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeDepthAudition") {
+    group = "distribution"
+    description = "Render FORGE's DEPTH gate clips, manifest and listening page under testkit/forge-depth-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeDepthAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-depth-audition", "${rootDir}")
 }
 
 /** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
