@@ -38,8 +38,10 @@ is slightly shallower. Longer simultaneous presence does not guarantee a more
 connected impression for every phase relationship.
 
 The 24-recording comparison includes both versions' actual stems, complete note
-and melody recipes, a portable page and a 15,066,676-byte ZIP. Browser checks cover
-playback, downloads, notes, mobile layout and offline playback; the 197 earlier
+and melody recipes, an offline ZIP player and a 15,064,379-byte hosted ZIP. The
+new embedded single-file copy is omitted from hosting to stay within the 256 MiB
+expanded output limit; the full 24-WAV ZIP remains available. Browser checks cover
+playback, downloads, notes and mobile layout; the 197 earlier
 non-navigation Site files retain their bytes. The broader suite is reported
 separately. No listening verdict is claimed for model 9.
 
