@@ -44,8 +44,8 @@ rather than the whole Kit value, so live metadata saves cannot abandon recording
 
 The host polls native faults, queued control requests and protected-frame diagnostics
 with its existing latency polling. Queued means waiting for publication, not confirmation
-that the audio thread has adopted a snapshot. Diagnostics count reduced frames over this
-native player's lifetime; physical-device timing is not inferred from that count.
+that the audio thread has adopted a snapshot. Diagnostics count reduced frames since the current stream preparation and reset
+on stream restart; physical-device timing is not inferred from that count.
 
 ## Persistence and compatibility
 
