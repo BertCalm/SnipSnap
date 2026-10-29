@@ -1487,6 +1487,39 @@ object Copy {
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
 
+    // ---- PAD SHEET: the pedal slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md) ----
+    /** MORE's chip, with the pad's pedals the row does not show counted ("MORE · 2"); plain MORE when there are none. */
+    fun pedalMore(count: Int): String = if (count <= 0) PadSheet.MORE else "${PadSheet.MORE} · $count"
+    /** The AMT stepper's label while it moves a pedal: which one ("AMT · TOUCH"), so a pedal behind MORE is named too. */
+    fun pedalAmt(pedal: String): String = "AMT · $pedal"
+    /** The slate's button on a pedal row seven does not draw: a label, not a landing. */
+    const val PUT_ON_ROW = "PUT ON ROW"
+    /** After PUT ON ROW on [pedal]: the next row-seven tap picks the chip it swaps with; any other tap cancels. */
+    fun putOnRowPrompt(pedal: String): String = "NOW TAP THE ROW CHIP TO SWAP FOR $pedal."
+    /** PUT ON ROW, landed: [incoming] in [outgoing]'s place, and where [outgoing] went. The row is every kit's. */
+    fun rowSwapped(incoming: String, outgoing: String): String =
+        "$incoming ON THE ROW IN EVERY KIT. $outgoing MOVES BEHIND MORE."
+    /** A lit pedal tapped off a pad that keeps others (or AMT taken to 0), and the pedal AMT moves now; the last one off lands as [unTreated]. */
+    fun pedalOff(pedal: String, pad: String, next: String): String = "$pedal OFF $pad. AMT NOW MOVES $next."
+    /** A pedal on in place of the ones it silenced: the same wah section (WAH, TOUCH, ROCK) or the same amp on one side. */
+    fun pedalReplaced(pedal: String, replaced: List<String>, pad: String): String =
+        "$pedal ON $pad IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN."
+    /** A movable pedal flipped to the other side of the amp, in place of any pedal it silenced there. */
+    fun pedalSide(pedal: String, beforeAmp: Boolean, pad: String, replaced: List<String> = emptyList()): String =
+        "$pedal NOW ${if (beforeAmp) "BEFORE" else "AFTER"} THE AMP ON $pad" +
+            (if (replaced.isEmpty()) "." else ", IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN.")
+    /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
+    const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
+    /**
+     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a take 30 days):
+     * the board re-renders whole from the original, so it would play every pedal already in the
+     * audio twice. Refused; the pedals are part of the sound now.
+     */
+    const val PEDALS_NOT_BINNED =
+        "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
+    /** A printed board pad ([PrintedPads]: WIDE, RUSH, AQUARIUM) takes no pedals; [label] names it. */
+    fun pedalsPrinted(label: String): String = "REMOVE $label BEFORE ADDING PEDALS."
+
     // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
     /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
     const val DUSTING_BUSY = "DUSTING…"

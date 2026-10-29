@@ -1130,7 +1130,9 @@ swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
-comes back as a repeat), SPRING (a Schroeder network, 1962), REVERSE,
+comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
+dark repeats with HEAD off, see
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
