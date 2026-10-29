@@ -79,8 +79,9 @@ class NacreSynthScreenTest : ComposeScreenTest() {
     fun picker_reaches_the_harp_and_its_starting_recipes() {
         val settings = mutableMapOf("engine" to "TRIO", "voice" to "TRES")
         show(settings)
-        press("ENGINE TRIO · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE NACRE · TAP FOR NEXT").assertExists()
+        // The header steps through the engines in their order with its arrows (#730's picker): TRIO, then NACRE.
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE NACRE. CHOOSE ENGINE").assertExists()
         compose.onNodeWithContentDescription("PEARL").assertExists()
         for (preset in NacrePresets.all()) {
             press("PRESET ${preset.name}")
@@ -92,8 +93,8 @@ class NacreSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
         }
         assertFiniteControls()
-        press("ENGINE NACRE · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE ORIGAMI · TAP FOR NEXT").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE ORIGAMI. CHOOSE ENGINE").assertExists()
     }
 
     private fun retainLegacy(model: Int) {
