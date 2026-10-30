@@ -36,7 +36,9 @@ object Chamber {
     const val MODEL_VERSION = 3
     /** Explicit range audition; the accepted default and factory recipes stay on model 3. */
     const val WIDE_RANGE_MODEL = 4
-    const val MAX_MODEL_VERSION = WIDE_RANGE_MODEL
+    /** Register-following listening candidate; earlier complete recipes remain exact. */
+    const val REGISTER_MODEL = 5
+    const val MAX_MODEL_VERSION = REGISTER_MODEL
     const val MAX_SECONDS = 6f
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
@@ -243,7 +245,7 @@ object Chamber {
         doubleArrayOf(1.0,1.48,2.17,2.91,4.16),
         doubleArrayOf(1.0,1.527,2.137,2.894,4.103,5.27))
     private fun instrument(index: Int, hz: Double, ratio: Double, hardness: Double,
-        rate: Int, seed: Long, model: Int, spectralTilt: Double = 0.0): Bank {
+        rate: Int, seed: Long, model: Int, spectralTilt: Double = 0.0, rootWeight: Double = 1.0): Bank {
         // Keep every source's established random realization across revisions.
         // Model 2 revises only the membrane; the other three banks are unchanged.
         val random=Random(Dsp.seedFor("CHAMBER", 1,seed,index))
@@ -268,6 +270,7 @@ object Chamber {
             }
         }
         if(spectralTilt!=0.0) for(j in weights.indices) weights[j] *= exp(j*spectralTilt)
+        if(rootWeight!=1.0) weights[0] *= rootWeight
         return Bank(frequencies,decay,weights,rate)
     }
 
@@ -279,14 +282,26 @@ object Chamber {
         doubleArrayOf(.38,.26,.17), doubleArrayOf(.63,.43,.28),
         doubleArrayOf(1.75,1.30,.95), doubleArrayOf(1.42,1.14,.78),
         doubleArrayOf(1.38,1.05,.75))
-    private fun boundary(region: Int, weights: List<Float>, rate: Int, profile: ChamberWideRange.Profile?): Bank {
+    private fun boundary(region: Int, weights: List<Float>, rate: Int, profile: ChamberWideRange.Profile?,
+        frequencyScale: Double = 1.0, requestedHz: Double = 0.0, sympatheticWeight: Double = 0.0): Bank {
         val f=ArrayList<Double>(); val t=ArrayList<Double>(); val p=ArrayList<Double>()
         // Fixed family modes with convex parallel participation. Inactive families
         // allocate no states; a nonzero family keeps the same modes across a sweep.
         for(material in 0..4) if(weights[material]>0f) for(mode in 0..2) {
-            f += surfaceHz[material][mode]*(1+.013*region)
+            val legacyHz=surfaceHz[material][mode]*(1+.013*region)
+            f += if(frequencyScale==1.0) legacyHz else legacyHz*frequencyScale
             t += profile?.boundaryT60(surfaceT60[material][mode]) ?: surfaceT60[material][mode]
             p += sqrt(weights[material].toDouble())*doubleArrayOf(.82,.50,.28)[mode]
+        }
+        if(sympatheticWeight>0.0) {
+            // This note-aligned material response is a musical adaptation, not
+            // an additional excitation. Bank normalizes the enlarged port, so
+            // it exchanges only energy already in the same passive network.
+            val weightSum=weights.sumOf { it.toDouble() }
+            val materialT60=weights.indices.sumOf { weights[it]*surfaceT60[it][0] }/weightSum
+            f += requestedHz
+            t += profile?.boundaryT60(materialT60) ?: materialT60
+            p += sympatheticWeight
         }
         return Bank(f.toDoubleArray(),t.toDoubleArray(),p.toDoubleArray(),rate)
     }
@@ -333,11 +348,15 @@ object Chamber {
     private data class PreparedStrike(val lengths: IntArray, val strengths: DoubleArray, val workBudget: Double)
     /** Keep parameter preparation out of the near-limit HotSpot render method. */
     private fun prepareStrike(m: Map<String,Float>, midi: Int, velocity: Float, hardness: Double,
-        configuration: ChamberConfig, rate: Int, isolated: Int?, profile: ChamberWideRange.Profile?): PreparedStrike {
+        configuration: ChamberConfig, rate: Int, isolated: Int?, profile: ChamberWideRange.Profile?, model: Int): PreparedStrike {
+        val legacyMinimum=(.0005*rate).toInt()
+        val minimum=if(model==REGISTER_MODEL) ChamberRegister.minimumContactFrames(legacyMinimum,midi) else legacyMinimum
         val lengths=IntArray(4) { i ->
             val cycles=doubleArrayOf(.47,.20,.13,.085)[i]*(1-.50*hardness)
-            val legacy=(rate*cycles/Keys.midiHz(midi)).roundToInt().coerceIn((.0005*rate).toInt(),(.012*rate).toInt())
-            profile?.contactFrames(legacy,Keys.midiHz(midi).toDouble()*configuration.tuningRatios[i],rate) ?: legacy
+            val legacy=(rate*cycles/Keys.midiHz(midi)).roundToInt().coerceIn(minimum,(.012*rate).toInt())
+            val sourceHz=Keys.midiHz(midi).toDouble()*configuration.tuningRatios[i]
+            val wide=profile?.contactFrames(legacy,sourceHz,rate) ?: legacy
+            if(model==REGISTER_MODEL) ChamberRegister.contactFrames(wide,sourceHz,rate,profile?.contactScale ?: 1.0) else wide
         }
         val balance=m.getValue("BALANCE").toDouble()*3
         val floor=profile?.balanceFloor ?: .17
@@ -394,19 +413,25 @@ object Chamber {
         require(options.oversample==4 || options.oversample==8)
         val m=settled(voice,macros)
         require(m.getValue("HOLD")==0f) { "CHAMBER model $model supports finite strikes only; HOLD must be 0" }
-        val profile=if(model==WIDE_RANGE_MODEL) ChamberWideRange.resolve(voice,m) else null
+        val profile=if(model==WIDE_RANGE_MODEL || model==REGISTER_MODEL) ChamberWideRange.resolve(voice,m) else null
         val preparationStart=System.nanoTime()
         val rate=RATE*options.oversample
         // Traveling samples use energy-normalized coordinates: their amplitude
         // falls as sqrt(dt). Convert observer pressure back to the same units for
         // the 8x reference. Production4x retains exactly its calibrated gain.
-        val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)
+        val registerPressure=if(model==REGISTER_MODEL) ChamberRegister.pressureScale(midi) else 1.0
+        val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)*registerPressure
         val geometry=ChamberWideRange.geometry(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"),profile)
         val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity).coerceIn(0.0,1.0)
-        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,profile?.spectralTilt ?: 0.0) }
+        val triangleRootWeight=if(model==REGISTER_MODEL) ChamberRegister.triangleRootWeight(midi) else 1.0
+        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,
+            profile?.spectralTilt ?: 0.0,if(i==3) triangleRootWeight else 1.0) }
         val average=averageMaterials(geometry)
         val materials=if(options.averageSurfaces) List(10) { average } else geometry.regionMaterialWeights
-        val boundaries=Array(10) { boundary(it,materials[it],rate,profile) }
+        val boundaryScale=if(model==REGISTER_MODEL) ChamberRegister.boundaryFrequencyScale(midi) else 1.0
+        val sympatheticWeight=if(model==REGISTER_MODEL) ChamberRegister.sympatheticWeight(midi) else 0.0
+        val boundaries=Array(10) { boundary(it,materials[it],rate,profile,boundaryScale,
+            Keys.midiHz(midi).toDouble(),sympatheticWeight) }
         val edges=Array(4) { source -> Array(10) { region ->
             geometry.surfaceCouplings.first { it.sourceIndex==source && it.region.ordinal==region }
         } }
@@ -429,8 +454,11 @@ object Chamber {
         val reflections=Array(geometry.reflections.size) { Reflection(if(options.averageSurfaces) average else geometry.reflections[it].materialWeights,rate,profile?.reflectionCutoffScale ?: 1.0) }
         val reflectionGains=reflectionGains(geometry)
         val earlyGain=EARLY_GAIN*(profile?.roomPresence ?: 1.0)
-        val surfaceGain=SURFACE_GAIN*(profile?.roomPresence ?: 1.0)
-        val lateGain=LATE_GAIN*(profile?.roomPresence ?: 1.0)
+        // Register voicing exposes the restored passive answer. This observer
+        // calibration never enters the network or raises the direct/early hit.
+        val roomPickup=if(model==REGISTER_MODEL) ChamberRegister.roomPickupScale(midi) else 1.0
+        val surfaceGain=SURFACE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
+        val lateGain=LATE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
         // Each region has one fixed radiation centre; moving the membrane cannot
         // accidentally move the pickup of the other three instruments' boundaries.
         val surfaceDistances=DoubleArray(10) { r ->
@@ -446,7 +474,7 @@ object Chamber {
         val fluidStepSinA=DoubleArray(10) { sin(TAU*(.31+.017*it)/rate) }
         val fluidStepCosA=DoubleArray(10) { cos(TAU*(.31+.017*it)/rate) }
         val fluidStepSinB=sin(TAU*.47/rate); val fluidStepCosB=cos(TAU*.47/rate)
-        val strike=prepareStrike(m,midi,velocity,hardness,configuration,rate,options.isolatedInstrument,profile)
+        val strike=prepareStrike(m,midi,velocity,hardness,configuration,rate,options.isolatedInstrument,profile,model)
         val strikeLengths=strike.lengths
         val sourceStrength=strike.strengths
         val sourceWorkBudget=strike.workBudget

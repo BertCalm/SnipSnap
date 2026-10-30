@@ -172,6 +172,78 @@ not a claim of new phone latency or hardware acceptance.
   energy into the passive physical network.
 - Compare a small set of endpoints before changing the current factory library.
 
+## Upper register — explicit listening candidate
+
+The owner's wider-range listen identified a weaker resonant answer on higher
+notes. A Kotlin/JDK17 baseline at `efb365650` rendered 36 complete 4.5-second
+recordings. At MATERIAL 1, model 4's cumulative-energy T90 falls from 1.431 s
+at C4 to .343 s at C6 in HYBRID, and from 1.256 s to .399 s in AQUARIUM.
+Room/direct RMS falls from 3.123 to .071 and from 1.255 to .017 respectively.
+T90 measures the complete mix's energy distribution; it is not material T60.
+The individual source decay times change little. Fixed boundary resonances
+therefore lose their contribution as the requested note rises.
+
+There is also a distinct excitation defect: the old .5 ms minimum contact can
+span more than two periods of the high triangle's actual fundamental. A long
+half-sine force can cancel that fundamental even when its resonator has a long
+decay. Increasing decay alone cannot restore energy that was never excited.
+
+The new candidate keeps the wider controls and tests these preparation changes:
+
+- Above C4, shorten the legacy minimum contact with pitch so the body's upper
+  modes keep receiving excitation. Also bound contact by each source's actual
+  tuned period, following STRIKE toward a shorter hard contact. The .8-period
+  soft/default cap and .2-period hard cap are voicing choices awaiting listening
+  acceptance.
+- Above C4, transpose the boundary modal frequencies with the requested note.
+  This is a musical adaptation of the designed material response. Physical room
+  dimensions, propagation delays and existing damping times stay fixed;
+  it does not claim that a real room retunes itself.
+- Fade a note-aligned sympathetic root into each boundary between C4 and C5.
+  Its decay follows the material mixture's first mode, alongside the existing
+  material families. The enlarged modal port stays unit normalized and exchanges
+  existing energy without another strike. This costs at most ten additional modes.
+- Give the high-register triangle's fundamental up to 25% more modal weight,
+  with the same unit port normalization, to retain its requested pitch when the
+  shorter contact also excites more upper modes.
+- Calibrate only surface and late-field pickups with the square root of the
+  upper-register note ratio, bounded at 2 at C6. This is an observer voicing
+  choice, like the existing boundary and membrane pressure calibrations. It
+  changes the returning room's proportion without changing network energy,
+  direct sound or early reflections.
+- Scale all upper-register observer pressure by the inverse of that note-ratio
+  square root to reserve PCM headroom for the restored transients. This bounded,
+  prepared calibration uses no measured peak, clipping or runtime limiter.
+  Matched playback retains the same room/body proportions.
+
+These changes prepare the existing simulation and add no separate audio-rate
+stage. Exact-recipe cache identity already includes note and model.
+Fresh renders retain the coupled simulation's existing cost; no new phone
+latency or hardware acceptance is claimed. Model 3 remains the factory default,
+and earlier sound revisions remain separately replayable. Candidate measurements
+and listening acceptance are recorded separately from this baseline diagnosis.
+
+The paired study compares the previous wider response with this candidate at
+C4, C5 and C6, holding MATERIAL at 1 and retaining the voiced defaults elsewhere.
+The complete-recording guards require each C6 answer/attack ratio to exceed its
+previous value by 25% and retain at least half of C4's relative answer, with T90
+at least 60% of C4. These are declared engineering targets, not listening verdicts.
+MATERIAL contrast is measured across the entire .55–2 s tail with a joint
+time/frequency distribution normalized once for the full window. Counterexamples
+reject unchanged audio and gain alone while detecting same-pitch decay changes.
+A single short normalized spectral slice remains an informational descriptor;
+it cannot by itself determine whether a pitched decay has changed.
+
+```sh
+./gradlew --no-daemon :synth:test --tests 'com.snipsnap.synth.Chamber*Test'
+./gradlew --no-daemon :synth:generateChamberRegisterAudition -PchamberRegisterBaseline=/absolute/register-baseline -PchamberRegisterPublished=/absolute/extremes-WAV-study -PchamberRegisterOutput=/tmp/chamber-register
+python3 scripts/package_chamber_register_site.py /absolute/current-hosted-dist /tmp/chamber-register /tmp/chamber-register-hosting
+```
+
+Final exports require a clean source commit. The hosting step verifies every
+lossless FLAC sample and seek table, preserves prior recordings, and reuses
+byte-identical source snapshots through explicit hash-checked hosted paths.
+
 ## Timpani mix lift — model 3
 
 The owner heard model 2 and approved its sound, then asked for a little more
