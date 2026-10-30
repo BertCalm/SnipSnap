@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -54,9 +55,9 @@ import kotlinx.coroutines.withContext
 /**
  * STACK THE TAKES: this pad's real prior takes as its soft velocity
  * zones — recordings the mic actually heard, in place of the softened
- * copies SOFT HITS renders. Reached from PAD SHEET's STACK ▸ button, the
- * same KIT-scoped-overlay shape TAPE SPLICE uses, over the same
- * candidate list (`priorTakes`).
+ * copies SOFT HITS renders. Reached from PAD SHEET's STACK ▸ button: a
+ * bench (`Bench.STACK`) opened over the pad editor, like TAPE SPLICE, over
+ * the same candidate list (`priorTakes`).
  *
  * One screen: LIVE pinned at the top (it is always the loudest zone —
  * `KitPad.init` demands it), then every recoverable prior take with its
@@ -75,13 +76,21 @@ import kotlinx.coroutines.withContext
 fun StackTakesScreen(
     entry: KitShelf.Entry,
     slot: Int,
+    /** The back chip's words, from the navigation model (`Navigation.backChip`: "◄ PAD" over the pad editor). */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    BackHandler { onBack() }
+    // Declared ahead of the BackHandler, which reads it. A COMMIT in flight
+    // swallows Back (the chip dims too): the screen it lands on is the pad
+    // editor, which re-opens the kit from disk, and a Back that cancelled this
+    // coroutine would drop the post-write callbacks that bring `open.kit` and
+    // the toast up to date.
+    var busy by remember(entry.dir) { mutableStateOf(false) }
+    BackHandler { if (!busy) onBack() }
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -94,7 +103,6 @@ fun StackTakesScreen(
     // Softest first. BinEntries, not row indices: the list never reorders
     // under the picks, but a pick is a specific archive, not a position.
     var picked by remember(entry.dir) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
-    var busy by remember(entry.dir) { mutableStateOf(false) }
     var voice by remember(entry.dir) { mutableStateOf<TapeVoice?>(null) }
     DisposableEffect(entry.dir) { onDispose { voice?.release() } }
     // Losing the foreground stops the preview, same as TAPE SPLICE's own
@@ -138,7 +146,7 @@ fun StackTakesScreen(
     @Composable
     fun refusalShell(text: String) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            StackHeader(onBack, scheme)
+            StackHeader(backLabel, busy, onBack, scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(text, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
@@ -249,7 +257,7 @@ fun StackTakesScreen(
     val zoneNames = if (picked.isEmpty()) emptyList() else StackTakes.zoneNames(picked.size)
     val livePeak = liveRow.facts?.peak
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StackHeader(onBack, scheme)
+        StackHeader(backLabel, busy, onBack, scheme)
         TapeText(
             "PICK UP TO THREE PRIOR TAKES AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
             TapeType.pixelSmall,
@@ -327,7 +335,7 @@ fun StackTakesScreen(
 }
 
 @Composable
-private fun StackHeader(onBack: () -> Unit, scheme: Scheme) {
+private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, scheme: Scheme) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -336,7 +344,16 @@ private fun StackHeader(onBack: () -> Unit, scheme: Scheme) {
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ActionButton("◄ PAD", scheme, enabled = true, modifier = Modifier.width(72.dp), onClick = onBack)
+        // Dimmed while a COMMIT is in flight, as system Back is swallowed: a tap
+        // that did nothing with no sign would be the worse answer.
+        ActionButton(
+            backLabel,
+            scheme,
+            enabled = !busy,
+            accessibilityLabel = spokenBack(backLabel),
+            modifier = Modifier.widthIn(min = 72.dp),
+            onClick = onBack,
+        )
         TapeText("STACK THE TAKES", TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f).padding(start = 8.dp))
     }
 }

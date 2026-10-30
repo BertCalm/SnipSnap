@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -63,8 +64,8 @@ import kotlinx.coroutines.withContext
 
 /**
  * TAPE SPLICE: joins two prior takes of ONE pad at one chosen frame — a
- * cut, not a blend. Reached from PAD SHEET's SPLICE ▸ button, the same
- * shelf-level-overlay shape TAKES+BIN and PAD SHEET itself already use.
+ * cut, not a blend. Reached from PAD SHEET's SPLICE ▸ button: a bench
+ * (`Bench.SPLICE`) opened over the pad editor, so Back lands on the editor.
  *
  * Two steps, one screen: pick a HEAD take and a TAIL take from this pad's
  * own recoverable history (its live sample counts as a candidate too —
@@ -80,13 +81,21 @@ import kotlinx.coroutines.withContext
 fun TapeSpliceScreen(
     entry: KitShelf.Entry,
     slot: Int,
+    /** The back chip's words, from the navigation model (`Navigation.backChip`: "◄ PAD" over the pad editor). */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
-    BackHandler { onBack() }
+    // Declared ahead of the BackHandler, which reads it. A COMMIT in flight
+    // swallows Back (the chip dims too): the screen it lands on is the pad
+    // editor, which re-opens the kit from disk, and a Back that cancelled this
+    // coroutine would drop the post-write callbacks that bring `open.kit` and
+    // the toast up to date.
+    var busy by remember(entry.dir) { mutableStateOf(false) }
+    BackHandler { if (!busy) onBack() }
 
     var model by remember(entry.dir) { mutableStateOf<KitBuilderModel?>(null) }
     var loadFailed by remember(entry.dir) { mutableStateOf(false) }
@@ -118,7 +127,7 @@ fun TapeSpliceScreen(
 
     if (loadFailed) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SpliceHeader(onBack, "SPLICE", scheme)
+            SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(Copy.SPLICE_KIT_GONE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
@@ -134,7 +143,7 @@ fun TapeSpliceScreen(
     // stated in words, matching this app's own law over a dead button.
     if (candidates.size < 2) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SpliceHeader(onBack, "SPLICE", scheme)
+            SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(Copy.SPLICE_NEEDS_HISTORY, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
@@ -151,7 +160,6 @@ fun TapeSpliceScreen(
     // out of TapeSplice.join at PREVIEW or COMMIT.
     var pairRefusal by remember(entry.dir) { mutableStateOf<String?>(null) }
     var needleFrame by remember(entry.dir) { mutableStateOf(0) }
-    var busy by remember(entry.dir) { mutableStateOf(false) }
 
     LaunchedEffect(headTake, tailTake) {
         val h = headTake
@@ -195,7 +203,7 @@ fun TapeSpliceScreen(
     val lt = loadedTail
     val refusal = pairRefusal
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SpliceHeader(onBack, "SPLICE", scheme)
+        SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
         if (lh != null && lt != null) {
             NeedleStep(
                 head = lh,
@@ -293,7 +301,7 @@ fun TapeSpliceScreen(
 }
 
 @Composable
-private fun SpliceHeader(onBack: () -> Unit, title: String, scheme: Scheme) {
+private fun SpliceHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, title: String, scheme: Scheme) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -302,7 +310,16 @@ private fun SpliceHeader(onBack: () -> Unit, title: String, scheme: Scheme) {
             .padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ActionButton("◄ PAD", scheme, enabled = true, modifier = Modifier.width(72.dp), onClick = onBack)
+        // Dimmed while a COMMIT is in flight, as system Back is swallowed: a tap
+        // that did nothing with no sign would be the worse answer.
+        ActionButton(
+            backLabel,
+            scheme,
+            enabled = !busy,
+            accessibilityLabel = spokenBack(backLabel),
+            modifier = Modifier.widthIn(min = 72.dp),
+            onClick = onBack,
+        )
         TapeText(title, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f).padding(start = 8.dp))
     }
 }

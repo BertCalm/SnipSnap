@@ -203,6 +203,71 @@ class NavigationTest {
     }
 
     @Test
+    fun `Back from a pad tool lands on the pad editor, and the editor then closes to the grid`() {
+        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)) {
+            val nav = Navigation()
+            nav.go(Place.PROJECT)
+            nav.open(Bench.PAD_SHEET)
+            nav.open(tool)
+            assertEquals("◄ PAD", nav.backChip, "$tool over the editor names the editor")
+
+            assertEquals(
+                Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)),
+                nav.closeBench(),
+                "the chip or system Back from $tool lands on the pad editor, not the grid",
+            )
+            assertEquals("◄ PADS", nav.backChip, "and the editor over the grid names the grid")
+            assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench(), "the editor's own Back lands on the grid")
+            assertEquals(
+                listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)),
+                nav.walkBack(),
+                "and the opening and closing left nothing in the history for a later Back to reopen",
+            )
+        }
+    }
+
+    @Test
+    fun `AUDITION leaves the pad editor in the history, and Back from the stage it lands on is the editor`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        // onAudition arms the comparison and lands on GROOVE, which is BEAT: a stage change, with the editor
+        // as the location the history keeps. The editor is not closed first.
+        nav.goTo(Location(Place.PROJECT, Stage.BEAT))
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), nav.location, "GROOVE shows no bench")
+
+        assertTrue(nav.back())
+        assertEquals(
+            Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)),
+            nav.location,
+            "system Back from GROOVE is the pad editor",
+        )
+        assertEquals("◄ PADS", nav.backChip)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench(), "and the editor closes to the grid it was opened over")
+    }
+
+    @Test
+    fun `a bench opened again over itself stacks a copy, so what moves the pad editor between pads must not open it`() {
+        // The editor's pad arrows (and the gathering hop) move it from pad to pad with App's
+        // retargetPadSheet, which sets the pad and never calls open. The model has no retarget
+        // to test, because it needs none: this is why. Had the arrows opened the editor each
+        // time, every pad stepped through would be one more PAD_SHEET on the stack and one more
+        // Back to get out. ConventionTest pins that retargetPadSheet never opens a bench.
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.PAD_SHEET)
+        assertEquals(listOf(Bench.PAD_SHEET, Bench.PAD_SHEET), nav.location.benches)
+
+        // With the pad arrows retargeting instead, the editor is one opening and one step out.
+        val once = Navigation()
+        once.go(Place.PROJECT)
+        once.open(Bench.PAD_SHEET)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), once.closeBench(), "one Back, not one per pad")
+        assertEquals(listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)), once.walkBack())
+    }
+
+    @Test
     fun `opening and closing a bench over and over leaves the history as it was`() {
         val nav = Navigation()
         nav.go(Place.PROJECT)

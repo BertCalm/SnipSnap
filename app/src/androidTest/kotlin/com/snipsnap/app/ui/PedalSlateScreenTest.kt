@@ -92,6 +92,7 @@ class PedalSlateScreenTest : ComposeScreenTest() {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
+                backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
                 onBack = {},
                 onToast = { toasts += it },

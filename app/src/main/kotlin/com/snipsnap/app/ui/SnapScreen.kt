@@ -1135,6 +1135,9 @@ fun SnapScreen(
                     GrainFieldScreen(
                         entry = null,
                         slot = null,
+                        // SNAP draws this one itself until it is routed, so it
+                        // still names its own way back.
+                        backLabel = prebuilt.backLabel,
                         onBack = {
                             quietResume = true
                             showField = false
