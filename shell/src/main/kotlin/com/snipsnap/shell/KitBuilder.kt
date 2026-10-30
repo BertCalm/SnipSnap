@@ -796,6 +796,19 @@ class KitBuilderModel private constructor(
     }
 
     /**
+     * Whether pad [slot]'s pedals sit in front of its own amp: the PEDALS card draws the pad's amp
+     * between the AMP and POST passes only when this is true
+     * (docs/superpowers/specs/2026-10-30-pad-pedalboard-card-design.md). A pad that carries pedals
+     * answers from its recipe ([PedalSlate.aroundTheAmp]); one that carries none answers where
+     * [pedalPad] would put the next one, which reads its file. False for an empty slot.
+     */
+    fun pedalsAroundTheAmp(slot: Int): Boolean {
+        val pad = kit.pad(slot) ?: return false
+        PedalSlate.aroundTheAmp(pad.recipe)?.let { return it }
+        return synthRecipeForPedals(pad)?.fx?.isBypass == false
+    }
+
+    /**
      * The pad's synth recipe with no pedals on it, when the pedals can go in front of its amp: a patch, no
      * velocity layers, no named treatment, no compound board, and the recipe still renders the file on disk.
      * That last check matters because an audio replacement with no recipe keeps the old one
