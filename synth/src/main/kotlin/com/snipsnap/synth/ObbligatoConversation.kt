@@ -20,6 +20,7 @@ class ObbligatoConversation internal constructor(
     private val heldSeconds: Double,
     mischief: Float,
     seed: Int,
+    private val overlap: Boolean = false,
 ) {
     enum class Mode { PLAY, FIGHT, PROTECT }
     enum class Player { AIR, REED }
@@ -51,7 +52,7 @@ class ObbligatoConversation internal constructor(
     private val reedPersonality = noise.next().toDouble()
     private val gestures = ArrayList<Gesture>()
     private val ledger = ArrayList<Event>()
-    private val live = PerformanceReader(gestures)
+    private val live = PerformanceReader(gestures, overlap)
     private var seconds = 0.0
     private var turnAge = 0.0
     private var turnIntegral = 0.0
@@ -59,6 +60,7 @@ class ObbligatoConversation internal constructor(
     private var turnFirst = 0.0
     private var turnLast = 0.0
     private var bodyStarted = false
+    private var bodyStartsAt = CROSSOVER + .04
     private var leader = Player.AIR
     private var airEver = false
     private var reedEver = false
@@ -110,7 +112,7 @@ class ObbligatoConversation internal constructor(
             // The compulsory handoff rises even for a level sustained tone. Remember
             // the voiced body after the crossover and one meter time constant, so a
             // reply does not mistake that entrance ramp for the player's own contour.
-            if (turnAge >= CROSSOVER + .04) {
+            if (turnAge >= bodyStartsAt) {
                 if (!bodyStarted) { turnFirst = heard; bodyStarted = true }
                 turnLast = heard
             }
@@ -181,6 +183,7 @@ class ObbligatoConversation internal constructor(
     }
 
     private fun enter(next: Player, kind: String, air: Double, reed: Double) {
+        val passing = next != leader && kind != "SETTLE"
         val rememberedDuration = turnAudibleSeconds.coerceIn(0.0, heldSeconds)
         val rememberedIntensity = (turnIntegral / turnAge.coerceAtLeast(.001)).coerceIn(0.0, 1.0)
         val rememberedSlope = (turnLast - turnFirst).coerceIn(-1.0, 1.0)
@@ -218,7 +221,7 @@ class ObbligatoConversation internal constructor(
         gestures += Gesture(seconds, next, kind, strength, duration, slope, share,
             live.airPresence, live.reedPresence, live.airTone, live.reedTone,
             live.airPressure, live.reedPressure, live.airPitch, live.reedPitch,
-            live.airTurbulence, live.reedTurbulence)
+            live.airTurbulence, live.reedTurbulence, passing)
         leader = next
         currentDuration = duration
         turnAge = 0.0
@@ -227,11 +230,12 @@ class ObbligatoConversation internal constructor(
         turnFirst = 0.0
         turnLast = 0.0
         bodyStarted = false
+        bodyStartsAt = (if (overlap && passing) OVERLAP_SECONDS else CROSSOVER) + .04
         readiness = 0.0
         live.at(seconds)
     }
 
-    internal fun performanceReader() = PerformanceReader(gestures)
+    internal fun performanceReader() = PerformanceReader(gestures, overlap)
 
     internal data class Gesture(
         val seconds: Double, val actor: Player, val kind: String, val strength: Double,
@@ -240,11 +244,13 @@ class ObbligatoConversation internal constructor(
         val fromAirPressure: Double, val fromReedPressure: Double,
         val fromAirPitch: Double, val fromReedPitch: Double,
         val fromAirTurbulence: Double, val fromReedTurbulence: Double,
+        val passing: Boolean = false,
     )
 
     /** Replays the recorded, value-continuous gesture curves after source conditioning. */
     internal class PerformanceReader internal constructor(
         private val gestures: List<Gesture>,
+        private val overlap: Boolean = false,
     ) {
         private var index = 0
         var airPresence = 1.0
@@ -283,8 +289,45 @@ class ObbligatoConversation internal constructor(
             val gestureGain = if (settling) .86 else .84 + .14 * g.strength * bump
             val a = airBase * if (airActive || settling) gestureGain else 1.0
             val r = reedBase * if (!airActive || settling) gestureGain else 1.0
-            airPresence = sqrt(mix(g.fromAir * g.fromAir, a * a, crossover)).coerceIn(FLOOR, 1.0)
-            reedPresence = sqrt(mix(g.fromReed * g.fromReed, r * r, crossover)).coerceIn(FLOOR, 1.0)
+            if (!overlap || !g.passing) {
+                airPresence = sqrt(mix(g.fromAir * g.fromAir, a * a, crossover)).coerceIn(FLOOR, 1.0)
+                reedPresence = sqrt(mix(g.fromReed * g.fromReed, r * r, crossover)).coerceIn(FLOOR, 1.0)
+            } else {
+                // Let the answer join before the old phrase yields, then retain its
+                // outgoing tail. Keep the balanced middle brief: near-unison pipes
+                // can oppose phase if held at equal weight for too long.
+                val fromIn = if (airActive) g.fromAir else g.fromReed
+                val fromOut = if (airActive) g.fromReed else g.fromAir
+                val targetIn = if (airActive) a else r
+                val targetOut = if (airActive) r else a
+                val joinIn = maxOf(fromIn, minOf(OVERLAP_SUPPORT, targetIn))
+                val joinOut = maxOf(targetOut, OVERLAP_SUPPORT)
+                val incoming: Double
+                val outgoing: Double
+                when {
+                    age < OVERLAP_PRELUDE -> {
+                        incoming = mix(fromIn * fromIn, joinIn * joinIn, smooth(age / OVERLAP_PRELUDE))
+                        outgoing = fromOut * fromOut
+                    }
+                    age < OVERLAP_PRELUDE + CROSSOVER -> {
+                        val f = smooth((age - OVERLAP_PRELUDE) / CROSSOVER)
+                        incoming = mix(joinIn * joinIn, targetIn * targetIn, f)
+                        outgoing = mix(fromOut * fromOut, joinOut * joinOut, f)
+                    }
+                    else -> {
+                        incoming = targetIn * targetIn
+                        outgoing = mix(joinOut * joinOut, targetOut * targetOut,
+                            smooth((age - OVERLAP_PRELUDE - CROSSOVER) / OVERLAP_TAIL))
+                    }
+                }
+                // Both retain one common power budget; overlapping does not grant a
+                // second full-strength voice or independently normalize either player.
+                val budget = mix(g.fromAir * g.fromAir + g.fromReed * g.fromReed,
+                    a * a + r * r, smooth(age / OVERLAP_SECONDS))
+                val correction = minOf(1.0, budget / (incoming + outgoing).coerceAtLeast(1e-12))
+                airPresence = sqrt((if (airActive) incoming else outgoing) * correction).coerceIn(FLOOR, 1.0)
+                reedPresence = sqrt((if (airActive) outgoing else incoming) * correction).coerceIn(FLOOR, 1.0)
+            }
             val tone = if (settling) .40 else .46 + .48 * g.strength * bump
             airTone = mix(g.fromAirTone, if (airActive || settling) tone else .48, crossover).coerceIn(0.0, 1.0)
             reedTone = mix(g.fromReedTone, if (!airActive || settling) tone else .44, crossover).coerceIn(0.0, 1.0)
@@ -315,6 +358,10 @@ class ObbligatoConversation internal constructor(
         const val FLOOR = .18
         const val MIN_DWELL = .32
         const val CROSSOVER = .14
+        const val OVERLAP_PRELUDE = .06
+        const val OVERLAP_TAIL = .04
+        const val OVERLAP_SECONDS = .24
+        const val OVERLAP_SUPPORT = .35
         private const val AUDIBLE = .025
     }
 }

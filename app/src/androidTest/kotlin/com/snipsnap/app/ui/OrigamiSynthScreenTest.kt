@@ -105,10 +105,10 @@ class OrigamiSynthScreenTest {
         pump()
         // Exercise the real picker rather than adding a test-only initial engine.
         repeat(64) {
-            val cycler = compose.onNode(hasContentDescription("ENGINE ", substring = true))
-            val node = cycler.fetchSemanticsNode()
-            if (node.config[SemanticsProperties.ContentDescription].single() == "ENGINE ORIGAMI · TAP FOR NEXT") return
-            compose.runOnIdle { assertTrue(node.config[SemanticsActions.OnClick].action!!.invoke()) }
+            val current = compose.onNode(hasContentDescription(". CHOOSE ENGINE", substring = true))
+            if (current.fetchSemanticsNode().config[SemanticsProperties.ContentDescription].single() == "ENGINE ORIGAMI. CHOOSE ENGINE") return
+            val next = compose.onNodeWithContentDescription("NEXT ENGINE").fetchSemanticsNode()
+            compose.runOnIdle { assertTrue(next.config[SemanticsActions.OnClick].action!!.invoke()) }
             pump(16)
         }
         throw AssertionError("ORIGAMI never appeared in the SYNTH picker")
@@ -297,7 +297,7 @@ class OrigamiSynthScreenTest {
         pump()
         compose.runOnIdle { showing = true }
         pump()
-        compose.onNodeWithContentDescription("ENGINE ORIGAMI · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE ORIGAMI. CHOOSE ENGINE").assertExists()
         assertEquals(.91f, macroValue("FOLD"), .0001f)
         assertEquals(.5f, macroValue("TUNE"), .0001f)
         val restored = send(1)

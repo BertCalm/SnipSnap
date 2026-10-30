@@ -18,11 +18,21 @@ Preview, shaping and mono-to-stereo preparation run on a worker. Preview and kit
 
 ## First performance backend
 
-The [PadEngine route and policy contract](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md) maps each actual playback/recording owner. One continuous processor now follows each PadEngine's summed stereo mix and precedes its unchanged PRINT tap. It is available through the native/JNI/Kotlin API and starts dry; no PERFORMANCE menu or automatic kit-folder persistence is added yet. The shared kit host supplies current kit tempo, while SPLIT, ORBIT audition and instrument handles remain separate instances.
+The [PadEngine route and policy contract](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md) maps each actual playback/recording owner. One continuous processor now follows each PadEngine's summed stereo mix and precedes its unchanged PRINT tap. It starts dry for old kits. KIT now exposes a qualified PERFORMANCE panel and restores its saved live settings when the shared host opens. The shared kit host supplies current kit tempo, while SPLIT, ORBIT audition and instrument handles remain separate instances.
 
 Global bypass retains the configured processor's time and delay history through quiet gaps. Sound/seed/tempo edits fade the wet branch to silence for snapshot adoption, then fade back; gain has its own linear slew. These transitions are 20 ms, with at most a fade-out plus fade-in for a sound edit. They do not interpolate filter/selector laws. The existing +/-1 mix clamp precedes Aquarium. The live host applies fixed gain and stereo-linked sample-peak protection at 0.99 with a 50 ms release; during global bypass transitions the dry branch retains its existing +/-1 ceiling. This differs deliberately from finite PAD rendering's reject-on-excess policy.
 
-Panic, bank replacement, stream recovery and non-finite handling have explicit policies. The callback uses a bounded settings handoff and fixed scratch, with no preparation, allocation, freeing or locks. PRINT records the actual processed buffer, including transitions and protection. Other mixer/print routes, the PERFORMANCE controls and persistence, phone CPU/power measurements and physical MPC acceptance remain open.
+Panic, bank replacement, stream recovery and non-finite handling have explicit policies. The callback uses a bounded settings handoff and fixed scratch, with no preparation, allocation, freeing or locks. PRINT records the actual processed buffer, including transitions and protection. Other mixer/print routes, phone CPU/power measurements and physical MPC acceptance remain open.
+
+## PERFORMANCE controls and kit storage
+
+Expand **PERFORMANCE** on KIT for the live Aquarium bus. LIVE ON/BYPASSED, OUTPUT (including mute), RESET TAIL, the eleven accepted presets and all 52 controls use the shared host. Presets preserve the seed, output and explicit global bypass. Tempo follows the kit; no finite tail/fade context is saved here. The panel displays missing streams, queued settings, faults and cumulative protected frames. Individual zero-mix stages retain their paused private history; global bypass keeps the configured processor clocking.
+
+Changes audition immediately. **SAVE TO KIT** stores the full versioned settings in optional `kit.json.aquariumPerformance`; **REVERT**, collapsing the panel or leaving KIT restores the last saved snapshot. A failed save retains the draft for retry. Saved settings return when the kit's host reopens. Saves reopen current metadata under the shared kit-write mutex and use ordinary atomic kit saves/takes, without rewriting sample WAVs. Live-only changes do not reload the sample bank or restart the beat/recording/bounce clock. Actual pad/tempo changes retain the existing transport policy.
+
+Old kits open dry without a write. Unknown/damaged live metadata is preserved during ordinary kit edits, shown as unreadable, and played dry until the owner explicitly saves a replacement. `:kit` stores this optional JSON opaquely, while `:shell` validates it using the synth codec; this avoids a circular dependency.
+
+This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SPLIT, ORBIT transport/audition, SURFACE, instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
 
 ## Finite render contract
 

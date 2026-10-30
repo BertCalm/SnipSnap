@@ -31,11 +31,13 @@ import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.dp
+import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.etchedBox
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.Motion
 import com.snipsnap.shell.Scheme
 
 /**
@@ -143,43 +145,66 @@ private fun Chevron(open: Boolean, color: Color) {
  * Two reels turning on an LCD strip beside [text] - the one motion rule,
  * reels spin whenever audio moves. OUTSIDE shows it while a trip is out,
  * so a five-second wait is visibly alive rather than a dead button.
+ *
+ * With animations off the reels hold one frame, the spokes upright: the
+ * words beside them say what is happening, and nothing here claims a
+ * position. The turning form is a composable of its own, so the still branch
+ * composes no infinite transition at all.
  */
 @Composable
 fun ReelsStrip(text: String, scheme: Scheme, modifier: Modifier = Modifier) {
-    val spin = rememberInfiniteTransition(label = "reels")
-    val angle by spin.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(durationMillis = 1200, easing = LinearEasing), RepeatMode.Restart),
-        label = "reelAngle",
-    )
     val ink = scheme.amber.tape
     Row(
         modifier.fillMaxWidth().height(28.dp).lcdPanel(scheme).padding(horizontal = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        Canvas(Modifier.size(width = 40.dp, height = 16.dp)) {
-            val r = 6.dp.toPx()
-            val stroke = 1.5.dp.toPx()
-            val cy = size.height / 2f
-            val left = Offset(8.dp.toPx(), cy)
-            val right = Offset(size.width - 8.dp.toPx(), cy)
-            for (c in listOf(left, right)) {
-                drawCircle(color = ink, radius = r, center = c, style = Stroke(width = stroke))
-                rotate(degrees = angle, pivot = c) {
-                    drawLine(color = ink, start = Offset(c.x, c.y - r), end = Offset(c.x, c.y + r), strokeWidth = stroke)
-                    drawLine(color = ink, start = Offset(c.x - r, c.y), end = Offset(c.x + r, c.y), strokeWidth = stroke)
-                }
-            }
-            drawLine(
-                color = ink,
-                start = Offset(left.x + r, cy),
-                end = Offset(right.x - r, cy),
-                strokeWidth = 1.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 2.dp.toPx())),
-            )
+        if (LocalReduceMotion.current) {
+            ReelsDrawing(ink) { 0f }
+        } else {
+            TurningReels(ink)
         }
         TapeText(text, TapeType.lcdSmall, ink, Modifier.weight(1f), maxLines = 1)
+    }
+}
+
+/** The strip's moving reels; composed only when motion is allowed. */
+@Composable
+private fun TurningReels(ink: Color) {
+    val spin = rememberInfiniteTransition(label = "reels")
+    val angle by spin.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(durationMillis = Motion.REEL_SPIN_MS, easing = LinearEasing), RepeatMode.Restart),
+        label = "reelAngle",
+    )
+    // Read inside the draw, so a frame redraws the reels and recomposes nothing.
+    ReelsDrawing(ink) { angle }
+}
+
+/** Two reels joined by a dashed tape line, their spokes turned [degrees] (read in the draw). */
+@Composable
+private fun ReelsDrawing(ink: Color, degrees: () -> Float) {
+    Canvas(Modifier.size(width = 40.dp, height = 16.dp)) {
+        val angle = degrees()
+        val r = 6.dp.toPx()
+        val stroke = 1.5.dp.toPx()
+        val cy = size.height / 2f
+        val left = Offset(8.dp.toPx(), cy)
+        val right = Offset(size.width - 8.dp.toPx(), cy)
+        for (c in listOf(left, right)) {
+            drawCircle(color = ink, radius = r, center = c, style = Stroke(width = stroke))
+            rotate(degrees = angle, pivot = c) {
+                drawLine(color = ink, start = Offset(c.x, c.y - r), end = Offset(c.x, c.y + r), strokeWidth = stroke)
+                drawLine(color = ink, start = Offset(c.x - r, c.y), end = Offset(c.x + r, c.y), strokeWidth = stroke)
+            }
+        }
+        drawLine(
+            color = ink,
+            start = Offset(left.x + r, cy),
+            end = Offset(right.x - r, cy),
+            strokeWidth = 1.dp.toPx(),
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.dp.toPx(), 2.dp.toPx())),
+        )
     }
 }

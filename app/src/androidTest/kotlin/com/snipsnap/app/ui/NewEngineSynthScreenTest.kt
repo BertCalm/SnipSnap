@@ -52,7 +52,7 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
                     appScope = appScope, settings = settings)
             }
         }
-        button("ENGINE $engine · TAP FOR NEXT").assertExists()
+        button("ENGINE $engine. CHOOSE ENGINE").assertExists()
     }
 
     private fun adjust(label: String, value: Float) {

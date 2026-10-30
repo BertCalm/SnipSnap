@@ -73,6 +73,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
 }
 
+/** A focused comparison of previous and overlapping duet handoffs. */
+tasks.register<JavaExec>("generateObbligatoOverlapAudition") {
+    group = "distribution"
+    description = "Compare previous and overlapping OBBLIGATO handoffs, melodies and actual player taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoOverlapAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoOverlapOutput").orNull ?: "${rootDir}/testkit/obbligato-overlap-audition")
+}
+
 /** Three relationship conversations beside their gentler reference performances. */
 tasks.register<JavaExec>("generateObbligatoConversationAudition") {
     group = "distribution"
@@ -131,6 +142,17 @@ tasks.register<JavaExec>("generateContourEdgeAudition") {
     mainClass.set("com.snipsnap.synth.ContourEdgeAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("contourEdgeOutput").orNull ?: "${rootDir}/testkit/contour-edge-audition")
+}
+
+/** All 36 complete factory recipes, with finite attacks and independently measured settled tones. */
+tasks.register<JavaExec>("generateContourPresetAudition") {
+    group = "distribution"
+    description = "Render 36 Contour presets, native/matched finite and held WAVs, held EDGE ranges and exact replay JSON."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ContourPresetAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("contourPresetOutput").orNull ?: "${rootDir}/testkit/contour-presets")
 }
 
 /** Dry first-listen guided-path synthesis, escaped stems and causal comparisons. */
@@ -1346,10 +1368,10 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
-/** Render SCOUR's R1 listening gate (raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
+/** Render SCOUR's R1.1 listen (phrases, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
 tasks.register<JavaExec>("generateScourAudition") {
     group = "distribution"
-    description = "Render SCOUR's SHOT x HARDEN gate, the ring-direction comparison, voices, sweeps and edges with a listening page under testkit/scour-audition/."
+    description = "Render SCOUR's phrases, PLATE beside PANE, the RING settings, the SHOT x HARDEN gate, sweeps and edges with a listening page under testkit/scour-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
     workingDir = projectDir
@@ -1467,6 +1489,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/valve-audition")
+}
+
+/** Render FORGE's DEPTH gate (YIELD 0.25 against DEPTH, DEPTH's in-between values, manifest, page) under testkit/forge-depth-audition/. See ForgeDepthAuditionGenerator. */
+tasks.register<JavaExec>("generateForgeDepthAudition") {
+    group = "distribution"
+    description = "Render FORGE's DEPTH gate clips, manifest and listening page under testkit/forge-depth-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ForgeDepthAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/forge-depth-audition", "${rootDir}")
 }
 
 /** Render FORGE's CHARGE tuning gate (four media, clips, manifest, page) under testkit/forge-charge-audition/. See ForgeChargeAuditionGenerator. */
@@ -2245,4 +2277,26 @@ tasks.register<JavaExec>("generateTidalHoldAudition") {
     maxHeapSize = "768m"
     workingDir = rootProject.projectDir
     args(providers.gradleProperty("tidalHoldOutput").orNull ?: "${rootDir}/testkit/tidal-hold-audition")
+}
+
+/** Original harp with two experimental timed venue returns and isolated-space previews. */
+tasks.register<JavaExec>("generateNacrePresenceAudition") {
+    group = "distribution"
+    description = "Render the model-1 reference, coral echoes, moving seaweed and space-only comparisons."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePresenceAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-presence-audition")
+}
+
+/** Ordinary saved patches across registers, strike strengths, controls and a short phrase. */
+tasks.register<JavaExec>("generateNacrePlayableAudition") {
+    group = "distribution"
+    description = "Render NACRE playable presets, register/velocity matrix, control sweeps and overlap phrases."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-playable-audition")
 }

@@ -102,7 +102,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         // frame. The control has to actually leave; a visible engine label
         // still fails this wait.
         waitFor("the hidden bench to drop ENGINE FILAMENT") {
-            compose.onAllNodesWithContentDescription("ENGINE FILAMENT · TAP FOR NEXT")
+            compose.onAllNodesWithContentDescription("ENGINE FILAMENT. CHOOSE ENGINE")
                 .fetchSemanticsNodes().isEmpty()
         }
         compose.runOnIdle {
@@ -194,7 +194,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["recipe.FILAMENT.THREAD"] = old.toJsonText()
         settings["macro.FILAMENT.THREAD.INJECT"] = ".01"
         show(shelfRoot())
-        button("ENGINE FILAMENT · TAP FOR NEXT").assertExists()
+        button("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
         // A complete current recipe wins over stale slider keys, then tapping a
         // factory sound must replace every field of that older draft.
         assertEquals(old, currentPatch(FilamentVoice.THREAD))
@@ -466,7 +466,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         activate("THREAD")
         activate("CURL")
         leaveAndReturn()
-        button("ENGINE FILAMENT · TAP FOR NEXT").assertExists()
+        button("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
         assertEquals(edited, currentPatch(source.voice))
         assertEquals(.75f, progress("ROOT"), 0f)
         assertEquals(.37f, progress("VELOCITY"), 0f)
@@ -537,7 +537,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         show(root, KitShelf.Entry(dir, kit))
         activate("REOPEN PAD RECIPE")
         activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
-        button("ENGINE FILAMENT · TAP FOR NEXT").assertExists()
+        button("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
         assertEquals(patch, currentPatch(patch.voice))
         for ((macro, value) in patch.macros) assertEquals(value, progress(macro), 0f)
         dial("INJECT", .79f)

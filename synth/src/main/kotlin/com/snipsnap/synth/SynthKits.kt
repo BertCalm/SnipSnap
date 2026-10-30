@@ -1372,7 +1372,8 @@ object SynthKits {
 
     /**
      * Sixteen dry tonal pads: seven KEY notes in C minor pentatonic, followed by
-     * all nine first-listen recipes. HOLD contains the settled sustain alone.
+     * the nine original recipes. The expanded preset browser stays independent
+     * of this sixteen-pad layout. HOLD contains the settled sustain alone.
      */
     fun contour(): List<ArrangedPad?> {
         fun note(n: Int, semitone: Int) = ContourPatch(
@@ -1381,7 +1382,7 @@ object SynthKits {
                 ("TUNE" to (.5f + semitone / (2f * ContourEngine.TUNE_SEMITONES))),
         ).let { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
         return PENTATONIC.take(7).mapIndexed { i, semitone -> note(i + 1, semitone) } +
-            ContourPresets.all().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
+            ContourPresets.original().map { pad(it, ContourEngine.drumClassFor(it.voice, it.macros)) }
     }
 
     /** Four notes from the approved THREAD recipe followed by all twelve dry factory recipes. */

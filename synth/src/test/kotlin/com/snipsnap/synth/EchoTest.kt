@@ -75,11 +75,18 @@ class EchoTest {
         "choir/random2" to "1c9a6551e31d9a3a6e9e3cc40d830c87d50757c5c33edc12b3bd1774e9e4bdf4",
     )
 
-    /** `delayed` at full, spelled out so the figures below are read off a literal; the recipe test ties it to Treatments. */
-    private val recipe = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1f)
+    /**
+     * The recipe the HEAD gate measured (the `delayed` character from 2026-10-23 to 2026-10-28), spelled out so HEAD's
+     * figures below are read off a literal. The owner chose HEAD off at that gate, so the shipped character is now
+     * [delayed]; HEAD stays a macro for kits and the CLI, and these are its measurements.
+     */
+    private val headRecipe = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.75f, "HEAD" to 1f)
 
-    /** The recipe with [mix] for its MIX, faded to [amount] the way the pad sheet fades ECHO (every macro linear, neutral 0). */
-    private fun at(mix: Float, amount: Float) = (recipe + ("MIX" to mix)).mapValues { it.value * amount }
+    /** The `delayed` character at full, the DELAY pedal, as the owner confirmed it (2026-10-28): HEAD off. */
+    private val delayed = mapOf("TIME" to 1f, "REPEAT" to 0.85f, "TONE" to 0.45f, "MIX" to 0.9f)
+
+    /** [headRecipe] with [mix] for its MIX, faded to [amount] the way the pad sheet fades ECHO (every macro linear, neutral 0). */
+    private fun at(mix: Float, amount: Float) = (headRecipe + ("MIX" to mix)).mapValues { it.value * amount }
 
     private fun hash(samples: FloatArray): String {
         val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
@@ -203,21 +210,21 @@ class EchoTest {
 
     @Test
     fun `HEAD on keeps the section contract - deterministic, stereo-identical, no widening, mono stays mono`() {
-        assertContentEquals(Echo.process(snare, recipe).samples, Echo.process(snare, recipe).samples, "not deterministic")
+        assertContentEquals(Echo.process(snare, headRecipe).samples, Echo.process(snare, headRecipe).samples, "not deterministic")
         for (s in listOf(kick, choir)) {
-            val out = Echo.process(doubled(s), recipe)
+            val out = Echo.process(doubled(s), headRecipe)
             assertContentEquals(channel(out, 0), channel(out, 1), "a doubled pad's channels diverged")
         }
-        val left = Echo.process(hardLeft(snare), recipe)
+        val left = Echo.process(hardLeft(snare), headRecipe)
         assertTrue(channel(left, 1).all { it == 0f }, "a hard-left pad gained a right channel")
-        assertEquals(1, Echo.process(mono(snare), recipe).channels, "a mono pad was widened")
+        assertEquals(1, Echo.process(mono(snare), headRecipe).channels, "a mono pad was widened")
     }
 
     @Test
     fun `the first repeat's onset is the same with HEAD on and off, up to the peak match's one gain`() {
-        val on = Echo.process(choir, recipe)
-        val off = Echo.process(choir, recipe + ("HEAD" to 0f))
-        val delay = Echo.delayFrames(recipe.getValue("TIME"), choir.sampleRate)
+        val on = Echo.process(choir, headRecipe)
+        val off = Echo.process(choir, headRecipe + ("HEAD" to 0f))
+        val delay = Echo.delayFrames(headRecipe.getValue("TIME"), choir.sampleRate)
         val head = Echo.headFrames(delay, choir.sampleRate)
         val end = (delay + head - head / 3) * choir.channels
         var p = 0
@@ -228,15 +235,15 @@ class EchoTest {
 
     @Test
     fun `HEAD makes the repeats discrete - the gap after the first repeat falls`() {
-        val off = recipe + ("HEAD" to 0f)
-        val choirOn = gap(Echo.process(choir, recipe), recipe)
+        val off = headRecipe + ("HEAD" to 0f)
+        val choirOn = gap(Echo.process(choir, headRecipe), headRecipe)
         val choirOff = gap(Echo.process(choir, off), off)
         println(String.format(Locale.ROOT, "DELAY gap, choir: HEAD 0 %.1f dB, HEAD 1 %.1f dB", choirOff, choirOn))
         assertTrue(choirOff - choirOn >= 7.0, "HEAD opened only ${choirOff - choirOn} dB on the choir (measured 9.8)")
         // A held tone never decays, so with the dry note included its gap is set by the delay's phase against the tone,
         // not by HEAD (at 220 Hz the plain repeat lands near antiphase: HEAD 0 -5.0 dB, HEAD 1 +3.2). Its wet alone shows HEAD.
         val tone = heldTone()
-        val toneOn = wetGap(tone, recipe)
+        val toneOn = wetGap(tone, headRecipe)
         val toneOff = wetGap(tone, off)
         println(String.format(Locale.ROOT, "DELAY wet gap, held tone: HEAD 0 %.1f dB, HEAD 1 %.1f dB", toneOff, toneOn))
         assertTrue(toneOn < -60.0, "with HEAD on, a held tone's wet between repeats is only $toneOn dB under its first repeat")
@@ -249,7 +256,7 @@ class EchoTest {
         assertEquals(2116, Echo.headFrames(Echo.delayFrames(0f, r), r))
         assertEquals(4100, Echo.headFrames(Echo.delayFrames(0.375f, r), r))
         assertEquals(5292, Echo.headFrames(Echo.delayFrames(0.75f, r), r))
-        val m = recipe + ("TIME" to 0f)
+        val m = headRecipe + ("TIME" to 0f)
         val w = wet(heldTone(), m).samples
         val delay = Echo.delayFrames(0f, r)
         val head = Echo.headFrames(delay, r)
@@ -280,31 +287,42 @@ class EchoTest {
         // and the tail's length are the same with HEAD on and off: the feedback path is checked repeat by repeat.
         val click = Snip(FloatArray(44_100) { if (it < 32) 0.9f else 0f }, 1, 44_100)
         for (time in listOf(0.75f, 0f)) for (s in listOf(click, doubled(click))) {
-            val m = recipe + ("TIME" to time)
+            val m = headRecipe + ("TIME" to time)
             assertContentEquals(Echo.process(s, m + ("HEAD" to 0f)).samples, Echo.process(s, m).samples, "TIME $time on ${s.channels} channels")
         }
     }
 
     @Test
-    fun `the recipe measured here is the delayed character, and its first tap is the sheet's`() {
-        assertEquals(recipe, Treatments.chain("delayed").echo, "delayed moved: re-measure, and move this file's recipe and bars with it")
-        assertEquals(Treatments.chain("delayed", 0.7f).echo, at(0.75f, 0.7f), "the pad sheet no longer fades ECHO linearly: the AMT 70 figures here are not what it plays")
+    fun `the delayed character is the recipe the owner confirmed - HEAD off, repeats 350 ms apart at full and 206 at the first tap`() {
+        assertEquals(delayed, Treatments.chain("delayed").echo, "delayed moved from the recipe the owner confirmed (2026-10-28)")
+        assertEquals(delayed.mapValues { it.value * 0.7f }, Treatments.chain("delayed", 0.7f).echo, "the pad sheet no longer fades ECHO linearly")
+        assertEquals(0f, Echo.reach(delayed), "the shipped recipe has HEAD off: the whole note feeds the repeats")
+        val rate = 44_100
+        assertEquals(350.0, Echo.delayFrames(1f, rate) * 1000.0 / rate, 0.5, "the repeats at full are not the 350 ms apart the owner asked for")
+        assertEquals(206.0, Echo.delayFrames(0.7f, rate) * 1000.0 / rate, 0.5, "the repeats at AMT 70 are not 206 ms apart")
+        // HEAD off is ECHO as it always was, bit for bit: the shipped recipe renders as the same values with HEAD set to 0.
+        assertContentEquals(Echo.process(choir, delayed + ("HEAD" to 0f)).samples, Echo.process(choir, delayed).samples)
+    }
+
+    @Test
+    fun `the HEAD recipe's first tap is the sheet's fade of it`() {
+        assertEquals(Treatments.fade(FxChain(echo = headRecipe), 0.7f).echo, at(0.75f, 0.7f), "the pad sheet no longer fades ECHO linearly: the AMT 70 figures here are not what it plays")
     }
 
     @Test
     fun `HEAD is stretched by 1_5 so the first tap still feeds the head alone`() {
         assertEquals(1f, Echo.reach(mapOf("HEAD" to 2f / 3f)))
-        assertEquals(1f, Echo.reach(mapOf("HEAD" to 0.7f)), "the recipe at AMT 70")
+        assertEquals(1f, Echo.reach(mapOf("HEAD" to 0.7f)), "the HEAD recipe at AMT 70")
         assertEquals(0.9f, Echo.reach(mapOf("HEAD" to 0.6f)), 1e-6f)
         assertEquals(0.001f, Echo.HEAD_OFF, "the off point is the spec's")
         assertEquals(0f, Echo.reach(mapOf("HEAD" to Echo.HEAD_OFF)))
         assertTrue(Echo.reach(mapOf("HEAD" to 0.0011f)) > 0f, "just above the off point HEAD is on")
         assertEquals(0f, Echo.reach(emptyMap()))
-        assertContentEquals(Echo.process(choir, recipe).samples, Echo.process(choir, recipe + ("HEAD" to 0.7f)).samples)
-        assertNotEquals(Echo.process(choir, recipe).samples.toList(), Echo.process(choir, recipe + ("HEAD" to 0.6f)).samples.toList())
+        assertContentEquals(Echo.process(choir, headRecipe).samples, Echo.process(choir, headRecipe + ("HEAD" to 0.7f)).samples)
+        assertNotEquals(Echo.process(choir, headRecipe).samples.toList(), Echo.process(choir, headRecipe + ("HEAD" to 0.6f)).samples.toList())
     }
 
-    // ---------------------------------------------------------------- the numbers the recipe's MIX rests on
+    // ---------------------------------------------------------------- the numbers the HEAD recipe's MIX rested on
 
     @Test
     fun `the jangle's pick and the snare's repeat at the first tap - the figures MIX 0_75 was chosen from`() {
@@ -317,11 +335,11 @@ class EchoTest {
         for (amount in listOf(1f, 0.7f)) for (mix in listOf(0.5f, 0.75f, 1f)) {
             val m = at(mix, amount)
             val delay = Echo.delayFrames(m.getValue("TIME"), 44_100)
-            println(String.format(Locale.ROOT, "DELAY probe AMT %.0f, recipe MIX %.2f: jangle pick %.1f dB, snare repeat %.1f dB, choir gap HEAD 0 %.1f / HEAD 1 %.1f dB",
+            println(String.format(Locale.ROOT, "DELAY probe AMT %.0f, HEAD recipe MIX %.2f: jangle pick %.1f dB, snare repeat %.1f dB, choir gap HEAD 0 %.1f / HEAD 1 %.1f dB",
                 amount * 100, mix, pick(Echo.process(jangle, m), delay), repeat(Echo.process(snare, m), delay),
                 gap(Echo.process(choir, m + ("HEAD" to 0f)), m), gap(Echo.process(choir, m), m)))
             for ((name, s) in linkedMapOf("choir" to choir, "chug" to chug, "jangle" to jangle, "snare" to snare)) {
-                println(String.format(Locale.ROOT, "DELAY gap AMT %.0f, recipe MIX %.2f, %s: HEAD 0 %.1f dB, HEAD 1 %.1f dB",
+                println(String.format(Locale.ROOT, "DELAY gap AMT %.0f, HEAD recipe MIX %.2f, %s: HEAD 0 %.1f dB, HEAD 1 %.1f dB",
                     amount * 100, mix, name, gap(Echo.process(s, m + ("HEAD" to 0f)), m), gap(Echo.process(s, m), m)))
             }
         }

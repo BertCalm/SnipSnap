@@ -10,18 +10,22 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.progressSemantics
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -346,9 +350,18 @@ fun LoadingCard(busy: Busy, modifier: Modifier = Modifier) {
  * progress update is a new value for the same job and leaves the latch
  * alone.
  *
- * The minimum is owed to a bar that was drawn. A job that ends after the
- * delay but before the bar was up (the frame had not come) shows none: the
- * latch forgets the run ([BusyLatch.discard]).
+ * The minimum is owed to a bar that went up: one this has returned true for
+ * by the time its job ended. A job that ends after the delay but before that
+ * (the delay's wake-up had not yet run) shows none: the latch forgets the run
+ * ([BusyLatch.discard]).
+ *
+ * It counts from the first frame that draws the bar, not from the moment the
+ * latch schedules it. This turns true at the schedule, but the bar needs a
+ * frame to be drawn in, and a cold start's first frames can come about 160 ms
+ * late: counted from the schedule, the bar would then be on screen for less
+ * than [BusyLatch.MIN_VISIBLE_MS]. So when this turns true it waits for the
+ * next frame, the one that composes the bar, reads the clock at its start and
+ * hands that to [BusyLatch.markShown].
  */
 @Composable
 fun rememberBusyVisible(busy: Busy?): Boolean = rememberBusyVisible(busy, SystemClock::uptimeMillis)
@@ -370,20 +383,131 @@ internal fun rememberBusyVisible(busy: Busy?, now: () -> Long): Boolean {
             running -> latch.start(clock())
             // The bar is up: it stays its minimum.
             visible -> latch.stop(clock())
-            // It never was. The delay and the draw are two moments, and a job
-            // can end between them: the latch alone would say a bar is owed for
-            // a job that is over, and drawing it then would put a loading screen
-            // over the result it was loading (the device showed exactly that
-            // for a starter that took about 250 ms). A bar that was not up has no
-            // minimum to serve.
+            // It never was: `visible` has not turned true. The delay's wake-up
+            // and the job's end are two moments, and a job can end between them:
+            // the latch alone would say a bar is owed for a job that is over,
+            // and showing it then would put a loading screen over the result it
+            // was loading (the device showed exactly that for a starter that took
+            // about 250 ms). A bar that was not up has no minimum to serve.
             else -> latch.discard()
         }
+        var told = false
         while (true) {
             val t = clock()
-            visible = latch.visible(t)
+            val shown = latch.visible(t)
+            visible = shown
+            if (shown && !told) {
+                // The bar is due, so the next frame composes it and draws it:
+                // the minimum counts from that frame (the clock read in it), and
+                // not from the schedule the frame may have missed. Every effect
+                // asks for its own frame and does not rely on an earlier one's:
+                // a job that ends while a frame is awaited replaces this effect
+                // and cancels the wait, and the next one finds the bar up and
+                // asks again. The latch keeps the first mark of a run and ignores
+                // the rest, so asking again costs a frame's wait and nothing else.
+                latch.markShown(withFrameNanos { clock() })
+                told = true
+                continue
+            }
             val next = latch.nextChangeAt(t) ?: break
             delay(next - t)
         }
     }
     return visible
+}
+
+/** The job a control's working ring stands for: held once so the key under [rememberRingUp] is one object. */
+private val RING_JOB = Busy(Copy.WORKING_BUSY)
+
+/**
+ * Whether the ring on the control that started a job should be on screen
+ * now: false for the first [BusyLatch.SHOW_AFTER_MS] after [working] turns
+ * true, so a job that is over by then draws nothing, and once it has shown,
+ * true for at least [BusyLatch.MIN_VISIBLE_MS] even if the job ends sooner.
+ * The same rule as the dock's bar and the loading card, on the same latch.
+ * [ActionButton] and [PrimaryAction] both ask here, and draw the ring and
+ * say [Copy.WORKING_BUSY] as their state only while it answers true.
+ *
+ * [now] is [rememberBusyVisible]'s clock: a device test hands it the compose
+ * test clock.
+ */
+@Composable
+internal fun rememberRingUp(working: Boolean, now: () -> Long = SystemClock::uptimeMillis): Boolean =
+    rememberBusyVisible(if (working) RING_JOB else null, now)
+
+/**
+ * Where a screen's own job goes to reach the dock. The app provides the
+ * sink at its root and the dock draws what it is handed; the default drops
+ * every report, so a screen shown on its own, in a test or a preview, has
+ * nowhere to send one and loses nothing by trying.
+ */
+val LocalBusySink = staticCompositionLocalOf<(Busy?) -> Unit> { {} }
+
+/**
+ * Tells the dock about [busy], a job this screen is carrying, for as long as
+ * it is given and as long as the screen is composed.
+ *
+ * The report is withdrawn (the sink is handed null) the moment [busy]
+ * changes and the moment this leaves the composition, so a screen that is
+ * navigated away from mid-job cannot leave its bar on the dock. The report
+ * lasts as long as the reporting screen is composed. A job that outlives its
+ * screen (the pad editor's treatments run on `appScope` on purpose, so the
+ * write survives a tab switch) is not shown once the screen has gone; the
+ * app-owned job board in a later change covers that case. A changed [busy]
+ * (the count moving on) is a withdrawal followed at once by the new report,
+ * so the sink's last word is always the job as it now stands.
+ *
+ * The sink is read as of the latest composition, so the withdrawal always
+ * reaches the sink the app has now.
+ *
+ * [busy] is the effect's key, so a caller that passes a [Busy] carrying a
+ * `cancel` lambda must `remember` it: a fresh lambda on every recomposition
+ * is a changed key, and churns the dock with a withdrawal and a report each
+ * time.
+ */
+@Composable
+fun ReportBusy(busy: Busy?) {
+    val sink by rememberUpdatedState(LocalBusySink.current)
+    DisposableEffect(busy) {
+        sink(busy)
+        onDispose { sink(null) }
+    }
+}
+
+/**
+ * What a screen draws, and tells the dock, while it reads a recording from
+ * disk: TAPE and CHOP, which have nothing of their own to show until the
+ * decode is done. Returns true when the screen's place is held by this - drawn
+ * here, so the caller returns - and false when the screen should draw what it
+ * has (its deck, its chop, or the empty face for a read that found nothing).
+ *
+ * While [decoding] the dock is told [Copy.READING_RECORDING] (one
+ * [ReportBusy] per screen; the [Busy] is remembered under [decoding], so the
+ * sink sees a job start and end and not a new object on every recomposition).
+ * The screen's place says it too, by the same rule as the dock's bar though
+ * not the same latch (the dock keeps its own): a quiet lit panel for the
+ * first [BusyLatch.SHOW_AFTER_MS], so a read that ends at once draws no words
+ * at all, then a [LoadingPanel], and the words stay at least
+ * [BusyLatch.MIN_VISIBLE_MS] once they have shown. That last part is why this
+ * holds after [decoding] ends, ahead of the empty face and the content: a read
+ * that ends a moment after the words appear would otherwise leave them a
+ * flash. [LoadingPanel] does not keep the rule itself - it is a bare column -
+ * so the screen asks for it here, once, above its early return.
+ *
+ * [clock] is the latch's, in ms and monotonic: a device test hands it the
+ * compose test clock, for the reason [rememberBusyVisible]'s own overload has
+ * one.
+ */
+@Composable
+fun holdWhileReading(decoding: Boolean, clock: () -> Long = SystemClock::uptimeMillis): Boolean {
+    val reading = remember(decoding) { if (decoding) Busy(Copy.READING_RECORDING) else null }
+    ReportBusy(reading)
+    val panelShown = rememberBusyVisible(reading, clock)
+    if (!decoding && !panelShown) return false
+    if (panelShown) {
+        LoadingPanel(Copy.READING_RECORDING, Modifier.fillMaxSize())
+    } else {
+        Box(Modifier.fillMaxSize().lcdPanel(LocalScheme.current))
+    }
+    return true
 }

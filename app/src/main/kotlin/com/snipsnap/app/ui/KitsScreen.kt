@@ -1317,10 +1317,26 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
  * pressed, and the dock says what the job is. It sits before [onClick] so a
  * trailing-lambda caller still compiles, and it goes with `enabled = false`:
  * the job being in flight is what disables the button.
+ *
+ * The ring and the state come up together and by the rule every loading
+ * drawing keeps ([rememberRingUp]): not in the first [BusyLatch.SHOW_AFTER_MS]
+ * of the job, so one that is over by then flashes nothing, and for at least
+ * [BusyLatch.MIN_VISIBLE_MS] once up. [ringClock] is that rule's clock, in ms
+ * and monotonic: a device test hands it the compose test clock, because the
+ * latch sleeps on a coroutine `delay`, which runs on that clock's virtual
+ * time, and [SystemClock] would not move with it (the same seam as
+ * `loadingClock` on this screen).
  */
 @Composable
-fun PrimaryAction(label: String, enabled: Boolean, working: Boolean = false, onClick: () -> Unit) {
+fun PrimaryAction(
+    label: String,
+    enabled: Boolean,
+    working: Boolean = false,
+    ringClock: () -> Long = SystemClock::uptimeMillis,
+    onClick: () -> Unit,
+) {
     val scheme = LocalScheme.current
+    val ringUp = rememberRingUp(working, ringClock)
     val rim = Modifier.border(2.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
     Box(
         Modifier
@@ -1338,7 +1354,7 @@ fun PrimaryAction(label: String, enabled: Boolean, working: Boolean = false, onC
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
             .tapeClick(label = label, enabled = enabled, onClick = onClick)
-            .let { if (working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
+            .let { if (ringUp) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
         contentAlignment = Alignment.Center,
     ) {
         // Past 22 characters (the longest label proven to fit one line at
@@ -1346,7 +1362,7 @@ fun PrimaryAction(label: String, enabled: Boolean, working: Boolean = false, onC
         // so CATCH YOUR FIRST SOUND ▸ is not cut mid-word.
         val type = if (label.length > 22) TapeType.display else TapeType.displayBig
         val ink = if (enabled) scheme.lcdInk.tape else scheme.ink3.tape
-        if (working) {
+        if (ringUp) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spinner(scheme.accent.tape, size = 18.dp)
                 // Shrinks before it pushes the ring off, so a long label at a

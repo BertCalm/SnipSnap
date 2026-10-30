@@ -968,8 +968,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
-63 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
+64 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1135,7 +1135,9 @@ swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
-comes back as a repeat), SPRING (a Schroeder network, 1962), REVERSE,
+comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
+dark repeats with HEAD off, see
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
@@ -1176,7 +1178,8 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
+OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
+TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing

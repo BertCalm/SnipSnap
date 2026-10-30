@@ -152,9 +152,11 @@ class CausticSynthScreenTest : ComposeScreenTest() {
         show(root, settings, KitShelf.Entry(kitDir, kit))
 
         // The picker reads OHM, MERCURY, CAUSTIC: #643 put MERCURY after OHM.
-        press("ENGINE OHM · TAP FOR NEXT")
-        press("ENGINE MERCURY · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE CAUSTIC · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE OHM. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE MERCURY. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE CAUSTIC. CHOOSE ENGINE").assertExists()
         compose.onNodeWithContentDescription("ALLOY").assertExists()
         val factory = CausticPresets.forVoice(CausticVoice.ALLOY).first()
         press("PRESET ${factory.name}")

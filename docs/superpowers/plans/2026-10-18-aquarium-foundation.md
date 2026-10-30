@@ -3,7 +3,7 @@
 **Date:** 2026-10-18  
 **Design:** [Aquarium integration — pads and a shared environment](../specs/2026-10-18-aquarium-integration-design.md)  
 **Base:** `45ba33832950530bb0148435378b4556045c6cf6`  
-**Current implementation scope:** the foundation, offline bridge and PAD control panel are complete. Stage 2 now has its first continuous backend: PadEngine playback and stereo PRINT, with typed/JNI control APIs, bounded transitions and an explicit output policy. Other mixers, PERFORMANCE controls/persistence and physical-device checks remain work to do.
+**Current implementation scope:** the foundation, offline bridge and PAD control panel are complete. Stage 2 now has its first continuous backend: PadEngine playback and stereo PRINT, with typed/JNI control APIs, bounded transitions and an explicit output policy. The shared-host PERFORMANCE controls and kit persistence are now implemented; other mixers and physical-device checks remain work to do.
 
 ## Accepted direction
 
@@ -70,7 +70,7 @@ The [offline bridge](https://github.com/BertCalm/SnipSnap/pull/622) supplies a r
 
 This is separate from per-pad rendering. Reuse Stage 0's processor/settings, with one continuous state per output session.
 
-**First backend:** [PadEngine and PRINT](../specs/2026-10-26-aquarium-padengine-performance-design.md), built against `fd791f583579dda3dcab3d2ea9e34f9975b07a12`. The route inventory, state/transition policy, linked sample-peak protection and per-instance native/JNI/Kotlin API are implemented. It starts dry and is exercised by the host/device tests; there is no inactive PERFORMANCE door. The route table explicitly leaves SURFACE stereo conversion, ORBIT/other transport mixers and offline bounces for later work. Current execution/measurement results belong in the change's validation report, and no phone timing or hardware listening verdict is inferred from a host run.
+**First backend:** [PadEngine and PRINT](../specs/2026-10-26-aquarium-padengine-performance-design.md), built against `fd791f583579dda3dcab3d2ea9e34f9975b07a12`. The route inventory, state/transition policy, linked sample-peak protection and per-instance native/JNI/Kotlin API are implemented. It starts dry and is exercised by the host/device tests; the subsequent KIT PERFORMANCE panel configures and saves this shared host. The route table explicitly leaves SURFACE stereo conversion, ORBIT/other transport mixers and offline bounces for later work. Current execution/measurement results belong in the change's validation report, and no phone timing or hardware listening verdict is inferred from a host run.
 
 1. Inventory each output/recording path before claiming global scope: PadEngine, SURFACE, live preview where relevant, loop/ORBIT playback, prints and offline bounces. Name the supported routes.
 2. Insert after the complete voice sum and before the route's output and print taps. Never reset on note-on or run one processor per voice.
