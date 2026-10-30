@@ -389,7 +389,7 @@ object Velocity {
             }
         is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
         is BallastPatch -> Ballast.render(patch.voice, patch.macros, velocity = v)
-        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v, model = patch.model)
         is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
         is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
