@@ -19,6 +19,11 @@ package com.snipsnap.shell
  * a place change — because that is the order they were pushed. There is
  * no root "go to the shelf" policy any more (J11): Back from inside
  * PROJECT lands on SHELF only if SHELF is where you came from.
+ *
+ * Closing a bench is not one of those pushes. It steps back, so a screen
+ * that was opened and then closed leaves no trace for Back to find
+ * ([closeBench]), and a bench's back chip names where that step lands
+ * ([backChip]).
  */
 class Navigation(start: Location = Location(Place.SHELF)) {
 
@@ -68,10 +73,28 @@ class Navigation(start: Location = Location(Place.SHELF)) {
         return location
     }
 
-    /** A bench's back chip, or a bench finishing (SEND, COMMIT): the bench closes. */
+    /**
+     * A bench's back chip, or a bench finishing (SEND, COMMIT): the top
+     * bench closes. Closing never adds history: the history already holds
+     * the way to where the bench was reached from, and putting the screen
+     * the user just left on top of it would make Back reopen that screen.
+     *
+     * Two cases. A bench that was opened over what is now showing
+     * ([open], or a [goTo] that landed it there) left that location on the
+     * history, so closing returns to it and takes it off: closing what was
+     * just opened is a step back. A bench that was landed on directly
+     * (`goTo(Location(MAKE, benches = [SYNTH]))` from the shelf) left the
+     * shelf on the history and nothing under the lab, so closing replaces
+     * the location in place and Back still goes to the shelf. A no-op when
+     * no bench is open.
+     */
     fun closeBench(): Location {
         if (location.benches.isEmpty()) return location
-        push(location.copy(benches = location.benches.dropLast(1)))
+        val target = location.copy(benches = location.benches.dropLast(1))
+        if (history.lastOrNull() == target) history.removeLast()
+        location = target
+        target.stage?.let { lastStage[target.place] = it }
+        taps++
         return location
     }
 
@@ -131,23 +154,21 @@ class Navigation(start: Location = Location(Place.SHELF)) {
     /**
      * The label the top bench's back chip reads, or null on a bare stage.
      *
-     * SETUP, HELP and MIDI are behind the gear, which opens over anything, so
-     * their [Bench.backChip] can only say BACK; here they name where back
-     * goes: the bench under them, if one is stacked, else the stage showing,
-     * else the place. A bench under the gear is named by its place, not its
-     * own label, which can be long ("STACK THE TAKES") for a chip this size.
+     * It names where [closeBench] lands, for every bench alike: the bench
+     * under the top one, by its [Bench.backName]; else the stage showing;
+     * else the place, for the places that have no stages. So the same
+     * bench reads differently over different things (SNIPS over PADS says
+     * PADS, over DECK says DECK), and the words come from the model, not
+     * from a string kept beside each screen.
      */
     val backChip: String?
         get() {
-            val top = location.benches.lastOrNull() ?: return null
-            if (!top.behindGear) return top.backChip
-            val below = location.benches.getOrNull(location.benches.size - 2)
-            val where = when {
-                below != null && below.behindGear -> below.label
-                below != null -> location.place.label
-                else -> location.stage?.label ?: location.place.label
-            }
-            return "◄ $where"
+            val benches = location.benches
+            if (benches.isEmpty()) return null
+            val name = benches.getOrNull(benches.size - 2)?.backName
+                ?: location.stage?.label
+                ?: location.place.label
+            return "◄ $name"
         }
 
     companion object {
@@ -182,47 +203,45 @@ enum class Stage(val place: Place, val label: String) {
 
 /**
  * A screen you take one thing to and come back from. [home] is the place
- * it belongs under (the plan's §3.8 table) and [backChip] is what its
- * back chip reads — a bench always names where it returns to.
+ * it belongs under (the plan's §3.8 table). [backName] is the short word a
+ * back chip uses when something is opened over this bench ("◄ PAD" over the
+ * pad sheet): its [label], unless that is too long for a chip, or not what
+ * the user calls it. What a bench's own chip reads is not stored here, as it
+ * depends on what the bench was opened over: [Navigation.backChip].
  */
-enum class Bench(val home: Place, val label: String, val backChip: String) {
+enum class Bench(val home: Place, val label: String, val backName: String = label) {
     // Under PROJECT ▸ PADS.
-    PAD_SHEET(Place.PROJECT, "PAD SHEET", "◄ PADS"),
-    GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD", "◄ PAD"),
-    SPLICE(Place.PROJECT, "SPLICE", "◄ PAD"),
-    STACK(Place.PROJECT, "STACK THE TAKES", "◄ PAD"),
-    SPREAD(Place.PROJECT, "SPREAD", "◄ PAD"),
-    SPLIT(Place.PROJECT, "SPLIT", "◄ PADS"),
-    VERSIONS(Place.PROJECT, "VERSIONS + BIN", "◄ PADS"),
-    PAD_CAPTURE(Place.PROJECT, "PAD CAPTURE", "◄ PADS"),
+    PAD_SHEET(Place.PROJECT, "PAD SHEET", backName = "PAD"),
+    GRAIN_FIELD(Place.PROJECT, "GRAIN FIELD"),
+    SPLICE(Place.PROJECT, "SPLICE"),
+    STACK(Place.PROJECT, "STACK THE TAKES", backName = "STACK"),
+    SPREAD(Place.PROJECT, "SPREAD"),
+    SPLIT(Place.PROJECT, "SPLIT"),
+    VERSIONS(Place.PROJECT, "VERSIONS + BIN", backName = "VERSIONS"),
+    PAD_CAPTURE(Place.PROJECT, "PAD CAPTURE"),
     // Under PROJECT ▸ BEAT.
-    ORBIT(Place.PROJECT, "ORBIT", "◄ BEAT"),
-    SONG(Place.PROJECT, "SONG", "◄ BEAT"),
-    LOOP(Place.PROJECT, "LOOP", "◄ BEAT"),
+    ORBIT(Place.PROJECT, "ORBIT"),
+    SONG(Place.PROJECT, "SONG"),
+    LOOP(Place.PROJECT, "LOOP"),
     // Under SHELF.
-    SNIPS(Place.SHELF, "SNIPS", "◄ SHELF"),
-    BIN(Place.SHELF, "BIN", "◄ SHELF"),
-    XRAY(Place.SHELF, "X-RAY", "◄ SHELF"),
-    DOUBLES(Place.SHELF, "DOUBLES", "◄ SHELF"),
+    SNIPS(Place.SHELF, "SNIPS"),
+    BIN(Place.SHELF, "BIN"),
+    XRAY(Place.SHELF, "X-RAY"),
+    DOUBLES(Place.SHELF, "DOUBLES"),
     // Under MAKE.
-    SYNTH(Place.MAKE, "SYNTH", "◄ MAKE"),
-    SNAP(Place.MAKE, "SNAP", "◄ MAKE"),
-    SURFACE(Place.MAKE, "SURFACE", "◄ MAKE"),
-    INSTRUMENTS(Place.MAKE, "INSTRUMENTS", "◄ MAKE"),
-    KEYS(Place.MAKE, "KEYS", "◄ MAKE"),
-    LIVE_SNAP(Place.MAKE, "LIVE", "◄ SNAP"),
-    DRAW(Place.MAKE, "DRAW", "◄ SNAP"),
-    FIELD(Place.MAKE, "PHOTO FIELD", "◄ SNAP"),
-    // Behind the gear, from anywhere. The chip here is the fallback:
-    // [Navigation.backChip] names the place the gear was opened over.
-    SETUP(Place.SHELF, "SETUP", "◄ BACK"),
-    HELP(Place.SHELF, "HELP", "◄ BACK"),
+    SYNTH(Place.MAKE, "SYNTH"),
+    SNAP(Place.MAKE, "SNAP"),
+    SURFACE(Place.MAKE, "SURFACE"),
+    INSTRUMENTS(Place.MAKE, "INSTRUMENTS"),
+    KEYS(Place.MAKE, "KEYS"),
+    LIVE_SNAP(Place.MAKE, "LIVE"),
+    DRAW(Place.MAKE, "DRAW"),
+    FIELD(Place.MAKE, "PHOTO FIELD"),
+    // Behind the gear, from anywhere: opened over whatever is showing.
+    SETUP(Place.SHELF, "SETUP"),
+    HELP(Place.SHELF, "HELP"),
     /** What is plugged in and what it sends: the MIDI diagnostics screen. */
-    MIDI(Place.SHELF, "MIDI", "◄ BACK"),
-    ;
-
-    /** Opened from the gear, over whatever is showing, rather than from a place of its own. */
-    val behindGear: Boolean get() = this == SETUP || this == HELP || this == MIDI
+    MIDI(Place.SHELF, "MIDI"),
 }
 
 /** Where you are: a place, its stage if it has stages, and the benches stacked on it. */

@@ -73,6 +73,7 @@ class NavigationTest {
         nav.open(Bench.SETUP)
         assertEquals("◄ SHELF", nav.backChip, "the shelf has no stage: its place")
         nav.closeBench()
+        assertFalse(nav.canGoBack, "open then close from a fresh root leaves nothing to go back to")
         nav.go(Place.PROJECT)
         nav.stage(Stage.BEAT)
         nav.open(Bench.HELP)
@@ -80,7 +81,7 @@ class NavigationTest {
         nav.closeBench()
         nav.open(Bench.PAD_SHEET)
         nav.open(Bench.HELP)
-        assertEquals("◄ PROJECT", nav.backChip, "under a bench: the place, as a long bench name will not fit the chip")
+        assertEquals("◄ PAD", nav.backChip, "under a bench: the bench's short name, one rule for every bench")
         nav.closeBench()
         nav.closeBench()
         nav.open(Bench.SETUP)
@@ -92,7 +93,6 @@ class NavigationTest {
         assertEquals("◄ BEAT", nav.backChip, "MIDI is behind the gear too: it names where back goes")
         nav.open(Bench.HELP)
         assertEquals("◄ MIDI", nav.backChip, "HELP from MIDI goes back to MIDI")
-        assertTrue(Bench.SETUP.backChip.startsWith("◄ ") && Bench.HELP.backChip.startsWith("◄ "), "the bench's own is still a back chip")
     }
 
     @Test
@@ -109,6 +109,9 @@ class NavigationTest {
         nav.closeBench()
         assertEquals(Location(Place.PROJECT, Stage.PADS), nav.location)
         assertEquals(nav.location, nav.closeBench(), "closing nothing is nothing")
+        assertTrue(nav.back(), "Back goes to before the pad sheet was opened")
+        assertEquals(Location(Place.SHELF), nav.location, "and not to the sheet, the splice, or PADS again")
+        assertFalse(nav.canGoBack)
     }
 
     @Test
@@ -148,6 +151,116 @@ class NavigationTest {
         assertFalse(nav.back(), "nothing left to pop: the app's cue to leave")
     }
 
+    // Closing a screen steps back (PR 3a): closeBench never adds history.
+
+    private fun Navigation.walkBack(): List<Location> {
+        val seen = mutableListOf(location)
+        while (back()) seen += location
+        return seen
+    }
+
+    @Test
+    fun `closing a bench steps back, so Back does not reopen it`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.stage(Stage.BEAT)
+        nav.open(Bench.ORBIT)
+        val before = nav.taps
+
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), nav.closeBench())
+        assertEquals(before + 1, nav.taps, "closing is still one navigation")
+
+        assertTrue(nav.back())
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.location, "Back undoes the stage change, as it did before ORBIT was opened")
+        val rest = nav.walkBack()
+        assertTrue(rest.none { it.benches.isNotEmpty() }, "ORBIT is nowhere in the history: $rest")
+    }
+
+    @Test
+    fun `closing a landed bench replaces it in place, and Back goes to where the user came from`() {
+        val nav = Navigation()
+        nav.goTo(Location(Place.SHELF))
+        nav.goTo(Location(Place.MAKE, benches = listOf(Bench.SYNTH)))
+
+        assertEquals(Location(Place.MAKE), nav.closeBench())
+        assertTrue(nav.back())
+        assertEquals(Location(Place.SHELF), nav.location, "the shelf it was landed from, not the lab")
+        assertFalse(nav.canGoBack)
+    }
+
+    @Test
+    fun `stacked benches close one at a time and Back never reopens any of them`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.SPLICE)
+
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)), nav.closeBench())
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
+
+        val rest = nav.walkBack()
+        assertEquals(listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)), rest, "PADS, then where it was left from")
+    }
+
+    @Test
+    fun `opening and closing a bench over and over leaves the history as it was`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        repeat(200) {
+            nav.open(Bench.PAD_SHEET)
+            nav.closeBench()
+        }
+        assertEquals(listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)), nav.walkBack())
+    }
+
+    @Test
+    fun `closing a bench records the stage under it, so the place reopens there`() {
+        val nav = Navigation()
+        nav.goTo(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)))
+        nav.stage(Stage.BEAT)
+        // Back reaches the landed sheet without touching the stage the place remembers: that is still BEAT.
+        assertTrue(nav.back())
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)), nav.location)
+
+        // So only closing the sheet can put PADS back as the stage to reopen on.
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
+        nav.go(Place.SHELF)
+        nav.go(Place.PROJECT)
+        assertEquals(Stage.PADS, nav.location.stage, "the place reopens on the stage the closed bench was over, not BEAT")
+    }
+
+    @Test
+    fun `a back chip is null on a bare stage, and a closeBench on nothing moves nothing`() {
+        val nav = Navigation()
+        assertNull(nav.backChip)
+        val before = nav.taps
+        nav.closeBench()
+        assertEquals(before, nav.taps)
+        assertFalse(nav.canGoBack)
+    }
+
+    @Test
+    fun `a back chip names what closing the bench reaches`() {
+        fun chip(place: Place, stage: Stage?, vararg benches: Bench) =
+            Navigation(Location(place, stage, benches.toList())).backChip
+
+        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SNIPS), "SNIPS over PADS")
+        assertEquals("◄ DECK", chip(Place.TAPE, Stage.DECK, Bench.SNIPS), "SNIPS over DECK")
+        assertEquals("◄ LOOP", chip(Place.PROJECT, Stage.BEAT, Bench.LOOP, Bench.SNIPS), "SNIPS over LOOP, which is over BEAT")
+        assertEquals("◄ INSTRUMENTS", chip(Place.MAKE, null, Bench.INSTRUMENTS, Bench.KEYS), "KEYS over INSTRUMENTS")
+        assertEquals("◄ BEAT", chip(Place.PROJECT, Stage.BEAT, Bench.ORBIT), "ORBIT over BEAT")
+        assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SPLICE), "SPLICE over PAD_SHEET")
+        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SETUP), "SETUP over PADS")
+        assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SETUP), "SETUP over PAD_SHEET")
+        assertEquals("◄ SETUP", chip(Place.SHELF, null, Bench.SETUP, Bench.HELP), "HELP over SETUP")
+
+        assertEquals("◄ MAKE", chip(Place.MAKE, null, Bench.SYNTH), "a lab on bare MAKE: the place, which has no stage")
+        assertEquals("◄ SHELF", chip(Place.SHELF, null, Bench.SNIPS), "SNIPS over the shelf")
+        assertEquals("◄ STACK", chip(Place.PROJECT, Stage.PADS, Bench.STACK, Bench.HELP), "a long label gives its short name")
+        assertEquals("◄ VERSIONS", chip(Place.PROJECT, Stage.PADS, Bench.VERSIONS, Bench.HELP), "a long label gives its short name")
+        assertNull(chip(Place.PROJECT, Stage.PADS), "a bare stage has nothing to go back from")
+    }
+
     @Test
     fun `per-place state survives a stage switch and a trip to another place`() {
         val nav = Navigation()
@@ -172,13 +285,34 @@ class NavigationTest {
     }
 
     @Test
-    fun `every bench is filed under a real place and names where it returns to`() {
+    fun `every bench has a label and a back name of at most 11 characters, which the chip over it reads`() {
         for (bench in Bench.entries) {
-            assertTrue(bench.backChip.startsWith("◄ "), "${bench.name}: a back chip points back")
-            assertTrue(bench.label.isNotBlank())
+            assertTrue(bench.label.isNotBlank(), "${bench.name}: a label")
+            assertTrue(bench.backName.isNotBlank(), "${bench.name}: a name for the chip over it")
+            // 11 is what a back chip holds beside the title ("INSTRUMENTS" is the longest the chips were drawn for).
+            assertTrue(bench.backName.length <= 11, "${bench.name}: '${bench.backName}' is longer than a back chip holds")
+            // Whatever is opened over it, the chip over this bench reads its backName.
+            val over = Navigation(Location(Place.PROJECT, Stage.PADS, listOf(bench, Bench.HELP)))
+            assertEquals("◄ ${bench.backName}", over.backChip, "${bench.name}: the chip of what is opened over it")
         }
-        assertEquals(setOf(Place.PROJECT), Bench.entries.filter { it.backChip == "◄ BEAT" }.map { it.home }.toSet())
-        assertEquals(setOf(Place.SHELF), Bench.entries.filter { it.backChip == "◄ SHELF" }.map { it.home }.toSet())
+    }
+
+    @Test
+    fun `a bench opened alone names the stage showing or the place, and the BEAT benches are filed under PROJECT and the shelf ones under SHELF`() {
+        for (bench in Bench.entries) {
+            val stage = Stage.defaultFor(bench.home)
+            val nav = Navigation(Location(bench.home, stage, listOf(bench)))
+            assertEquals("◄ ${stage?.label ?: bench.home.label}", nav.backChip, bench.name)
+        }
+        // What the retired grouping law pinned, with the home spelled out rather than read back from the bench.
+        for (bench in listOf(Bench.ORBIT, Bench.SONG, Bench.LOOP)) {
+            assertEquals(Place.PROJECT, bench.home, "${bench.name}: filed under PROJECT")
+            assertEquals("◄ BEAT", Navigation(Location(Place.PROJECT, Stage.BEAT, listOf(bench))).backChip, "${bench.name}: over BEAT")
+        }
+        for (bench in listOf(Bench.SNIPS, Bench.BIN, Bench.XRAY, Bench.DOUBLES)) {
+            assertEquals(Place.SHELF, bench.home, "${bench.name}: filed under SHELF")
+            assertEquals("◄ SHELF", Navigation(Location(Place.SHELF, null, listOf(bench))).backChip, "${bench.name}: over the shelf")
+        }
     }
 
     @Test
