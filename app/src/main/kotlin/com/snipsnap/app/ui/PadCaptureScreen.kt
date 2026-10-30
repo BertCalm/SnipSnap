@@ -50,7 +50,9 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.PadCapture
+import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
@@ -108,6 +110,43 @@ private enum class Gesture { GRAB, HOLD }
 // no crash" scenario a screen-local mutex here used to leave open. Only the
 // mutation itself is behind the lock; the snapshot/DSP/classify work above
 // it is read-only and stays concurrent.
+
+/** What [writeCaptureToPad] came to. */
+internal sealed interface CaptureWrite {
+    /** The capture is on the pad, and [kit] is the kit as saved. */
+    class Landed(val kit: Kit) : CaptureWrite
+
+    /** The pad held a sample when the write took its turn, so nothing was written and nothing was replaced. */
+    object SlotTaken : CaptureWrite
+}
+
+/**
+ * The write behind GRAB and HOLD: open the kit's folder, put [snip] on [slot],
+ * save. [KitBuilderModel.assign] replaces whatever the pad holds without
+ * asking, so the pad is looked at here, after the lock is taken and on the
+ * kit as it is on disk now, and a pad that has been filled since the screen
+ * opened is left as it is. That is the check that holds whatever navigation
+ * did: a GRAB still in flight when the user left and came back, or a
+ * long-press on the same pad meanwhile, cannot make a second capture replace
+ * the first.
+ *
+ * Open, check, assign and save share one lock acquisition, as every write to
+ * a kit folder must (`KitWrites`). The tape the capture came from is already
+ * on the shelf by now, so a refused capture is kept as a snip, not lost.
+ */
+internal suspend fun writeCaptureToPad(
+    dir: File,
+    slot: Int,
+    snip: Snip,
+    drumClass: DrumClass,
+    source: Map<String, String>,
+): CaptureWrite = KitWrites.mutex.withLock {
+    val model = KitBuilderModel.open(dir)
+    if (model.pad(slot) != null) return@withLock CaptureWrite.SlotTaken
+    model.assign(slot, snip, drumClass, drumClass.name.replace('_', ' '), source = source)
+    model.save()
+    CaptureWrite.Landed(model.kit)
+}
 
 /**
  * The capture surface: what a long-press on an empty [KitScreen] pad opens.
@@ -193,27 +232,29 @@ fun PadCaptureScreen(
         committing = gesture
         appScope.launch {
             try {
-                val updated: Kit? = withContext(Dispatchers.IO) {
+                val written: CaptureWrite? = withContext(Dispatchers.IO) {
                     val landing = producer() ?: return@withContext null
                     val tape = SnipStore.commitPrepared(landing.tape, snipsRoot, System.currentTimeMillis())
                     val snip = landing.pad
                     val cls = Classifier.classify(snip).drumClass
-                    KitWrites.mutex.withLock {
-                        val model = KitBuilderModel.open(entry.dir)
-                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = PadTape.tag(tape, landing))
-                        model.save()
-                        model.kit
-                    }
+                    writeCaptureToPad(entry.dir, slot, snip, cls, PadTape.tag(tape, landing))
                 }
-                if (updated == null) {
-                    // Distinguish the two null paths live, not off the
-                    // composition's `armed` param — a session can eject
-                    // mid-commit (EJECT from the notification, most likely),
-                    // and this read is what keeps the toast honest about
-                    // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) Copy.PAD_CAPTURE_NOT_LISTENING else nothingLabel)
+                if (written !is CaptureWrite.Landed) {
+                    // Tell the three apart live, not off the composition's
+                    // `armed` param — a session can eject mid-commit (EJECT
+                    // from the notification, most likely), and this read is
+                    // what keeps the toast honest about which of the null
+                    // paths actually happened. A pad filled meanwhile is a
+                    // third: it says so, and the screen stays as it is.
+                    onToast(
+                        when {
+                            written == CaptureWrite.SlotTaken -> Copy.PAD_CAPTURE_SLOT_TAKEN
+                            !MicSessionService.armed.value -> Copy.PAD_CAPTURE_NOT_LISTENING
+                            else -> nothingLabel
+                        },
+                    )
                 } else {
-                    onKitUpdated(updated)
+                    onKitUpdated(written.kit)
                     onToast(successLabel)
                     // `scope.isActive` guards ONLY this navigation — see the
                     // KDoc on `scope`'s declaration above for the disposed-

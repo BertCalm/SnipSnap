@@ -2526,6 +2526,8 @@ object Copy {
     const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
     /** HOLD's own empty snapshot - released before a single frame landed. */
     const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
+    /** GRAB/HOLD found the pad filled when the write took its turn (another capture landed, or a snip was placed, while the user was away), so nothing was written. */
+    const val PAD_CAPTURE_SLOT_TAKEN = "THAT PAD WAS FILLED WHILE YOU WERE AWAY. NOTHING WAS REPLACED."
     /** GRAB/HOLD's own landing toast: [verb] the gesture's own past-tense word ("GRABBED"/"RECORDED"), [pad] the pad it landed on. */
     fun padGestureLanded(verb: String, pad: String): String = "$verb → PAD $pad."
     /**

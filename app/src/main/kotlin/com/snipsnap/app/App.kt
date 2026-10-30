@@ -157,6 +157,7 @@ import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Stage
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.InstantKit
+import com.snipsnap.shell.KitBench
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.LandingNote
@@ -609,19 +610,22 @@ fun App(shelf: KitShelf) {
     // about a kit, though, and the history can bring it back after the user
     // has opened a different one: this is the kit it was opened for. Not
     // cleared by `clearTransientState` (Back can restore PADS with VERSIONS on
-    // top, and the screen needs it then). On arrival, opened or restored by
-    // Back, VERSIONS closes itself if that is not the kit open now
-    // (`openedForOpenKit`). One slot: the latest opening wins when the history
-    // holds more than one VERSIONS entry, and that is accepted.
+    // top, and the screen needs it then). VERSIONS asks `KitBench.verdict` once
+    // per arrival (opened, restored by Back, or the open kit changed) and closes
+    // itself if that is not the kit open now. One slot: the latest opening wins
+    // when the history holds more than one VERSIONS entry, and that is accepted.
     var versionsKitDir by remember { mutableStateOf<File?>(null) }
     // PAD CAPTURE (capture-to-pad) is a bench too (`Bench.PAD_CAPTURE`), opened
     // by the pad strip's CAPTURE door or by a long-press on an *empty* pad.
     // These two are its argument: the empty slot it fills, and the kit that slot
     // is on. Neither is cleared by `clearTransientState`, for the reason above.
     // On arrival it closes itself if that is not the kit open now, or if the
-    // slot is no longer empty: PadCaptureScreen writes over a filled pad
-    // without asking. A capture fills the slot and closes the screen itself, so
-    // the check never runs mid-use. One slot, latest opening wins, as above.
+    // slot is no longer empty, so it is never drawn over a filled pad. A GRAB
+    // still in flight from an earlier arrival is stopped at write time instead:
+    // PadCaptureScreen refuses to replace a filled pad. A capture fills the slot
+    // and closes the screen itself, and keeps the kit's folder, so the check
+    // never trips on the screen's own work. One slot, latest opening wins, as
+    // above.
     var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
     var padCaptureKitDir by remember { mutableStateOf<File?>(null) }
     // GRAIN FIELD: same shape as PAD SHEET/TAKES+BIN/PAD CAPTURE above — only
@@ -649,10 +653,10 @@ fun App(shelf: KitShelf) {
     // below are its argument. None is cleared by `clearTransientState`: Back
     // can restore BEAT with SONG on top, and the screen needs them then. They
     // belong to one kit's groove, so `arrangeKitDir` is the kit SONG was opened
-    // for, and on arrival SONG closes itself if that is not the kit open now.
-    // With no kit open at all it shows the same panel ORBIT does, so the user
-    // sees why. One slot: the latest opening wins when the history holds more
-    // than one SONG entry, and that is accepted.
+    // for, and on arrival SONG closes itself if that is not the kit open now
+    // (`KitBench.verdict`). With no kit open at all it shows the same panel
+    // ORBIT does, so the user sees why. One slot: the latest opening wins when
+    // the history holds more than one SONG entry, and that is accepted.
     var arrangeKitDir by remember { mutableStateOf<File?>(null) }
     // GROOVE's own swing/feel at the moment SONG ▸ was tapped — carried
     // across so ARRANGE plans the groove this screen is actually showing,
@@ -2639,7 +2643,10 @@ fun App(shelf: KitShelf) {
      * (`entry`, captured before the `await`); a match means `open` must be
      * repointed at the renamed `Entry`, or it keeps naming a directory that
      * no longer exists — the same identity-guard discipline every
-     * `onKitUpdated` closure elsewhere in this file already applies.
+     * `onKitUpdated` closure elsewhere in this file already applies. The same
+     * step repoints the folders VERSIONS, PAD CAPTURE and SONG were opened for
+     * (`versionsKitDir`, `padCaptureKitDir`, `arrangeKitDir`), so none of them
+     * sees the rename as a different kit.
      */
     fun renameKit(entry: KitShelf.Entry, newName: String) {
         if (busy != null) return
@@ -2651,6 +2658,14 @@ fun App(shelf: KitShelf) {
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     dock.say(Copy.kitRenamed(renamed.kit.name))
                     if (open?.dir == entry.dir) open = renamed
+                    // The benches opened for this kit follow it to its new
+                    // folder, in the same step as `open`, so a rename never
+                    // closes VERSIONS, PAD CAPTURE or SONG mid-use: they
+                    // compare the folder they were opened for with the open
+                    // kit's, and both moved.
+                    if (versionsKitDir == entry.dir) versionsKitDir = renamed.dir
+                    if (padCaptureKitDir == entry.dir) padCaptureKitDir = renamed.dir
+                    if (arrangeKitDir == entry.dir) arrangeKitDir = renamed.dir
                 } else {
                     dock.say(Copy.KIT_RENAME_FAILED)
                 }
@@ -3272,8 +3287,15 @@ fun App(shelf: KitShelf) {
     // shared path for the rest of its life, so the beat stops when one opens
     // (v1) and is not offered while one is up. The PADS grid is not among
     // them: it holds the same host the beat plays through.
+    //
+    // SONG counts only while it will draw ARRANGE, which is the verdict its own
+    // branch below acts on (`KitBench.verdict`). A SONG that Back restored for
+    // another kit draws nothing and closes itself on arrival, so the beat
+    // playing under it is not stopped for a screen that never opens; nor is it
+    // for SONG's no-kit panel, which makes no sound.
     val beatMustStop = location.top == Bench.ORBIT || location.top == Bench.SPLIT || location.top == Bench.LOOP ||
-        location.top == Bench.SONG
+        (location.top == Bench.SONG &&
+            KitBench.verdict(Bench.SONG, arrangeKitDir?.path, open?.dir?.path) == KitBench.Verdict.DRAW)
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -3301,22 +3323,6 @@ fun App(shelf: KitShelf) {
     var gearOpen by remember { mutableStateOf(false) }
     // The dock's capture choice (mic, or another app), the same shape.
     var captureSheetOpen by remember { mutableStateOf(false) }
-
-    /**
-     * Whether a bench opened for a kit ([openedFor], the dir recorded when it
-     * opened) still has that kit to work on: it is the kit open now. VERSIONS,
-     * PAD CAPTURE and SONG ask once per arrival (the bench opened, or Back
-     * restored it, or the open kit appeared or went away) and close themselves
-     * on a no, so the user is never shown one kit's versions, one kit's empty
-     * pad or one kit's groove over another kit.
-     *
-     * Never asked on a recomposition. A RESTORE in VERSIONS and a capture both
-     * rewrite the open kit, and they keep its `dir` (`open?.copy(kit = ...)`),
-     * so the dir is the identity that holds through both. A rename of the open
-     * kit (`renameKit`) gives it a new dir, so a bench restored after one
-     * closes: a false close, and the safe one.
-     */
-    fun openedForOpenKit(openedFor: File?): Boolean = openedFor != null && open?.dir == openedFor
 
     // System Back, root policy: with no KIT-scoped or shelf-level overlay
     // drawn (every such overlay owns its own BackHandler, mounted only while
@@ -3620,14 +3626,26 @@ fun App(shelf: KitShelf) {
                         }
                         // VERSIONS: a bench over PADS, opened from THIS KIT's
                         // VERSIONS + BIN ▸. It is about the kit it was opened
-                        // for; `fits` is decided once per arrival and a bench
-                        // that no longer fits draws nothing and closes, so the
-                        // open kit's versions are never shown in its place.
+                        // for; `KitBench.verdict` is asked once per arrival (the
+                        // bench opened, Back restored it, or the open kit
+                        // changed, appeared or went away: the keys are the
+                        // location and the open kit's folder) and a bench that
+                        // no longer fits draws nothing and closes, so the open
+                        // kit's versions are never shown in its place. Never
+                        // asked on a recomposition: a RESTORE rewrites the
+                        // open kit with `open?.copy(kit = ...)`, which keeps
+                        // its folder, so the screen's own work cannot trip it.
+                        // The effect closes only the location it judged.
                         top == Bench.VERSIONS -> {
                             val versionsEntry = open
-                            val fits = remember(location, versionsEntry == null) { openedForOpenKit(versionsKitDir) }
-                            LaunchedEffect(location, versionsEntry == null) { if (!fits) nav.closeBench() }
-                            if (fits && versionsEntry != null) {
+                            val openDir = versionsEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(Bench.VERSIONS, versionsKitDir?.path, openDir?.path)
+                            }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && versionsEntry != null) {
                                 TakesBinScreen(
                                     entry = versionsEntry,
                                     backLabel = checkNotNull(nav.backChip) { "VERSIONS is a bench, so it has something to go back to" },
@@ -3662,11 +3680,19 @@ fun App(shelf: KitShelf) {
                         top == Bench.PAD_CAPTURE -> {
                             val captureEntry = open
                             val captureSlot = padCaptureSlot
-                            val fits = remember(location, captureEntry == null) {
-                                openedForOpenKit(padCaptureKitDir) && captureSlot != null && captureEntry?.kit?.pad(captureSlot) == null
+                            val openDir = captureEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(
+                                    Bench.PAD_CAPTURE,
+                                    padCaptureKitDir?.path,
+                                    openDir?.path,
+                                    slotFilled = captureEntry?.let { e -> captureSlot?.let { s -> e.kit.pad(s) != null } },
+                                )
                             }
-                            LaunchedEffect(location, captureEntry == null) { if (!fits) nav.closeBench() }
-                            if (fits && captureEntry != null && captureSlot != null) {
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && captureEntry != null && captureSlot != null) {
                                 // Only `armed` is collected here — it changes
                                 // rarely. `level` is deliberately NOT collected
                                 // at this scope; PadCaptureScreen's own leaf
@@ -4250,16 +4276,21 @@ fun App(shelf: KitShelf) {
                         // instead, as ORBIT does, so the user sees why.
                         top == Bench.SONG -> {
                             val songEntry = open
-                            val fits = remember(location, songEntry == null) { songEntry == null || openedForOpenKit(arrangeKitDir) }
-                            LaunchedEffect(location, songEntry == null) { if (!fits) nav.closeBench() }
-                            if (songEntry == null) {
+                            val openDir = songEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(Bench.SONG, arrangeKitDir?.path, openDir?.path)
+                            }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.NO_KIT) {
                                 NoKitPanel(
                                     Copy.NO_KIT_FOR_SONG,
                                     hasProject = project != null,
                                     onAddFromShelf = ::addFromShelf,
                                     onNavigateKits = { goToScreen(AppScreen.KITS) },
                                 )
-                            } else if (fits) {
+                            } else if (verdict == KitBench.Verdict.DRAW && songEntry != null) {
                                 ArrangeScreen(
                                     entry = songEntry,
                                     backLabel = checkNotNull(nav.backChip) { "SONG is a bench, so it has something to go back to" },

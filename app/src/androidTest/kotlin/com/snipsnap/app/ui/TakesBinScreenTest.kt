@@ -79,15 +79,29 @@ class TakesBinScreenTest : ComposeScreenTest() {
         }
     }
 
+    /**
+     * The main screen is up: its header is drawn only once the kit has loaded
+     * on the IO dispatcher, which `waitForIdle` does not wait for. Until then
+     * the loading shell draws the same chip, so a test that asserted at once
+     * could be reading the shell's and never see the main screen's.
+     */
+    private fun waitForMainScreen() {
+        waitFor("the main screen's header") {
+            compose.onAllNodesWithText("VERSIONS + BIN").fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
     @Test
     fun the_back_chip_reads_the_label_it_is_given_in_full() {
         show(kit(), "◄ PADS")
+        waitForMainScreen()
         assertReadsInFull("◄ PADS")
     }
 
     @Test
     fun the_back_chip_is_spoken_as_back_to_that_screen_and_a_tap_calls_onBack() {
         show(kit(), "◄ PADS")
+        waitForMainScreen()
 
         button("BACK TO PADS").assertIsEnabled()
         assertEquals("nothing has closed it yet", 0, backs.get())
