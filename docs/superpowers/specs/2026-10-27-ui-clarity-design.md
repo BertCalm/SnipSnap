@@ -266,9 +266,9 @@ SnapScreen's `showLive`, `drawing` and `showField`, and the pad editor's
 - **Screens opened away from their home.** Some screens open on top of the
   current place rather than jumping to theirs: Synth from "Make from this
   pad", and Samples from "From samples". Their back label is derived from
-  what is below them, the way `Navigation.backChip` already does for the
-  gear's screens (`Navigation.kt:120-133`). The static `Bench.backChip`
-  becomes a fallback only.
+  what is below them: the `backName` of the screen below, else the stage,
+  else the place (`Navigation.backChip`). The static `Bench.backChip` is
+  gone; every back label is derived this way.
 - **Audition.** It stays a stage switch to Beat. Back returns through
   history to the pad editor, which history already records.
 - **The two-screen limit.** Help and Settings don't count toward it.
