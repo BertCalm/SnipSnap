@@ -3840,13 +3840,16 @@ class ConventionTest {
             raiseProblems("activateKit", raisesBeforeReturn, "SWITCHING_KIT_BUSY").any { "can return after" in it },
             "the raise check accepts a handler that raises `busy` and then returns early, leaving the flag up",
         )
+        // An early return before the raise is how activateKit is written, and a
+        // labelled return (`return@map`) between the raise and the launch is
+        // not an early return of the handler: neither may be flagged.
         val returnsBeforeRaise = stripCommentsAndStrings(
-            "if (busy != null) return\n        val p = project ?: return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        scope.launch {\n            try {\n                save(p)\n                return@launch\n            } finally {\n                busy = null\n            }\n        }\n",
+            "if (busy != null) return\n        val p = project ?: return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        val names = kits.map { return@map it.name }\n        scope.launch {\n            try {\n                save(p, names)\n            } finally {\n                busy = null\n            }\n        }\n",
         )
         assertEquals(
             emptyList(),
             raiseProblems("activateKit", returnsBeforeRaise, "SWITCHING_KIT_BUSY"),
-            "the raise check rejects a handler that returns early before it raises, or reads a `return@launch` as an early return",
+            "the raise check flags an early return that comes before the raise, or a labelled `return@map` between the raise and the launch",
         )
 
         val code = stripCommentsAndStrings(appKt.readText(Charsets.UTF_8))
