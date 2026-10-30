@@ -127,3 +127,12 @@ attack-plus-loop instruments remain separate work.
 - A separate dense recipe lets the first listen start with a controlled gesture.
 - The risky decision is the balance between a clear body and enough density to
   hear depletion. Measurements narrow the choice; listening decides it.
+
+## Revision after listening
+
+The owner found this first response too much like a voice being hit repeatedly.
+The [connected-body revision](WICK_RATTLE_COHESION.md) keeps the same controls
+and causal reserve network, with gentler openings and more audible body between
+pulses. The constants and measurements above describe the first audition; its
+C3/C4/C5 audio remains available as an exact diagnostic comparison. The revised
+response awaits owner listening.
