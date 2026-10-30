@@ -60,6 +60,29 @@ class PadSheetBoxesTest {
         }
     }
 
+    @Test
+    fun `a pedal board names each pedal and its AMT on the strip, and marks the pad as treated`() {
+        fun pick(key: String, amount: Float) = com.snipsnap.synth.PedalBoard.Pick(key, amount)
+        val two = com.snipsnap.synth.PedalBoard(listOf(pick("wahed", 0.7f), pick("driven", 1f)))
+        val pad = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = two).toJsonValue())
+        assertEquals("WAH 70% · DRIVE 100%", PadSheetBoxes.summaries(pad, null)[PadSheetBoxes.Box.TREATMENT])
+        assertTrue(PadSheetBoxes.isTouched(pad), "a board pad was UNTOUCHED on the grid")
+        // Six pedals, all heard (TOUCH after the amp, ROCK before it): the AMTs do not fit the strip, then the words do not either.
+        val six = listOf("compressed", "driven", "touchwahed", "forged", "delayed", "rockwahed")
+            .map { if (it == "touchwahed") com.snipsnap.synth.PedalBoard.Pick(it, 1f, com.snipsnap.synth.PedalSide.POST) else pick(it, 1f) }
+        assertEquals(six, PedalSlate.audible(six), "the fixture's six are all heard")
+        assertEquals("6 PEDALS", PadSheetBoxes.pedals(six))
+        val four = listOf("compressed", "driven", "touchwahed", "delayed").map { pick(it, 1f) }
+        assertEquals("SUSTAIN · DRIVE · TOUCH · DELAY", PadSheetBoxes.pedals(four))
+        for (b in listOf(two.picks, four, six)) assertTrue(PadSheetBoxes.pedals(b).length <= PadSheetBoxes.SUMMARY_CHARS)
+        // One pedal reads as a chip does, so the same DELAY at 70 reads one way whichever door made it.
+        assertEquals("DELAY · 70%", PadSheetBoxes.pedals(listOf(pick("delayed", 0.7f))))
+        // The strip names only what plays: WAH under TOUCH on one side is silent, and so is a pick at AMT 0.
+        val shadowed = com.snipsnap.synth.PedalBoard(listOf(pick("wahed", 0.7f), pick("touchwahed", 0.7f), pick("driven", 0f)))
+        val shadowedPad = bare.copy(recipe = com.snipsnap.synth.PadRecipe(pedals = shadowed).toJsonValue())
+        assertEquals("TOUCH · 70%", PadSheetBoxes.summaries(shadowedPad, null)[PadSheetBoxes.Box.TREATMENT])
+    }
+
     /**
      * J36: KIT's grid showed nothing to tell a treated pad from a raw one,
      * so sixteen treated pads could only be told apart by holding each in

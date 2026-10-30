@@ -21,6 +21,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PedalSlate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -147,6 +148,8 @@ class PadSheetScreenTest : ComposeScreenTest() {
                 workshopOpen = false,
                 openBox = openBoxState,
                 onOpenBox = { openBoxState = it },
+                pedalRow = PedalSlate.DEFAULT,
+                onPedalRowChange = {},
             )
         }
         // KitBuilderModel.open runs inside a LaunchedEffect(entry.dir), so

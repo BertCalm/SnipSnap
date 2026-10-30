@@ -430,7 +430,7 @@ class UatSimTest {
         // apply a treatment for real
         val slot = model.kit.pads.first().slot
         val before = model.pad(slot)!!
-        say("  applying every segment the card draws, the way the screen does (PadSheet.treatmentFor):")
+        say("  applying every segment the card can dispatch, the way the screen does (PadSheet.treatmentFor):")
         PadSheet.ALL_SEGMENTS.forEach { seg ->
             val t = runCatching { PadSheet.treatmentFor(seg) }.getOrNull()
             if (t == null) {

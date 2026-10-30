@@ -7,6 +7,7 @@ import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
 import com.snipsnap.synth.ContourConfig
+import com.snipsnap.synth.ContourEdgeResponse
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourRelation
 import com.snipsnap.synth.ContourTable
@@ -608,25 +609,49 @@ class UserPresetsTest {
                     "ampRelease = 0.42f, sustainSeconds = 0.75f, " +
                     "filterAttack = 0.005f, filterDecay = 0.5f, filterAmount = 0.6f, " +
                     "motionShape = ContourMotionShape.FALL, motionSeconds = 1.2f, " +
-                    "filterType = ContourFilterType.LOW_PASS, loopSeconds = 2.0f)",
+                    "filterType = ContourFilterType.LOW_PASS, loopSeconds = 2.0f, " +
+                    "edgeResponse = ContourEdgeResponse.LEGACY)",
                 constructor,
                 "the pasteable Kotlin constructor retains the exact architecture, including all five revised fields",
             )
-            // Read the emitted constructor's own literals into the patch decoder. Any omitted
-            // revised field falls back to neutral legacy state and changes this recipe.
-            val fields = constructor.removePrefix("ContourConfig(").removeSuffix(")").split(", ").associate { entry ->
-                val (name, literal) = entry.split(" = ", limit = 2)
-                name to if (literal.endsWith("f")) JsonValue.Num(literal.dropLast(1).toDouble())
-                    else JsonValue.Str(literal.substringAfterLast('.'))
-            }
-            val promoted = ContourPatch.fromJsonValue(JsonValue.Obj(
-                saved.toJsonValue().entries + ("config" to JsonValue.Obj(fields)),
-            )) as ContourPatch
+            val promoted = contourWithPromotedConfig(saved, line)
             assertEquals(source.config, promoted.config, "promotion reconstructs the saved contour and independent edge envelope")
             assertEquals(source, promoted, "all audible recipe fields survive promotion")
         } finally {
             root.deleteRecursively()
         }
+    }
+
+    @Test
+    fun `Contour promotion reconstructs every saved EDGE response law`() {
+        for (response in ContourEdgeResponse.entries) {
+            val source = ContourPatch(
+                "MY RESPONSE", ContourVoice.BASS,
+                linkedMapOf("TUNE" to .5f, "SCAN" to .30f, "OFFSET" to .45f, "MOTION" to .48f,
+                    "FILTER" to .58f, "DRIVE" to .20f, "HOLD" to 0f, "EDGE" to .73f),
+                config = ContourConfig.forVoice(ContourVoice.BASS).copy(edgeResponse = response),
+                velocity = .3f,
+            )
+            val promoted = contourWithPromotedConfig(source, UserPresets.rosterLine(source))
+            assertEquals(response, promoted.config.edgeResponse,
+                "$response: promotion must reconstruct the saved EDGE law instead of falling back to LEGACY")
+            assertEquals(source.config, promoted.config, "$response: every configuration field survives promotion")
+            assertEquals(source, promoted, "$response: the promoted patch retains its complete recipe")
+        }
+    }
+
+    private fun contourWithPromotedConfig(source: ContourPatch, line: String): ContourPatch {
+        // Decode the emitted constructor's literals, so omitted fields use the public
+        // decoder's defaults. A missing EDGE response must fail for non-legacy recipes.
+        val constructor = line.substringAfter("config = ").substringBefore(", velocity = ")
+        val fields = constructor.removePrefix("ContourConfig(").removeSuffix(")").split(", ").associate { entry ->
+            val (name, literal) = entry.split(" = ", limit = 2)
+            name to if (literal.endsWith("f")) JsonValue.Num(literal.dropLast(1).toDouble())
+                else JsonValue.Str(literal.substringAfterLast('.'))
+        }
+        return ContourPatch.fromJsonValue(JsonValue.Obj(
+            source.toJsonValue().entries + ("config" to JsonValue.Obj(fields)),
+        )) as ContourPatch
     }
 
     /**

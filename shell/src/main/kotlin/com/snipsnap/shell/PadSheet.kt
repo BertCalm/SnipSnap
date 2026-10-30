@@ -16,7 +16,9 @@ import com.snipsnap.synth.Treatments
  * damage done to it. Row four is what happens to it in time — repeats,
  * rooms, the grid. Row five is the machine's own transport. Row six is
  * the keyed family ([Keyed]), the treatments that read the kit's own key
- * and tempo. Row seven is the pedals ([PEDAL_SEGMENTS]), grouped by what an effect *is*.
+ * and tempo. Row seven is the pedals, grouped by what an effect *is*: today the slate's
+ * ([PEDAL_SEGMENTS]) first six ([ROWS]), and five of it and [MORE] once the app draws the slate's
+ * card ([rows], [PedalSlate]).
  * Every row is a vocabulary mapping and nothing more: the words are the
  * app's, not the engine's, so [Eras] and [Treatments] never learn what a
  * "segment" is.
@@ -92,29 +94,64 @@ object PadSheet {
     val KEYED_SEGMENTS: List<String> = listOf(TUNE, "BODY", "WOBBLE", "ETERNAL")
 
     /**
-     * Row seven, the pedals: the guitar-pedal words over the rack's own sections (the pedal board's
-     * Stage 0, docs/superpowers/specs/2026-10-04-pedal-board-design.md). The one row grouped by what an
-     * effect *is* rather than what it does: a guitarist looks for a pedal by its name. Derived from the
-     * pedal library ([com.snipsnap.synth.Pedals]): the entries that passed their gate, in library
-     * order, so WAH, TREM, FLANGE and the rest join the row the moment their `gated` flag turns
+     * The slate: every pedal the card can put on a pad, the guitar-pedal words over the rack's own
+     * sections (the pedal board's Stage 0, docs/superpowers/specs/2026-10-04-pedal-board-design.md). The
+     * one family grouped by what an effect *is* rather than what it does: a guitarist looks for a pedal
+     * by its name. Derived from the pedal library ([com.snipsnap.synth.Pedals]): the entries that passed
+     * their gate, in library order, so TREM, FLANGE and the rest join the moment their `gated` flag turns
      * (docs/superpowers/specs/2026-10-21-pedal-library-and-board-design.md). A board entry (RIG) is not a
-     * character and waits for the picker (R2) to draw it.
+     * character and is not on the slate.
+     *
+     * Row seven draws five of these, the user's choice and the same everywhere, then [MORE], which
+     * holds them all ([rows], [PedalSlate];
+     * docs/superpowers/specs/2026-10-28-pedal-slate-design.md). Every slate word is a segment whether
+     * the row draws it or not, so a pedal tapped behind MORE dispatches like one on the row.
      */
     val PEDAL_SEGMENTS: List<String> = com.snipsnap.synth.Pedals.gated().filter { !it.isBoard }.map { it.word }
 
+    /** No row may be wider: past six, every chip is too narrow to read or hit on a phone. */
+    const val MAX_ROW_CHIPS = 6
+
     /**
-     * All rows, in drawing order. Six of the seven are grouped by what an
-     * effect *does*, not by which family implements it: ROLL and GATE are
-     * keyed treatments sitting on the TIME row because that is what they
-     * sound like, the way TUNE has always sat among the characters. The
-     * seventh, the pedals, is grouped by what an effect *is*.
+     * Row seven's last chip: it opens the slate. A sheet affordance, not a segment (the pedal library
+     * design, section 9): it is in no segment list, so [treatmentFor] refuses it and the screen must
+     * route it before asking.
      */
-    val ROWS: List<List<String>> = listOf(
-        SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS, PEDAL_SEGMENTS,
+    const val MORE = "MORE"
+
+    /** Rows one to six, which every card draws the same. */
+    private val FIXED_ROWS: List<List<String>> = listOf(
+        SEGMENTS, ANATOMY_SEGMENTS, CHARACTER_SEGMENTS, TIME_SEGMENTS, TRANSPORT_SEGMENTS, KEYED_SEGMENTS,
     )
 
-    /** Every segment on any row. */
-    val ALL_SEGMENTS: List<String> get() = ROWS.flatten()
+    /**
+     * The card the app draws today, in drawing order. Six of the seven rows are grouped by what an
+     * effect *does*, not by which family implements it: ROLL and GATE are keyed treatments sitting on
+     * the TIME row because that is what they sound like, the way TUNE has always sat among the
+     * characters. The seventh, the pedals, is grouped by what an effect *is*.
+     *
+     * Row seven here is the slate's first [MAX_ROW_CHIPS] in library order, the six it drew before DELAY
+     * joined the slate. The app keeps drawing this until it draws [rows] with [MORE] (the slate design's
+     * app round), so no pedal leaves the phone before MORE exists to reach it.
+     */
+    val ROWS: List<List<String>> = FIXED_ROWS + listOf(PEDAL_SEGMENTS.take(MAX_ROW_CHIPS))
+
+    /**
+     * The slate's card: rows one to six as they are, then row seven as [pedals] (the words of the
+     * user's [PedalSlate.Row]) and [MORE]. Refuses a word off the slate, a duplicate, or a row too wide
+     * to leave room for MORE. A library with no gated pedals draws MORE alone.
+     */
+    fun rows(pedals: List<String>): List<List<String>> {
+        require(pedals.size < MAX_ROW_CHIPS) { "row seven draws at most ${MAX_ROW_CHIPS - 1} pedals and MORE, got ${pedals.size}" }
+        require(pedals.distinct().size == pedals.size) { "row seven draws a pedal twice: $pedals" }
+        for (word in pedals) require(word in PEDAL_SEGMENTS) {
+            "'$word' is not on the slate - it holds: ${PEDAL_SEGMENTS.joinToString(", ")}"
+        }
+        return FIXED_ROWS + listOf(pedals + MORE)
+    }
+
+    /** Every segment the card can dispatch: rows one to six and the whole slate, on row seven or behind [MORE]. */
+    val ALL_SEGMENTS: List<String> get() = FIXED_ROWS.flatten() + PEDAL_SEGMENTS
 
     /**
      * Where the AMT stepper sits when a pad has never been treated. 70,
@@ -255,12 +292,13 @@ object PadSheet {
     }
 
     /**
-     * What tapping [segment] does, whatever row it sits on, or null for [NONE].
-     * Throws on a segment the card does not draw.
+     * What tapping [segment] does, whatever row it sits on (a slate pedal behind
+     * [MORE] included), or null for [NONE]. Throws on a word that is not a
+     * segment, [MORE] among them.
      */
     fun treatmentFor(segment: String): Treatment? {
         require(segment in ALL_SEGMENTS) {
-            "unknown pad-sheet segment '$segment' - the card draws: ${ALL_SEGMENTS.joinToString(", ")}"
+            "unknown pad-sheet segment '$segment' - the card's segments: ${ALL_SEGMENTS.joinToString(", ")}"
         }
         ERA_FOR[segment]?.let { return Treatment.Era(it) }
         CHARACTER_FOR[segment]?.let { return Treatment.Character(it) }

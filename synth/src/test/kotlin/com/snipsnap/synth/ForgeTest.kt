@@ -293,6 +293,12 @@ class ForgeTest {
         val mid = rows[2]
         assertTrue(mid.second < 2 * rigid.second, "at YIELD 0.5 the body distorts: ${mid.second} against ${rigid.second} rigid")
         assertTrue(mid.third > 1.5 * rigid.third, "at YIELD 0.5 the attack does not fold: ${mid.third} against ${rigid.third} rigid")
+
+        // The harsh middle is still on the knobs: DEPTH 1 is the AS_BUILT medium it was heard on. Measured
+        // body share 0.0866 at YIELD 0.25 against 0.0206 at YIELD 0 (DEPTH 0.75: 0.0531 against 0.0332).
+        val deep = listOf(0f, 0.25f).map { y -> bandShare(forge(kick, "YIELD" to y, "ARREST" to 0f, "DEPTH" to 1f).samples, 200f, 20_000f, body) }
+        println("FORGE YIELD 0 / 0.25 on the kick at DEPTH 1 (ARREST 0), body share: ${deep.joinToString { "%.4f".format(it) }}")
+        assertTrue(deep[1] > 2 * deep[0], "DEPTH 1 lost the harsh middle: $deep")
     }
 
     @Test

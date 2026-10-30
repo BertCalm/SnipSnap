@@ -76,12 +76,12 @@ the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 64 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 65 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
-MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, TREFOIL, ORIGAMI, OHM,
+MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL and CHAMBER.
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
@@ -238,10 +238,13 @@ RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
 seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds a 100-clip page covering the
-bank, musical performances, velocity response, starter pads and a separate PULSE
-mapping comparison. The owner approved the 36-preset bank's sound on 2026-10-21;
-hands-on device verification and the candidate PULSE mapping's listen remain open.
+pads. `:synth:generateRelayPerformanceAudition` builds an 88-clip page covering the
+bank, musical performances, velocity response, starter pads and six PULSE
+0-versus-1 pairs. The full-range diagnostic changes only PULSE in copies of the
+same six finite recipes; the production control and saved model stay unchanged.
+The earlier eased mapping was not adopted after the owner reported no audible
+difference on 2026-10-26. The owner approved the 36-preset bank's sound on
+2026-10-21; hands-on device verification remains open.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds

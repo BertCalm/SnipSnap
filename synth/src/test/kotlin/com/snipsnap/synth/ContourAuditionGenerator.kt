@@ -334,7 +334,7 @@ object ContourAuditionGenerator {
     }
 
     private fun cases(quick: Boolean): List<Case> = buildList {
-        for (preset in ContourPresets.all()) add(Case("preset_${slug(preset.name)}", "presets", "Nine provisional recipes", preset.name,
+        for (preset in ContourPresets.original()) add(Case("preset_${slug(preset.name)}", "presets", "Nine original recipes", preset.name,
             presetDescriptions.getValue(preset.name),
             preset.voice, preset.macros, preset.velocity, preset.config, includeNormalized = true, featured = true))
         val controlReferences = listOf("Moving Corner", "Copper Scan", "Twin Outline")

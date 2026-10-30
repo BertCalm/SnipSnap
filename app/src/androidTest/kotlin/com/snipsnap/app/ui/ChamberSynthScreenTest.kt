@@ -126,10 +126,13 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
     fun picker_reaches_both_finite_voices_and_their_factory_presets() {
         val settings = mutableMapOf("engine" to "FILAMENT", "voice" to "THREAD")
         show(shelf(), settings)
-        press("ENGINE FILAMENT · TAP FOR NEXT")
-        press("ENGINE APSIS · TAP FOR NEXT")
-        press("ENGINE TIDAL · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE CHAMBER · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE APSIS. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE TIDAL. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE CHAMBER. CHOOSE ENGINE").assertExists()
         for (voice in ChamberVoice.entries) {
             press(voice.name)
             val preset = ChamberPresets.forVoice(voice).last()
@@ -142,8 +145,9 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertFiniteControls()
         }
         // The new entry retains the existing cycle back to LATTICE.
-        press("ENGINE CHAMBER · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE LATTICE · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE CHAMBER. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE LATTICE. CHOOSE ENGINE").assertExists()
     }
 
     @Test
