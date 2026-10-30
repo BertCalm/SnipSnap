@@ -8,6 +8,7 @@ import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
+import kotlin.math.ln
 import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -172,15 +173,15 @@ internal object TremorV2 {
     fun frequencyFor(voice: TremorVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
     /**
-     * Authored pad filing, normally aligned with generic file-import classification.
+     * Authored pad roles, retained across saved renderers.
      *
      * A short HIDE files KICK through A#2 (the centroid sits under the kick stretch) and TOM from
      * C3 through F3. C4 leaves the bass band and files PERC. A dense fault on a low note lifts the
      * centroid out of that kick rule and files TOM. HOLD at [HOLD_LOOP] or above is past 1.5 s and
-     * files LOOP by the length rule. Factory roles can intentionally override the generic
-     * classifier: SETTLING BED stays TOM despite its audible bead texture, and CHARGED TAIL
-     * stays PERC after its feedback tone was removed. Kit and preset tests pin those roles
-     * explicitly and compare the other factory sounds with generic classification.
+     * files LOOP by the length rule. Brighter model-2 contacts and pickups can cross generic
+     * file-import labels, including CLAP for bead textures. Kit and preset tests pin the
+     * authored roles separately from those measured labels; the classifier does not retune
+     * the accepted audio or move a saved factory pad to a different role.
      */
     fun drumClassFor(voice: TremorVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
@@ -292,7 +293,28 @@ internal object TremorV2 {
             strikeB[s] = participation(s, contactStrike)
             strikeTraces.add(TremorStrike(s, delay, imp))
         }
+        if (!hold) coordinateContacts(strikeStart, strikeForce, strikeB, headAudioRad, hz, rate, strike,
+            latestStart = (UNISON_SECONDS * rate).toInt())
         val micro = if (hold) reshapeContact(pulse(pulseSamples(strike, rate).coerceAtMost(loopInternal / 8), impulse * 0.22, rate, strike, drummers), vel, hz, rate) else DoubleArray(0)
+
+        val microStart = IntArray(4) { it * loopInternal / 48 }
+        if (hold) {
+            val microForce = Array(4) { s ->
+                if (weights[s] > 1e-4) DoubleArray(micro.size) { micro[it] * weights[s] }
+                else DoubleArray(0)
+            }
+            coordinateContacts(microStart, microForce, strikeB, headAudioRad, hz, rate, strike)
+            // HOLD begins with both the main strike and the first recurring contact group.
+            // Plan their combined attack, while keeping the recurring timing fixed.
+            val attackStart = strikeStart + microStart
+            coordinateContacts(attackStart, strikeForce + microForce, strikeB + strikeB,
+                headAudioRad, hz, rate, strike, strikeForce.size, (UNISON_SECONDS * rate).toInt())
+            for (s in strikeStart.indices) strikeStart[s] = attackStart[s]
+        }
+        for (i in strikeTraces.indices) {
+            val hit = strikeTraces[i]
+            strikeTraces[i] = hit.copy(sample = strikeStart[hit.index])
+        }
 
         val cageMix = CAGE_FLOOR + (1.0 - CAGE_FLOOR) * cage
         val loops = Array(STRINGS) { i ->
@@ -408,7 +430,7 @@ internal object TremorV2 {
                 val phase = n % loopInternal
                 for (s in 0 until 4) {
                     if (weights[s] <= 1e-4) continue
-                    val k = phase - (s * loopInternal / 48)
+                    val k = phase - microStart[s]
                     if (k in micro.indices) {
                         val force = micro[k] * weights[s]
                         head.drive(strikeB[s], force)
@@ -813,6 +835,143 @@ internal object TremorV2 {
         val n = 1.0 / sqrt(sum)
         for (i in w.indices) w[i] *= n
         return w
+    }
+
+    /**
+     * Keep a signed multi-contact strike from cancelling the requested membrane anchor.
+     * The finite, already-generated force kernels are projected onto each damped head mode;
+     * their displacement and audible pickup predict the first 370 ms of the struck body.
+     * If the anchor wins, sampled timing is returned exactly. Otherwise a bounded, local
+     * timing solve reinforces the real head motion. No force, participation, gain or random
+     * draw changes. Initial contacts keep the 12 ms unison window; recurring contacts retain
+     * their existing spread. Retiming changes mechanical work even though impulses are unchanged.
+     */
+    private fun coordinateContacts(starts: IntArray, force: Array<DoubleArray>,
+                                   participation: Array<DoubleArray>, radiation: DoubleArray,
+                                   hz: Double, rate: Int, strike: Double, movable: Int = force.size,
+                                   latestStart: Int = Int.MAX_VALUE) {
+        if (force.count { it.isNotEmpty() } < 2) return
+        val decay = DoubleArray(HEAD_MODES)
+        val omega = DoubleArray(HEAD_MODES)
+        val bodyWeight = DoubleArray(HEAD_MODES)
+        val re = Array(force.size) { DoubleArray(HEAD_MODES) }
+        val im = Array(force.size) { DoubleArray(HEAD_MODES) }
+        val horizon = 0.37
+        val windowOmega = 2.0 * PI / horizon
+        for (mode in HEAD.indices) {
+            val ratio = HEAD[mode].second
+            omega[mode] = 2.0 * PI * hz * ratio / rate
+            val t60 = (0.48 + 0.25 * (1.0 - strike)) / (1.0 + 0.55 * (ratio - 0.6))
+            val loss = ln(1000.0) / t60
+            decay[mode] = loss / rate
+            val window = 0.5 * (1.0 - exp(-loss * horizon)) * windowOmega * windowOmega /
+                (loss * (loss * loss + windowOmega * windowOmega))
+            bodyWeight[mode] = radiation[mode] / (omega[mode] * rate) * window
+            val gain = exp(decay[mode])
+            val stepRe = gain * cos(omega[mode])
+            val stepIm = -gain * sin(omega[mode])
+            for (s in force.indices) {
+                var phaseRe = 1.0
+                var phaseIm = 0.0
+                var sumRe = 0.0
+                var sumIm = 0.0
+                for (f in force[s]) {
+                    sumRe += f * phaseRe
+                    sumIm += f * phaseIm
+                    val nextRe = phaseRe * stepRe - phaseIm * stepIm
+                    phaseIm = phaseRe * stepIm + phaseIm * stepRe
+                    phaseRe = nextRe
+                }
+                re[s][mode] = sumRe * participation[s][mode] / rate * bodyWeight[mode]
+                im[s][mode] = sumIm * participation[s][mode] / rate * bodyWeight[mode]
+            }
+        }
+        val times = DoubleArray(force.size) { if (force[it].isEmpty()) 0.0 else starts[it].toDouble() }
+        val modalRe = Array(force.size) { DoubleArray(HEAD_MODES) }
+        val modalIm = Array(force.size) { DoubleArray(HEAD_MODES) }
+        val totalRe = DoubleArray(HEAD_MODES)
+        val totalIm = DoubleArray(HEAD_MODES)
+        val power = DoubleArray(HEAD_MODES)
+        fun measure(at: DoubleArray, contacts: Int): Double {
+            for (mode in HEAD.indices) {
+                var r = 0.0
+                var q = 0.0
+                for (s in 0 until contacts) {
+                    if (force[s].isEmpty()) continue
+                    val gain = exp(decay[mode] * at[s])
+                    val c = gain * cos(omega[mode] * at[s])
+                    val d = -gain * sin(omega[mode] * at[s])
+                    modalRe[s][mode] = re[s][mode] * c - im[s][mode] * d
+                    modalIm[s][mode] = re[s][mode] * d + im[s][mode] * c
+                    r += modalRe[s][mode]
+                    q += modalIm[s][mode]
+                }
+                totalRe[mode] = r
+                totalIm[mode] = q
+                power[mode] = r * r + q * q
+            }
+            val upper = (1 until HEAD_MODES).maxOf { power[it] }
+            return sqrt(power[0] / max(1e-60, upper))
+        }
+        fun ratio(at: DoubleArray): Double {
+            val combined = measure(at, force.size)
+            if (movable == force.size) return combined
+            // A later recurring contact can mask cancellation of the main strike in the
+            // combined projection. Both the struck onset and its full layering must retain
+            // the anchor; the same bounded solve moves the main contacts only once.
+            val onset = measure(at, movable)
+            return if (onset < combined) onset else measure(at, force.size)
+        }
+        val original = ratio(times)
+        if (original >= 1.0) return
+        // The extra margin shrinks continuously to zero as the original strike approaches
+        // modal balance. The correction therefore starts with an infinitesimal timing move.
+        val wanted = 2.0 - original
+        val period = rate / hz
+        var current = original
+        val gradient = DoubleArray(force.size)
+        repeat(48) {
+            if (current >= wanted) return@repeat
+            ratio(times)
+            val upper = (1 until HEAD_MODES).maxBy { power[it] }
+            var norm = 0.0
+            for (s in 1 until movable) {
+                if (force[s].isEmpty()) continue
+                fun slope(mode: Int): Double {
+                    val r = totalRe[mode] * modalRe[s][mode] + totalIm[mode] * modalIm[s][mode]
+                    val q = totalRe[mode] * modalIm[s][mode] - totalIm[mode] * modalRe[s][mode]
+                    return (decay[mode] * r + omega[mode] * q) / max(1e-60, power[mode])
+                }
+                val g = slope(0) - slope(upper)
+                val lower = max(0.0, starts[s] - period * 0.5)
+                val upper = min(starts[s] + period * 0.5, latestStart.toDouble())
+                gradient[s] = if ((times[s] <= lower && g < 0.0) ||
+                    (times[s] >= upper && g > 0.0)) 0.0 else g
+                norm += gradient[s] * gradient[s]
+            }
+            if (norm < 1e-30) return@repeat
+            var step = ln(wanted / max(1e-30, current)) / norm
+            val largest = (1 until movable).maxOf { abs(gradient[it] * step) }
+            if (largest > period * 0.05) step *= period * 0.05 / largest
+            val proposal = times.copyOf()
+            var accepted = false
+            repeat(10) {
+                if (!accepted) {
+                    for (s in 1 until movable) if (force[s].isNotEmpty()) {
+                        proposal[s] = (times[s] + gradient[s] * step).coerceIn(
+                            max(0.0, starts[s] - period * 0.5),
+                            min(starts[s] + period * 0.5, latestStart.toDouble()))
+                    }
+                    val next = ratio(proposal)
+                    if (next > current) {
+                        proposal.copyInto(times)
+                        current = next
+                        accepted = true
+                    } else step *= 0.5
+                }
+            }
+        }
+        for (s in 1 until movable) if (force[s].isNotEmpty()) starts[s] = times[s].roundToInt()
     }
 
     private fun pulseSamples(strike: Double, rate: Int): Int {

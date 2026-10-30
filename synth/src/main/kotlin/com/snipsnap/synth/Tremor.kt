@@ -2,6 +2,7 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+
 /**
  * TREMOR — a tuned hide drum, up to four coordinated strikers, loose beads on an internal tray,
  * and a six-string cage with a powered pickup/actuator and load faults.
@@ -41,7 +42,7 @@ data class TremorProbe(
     val circuit: Boolean = true,
 )
 
-/** One coordinated strike, in internal samples. [force] sums to the impulse when multiplied by the sample period. */
+/** One coordinated strike, with its onset in internal samples and the integrated force impulse. */
 data class TremorStrike(
     val index: Int,
     val sample: Int,

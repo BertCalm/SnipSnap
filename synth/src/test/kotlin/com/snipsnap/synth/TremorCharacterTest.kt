@@ -84,6 +84,40 @@ class TremorCharacterTest {
             val r = Tremor.play(TremorVoice.UNISON, macros)
             assertAnchor(r.snip.samples, Tremor.frequencyFor(TremorVoice.UNISON, tune), "UNISON coordination TUNE$tune ENSEMBLE$ensemble STRIKE$strike")
             assertEquals(0, r.railHits)
+            assertTrue(r.strikes.all { it.sample in 0..(0.012 * Dsp.RATE * Dsp.OVERSAMPLE).toInt() },
+                "anchor coordination turned the initial group into a roll: ${r.strikes}")
+        }
+    }
+
+    @Test
+    fun `anchor coordination keeps late contacts inside the initial unison window`() {
+        val voice = TremorVoice.CHARGE
+        val macros = Tremor.defaults(voice) + mapOf(
+            "TUNE" to 4 / 24f, "STRIKE" to .879606f, "ENSEMBLE" to .44305366f,
+        )
+        // Without the initial-window ceiling the prepared striker at 11.780 ms moved to
+        // 12.851 ms. Coordination must respect the instrument's existing 12 ms group.
+        for (hold in listOf(0f, 1f)) {
+            val r = Tremor.play(voice, macros + ("HOLD" to hold))
+            assertTrue(r.strikes.all { it.sample in 0..(0.012 * Dsp.RATE * Dsp.OVERSAMPLE).toInt() },
+                "anchor coordination exceeded the initial unison window at HOLD$hold: ${r.strikes}")
+            assertAnchor(r.snip.samples, Tremor.frequencyFor(voice, macros.getValue("TUNE")), "late CHARGE contacts HOLD$hold")
+        }
+    }
+
+    @Test
+    fun `crowded high held bead strikes retain the requested note in the attack and loop`() {
+        val voice = TremorVoice.ROLL
+        val macros = Tremor.defaults(voice).mapValues { 1f }
+        for (velocity in listOf(0.9f, 1f)) {
+            val r = Tremor.play(voice, macros, velocity)
+            val wanted = Tremor.frequencyFor(voice, 1f)
+            // The uncoordinated R4 attack and recurring contacts promoted a membrane mode
+            // roughly 507 cents above C4. Check the actual exported attack and held segment.
+            assertAnchor(r.snip.samples, wanted, "ROLL held C4 attack touch$velocity")
+            assertAnchor(r.snip.samples.copyOfRange(r.loopStart, r.snip.frameCount), wanted,
+                "ROLL held C4 loop touch$velocity")
+            assertEquals(0, r.railHits)
         }
     }
 
@@ -143,7 +177,7 @@ class TremorCharacterTest {
         val (re, im) = spectrum(samples, 16384, n)
         fun magnitude(k: Int) = sqrt(re[k].toDouble() * re[k] + im[k].toDouble() * im[k])
         val from = (20.0 * n / Dsp.RATE).toInt().coerceAtLeast(1)
-        val to = (4000.0 * n / Dsp.RATE).toInt()
+        val to = n / 2 - 2
         val bin = (from..to).maxBy { magnitude(it) }
         val a = ln(magnitude(bin - 1).coerceAtLeast(1e-30))
         val b = ln(magnitude(bin).coerceAtLeast(1e-30))
