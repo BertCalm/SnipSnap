@@ -24,16 +24,16 @@ import kotlin.random.Random
 enum class ScourVoice { PLATE, PANE }
 
 /**
- * SCOUR: a free plate is rolled against, then blasted with shot. Each shot dents the surface, the
- * dented fraction (coverage) climbs toward saturation, and the plate's upper partials climb with it
- * while RING decides whether its ring grows or tightens. When the blast stops the plate rings out in
- * the state the blast left. The characteristic gesture is rolling contact, shot blast, coverage
- * builds and the plate stiffens, then a hardened ring that keeps its tuning (PLATE) or gives it back
- * (PANE).
+ * SCOUR: an impact that builds. A roller spins up against a free plate while shot rains on it faster and
+ * harder; each shot dents the surface, the dented fraction (coverage) climbs, and the plate's upper
+ * partials climb with it, so the build rises. Then one heavy slam lands and the hardened plate rings
+ * out. The characteristic gesture is the roller spins up, the shot rain accelerates, the plate stiffens
+ * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE) or
+ * giving it back as it rings (PANE).
  *
- * Computed: the roller's Coulomb spin-down, read against a fixed surface at its contact phase; a
- * seeded Poisson shot schedule; coverage by the random-dent recursion `S += κ·e·(1 − S)`; the plate,
- * a [Modes.Bank]. Analogy: coverage moving the modal frequencies and damping (real cold work raises
+ * Computed: the roller's spin-up, read against a fixed surface at its contact phase; a seeded Poisson
+ * shot schedule whose rate rises twentyfold over the build; coverage by the random-dent recursion
+ * `S += κ·e·(1 − S)`; the plate, a [Modes.Bank]. Analogy: coverage moving the modal frequencies and damping (real cold work raises
  * yield strength and barely the stiffness). Not simulated: plastic flow, residual stress, curvature,
  * rebound, stick-slip, air. The design is
  * docs/superpowers/specs/2026-10-26-scour-engine-engineering-spec.md; every constant marked shape
@@ -46,30 +46,32 @@ enum class ScourVoice { PLATE, PANE }
  *
  * The strike weights keep the root at full weight. A real free plate's root (the round plate's (2,0)
  * mode, the square's twisting mode) has no motion at the centre, so a real centre strike would not
- * sound the note; this departure is deliberate. The blast lands where R1's TRAVERSE default put it:
- * the owner heard TRAVERSE change nothing, and its knob went to RING.
+ * sound the note; this departure is deliberate. The blast lands where R1's TRAVERSE default put it.
  *
- * HOLD's top step is reserved for the R2 loop and renders as the step below it here, as GYRE's does.
+ * R2 reshaped R1's roll-then-blast into this build and hit after the owner's second listen: of three
+ * phrases only the impact was a maybe ("a gong with static sounds on top" for the riff), and RING .5,
+ * hardening leaving the ring alone, was the owner's pick for both voices, so the ring law is fixed
+ * there and HOLD sets the ring's length instead. HOLD's top step is reserved for a held loop and
+ * renders as the step below it, as GYRE's does.
  */
 object Scour {
-    /**
-     * Seeds the draws, so it stays 1: no saved SCOUR sound exists (the engine is a prototype, outside
-     * the picker), and keeping the seeds keeps every shot of PLATE's blast where the owner heard it.
-     * Before PLATE's (1,1) mode was quieted, RING .25 rendered R1's PLATE byte for byte (measured).
-     */
+    /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
     const val MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
-    /** HOLD's top step, reserved for the R2 loop; [render] treats it as the step below. */
+    /** HOLD's top step, reserved for a held loop; [render] treats it as the step below. */
     const val LOOP_THRESHOLD = 0.99f
     /** The classifier files anything longer than this as LOOP (`Classifier`'s own constant is private). */
     const val LOOP_MIN_SECONDS = 1.5f
     /**
-     * No render is shorter than this. RING 0 can tighten PANE's ring to 1.33 s in all, under the
-     * classifier's 1.5 s, where its feature rules could file a plate as a drum; the floor keeps every
-     * SCOUR sound a LOOP-class phrase, as R1's all were. Below it the render holds the decayed ring.
+     * No render is shorter than this, so no SCOUR sound falls under the classifier's 1.5 s, where its
+     * feature rules could file a plate as a drum. The shortest build and ring (BUILD 0 on PANE, 1.65 s)
+     * already clear it; the floor states the promise.
      */
     const val MIN_RENDER_SECONDS = 1.6
+    /** BUILD's range, seconds, on an exponential law: .25 s is a hit, 2 s (the default) one bar at 120 BPM. */
+    const val BUILD_MIN_SECONDS = .25f
+    const val BUILD_MAX_SECONDS = 8f
 
     internal const val INTERNAL_RATE = RATE * Dsp.OVERSAMPLE
     /** The control tick, in internal samples (about 1 kHz, THAW's): coverage retunes the plate this often. */
@@ -86,11 +88,23 @@ object Scour {
     private const val SHOT_FORCE = 60.0
     /** A shot is a half-sine over four internal samples (22.7 µs): a band-limit, not a mallet model. */
     private const val PULSE_SAMPLES = 4
+    /**
+     * How far the shot rate rises over the build: it starts at SHOT's rate over this and ends at SHOT's
+     * rate, exponentially, so the rain accelerates evenly on a log scale (shape).
+     */
+    internal const val ACCEL = 20.0
+    /** Each shot's force rises over the build from this fraction to 1, as `(t/BUILD)²` (shape). */
+    internal const val SWELL_FLOOR = .25
+    /** The slam: a half-sine over 0.6 ms, a padded mallet next to the shots' grit, with this peak force (shape). */
+    private const val SLAM_FORCE = 30.0
+    private val SLAM_SAMPLES = (.0006 * INTERNAL_RATE).roundToInt()
+    /** The slam stops the roller over this long (shape): long enough not to click, short enough to clear the ring. */
+    private const val ROLLER_STOP_SECONDS = .06
     private const val OUTPUT_DC_HZ = 20f
     /**
-     * Fixed radiation trim, never per render. Measured once over the extreme corners: the loudest raw peak
-     * after the output stage is 0.61 (PLATE, SHOT 0 and TRAVERSE 0, where a few heavy shots pile onto the
-     * ring), and the defaults sit at 0.21 (PLATE) and 0.11 (PANE).
+     * Fixed radiation trim, never per render. Measured over the {0, 1} corners of TUNE, BUILD, RPM, SHOT and
+     * HARDEN: the loudest raw peak after the output stage is 0.73 (PLATE at C3 with BUILD 0 and RPM 1, the slam
+     * landing on a roller at full speed), and the defaults sit at 0.53 (PLATE) and 0.43 (PANE).
      */
     private const val OUTPUT_TRIM = 36.0
     /** The roller runs on the rim. */
@@ -101,6 +115,7 @@ object Scour {
      */
     private val AIM = Dsp.lin(.2f, .05f, .95f).toDouble()
     private val PULSE = DoubleArray(PULSE_SAMPLES) { sin(PI * (it + .5) / PULSE_SAMPLES) }
+    private val SLAM_PULSE = DoubleArray(SLAM_SAMPLES) { sin(PI * (it + .5) / SLAM_SAMPLES) }
 
     /**
      * PLATE's body: the completely free circular plate, Leissa, *Vibration of Plates* (NASA SP-160, 1969),
@@ -158,30 +173,28 @@ object Scour {
         val gain: Double,
         /** Coverage one shot leaves (κ) and the recovery rate per second (ρ). */
         val kappa: Double, val rho: Double,
-        /** How far full coverage at HARDEN 1 lifts the top mode, and how far it moves the ring (RING picks the way). */
-        val shift: Double, val damp: Double,
-        /** Roller alone before the blast opens, and how long the blast runs, seconds. */
-        val lead: Double, val window: Double,
-        /** Roller deceleration per second, and its force against a shot's. */
-        val decel: Double, val roll: Double,
+        /** How far full coverage at HARDEN 1 lifts the top mode. */
+        val shift: Double,
+        /** The roller's force against a shot's. */
+        val roll: Double,
     )
 
     /**
-     * PLATE's (1,1) mode, 3.906, is heard at .6 of the gain law. R1's tightening ring kept it short; at a
-     * longer ring and full blast, stretched toward 4.4, it pulled the note sharp in the tail (+116 to +139
-     * cents at SHOT 1, HARDEN 1, RING 1, three of the 37 corners `ScourTest` asserts; silencing it alone
-     * fixed them). At the onset, unstretched near 4, it supports the root, so too little costs a default:
+     * PLATE's (1,1) mode, 3.906, is heard at .6 of the gain law (measured in R1.1, before the impact). R1's
+     * tightening ring kept it short; at a longer ring and full blast, stretched toward 4.4, it pulled the note
+     * sharp in the tail (+116 to +139 cents at SHOT 1, HARDEN 1 and R1.1's RING 1, three of the 37 corners
+     * `ScourTest` then asserted; silencing it alone fixed them). At the onset, unstretched near 4, it supports the root, so too little costs a default:
      * at .5 F♯4's onset read +54 cents. At .7 one corner still read +107; .6 reads all 37 at both windows
      * (324 and 312 of a 324-corner grid) and raises HARDEN's log-spectral reach from 1.88 to 1.93 dB.
      */
     private val PLATE_HEARD = doubleArrayOf(1.0, 1.0, 1.0, .6, 1.0, 1.0, 1.0, 1.0)
-    private val PLATE = Shape(CIRCLE, .4, .5, PLATE_HEARD, 2.2, .80, .72, .012, .15, .35, 1.2, .20, .90, .45, .06)
+    private val PLATE = Shape(CIRCLE, .4, .5, PLATE_HEARD, 2.2, .80, .72, .012, .15, .35, .06)
     /**
      * PANE's pair at .5 of the gain law and .7 of its ring: of the 37 corners `ScourTest` asserts, full level
      * read 34 at the onset and 31 in the tail, .7 and .7 read 36 and 36 (missing the defaults at C3 and C4),
      * and .5 and .7 read all 37 at both windows (312 and 314 of a 324-corner grid). The rest is R1's shape.
      */
-    private val PANE = Shape(SQUARE, .5, .7, SQUARE_HEARD, 1.4, .74, .65, .03, 1.5, .25, .6, .12, .60, .60, .05)
+    private val PANE = Shape(SQUARE, .5, .7, SQUARE_HEARD, 1.4, .74, .65, .03, 1.5, .25, .05)
 
     private fun shape(voice: ScourVoice) = when (voice) {
         ScourVoice.PLATE -> PLATE
@@ -190,10 +203,10 @@ object Scour {
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: ScourVoice): List<MacroSpec> = listOf(
         MacroSpec("TUNE", .5f, neutral = .5f),
-        MacroSpec("RPM", .3f, neutral = .3f),
-        MacroSpec("SHOT", .5f, neutral = .5f),
+        MacroSpec("BUILD", .6f, neutral = .6f),
+        MacroSpec("RPM", .5f, neutral = .5f),
+        MacroSpec("SHOT", .7f, neutral = .7f),
         MacroSpec("HARDEN", .6f, neutral = .5f),
-        MacroSpec("RING", .75f, neutral = .5f),
         MacroSpec("HOLD", 0f, neutral = 0f),
     )
 
@@ -208,65 +221,52 @@ object Scour {
         rootMidi(voice) + ((tune.takeIf { it.isFinite() } ?: .5f).coerceIn(0f, 1f) * TUNE_SEMITONES).roundToInt()
     fun frequencyFor(voice: ScourVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
-    /**
-     * RING: which way, and how far, hardening moves every mode's ring. The factor on t60 is
-     * `(1 + damp·HARDEN·coverage)^(2(2·RING − 1))`: RING .5 leaves the ring alone, .25 is R1's tightening
-     * ring (exponent −1, the "shorter" clip), .75 the "longer" clip the owner picked for both voices
-     * (exponent +1, the default), and the ends double either way. With nothing hardened the factor is
-     * exactly 1, so RING needs HARDEN and shots to be heard, as HARDEN needs shots. A negative exponent
-     * is taken as a reciprocal so that RING .25 is R1's `1 / f` to the bit.
-     */
-    private fun ringFactor(s: Shape, harden: Double, coverage: Double, ring: Double): Double {
-        val f = 1 + s.damp * harden * coverage
-        val e = 2 * (2 * ring - 1)
-        return if (e >= 0) f.pow(e) else 1 / f.pow(-e)
-    }
+    /** How long BUILD's build runs before the slam, seconds. */
+    fun buildSeconds(build: Float): Double =
+        Dsp.expMap((build.takeIf { it.isFinite() } ?: .6f).coerceIn(0f, 1f), BUILD_MIN_SECONDS, BUILD_MAX_SECONDS).toDouble()
 
-    /** No step is a loop in R1: HOLD's top step is reserved (see the class KDoc). */
+    /** The BUILD setting whose build lasts [seconds] (clamped to BUILD's range): how a phrase lands the slam on a beat. */
+    fun buildFor(seconds: Double): Float =
+        (ln(seconds.coerceIn(BUILD_MIN_SECONDS.toDouble(), BUILD_MAX_SECONDS.toDouble()) / BUILD_MIN_SECONDS) /
+            ln(BUILD_MAX_SECONDS.toDouble() / BUILD_MIN_SECONDS)).toFloat()
+
+    /** The shot rate at [t] seconds into a build of [build] seconds that ends at [peak] shots per second. */
+    internal fun rateAt(peak: Double, build: Double, t: Double): Double = peak / ACCEL * ACCEL.pow(t / build)
+
+    /** Shots expected by [t]: the integral of [rateAt], so a unit-rate arrival `u` lands where this equals `u`. */
+    internal fun arrivalsBy(peak: Double, build: Double, t: Double): Double =
+        peak / ACCEL * build / ln(ACCEL) * (ACCEL.pow(t / build) - 1)
+
+    /** Each shot's force swells over the build, from [SWELL_FLOOR] to 1. */
+    internal fun swell(build: Double, t: Double): Double = SWELL_FLOOR + (1 - SWELL_FLOOR) * (t / build).pow(2)
+
+    /** No step is a loop: HOLD's top step is reserved (see the class KDoc). */
     @Suppress("UNUSED_PARAMETER")
     fun isLoop(hold: Float): Boolean = false
 
     private fun velocityOf(velocity: Float) = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
-    private fun rollerStart(rpm: Float) = Dsp.lin(rpm, .15f, 1f).toDouble()
+    private fun rollerTop(rpm: Float) = Dsp.lin(rpm, .15f, 1f).toDouble()
     private fun shotRate(shot: Float) = Dsp.expMap(shot, 3f, 300f).toDouble()
     private val REFERENCE_RATE = shotRate(.5f)
-    private fun windowSeconds(s: Shape, hold: Float) = s.window * (1 + 2 * hold.coerceAtMost(LOOP_THRESHOLD))
-
-    /** Coverage expected when the blast closes, `S*·(1 − e^(−(λκe + ρ)W))`: render length only, never the audio. */
-    private fun expectedCoverage(s: Shape, m: Map<String, Float>, velocity: Float): Double {
-        val gain = shotRate(m.getValue("SHOT")) * s.kappa * velocity.toDouble().pow(.8)
-        val total = gain + s.rho
-        return gain / total * (1 - exp(-total * windowSeconds(s, m.getValue("HOLD"))))
-    }
+    /** HOLD lengthens the ring after the slam, up to threefold below its reserved top step. */
+    private fun ringSeconds(s: Shape, hold: Float) = s.t60 * (1 + 2 * hold.coerceAtMost(LOOP_THRESHOLD))
 
     /**
-     * The render's length: the later of the blast closing and the roller stopping, plus the hardened
-     * root's ring, and never under [MIN_RENDER_SECONDS]. A closed form, so [drumClassFor] never renders.
-     * A softer hit leaves less coverage, so the length moves with velocity one way only: longer below
-     * RING .5, shorter above it.
+     * The render's length: the build, then the root's ring, and never under [MIN_RENDER_SECONDS]. A closed
+     * form in BUILD and HOLD alone, so velocity never changes it and [drumClassFor] never renders.
      */
-    fun lengthSeconds(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Double {
+    fun lengthSeconds(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): Double {
         val s = shape(voice)
         val m = settled(voice, macros)
-        val close = s.lead + windowSeconds(s, m.getValue("HOLD"))
-        val stop = rollerStart(m.getValue("RPM")) / s.decel
-        val coverage = expectedCoverage(s, m, velocityOf(velocity))
-        val tail = s.t60 * ringFactor(s, m.getValue("HARDEN").toDouble(), coverage, m.getValue("RING").toDouble())
-        return max(max(close, stop) + tail, MIN_RENDER_SECONDS)
+        return max(buildSeconds(m.getValue("BUILD")) + ringSeconds(s, m.getValue("HOLD")), MIN_RENDER_SECONDS)
     }
 
-    fun renderFrames(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Int =
-        (lengthSeconds(voice, macros, velocity) * RATE).roundToInt()
+    fun renderFrames(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): Int =
+        (lengthSeconds(voice, macros) * RATE).roundToInt()
 
-    /**
-     * LOOP when the render passes the classifier's 1.5 s, else PERC; never a drum class. The length is
-     * monotonic in velocity, so its shortest is at velocity 0 or 1, and reading both makes the class hold
-     * at every velocity. [MIN_RENDER_SECONDS] means it is always LOOP today.
-     */
-    fun drumClassFor(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
-        val shortest = minOf(renderFrames(voice, macros, 0f), renderFrames(voice, macros, 1f))
-        return if (shortest > RATE * LOOP_MIN_SECONDS) DrumClass.LOOP else DrumClass.PERC
-    }
+    /** LOOP when the render passes the classifier's 1.5 s, else PERC; never a drum class. Always LOOP today. */
+    fun drumClassFor(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
+        if (renderFrames(voice, macros) > RATE * LOOP_MIN_SECONDS) DrumClass.LOOP else DrumClass.PERC
 
     /** Random sounds stay finite: HOLD is an explicit choice. */
     fun scramble(voice: ScourVoice, random: Random = Random.Default): Map<String, Float> =
@@ -275,14 +275,16 @@ object Scour {
     fun render(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
         Snip(finish(play(voice, macros, velocity).raw), channels = 1, sampleRate = RATE)
 
-    // ---- mechanics: roller, blast and coverage, on the control tick ---------------------------------
+    // ---- mechanics: the build, the slam and coverage, on the control tick -----------------------------
 
     /** What the mechanics decided, before any audio. Shots are sorted by their internal frame. */
     internal class Trace(
         val frames: Int,
-        val shotRate: Double,
-        val closeSeconds: Double,
-        val stopSeconds: Double,
+        /** The shot rate the build ends at (SHOT's), per second. */
+        val peakRate: Double,
+        /** When the slam lands: the end of the build, seconds and internal frame. */
+        val slamSeconds: Double,
+        val slamFrame: Int,
         val shotFrames: IntArray,
         val shotAmplitude: DoubleArray,
         val shotAim: DoubleArray,
@@ -293,38 +295,39 @@ object Scour {
     )
 
     /**
-     * Unit-rate gaps and jitters come from fixed streams seeded by the voice alone, then the gaps are
-     * divided by λ: turning SHOT stretches one schedule instead of reshuffling it, and shot `i` always
-     * gets the `i`-th draws.
+     * Unit-rate arrivals and jitters come from fixed streams seeded by the voice alone. Each arrival `u`
+     * lands where the build's expected shot count reaches it ([arrivalsBy]), so the rain accelerates
+     * while turning SHOT or BUILD only stretches one schedule, and shot `i` always gets the `i`-th draws.
      */
     internal fun mechanics(voice: ScourVoice, macros: Map<String, Float>, velocity: Float = 1f): Trace {
         val s = shape(voice)
         val m = settled(voice, macros)
         val vel = velocityOf(velocity)
-        val frames = renderFrames(voice, m, vel) * Dsp.OVERSAMPLE
-        val lambda = shotRate(m.getValue("SHOT"))
-        val open = s.lead
-        val close = s.lead + windowSeconds(s, m.getValue("HOLD"))
+        val frames = renderFrames(voice, m) * Dsp.OVERSAMPLE
+        val peak = shotRate(m.getValue("SHOT"))
+        val build = buildSeconds(m.getValue("BUILD"))
+        val slamFrame = (build * INTERNAL_RATE).roundToInt()
         val gaps = Random(Dsp.seedFor("SCOUR", MODEL_VERSION, voice.name, "GAPS"))
         val levels = Random(Dsp.seedFor("SCOUR", MODEL_VERSION, voice.name, "LEVEL"))
         val aims = Random(Dsp.seedFor("SCOUR", MODEL_VERSION, voice.name, "AIM"))
-        // House energy doctrine: per-shot amplitude falls as √(λ_ref/λ), so the expected mean shot
-        // power is the same at every SHOT. Coverage counts dents, not this audio level.
-        val amplitude = SHOT_FORCE * sqrt(REFERENCE_RATE / lambda) * vel
         val dent = vel.toDouble().pow(.8)
         val shotFrames = ArrayList<Int>()
         val shotAmplitude = ArrayList<Double>()
         val shotAim = ArrayList<Double>()
         val shotCoverage = ArrayList<Double>()
-        var t = open
+        val warp = peak / ACCEL * build / ln(ACCEL)
+        var u = 0.0
         while (true) {
-            t += -ln(1.0 - gaps.nextDouble()) / lambda
+            u += -ln(1.0 - gaps.nextDouble())
             val level = levels.nextDouble() * 2 - 1
             val off = aims.nextDouble() * 2 - 1
-            if (t >= close) break
-            val frame = (t * INTERNAL_RATE).toInt()
-            if (frame >= frames) break
-            shotFrames += frame
+            // The inverse of arrivalsBy: where the build's expected count reaches u.
+            val t = build / ln(ACCEL) * ln(1 + u / warp)
+            if (t >= build) break
+            // House energy doctrine at every instant: force falls as √(λ_ref/λ(t)), so the mean shot power
+            // does not follow the rate; the swell alone makes the build louder. Coverage counts dents.
+            val amplitude = SHOT_FORCE * sqrt(REFERENCE_RATE / rateAt(peak, build, t)) * swell(build, t) * vel
+            shotFrames += (t * INTERNAL_RATE).toInt()
             shotAmplitude += amplitude * (1 + .2 * level)
             shotAim += (AIM + .05 * off).coerceIn(0.0, 1.0)
             shotCoverage += (1 + .2 * level) * dent
@@ -343,12 +346,14 @@ object Scour {
                 c += s.kappa * shotCoverage[j] * (1 - c)
                 j++
             }
+            // The slam dents the plate too, once, like a shot.
+            if (slamFrame / CTRL == k) c += s.kappa * dent * (1 - c)
             coverage[k] = c
             y = follow * y + (1 - follow) * c
             smoothed[k] = y
         }
         return Trace(
-            frames, lambda, close, rollerStart(m.getValue("RPM")) / s.decel,
+            frames, peak, build, slamFrame,
             shotFrames.toIntArray(), shotAmplitude.toDoubleArray(), shotAim.toDoubleArray(),
             shotCoverage.toDoubleArray(), coverage, smoothed,
         )
@@ -415,15 +420,17 @@ object Scour {
         val prepared = System.nanoTime()
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val harden = m.getValue("HARDEN").toDouble()
-        val ring = m.getValue("RING").toDouble()
         val kept = keptModes(s, hz)
         val last = (s.body.size - 1).toDouble()
         val ratio = DoubleArray(kept.size) { s.body[kept[it]] / s.body[0] }
         val grade = DoubleArray(kept.size) { kept[it] / last }
-        val t60s = DoubleArray(kept.size) { s.t60 * s.decay.pow(kept[it]) * if (kept[it] in 1..2) s.pairRing else 1.0 }
+        val ring = ringSeconds(s, m.getValue("HOLD")) / s.t60
+        val t60s = DoubleArray(kept.size) { s.t60 * ring * s.decay.pow(kept[it]) * if (kept[it] in 1..2) s.pairRing else 1.0 }
         val pickup = DoubleArray(kept.size) { s.gain.pow(kept[it]) * s.heard[kept[it]] * if (kept[it] in 1..2) s.pairLevel else 1.0 }
         val rim = weights(RIM, kept)
         val shotWeights = Array(trace.shotFrames.size) { weights(trace.shotAim[it], kept) }
+        val slamWeights = weights(AIM, kept)
+        val slam = SLAM_FORCE * velocityOf(velocity)
         val ticks = trace.smoothed.size
         val modeHz = if (record) Array(kept.size) { FloatArray(ticks) } else null
         val bank = Modes.Bank(kept.size, INTERNAL_RATE)
@@ -431,12 +438,13 @@ object Scour {
             val c = trace.smoothed[tick]
             for (i in kept.indices) {
                 val f = hz * ratio[i] * (1 + s.shift * harden * c * grade[i])
-                bank.tune(i, f, t60s[i] * ringFactor(s, harden, c, ring))
+                bank.tune(i, f, t60s[i])
                 modeHz?.get(i)?.set(tick, f.toFloat())
             }
         }
         val table = roughnessFor(voice)
-        val v0 = rollerStart(m.getValue("RPM"))
+        val top = rollerTop(m.getValue("RPM"))
+        val build = trace.slamSeconds
         val dt = 1.0 / INTERNAL_RATE
         val force = DoubleArray(kept.size)
         val out = FloatArray(trace.frames)
@@ -445,7 +453,9 @@ object Scour {
         for (n in 0 until trace.frames) {
             if (n % CTRL == 0) retune(n / CTRL)
             bank.step()
-            val speed = max(0.0, v0 - s.decel * n * dt)
+            // The roller spins up as (t/BUILD)² and the slam stops it.
+            val t = n * dt
+            val speed = if (t < build) top * (t / build).pow(2) else top * max(0.0, 1 - (t - build) / ROLLER_STOP_SECONDS)
             val roll = if (speed > 0.0) {
                 phase += REVS_PER_SECOND * speed * dt
                 val x = (phase - floor(phase)) * TABLE
@@ -463,6 +473,8 @@ object Scour {
                 for (i in force.indices) force[i] += w[i] * p
                 j++
             }
+            val k = n - trace.slamFrame
+            if (k in SLAM_PULSE.indices) for (i in force.indices) force[i] += slamWeights[i] * slam * SLAM_PULSE[k]
             bank.drive(force, 1.0)
             out[n] = (bank.velocityAlong(pickup) * OUTPUT_TRIM).toFloat()
         }

@@ -1368,10 +1368,10 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
-/** Render SCOUR's R1.1 listen (phrases, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
+/** Render SCOUR's R2 listen (the impact into a drop, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
 tasks.register<JavaExec>("generateScourAudition") {
     group = "distribution"
-    description = "Render SCOUR's phrases, PLATE beside PANE, the RING settings, the SHOT x HARDEN gate, sweeps and edges with a listening page under testkit/scour-audition/."
+    description = "Render SCOUR's impacts into a drop at 120 and 90 BPM, each build alone, PLATE beside PANE, sweeps and edges with a listening page under testkit/scour-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
     workingDir = projectDir
