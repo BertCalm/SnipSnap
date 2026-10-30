@@ -261,6 +261,71 @@ class NavigationTest {
         assertNull(chip(Place.PROJECT, Stage.PADS), "a bare stage has nothing to go back from")
     }
 
+    // Hand-offs open over where the user is (PR 3b): the chip, system Back and the screen's own
+    // close all return to the same place, and the chip names it.
+
+    /** Builds a location with [build], then closes the top bench by the chip in one session and by system Back in another. */
+    private fun assertChipAndBackAgree(expected: Location, expectedChip: String, build: Navigation.() -> Unit) {
+        val viaChip = Navigation().apply(build)
+        assertEquals(expectedChip, viaChip.backChip)
+        assertEquals(expected, viaChip.closeBench(), "the chip")
+        val viaBack = Navigation().apply(build)
+        assertTrue(viaBack.back())
+        assertEquals(expected, viaBack.location, "system Back")
+    }
+
+    @Test
+    fun `ORBIT opened over SNAP returns to SNAP by the chip and by Back, not to a BEAT nobody visited`() {
+        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SNAP)), "◄ SNAP") {
+            go(Place.MAKE)
+            open(Bench.SNAP)
+            open(Bench.ORBIT)
+        }
+    }
+
+    @Test
+    fun `SURFACE opened over SYNTH returns to SYNTH by the chip and by Back`() {
+        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SYNTH)), "◄ SYNTH") {
+            go(Place.MAKE)
+            open(Bench.SYNTH)
+            open(Bench.SURFACE)
+        }
+    }
+
+    @Test
+    fun `BIN opened over SNIPS returns to SNIPS, and SNIPS then names the stage it is over`() {
+        val over = Location(Place.PROJECT, Stage.PADS, listOf(Bench.SNIPS))
+        assertChipAndBackAgree(over, "◄ SNIPS") {
+            go(Place.PROJECT)
+            open(Bench.SNIPS)
+            open(Bench.BIN)
+        }
+        val nav = Navigation().apply {
+            go(Place.PROJECT)
+            open(Bench.SNIPS)
+            open(Bench.BIN)
+            closeBench()
+        }
+        assertEquals("◄ PADS", nav.backChip, "SNIPS over PADS, not the shelf it is usually reached from")
+    }
+
+    @Test
+    fun `a screen the user leaves for another place is restored by Back with its screen on top`() {
+        // X-RAY (its reading kept by the app) and DOUBLES (whose GO lands on a pad) both rely on this.
+        val nav = Navigation()
+        nav.open(Bench.XRAY)
+        nav.go(Place.TAPE)
+        assertTrue(nav.back())
+        assertEquals(Location(Place.SHELF, null, listOf(Bench.XRAY)), nav.location)
+
+        val doubles = Navigation()
+        doubles.open(Bench.DOUBLES)
+        doubles.goTo(Location(Place.PROJECT, Stage.PADS))
+        assertTrue(doubles.back())
+        assertEquals(Location(Place.SHELF, null, listOf(Bench.DOUBLES)), doubles.location, "Back from the pad lands on the list GO came from")
+        assertEquals("◄ SHELF", doubles.backChip)
+    }
+
     @Test
     fun `per-place state survives a stage switch and a trip to another place`() {
         val nav = Navigation()
