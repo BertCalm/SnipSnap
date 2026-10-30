@@ -3552,6 +3552,9 @@ class ConventionTest {
 
     private val splitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SplitScreen.kt")
     private val takesBinScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TakesBinScreen.kt")
+    private val deletedSnipsSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/DeletedSnipsSection.kt")
+    private val deletedKitsSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/DeletedKitsSection.kt")
+    private val kitsScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/KitsScreen.kt")
 
     /**
      * A control is guarded by a flag (`busy`, `working`) that its handler
@@ -3575,8 +3578,21 @@ class ConventionTest {
      * has none. Comment-only lines between the opening brace and the raise are
      * skipped, so a comment explaining the raise cannot hide it.
      *
-     * It reads the three screens that guard a control with such a flag: the
-     * pad editor, SPLIT and the Takes bin (RESTORE, BACK and EMPTY THE BIN NOW).
+     * It reads the seven files that guard a control with such a flag, or
+     * (KitsScreen) with a `busy` the caller raises:
+     *  - the pad editor, SPLIT and the Takes bin (RESTORE, BACK and EMPTY THE
+     *    BIN NOW);
+     *  - the two BIN sections, `DeletedSnipsSection` and `DeletedKitsSection`
+     *    (RESTORE and EMPTY THE BIN);
+     *  - GROOVE;
+     *  - the shelf, `KitsScreen`, whose `busy` is a parameter App raises
+     *    (the project-handler law below holds that side). It has no launch of
+     *    its own today, so the law finds nothing there; it is listed so a
+     *    launch added to it later is read.
+     *
+     * It does not read `App.kt`: App's own jobs raise `busy = Busy(...)`, a
+     * different shape, and the project-handler law below holds the handlers
+     * that law names.
      */
     private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
     private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
@@ -3621,7 +3637,10 @@ class ConventionTest {
             ),
             "the suspend-fun scan flags a suspend function that raises no guard",
         )
-        val offending = listOf(padSheetScreen, splitScreen, takesBinScreen).flatMap { file ->
+        val offending = listOf(
+            padSheetScreen, splitScreen, takesBinScreen,
+            deletedSnipsSection, deletedKitsSection, grooveScreen, kitsScreen,
+        ).flatMap { file ->
             val src = file.readText(Charsets.UTF_8)
             // The line of the `busy = true` itself, which is where the match ends.
             fun lineOf(m: MatchResult) = "${file.name}:${src.take(m.range.last).count { it == '\n' } + 1}"
