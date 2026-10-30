@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -126,6 +127,8 @@ fun PadCaptureScreen(
     slot: Int,
     armed: Boolean,
     onRequestArm: () -> Unit,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
@@ -299,7 +302,7 @@ fun PadCaptureScreen(
                 // heightIn, not a fixed height — Layout.LCD_HEADER_H (40dp) is
                 // shorter than Layout.MIN_HIT_TARGET (44dp), and this header
                 // (unlike KitsScreen's own, which holds no tappable chip)
-                // holds the ◄ KIT back chip; a fixed parent height would clip
+                // holds the back chip; a fixed parent height would clip
                 // that chip's min hit target. Same fix PadSheetScreen's own
                 // header already applies.
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -307,7 +310,7 @@ fun PadCaptureScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), onClick = onBack)
             Spacer(Modifier.weight(1f))
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))

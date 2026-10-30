@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -76,6 +76,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ArrangeScreen(
     entry: KitShelf.Entry,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     swingPercent: Int? = null,
@@ -201,7 +203,7 @@ fun ArrangeScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            HeaderChip("◄ GROOVE", scheme, Modifier.width(72.dp), onClick = { stopPlayback(); onBack() })
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = { stopPlayback(); onBack() })
             TapeText("ARRANGE", TapeType.lcd(21), scheme.lcdInk.tape)
             val p = plan
             TapeText(

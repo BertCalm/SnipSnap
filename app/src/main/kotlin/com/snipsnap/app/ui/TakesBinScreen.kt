@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -115,6 +116,8 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
 @Composable
 fun TakesBinScreen(
     entry: KitShelf.Entry,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
@@ -380,7 +383,7 @@ fun TakesBinScreen(
         // on in this state).
         BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
-            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp), onLcd = true) { onBack() }
+            HeaderChip(backLabel, scheme, Modifier.align(Alignment.TopStart).widthIn(min = 64.dp), onLcd = true) { onBack() }
             if (loadFailed) {
                 TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
@@ -455,7 +458,7 @@ fun TakesBinScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
             Row(
                 Modifier
                     .weight(1f)

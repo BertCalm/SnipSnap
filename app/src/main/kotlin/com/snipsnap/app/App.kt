@@ -218,7 +218,7 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * three labs gain a chip of their own with the MAKE step, the gear's three
  * stay here. A screen that draws its own chip is handed the words by
  * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
- * SPLIT), so they come from the model either way.
+ * SPLIT, VERSIONS, PAD CAPTURE, SONG), so they come from the model either way.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
@@ -3404,10 +3404,10 @@ fun App(shelf: KitShelf) {
                 }
                 // A bench that has no back chip of its own gets the frame's,
                 // reading what the model says it returns to. The screens
-                // that draw their own chip (KEYS, SPLIT, ORBIT, BIN and the
-                // rest) are handed the same words as `backLabel`; the pad
-                // benches keep a hand-drawn one until their own step of the
-                // plan.
+                // that draw their own chip (KEYS, SPLIT, ORBIT, BIN, VERSIONS,
+                // SONG and the rest) are handed the same words as `backLabel`;
+                // the pad editor benches keep a hand-drawn one until their own
+                // step of the plan.
                 val top = location.top
                 val backChip = nav.backChip
                 if (top != null && top in FRAME_CHIP_BENCHES && backChip != null) {
@@ -3630,6 +3630,7 @@ fun App(shelf: KitShelf) {
                             if (fits && versionsEntry != null) {
                                 TakesBinScreen(
                                     entry = versionsEntry,
+                                    backLabel = checkNotNull(nav.backChip) { "VERSIONS is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onKitUpdated = { updatedKit ->
@@ -3678,6 +3679,7 @@ fun App(shelf: KitShelf) {
                                     slot = captureSlot,
                                     armed = captureArmed,
                                     onRequestArm = ::requestArm,
+                                    backLabel = checkNotNull(nav.backChip) { "PAD CAPTURE is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onKitUpdated = { updatedKit ->
@@ -4260,6 +4262,7 @@ fun App(shelf: KitShelf) {
                             } else if (fits) {
                                 ArrangeScreen(
                                     entry = songEntry,
+                                    backLabel = checkNotNull(nav.backChip) { "SONG is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     swingPercent = arrangeSwing,
