@@ -46,6 +46,8 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeysLayout
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
@@ -87,8 +89,18 @@ fun KeysScreen(
     // a key plays nothing, never a stale instrument.
     val player = remember(sidecar, instrument) { InstrumentPlayer(context) }
     DisposableEffect(player) { onDispose { player.close() } }
+    // True from the player's birth until its zones have been read. Keyed on
+    // the player, so a superseded open's `finally` lowers the flag of the
+    // player it was opening and never the new one's.
+    var opening by remember(player) { mutableStateOf(true) }
+    // The screen's one report to the dock (the sink is a single slot).
+    ReportBusy(remember(opening) { if (opening) Busy(Copy.KEYS_LOADING_BUSY) else null })
     LaunchedEffect(player) {
-        withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
+        try {
+            withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
+        } finally {
+            opening = false
+        }
     }
 
     var layout by remember(sidecar) { mutableStateOf(KeysLayout.DEFAULT_LAYOUT) }
