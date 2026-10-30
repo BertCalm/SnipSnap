@@ -425,8 +425,10 @@ private val RING_JOB = Busy(Copy.WORKING_BUSY)
  * true, so a job that is over by then draws nothing, and once it has shown,
  * true for at least [BusyLatch.MIN_VISIBLE_MS] even if the job ends sooner.
  * The same rule as the dock's bar and the loading card, on the same latch.
- * [ActionButton] and [PrimaryAction] both ask here, and draw the ring and
- * say [Copy.WORKING_BUSY] as their state only while it answers true.
+ * [ActionButton] and [PrimaryAction] both ask here, and draw the ring while
+ * it answers true. They say [Copy.WORKING_BUSY] as their state only while it
+ * answers true and the job is still running, so a ring held out its minimum
+ * after the job ended is seen and not announced.
  *
  * [now] is [rememberBusyVisible]'s clock: a device test hands it the compose
  * test clock.

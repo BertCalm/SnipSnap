@@ -352,8 +352,9 @@ fun SurfaceScreen(
     // and loadPad4 each count their read through `whileReading`). A count, not
     // a flag: a PAD press and a PAD2 press can be reading at once, and the
     // first to finish must not put the line down under the other. Not keyed
-    // on the entry: a read belongs to the screen, and a key would reset the
-    // count under reads still running, which would then count it below zero.
+    // on the entry: a read belongs to the screen, and a key would start the
+    // new entry's count at 0 while old reads still run (they go on counting
+    // down the old one), so the line would drop under reads still in flight.
     var readsInFlight by remember { mutableIntStateOf(0) }
     val readingPad = readsInFlight > 0
     // The screen's one report to the dock (the sink is a single slot), keyed

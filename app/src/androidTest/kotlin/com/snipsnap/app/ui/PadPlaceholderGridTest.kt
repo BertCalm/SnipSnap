@@ -18,6 +18,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.onNodeWithTag
@@ -222,19 +223,30 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
     }
 
     /**
-     * Whether the button's ring is up. Both of its signals are read and must
-     * agree: the spinner is a progress node, and the node says
-     * [Copy.WORKING_BUSY] as its state; one without the other is a button
-     * half-way to working. The label is there either way.
+     * Whether the button's ring is up while its job runs, or when nothing is
+     * lingering. Both of its signals are read and must agree: the spinner is a
+     * progress node, and the node says [Copy.WORKING_BUSY] as its state; one
+     * without the other is a button half-way to working. The label is there
+     * either way. After the job has ended the two part, by design, for the
+     * minimum: use [spinnerIsDrawn] and [saysWorking] there.
      */
     private fun ringIsUp(): Boolean {
-        compose.onNodeWithText(RING_LABEL).assertExists("the label stays, ring or not, at ${now()} ms")
-        val spinners = compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).fetchSemanticsNodes().size
-        val said = compose.onNodeWithText(RING_LABEL).fetchSemanticsNode()
-            .config.getOrNull(SemanticsProperties.StateDescription) == Copy.WORKING_BUSY
-        assertEquals("the spinner and the working state come up together at ${now()} ms ($spinners spinners)", spinners == 1, said)
+        val drawn = spinnerIsDrawn()
+        val said = saysWorking()
+        assertEquals("the spinner and the working state come up together at ${now()} ms", drawn, said)
         return said
     }
+
+    /** Whether the spinner is on screen. The label is there either way. */
+    private fun spinnerIsDrawn(): Boolean {
+        compose.onNodeWithText(RING_LABEL).assertExists("the label stays, ring or not, at ${now()} ms")
+        return compose.onAllNodes(progress(ProgressBarRangeInfo.Indeterminate)).fetchSemanticsNodes().size == 1
+    }
+
+    /** Whether the button tells TalkBack it is working. */
+    private fun saysWorking(): Boolean =
+        compose.onNodeWithText(RING_LABEL).fetchSemanticsNode()
+            .config.getOrNull(SemanticsProperties.StateDescription) == Copy.WORKING_BUSY
 
     private fun aJobThatEndsInsideTheDelayDrawsNoRing(button: @Composable (Boolean) -> Unit) {
         val working = mutableStateOf(false)
@@ -280,14 +292,42 @@ class PadPlaceholderGridTest : ComposeScreenTest() {
 
         working.value = false
         pump(FRAME_MS)
-        assertTrue("a frame after the job ended, the ring is still up", ringIsUp())
+        assertTrue("a frame after the job ended, the spinner is still drawn", spinnerIsDrawn())
         // `up` is read a frame at most after the frame that drew the ring, so
         // 450 is inside the 500 by a frame and more.
         pumpTo(up + 450)
-        assertTrue("450 ms after it came up the ring is still up: ${BusyLatch.MIN_VISIBLE_MS} ms is owed", ringIsUp())
+        assertTrue("450 ms after it came up the spinner is still drawn: ${BusyLatch.MIN_VISIBLE_MS} ms is owed", spinnerIsDrawn())
         pumpTo(up + BusyLatch.MIN_VISIBLE_MS + 4 * FRAME_MS)
         assertFalse("and once the minimum is served it goes", ringIsUp())
     }
+
+    private fun aRingThatLingersAfterItsJobDoesNotSayItIsWorking(button: @Composable (Boolean) -> Unit) {
+        val working = mutableStateOf(false)
+        show(settleMillis = 0) { button(working.value) }
+
+        working.value = true
+        pump(FRAME_MS)
+        val started = now()
+        pumpTo(started + 300)
+        assertTrue("held 300 ms, the ring is up and says working (started $started)", ringIsUp())
+
+        working.value = false
+        pump(FRAME_MS)
+        // The job is over and the button is its own again, but the minimum is
+        // still owed: the spinner stays and the state does not.
+        compose.onNodeWithText(RING_LABEL).assertIsEnabled()
+        assertTrue("the spinner is still drawn just after the job ended (${now() - started} ms in)", spinnerIsDrawn())
+        compose.onNodeWithText(RING_LABEL)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.StateDescription))
+    }
+
+    @Test
+    fun an_action_button_whose_ring_lingers_does_not_say_it_is_working() =
+        aRingThatLingersAfterItsJobDoesNotSayItIsWorking(actionButton)
+
+    @Test
+    fun a_primary_action_whose_ring_lingers_does_not_say_it_is_working() =
+        aRingThatLingersAfterItsJobDoesNotSayItIsWorking(primaryAction)
 
     @Test
     fun an_action_button_whose_job_ends_inside_200_ms_never_draws_its_ring() =

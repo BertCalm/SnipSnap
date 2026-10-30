@@ -4977,7 +4977,10 @@ internal fun ActionButton(
      * The ring and the state come up together and by the rule every loading
      * drawing keeps ([rememberRingUp]): not in the first [BusyLatch.SHOW_AFTER_MS]
      * of the job, so one that is over by then flashes nothing, and for at least
-     * [BusyLatch.MIN_VISIBLE_MS] once up.
+     * [BusyLatch.MIN_VISIBLE_MS] once up. They do not leave together: the
+     * state goes the moment [working] turns false, because the button is
+     * enabled again and must not tell TalkBack it is still working, while the
+     * ring stays out its minimum.
      */
     working: Boolean = false,
     /**
@@ -5018,7 +5021,9 @@ internal fun ActionButton(
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
             .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
-            .let { if (ringUp) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
+            // Said only while the job runs: a ring held out its minimum after
+            // the job ended is a drawing, not news.
+            .let { if (ringUp && working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {
