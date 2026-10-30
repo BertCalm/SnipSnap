@@ -3640,10 +3640,11 @@ class ConventionTest {
      * added, a new project) change which project and kit the whole app is
      * looking at. `busy` is App's own job: a starter being rendered, a
      * remix, a pack. A tap on one of these while it runs moved the open
-     * kit out from under the job, and a double tap on NEW PROJECT made two
-     * projects, because the handler launched before anything said it was
-     * under way. Every other App handler that starts work opens with
-     * `if (busy != null) return`; these five were the ones that did not.
+     * kit out from under the job, and a double tap on NEW PROJECT could make
+     * two projects, because the handler launched before anything said it was
+     * under way. The handlers that raise `busy` guard with
+     * `if (busy != null) return` before they launch; these five were the
+     * project actions that had no guard at all.
      *
      * "First" is the law's whole point: a guard placed after
      * `val p = project ?: return` still guards, but a guard that is not the
