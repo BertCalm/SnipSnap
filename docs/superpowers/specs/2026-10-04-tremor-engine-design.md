@@ -5,12 +5,15 @@ internal tray, and a six-string cage with a powered pickup. The sequence is the 
 A hit starts in the skin, the beads scatter and come back, the cage rings, the circuit blooms
 and faults, and what is left decays.
 
-This note is the as-built record. The integration and listening corrections were
-checked on 23 October 2026 against `b17c3bd2010c04e1ce08909a9c647bde1ca66907`;
-the velocity follow-up below records the subsequent implementation. The constants marked as shape are
-musical calibration, not a measured hide or a claim about a real circuit. The owner
-heard the first audition and reported a damped drum with an unwanted high squeal;
-the revised voice still awaits an acceptance verdict. The audition generator
+This note records the original model 1 and the model 2 integration. The owner
+rejected the earlier voice/touch contrast as too similar, then reported
+"Tremor has good variation now" for the [R4 voices and touch audition](https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-character/)
+on 26 October 2026. That verdict covers the variation demonstrated there, not
+individual approval of every factory recipe or phone/MPC playback. Model 2 takes
+that R4 profile into versioned recipes; its final integration and wider tuning
+checks are still in progress on base `bf17f4561bda7418cc4ebf7bae8e78d7c8c45329`.
+Constants marked as shape are musical calibration, not measurements of a real
+hide, frame or circuit. The audition generator
 (`./gradlew :synth:generateTremorAudition`) supplies the full diagnostic set.
 
 ## Round 0 — where it sits
@@ -23,8 +26,8 @@ tom, a snare and a perc pad do not.
 The melodic contract (file PERC or LOOP, and forbid KICK, SNARE, HAT, CLAP and TOM) would
 mean taking the attack off the drum so the classifier stops hearing one. That is the wrong
 instrument. `Tremor.drumClassFor` declares a drum role, normally aligned with the
-generic file-import classifier. The original calibration established the first
-three register cases below; two factory roles are now explicit exceptions:
+generic file-import classifier. The model 1 calibration at `b17c3bd` established
+the first three register cases below; two factory roles are explicit exceptions:
 
 - HIDE through A#2 (anchor under 123 Hz, FAULT under 0.5) files KICK. C2's centroid measured
   69 Hz against a 65 Hz anchor.
@@ -54,8 +57,10 @@ contains the dry TREMOR kit. Phone listening remains a separate check.
 
 ## Architecture
 
-One voice is one architecture. The differences are the default row and a fixed cents table
-on the strings.
+The models share the same head, body, bead tray and six-string cage. In model 1,
+voice differences mainly come from the default control row, pickup gain and a
+fixed string cents table. Model 2 adds the excitation and radiation profiles
+described below, while retaining that instrument structure.
 
 - 12 head modes. Ratios are the circular-membrane Bessel zeros relative to (1,1), which is
   the anchor the player asked for. (0,1) is kept, at 0.12 of the others, so it does not
@@ -120,9 +125,9 @@ the actuator peak and the circuit work stay 0. A low FAULT waits longer between 
 than a high one. The stream that places those events is seeded, per render, from the voice
 and the note. There is no shared RNG.
 
-## Velocity articulation follow-up, 23 October 2026
+## Model 1 velocity follow-up, 23 October 2026
 
-The old impulse law is retained: `0.55 * (0.28 + 0.72 * velocity) *
+The model 1 impulse law is retained: `0.55 * (0.28 + 0.72 * velocity) *
 (0.62 + 0.38 * STRIKE)`. Gain levelling largely removed that impulse difference
 from the exported timbre. A softer event now also has a broader contact footprint
 and a longer force pulse, so fewer upper modes are excited even after the sample
@@ -154,9 +159,66 @@ brightness or a listening verdict:
 
 All six existing one-shot and six held hard-touch sample hashes matched the
 pre-articulation version in the standalone comparison. `TremorVelocityTest`
-covers spectral articulation, the upper-register root, ensemble timing, soft
-held determinism/join and those hard-touch hashes. The softer contacts remain a
-listening candidate.
+retains these model 1 regressions for saved recipes. The relative spectral
+increases did not establish useful musical contrast: the owner subsequently
+reported that the voices and soft-to-hard hits still sounded the same. That
+listening verdict led to R4 rather than treating the small numerical differences
+as acceptance.
+
+## Model 2: the accepted R4 variation, 26–27 October 2026
+
+The heard prototype source is identified by SHA-256
+`b6f95b8e22bfcaa14416f8a8a894bb36d0bc2c8fbec4d21d2e0e5120120c105a`.
+Its listening set is six voices at C3, each at velocity 0.2, 0.55 and 1, with
+matched loudness. Model 2 integration pins all eighteen raw float buffers so
+changes outside that set cannot silently replace the variation the owner heard.
+
+The former output was dominated by the shared head anchor. Upper head radiation
+tapered with frequency, displacement added another frequency loss, and cage
+weights attenuated both excitation and pickup. Levelling then removed much of
+the force difference. Model 2 changes the sources and their audible readout:
+
+- The already-generated contact pulse is resampled from broad soft contact to
+  shorter hard contact, preserving its summed impulse and the RNG draw count.
+  Its new duration is capped at 0.82 note periods. Contact hardness also spans a
+  wider modal footprint. Hard touch intentionally changes from model 1.
+- Separate head and cage pickups expose existing upper motion. The mechanical
+  displacement pickups still drive the couplings. Voice-specific radiation
+  balances favour head/body for HIDE, coordinated strikers for UNISON, actual
+  contacts for ROLL, passive cage for WIRE, driven pickup for CHARGE, and loaded
+  interruptions for FRACTURE. These are design intentions backed by the R4
+  variation verdict, not claims that every factory position was heard.
+- A small share of each actual initial or held strike reaches the existing
+  string bank through the frame. This input is zero between contacts and uses
+  no additional event clock or oscillator. It supplies contact bandwidth that
+  the displacement-only bridge had removed. It is a second externally driven
+  port: preserving the force pulse's impulse does not prove conservation of
+  combined head/cage energy.
+- The audible powered pickup has bounded saturation and a root-rejecting
+  readout filter. Its level budget follows the actual anchor mode's
+  phase-independent motion, so a saturated upper partial cannot simply replace
+  the requested note. These readout stages do not enter the actuator return.
+  The one-shot return remains 0.0004; HOLD still opens it. FRACTURE makes the
+  existing smoothed load interruptions more exposed in the audible return.
+
+`Tremor.kt` dispatches by saved model. `TremorV1.kt` freezes the previous signal
+path; `TremorV2.kt` contains the new profile. New `TremorPatch` constructors,
+factory recipes and starter patches select model 2. JSON with an omitted or
+null `model` selects model 1. Explicit model values round-trip, and native
+velocity rendering passes the saved model through. The editor retains typed
+recipes through edits, drafts, saving and sending; old macro-only work selects
+model 1, while an explicit current factory choice selects model 2.
+
+The R4 prototype's ninety-case Kotlin harness recorded no raw rail hits. Its
+54 ordinary voice/note/touch cases had a worst open spectral-peak offset of
+16.43 cents; the eighteen C3 listening cases had a worst offset of 6.64 cents.
+Those prototype measurements do not replace the production test gate. The
+prototype also exposed anchor cancellation in crowded UNISON gestures: the
+1.4406× head mode could dominate when opposing strikers cancelled the anchor.
+The wider coordination correction and final integration checks remain pending.
+`TremorCharacterTest` covers the heard buffers, absolute upper-band contrast,
+register anchors and the coordination corners; its final results must be
+recorded after that correction settles.
 
 ## HOLD
 
@@ -183,8 +245,11 @@ cyclic changes still require listening.
 
 ## What is not done
 
-- The owner has heard the original voice. Acceptance of the revised voice and its
-  factory presets remains pending; measurements are not a replacement for that verdict.
+- The owner accepted the variation demonstrated by R4. Individual approval of
+  all thirteen current factory recipes remains pending.
+- Model 2's wider coordination correction and complete integration checks are
+  pending. The R4 prototype's measurements are historical evidence, not a green
+  production test result.
 - The phone picker is wired. A phone and MPC listening check is still pending.
 - The bead tray is one axis, not a plate.
 - The head ratios, the body, the circuit and the coupling gains are shape.
@@ -207,5 +272,24 @@ cyclic changes still require listening.
 - **Disclosed:** HOLD opens the feedback return and constructs its playback seam;
   one-shots remain limited to 1.40 s. Neither is a claim about an indefinitely
   continuing physical drum.
-- **Heard:** the owner's first verdict supplied the squeal and short-body finding.
-  The latest revision is a listening candidate. The assistant did not listen.
+- **Heard at this stage:** the owner's first verdict supplied the squeal and
+  short-body finding. The later model 1 articulation remained insufficient;
+  the model 2 section records the subsequent R4 variation acceptance. The
+  assistant did not listen.
+
+## Model 2 integration ledger, 27 October 2026
+
+- **Verified by source on base `bf17f4561` plus this integration:** separate
+  frozen/current renderers, saved model decoding and encoding, native velocity
+  dispatch, broader contact shaping, independent audible pickups, actual-force
+  frame input and an anchor-referenced powered readout budget.
+- **Measured previously:** the R4 prototype's bounds and register numbers above.
+  The final correction must preserve the eighteen heard buffers; final test
+  exits and wider sweep results are pending.
+- **Disclosed:** the frame connection adds external input; the powered readout
+  budget is not a proof of passive feedback. HOLD still uses periodic external
+  micro-strikes, an open actuator return and a constructed crossfade/copy join.
+  Physical phone/MPC playback and measured phone render cost remain pending.
+- **Heard:** the owner rejected the earlier contrast and then accepted R4's
+  variation with "Tremor has good variation now." No broader preset or hardware
+  approval is inferred.
