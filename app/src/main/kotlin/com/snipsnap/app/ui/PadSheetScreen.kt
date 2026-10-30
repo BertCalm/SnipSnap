@@ -246,6 +246,10 @@ fun PadSheetScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    // The app's job board: where the dock hears of every job this sheet starts.
+    // Null when the sheet is shown on its own, in a test or a preview, which has
+    // no dock to tell.
+    val jobs = LocalJobs.current
     val context = LocalContext.current
     // The SNIPS shelf: where a pad's tape, and the dust print cached beside it, live.
     val snipsDir = File(context.filesDir, SnipStore.DIR)
@@ -368,15 +372,22 @@ fun PadSheetScreen(
     // handler, before the `launch` that does the work, and comes down in the
     // `finally` inside it: raised inside the coroutine, a second tap in the
     // gap before it starts would run the job twice (ConventionTest holds this).
+    //
+    // The dock hears of a job from the app's job board, not from this screen:
+    // every site that raises `busy` also begins a board job (`jobs.beginJob`,
+    // beside it, before the launch) and ends it in the same `finally` that
+    // lowers `busy`. A `ReportBusy` here would be withdrawn the moment this
+    // screen left the composition, and most of this file's writes run on
+    // `appScope` on purpose, to carry on after that.
     var busy by remember(model) { mutableStateOf(false) }
-    // What the job in flight is called in the dock; null for a job with no
-    // word of its own, which the dock says as WORKING…. Set beside `busy`,
+    // What the job in flight is called: the rings on MAKE PAD, DE-SAMPLE and
+    // MAKE INSTRUMENT key on it, and it is the label of the job's board entry.
+    // Null for a job with no word of its own. The board then says SAVING THE
+    // PAD… for `commitPadEditNow`'s callers that pass no job name, and WORKING…
+    // for every other write; the flush when the screen closes begins its
+    // SAVING THE PAD… entry without setting this at all. Set beside `busy`,
     // cleared with it.
     var padJob by remember(model) { mutableStateOf<String?>(null) }
-    // The sheet's one report to the dock (the sink is a single slot). `busy`
-    // is the effect's key, so the value is remembered: a fresh one each
-    // recomposition would withdraw the report and make it again.
-    ReportBusy(remember(busy, padJob) { if (busy) Busy(padJob ?: Copy.WORKING_BUSY) else null })
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
 
@@ -564,6 +575,7 @@ fun PadSheetScreen(
         // decode is outside it, as `KitWrites` keeps every read-only DSP
         // pass — a purge racing the decode reads as gone, which is true.
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val before = offMain {
@@ -585,8 +597,9 @@ fun PadSheetScreen(
                 }
             } finally {
                 busy = false
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     fun failure(action: String, e: Exception) {
@@ -654,6 +667,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         try {
             val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
             if (saved) onKitUpdated(fresh.kit)
@@ -663,6 +677,7 @@ fun PadSheetScreen(
             failure("SAVE", e)
         } finally {
             busy = false
+            boardJob?.end()
         }
     }
 
@@ -707,7 +722,8 @@ fun PadSheetScreen(
      * The guard goes up here, before the launch, so a second tap in the gap
      * before the coroutine starts finds it. [job] is what the dock calls the
      * work while it runs (SPREAD says `Copy.SPREAD_BUSY`); null for the
-     * callers with no word of their own, which the dock says as WORKING….
+     * callers with no word of their own, which the dock says as SAVING THE
+     * PAD… (`Copy.SAVING_PAD_BUSY`).
      */
     fun commitPadEditNow(
         action: String,
@@ -722,6 +738,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = job
+        val boardJob = jobs.beginJob(job ?: Copy.SAVING_PAD_BUSY)
         appScope.launch {
             try {
                 var applied = false
@@ -742,6 +759,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -822,6 +840,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = Copy.treatmentBusy(PadSheet.displayLabel(PadSheet.SMEAR))
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 var applied = false
@@ -885,6 +904,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -923,6 +943,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = Copy.treatmentBusy(PadSheet.displayLabel(PadSheet.DUST))
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 val tapeFile = File(snipsDir, tape)
@@ -988,6 +1009,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -1086,6 +1108,7 @@ fun PadSheetScreen(
         val keyedSeed = kotlin.random.Random.nextLong(0L, 1_000_000L)
         busy = true
         padJob = Copy.treatmentBusy(PadSheet.displayLabel(segment))
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 var applied = false
@@ -1172,6 +1195,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -1271,6 +1295,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 // null = the slot changed underneath us; BIN_ITEM_GONE says so.
@@ -1312,6 +1337,7 @@ fun PadSheetScreen(
                 failure("UNTREAT", e)
             } finally {
                 busy = false
+                boardJob?.end()
             }
         }
     }
@@ -1338,6 +1364,7 @@ fun PadSheetScreen(
         boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${typeToHear.name}"
         voice?.release()
         voice = null
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val rendered = offMain {
@@ -1364,8 +1391,9 @@ fun PadSheetScreen(
             } finally {
                 boardAction = null
                 busy = false
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     fun commitBoard(action: String) {
@@ -1383,6 +1411,7 @@ fun PadSheetScreen(
         boardAction = action
         voice?.release()
         voice = null
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         // Writes outlive leaving the sheet; preview does not. Opening,
         // changing all zones and saving share the kit writers' lock.
         appScope.launch {
@@ -1422,6 +1451,7 @@ fun PadSheetScreen(
             } finally {
                 boardAction = null
                 busy = false
+                boardJob?.end()
             }
         }
     }
@@ -1502,6 +1532,7 @@ fun PadSheetScreen(
         aquariumAction = action
         applyingSegment = null
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         // A kept edit completes and reports to App even after leaving the sheet.
         // It opens, processes every layer and saves inside the existing kit lock.
         appScope.launch {
@@ -1539,6 +1570,7 @@ fun PadSheetScreen(
             } finally {
                 aquariumAction = null
                 busy = false
+                boardJob?.end()
             }
         }
     }
@@ -1590,6 +1622,7 @@ fun PadSheetScreen(
             // second commit. It is let go right before `commitPadEditNow`
             // takes it back, on the same main-thread turn.
             busy = true
+            val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
             scope.launch {
                 val tapeFile = File(snipsDir, plan.tape)
                 val print = try {
@@ -1599,6 +1632,9 @@ fun PadSheetScreen(
                     busy = false
                     failure("PASTE", e)
                     return@launch
+                } finally {
+                    // The extraction is this job; the commit below begins its own.
+                    boardJob?.end()
                 }
                 busy = false
                 if (print == null) {
@@ -1608,7 +1644,7 @@ fun PadSheetScreen(
                 commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
                     said = RecipeReplay.apply(mm, slot, clip.recipe, padName, aquariumRenderer = AquariumPadRenderer) { print }.toast
                 }
-            }
+            }.endBoardJobOnCompletion(boardJob)
             return
         }
         commitPadEditNow("PASTE", onSuccess = { said?.let(onToast) }) { mm ->
@@ -1811,6 +1847,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = Copy.MUTATE_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 var applied = false
@@ -1855,6 +1892,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -1895,6 +1933,7 @@ fun PadSheetScreen(
         val becomeFraction = pendingBecome
         busy = true
         padJob = Copy.MUTATE_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val (rendered, padMs) = offMain {
@@ -1915,8 +1954,9 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     /**
@@ -1949,6 +1989,7 @@ fun PadSheetScreen(
         val root = entry.dir.parentFile ?: entry.dir
         val seed = spins
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val deal = offMain { MutateSheet.deal(m, slot, root, seed) }
@@ -1960,8 +2001,9 @@ fun PadSheetScreen(
                 if (why != null) onToast(why.line) else failure("ROULETTE", e)
             } finally {
                 busy = false
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     /**
@@ -2044,6 +2086,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = Copy.MUTATE_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 var drifted: Mutate.Drifted? = null
@@ -2081,6 +2124,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -2096,6 +2140,7 @@ fun PadSheetScreen(
     fun onFilePicked(uri: Uri) {
         if (busy) return
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val held = offMain {
@@ -2109,8 +2154,9 @@ fun PadSheetScreen(
                 if (e is IllegalArgumentException) onToast(Copy.fileRefused(e.message ?: "that file said no")) else failure("A FILE", e)
             } finally {
                 busy = false
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
     val filePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) onFilePicked(uri)
@@ -2152,6 +2198,7 @@ fun PadSheetScreen(
         val instrumentBase = "${m.kit.name}_${p.displayName}"
         busy = true
         padJob = Copy.MAKE_INSTRUMENT_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
@@ -2172,6 +2219,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -2334,14 +2382,15 @@ fun PadSheetScreen(
         voice = null
         busy = true
         outsideStage = Copy.OUTSIDE_LISTENING
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
+        // Set once the capture below lands and the write is handed off
+        // to `appScope`; the outer `finally` only tidies `busy`/
+        // `outsideStage` (and the board job) itself when this stays false,
+        // since past that point the handoff's own `finally` owns them
+        // instead — see this function's own KDoc for why the write, not the
+        // capture, is what needs to outlive a cancelled `scope`.
+        var handedOff = false
         scope.launch {
-            // Set once the capture below lands and the write is handed off
-            // to `appScope`; the outer `finally` only tidies `busy`/
-            // `outsideStage` itself when this stays false, since past that
-            // point the handoff's own `finally` owns them instead — see
-            // this function's own KDoc for why the write, not the capture,
-            // is what needs to outlive a cancelled `scope`.
-            var handedOff = false
             try {
                 // Unlocked: reading the send off `m` (still the screen-mount
                 // model — fine, this only READS the pad's current audio) and
@@ -2394,6 +2443,7 @@ fun PadSheetScreen(
                     } finally {
                         outsideStage = null
                         busy = false
+                        boardJob?.end()
                     }
                 }
             } catch (e: Exception) {
@@ -2407,8 +2457,13 @@ fun PadSheetScreen(
                 if (!handedOff) {
                     outsideStage = null
                     busy = false
+                    boardJob?.end()
                 }
             }
+        }.invokeOnCompletion {
+            // A capture cancelled before it ever started never reaches its own
+            // `finally`; once handed off, the write's `finally` owns the entry.
+            if (!handedOff) boardJob?.end()
         }
     }
 
@@ -2451,6 +2506,7 @@ fun PadSheetScreen(
         // Busy before the launch, not inside it: a second tap in the gap
         // before the coroutine starts must not keep the same room twice.
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 val kept = offMain { OutsideSheet.keep(root, o, m.kit.name) }
@@ -2464,6 +2520,7 @@ fun PadSheetScreen(
                 failure("KEEP ROOM", e)
             } finally {
                 busy = false
+                boardJob?.end()
             }
         }
     }
@@ -2536,6 +2593,7 @@ fun PadSheetScreen(
         gatheringRefusal = null
         gatheringStatus = "RENDERING THE PREVIEW…"
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val prepared = offMain(Dispatchers.Default) { editor.prepare(controls) }
@@ -2554,8 +2612,9 @@ fun PadSheetScreen(
                 gatheringFailed(e, sourceSlot, sourceModel)
             } finally {
                 busy = false
+                boardJob?.end()
             }
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     fun makeGatheringVariation() {
@@ -2576,6 +2635,7 @@ fun PadSheetScreen(
         gatheringRefusal = null
         gatheringStatus = "RENDERING A NEW GATHERING…"
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         // Disk work outlives this sheet; navigation and preview do not.
         appScope.launch {
             try {
@@ -2613,6 +2673,7 @@ fun PadSheetScreen(
             } finally {
                 gatheringStatus = null
                 busy = false
+                boardJob?.end()
             }
         }
     }
@@ -2662,6 +2723,7 @@ fun PadSheetScreen(
         val spec = PadMaker.spec(pendingDepth, pendingBloom, kotlin.random.Random.nextLong(0L, 1_000_000L))
         busy = true
         padJob = Copy.MAKE_PAD_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 val destRoot = File(entry.dir.parentFile ?: entry.dir, KitShelf.INSTRUMENTS_DIR)
@@ -2682,6 +2744,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -2716,6 +2779,7 @@ fun PadSheetScreen(
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
         padJob = Copy.DESAMPLE_BUSY
+        val boardJob = jobs.beginJob(padJob ?: Copy.WORKING_BUSY)
         appScope.launch {
             try {
                 var match: com.snipsnap.synth.Desample.Match? = null
@@ -2745,6 +2809,7 @@ fun PadSheetScreen(
             } finally {
                 busy = false
                 padJob = null
+                boardJob?.end()
             }
         }
     }
@@ -2776,6 +2841,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         busy = true
+        val boardJob = jobs.beginJob(Copy.WORKING_BUSY)
         scope.launch {
             try {
                 val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
@@ -2786,9 +2852,10 @@ fun PadSheetScreen(
                 failure("SAVE", e)
             } finally {
                 busy = false
+                boardJob?.end()
             }
             onBack()
-        }
+        }.endBoardJobOnCompletion(boardJob)
     }
 
     // System Back mirrors the header's own ◄ KIT chip exactly — same
@@ -2879,6 +2946,9 @@ fun PadSheetScreen(
                 // the debounce above never call `m.save()` any more either.)
                 val stalePads = targetSlots.associateWith { m.kit.pad(it) }
                 val kitDir = m.kitDir
+                // No `busy` here, the sheet is going; the board is the only
+                // thing that tells the dock the write is still running.
+                val boardJob = jobs.beginJob(Copy.SAVING_PAD_BUSY)
                 appScope.launch {
                     try {
                         val (fresh, saved) = withFreshKit(kitDir) { f -> reapplyPendingMetadataFields(f, stalePads) }
@@ -2886,6 +2956,8 @@ fun PadSheetScreen(
                     } catch (e: Exception) {
                         if (e is CancellationException) throw e
                         failure("SAVE", e)
+                    } finally {
+                        boardJob?.end()
                     }
                 }
             }
@@ -3798,6 +3870,33 @@ private fun aquariumAuditionPcm(source: Snip, pad: KitPad): Snip {
         shaped.samples[if (shaped.channels == 1) index / 2 else index] * pad.level
     }
     return Snip(stereo, 2, shaped.sampleRate)
+}
+
+/**
+ * Begins a job called [label] on the app's job board, for work the sheet is
+ * about to launch, and hands back the handle its `finally` ends. Null when
+ * there is no board (the sheet shown on its own, in a test or a preview), so
+ * every site ends it with `boardJob?.end()` and nothing else changes.
+ *
+ * Called in the handler, beside `busy = true` and before the `launch`, so the
+ * sheet's guard and the dock's line go up together. The board, not
+ * `ReportBusy`, is how this sheet tells the dock: most of its writes run on
+ * `appScope` and carry on after the sheet is gone, and a report made by the
+ * screen would be withdrawn with it.
+ */
+private fun AppJobs?.beginJob(label: String): JobHandle? = this?.begin(Busy(label))
+
+/**
+ * Ends [boardJob] when this job completes, however it does. A coroutine on
+ * the sheet's own scope that is cancelled before it is first dispatched (the
+ * sheet closes in the frame after a tap) never enters its `try`, so the
+ * `finally` that ends the entry never runs, and the entry would stay on the
+ * dock for good: it belongs to the app, which outlives the sheet. This is the
+ * backstop for that gap; the `finally` stays the way the entry ends in every
+ * other case, and [JobHandle.end] is safe to call twice.
+ */
+private fun Job.endBoardJobOnCompletion(boardJob: JobHandle?) {
+    if (boardJob != null) invokeOnCompletion { boardJob.end() }
 }
 
 /**
@@ -5189,7 +5288,10 @@ internal fun ActionButton(
      * The ring and the state come up together and by the rule every loading
      * drawing keeps ([rememberRingUp]): not in the first [BusyLatch.SHOW_AFTER_MS]
      * of the job, so one that is over by then flashes nothing, and for at least
-     * [BusyLatch.MIN_VISIBLE_MS] once up.
+     * [BusyLatch.MIN_VISIBLE_MS] once up. They do not leave together: the
+     * state goes the moment [working] turns false, because the button is
+     * enabled again and must not tell TalkBack it is still working, while the
+     * ring stays out its minimum.
      */
     working: Boolean = false,
     /**
@@ -5230,7 +5332,9 @@ internal fun ActionButton(
             // unavailable instead of it silently vanishing from the tree
             // (accessibility audit finding 12).
             .tapeClick(label = accessibilityLabel ?: label, enabled = enabled, onClick = onClick)
-            .let { if (ringUp) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
+            // Said only while the job runs: a ring held out its minimum after
+            // the job ended is a drawing, not news.
+            .let { if (ringUp && working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it }
             .padding(horizontal = 8.dp),
         contentAlignment = Alignment.Center,
     ) {

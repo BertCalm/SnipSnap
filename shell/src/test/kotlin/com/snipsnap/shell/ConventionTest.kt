@@ -3551,6 +3551,10 @@ class ConventionTest {
     // ---- Law: a busy guard is raised before its launch, not inside it ----
 
     private val splitScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/SplitScreen.kt")
+    private val takesBinScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/TakesBinScreen.kt")
+    private val deletedSnipsSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/DeletedSnipsSection.kt")
+    private val deletedKitsSection = File("../app/src/main/kotlin/com/snipsnap/app/ui/DeletedKitsSection.kt")
+    private val kitsScreen = File("../app/src/main/kotlin/com/snipsnap/app/ui/KitsScreen.kt")
 
     /**
      * A control is guarded by a flag (`busy`, `working`) that its handler
@@ -3573,6 +3577,22 @@ class ConventionTest {
      * would pass; the sheet was read for that when the law was written and
      * has none. Comment-only lines between the opening brace and the raise are
      * skipped, so a comment explaining the raise cannot hide it.
+     *
+     * It reads the seven files that guard a control with such a flag, or
+     * (KitsScreen) with a `busy` the caller raises:
+     *  - the pad editor, SPLIT and the Takes bin (RESTORE, BACK and EMPTY THE
+     *    BIN NOW);
+     *  - the two BIN sections, `DeletedSnipsSection` and `DeletedKitsSection`
+     *    (RESTORE and EMPTY THE BIN);
+     *  - GROOVE;
+     *  - the shelf, `KitsScreen`, whose `busy` is a parameter App raises
+     *    (the project-handler law below holds that side). It has no launch of
+     *    its own today, so the law finds nothing there; it is listed so a
+     *    launch added to it later is read.
+     *
+     * It does not read `App.kt`: App's own jobs raise `busy = Busy(...)`, a
+     * different shape, and the project-handler law below holds the handlers
+     * that law names.
      */
     private val guardRaisedInsideLaunch = Regex("""launch\s*(\([^)]*\))?\s*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
     private val guardRaisedInsideSuspendFun = Regex("""suspend fun[^\n]*\{\s*\n(?:\s*//[^\n]*\n)*\s*(busy|working)\s*=\s*true""")
@@ -3617,7 +3637,10 @@ class ConventionTest {
             ),
             "the suspend-fun scan flags a suspend function that raises no guard",
         )
-        val offending = listOf(padSheetScreen, splitScreen).flatMap { file ->
+        val offending = listOf(
+            padSheetScreen, splitScreen, takesBinScreen,
+            deletedSnipsSection, deletedKitsSection, grooveScreen, kitsScreen,
+        ).flatMap { file ->
             val src = file.readText(Charsets.UTF_8)
             // The line of the `busy = true` itself, which is where the match ends.
             fun lineOf(m: MatchResult) = "${file.name}:${src.take(m.range.last).count { it == '\n' } + 1}"
@@ -3630,6 +3653,351 @@ class ConventionTest {
                 "coroutine starts runs the job twice. Raise the flag in the handler, before the `launch`, and " +
                 "keep the `finally` that clears it inside (a suspend function leaves the flag to its caller). " +
                 "At: ${offending.joinToString(", ")}",
+        )
+    }
+
+    // ---- Law: every App project handler is guarded ----
+
+    /**
+     * The project actions (a project opened, a kit opened or switched or
+     * added, a new project) change which project and kit the whole app is
+     * looking at. `busy` is App's own job: a starter being rendered, a
+     * remix, a pack. A tap on one of these while it runs moved the open
+     * kit out from under the job. These five were the project actions that
+     * had no guard at all, so each opens with `if (busy != null) return`.
+     *
+     * "First" is the law's whole point: a guard placed after
+     * `val p = project ?: return` still guards, but a guard that is not the
+     * first statement is one an edit can slip a launch in front of, and the
+     * first-statement shape is what a reader scanning the handlers sees.
+     * Comment-only and blank lines before it are skipped.
+     *
+     * The guard alone does not stop a double tap. It refuses a tap only
+     * while some other job holds `busy`, and four of the five launch
+     * (`openKit`, `activateKit`, `addKitToProject`, `newProject`): `launch`
+     * only schedules, so a second tap in the beat before the coroutine starts
+     * finds nothing saying the first is under way. Two taps on a kit no
+     * project holds could make two projects. So each of those four also
+     * holds, by [raiseProblems]:
+     *  - `busy` goes up in the handler, with the handler's own
+     *    `Busy(Copy.<X>_BUSY)`, before the `launch` (the same rule as "a busy
+     *    guard is raised before its launch"), or two quick taps both find it
+     *    down. After `val p = project ?: return`, if the handler has one, so
+     *    an early return cannot leave the flag up;
+     *  - `busy` comes down in a `finally`, so a failure or a cancel cannot
+     *    lock App's actions for good;
+     *  - `busy` comes down before the handler calls another handler of this
+     *    list. Each of them opens with the guard, so a landing made with the
+     *    flag still up would be refused by the very job that made it. Only
+     *    `newProject` calls one today (`openProject(p)`): the project would
+     *    stay on the shelf and the screen where it was.
+     *
+     * `openProject` launches nothing and raises nothing: it is the landing,
+     * and only guarded.
+     */
+    private val projectHandlers = listOf("openProject", "openKit", "activateKit", "addKitToProject", "newProject")
+    private val projectGuard = "if (busy != null) return"
+
+    /** The handlers of [projectHandlers] that launch, and the `Copy` constant each raises `busy` with. */
+    private val projectRaises = mapOf(
+        "openKit" to "OPENING_KIT_BUSY",
+        "activateKit" to "SWITCHING_KIT_BUSY",
+        "addKitToProject" to "ADDING_KIT_BUSY",
+        "newProject" to "NEW_PROJECT_BUSY",
+    )
+
+    /**
+     * What is wrong with how the project handler [name], whose stripped body
+     * is [body], raises and lowers `busy` around its launch; empty when
+     * nothing is. One sentence per fault, each naming the handler, so the
+     * failure says which guard went and why.
+     */
+    private fun raiseProblems(name: String, body: String, constant: String): List<String> {
+        val problems = mutableListOf<String>()
+        val raise = "busy = Busy(Copy.$constant)"
+        val raised = body.indexOf(raise)
+        val launched = body.indexOf("launch")
+        if (raised < 0) {
+            problems += "`$name` never raises `$raise`, so its guard refuses a tap only while another job holds `busy` and a double tap runs it twice"
+        } else if (launched >= 0 && raised > launched) {
+            problems += "`$name` raises `busy` inside or after its launch, so two quick taps both pass the guard. Raise it in the handler, before the `launch`."
+        }
+        // An early `return` (not `return@launch`, which is the coroutine's own)
+        // after the raise would leave the flag up for good.
+        val lastReturn = Regex("""\breturn\b(?!@)""").findAll(body).map { it.range.first }.filter { launched < 0 || it < launched }.maxOrNull()
+        if (raised >= 0 && lastReturn != null && lastReturn > raised) {
+            problems += "`$name` can return after it raises `busy`, leaving the flag up; raise it after the last early `return`"
+        }
+        val lowered = body.indexOf("busy = null")
+        if (!Regex("""finally\s*\{\s*busy = null""").containsMatchIn(body)) {
+            problems += "`$name` does not lower `busy` in a `finally { busy = null }`, so a failure or a cancel would lock App's actions for good"
+        }
+        for (other in projectHandlers) {
+            if (other == name) continue
+            val call = Regex("""(?<![.\w])$other\(""").find(body) ?: continue
+            if (lowered < 0 || lowered > call.range.first) {
+                problems += "`$name` calls `$other(` before it lowers `busy`; `$other` opens with `$projectGuard`, " +
+                    "so the landing would be refused by the job that made it. Lower the flag first."
+            }
+        }
+        return problems
+    }
+
+    /** The `{ ... }` body of the one `fun <name>(` in [code] (already stripped of comments and strings), brace-matched. */
+    private fun funBody(code: String, name: String): String {
+        val decls = Regex("""\bfun $name\(""").findAll(code).toList()
+        assertEquals(1, decls.size, "expected exactly one `fun $name(`, found ${decls.size}; this scan reads one body, so a second declaration would be unchecked")
+        val open = code.indexOf('{', decls[0].range.last)
+        assertTrue(open >= 0, "expected a `{` body after `fun $name(`")
+        var depth = 0
+        for (i in open until code.length) {
+            if (code[i] == '{') depth++
+            if (code[i] == '}') {
+                depth--
+                if (depth == 0) return code.substring(open + 1, i)
+            }
+        }
+        fail("unbalanced braces in `fun $name(`")
+    }
+
+    /** The first statement of the body: its first line that is not blank. Comments are gone from [code] already. */
+    private fun firstStatement(body: String): String =
+        body.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: ""
+
+    @Test
+    fun `every App project handler is guarded`() {
+        // The scan has to see an unguarded handler as unguarded, and a guarded
+        // one, with a comment above its guard, as guarded; otherwise a clean
+        // result would mean nothing.
+        val unguarded = stripCommentsAndStrings(
+            "fun openKit(entry: Entry) {\n        scope.launch {\n            val p = load(entry)\n        }\n    }\n",
+        )
+        assertEquals(
+            "scope.launch {",
+            firstStatement(funBody(unguarded, "openKit")),
+            "the scan no longer reads the first statement of a handler that has no guard",
+        )
+        val guardSecond = stripCommentsAndStrings(
+            "fun activateKit(folder: String) {\n        val p = project ?: return\n        if (busy != null) return\n    }\n",
+        )
+        assertFalse(
+            firstStatement(funBody(guardSecond, "activateKit")) == projectGuard,
+            "the scan accepts a guard that is the second statement; the law means the first",
+        )
+        val guarded = stripCommentsAndStrings(
+            "fun openProject(p: Project) {\n        // Not while a job is under way.\n\n        if (busy != null) return\n        project = p\n    }\n",
+        )
+        assertEquals(
+            projectGuard,
+            firstStatement(funBody(guarded, "openProject")),
+            "the scan no longer sees a guard that has a comment and a blank line above it",
+        )
+
+        // The raise check has to see each fault it names, and let a right
+        // handler through; otherwise a clean result would mean nothing. The
+        // second body guards and launches and lowers, but never raises: the
+        // shape the three kit handlers had.
+        val right = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.OPENING_KIT_BUSY)\n        scope.launch {\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n            project = p\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            raiseProblems("openKit", right, "OPENING_KIT_BUSY"),
+            "the raise check rejects a handler that raises before its launch and lowers in a finally",
+        )
+        val guardsNeverRaises = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n            project = p\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", guardsNeverRaises, "OPENING_KIT_BUSY").any { "never raises" in it },
+            "the raise check accepts a handler that guards but never raises `busy`",
+        )
+        val raisesInside = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            busy = Busy(Copy.OPENING_KIT_BUSY)\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", raisesInside, "OPENING_KIT_BUSY").any { "inside or after its launch" in it },
+            "the raise check accepts a handler that raises `busy` inside its launch",
+        )
+        val landsFirst = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.NEW_PROJECT_BUSY)\n        scope.launch {\n            try {\n                openProject(make())\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("newProject", landsFirst, "NEW_PROJECT_BUSY").any { "calls `openProject(` before it lowers" in it },
+            "the raise check accepts a handler that lands through `openProject(` with `busy` still up",
+        )
+        val neverLowers = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.OPENING_KIT_BUSY)\n        scope.launch {\n            val p = load(entry)\n            busy = null\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", neverLowers, "OPENING_KIT_BUSY").any { "does not lower" in it },
+            "the raise check accepts a handler that lowers `busy` outside a `finally`",
+        )
+        val raisesBeforeReturn = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        val p = project ?: return\n        scope.launch {\n            try {\n                save(p)\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("activateKit", raisesBeforeReturn, "SWITCHING_KIT_BUSY").any { "can return after" in it },
+            "the raise check accepts a handler that raises `busy` and then returns early, leaving the flag up",
+        )
+        // An early return before the raise is how activateKit is written, and a
+        // labelled return (`return@map`) between the raise and the launch is
+        // not an early return of the handler: neither may be flagged.
+        val returnsBeforeRaise = stripCommentsAndStrings(
+            "if (busy != null) return\n        val p = project ?: return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        val names = kits.map { return@map it.name }\n        scope.launch {\n            try {\n                save(p, names)\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            raiseProblems("activateKit", returnsBeforeRaise, "SWITCHING_KIT_BUSY"),
+            "the raise check flags an early return that comes before the raise, or a labelled `return@map` between the raise and the launch",
+        )
+
+        val code = stripCommentsAndStrings(appKt.readText(Charsets.UTF_8))
+        val unguardedNames = projectHandlers.filter { firstStatement(funBody(code, it)) != projectGuard }
+        assertTrue(
+            unguardedNames.isEmpty(),
+            "App's project handlers must open with `$projectGuard`: a tap on one while a job runs moves the open " +
+                "project or kit out from under it. Missing from: $unguardedNames",
+        )
+
+        val raiseFaults = projectRaises.flatMap { (name, constant) -> raiseProblems(name, funBody(code, name), constant) }
+        assertTrue(
+            raiseFaults.isEmpty(),
+            "the guard refuses a tap only while another job holds `busy`; a handler that launches must raise its own " +
+                "`busy` before the launch, or a double tap on it runs it twice, and lower it in a `finally`. $raiseFaults",
+        )
+    }
+
+    // ---- Law: the camera app is only launched behind the CAMERA grant ----
+
+    /**
+     * Android refuses `ACTION_IMAGE_CAPTURE` (and `ACTION_VIDEO_CAPTURE`) to
+     * an app that declares `android.permission.CAMERA` and has not been
+     * granted it: the launch throws a `SecurityException`, and the camera
+     * app that would have taken the picture is never reached. SNAP's TAKE
+     * PHOTO shipped that way. The manifest declares CAMERA for LIVE (CameraX
+     * needs the grant itself), a comment beside it said the system camera
+     * did not, and a fresh install killed the app on the first tap.
+     *
+     * So any file that launches the system camera (`TakePicture`,
+     * `TakePicturePreview`, `CaptureVideo`, or the raw intent actions) has to
+     * name the three things that make the launch safe: the CAMERA constant,
+     * a `checkSelfPermission` to read the grant, and a `RequestPermission`
+     * contract to ask for it when it is missing. A second camera screen
+     * (a cover photo for a kit, say) that copies the launch and forgets the
+     * ask fails here, not on someone's phone.
+     *
+     * **What this law can and cannot prove.** It is a fence per file, not
+     * per call: SNAP declares the launcher before the function that checks,
+     * so "the check comes first" has no textual order to hold to. It cannot
+     * prove the check guards the launch, or that a refusal is said out loud;
+     * `SnapScreenTest` drives those on a device. It reads code after
+     * comments and string literals are stripped, so a comment that names
+     * `TakePicturePreview` does not put its file under the rule and a comment
+     * that names `checkSelfPermission` does not satisfy it.
+     */
+    private val cameraLaunch = Regex("""ActivityResultContracts\s*\.\s*(?:TakePicture\w*|CaptureVideo)\b|\bACTION_(?:IMAGE|VIDEO)_CAPTURE\b""")
+
+    /** What a camera launch's file has to say, in code, and how the law names each. */
+    private val cameraGuard = listOf(
+        "Manifest.permission.CAMERA" to "name `Manifest.permission.CAMERA`",
+        "checkSelfPermission" to "read the grant with `checkSelfPermission`",
+        "ActivityResultContracts.RequestPermission" to "ask for it with `ActivityResultContracts.RequestPermission`",
+    )
+
+    /** What [name]'s code launches the camera app without: empty when it launches none, or all of it is there. */
+    private fun cameraLaunchProblems(name: String, code: String): List<String> {
+        if (!cameraLaunch.containsMatchIn(code)) return emptyList()
+        return cameraGuard.filter { (needle, _) -> needle !in code }.map { (_, say) -> "$name launches the camera app but never does: $say" }
+    }
+
+    @Test
+    fun `law - the camera app is only launched behind the CAMERA grant`() {
+        // Controls first: a law that cannot see its own failure shape checks nothing.
+        val unguarded = stripCommentsAndStrings(
+            "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n" +
+                "fun takePhoto() { camera.launch(null) }\n",
+        )
+        assertEquals(
+            cameraGuard.size,
+            cameraLaunchProblems("Unguarded.kt", unguarded).size,
+            "the camera law misses a launch with no check at all, which is the bug it exists for",
+        )
+        val checkedNotAsked = stripCommentsAndStrings(
+            "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { }\n" +
+                "fun takePhoto() { if (ContextCompat.checkSelfPermission(c, Manifest.permission.CAMERA) == 0) camera.launch(uri) }\n",
+        )
+        assertTrue(
+            cameraLaunchProblems("CheckedNotAsked.kt", checkedNotAsked).any { "RequestPermission" in it },
+            "the camera law accepts a launch that reads the grant but never asks for it, which leaves a refusal with no way back",
+        )
+        val rawIntent = stripCommentsAndStrings("startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE))\n")
+        assertTrue(
+            cameraLaunchProblems("RawIntent.kt", rawIntent).isNotEmpty(),
+            "the camera law misses the raw intent action, which needs the grant just as the contract does",
+        )
+        val guarded = stripCommentsAndStrings(
+            "val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }\n" +
+                "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n" +
+                "fun takePhoto() {\n" +
+                "    if (ContextCompat.checkSelfPermission(c, Manifest.permission.CAMERA) == 0) camera.launch(null)\n" +
+                "    else ask.launch(Manifest.permission.CAMERA)\n" +
+                "}\n",
+        )
+        assertEquals(
+            emptyList(),
+            cameraLaunchProblems("Guarded.kt", guarded),
+            "the camera law flags a launch that checks the grant and asks for it",
+        )
+        val onlyTalksAboutIt = stripCommentsAndStrings(
+            "// uses ActivityResultContracts.TakePicturePreview, see checkSelfPermission(Manifest.permission.CAMERA)\n" +
+                "/* ACTION_IMAGE_CAPTURE */ val x = \"ActivityResultContracts.TakePicture\"\n",
+        )
+        assertEquals(
+            emptyList(),
+            cameraLaunchProblems("Talks.kt", onlyTalksAboutIt),
+            "the camera law counts a comment or a string as a launch",
+        )
+        val commentOnlyCheck = stripCommentsAndStrings(
+            "// checkSelfPermission(Manifest.permission.CAMERA) then ActivityResultContracts.RequestPermission\n" +
+                "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n",
+        )
+        assertEquals(
+            cameraGuard.size,
+            cameraLaunchProblems("CommentOnly.kt", commentOnlyCheck).size,
+            "the camera law lets a comment stand in for the check",
+        )
+
+        // The rule is about a declared CAMERA permission. If the declaration
+        // goes (LIVE dropped), the rule goes with it: delete this law then,
+        // do not teach it to pass.
+        val manifest = File("../app/src/main/AndroidManifest.xml").readText(Charsets.UTF_8)
+        assertTrue(
+            "android.permission.CAMERA" in manifest,
+            "the manifest no longer declares CAMERA, so Android no longer requires the grant to launch the system camera; " +
+                "this law is moot - remove it together with the declaration rather than loosening it",
+        )
+
+        val sources = File("../app/src/main/kotlin").walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        require(sources.size > 20) { "found only ${sources.size} :app sources - the scan is broken, not the tree." }
+        var launching = 0
+        val problems = mutableListOf<String>()
+        for (file in sources) {
+            val code = stripCommentsAndStrings(file.readText(Charsets.UTF_8))
+            if (cameraLaunch.containsMatchIn(code)) launching++
+            problems += cameraLaunchProblems(file.name, code)
+        }
+        assertTrue(
+            launching >= 1,
+            "expected SnapScreen's TAKE PHOTO to launch the camera app, found $launching files that do - the pattern this " +
+                "law matches must have changed, which would make it pass by checking nothing. Fix the pattern, do not lower this bound.",
+        )
+        assertTrue(
+            problems.isEmpty(),
+            "the system camera is launched without the CAMERA grant behind it. A manifest that declares CAMERA makes " +
+                "ACTION_IMAGE_CAPTURE throw a SecurityException until the user has granted it, so a fresh install dies on the " +
+                "tap. Check the grant at the tap and ask for it when it is missing (SnapScreen.takePhoto):\n  " +
+                problems.joinToString("\n  "),
         )
     }
 

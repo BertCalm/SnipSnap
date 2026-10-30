@@ -1321,10 +1321,13 @@ private fun KitRenameDialog(initialName: String, taken: Set<String>, onCancel: (
  * The ring and the state come up together and by the rule every loading
  * drawing keeps ([rememberRingUp]): not in the first [BusyLatch.SHOW_AFTER_MS]
  * of the job, so one that is over by then flashes nothing, and for at least
- * [BusyLatch.MIN_VISIBLE_MS] once up. [ringClock] is that rule's clock, in ms
- * and monotonic: a device test hands it the compose test clock, because the
- * latch sleeps on a coroutine `delay`, which runs on that clock's virtual
- * time, and [SystemClock] would not move with it (the same seam as
+ * [BusyLatch.MIN_VISIBLE_MS] once up. They do not leave together: the state
+ * goes the moment [working] turns false, because the button is enabled again
+ * and must not tell TalkBack it is still working, while the ring stays out
+ * its minimum. [ringClock] is that rule's clock, in ms and monotonic: a
+ * device test hands it the compose test clock, because the latch sleeps on a
+ * coroutine `delay`, which runs on that clock's virtual time, and
+ * [SystemClock] would not move with it (the same seam as
  * `loadingClock` on this screen).
  */
 @Composable
@@ -1354,7 +1357,9 @@ fun PrimaryAction(
             // instead of it silently vanishing from the tree (accessibility
             // audit finding 12 — see ActionButton in PadSheetScreen.kt).
             .tapeClick(label = label, enabled = enabled, onClick = onClick)
-            .let { if (ringUp) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
+            // Said only while the job runs: a ring held out its minimum after
+            // the job ended is a drawing, not news.
+            .let { if (ringUp && working) it.semantics { stateDescription = Copy.WORKING_BUSY } else it },
         contentAlignment = Alignment.Center,
     ) {
         // Past 22 characters (the longest label proven to fit one line at

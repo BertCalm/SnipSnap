@@ -674,6 +674,21 @@ class PersonalityTest {
         // above: a line the dock says while the job runs, not a landing.
         // Each job's own landing toast is a separate line.
         "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
+        // The pad editor's plain save and its close-time flush: the same
+        // `…`-suffixed dock line as the named jobs above, for a write no
+        // control of its own started.
+        "SAVING_PAD_BUSY",
+        // App's own silent operations: setting the kit's key, IN KEY's retune
+        // of every tonal pad, NEW PROJECT's make-the-project, and the three
+        // kit moves (open a kit row, add a kit from the shelf, switch the
+        // open project's kit) - the same `…`-suffixed dock line as every
+        // other *_BUSY constant above.
+        "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
+        "OPENING_KIT_BUSY", "ADDING_KIT_BUSY", "SWITCHING_KIT_BUSY",
+        // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
+        // are read off disk: the same `…`-suffixed dock line as every other
+        // *_BUSY constant above, for a load no control started.
+        "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
     )
 
     /**
