@@ -34,6 +34,12 @@ object MidiLearnStore {
         return all.filterNot { it.target.startsWith("$screen.") } + mine
     }
 
+    /** [screen]'s bindings out of the text kept under [PREFS_KEY] (null when nothing is kept yet). */
+    fun load(text: String?, screen: String): List<MidiBinding> = of(screen, read(text))
+
+    /** The text to keep under [PREFS_KEY] once [screen] has learned [mine], every other screen's bindings kept. */
+    fun save(text: String?, screen: String, mine: List<MidiBinding>): String = write(replace(read(text), screen, mine))
+
     fun write(bindings: List<MidiBinding>): String = Json.write(
         JsonValue.Obj(
             linkedMapOf(

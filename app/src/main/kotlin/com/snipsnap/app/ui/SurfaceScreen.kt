@@ -417,9 +417,7 @@ fun SurfaceScreen(
     // opens the keyboard with the lifecycle, below, and keeps the bindings
     // in the app's preferences beside every other screen's.
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val learn = remember {
-        MidiLearn(MidiLearnStore.of(SurfaceMidi.SCREEN, MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))))
-    }
+    val learn = remember { MidiLearn(MidiLearnStore.load(prefs.getString(MidiLearnStore.PREFS_KEY, null), SurfaceMidi.SCREEN)) }
     val hand = remember { SurfaceMidi() }
     var learnedBindings by remember { mutableStateOf(learn.bindings) }
     var learnArmed by remember { mutableStateOf<String?>(null) }
@@ -431,9 +429,8 @@ fun SurfaceScreen(
 
     fun saveLearn() {
         learnedBindings = learn.bindings
-        val all = MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))
-        val merged = MidiLearnStore.replace(all, SurfaceMidi.SCREEN, learn.bindings)
-        prefs.edit().putString(MidiLearnStore.PREFS_KEY, MidiLearnStore.write(merged)).apply()
+        val saved = MidiLearnStore.save(prefs.getString(MidiLearnStore.PREFS_KEY, null), SurfaceMidi.SCREEN, learn.bindings)
+        prefs.edit().putString(MidiLearnStore.PREFS_KEY, saved).apply()
     }
 
     val midi = remember { MidiInput(context) }
@@ -1569,62 +1566,25 @@ fun SurfaceScreen(
             if (panel == Panel.MIDI) {
                 Spacer(Modifier.height(6.dp))
 
-                // MIDI learn: tap a target, move a control on the keyboard.
-                // A lit chip is waiting for its control; tapping it again
-                // stops waiting, FORGET drops what the waiting one had.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    for ((t, chip) in SurfaceMidi.TARGETS) {
-                        ActionButton(
-                            chip,
-                            scheme,
-                            enabled = midiSupported,
-                            dimmed = learnArmed != t,
-                            modifier = Modifier.weight(1f).semantics { selected = learnArmed == t },
-                        ) {
-                            if (learnArmed == t) {
-                                learn.disarm()
-                                learnArmed = null
-                            } else {
-                                learn.arm(t, SurfaceMidi.prefer(t))
-                                learnArmed = t
-                            }
-                        }
-                    }
-                    val armedNow = learnArmed
-                    ActionButton(
-                        "FORGET",
-                        scheme,
-                        enabled = armedNow != null && learnedBindings.any { it.target == armedNow },
-                        modifier = Modifier.weight(1.4f),
-                    ) {
-                        if (armedNow != null) {
-                            learn.forget(armedNow)
-                            learn.disarm()
-                            learnArmed = null
-                            saveLearn()
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-                val armedLabel = SurfaceMidi.TARGETS.firstOrNull { it.first == learnArmed }?.second
-                TapeText(
-                    when {
-                        !midiSupported -> "THIS PHONE HAS NO MIDI"
-                        midiDevices.isEmpty() -> "PLUG IN A KEYBOARD TO LEARN"
-                        armedLabel != null -> "MOVE A CONTROL FOR $armedLabel"
-                        else -> "TAP A TARGET, THEN MOVE A CONTROL"
+                MidiLearnPanel(
+                    targets = SurfaceMidi.TARGETS,
+                    armed = learnArmed,
+                    bindings = learnedBindings,
+                    supported = midiSupported,
+                    connected = midiDevices.isNotEmpty(),
+                    lastHeard = lastHeard,
+                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
+                    onArm = { t ->
+                        if (t == null) learn.disarm() else learn.arm(t, SurfaceMidi.prefer(t))
+                        learnArmed = t
                     },
-                    TapeType.pixel,
-                    scheme.ink.tape,
+                    onForget = { t ->
+                        learn.forget(t)
+                        learn.disarm()
+                        learnArmed = null
+                        saveLearn()
+                    },
                 )
-                TapeText("KNOBS MOVE THE PUCK, HOLD SOUNDS IT", TapeType.pixel, scheme.ink.tape)
-                for ((t, chip) in SurfaceMidi.TARGETS) {
-                    val bound = learnedBindings.firstOrNull { it.target == t }
-                    TapeText("$chip  ${bound?.let { MidiLearn.describe(it.source) } ?: "-"}", TapeType.pixel, scheme.amber.tape)
-                }
-                TapeText("LAST  ${lastHeard ?: "-"}", TapeType.pixel, scheme.ink.tape)
             }
 
             if (panel == Panel.MOD) {
