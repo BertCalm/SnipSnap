@@ -231,14 +231,15 @@
       <p id="gateIntro">A rack section that forms a hit against a die: a low shock, a sweep through the medium, the fast part folded, then a hard stop with a flash of heat. These clips are the real Kotlin section on real pads. Nobody has heard them yet: your ear is the measurement.</p>
     </div>
 
-    <div class="lcd stages" aria-label="What the four knobs do">
+    <div class="lcd stages" aria-label="What the knobs do">
       <b>CHARGE</b><span>Adds a 48 Hz shock under the hit, and spreads the click into a short sweep.</span>
       <b>STANDOFF</b><span>When the shock lands: 0 to 1 ms after the hit.</span>
       <b>YIELD</b><span>How fast the sound must move to fold. Low folds more; 1 folds nothing.</span>
       <b>ARREST</b><span>The die: 0 touches nothing, 1 is a hard stop at 0.4 of the peak, with grit.</span>
+      <b>DEPTH</b><span>How deep the sweep goes: 0 is the short, high one; 1 is the long one from the low end.</span>
     </div>
 
-    <p class="dim">The clips play as the rack lands them, so they keep their peaks and their loudness differences. A number like <span class="up" style="color:var(--heat)">+2.1 dB</span> is how much louder than dry, at the same peak. "Same loudness" levels three clips to check that tone, not volume, is what you like.</p>
+    <p class="dim">The clips play as the rack lands them, so they keep their peaks and their loudness differences. A number like <span class="up" style="color:var(--heat)">+2.1 dB</span> is how much louder than dry, at the same peak. <span id="levelNote">"Same loudness" levels three clips to check that tone, not volume, is what you like.</span></p>
 
     <p id="loadState" class="dim" role="status">Loading the clips…</p>
 
@@ -528,6 +529,8 @@
     applyGate(m.gate);
     merge(readLocal());
     sections = m.sections;
+    // Only the first gate has the LEVELLED section the loudness note points at.
+    if (!sections.some(function (s) { return s.id === 'LEVELLED'; })) document.getElementById('levelNote').hidden = true;
     sections.forEach(function (s) { s.clips.forEach(function (c) { clipsById[s.id + '/' + c.id] = c; }); });
     var count = Object.keys(clipsById).length;
     document.getElementById('loadState').textContent = count + ' clips, rendered by ./gradlew :synth:' + TASK + '.';

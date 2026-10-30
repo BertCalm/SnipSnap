@@ -14,9 +14,10 @@ package com.snipsnap.shell
  */
 object Copy {
 
-    const val BOOT_READY = "SNIPSNAP.EXE — READY."
+    /** HELP's banner heading. The app no longer boots behind a start-up overlay; this is HELP's alone (its wording is a later copy pass's to settle). */
+    const val BOOT_READY = "SNIPSNAP — READY."
 
-    /** Boot screen progress lines, in order. */
+    /** The lines of HELP's banner, in order. They were the start-up overlay's, which is gone. */
     val BOOT_LINES = listOf(
         "CHECKING HEADS…",
         "DEMAGNETIZING…",
@@ -1486,6 +1487,39 @@ object Copy {
     /** SMEAR at AMT 0 on a pad that isn't smeared: `smearPad` writes nothing, so nothing landed. */
     const val SMEAR_ZERO = "AMT 0: NOTHING TO SMEAR. THE PAD STAYS AS IT IS."
 
+    // ---- PAD SHEET: the pedal slate (docs/superpowers/specs/2026-10-28-pedal-slate-design.md) ----
+    /** MORE's chip, with the pad's pedals the row does not show counted ("MORE · 2"); plain MORE when there are none. */
+    fun pedalMore(count: Int): String = if (count <= 0) PadSheet.MORE else "${PadSheet.MORE} · $count"
+    /** The AMT stepper's label while it moves a pedal: which one ("AMT · TOUCH"), so a pedal behind MORE is named too. */
+    fun pedalAmt(pedal: String): String = "AMT · $pedal"
+    /** The slate's button on a pedal row seven does not draw: a label, not a landing. */
+    const val PUT_ON_ROW = "PUT ON ROW"
+    /** After PUT ON ROW on [pedal]: the next row-seven tap picks the chip it swaps with; any other tap cancels. */
+    fun putOnRowPrompt(pedal: String): String = "NOW TAP THE ROW CHIP TO SWAP FOR $pedal."
+    /** PUT ON ROW, landed: [incoming] in [outgoing]'s place, and where [outgoing] went. The row is every kit's. */
+    fun rowSwapped(incoming: String, outgoing: String): String =
+        "$incoming ON THE ROW IN EVERY KIT. $outgoing MOVES BEHIND MORE."
+    /** A lit pedal tapped off a pad that keeps others (or AMT taken to 0), and the pedal AMT moves now; the last one off lands as [unTreated]. */
+    fun pedalOff(pedal: String, pad: String, next: String): String = "$pedal OFF $pad. AMT NOW MOVES $next."
+    /** A pedal on in place of the ones it silenced: the same wah section (WAH, TOUCH, ROCK) or the same amp on one side. */
+    fun pedalReplaced(pedal: String, replaced: List<String>, pad: String): String =
+        "$pedal ON $pad IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN."
+    /** A movable pedal flipped to the other side of the amp, in place of any pedal it silenced there. */
+    fun pedalSide(pedal: String, beforeAmp: Boolean, pad: String, replaced: List<String> = emptyList()): String =
+        "$pedal NOW ${if (beforeAmp) "BEFORE" else "AFTER"} THE AMP ON $pad" +
+            (if (replaced.isEmpty()) "." else ", IN PLACE OF ${replaced.joinToString(" AND ")}. ORIGINAL SLEEPS IN THE BIN.")
+    /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
+    const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
+    /**
+     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a take 30 days):
+     * the board re-renders whole from the original, so it would play every pedal already in the
+     * audio twice. Refused; the pedals are part of the sound now.
+     */
+    const val PEDALS_NOT_BINNED =
+        "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
+    /** A printed board pad ([PrintedPads]: WIDE, RUSH, AQUARIUM) takes no pedals; [label] names it. */
+    fun pedalsPrinted(label: String): String = "REMOVE $label BEFORE ADDING PEDALS."
+
     // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
     /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
     const val DUSTING_BUSY = "DUSTING…"
@@ -2777,12 +2811,53 @@ object Copy {
     /** X-RAY's own footnote: fields the reading found but doesn't yet have a label for. */
     fun xrayUnlabeledFields(count: Int): String =
         "$count FIELD${if (count == 1) "" else "S"} PRESENT IN THIS FILE, NOT YET LABELED HERE."
-    /** `App.kt`'s `fresh()`: the busy overlay while a starter kit renders offline, named so the wait is attributable - same shape as [treatmentBusy]. */
-    fun dubbingBusy(name: String): String = "DUBBING $name…"
     /** EVIL TWINS' own busy overlay while every twin renders offline. */
     const val EVIL_TWINS_BUSY = "TWINNING…"
     /** INSTANT KIT's own busy overlay - the same word [CHOP_ALL_BUSY] uses for its own (unrelated) crate-digging pass, kept as its own constant since the two features are otherwise unconnected. */
     const val INSTANT_KIT_BUSY = "CHOPPING…"
+    /**
+     * The dock's busy line while a kit loads, named so the wait is attributable
+     * - [name] is the kit's own name. `App.kt`'s `fresh()` says it while a
+     * starter renders, and the loading card over the pad grid (`LoadingCard`)
+     * carries the same line, so the dock and the card never word the one job
+     * two ways.
+     */
+    fun loadingBusy(name: String): String = "LOADING $name…"
+    /** The count beside a job's bar: [done] of [total], for a job that can be counted. */
+    fun busyCount(done: Int, total: Int): String = "$done OF $total"
+    /** The dock's busy line while something loads and there is no name to give it. */
+    const val LOADING_BUSY = "LOADING…"
+    /**
+     * WORKING…, said in two places. On a button it is what TalkBack hears as
+     * the state while the job the button started is running: its
+     * `stateDescription`, beside the label it keeps and the ring drawn at its
+     * edge. On the dock it is the line a screen reports (`ReportBusy`) for a
+     * job it cannot name. It is never a visible label on a button: the
+     * button keeps its own words.
+     */
+    const val WORKING_BUSY = "WORKING…"
+    // The dock's line for the jobs the pad editor and SPLIT start, each said
+    // in the word of the control that started it. A treatment says its own
+    // name through `treatmentBusy`; a job with no word at all (SAVE, a file
+    // decode, the mic trip, UNDO) falls back to WORKING_BUSY.
+    /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
+    const val MUTATE_BUSY = "MUTATING…"
+    /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
+    const val DESAMPLE_BUSY = "DE-SAMPLING…"
+    /** The dock's line while MAKE PAD renders a new pad out of one hit. */
+    const val MAKE_PAD_BUSY = "MAKING THE PAD…"
+    /** The dock's line while MAKE INSTRUMENT writes an instrument package. */
+    const val MAKE_INSTRUMENT_BUSY = "MAKING THE INSTRUMENT…"
+    /** The dock's line while SPREAD writes the pad's sound across a bank. */
+    const val SPREAD_BUSY = "SPREADING…"
+    /** The dock's line while SPLIT takes a pad apart into its three parts. */
+    const val SPLIT_BUSY = "SPLITTING…"
+    /** The KITS screen's placeholder line while the library is read from disk. */
+    const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
+    /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */
+    const val READING_RECORDING = "READING THE RECORDING…"
+    /** The dock's button to stop a job that can be stopped part-way. */
+    const val CANCEL_JOB = "CANCEL"
 
 
     // ---- gear · MIDI: the CLOCK CHECK button and what it says around the run ----

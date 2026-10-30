@@ -1031,13 +1031,13 @@ fun GrooveScreen(
     // converting elapsed wall time to elapsed steps (TAPE's own dt-clamp
     // lesson against a stale frame gap fast-forwarding the needle), reading
     // the program this screen last pushed. App drives the one it hands in,
-    // keyed on the transport, the kit's folder and the kit itself; a beat
-    // built here is driven from here with the same keys. An edit that
+    // keyed on the transport, folder, pads and tempo; a beat built here
+    // uses the same keys. Live-bus metadata leaves the clock running. An edit that
     // reaches the clock while the roll is running restarts it, and
     // restarting costs nothing — the beat reads its position back from
     // state, so the needle resumes where it was.
     if (ownsBeat) {
-        LaunchedEffect(beat.playing, kitDir, entry.kit) { beat.run() }
+        LaunchedEffect(beat.playing, kitDir, entry.kit.pads, entry.kit.tempoBpm) { beat.run() }
     }
 
     // What this screen hangs on the clock: BOUNCE's arming and its pattern-

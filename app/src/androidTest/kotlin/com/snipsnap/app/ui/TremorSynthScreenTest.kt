@@ -216,6 +216,7 @@ class TremorSynthScreenTest : ComposeScreenTest() {
             button("CAGE").assertDoesNotExist()
             button("SCRAMBLE").assertIsNotEnabled()
             button("SAVE PRESET").assertIsNotEnabled()
+            button("AUDITION").assertIsNotEnabled()
             button("PRESET DRY CAGE").assertIsEnabled()
             for (action in listOf("SCRAMBLE", "SAVE PRESET")) press(action)
             compose.runOnIdle {

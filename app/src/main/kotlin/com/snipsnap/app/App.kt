@@ -48,11 +48,13 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeTheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.rememberDeskBrush
+import com.snipsnap.app.theme.rememberReduceMotion
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
 import com.snipsnap.app.ui.AppScreen
@@ -60,8 +62,6 @@ import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
 import com.snipsnap.app.ui.ChopScreen
 import com.snipsnap.app.ui.BinScreen
-import com.snipsnap.app.ui.BootGate
-import com.snipsnap.app.ui.BootText
 import com.snipsnap.app.ui.CaptureSheet
 import com.snipsnap.app.ui.ChoiceSheet
 import com.snipsnap.app.ui.SheetRow
@@ -73,9 +73,11 @@ import com.snipsnap.app.ui.GROOVE_SWING_DEFAULT
 import com.snipsnap.app.ui.GrainFieldScreen
 import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
+import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
+import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -141,6 +143,7 @@ import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.shell.BenchExport
 import com.snipsnap.shell.BenchNotes
 import com.snipsnap.shell.Breed
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Bench
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DockModel
@@ -283,21 +286,15 @@ private class CatchSession {
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
- * The whole M0 app: the SNIPSNAP.EXE window on its desk, the menu row,
+ * The whole M0 app: the SNIPSNAP window on its desk, the menu row,
  * the status bar, and the three real screens. State is plain Compose
  * state — the screens' actual machines live tested in `:shell`, and the
  * later milestones bind to them; M0's state is navigation and a shelf.
  */
 @Composable
-fun App(shelf: KitShelf, bootText: Boolean = true) {
+fun App(shelf: KitShelf) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-
-    // The boot text: the LCD draws Copy.BOOT_LINES then BOOT_READY for ~0.6 s
-    // on a cold start and lifts to whatever is under it. `BootGate` is the
-    // process's, so a rotation (which rebuilds this composition) does not
-    // replay it; [bootText] is the seam for a harness that must not wait.
-    var booting by remember { mutableStateOf(bootText && BootGate.claim()) }
 
     // SETUP's WHERE YOUR FILES LIVE row (September UAT, finding 23).
     // getExternalFilesDir does real filesystem work - it creates the
@@ -341,6 +338,20 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val nav = rememberNavigation()
     val location = nav.location
     var kits by remember { mutableStateOf<List<KitShelf.Entry>>(emptyList()) }
+    // Whether the shelf's lists have been read once: `kitsLoaded` for the kit
+    // list, `shelfListsLoaded` for the projects, the rooms and the rooms in the
+    // bin (the shelf effect below, which sets it only after the last of the
+    // three). An empty list before that is "not read yet", not an empty
+    // library, and the shelf says LOADING instead of NOTHING TAPED YET until
+    // both are true. All three lists matter, not only the projects: the empty
+    // panel is drawn when kits, rooms and binned rooms are all empty, so a
+    // flag set while rooms were still on their way would let a library with
+    // no kits but some rooms flash it. Set once and never cleared: a later
+    // re-read of a list that already holds something is a refresh, and
+    // flashing the panel over it on every kit change would be the flicker
+    // this removes, moved.
+    var kitsLoaded by remember { mutableStateOf(false) }
+    var shelfListsLoaded by remember { mutableStateOf(false) }
     var open by remember { mutableStateOf<KitShelf.Entry?>(null) }
     // The dock (§1): the strip at the foot of every screen. Its `now` is
     // the line the toast used to say, and the door the toast used to carry
@@ -361,6 +372,11 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
+    // REDUCED MOTION: the system's own "remove animations", kept current while
+    // the app is up (it can change under us; see `rememberReduceMotion`). The
+    // drawings that loop (the busy bar, the spinner) read it through
+    // `LocalReduceMotion` and hold still when it is on.
+    val reduceMotion = rememberReduceMotion()
     // MIDI OUT (SETUP): the hardware switch, remembered like HAPTICS, on by
     // default (MIDI_OUT_DEFAULT). `MidiOut.install` reads the same pref; pushing the value
     // once here makes the two agree even if install ran before it was written.
@@ -443,7 +459,23 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         note = null
         dock.offer(message, Door(label, locationOf(target)))
     }
-    var busy by remember { mutableStateOf<String?>(null) }
+    var busy by remember { mutableStateOf<Busy?>(null) }
+    // The job a screen is carrying on its own (the pad editor's jobs, Split,
+    // and a recording being read in TAPE and CHOP), reported through
+    // `LocalBusySink` and gone when the screen is: an `appScope` job that
+    // outlives its screen is not shown after it goes (a later app-owned job
+    // board covers that). It is kept apart from `busy` on purpose: `busy` is
+    // App's own job and gates App's own work (`if (busy != null) return`), and
+    // a screen's job must not lock App's actions out. The dock shows App's
+    // first.
+    var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // Remembered, so the sink the screens read is one object for the life of
+    // the composition: a static local that changed would recompose all of it.
+    val busySink = remember { { reported: Busy? -> screenBusy = reported } }
+    // The starter kit being rendered, by name, or null: while set, PADS draws
+    // the placeholder grid for it and the shelf's NEW KIT button shows its
+    // spinner. Set and cleared by `fresh`, alongside `busy`, and by nothing else.
+    var pendingKit by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
     // PAD SHEET: the long-press pad inspector, full-screen over PADS. Not a
     // place or a stage of its own; it's PADS-scoped overlay state, cleared
@@ -516,6 +548,10 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             }
             rooms = withContext(Dispatchers.IO) { runCatching { shelf.rooms() }.getOrDefault(emptyList()) }
             binnedRooms = withContext(Dispatchers.IO) { runCatching { shelf.binnedRooms() }.getOrDefault(emptyList()) }
+            // After the last list the empty panel reads, not after the first:
+            // see `shelfListsLoaded`. (`binnedCount` below only gates the BIN
+            // row, which the empty panel does not read.)
+            shelfListsLoaded = true
             binnedCount = withContext(Dispatchers.IO) {
                 runCatching { shelf.binnedKits().size }.getOrDefault(0) +
                     runCatching { SnipStore.binned(context.filesDir).size }.getOrDefault(0)
@@ -1042,6 +1078,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
 
     LaunchedEffect(Unit) {
         kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+        kitsLoaded = true
         // The rooms' bin empties itself of what has slept past its days.
         withContext(Dispatchers.IO) { runCatching { shelf.sweepRooms() } }
         // Same promise, for forgotten presets (docs/WORKSHOP.md, WS5's
@@ -1158,7 +1195,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // import runs beside that dub without racing it, and must not wipe
         // the dub's own DUBBING… line on its way out.
         val ownsBusy = busy == null
-        if (ownsBusy) busy = Copy.IMPORT_BUSY
+        if (ownsBusy) busy = Busy(Copy.IMPORT_BUSY)
         // The share's own name, for the refusal box; blank until the provider answers.
         var sharedName = ""
         try {
@@ -1170,7 +1207,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             sharedName = name
             val kind = withContext(Dispatchers.IO) { ShelfImport.sniff(ShareInbox.head(context, uri, ShelfImport.SNIFF_BYTES)) }
             if (ShelfImport.isKit(kind)) {
-                if (ownsBusy) busy = Copy.LANDING_BUSY
+                if (ownsBusy) busy = Busy(Copy.LANDING_BUSY)
                 val local = withContext(Dispatchers.IO) { ShareInbox.copyToCache(context, uri, name, LANDING_MAX_BYTES) }
                 try {
                     // Any ZIP sniffs the same by its magic bytes alone -
@@ -1248,14 +1285,40 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun hasLandingPad(kit: com.snipsnap.kit.Kit): Boolean =
         (PadBanks.slots(0).first..PadBanks.slots(1).last).any { kit.pad(it) == null }
 
+    /**
+     * A starter kit, rendered and landed on PADS. The render takes a few
+     * seconds (a minute, on a slow phone), so the user is taken to PADS at
+     * once and finds the shape of the grid there ([pendingKit] makes `KitLoading`
+     * draw `PadPlaceholderGrid`, which takes no name, with the loading card over
+     * it once the job has run 200 ms; the card and the dock's bar carry the
+     * starter's name); the kit replaces the placeholders when it lands.
+     *
+     * Moved with [landOn], not `goToScreen`: that one also clears the
+     * transient state, `pendingSnipAssign` among it, and the snip waiting
+     * for a home is exactly what the success line below checks for. (It is
+     * also declared further down, out of a local function's reach.)
+     */
     fun fresh(starter: StarterKits.Starter) {
         if (busy != null) return
-        busy = Copy.dubbingBusy(starter.displayName)
+        busy = Busy(Copy.loadingBusy(starter.displayName))
+        pendingKit = starter.displayName
+        landOn(AppScreen.KIT)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.render(starter, Random.nextInt()) }
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                pendingKit = null
                 busy = null
+                // Nothing landed, so the placeholders have nothing to become -
+                // but only a user still looking at them is moved. Someone who
+                // went to TAPE or BEAT while it rendered is where they chose to
+                // be, and is told, not yanked. From the placeholders it is Back,
+                // not a new landing, so the KIT entry `fresh` pushed is popped
+                // and not left in the history; the shelf is landed on only if
+                // Back did not get there (`Navigation.backOutOf`).
+                if (nav.backOutOf(locationOf(AppScreen.KIT), locationOf(AppScreen.KITS))) dock.moved(nav.location)
                 // Law 3 in practice, matching ExportScreen's own dub-failed
                 // catch: the user gets what failed, not a Java exception's
                 // `message` quoted at them — that detail stays in logcat.
@@ -1264,7 +1327,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                 return@launch
             }
             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            busy = null
             // A snip may be waiting for a home: the empty shelf's own copy
             // sends the user here to make a kit for it (EMPTY_SHELF_FOR_ASSIGN),
             // and `fresh` deliberately does not clear the hand-off. Saying
@@ -1273,6 +1335,12 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             // armed says what to do next (September UAT, finding 12).
             dock.say(if (pendingSnipAssign != null) Copy.snipLanding(hasLandingPad(entry.kit)) else Copy.FRESH_TAPE)
             landKit(entry)
+            // Cleared after landKit has put the kit in `open`. It is one run on
+            // the main thread, so the placeholders and the dock's bar go in the
+            // same frame the kit arrives; the order is only the one that reads
+            // as "the kit is here, so the wait is over".
+            pendingKit = null
+            busy = null
         }
     }
 
@@ -1284,7 +1352,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun buildPhotoKit(photo: Photo) {
         if (busy != null) return
-        busy = Copy.SNAP_KIT_BUSY
+        busy = Busy(Copy.SNAP_KIT_BUSY)
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.landPhotoKit("PHOTO KIT", PhotoKit.build(photo, "PHOTO KIT")) }
@@ -1315,7 +1383,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun buildPathRing(cells: List<Pair<Int, Int>>, bpm: Float) {
         val e = open ?: return
         if (busy != null) return
-        busy = Copy.SNAP_PATH_BUSY
+        busy = Busy(Copy.SNAP_PATH_BUSY)
         scope.launch {
             try {
                 val current = withContext(Dispatchers.IO) {
@@ -1366,7 +1434,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun buildChordKit(photo: Photo) {
         if (busy != null) return
-        busy = Copy.SNAP_CHORD_BUSY
+        busy = Busy(Copy.SNAP_CHORD_BUSY)
         scope.launch {
             try {
                 val built = withContext(Dispatchers.Default) { PhotoChord.build(photo, "PHOTO CHORD") }
@@ -1418,17 +1486,18 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /**
      * SCULPT / STRETCH / FREEZE from the KIT screen: one pad of the open kit
      * becomes a texture kit of its own on the shelf, which then opens —
-     * the same DUBBING… shape as [fresh], because it's the same thing: a
-     * new tape rendered offline over a few seconds.
+     * the same busy-then-land shape as [fresh] (the dock says SCULPTING…,
+     * STRETCHING… or FREEZING…, where [fresh] says LOADING <NAME>…), because
+     * it's the same thing: a new tape rendered offline over a few seconds.
      */
     fun texture(slot: Int, spec: TextureKits.Spec) {
         val source = open ?: return
         if (busy != null) return
-        busy = when (spec) {
+        busy = Busy(when (spec) {
             is TextureKits.Spec.Sculpt -> "SCULPTING…"
             is TextureKits.Spec.Stretch -> "STRETCHING…"
             is TextureKits.Spec.Freeze -> "FREEZING…"
-        }
+        })
         scope.launch {
             val entry = try {
                 withContext(Dispatchers.IO) { shelf.texture(source, slot, spec) }
@@ -1484,8 +1553,9 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
 
     /**
      * EVIL TWINS (W4.3): bank B lit with seeded re-treatments of bank A, a
-     * new seed every press so the second press rerolls. The same DUBBING…
-     * shape as a fresh tape: every twin renders offline over a few seconds.
+     * new seed every press so the second press rerolls. The same
+     * busy-then-land shape as a fresh tape: every twin renders offline over a
+     * few seconds.
      */
     fun evilTwins() {
         val source = open ?: return
@@ -1499,7 +1569,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         val hadTwins = source.kit.pads.any { it.slot > 16 }
-        busy = Copy.EVIL_TWINS_BUSY
+        busy = Busy(Copy.EVIL_TWINS_BUSY)
         scope.launch {
             val (entry, _) = try {
                 // Same reasoning as setKey above: evilTwins is an
@@ -1526,7 +1596,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      * per-pad door `KitBuilderModel.dustPad` once per pad under one
      * `KitWrites.mutex`, each tape's print read once. Layered and chained
      * pads are left as they are and counted, since every audio rewrite
-     * refuses them. The same DUBBING…-shaped busy line as EVIL TWINS: the
+     * refuses them. The same busy-then-land shape as EVIL TWINS: the
      * prints and sixteen convolutions run offline.
      */
     fun dustAll() {
@@ -1542,7 +1612,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             dock.say(Copy.dustTapeGone(kitTape))
             return
         }
-        busy = Copy.DUSTING_BUSY
+        busy = Busy(Copy.DUSTING_BUSY)
         scope.launch {
             // What landed before a failure, if one comes: saved and shown,
             // never left as audio in the bin with no recipe in kit.json.
@@ -1641,13 +1711,13 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      * own open→mutate→save (via `KitBuilderModel.create`) is exactly the
      * kind of kit write two concurrent presses must never race, the same
      * reasoning `setKey`/`evilTwins` above already follow. Same
-     * DUBBING…-shaped busy line as EVIL TWINS: every crossed pad renders
+     * busy-then-land shape as EVIL TWINS: every crossed pad renders
      * offline.
      */
     fun finishBreed(source: KitShelf.Entry, partner: KitShelf.Entry) {
         pendingBreedWith = null
         if (busy != null) return
-        busy = Copy.BREEDING_BUSY
+        busy = Busy(Copy.BREEDING_BUSY)
         scope.launch {
             val (entry, report) = try {
                 withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.breed(source, partner, Random.nextInt()) } }
@@ -1700,7 +1770,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // run finishes, for a hand-off the user has already moved past.
         pendingBreedWith = null
         if (uris.isEmpty() || busy != null) return
-        busy = Copy.CHOP_ALL_BUSY
+        busy = Busy(Copy.CHOP_ALL_BUSY)
         scope.launch {
             var wavCount = 0
             var made = 0
@@ -1764,7 +1834,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun xray(uri: Uri?) {
         if (uri == null || busy != null) return
-        busy = Copy.XRAY_BUSY
+        busy = Busy(Copy.XRAY_BUSY)
         scope.launch {
             try {
                 val name = withContext(Dispatchers.IO) { ShareInbox.displayName(context, uri) }
@@ -2018,7 +2088,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun backOnto(request: RetrimRequest, range: IntRange) {
         if (busy != null) return
-        busy = Copy.RETRIM_BUSY
+        busy = Busy(Copy.RETRIM_BUSY)
         scope.launch {
             try {
                 val (updated, treatment) = withContext(Dispatchers.IO) {
@@ -2149,7 +2219,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         if (busy != null) return
-        busy = Copy.READ_GROOVE_BUSY
+        busy = Busy(Copy.READ_GROOVE_BUSY)
         scope.launch {
             try {
                 val reading = withContext(Dispatchers.IO) {
@@ -2200,7 +2270,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             return
         }
         if (busy != null) return
-        busy = Copy.FEEL_BUSY
+        busy = Busy(Copy.FEEL_BUSY)
         scope.launch {
             try {
                 val felt = withContext(Dispatchers.IO) {
@@ -2235,7 +2305,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /**
      * INSTANT KIT (F2.2): the one tap on TAPE — the selection (or the whole
      * deck) chopped with the defaults and landed on the grid without the
-     * review, the same DUBBING… shape as a fresh tape. CHOP can still open
+     * review, the same busy-then-land shape as a fresh tape. CHOP can still open
      * the result later to argue with the chips.
      *
      * [hadSelection] is TAPE's answer, not this function's guess (September
@@ -2245,7 +2315,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun instantKit(file: File, range: IntRange, hadSelection: Boolean) {
         if (busy != null) return
-        busy = Copy.INSTANT_KIT_BUSY
+        busy = Busy(Copy.INSTANT_KIT_BUSY)
         scope.launch {
             // `finally` owns the busy overlay: whichever way this leaves
             // (built, refused, or the scope cancelled underneath it), the
@@ -2285,7 +2355,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     fun shareKit() {
         val source = open ?: return
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val file = withContext(Dispatchers.IO) { shelf.pack(source, ShareOut.shareDir(context)) }
@@ -2307,7 +2377,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         // Under the app's one busy lock, like every other file move: a second
         // tap, or another job in flight, must not race the bin.
         if (busy != null) return
-        busy = Copy.ROOM_FORGET_BUSY
+        busy = Busy(Copy.ROOM_FORGET_BUSY)
         scope.launch {
             try {
                 // The bin may freshen the name ("FUNK ROOM 2") - the toast says the name it went in under.
@@ -2332,7 +2402,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun shareRoom(room: Rooms.Room) {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val file = withContext(Dispatchers.IO) { shelf.packRoom(room, ShareOut.shareDir(context)) }
@@ -2373,7 +2443,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun shareSnip(info: SnipStore.Info) {
         if (busy != null) return
-        busy = Copy.SHARE_BUSY
+        busy = Busy(Copy.SHARE_BUSY)
         scope.launch {
             try {
                 val staged = withContext(Dispatchers.IO) {
@@ -2397,7 +2467,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     /** RESTORE on a binned room: back onto the shelf, the toast names it. */
     fun restoreRoom(binned: Rooms.Binned) {
         if (busy != null) return
-        busy = Copy.ROOM_RESTORE_BUSY
+        busy = Busy(Copy.ROOM_RESTORE_BUSY)
         scope.launch {
             try {
                 val room = withContext(Dispatchers.IO) { shelf.restoreRoom(binned) }
@@ -2425,7 +2495,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun emptyRoomsBin() {
         if (busy != null) return
-        busy = Copy.ROOM_BIN_EMPTY_BUSY
+        busy = Busy(Copy.ROOM_BIN_EMPTY_BUSY)
         scope.launch {
             try {
                 withContext(Dispatchers.IO) { shelf.emptyRoomsBin() }
@@ -2465,7 +2535,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun deleteKit(entry: KitShelf.Entry) {
         if (busy != null) return
-        busy = Copy.KIT_DELETE_BUSY
+        busy = Busy(Copy.KIT_DELETE_BUSY)
         scope.launch {
             try {
                 val ok = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.deleteKit(entry) } }
@@ -2520,7 +2590,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun renameKit(entry: KitShelf.Entry, newName: String) {
         if (busy != null) return
-        busy = Copy.KIT_RENAME_BUSY
+        busy = Busy(Copy.KIT_RENAME_BUSY)
         scope.launch {
             try {
                 val renamed = withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.renameKit(entry, newName) } }
@@ -2555,7 +2625,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
             dock.say(Copy.BACKUP_EMPTY)
             return
         }
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val (result, presets) = withContext(Dispatchers.IO) {
@@ -2600,7 +2670,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun sendToBench() {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val (logs, notes, presets) = withContext(Dispatchers.IO) {
@@ -2639,7 +2709,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
      */
     fun sendHitsToBench() {
         if (busy != null) return
-        busy = Copy.PACKING_BUSY
+        busy = Busy(Copy.PACKING_BUSY)
         scope.launch {
             try {
                 val hits = withContext(Dispatchers.IO) { LabelledHits.list(shelf.root) }
@@ -3029,6 +3099,32 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     // and AUDITION. Over the open kit, read live; its settings stand in for
     // GROOVE's own only when the beat is started with GROOVE never opened.
     val hosts = remember { PadHosts(context) }
+
+    fun savePerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings, onResult: (String?) -> Unit) {
+        val source = open
+        if (source == null || busy != null) {
+            onResult("KIT IS BUSY · TRY SAVE AGAIN")
+            return
+        }
+        scope.launch {
+            val kit = try {
+                withContext(Dispatchers.IO) {
+                    KitWrites.mutex.withLock { com.snipsnap.shell.AquariumPerformance.save(source.dir, settings) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "savePerformance: failed", e)
+                onResult("COULD NOT SAVE PERFORMANCE · TRY AGAIN")
+                return@launch
+            }
+            val entry = KitShelf.Entry(source.dir, kit)
+            // Saving stays with its original kit even if navigation moves.
+            hosts.peek(source.dir)?.request(entry)
+            if (open?.dir == source.dir) open = entry
+            onResult(null)
+            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+        }
+    }
+
     val grooveSettings by rememberUpdatedState(BeatPlayer.Settings(grooveProgIndex, grooveSwingPercent, grooveFeel, grooveSeed))
     val beat = remember {
         BeatPlayer(hosts = hosts, scope = scope, kitNow = { open }, settings = { grooveSettings })
@@ -3049,10 +3145,10 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
     // The bank follows an edit made while no screen is holding the kit's
     // pads - the pad sheet's TUNE, heard on a beat that is playing under it.
     LaunchedEffect(open?.kit) { open?.let { beat.kitChanged(it) } }
-    // The clock, driven from here for the life of the app. Keyed as the
-    // screen's own loop always was: the transport, the kit's folder and the
-    // kit itself.
-    LaunchedEffect(beat.playing, open?.dir, open?.kit) { beat.run() }
+    // Drive one clock for the app's lifetime.
+    // Live-bus metadata does not cancel a running print, recording or beat clock.
+    // Actual pad/tempo edits retain the transport's existing restart policy.
+    LaunchedEffect(beat.playing, open?.dir, open?.kit?.pads, open?.kit?.tempoBpm) { beat.run() }
     // What the dock reads. The bar is written to the beat only when it
     // changes, so this follows at bar granularity and never reads the
     // position, which moves every frame.
@@ -3160,7 +3256,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics) {
+    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -3314,6 +3410,8 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                 onNewProject = ::newProject,
                                 onCatchFirst = ::requestArm,
                                 busy = busy != null,
+                                startingKit = pendingKit != null,
+                                loading = !(kitsLoaded && shelfListsLoaded),
                                 onOpen = { entry ->
                                     val breedSource = pendingBreedWith
                                     val addTo = pendingAddTo
@@ -3610,70 +3708,76 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                                         appScope = scope,
                                     )
                                 }
-                                else -> KitScreen(
-                                    open,
-                                    // The switcher (plan §3.3): the project's line,
-                                    // its kit list, and the shelf in pick mode.
-                                    switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
-                                    // With fewer than two kits there is nothing to
-                                    // switch between: the chip is the shelf's door,
-                                    // not a one-row sheet naming the kit on screen.
-                                    onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
-                                    onAddFromShelf = ::addFromShelf,
-                                    // The grid's state, held by the navigation model.
-                                    bank = nav.padsBank,
-                                    onBankChange = { nav.padsBank = it },
-                                    selectedSlot = nav.padsSelectedSlot,
-                                    onSelectSlot = { nav.padsSelectedSlot = it },
-                                    // The strip's doors: the tap twin of the hold (W#22).
-                                    onOpenPad = ::openPadSheet,
-                                    onCaptureInto = { slot -> padCaptureSlot = slot },
-                                    onFromSnips = { slot ->
-                                        pendingSnipTarget = slot
-                                        nav.open(Bench.SNIPS)
-                                    },
-                                    versions = versions,
-                                    busy = busy != null,
-                                    onLongPress = ::openPadSheet,
-                                    onTakesBin = { takesBinOpen = true },
-                                    onTexture = ::texture,
-                                    onSetKey = ::setKey,
-                                    onInKey = ::inKey,
-                                    onTwins = ::evilTwins,
-                                    onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
-                                    bankRequest = kitBankRequest,
-                                    onBankRequestConsumed = { kitBankRequest = null },
-                                    lightRequest = lightRequest,
-                                    onLightConsumed = { lightRequest = null },
-                                    beat = beat,
-                                    onBreed = ::startBreed,
-                                    // A second kit to cross with has to
-                                    // already be on the shelf — BREED can't
-                                    // offer a pick with nothing else there.
-                                    canBreed = kits.size > 1,
-                                    onSplit = { landOn(AppScreen.SPLIT) },
-                                    onDustAll = ::dustAll,
-                                    onEmptyLongPress = { slot ->
-                                        // SNIPS → PAD's landing: a pick still
-                                        // armed intercepts the press here,
-                                        // before it ever reaches the normal
-                                        // capture surface below — KitScreen.kt
-                                        // itself needs no changes for this.
-                                        val pending = pendingSnipAssign
-                                        if (pending != null) {
-                                            assignPendingSnip(pending, slot)
-                                        } else {
-                                            padCaptureSlot = slot
-                                        }
-                                    },
-                                    onEmptyTapHint = {
-                                        dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
-                                    },
-                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
-                                    hasProject = project != null,
-                                    onNavigateTape = { goToScreen(AppScreen.TAPE) },
-                                    hosts = hosts,
-                                )
+                                else -> KitLoading(pendingKit) {
+                                    // A starter still rendering: the page is the placeholder grid for it
+                                    // (and, after 200 ms, the loading card over it), whatever kit is open;
+                                    // the kit is the page again once it has landed and the card has had its time.
+                                    KitScreen(
+                                        open,
+                                        // The switcher (plan §3.3): the project's line,
+                                        // its kit list, and the shelf in pick mode.
+                                        switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
+                                        // With fewer than two kits there is nothing to
+                                        // switch between: the chip is the shelf's door,
+                                        // not a one-row sheet naming the kit on screen.
+                                        onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
+                                        onAddFromShelf = ::addFromShelf,
+                                        // The grid's state, held by the navigation model.
+                                        bank = nav.padsBank,
+                                        onBankChange = { nav.padsBank = it },
+                                        selectedSlot = nav.padsSelectedSlot,
+                                        onSelectSlot = { nav.padsSelectedSlot = it },
+                                        // The strip's doors: the tap twin of the hold (W#22).
+                                        onOpenPad = ::openPadSheet,
+                                        onCaptureInto = { slot -> padCaptureSlot = slot },
+                                        onFromSnips = { slot ->
+                                            pendingSnipTarget = slot
+                                            nav.open(Bench.SNIPS)
+                                        },
+                                        versions = versions,
+                                        busy = busy != null,
+                                        onLongPress = ::openPadSheet,
+                                        onTakesBin = { takesBinOpen = true },
+                                        onTexture = ::texture,
+                                        onSetKey = ::setKey,
+                                        onSavePerformance = ::savePerformance,
+                                        onInKey = ::inKey,
+                                        onTwins = ::evilTwins,
+                                        onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
+                                        bankRequest = kitBankRequest,
+                                        onBankRequestConsumed = { kitBankRequest = null },
+                                        lightRequest = lightRequest,
+                                        onLightConsumed = { lightRequest = null },
+                                        beat = beat,
+                                        onBreed = ::startBreed,
+                                        // A second kit to cross with has to
+                                        // already be on the shelf — BREED can't
+                                        // offer a pick with nothing else there.
+                                        canBreed = kits.size > 1,
+                                        onSplit = { landOn(AppScreen.SPLIT) },
+                                        onDustAll = ::dustAll,
+                                        onEmptyLongPress = { slot ->
+                                            // SNIPS → PAD's landing: a pick still
+                                            // armed intercepts the press here,
+                                            // before it ever reaches the normal
+                                            // capture surface below — KitScreen.kt
+                                            // itself needs no changes for this.
+                                            val pending = pendingSnipAssign
+                                            if (pending != null) {
+                                                assignPendingSnip(pending, slot)
+                                            } else {
+                                                padCaptureSlot = slot
+                                            }
+                                        },
+                                        onEmptyTapHint = {
+                                            dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
+                                        },
+                                        onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                        hasProject = project != null,
+                                        onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                                        hosts = hosts,
+                                    )
+                                }
                             }
                         }
                         top == null && location.stage == Stage.DECK -> TapeScreen(
@@ -4102,10 +4206,6 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                         // nothing rather than something false.
                         else -> Unit
                     }
-                    // The boot text over the stage, last so it is on top: the
-                    // frame around it is already drawn, the stage under it is
-                    // already composing, and it lifts after ~0.6 s or a tap.
-                    BootText(booting = booting, onDone = { booting = false })
                 }
                 // The dock, at the foot of every screen (plan §1). The status
                 // bar's three cells live on: where you are is the two rows
@@ -4113,7 +4213,7 @@ fun App(shelf: KitShelf, bootText: Boolean = true) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy,
+                    busy = busy ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's

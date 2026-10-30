@@ -33,7 +33,8 @@ import kotlin.math.sqrt
  * Raw measurements precede shared melodic gain; listening WAVs use AuditionLevel.
  * The source ablation keeps the direct attack coefficient and complete settings.
  * The selected-voice publication has its own output and review namespace; the
- * original and contrast listening packs remain available as fixed references.
+ * original, contrast, selected and role-comparison packs remain fixed references.
+ * --factory publishes the approved complete-configuration bank separately.
  */
 object AlloyAuditionGenerator {
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
@@ -46,7 +47,7 @@ object AlloyAuditionGenerator {
         "Drawn Wire", "Held Filament", "Soft Forge", "Endless Ember",
     ).mapIndexed { index, name -> name to "preset_${(index + 1).toString().padStart(2, '0')}_${slug(name)}" }.toMap()
     private val sectionDescriptions = linkedMapOf(
-        "PRESETS" to ("Thirty-six factory patches" to "Six factory patches per voice, rendered dry with original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING. Names and macro settings are retained for this listening pass."),
+        "PRESETS" to ("Factory patches with distinct roles" to "Four patches per voice: the selected reference and three owner-approved roles with their complete operator, routing and envelope configurations. All are dry; the original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING defaults remain available."),
         "VOICES" to ("Six voices across their range" to "Low, middle and high TUNE at soft (.3) and full (1) velocity. Compare attack, body and raw level; matching loudness preserves differences in excitation."),
         "SWEEPS" to ("Five points per control" to "0, .25, .5, .75 and 1 with companion controls at declared neutral values. Finite and held timbral examples are separate; HOLD below its top step remains finite."),
         "GRIDS" to ("The required interactions" to "MATERIAL × FUSE, FUSE × EDGE, BODY × EDGE and FUSE × LENGTH at 0, .5 and 1. Selected grids also use settled held excitation."),
@@ -77,6 +78,10 @@ object AlloyAuditionGenerator {
             model = patch?.model ?: Alloy.MODEL_VERSION,
             config = patch?.config ?: Alloy.defaultConfigFor(voice))
 
+        // A diagnostic can carry a transposed factory recipe without replacing
+        // that preset's canonical saved note in patches/ or the preset gallery.
+        val canonicalPresetPatch: AlloyPatch? get() = patch.takeIf { section == "PRESETS" }
+
         init {
             require(patch == null || patch.voice == voice) { "$id: factory voice disagrees with case" }
             require(Alloy.midiFor(voice, macros.getValue("TUNE"), baseMidi) == midi) {
@@ -100,11 +105,12 @@ object AlloyAuditionGenerator {
     fun main(args: Array<String>) {
         val root = File(args.firstOrNull() ?: "../testkit/alloy-audition")
         require(root.mkdirs() || root.isDirectory) { "cannot create ${root.absolutePath}" }
-        val selected = "--selected" in args.drop(1)
+        val factory = "--factory" in args.drop(1)
+        val selected = factory || "--selected" in args.drop(1)
         val full = "--full" in args.drop(1)
         val refreshPage = "--refresh-page" in args.drop(1)
         if (refreshPage) {
-            copyPage(root, selected)
+            copyPage(root, selected, factory)
             println("refreshed ALLOY listening page under ${root.absolutePath}")
             return
         }
@@ -118,6 +124,7 @@ object AlloyAuditionGenerator {
         File(root, "kit/SnipSnap Alloy Provisional Kit").deleteRecursively()
         File(root, "kit/SnipSnap Alloy Kit").deleteRecursively()
         File(root, "kit/SnipSnap Alloy Selected Kit").deleteRecursively()
+        File(root, "kit/SnipSnap Alloy Factory Kit").deleteRecursively()
         val sections = sectionDescriptions.mapValues { mutableListOf<MutableMap<String, Any?>>() }
         val pairReferences = mutableMapOf<String, PairReference>()
         val began = System.nanoTime()
@@ -137,8 +144,14 @@ object AlloyAuditionGenerator {
             if (!loop) Dsp.fadeTail(p.samples)
             require(p.samples.isNotEmpty() && p.samples.all { it.isFinite() }) { "${c.id}: invalid raw audio" }
             val native = Snip(p.samples, 1, Dsp.RATE)
-            require(native.peak() < 1f) { "${c.id}: raw output would clip PCM export (${native.peak()})" }
+            // Floating synthesis can exceed full scale before the listening/public
+            // level stage. Retain the factory's raw bound; only an actual raw PCM
+            // export needs the stricter encoding ceiling below.
+            require(native.peak() < 2f && p.diagnostics.rawPeak < 2.0) {
+                "${c.id}: raw synthesis exceeded its bound (${native.peak()})"
+            }
             val matched = AuditionLevel.level(native)
+            require(matched.peak() < 1f) { "${c.id}: matched output would clip PCM export" }
             val file = "audio/${c.id}.wav"
             WavWriter.write(File(root, file), matched, WavWriter.BitDepth.PCM_16)
             wavCount++
@@ -186,13 +199,18 @@ object AlloyAuditionGenerator {
                     "rootHz" to p.diagnostics.rootHz, "internalRate" to p.diagnostics.internalRate,
                 ),
             )
-            if (c.id == "pluck_all_low_c2") {
+            val classificationMeaning = when (c.id) {
+                "pluck_all_low_c2" -> "The all-low C2 PLUCK corner has a short percussive decay while retaining its pitched root. These are actual full-export heuristic classifications, separate from the engine's declared pitched export class."
+                "picked_fibre_c2" -> "Picked Fibre at C2 retains its stable pitched root and approved configuration, but its short attack and decay trigger the generic TOM heuristic. Actual raw and matched classifications are recorded separately from the declared TONAL export class."
+                else -> null
+            }
+            if (classificationMeaning != null) {
                 val decodedMatched = WavReader.read(File(root, file))
                 clip["classification"] = linkedMapOf(
                     "declaredEngineClass" to Alloy.drumClassFor(recipe.voice, recipe.macros).name,
                     "rawFullRenderClass" to Classifier.classify(native).drumClass.name,
                     "matchedPcm16FullRenderClass" to Classifier.classify(decodedMatched).drumClass.name,
-                    "meaning" to "The all-low C2 PLUCK corner has a short percussive decay while retaining its pitched root. These are actual full-export heuristic classifications, separate from the engine's declared pitched export class.",
+                    "meaning" to classificationMeaning,
                 )
             }
             File(root, "recipes/${c.id}.json").apply {
@@ -202,12 +220,13 @@ object AlloyAuditionGenerator {
                 parentFile.mkdirs(); writeText(recipe.toJsonText() + "\n")
             }
             if (c.raw) {
+                require(native.peak() < 1f) { "${c.id}: raw output would clip PCM export (${native.peak()})" }
                 val rawFile = "audio/${c.id}_raw.wav"
                 WavWriter.write(File(root, rawFile), native, WavWriter.BitDepth.PCM_24)
                 clip["rawFile"] = rawFile
                 wavCount++
             }
-            c.patch?.let { patch ->
+            c.canonicalPresetPatch?.let { patch ->
                 val patchFile = "patches/${slug(patch.name)}.json"
                 File(root, patchFile).apply { parentFile.mkdirs(); writeText(patch.toJsonText() + "\n") }
                 clip["preset"] = patch.name
@@ -238,8 +257,8 @@ object AlloyAuditionGenerator {
             }
         }
         require(pairReferences.isEmpty()) { "unpaired source ablations" }
-        val downloads = exportKit(root, selected)
-        if (selected) downloads += exportPresetBank(root)
+        val downloads = exportKit(root, selected, factory)
+        if (selected) downloads += exportPresetBank(root, factory)
         val patchZip = File(root, "alloy-patches.zip")
         zipDirectory(File(root, "patches"), patchZip, "patches")
         // Preserve download URLs shared from the first audition.
@@ -250,15 +269,19 @@ object AlloyAuditionGenerator {
 
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "ALLOY", "title" to "Alloy · hybrid attack / phase modulation",
-            "version" to if (selected) 2 else 1, "sampleRate" to Dsp.RATE, "channels" to 1,
-            "bitDepth" to 16, "rawBitDepth" to 24, "provisional" to true, "full" to full,
-            "stage" to if (selected) "selected-release-listening" else "factory-listening",
-            "selectedVoices" to selectedVoices(), "presetReviewPending" to true,
+            "version" to if (factory) 3 else if (selected) 2 else 1, "sampleRate" to Dsp.RATE, "channels" to 1,
+            "bitDepth" to 16, "rawBitDepth" to 24, "provisional" to !factory, "full" to full,
+            "stage" to if (factory) "factory-role-release" else if (selected) "selected-release-listening" else "factory-listening",
+            "selectedVoices" to selectedVoices(), "presetReviewPending" to !factory,
+            "roleBankApproved" to factory,
+            "presetConfigurationMeaning" to "Voice studies use selected defaults; each factory preset retains its own complete approved configuration.",
             "deviceAcceptancePending" to true,
-            "presetCount" to AlloyPresets.all().size, "presetsPerVoice" to 6,
+            "presetCount" to AlloyPresets.all().size,
+            "presetsPerVoice" to AlloyVoice.entries.map { AlloyPresets.forVoice(it).size }.distinct().single(),
             "clipCount" to roster.size, "wavCount" to wavCount,
             "elapsedSeconds" to (System.nanoTime() - began) / 1e9,
-            "generatedBy" to if (selected) "./gradlew :synth:generateAlloySelectedAudition${if (full) " -PalloySelectedFull" else ""}"
+            "generatedBy" to if (factory) "./gradlew :synth:generateAlloyFactoryAudition${if (full) " -PalloyFactoryFull" else ""}"
+                else if (selected) "./gradlew :synth:generateAlloySelectedAudition${if (full) " -PalloySelectedFull" else ""}"
                 else "./gradlew :synth:generateAlloyAudition${if (full) " -PalloyFull" else ""}",
             "coverage" to if (full) "Expanded all-voice timbral sweeps and finite/held interaction grids."
                 else "Curated publication pack: six voices × three registers × two velocities; five-point finite/held timbral sweeps; all-voice HOLD sweeps; four interaction grids; causal source ablations; hard held and extreme settings.",
@@ -266,7 +289,8 @@ object AlloyAuditionGenerator {
             "matchedMeaning" to "The same render at AuditionLevel's shared loudest-200ms RMS target (0.03), with peak guard. No rack FX.",
             "holdMeaning" to "HOLD 1 exports settled loop-only material. Its restrained periodic source enters the same conditioned phase-modulation port; the initial full attack is absent.",
             "fusionMeaning" to "FUSE is generated transient phase modulation in radians, with a retained direct attack. This is a reduced hybrid proposal, not copied Yamaha sample data or hardware reconstruction.",
-            "listeningVerdict" to "The owner selected original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING voices. This pack uses those configurations throughout. The 36 factory presets and names remain under listening review; phone and hardware MPC acceptance remain open.",
+            "listeningVerdict" to if (factory) "The owner heard the distinct-role comparison, judged it much better and authorized these patches for the factory bank. Each voice retains its selected reference plus three approved roles. Phone profiling and physical hardware MPC playback remain open."
+                else "The owner selected original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING defaults. Factory presets preserve their authored complete configurations. Phone and physical hardware MPC acceptance remain open.",
             "downloads" to downloads,
             "provenance" to provenance(roster, root),
             "sections" to sectionDescriptions.map { (id, names) ->
@@ -274,17 +298,17 @@ object AlloyAuditionGenerator {
             },
         )
         File(root, "manifest.json").writeText(Json.write(value(manifest)) + "\n")
-        copyPage(root, selected)
+        copyPage(root, selected, factory)
         File(root, "README.txt").writeText(
-            "ALLOY ${if (selected) "selected-voice release" else "expanded factory"} audition\n" +
+            "ALLOY ${if (factory) "approved factory release" else if (selected) "selected-voice release" else "expanded factory"} audition\n" +
                 "Regenerate: ${manifest.getValue("generatedBy")}\n" +
                 "${roster.size} listening clips, $wavCount WAVs; mono 44.1 kHz.\n" +
                 "Serve this folder as a static website and open index.html.\n" +
                 "Listening files share the project's audition level. Raw PCM24 files retain pre-target engine output.\n" +
                 "Held files are loop-only regions; initial attacks are absent. Use Repeat to review several wraps.\n" +
-                "36 factory patch JSONs cover six presets per voice. Every clip has an exact diagnostic render recipe under recipes/; ordinary clips also have importable patches under clip-patches/.\n" +
-                "Original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING are selected throughout the pack.\n" +
-                "The selected voices were heard; the complete factory bank, final names, phone behavior and hardware MPC playback await listening review.\n" +
+                "${AlloyPresets.all().size} factory patch JSONs cover four distinct roles per voice. Every clip has an exact diagnostic render recipe under recipes/; ordinary clips also have importable patches under clip-patches/.\n" +
+                "Voice defaults retain original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING; factory presets retain their complete authored configurations.\n" +
+                "${manifest.getValue("listeningVerdict")}\n" +
                 "Original and contrast auditions remain fixed references with their existing reviews.\n",
         )
         writeMetrics(File(root, "diagnostics.csv"), sections.values.flatten())
@@ -296,7 +320,7 @@ object AlloyAuditionGenerator {
             val m = Alloy.defaults(patch.voice) + patch.macros
             val id = publishedPresetIds[patch.name] ?: "preset_${slug(patch.name)}"
             add(Case("PRESETS", patch.voice.name, id,
-                patch.name, "Dry factory ${patch.voice.name.lowercase()} patch; empty FX.",
+                patch.name, "Owner-approved factory ${patch.voice.name.lowercase()} role with its complete authored configuration; empty FX.",
                 patch.voice, m, Alloy.midiFor(patch.voice, m.getValue("TUNE"), patch.midi),
                 velocity = patch.velocity, patch = patch, baseMidi = patch.midi))
         }
@@ -349,6 +373,12 @@ object AlloyAuditionGenerator {
             "PLUCK · all-low C2 corner",
             "Short percussive corner with its pitched root retained. Actual raw and decoded matched classifications are recorded separately from the declared tonal export class.",
             AlloyVoice.PLUCK, lowPluck, 36, raw = true, baseMidi = 36))
+        val pickedFibre = AlloyPresets.forVoice(AlloyVoice.STRING).single { it.name == "Picked Fibre" }.copy(midi = 36)
+        add(Case("EXTREMES", AlloyVoice.STRING.name, "picked_fibre_c2",
+            "STRING · Picked Fibre · C2",
+            "Approved Picked Fibre at C2 retains its stable pitched root but triggers the generic TOM heuristic. Compare actual raw and decoded matched classifications with the declared TONAL export class.",
+            pickedFibre.voice, pickedFibre.macros, 36, velocity = pickedFibre.velocity,
+            raw = true, patch = pickedFibre, baseMidi = pickedFibre.midi))
 
         val finiteVoices = mapOf(
             "MATERIAL" to listOf(AlloyVoice.KEY, AlloyVoice.BRASS),
@@ -399,23 +429,23 @@ object AlloyAuditionGenerator {
 
     private fun neutral(voice: AlloyVoice) = Alloy.macrosFor(voice).associate { it.name to it.neutral } + mapOf("TUNE" to .5f, "HOLD" to 0f)
 
-    private fun exportKit(root: File, selected: Boolean): MutableList<Map<String, String>> {
+    private fun exportKit(root: File, selected: Boolean, factory: Boolean): MutableList<Map<String, String>> {
         val work = File(root, ".alloy-kit-work")
         work.deleteRecursively()
-        val kit = KitAssembler.assembleArranged(if (selected) "SnipSnap Alloy Selected Kit" else "SnipSnap Alloy Kit", SynthKits.alloy(), work)
+        val kit = KitAssembler.assembleArranged(if (factory) "SnipSnap Alloy Factory Kit" else if (selected) "SnipSnap Alloy Selected Kit" else "SnipSnap Alloy Kit", SynthKits.alloy(), work)
         val result = KitExporter.exportProgramFolder(kit, work, File(root, "kit"), overwrite = true)
         require(File(result.directory, KitStore.FILE_NAME).isFile) { "starter export omitted its native history" }
         File(result.directory, "README.txt").writeText(
             "SnipSnap Alloy MPC kit\n" +
                 "Load the XPM program with its PCM24 WAV files beside it.\n" +
-                "Sixteen dry pads use original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING alongside the 36-preset factory library.\n" +
-                "Pads A01-A08 play Tine Alloy up the C minor pentatonic; A09-A14 retain one finite reference per voice.\n" +
+                "Sixteen dry pads retain full approved configurations alongside the ${AlloyPresets.all().size}-preset factory library.\n" +
+                "Pads A01-A08 play Long Prism up the C minor pentatonic; A09-A14 showcase Hollow Rail, Reed Switch, Open Chime, Bright Stamp, Beating Glass and Velvet Rise.\n" +
                 "The standard drum program leaves sample looping disabled.\n" +
                 "Pads A15 (Held Filament) and A16 (Endless Ember) contain settled loop-only audio; the initial full attack is absent.\n" +
                 "Enable sample looping across the whole sample on those MPC pads for indefinite HOLD.\n" +
                 "The published audition's Repeat button performs this looping directly in Web Audio.\n" +
                 "Native kit.json includes all sixteen complete recipes beside the PCM24 WAVs and XPM.\n" +
-                "The voice choice was heard; full-bank, naming and hardware MPC acceptance remain open.\n",
+                "The owner approved the distinct-role direction; physical phone and hardware MPC acceptance remain open.\n",
         )
         val zip = File(root, "alloy-mpc-kit.zip")
         zipDirectory(result.directory, zip, result.directory.name)
@@ -426,11 +456,12 @@ object AlloyAuditionGenerator {
 
     /** Every selected factory recipe reaches a hardware-loadable program, not only
      * the sixteen starter pads. Exporter-owned history retains actual WAV fingerprints. */
-    private fun exportPresetBank(root: File): Map<String, String> {
+    private fun exportPresetBank(root: File, factory: Boolean): Map<String, String> {
         val presets = AlloyPresets.all()
-        require(presets.size == 36 && presets.map { it.name }.distinct().size == 36)
+        require(presets.size == 24 && presets.map { it.name }.distinct().size == presets.size)
         val work = File(root, ".alloy-bank-work")
-        val destination = File(root, "bank/SnipSnap Alloy Selected Bank")
+        val bankName = if (factory) "SnipSnap Alloy Factory Bank" else "SnipSnap Alloy Selected Bank"
+        val destination = File(root, "bank/$bankName")
         work.deleteRecursively()
         destination.deleteRecursively()
         require(destination.mkdirs() || destination.isDirectory)
@@ -440,10 +471,9 @@ object AlloyAuditionGenerator {
             "String Soft" to listOf(AlloyVoice.STRING, AlloyVoice.SOFT),
         )
         try {
-            val heldProgramSummaries = mutableListOf<String>()
             val programs = groups.map { (title, voices) ->
                 val patches = voices.flatMap(AlloyPresets::forVoice)
-                require(patches.size == 12)
+                require(patches.size == 8)
                 val pads = patches.map { patch ->
                     val recipe = PadRecipe(patch)
                     ArrangedPad(recipe.render(), Alloy.drumClassFor(patch.voice, patch.macros),
@@ -452,7 +482,7 @@ object AlloyAuditionGenerator {
                 val staging = File(work, title.replace(' ', '-'))
                 val kit = KitAssembler.assembleArranged("SnipSnap Alloy $title", pads, staging)
                 val result = KitExporter.exportProgramFolder(kit, staging, destination, overwrite = true)
-                require(result.samples.size == 12)
+                require(result.samples.size == patches.size)
                 val sidecar = File(result.directory, KitStore.FILE_NAME)
                 require(sidecar.isFile) { "$title export omitted its native history" }
                 val exported = KitStore.load(result.directory)
@@ -465,18 +495,17 @@ object AlloyAuditionGenerator {
                 }.joinToString("; ") { (pad, patch) ->
                     "A${pad.slot.toString().padStart(2, '0')} ${patch.name}"
                 }
-                heldProgramSummaries += "$title: ${heldLabels.ifEmpty { "no held pads" }}"
                 val heldInstructions = if (heldLabels.isEmpty()) "This program has no held pads."
                     else "For indefinite HOLD, enable whole-sample looping on: $heldLabels."
                 File(result.directory, "README.txt").writeText(
-                    "ALLOY selected factory bank — $title\n" +
-                        "A01–A06: ${voices[0]}; A07–A12: ${voices[1]}. All patches are dry at their saved root and velocity.\n" +
+                    "ALLOY factory bank — $title\n" +
+                        "A01–A04: ${voices[0]}; A05–A08: ${voices[1]}. All patches are dry at their saved root and velocity.\n" +
                         "Load the XPM with its PCM24 WAVs and native kit.json beside it.\n" +
                         "These drum programs play each file once. $heldInstructions\n" +
-                        "Held material omits its opening full attack. Full-bank listening and hardware MPC acceptance remain open.\n",
+                        "The owner approved these distinct roles. Physical phone and hardware MPC acceptance remain open.\n",
                 )
                 linkedMapOf<String, Any?>(
-                    "name" to kit.name, "voices" to voices.map { it.name }, "presetCount" to 12,
+                    "name" to kit.name, "voices" to voices.map { it.name }, "presetCount" to patches.size,
                     "programFile" to result.program.relativeTo(destination).invariantSeparatorsPath,
                     "kitFile" to sidecar.relativeTo(destination).invariantSeparatorsPath,
                     "pads" to exportedPads.map { (pad, patch) ->
@@ -491,31 +520,32 @@ object AlloyAuditionGenerator {
                 )
             }
             File(destination, "bank.json").writeText(Json.write(value(linkedMapOf(
-                "engine" to "ALLOY", "presetCount" to 36, "programCount" to 3,
+                "engine" to "ALLOY", "presetCount" to presets.size, "programCount" to groups.size,
                 "selectedVoices" to selectedVoices(),
-                "playback" to "Three twelve-pad drum programs. Each WAV plays once by default; enable whole-sample looping on held pads for indefinite sustain. These are not keygroup instruments.",
+                "playback" to "Three eight-pad drum programs. Each complete finite WAV plays once. These are drum programs, not keygroup instruments.",
                 "programs" to programs,
             ))) + "\n")
             File(destination, "README.txt").writeText(
-                "ALLOY selected factory bank\n" +
-                    "All 36 factory patches in three twelve-pad programs: Bass Key, Pluck Brass, String Soft.\n" +
-                    "Original BASS/SOFT; revised KEY/PLUCK/BRASS/STRING. Every program carries its XPM, PCM24 WAVs and exporter-owned native kit.json with actual sample fingerprints.\n" +
-                    "For indefinite HOLD, enable whole-sample looping on these pads:\n" +
-                    heldProgramSummaries.joinToString("\n", postfix = "\n") +
+                "ALLOY factory bank\n" +
+                    "All ${presets.size} factory patches in three eight-pad programs: Bass Key, Pluck Brass, String Soft.\n" +
+                    "Each voice retains its selected reference and three approved full-config roles. Every program carries its XPM, PCM24 WAVs and exporter-owned native kit.json with actual sample fingerprints.\n" +
+                    "These factory roles are finite notes. The separate sixteen-pad starter kit retains two legacy held references.\n" +
                     "See bank.json for complete per-pad patches, program paths and held-pad flags.\n" +
-                    "The voice choice was heard; full-bank listening, final naming and hardware MPC acceptance remain open.\n",
+                    "The owner approved the distinct-role direction; physical phone and hardware MPC acceptance remain open.\n",
             )
-            val archive = File(root, "alloy-selected-preset-bank.zip")
+            val archive = File(root, if (factory) "alloy-factory-preset-bank.zip" else "alloy-selected-preset-bank.zip")
             zipDirectory(destination, archive, destination.name)
-            println("ALLOY selected factory bank: three twelve-pad programs, 36 complete recipes")
-            return mapOf("title" to "36-preset MPC bank · 3 × 12 pads · XPM + PCM24", "file" to archive.name)
+            println("ALLOY factory bank: three eight-pad programs, ${presets.size} complete recipes")
+            return mapOf("title" to "${presets.size}-preset MPC bank · 3 × 8 pads · XPM + PCM24", "file" to archive.name)
         } finally {
             work.deleteRecursively()
         }
     }
 
-    private fun copyPage(root: File, selected: Boolean) {
-        val pages = if (selected) listOf("alloy-selected/index.html" to "index.html",
+    private fun copyPage(root: File, selected: Boolean, factory: Boolean) {
+        val pages = if (factory) listOf("alloy-factory/index.html" to "index.html",
+            "alloy-factory/app.js" to "app.js", "alloy-factory/styles.css" to "styles.css")
+        else if (selected) listOf("alloy-selected/index.html" to "index.html",
             "alloy-selected/app.js" to "app.js", "alloy-selected/styles.css" to "styles.css")
         else listOf("alloy-audition.html" to "index.html", "alloy-audition.css" to "alloy-audition.css", "alloy-audition.js" to "alloy-audition.js")
         for ((source, destination) in pages) {
@@ -526,7 +556,7 @@ object AlloyAuditionGenerator {
     }
 
     private fun provenance(roster: List<Case>, root: File): Map<String, Any?> {
-        val sourceNames = listOf("Alloy.kt", "AlloyConfig.kt", "AlloyPatch.kt", "AlloyPresets.kt", "AlloyContrastPresets.kt")
+        val sourceNames = listOf("Alloy.kt", "AlloyConfig.kt", "AlloyPatch.kt", "AlloyPresets.kt", "AlloyFactoryRoles.kt", "AlloyContrastPresets.kt")
         val cwd = File(System.getProperty("user.dir"))
         val synth = if (File(cwd, "src/main/kotlin/com/snipsnap/synth/Alloy.kt").isFile) cwd else File(cwd, "synth")
         val repo = synth.parentFile
@@ -541,7 +571,7 @@ object AlloyAuditionGenerator {
             listOf(cls) + cls.declaredClasses.flatMap { executableClasses(it) }
         // Include the shared stages that shape the rendered and written bytes, not only ALLOY's own classes.
         val compiled = listOf(Alloy::class.java, AlloyConfig::class.java, AlloyPatch::class.java,
-            AlloyPresets::class.java, AlloyContrastPresets::class.java, AlloyAuditionGenerator::class.java,
+            AlloyPresets::class.java, AlloyFactoryRoles::class.java, AlloyContrastPresets::class.java, AlloyAuditionGenerator::class.java,
             SynthKits::class.java, Dsp::class.java, Tide::class.java, Resampler::class.java,
             AuditionLevel::class.java, Loudness::class.java, Snip::class.java, WavWriter::class.java,
             KitAssembler::class.java, KitExporter::class.java, KitStore::class.java,

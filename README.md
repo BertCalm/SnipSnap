@@ -164,6 +164,13 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 ### `:synth`
 
+FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
+a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
+HANDOFF control, provisional CLI starting points and an actual-engine audition
+are available outside the factory roster and phone picker. Run
+`./gradlew :synth:generateFerryAudition`; [implementation notes](docs/FERRY.md)
+separate Python listening approval from Kotlin, tail, HOLD and phone acceptance.
+
 CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
 and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
 contact-aligned playback, a 243-point middle-control check and a 92-clip audition
@@ -956,8 +963,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
-63 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
+64 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1123,7 +1130,9 @@ swept by one slow sine and summed back with the dry, the notches sliding
 up and down the spectrum), ECHO (one delay line and
 one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
-comes back as a repeat), SPRING (a Schroeder network, 1962), REVERSE,
+comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
+dark repeats with HEAD off, see
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
@@ -1131,8 +1140,8 @@ loses its click and keeps its thump), GHOST (the tone gone too, the
 breath alone), SPIKE (the attack leaned into instead of taken away: two
 envelope followers at different speeds, their gap gained as the
 transient), FORGE (a hit formed against a die: a low shock, an all-pass
-sweep, the fast part folded and the slow part left, then a ceiling that
-closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
+sweep as deep as DEPTH asks, the fast part folded and the slow part left,
+then a ceiling that closes with a flash of grit; peak-matched, no gain envelope; the FORGE chip
 on the pedal row since its listening gate, see
 [`docs/superpowers/specs/2026-10-25-forge-section-design-brief.md`](docs/superpowers/specs/2026-10-25-forge-section-design-brief.md)),
 RING (the sound multiplied by a sine — metal, bells, radio;
@@ -1164,7 +1173,8 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
+OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
+TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE and
 ARCO have preset rosters, so `snipsnap synth` renders them.
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
@@ -1342,11 +1352,13 @@ The app's brain: every screen's state machine as tested pure Kotlin, so the
 Android app is Compose bound to proven logic instead of logic written in a
 UI layer. What lives here:
 
-- **`Schemes`/`Layout`/`Motion`** — the two TapeOS scheme token
+- **`Schemes`/`Layout`/`Motion`** — the eight TapeOS scheme token
   tables as data (VENT and OPENSKY, from the audition pages
   `docs/DIRECTION_2026_10.md` names — OPENSKY the first paper scheme,
-  which reopened the August cut of light shells; the schemes of the
-  classic look were retired on 2026-10-27), pad-label ink tables
+  which reopened the August cut of light shells — and the six
+  colourways chosen from the audition board on 2026-10-27: DUSK and
+  PHOSPHOR dark, TIDE, MEMO, RISO and SAGE paper; the schemes of the
+  classic look were retired the same day), pad-label ink tables
   for dark schemes and CLEAR, and the layout/motion constants from the
   handoff. The two-surface rule — the LCD stays dark in every scheme — is
   a unit test now.

@@ -107,11 +107,11 @@ class NacrePatchTest {
     }
 
     @Test
-    fun `provisional recipes cover close answers crossing still water and both initial venues`() {
-        val recipes = NacrePresets.all()
+    fun `frozen second listening recipes retain close answers crossing and still water`() {
+        val recipes = NacreModel2Presets.all()
         assertEquals(6, recipes.size)
         assertEquals(6, recipes.map { it.name }.toSet().size)
-        assertEquals(recipes, NacrePresets.forVoice(NacreVoice.PEARL))
+        assertEquals(recipes, NacreModel2Presets.forVoice(NacreVoice.PEARL))
         assertTrue(Presets.all().none { it.engine == NacrePatch.ENGINE })
         assertTrue(Presets.forVoice(NacrePatch.ENGINE, NacreVoice.PEARL.name).isEmpty())
         for (recipe in recipes) {

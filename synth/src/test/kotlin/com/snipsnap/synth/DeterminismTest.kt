@@ -11,6 +11,28 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
+        val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
+        val samples = patch.render().samples
+        Ferry.clearCache()
+        assertContentEquals(samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+    }
+
+    @Test
+    fun `NACRE saved playable recipes reproduce across cold source caches`() {
+        for (voice in NacreVoice.entries) {
+            val patch = NacrePatch("Nacre canary", voice,
+                Nacre.defaults(voice) + mapOf("VENUE" to 1f, "BLOOM" to .65f),
+                midi = 57, velocity = .65f, seed = 9_007_199_254_740_993L, model = 3)
+            Nacre.clearCoreCache()
+            val original = patch.render().samples
+            Nacre.clearCoreCache()
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(original, saved.render().samples)
+        }
+    }
+
+    @Test
     fun `CAIRN fresh uncached renders reproduce both voices and their contact cues`() {
         for (voice in CairnVoice.entries) {
             val patch = CairnPatch("Stone canary", voice, Cairn.defaults(voice))
@@ -487,6 +509,18 @@ class DeterminismTest {
         for (voice in BallastVoice.entries) {
             val patch = BallastPatch("Canary", voice, Ballast.defaults(voice))
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `SCOUR is byte-identical across renders, every voice, a saved recipe and a soft hit included`() {
+        for (voice in ScourVoice.entries) {
+            val patch = ScourPatch("Canary", voice, Scour.defaults(voice) + ("SHOT" to .8f))
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            val saved = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, "$voice recipe")
+            assertContentEquals(Scour.render(voice, patch.macros, velocity = .3f).samples,
+                Scour.render(voice, patch.macros, velocity = .3f).samples, "$voice soft")
         }
     }
 }

@@ -37,7 +37,7 @@ object NacreAuditionGenerator {
         val macros: Map<String, Float>, val midi: Int = MIDI, val velocity: Float = 1f,
         val options: Nacre.Options = Nacre.Options(), val component: String = "full",
         val comparisonGroup: String = id, val referenceId: String = id,
-        val model: Int = Nacre.MODEL_VERSION,
+        val model: Int = NacreModel2.MODEL_VERSION,
     )
 
     // Retain only the selected 44.1 kHz tap, never all internal arrays from every probe.
@@ -127,7 +127,7 @@ object NacreAuditionGenerator {
             "format" to "snipsnap-nacre-audition", "version" to 2, "revision" to 2,
             "title" to "Nacre / Tone and motion", "engine" to "NACRE", "voice" to "PEARL",
             "description" to "Original and revised paired harps, followed by four timbral comparisons with identical pluck timing and order. The complete revised listening bench remains available.",
-            "model" to Nacre.MODEL_VERSION, "seed" to SEED.toString(), "sampleRate" to RATE,
+            "model" to NacreModel2.MODEL_VERSION, "seed" to SEED.toString(), "sampleRate" to RATE,
             "channels" to 1, "bitDepth" to 24, "midi" to MIDI, "macros" to base,
             "hold" to false, "venueModel" to "coral-to-seaweed-prototype", "clipCount" to clips.size,
             "generatedAt" to generatedAt, "download" to downloads.first().getValue("path"),
@@ -166,7 +166,7 @@ object NacreAuditionGenerator {
         fun addCase(id: String, title: String, description: String, section: String,
                     macros: Map<String, Float> = base, midi: Int = MIDI, velocity: Float = 1f,
                     options: Nacre.Options = Nacre.Options(), component: String = "full",
-                    group: String = id, reference: String = id, model: Int = Nacre.MODEL_VERSION) {
+                    group: String = id, reference: String = id, model: Int = NacreModel2.MODEL_VERSION) {
             add(Request(id, title, description, section, macros, midi, velocity, options, component, group, reference, model))
         }
         addCase("focus_original", "Original / model 1", "The published original synthesis, with its original PEARL controls: TOUCH .30, DUET .15, CURRENT .20, VENUE .15, BLOOM .35. Timing is not locked. Compare with the revised model at exactly the same controls.",
@@ -387,6 +387,8 @@ object NacreAuditionGenerator {
         val paths = mutableListOf(
             "synth/src/main/kotlin/com/snipsnap/synth/Nacre.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/NacreModel1.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/NacreModel2.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/NacreModel2Presets.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/NacreModels.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/NacrePatch.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/NacrePresets.kt",

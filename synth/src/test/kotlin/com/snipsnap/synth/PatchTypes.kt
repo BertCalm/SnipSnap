@@ -60,11 +60,12 @@ internal object PatchTypes {
      * deliberately kept out of [Presets] until the owner's listening verdict.
      * WICK keeps its provisional starting points in its own preset object and
      * renders through the CLI while awaiting that verdict.
-     * NACRE's finite PEARL duet likewise has provisional listening recipes only.
+     * NACRE's playable PEARL revision has three starting recipes while range acceptance is pending.
+     * SCOUR's R1 voices carry one provisional default each until the first Kotlin listen.
      * Named here so leaving it out is a recorded decision, not a forgotten line:
      * accepting the engine means filing its recipes in [Presets] and taking it off this list.
      */
-    val PROTOTYPES: Set<String> = setOf(CairnPatch.ENGINE, WickPatch.ENGINE, NacrePatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(CairnPatch.ENGINE, WickPatch.ENGINE, NacrePatch.ENGINE, FerryPatch.ENGINE, ScourPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

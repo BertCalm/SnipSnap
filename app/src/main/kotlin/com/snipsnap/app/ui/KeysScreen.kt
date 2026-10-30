@@ -120,7 +120,7 @@ fun KeysScreen(
     val midi = remember(player) { MidiInput(context) }
     val midiListener = remember(player) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event) = midiKeys.handle(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = midiKeys.handle(event)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
             override fun onDeviceRemoved() = midiKeys.allOff()

@@ -17,6 +17,23 @@ object MidiLearnStore {
 
     const val VERSION = 1
 
+    /** Where the app keeps [write]'s text: one key in its preferences for every screen's bindings. */
+    const val PREFS_KEY = "midi.learn"
+
+    /** The bindings that belong to [screen]: its targets are named `screen.something`. */
+    fun of(screen: String, bindings: List<MidiBinding>): List<MidiBinding> =
+        bindings.filter { it.target.startsWith("$screen.") }
+
+    /**
+     * [all] with [screen]'s bindings replaced by [mine], so one screen saving
+     * what it learned never drops another screen's. A control may drive one
+     * thing on each screen; within a screen, [MidiLearn] keeps it one to one.
+     */
+    fun replace(all: List<MidiBinding>, screen: String, mine: List<MidiBinding>): List<MidiBinding> {
+        require(mine.all { it.target.startsWith("$screen.") }) { "a binding saved for $screen names another screen's target" }
+        return all.filterNot { it.target.startsWith("$screen.") } + mine
+    }
+
     fun write(bindings: List<MidiBinding>): String = Json.write(
         JsonValue.Obj(
             linkedMapOf(

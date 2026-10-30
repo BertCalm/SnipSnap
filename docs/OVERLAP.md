@@ -322,8 +322,8 @@ The generator records uncached setup, settling and conditioning milliseconds in
 `metrics-runtime.json`, outside the deterministic download archive. Settling is
 capped by a T60-derived budget and an absolute 192-period limit, with cancellation
 checks during simulation. Those host timings do not establish phone performance.
-Listening acceptance, moving-breath loops and an engine-specific aliasing bound
-remain unverified.
+Josh has approved the steady held listening proof. Moving-breath loops and an
+engine-specific aliasing bound remain unverified.
 
 ### Why it is built this way
 
@@ -338,3 +338,66 @@ remain unverified.
   setup already happen once per render; caching those alone will not remove
   repeated network simulation. Phone timing and a cache implementation are not
   established by this proof.
+
+## Held keygroup hardware trial
+
+The next handoff packages those steady settings as four playable instruments,
+one per topology, using the existing keygroup export path. Generate it with:
+
+```text
+./gradlew :synth:generateOverlapHeldKeygroups
+```
+
+The generated, ignored `testkit/overlap-held-keygroup/` contains
+`overlap-held-keygroups.zip`, four native MPC 3 `.xty` tracks, four matching
+legacy `.xpm` programs, twelve mono 44.1-kHz PCM24 WAVs, instrument sidecars,
+experimental source recipes, a manifest and checksums. Extract the whole ZIP
+and keep its folder structure. MPC 3 loads a top-level `.xty`; older MPC
+versions load its matching `.xpm` from the `_[TrackData]` folder.
+
+Each topology uses reference MIDI 36, 48 and 60. The three inclusive zones are
+30–42, 43–54 and 55–66; notes outside 30–66 deliberately have no zone. Roots are
+the synthesis reference notes, not a claim that each topology's strongest
+partial is that note. The lower and upper references extend the settings heard
+in the approved MIDI-48 proof and still need listening acceptance.
+
+Each WAV has an onset period followed by one untouched settled period. A short
+fade at the start of the onset prevents an abrupt start; the second period is
+the sustain loop. Its positive loop-start frame avoids the exporter's zero
+sentinel for a sample with no loop. Loop endpoints come from the same program
+data in the native track, legacy program, WAV sampler chunk and phone sidecar.
+The trial opts into instrument-level `TriggerMode=2` in the legacy writer, the
+NoteOn mode already used by the native writer and sustained reference programs.
+Existing packages retain their original legacy serialization by default.
+
+The program's release value is `0.6` in the existing MPC envelope field. Its
+hardware time mapping has not been measured. A sampler fades the repeating
+body after note-off; this differs from withdrawing excitation and allowing
+the prototype's resonator state to decay. This trial tests that handoff. It
+does not export a separately triggered physical release tail. PULSE and GLOW
+remain off; LOCK is inactive. No new saved engine model or phone controls are
+introduced by this package.
+
+`README.txt` carries the hardware checklist: load each program, hold each
+sampled reference through several repeats, tap and release early, play across
+zone boundaries, try a small chord and check final note-off. Record the MPC
+model/firmware and any clicks, unexpected pitch jumps, missing notes or stuck
+voices. Hardware loading, envelope timing, polyphony and playability remain
+pending until that check is performed.
+
+The package records deterministic audio and source hashes separately from
+host render-time measurements. Generation is an offline, bounded export job;
+it does not establish interactive phone performance. Saved held recipes,
+phone controls, completed-note caching, loopable breathing and GLOW remain
+subsequent integration work.
+
+### Why it is built this way
+
+- Three source notes keep the hardware trial small while exposing register and
+  zone-boundary changes.
+- The onset and steady loop share one waveform and gain, so the transition does
+  not depend on matching independently normalized captures.
+- Native and legacy programs use the same central packaging path and sample
+  bounds, reducing format-specific disagreements.
+- The sampler release is a deliberate approximation to test on the MPC before
+  making it part of the phone workflow.

@@ -207,7 +207,7 @@ class UatSimTest {
         val t0 = System.currentTimeMillis()
         val kit = starter.render("FACTORY", dir, seed = 0)
         val renderMs = System.currentTimeMillis() - t0
-        note("DUBBING FACTORY… took ${renderMs} ms of real DSP on this machine")
+        note("LOADING FACTORY… took ${renderMs} ms of real DSP on this machine")
         note("landed ${kit.pads.size} pads; toast: \"${Copy.FRESH_TAPE}\"")
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 
@@ -430,7 +430,7 @@ class UatSimTest {
         // apply a treatment for real
         val slot = model.kit.pads.first().slot
         val before = model.pad(slot)!!
-        say("  applying every segment the card draws, the way the screen does (PadSheet.treatmentFor):")
+        say("  applying every segment the card can dispatch, the way the screen does (PadSheet.treatmentFor):")
         PadSheet.ALL_SEGMENTS.forEach { seg ->
             val t = runCatching { PadSheet.treatmentFor(seg) }.getOrNull()
             if (t == null) {
@@ -659,7 +659,7 @@ class UatSimTest {
         note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸, ${Places.GEAR_HELP} ▸ and ${Places.GEAR_MIDI} ▸ — the first two were tabs twelve and thirteen of the old row, all one tap from anywhere now")
         note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
         note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
-        note("title bar reads: SNIPSNAP.EXE, then the open project's name — the stale M0 build tag went with finding 2")
+        note("title bar reads: SNIPSNAP, then the open project's name — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,
         // since once every toast states fact there is nothing left for a

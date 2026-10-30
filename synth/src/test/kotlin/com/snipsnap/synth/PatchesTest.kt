@@ -50,6 +50,8 @@ class PatchesTest {
         CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
         WickPresets.all().first(),
         NacrePresets.all().first(),
+        FerryPresets.all().first(),
+        ScourPresets.all().first(),
     )
 
     @Test

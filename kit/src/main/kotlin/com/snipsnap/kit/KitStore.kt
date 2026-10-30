@@ -66,6 +66,7 @@ object KitStore {
                 )
             }
             kit.tempoBpm?.let { root["tempoBpm"] = JsonValue.Num(it.toDouble()) }
+            kit.aquariumPerformance?.let { root["aquariumPerformance"] = it }
             kit.wear?.let {
                 // The ledger only - w is derived from it, never stored.
                 root["wear"] = JsonValue.Obj(
@@ -172,7 +173,8 @@ object KitStore {
                 k = w.entries["k"]?.num() ?: WearLedger.DEFAULT_K,
             )
         }
-        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear)
+        return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear,
+            aquariumPerformance = obj["aquariumPerformance"])
     }
 
     /** One pad, the inverse of [padToJson] — shared by [fromJson] and, standalone, by a bin tombstone's read-back. */

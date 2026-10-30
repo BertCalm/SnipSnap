@@ -66,15 +66,22 @@ abstract class ComposeScreenTest {
      * subclass's own `show()` calls this first, then does whatever
      * screen-specific waiting its own fixture needs (a kit read off disk,
      * an engine spinning up) — this only sets the stage.
+     *
+     * [settleMillis] is how much of the frozen clock is given to the first
+     * composition before this returns: 300 ms, which is what a screen with a
+     * loop needs to be at rest. A test of something with a delay of its own
+     * (a loading panel's 200 ms show delay) passes a small one, because the
+     * job is already past the delay by the time a 300 ms settle returns and
+     * "nothing in the first 200 ms" could never be looked at.
      */
-    protected fun setPhoneContent(content: @Composable () -> Unit) {
+    protected fun setPhoneContent(settleMillis: Long = 300, content: @Composable () -> Unit) {
         compose.mainClock.autoAdvance = false
         compose.setContent {
             TapeTheme(Schemes.DEFAULT) {
                 Box(Modifier.width(PHONE_WIDTH_DP.dp).fillMaxHeight()) { content() }
             }
         }
-        pump()
+        pump(settleMillis)
     }
 
     /** Frames for the screen's loops, then layout: what a moment of real time gives it. */

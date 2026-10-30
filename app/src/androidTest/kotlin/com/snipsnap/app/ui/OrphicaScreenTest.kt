@@ -80,16 +80,16 @@ class OrphicaScreenTest : ComposeScreenTest() {
             // header before advancing again; the fixed frame pump alone
             // cannot establish that the previous transition has completed.
             waitFor("SYNTH to display $engine before cycling") {
-                compose.onAllNodesWithContentDescription("ENGINE $engine · TAP FOR NEXT")
+                compose.onAllNodesWithContentDescription("ENGINE $engine. CHOOSE ENGINE")
                     .fetchSemanticsNodes().size == 1
             }
-            click(button("ENGINE $engine · TAP FOR NEXT"))
+            click(button("NEXT ENGINE"))
         }
         waitFor("SYNTH to display ORPHICA after PLUCK") {
-            compose.onAllNodesWithContentDescription("ENGINE ORPHICA · TAP FOR NEXT")
+            compose.onAllNodesWithContentDescription("ENGINE ORPHICA. CHOOSE ENGINE")
                 .fetchSemanticsNodes().size == 1
         }
-        button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
+        button("ENGINE ORPHICA. CHOOSE ENGINE").assertExists()
     }
 
     private fun click(node: SemanticsNodeInteraction) {
@@ -198,7 +198,7 @@ class OrphicaScreenTest : ComposeScreenTest() {
         compose.runOnIdle { showingSynth = true }
         pump()
 
-        button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
+        button("ENGINE ORPHICA. CHOOSE ENGINE").assertExists()
         button("MODE REVERSE").assertIsSelected()
         assertEquals(.67f, value("FRACTURE"), 0f)
         assertEquals(1f, value("HOLD"), 0f)

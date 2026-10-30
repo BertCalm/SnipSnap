@@ -135,8 +135,9 @@ class OverlapSynthScreenTest : ComposeScreenTest() {
         show(root, settings, KitShelf.Entry(kitDir, kit))
 
         // Enter through the real engine cycler, then choose the topology and preset.
-        press("ENGINE OPENSKY · TAP FOR NEXT")
-        compose.onNodeWithContentDescription("ENGINE OVERLAP · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE OPENSKY. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE OVERLAP. CHOOSE ENGINE").assertExists()
         for (topology in OverlapTopology.entries) {
             compose.onNodeWithContentDescription(topology.name).assertExists()
         }

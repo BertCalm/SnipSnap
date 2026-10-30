@@ -189,4 +189,47 @@ class NavigationTest {
         while (nav.back()) steps++
         assertTrue(steps in 1..64, "popped $steps")
     }
+
+    // backOutOf: a page that turned out to have nothing to show (a starter kit
+    // that failed to render, with its placeholders on screen).
+
+    private val kitPage = Location(Place.PROJECT, Stage.PADS)
+    private val shelfPage = Location(Place.SHELF)
+
+    @Test
+    fun `backing out of the page the user is still on goes back, and leaves no entry for it`() {
+        val nav = Navigation()
+        nav.goTo(kitPage)
+
+        assertTrue(nav.backOutOf(kitPage, shelfPage), "it moved the user")
+        assertEquals(shelfPage, nav.location, "to the shelf the page was asked for from")
+        assertFalse(nav.canGoBack, "and the page is not left in the history: Back from the shelf leaves the app")
+    }
+
+    @Test
+    fun `a user who has moved on is left where they are`() {
+        val nav = Navigation()
+        nav.goTo(kitPage)
+        nav.go(Place.TAPE)
+        val tapsBefore = nav.taps
+
+        assertFalse(nav.backOutOf(kitPage, shelfPage), "the page is not what is on screen")
+        assertEquals(Place.TAPE, nav.location.place, "TAPE is where they chose to be")
+        assertEquals(tapsBefore, nav.taps, "and nothing moved")
+        assertTrue(nav.canGoBack)
+    }
+
+    @Test
+    fun `when Back does not reach the shelf it is landed on, with the page still out of the history`() {
+        val nav = Navigation()
+        nav.go(Place.TAPE)
+        nav.goTo(kitPage)
+
+        assertTrue(nav.backOutOf(kitPage, shelfPage))
+        assertEquals(shelfPage, nav.location)
+        // Back from here walks what was there before, and the page is not in it.
+        val seen = mutableListOf(nav.location)
+        while (nav.back()) seen += nav.location
+        assertFalse(kitPage in seen, "the page is gone from the history: $seen")
+    }
 }

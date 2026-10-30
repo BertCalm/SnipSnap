@@ -57,6 +57,7 @@ class PadRecipeTest {
         TremorPatch("Hide Test", TremorVoice.HIDE, mapOf("STRIKE" to 0.4f)),
         MurkPatch("Wood Test", MurkVoice.CLUNK, mapOf("FOG" to 0.4f)),
         ThawPatch("Ice Test", ThawVoice.BRITTLE, mapOf("HEAT" to 0.4f)),
+        ScourPatch("Peened Test", ScourVoice.PANE, mapOf("SHOT" to 0.8f, "HARDEN" to 0.9f)),
         TesseraPatch("Mixed Material Test", TesseraVoice.ANSWER, mapOf("FOLD" to 0.7f)),
         UndertowPatch("Shell Test", UndertowVoice.KNOCK, mapOf("DRAW" to 0.4f)),
         SuturePatch("Vessel Test", SutureVoice.BLOOM, mapOf("GAP" to 0.4f)),
@@ -76,6 +77,7 @@ class PadRecipeTest {
         CairnPatch("Stone Test", CairnVoice.ANSWER, mapOf("BODY" to .5f), midi = 55, velocity = .6f, startAtContact = false),
         WickPatch("Gate Test", WickVoice.PLUCK, mapOf("CASCADE" to 0.6f), midi = 48, velocity = 0.6f),
         NacrePatch("Duet Test", NacreVoice.PEARL, mapOf("DUET" to .6f), midi = 43, velocity = .6f, seed = Long.MAX_VALUE),
+        FerryPatch("Passage Test", macros = mapOf("HANDOFF" to .7f), midi = 43, velocity = .6f, seed = Long.MIN_VALUE),
         // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),

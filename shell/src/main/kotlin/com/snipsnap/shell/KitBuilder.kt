@@ -247,6 +247,14 @@ class KitBuilderModel private constructor(
         dirty = true
     }
 
+    /** Store a complete live snapshot without rewriting or printing any sample. */
+    fun setAquariumPerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings) {
+        val value = settings.toJsonValue()
+        if (kit.aquariumPerformance == value) return
+        kit = kit.copy(aquariumPerformance = value)
+        dirty = true
+    }
+
     /**
      * IN KEY: retune every TONAL pad onto the nearest note of the kit's
      * key, via the tune fields the MPC pad already has - audio untouched,

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -281,6 +282,10 @@ import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberRenderer
 import com.snipsnap.synth.ChamberVoice
+import com.snipsnap.synth.Nacre
+import com.snipsnap.synth.NacrePatch
+import com.snipsnap.synth.NacrePresets
+import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.CausticInstrument
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
@@ -748,8 +753,8 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR) {
-                        Presets.forVoice(e.name, v.name).firstOrNull {
+                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
+                        factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
                     } else null
@@ -764,7 +769,9 @@ fun SynthScreen(
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
-                        else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice] else null
+                        else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
+                        else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
+                            .firstOrNull { it.voice == v } else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
@@ -786,7 +793,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite CAUSTIC and CHAMBER reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER) && name == "HOLD") fallback
+                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -833,7 +840,7 @@ fun SynthScreen(
             }
             for ((pair, name) in seed.seededPresets) {
                 if (containsKey(pair)) continue
-                val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
+                val factory = factoryPresets(pair.first, pair.second).firstOrNull { it.name == name }
                 if (factory != null) {
                     val editable = editablePreset(factory)
                     // Before modelled TREMOR recipes, a named factory and macro bag
@@ -914,10 +921,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch ||
+            patch is PrismPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -978,6 +985,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.NACRE) {
+            // Use the live draft for same-frame root/velocity and macro edits. Copying it
+            // retains an older saved rendition and the full-width variation seed.
+            val current = loadedPatchesByVoice[engine to voice] as? NacrePatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: NacrePatch(name, voice as NacreVoice, controls)
+        }
         if (engine == Engine.PRISM) {
             // Detail edits and accessibility events can share a frame with SAVE or HOLD.
             val current = loadedPatchesByVoice[engine to voice] as? PrismPatch
@@ -1135,6 +1150,9 @@ fun SynthScreen(
                 Engine.TREMOR -> loadedPatchesByVoice[pair] = TremorPatch(
                     engine.patchDisplayName(voice), voice as TremorVoice, macrosByVoice.getValue(pair),
                     model = seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+                )
+                Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
+                    engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
                 )
                 else -> Unit
             }
@@ -1322,7 +1340,7 @@ fun SynthScreen(
                     embouchureRestore.pending.remove(pair)
                     continue
                 }
-                val factory = Presets.byName(pair.first.name, pair.second.name, name)
+                val factory = factoryPresets(pair.first, pair.second).firstOrNull { it.name == name }
                 // SHOAL always holds a complete snapshot, so a YOURS name must still be adopted whole.
                 if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) {
                     // OVEN can retain a full edited recipe after its YOURS
@@ -1354,6 +1372,7 @@ fun SynthScreen(
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
+                        if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
                         // The named preset is being restored whole. A partial legacy
                         // OVERLAP recipe must fill its sliders from its saved model.
                         if (mine is OverlapPatch) {
@@ -1537,13 +1556,13 @@ fun SynthScreen(
             rendering = false
             return@LaunchedEffect
         }
-        delay(MACRO_DEBOUNCE_MS)
-        val effectJob = coroutineContext[Job]
-        val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
-        try {
-            val previewJob = coroutineContext[Job]
-            val rendered = offMainInterruptible(Dispatchers.Default) {
-                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER)
+        val previewJob = coroutineContext[Job]
+        renderSynthPreview(
+            debounceMillis = MACRO_DEBOUNCE_MS,
+            shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
+            onRendering = { rendering = it },
+            render = {
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
                     patch is ChamberPatch -> seed.chamberRenderer.render(patch) {
@@ -1575,23 +1594,18 @@ fun SynthScreen(
                 // native OPENSKY renderer above keeps its cancellation hook.
                 if (activeRecipe != null) activeRecipe.process(dry)
                 else Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
-            }
-            coroutineContext.ensureActive()
-            if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) return@LaunchedEffect
-            snip = rendered
-            if (touched) audition(rendered, allowLoop = true)
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            Log.e("SynthScreen", "render: failed", e)
-            onToast(Copy.RENDER_FAILED)
-        } finally {
-            shimmerJob.cancel()
-            // A cancelled preview belongs to a screen that is already leaving.
-            // Writing rendering here reapplies the last frame and the engine
-            // control stays in the tree after the bench is hidden.
-            if (effectJob?.isCancelled == false) rendering = false
-        }
+            },
+            publish = { rendered ->
+                if (engine != Engine.PRISM || !prismMotionStudio.ownsPreview) {
+                    snip = rendered
+                    if (touched) audition(rendered, allowLoop = true)
+                }
+            },
+            onFailure = { failure ->
+                Log.e("SynthScreen", "render: failed", failure)
+                onToast(Copy.RENDER_FAILED)
+            },
+        )
     }
 
     // ---- SEND TO PAD ----
@@ -2260,58 +2274,36 @@ fun SynthScreen(
 
     val classColor = Schemes.classColor(engine.drumClass(voice)).tape
 
+    // The engine list's sheet and the engines picked from it lately, in one holder: this
+    // composable is at the limit of what the toolchain verifies (see `embouchureRestore`).
+    val enginePicker = rememberEnginePicker(ENGINE_NAME_SET)
+
+    // Arriving on a different engine, whichever way: ◄, ► or a row of the engine list other than
+    // the current engine's (that row only closes the list, see the sheet's onPick). It is exactly
+    // what the tap-to-cycle header did, so the new engine is touched (and so auditioned, as
+    // every touch is) and starts on its first voice.
+    fun arrive(next: Engine) {
+        touched = true
+        engine = next
+        voice = next.voices().first()
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    // `Layout.LCD_HEADER_H` (40dp) is less than
-                    // `Layout.MIN_HIT_TARGET` (44dp) — every other header in
-                    // the app can get away with that because nothing in it
-                    // is tappable. This one now has a cycler in it, and the
-                    // brief is explicit that the cycler keeps the standing
-                    // hit-target rule, so this screen's own header grows to
-                    // whichever constant is taller rather than clipping the
-                    // cycler's touch target to a shared constant this file
-                    // isn't allowed to change. Local, minimal, and it only
-                    // affects SYNTH's own header row.
-                    .height(max(Layout.LCD_HEADER_H, Layout.MIN_HIT_TARGET).dp)
-                    .lcdPanel(scheme)
-                    .padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                // ENGINE cycler — tap advances to the next entry, wrapping,
-                // on the LCD header's title in place of a static "THUMP"
-                // label. Long-press is not used, per the brief.
-                //
-                // EXPORT's format row used to be the same idiom and is now a
-                // picker instead (September UAT, finding 7), because eight
-                // one-way states with no back step is a walk. This cycler is
-                // deliberately left alone: each tap auditions the next engine.
-                Box(
-                    Modifier
-                        .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                        // States which engine is current and what the tap
-                        // does, the same shape as KitsScreen's SORT/SHOW
-                        // cyclers (a real word name, not a glyph, but the
-                        // TapeText below still doesn't merge into this
-                        // node for free).
-                        .tapeClick(label = "ENGINE ${engine.displayName} · TAP FOR NEXT") {
-                            touched = true
-                            val next = engine.next()
-                            engine = next
-                            voice = next.voices().first()
-                        },
-                    contentAlignment = Alignment.CenterStart,
-                ) {
-                    // Batch 3, Task 4: no ▸ — the tap cycles to the next
-                    // engine in place, same as the cyclers below; it doesn't
-                    // navigate or open a panel.
-                    TapeText(engine.displayName, TapeType.lcdHeader, scheme.lcdInk.tape)
-                }
-                TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
-            }
+            // ENGINE header: ◄ NAME ▾ ►. The owner asked for "a better way to search, scroll
+            // through, select engines. Click to cycle takes too much": 63 engines, one way
+            // round and no way back from an overshoot. The name opens the engine list (search,
+            // sound-type chips, recents); ◄ and ► are the old tap, one engine either side and
+            // wrapping, kept because stepping is still the quickest way to audition neighbours.
+            // All three arrive the same way, through `arrive`. See [EngineHeader].
+            EngineHeader(
+                engine = engine,
+                voice = voice,
+                scheme = scheme,
+                onOpen = { enginePicker.open = true },
+                onPrevious = { arrive(engine.previous()) },
+                onNext = { arrive(engine.next()) },
+            )
 
             Column(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
@@ -2419,6 +2411,26 @@ fun SynthScreen(
                     TapeText(
                         "ROOT IS THE REFERENCE NOTE. HOLD EXTENDS A FINITE SOUND.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    )
+                }
+
+                if (engine == Engine.NACRE) {
+                    NacreNoteControls(
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as NacrePatch,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onRootChange = { root ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(midi = root)
+                        },
+                        onVelocityChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(velocity = value)
+                        },
                     )
                 }
 
@@ -3367,14 +3379,32 @@ fun SynthScreen(
                         .fillMaxWidth()
                         .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                         .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                        .tapeClick(label = "AUDITION", enabled = engine != Engine.TIDAL ||
-                            !embouchureRestore.pending.containsKey(engine to voice)) { snip?.let { audition(it, allowLoop = true) } }
+                        .tapeClick(label = "AUDITION", enabled = !embouchureRestore.waitsForRecipe(engine, voice)) {
+                            snip?.let { audition(it, allowLoop = true) }
+                        }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     TapeText("AUDITION", TapeType.pixel, scheme.titleInk.tape)
                 }
             }
+        }
+
+        if (enginePicker.open) {
+            EnginePickerSheet(
+                names = ENGINE_NAMES,
+                voicesOf = ::engineVoiceNames,
+                current = engine.name,
+                recents = enginePicker.recents,
+                onPick = { name ->
+                    enginePicker.open = false
+                    // The engine it is already on is not an arrival: arriving resets the voice and
+                    // plays the sound again, and a pick that was a look at the list has asked for neither.
+                    if (name != engine.name) arrive(Engine.valueOf(name))
+                    enginePicker.picked(name)
+                },
+                onDismiss = { enginePicker.open = false },
+            )
         }
 
         if (showChooser) {
@@ -3818,6 +3848,80 @@ private fun macroReadout(
 @Composable
 private fun SynthOverlayBackHandler(onBack: () -> Unit) {
     BackHandler(true, onBack)
+}
+
+// ---------- ENGINE header and list ----------
+
+/** Every picker engine by constant name, in the enum's own order: what the engine list is handed. */
+private val ENGINE_NAMES = Engine.entries.map { it.name }
+
+/** The same, as a set: what the saved recents are checked against. */
+private val ENGINE_NAME_SET = ENGINE_NAMES.toSet()
+
+/** The voice names of the engine called [name], for the engine list's search and its voices line. */
+private fun engineVoiceNames(name: String): List<String> = Engine.valueOf(name).voices().map { it.name }
+
+/**
+ * SYNTH's LCD header: `◄  NAME ▾  ►` at the left and the voice's chip at the right.
+ *
+ * The name opens the engine list ([onOpen]); the ▾ says it opens a sheet. ◄ and ►
+ * ([onPrevious], [onNext]) step to the engine either side, wrapping, and each is a
+ * 48 dp target named for what it does. Stepping is the old tap-to-cycle, kept because
+ * walking a few neighbours is still the quickest way to audition them; the list is
+ * for the other times, when 63 engines are too many to walk.
+ *
+ * The row is as tall as the standing hit-target rule asks, not the 40 dp LCD header
+ * height, which nothing else tappable in an LCD header was ever held to.
+ */
+@Composable
+private fun EngineHeader(
+    engine: Engine,
+    voice: Enum<*>,
+    scheme: Scheme,
+    onOpen: () -> Unit,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(max(Layout.LCD_HEADER_H, Layout.MIN_HIT_TARGET).dp)
+            .lcdPanel(scheme)
+            .padding(start = 2.dp, end = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        // The cluster gives way to the voice chip, never the other way round: the chip is
+        // the shorter, and a name that is cut still opens the list.
+        Row(Modifier.weight(1f, fill = false), verticalAlignment = Alignment.CenterVertically) {
+            EngineStep("◄", "PREVIOUS ENGINE", scheme, onPrevious)
+            Box(
+                Modifier
+                    .weight(1f, fill = false)
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    // Says which engine is current and what the tap does: the words, not the
+                    // ▾, which a screen reader would read as a symbol.
+                    .tapeClick(label = "ENGINE ${engine.displayName}. CHOOSE ENGINE", onClick = onOpen)
+                    .padding(horizontal = 6.dp),
+                contentAlignment = Alignment.CenterStart,
+            ) {
+                TapeText("${engine.displayName} ▾", TapeType.lcdHeader, scheme.lcdInk.tape)
+            }
+            EngineStep("►", "NEXT ENGINE", scheme, onNext)
+        }
+        TapeText(chipLabel(engine, voice), TapeType.lcdSmall, scheme.amber.tape)
+    }
+}
+
+/** One of the header's arrows: a [Layout.MIN_HIT_TARGET] square, named for the step it takes. */
+@Composable
+private fun EngineStep(glyph: String, label: String, scheme: Scheme, onClick: () -> Unit) {
+    Box(
+        Modifier.size(Layout.MIN_HIT_TARGET.dp).tapeClick(label = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        TapeText(glyph, TapeType.lcdReadout, scheme.lcdInk.tape)
+    }
 }
 
 // ---------- FORGET → BIN: the ask, and the bin's door ----------
@@ -4660,11 +4764,14 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
     val displayName: String get() = name.replace('_', ' ')
 
-    /** Cycle through the registered synth engines, wrapping back to THUMP. */
+    /** The engine after this one in the enum's order, wrapping from the last back to the first. */
     fun next(): Engine = entries[(ordinal + 1) % entries.size]
+
+    /** The engine before this one, wrapping from the first round to the last. */
+    fun previous(): Engine = entries[(ordinal + entries.size - 1) % entries.size]
 
     fun voices(): List<Enum<*>> = when (this) {
         THUMP -> ThumpVoice.entries
@@ -4732,6 +4839,7 @@ private enum class Engine {
         FILAMENT -> FilamentVoice.entries
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
+        NACRE -> NacreVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -4798,6 +4906,7 @@ private enum class Engine {
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
         CHAMBER -> Chamber.macrosFor(voice as ChamberVoice).filter { it.name != "HOLD" }
+        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" }
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -4864,6 +4973,7 @@ private enum class Engine {
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
         CHAMBER -> Chamber.defaults(voice as ChamberVoice)
+        NACRE -> Nacre.defaults(voice as NacreVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -4934,6 +5044,12 @@ private enum class Engine {
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
         CHAMBER -> Chamber.scramble(voice as ChamberVoice, random)
+        NACRE -> Nacre.defaults(voice as NacreVoice) + mapOf(
+            "TOUCH" to (.15f + .55f * random.nextFloat()),
+            "DUET" to (.10f + .80f * random.nextFloat()),
+            "CURRENT" to random.nextFloat(), "VENUE" to random.nextFloat(),
+            "BLOOM" to (.10f + .65f * random.nextFloat()), "HOLD" to 0f,
+        )
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -5005,6 +5121,7 @@ private enum class Engine {
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
         CHAMBER -> Chamber.render(voice as ChamberVoice, macros)
+        NACRE -> Nacre.render(voice as NacreVoice, macros)
     }
 
     /**
@@ -5078,6 +5195,7 @@ private enum class Engine {
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
         CHAMBER -> Chamber.drumClassFor(voice as ChamberVoice, macros)
+        NACRE -> Nacre.drumClassFor(voice as NacreVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -5144,6 +5262,7 @@ private enum class Engine {
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
         CHAMBER -> ChamberPatch(name, voice as ChamberVoice, macros)
+        NACRE -> NacrePatch(name, voice as NacreVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -5154,6 +5273,11 @@ private enum class Engine {
         return "$voiceName $engineName"
     }
 }
+
+/** Starting recipes supplied directly by a provisional engine remain available in MAKE. */
+private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
+    if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
+    else Presets.forVoice(engine.name, voice.name)
 
 // ---------- voice ↔ drum class ----------
 //
@@ -5454,7 +5578,7 @@ private fun PresetList(
     // A new voice must not reuse the previous voice's chip nodes. Positional
     // reuse kept the old spoken names, so a later voice's preset (PRISM BASS
     // "Hollow Rise" after the KEY openings) was absent from the tree.
-    val presets = Presets.forVoice(engine.name, voice.name)
+    val presets = factoryPresets(engine, voice)
     key(engine, voice) {
         PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
     }
@@ -5623,6 +5747,36 @@ private fun ChamberNoteControls(
     TapeText(
         "FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+    )
+}
+
+/** Root and strike strength travel with the complete finite harp recipe. */
+@Composable
+private fun NacreNoteControls(
+    patch: NacrePatch,
+    fillColor: Color,
+    scheme: Scheme,
+    onRootChange: (Int) -> Unit,
+    onVelocityChange: (Float) -> Unit,
+) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - Nacre.MIN_MIDI).toFloat() / (Nacre.MAX_MIDI - Nacre.MIN_MIDI),
+        fillColor = fillColor,
+        scheme = scheme,
+        readout = Scales.nameOf(patch.midi),
+        onValueChange = { value ->
+            onRootChange((Nacre.MIN_MIDI + value * (Nacre.MAX_MIDI - Nacre.MIN_MIDI)).roundToInt()
+                .coerceIn(Nacre.MIN_MIDI, Nacre.MAX_MIDI))
+        },
+    )
+    MacroSlider(
+        label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
+        onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
+    )
+    TapeText(
+        "PAIRED HARP · FINITE STRUM · SPACE FOLLOWS THE NOTE.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
 
