@@ -116,6 +116,7 @@ private const val MAKE_ROW_H = 72
 @Composable
 fun InstrumentsBench(
     instruments: List<KitShelf.InstrumentEntry>,
+    backLabel: String,
     onOpen: (KitShelf.InstrumentEntry) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -134,10 +135,10 @@ fun InstrumentsBench(
                 Modifier
                     .width(72.dp)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .tapeClick(label = Bench.INSTRUMENTS.backChip, onClick = onBack),
+                    .tapeClick(label = backLabel, onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Bench.INSTRUMENTS.backChip, TapeType.pixel, scheme.lcdInk.tape)
+                TapeText(backLabel, TapeType.pixel, scheme.lcdInk.tape)
             }
             Spacer(Modifier.weight(1f))
             TapeText(Bench.INSTRUMENTS.label, TapeType.lcdHeader, scheme.lcdInk.tape)

@@ -213,7 +213,9 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * from `Navigation.backChip`. The tab-era screens never needed a chip —
  * a tab is left by another tab — and SETUP and HELP were tabs. The list
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
- * three labs gain `◄ MAKE` with the MAKE step, the gear's three stay here.
+ * three labs gain a chip of their own with the MAKE step, the gear's three
+ * stay here. A screen that draws its own chip is handed the words by
+ * `nav.backChip` (KEYS, INSTRUMENTS), so they come from the model either way.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
@@ -3219,7 +3221,7 @@ fun App(shelf: KitShelf) {
     // dispatcher is LIFO and those are registered deeper/later), Back pops
     // `Navigation`'s stack — a bench, then a stage, then a place, the order
     // they were pushed (J11). One exclusion remains, for the screen that
-    // owns its own one-level back door: KEYS (its own "◄ SHELF" chip, via
+    // owns its own one-level back door: KEYS (its own back chip, via
     // `onBack`, which also silences the instrument before leaving — this
     // generic pop does not). SPLIT used to be excluded too, which left Back
     // on it to finish the Activity; as a bench it pops like any other.
@@ -3299,8 +3301,9 @@ fun App(shelf: KitShelf) {
                 // that draw their own (KEYS, SPLIT, ORBIT, the pad benches)
                 // keep theirs until their own step of the plan rewords them.
                 val top = location.top
-                if (top != null && top in FRAME_CHIP_BENCHES) {
-                    DoorChip(nav.backChip ?: top.backChip, onClick = { nav.closeBench() })
+                val backChip = nav.backChip
+                if (top != null && top in FRAME_CHIP_BENCHES && backChip != null) {
+                    DoorChip(backChip, onClick = { nav.closeBench() })
                 }
                 Box(Modifier.weight(1f)) {
                     // Captured once, like `open`'s own `sheetEntry`/`songEntry`
@@ -4199,6 +4202,7 @@ fun App(shelf: KitShelf) {
                                 KeysScreen(
                                     sidecar = inst.sidecar,
                                     instrument = inst.instrument,
+                                    backLabel = checkNotNull(nav.backChip) { "KEYS is a bench, so it has something to go back to" },
                                     onBack = { openInstrument = null; nav.closeBench() },
                                 )
                             }
@@ -4206,6 +4210,7 @@ fun App(shelf: KitShelf) {
                         top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
+                            backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
                         )
