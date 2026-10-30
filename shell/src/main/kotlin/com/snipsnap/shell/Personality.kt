@@ -2838,10 +2838,13 @@ object Copy {
     const val WORKING_BUSY = "WORKING…"
     // The dock's line for the jobs the pad editor and SPLIT start, each said
     // in the word of the control that started it. A treatment says its own
-    // name through `treatmentBusy`; a write to the kit that no control named
-    // (UNDO, PASTE, the flush when the editor closes) says SAVING_PAD_BUSY;
-    // a job with no word at all (a file decode, the mic trip, a preview)
-    // falls back to WORKING_BUSY.
+    // name through `treatmentBusy`. SAVING_PAD_BUSY is what `commitPadEditNow`
+    // says when its caller gives it no word (PASTE, SOFT HITS, EJECT, and
+    // both UNDOs) and what the flush the editor hands on when it closes says.
+    // Every other job the editor starts falls back to WORKING_BUSY, and that
+    // includes some writes (a board or AQUARIUM KEEP, NONE, KEEP ROOM, MAKE
+    // A GATHERING, the debounced save) as well as decodes, the mic trip and
+    // previews.
     /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
     const val MUTATE_BUSY = "MUTATING…"
     /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
@@ -2855,11 +2858,13 @@ object Copy {
     /** The dock's line while SPLIT takes a pad apart into its three parts. */
     const val SPLIT_BUSY = "SPLITTING…"
     /**
-     * The dock's line while the pad editor writes an edit to the kit and no
-     * control gave the write a word of its own: UNDO, PASTE, and the flush
-     * that hands a pending edit on when the editor closes. That last one is
-     * why the line exists: the write outlives the editor, and the job board
-     * keeps it on the dock until it lands.
+     * The dock's line for two kinds of write in the pad editor: the ones
+     * `commitPadEditNow` runs for a caller that gives it no word of its own
+     * (PASTE, SOFT HITS, EJECT, and both UNDOs), and the flush the editor
+     * hands on when it closes with an edit the debounce had not written. That
+     * last one is why the line exists: the write outlives the editor, and the
+     * job board keeps it on the dock until it lands. Other writes the editor
+     * starts say [WORKING_BUSY].
      */
     const val SAVING_PAD_BUSY = "SAVING THE PAD…"
     /** The KITS screen's placeholder line while the library is read from disk. */

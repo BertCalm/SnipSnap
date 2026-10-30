@@ -44,7 +44,7 @@ import java.io.File
  * has had zero on-device coverage until now — this suite is deliberately
  * narrow, not a sweep of it.
  *
- * **What this covers, and why these three things.** `KitBuilderModel`'s
+ * **What this covers, and why these four things.** `KitBuilderModel`'s
  * own edits (`assign`/`save`/undo/etc.) are already exhaustively proven by
  * `KitBuilderTest`/`KitBuilderStemBoundTest`/`KitBuilderLocaleTest` in
  * `:shell` — the same JVM/on-device split `ExportScreenTest`'s own KDoc
@@ -378,9 +378,10 @@ class PadSheetScreenTest : ComposeScreenTest() {
 
     /**
      * A job on the sheet's own scope (HEAR plays a preview and writes nothing)
-     * dies with the sheet, and its board entry has to die with it: a cancelled
-     * job runs its `finally`, and the entry would otherwise sit on the dock for
-     * good.
+     * dies with the sheet, and its board entry has to leave the board with it,
+     * or it would sit on the dock for good. The entry is ended by the job's own
+     * `finally` and, as a backstop, when the launched job completes; this pins
+     * that it is gone, not which of the two ended it.
      */
     @Test
     fun a_job_the_sheet_cancels_by_closing_leaves_the_board() {
