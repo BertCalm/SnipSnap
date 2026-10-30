@@ -217,9 +217,16 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
  * three labs gain a chip of their own with the MAKE step, the gear's three
  * stay here. A screen that draws its own chip is handed the words by
- * `nav.backChip` (KEYS, INSTRUMENTS), so they come from the model either way.
+ * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
+ * SPLIT), so they come from the model either way.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+
+/** The gear's three open over whatever is showing, and do not count toward [MAX_SCREENS]. */
+private val GEAR_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI)
+
+/** The spec's two-screen limit (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` §7.3): at most this many screens stack above a stage. */
+private const val MAX_SCREENS = 2
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -287,7 +294,7 @@ private class CatchSession {
     val landed = LinkedHashSet<Int>()
 }
 
-/** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
+/** X-RAY's argument: the picked file's display name and what [MpcXRay.read] made of it. Whether the screen is open is the navigation model's (`Bench.XRAY`), not this value's; with no reading, X-RAY has nothing to show and closes. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
@@ -446,6 +453,23 @@ fun App(shelf: KitShelf) {
     }
 
     /**
+     * Room for one more screen over where the user is. At most [MAX_SCREENS]
+     * screens stack above a stage (SETUP, HELP and MIDI do not count), so with
+     * two already showing the top one closes first, and the caller opens its
+     * own bench with `nav.open` right after. This only makes room.
+     *
+     * For the jobs that open their screen after an await: X-RAY's reading, the
+     * ring or the chord kit SNAP builds, SYNTH's hand-off to SURFACE. The
+     * location is read here, when the job lands, never captured before the
+     * await: the user may be anywhere by then, and they asked for the result,
+     * so it opens over wherever they are. A loop, not one close, because the
+     * gear's benches can sit on top of the two (closing HELP still leaves two).
+     */
+    fun makeRoomForScreen() {
+        while (nav.location.benches.count { it !in GEAR_BENCHES } >= MAX_SCREENS) nav.closeBench()
+    }
+
+    /**
      * An offer: a line, and a door out of it (J10).
      *
      * CHOP and EXPORT are steps 2 and 4 of the loop the app advertises and
@@ -516,13 +540,12 @@ fun App(shelf: KitShelf) {
     var roomsRevision by remember { mutableStateOf(0) }
     // BIN (the plan's §3.1, over the bin-restore plan's DELETED KITS): the
     // shelf's own gate for the `BIN ▸` row — how many kits and snips the two
-    // bins hold right now. `binOpen` is in this effect's key list, not just
-    // `kits`/`onShelf`/`roomsRevision`: EMPTY THE BIN NOW changes nothing
-    // else this effect already watches, so without that key, emptying a bin
-    // and returning to the shelf would leave a stale count (and the row
-    // itself) showing after the door behind it is empty.
+    // bins hold right now. BIN being on top (`binOnTop`, below) is in this
+    // effect's key list, not just `kits`/`onShelf`/`roomsRevision`: EMPTY THE
+    // BIN NOW changes nothing else this effect already watches, so without
+    // that key, emptying a bin and returning to the shelf would leave a stale
+    // count (and the row itself) showing after the door behind it is empty.
     var binnedCount by remember { mutableStateOf(0) }
-    var binOpen by remember { mutableStateOf(false) }
     // The projects on the shelf (`docs/DIRECTION_2026_10.md` §2): the
     // library's project list, read with the rest of the shelf, and the one
     // that is open. `ShelfModel` is the project half of the shelf beside
@@ -531,8 +554,10 @@ fun App(shelf: KitShelf) {
     var projects by remember { mutableStateOf<List<ShelfModel.ProjectRow>>(emptyList()) }
     var project by remember { mutableStateOf<Project?>(null) }
     // Keyed on the place, not the whole location: a bench opening over the
-    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf.
+    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf. The
+    // one exception is BIN, whose leaving is the edge that re-counts the bins.
     val onShelf = location.place == Place.SHELF
+    val binOnTop = location.top == Bench.BIN
     // The instruments are MAKE's list now (plan §3.6), read when MAKE is the
     // place and re-read when a lab writes one (`roomsRevision` bumps on
     // every shelf asset a lab writes).
@@ -540,7 +565,7 @@ fun App(shelf: KitShelf) {
     LaunchedEffect(onMake, roomsRevision) {
         if (onMake) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
     }
-    LaunchedEffect(kits, onShelf, roomsRevision, binOpen) {
+    LaunchedEffect(kits, onShelf, roomsRevision, binOnTop) {
         if (onShelf) {
             // Opening the shelf adopts every unheld kit into a project of
             // its own name (`ProjectMigration.adopt`, idempotent) — the one
@@ -728,22 +753,17 @@ fun App(shelf: KitShelf) {
     // bench under BEAT now, and its session lives in this one folder. Held
     // here because SNIPS' own → LOOP and SYNTH's drone send both fill it.
     val loopDir = remember(context) { LoopWrites.dir(context) }
-    // X-RAY: same shelf-level shape as snipsOpen above, reached from
-    // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
-    // it could belong to even in principle (the file picked is never
-    // landed anywhere), so it carries its own reading rather than a bare
-    // boolean.
+    // X-RAY, BIN and DOUBLES are benches (`Bench.XRAY`, `Bench.BIN`,
+    // `Bench.DOUBLES`), opened with `nav.open` like SNIPS, so there is no
+    // boolean for them here. BIN and DOUBLES take nothing: BIN lists what the
+    // two bins hold and DOUBLES measures the shelf itself on mount. X-RAY is
+    // the one with an argument — reached from KitsScreen's own X-RAY ▸ INSPECT
+    // A FILE row, but there's no kit it could belong to even in principle (the
+    // file picked is never landed anywhere), so it carries its own reading,
+    // and this var holds just that. It is deliberately not cleared when the
+    // place changes (`clearTransientState`): Back can restore the shelf with
+    // X-RAY on top, and the screen needs its reading then.
     var xray by remember { mutableStateOf<XRayView?>(null) }
-    // DOUBLES: shelf-level too, same shape as X-RAY — reachable from
-    // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
-    // measures the shelf itself on mount.
-    var doublesOpen by remember { mutableStateOf(false) }
-    // BIN (plan §3.1, over Task 2 of the bin-restore plan): same shape as
-    // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
-    // from `KitsScreen`'s own `BIN ▸` row and from SNIPS' own door.
-    // `binOpen` itself is declared earlier in this function (with
-    // `binnedCount`, above) since the shelf's refresh effect needs it as
-    // a key; this comment marks where `snipsOpen`'s own sibling lives.
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
     // ever reached from the shelf, where no kit is open by definition, so
@@ -1873,6 +1893,11 @@ fun App(shelf: KitShelf) {
                     }
                 }
                 xray = XRayView(name, reading)
+                // The reading lands whenever the file finishes, so X-RAY opens
+                // over wherever the user is by now, not over the shelf they
+                // asked from.
+                makeRoomForScreen()
+                nav.open(Bench.XRAY)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2885,15 +2910,12 @@ fun App(shelf: KitShelf) {
         // some later visit to some other kit.
         kitBankRequest = null
         tapeOpenOverride = null
-        // DELETED KITS is shelf-level too — same reasoning
-        // as SNIPS above: a tab switch away from KITS must
-        // not leave this overlay armed to reopen on top of
-        // whatever tab comes back into view later.
-        binOpen = false
-        // X-RAY is shelf-level too, same reasoning again.
-        xray = null
-        // DOUBLES likewise.
-        doublesOpen = false
+        // Not here: BIN, DOUBLES and X-RAY. They are benches, and a bench
+        // closes by itself when the place or stage changes (`Navigation.go`
+        // and `stage` land with no benches), so there is nothing left armed to
+        // reopen later. X-RAY's reading (`xray`) is kept on purpose: Back from
+        // the next place pops to the shelf with X-RAY on top, and clearing it
+        // here would leave that screen with nothing to show.
     }
 
     /** The user leaving for [target]: the landing, and everything transient abandoned. */
@@ -3297,7 +3319,6 @@ fun App(shelf: KitShelf) {
         Stage.PADS -> padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
             padCaptureSlot != null
         Stage.BEAT -> arrangeOpen
-        null -> location.place == Place.SHELF && (binOpen || doublesOpen || xray != null)
         else -> false
     }
     val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen || captureSheetOpen || kitSheetOpen
@@ -3367,8 +3388,10 @@ fun App(shelf: KitShelf) {
                 }
                 // A bench that has no back chip of its own gets the frame's,
                 // reading what the model says it returns to. The screens
-                // that draw their own (KEYS, SPLIT, ORBIT, the pad benches)
-                // keep theirs until their own step of the plan rewords them.
+                // that draw their own chip (KEYS, SPLIT, ORBIT, BIN and the
+                // rest) are handed the same words as `backLabel`; the pad
+                // benches keep a hand-drawn one until their own step of the
+                // plan.
                 val top = location.top
                 val backChip = nav.backChip
                 if (top != null && top in FRAME_CHIP_BENCHES && backChip != null) {
@@ -3396,13 +3419,12 @@ fun App(shelf: KitShelf) {
                         top == Bench.SNIPS -> SnipsScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "SNIPS is a bench, so it has something to go back to" },
                             onBack = { pendingSnipTarget = null; nav.closeBench() },
-                            onBin = {
-                                // BIN is the shelf's: land there first, then
-                                // open it (the landing clears the overlays).
-                                goToScreen(AppScreen.KITS)
-                                binOpen = true
-                            },
+                            // BIN opens over SNIPS, wherever SNIPS is (the
+                            // shelf, PADS, DECK): Back from BIN returns here,
+                            // and a pick still pending for a pad survives it.
+                            onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
                             onOpenInTape = { file ->
                                 nav.closeBench()
@@ -3434,53 +3456,66 @@ fun App(shelf: KitShelf) {
                             onSendToLoop = ::sendSnipToLoop,
                             onShare = ::shareSnip,
                         )
-                        top == null && location.place == Place.SHELF -> if (xrayView != null) {
-                            XRayScreen(
-                                fileName = xrayView.fileName,
-                                reading = xrayView.reading,
-                                onBack = { xray = null },
-                            )
-                        } else if (binOpen) {
-                            BinScreen(
-                                shelf = shelf,
-                                snipsRoot = context.filesDir,
-                                onBack = { binOpen = false },
-                                onToast = { dock.say(it) },
-                                onKitRestored = {
-                                    // The section already owns its own toast
-                                    // and its own list refresh — this only
-                                    // needs to catch the shelf back up, the
-                                    // same reload `deleteKit`/`renameKit`
-                                    // already do after their own move. The
-                                    // `binnedCount` effect above is keyed
-                                    // on `kits`, so this refresh alone is
-                                    // also what re-reads the bin count.
-                                    scope.launch {
-                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                    }
-                                },
-                                // A snip back on its list changes nothing the
-                                // shelf shows; the count re-reads when BIN closes.
-                                onSnipRestored = {},
-                            )
-                        } else if (doublesOpen) {
-                            DoublesScreen(
-                                shelf = shelf,
-                                onBack = { doublesOpen = false },
-                                onToast = { dock.say(it) },
-                                onGoTo = { entry, slot ->
-                                    // The shelf's own onOpen, plus the pad:
-                                    // land on that kit with its PAD SHEET
-                                    // already up on the double in question.
-                                    doublesOpen = false
-                                    landKit(entry)
-                                    // Through openPadSheet (J16): DOUBLES' GO was
-                                    // the second of the three doors that opened
-                                    // the sheet without retiring its hint.
-                                    openPadSheet(slot)
-                                },
-                            )
-                        } else {
+                        // X-RAY: a bench over whatever is showing, since its
+                        // reading lands whenever the file finishes. With no
+                        // reading (a history entry that outlived it) there is
+                        // nothing to show, so it closes, as KEYS does with no
+                        // instrument.
+                        top == Bench.XRAY -> {
+                            if (xrayView == null) {
+                                nav.closeBench()
+                            } else {
+                                XRayScreen(
+                                    fileName = xrayView.fileName,
+                                    reading = xrayView.reading,
+                                    backLabel = checkNotNull(nav.backChip) { "X-RAY is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
+                                )
+                            }
+                        }
+                        top == Bench.BIN -> BinScreen(
+                            shelf = shelf,
+                            snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "BIN is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onKitRestored = {
+                                // The section already owns its own toast
+                                // and its own list refresh — this only
+                                // needs to catch the shelf back up, the
+                                // same reload `deleteKit`/`renameKit`
+                                // already do after their own move. The
+                                // `binnedCount` effect above is keyed
+                                // on `kits`, so this refresh alone is
+                                // also what re-reads the bin count.
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            // A snip back on its list changes nothing the
+                            // shelf shows; the count re-reads when BIN closes.
+                            onSnipRestored = {},
+                        )
+                        top == Bench.DOUBLES -> DoublesScreen(
+                            shelf = shelf,
+                            backLabel = checkNotNull(nav.backChip) { "DOUBLES is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onGoTo = { entry, slot ->
+                                // The shelf's own onOpen, plus the pad:
+                                // land on that kit with its PAD SHEET
+                                // already up on the double in question.
+                                // DOUBLES stays in the history (the shelf with
+                                // DOUBLES on top), so Back from the pad lands
+                                // on the list the user came from.
+                                landKit(entry)
+                                // Through openPadSheet (J16): DOUBLES' GO was
+                                // the second of the three doors that opened
+                                // the sheet without retiring its hint.
+                                openPadSheet(slot)
+                            },
+                        )
+                        top == null && location.place == Place.SHELF -> {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
@@ -3548,7 +3583,7 @@ fun App(shelf: KitShelf) {
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
-                                onDoubles = { doublesOpen = true },
+                                onDoubles = { nav.open(Bench.DOUBLES) },
                                 onSnips = { nav.open(Bench.SNIPS) },
                                 assigningSnip = pendingSnipAssign != null,
                                 addingTo = pendingAddTo?.name,
@@ -3562,7 +3597,7 @@ fun App(shelf: KitShelf) {
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
                                 binnedCount = binnedCount,
-                                onBin = { binOpen = true },
+                                onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
                                 onToggleSort = { setShelfSort(if (shelfSort == KitShelf.ShelfSort.RECENT) KitShelf.ShelfSort.ALPHA else KitShelf.ShelfSort.RECENT) },
                             )
@@ -4284,11 +4319,11 @@ fun App(shelf: KitShelf) {
                             onBack = { nav.closeBench() },
                         )
                         // The pad benches (PAD SHEET, GRAIN FIELD, SPLICE,
-                        // STACK, SPREAD, VERSIONS, PAD CAPTURE), BIN, SNIPS,
-                        // SONG, LOOP and the rest of the bench roster are
-                        // still PADS', SHELF's and BEAT's own overlays above,
-                        // and nothing opens them as a bench yet. Their steps
-                        // of the plan move them here; until then this draws
+                        // STACK, SPREAD, VERSIONS, PAD CAPTURE), SONG and
+                        // SNAP's own panels (LIVE, DRAW, FIELD) are still
+                        // PADS', BEAT's and SNAP's own overlays above, and
+                        // nothing opens them as a bench yet. Their steps of
+                        // the plan move them here; until then this draws
                         // nothing rather than something false.
                         else -> Unit
                     }

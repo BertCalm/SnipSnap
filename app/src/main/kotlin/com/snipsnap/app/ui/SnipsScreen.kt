@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -114,6 +114,11 @@ fun SnipsScreen(
      * over `SnipStore` call sites is what stops the two drifting apart again.
      */
     snipsRoot: File,
+    /**
+     * The back chip's words: `Navigation.backChip`. SNIPS opens over the shelf,
+     * PADS, DECK and BEAT, so the chip names whichever of them Back lands on.
+     */
+    backLabel: String,
     onBack: () -> Unit,
     /** → BIN: the door under the header, shown only while the snip bin holds something. */
     onBin: () -> Unit,
@@ -158,8 +163,9 @@ fun SnipsScreen(
     // BIN bench `onBin` navigates to, so this screen has no "bin closed again"
     // edge of its own to re-count on. That makes this a count taken once per
     // mount. It is correct for as long as walking into BIN and back remounts
-    // this screen (whoever owns `onBin` decides that): then EMPTY THE BIN NOW
-    // or a RESTORE over there is seen by the fresh load here. If the host ever
+    // this screen (App draws only the bench on top, so BIN opened over SNIPS
+    // unmounts it and Back remounts it): then EMPTY THE BIN NOW or a RESTORE
+    // over there is seen by the fresh load here. If the host ever
     // keeps this screen composed underneath BIN, the count goes stale until
     // the next mount, and this effect needs a key the host can bump. The
     // local `+= 1` in doDelete below stays, for instant feedback between
@@ -220,7 +226,7 @@ fun SnipsScreen(
         voice = null
         playingFile = null
     }
-    // Leaving the screen (◄ SHELF, or SNIPS closing under a → PAD/→ TAPE
+    // Leaving the screen (the back chip, or SNIPS closing under a → PAD/→ TAPE
     // navigation) must not leave a voice streaming into a screen that's
     // gone — the same contract TapeScreen's own DisposableEffect(voice)
     // keeps for its one long-lived voice.
@@ -268,7 +274,7 @@ fun SnipsScreen(
 
     var confirmDelete by remember { mutableStateOf<SnipStore.Info?>(null) }
     var renameTarget by remember { mutableStateOf<SnipStore.Info?>(null) }
-    // Mirrors the header's own ◄ SHELF chip — disabled while either dialog
+    // Mirrors the header's own back chip — disabled while either dialog
     // is up so that dialog's own BackHandler below (composed only while
     // it's showing) is the one Back reaches first. Paired the same way
     // ConventionTest.kt's own law documents: while confirmDelete OR
@@ -320,7 +326,7 @@ fun SnipsScreen(
                     .padding(horizontal = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+                HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
                 Spacer(Modifier.weight(1f))
                 TapeText("SNIPS", TapeType.lcdHeader, scheme.lcdInk.tape)
                 Spacer(Modifier.weight(1f))
