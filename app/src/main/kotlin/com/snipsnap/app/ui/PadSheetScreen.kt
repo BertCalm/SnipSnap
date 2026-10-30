@@ -370,9 +370,11 @@ fun PadSheetScreen(
     var busy by remember(model) { mutableStateOf(false) }
     // What the job in flight is called: the rings on MAKE PAD, DE-SAMPLE and
     // MAKE INSTRUMENT key on it, and it is the label of the job's board entry.
-    // Null for a job with no word of its own, which the board says as
-    // WORKING… (SAVING THE PAD… for a plain write). Set beside `busy`, cleared
-    // with it.
+    // Null for a job with no word of its own. The board then says SAVING THE
+    // PAD… for `commitPadEditNow`'s callers that pass no job name, and WORKING…
+    // for every other write; the flush when the screen closes begins its
+    // SAVING THE PAD… entry without setting this at all. Set beside `busy`,
+    // cleared with it.
     var padJob by remember(model) { mutableStateOf<String?>(null) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
@@ -708,7 +710,8 @@ fun PadSheetScreen(
      * The guard goes up here, before the launch, so a second tap in the gap
      * before the coroutine starts finds it. [job] is what the dock calls the
      * work while it runs (SPREAD says `Copy.SPREAD_BUSY`); null for the
-     * callers with no word of their own, which the dock says as WORKING….
+     * callers with no word of their own, which the dock says as SAVING THE
+     * PAD… (`Copy.SAVING_PAD_BUSY`).
      */
     fun commitPadEditNow(
         action: String,

@@ -28,8 +28,10 @@ import com.snipsnap.shell.PadSheetBoxes
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
@@ -144,7 +146,15 @@ class PadSheetScreenTest : ComposeScreenTest() {
 
     /** Takes the lock every kit write needs, so a write started from here on waits at the door. See this file's KDoc. */
     private fun holdWrites() {
-        runBlocking { KitWrites.mutex.lock() }
+        check(!writesHeld) { "holdWrites() was called twice in one test; this test already holds the write lock" }
+        // Bounded: if another test (or a write that never finished) already
+        // holds the lock, an unbounded `lock()` would hang CI instead of
+        // failing.
+        try {
+            runBlocking { withTimeout(10_000) { KitWrites.mutex.lock() } }
+        } catch (e: TimeoutCancellationException) {
+            throw AssertionError("KitWrites.mutex was already held, so holdWrites() could not take the write lock within 10 s", e)
+        }
         writesHeld = true
     }
 
