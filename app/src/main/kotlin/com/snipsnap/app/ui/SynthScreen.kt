@@ -516,6 +516,19 @@ private fun rememberEmbouchureRestore(
     return remember { EmbouchureRestore(settings, seededPresets, reopenedPads, reader) }
 }
 
+/** A visited TREMOR default keeps its renderer when its controls enter the navigation bag. */
+private fun retainTremorDraft(
+    loaded: MutableMap<Pair<Engine, Enum<*>>, Patch>,
+    voice: TremorVoice,
+    macros: Map<String, Float>,
+    model: Int,
+) {
+    val pair = Engine.TREMOR to voice
+    if (pair !in loaded) loaded[pair] = TremorPatch(
+        Engine.TREMOR.patchDisplayName(voice), voice, macros, model = model,
+    )
+}
+
 /** Restore only the selected model's controls; a legacy BRASS recipe never inherits GROW. */
 private fun restoredMacros(
     engine: Engine,
@@ -901,6 +914,24 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
+    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
+    // (engine, voice), so this is the one place the bag needs to follow; the
+    // pairs the player left earlier already wrote theirs when they were open.
+    LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
+        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
+        if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        // Keep a visited default's renderer before persisting its controls, so
+        // a later restore cannot mistake the new macro bag for an old model.
+        if (engine == Engine.TREMOR) retainTremorDraft(
+            loadedPatchesByVoice, voice as TremorVoice, macros,
+            seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+        )
+        if (engine == Engine.EMBOUCHURE) {
+            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
+            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
+        }
+        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
+    }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
@@ -1128,9 +1159,9 @@ fun SynthScreen(
                 Engine.CHAMBER -> loadedPatchesByVoice[pair] = ChamberPatch(
                     engine.patchDisplayName(voice), voice as ChamberVoice, macrosByVoice.getValue(pair),
                 )
-                Engine.TREMOR -> loadedPatchesByVoice[pair] = TremorPatch(
-                    engine.patchDisplayName(voice), voice as TremorVoice, macrosByVoice.getValue(pair),
-                    model = seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+                Engine.TREMOR -> retainTremorDraft(
+                    loadedPatchesByVoice, voice as TremorVoice, macrosByVoice.getValue(pair),
+                    seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
                 )
                 Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
                     engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
@@ -1149,21 +1180,6 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as TidalVoice, macrosByVoice.getValue(pair),
             )
         }
-    }
-    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
-    // (engine, voice), so this is the one place the bag needs to follow; the
-    // pairs the player left earlier already wrote theirs when they were open.
-    LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
-        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
-        if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
-        // Keep a visited default's renderer before persisting its controls, so
-        // a later restore cannot mistake the new macro bag for an old model.
-        if (engine == Engine.TREMOR) ensureNativeDraft()
-        if (engine == Engine.EMBOUCHURE) {
-            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
-            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
-        }
-        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun updateUprightVelocity(value: Float) {
         if (engine != Engine.PLUCK || voice != PluckVoice.UPRIGHT) return
