@@ -10,9 +10,12 @@ rejected the earlier voice/touch contrast as too similar, then reported
 "Tremor has good variation now" for the [R4 voices and touch audition](https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-character/)
 on 26 October 2026. That verdict covers the variation demonstrated there, not
 individual approval of every factory recipe or phone/MPC playback. Model 2 takes
-that R4 profile into versioned recipes. As of 30 October 2026, the wider
-coordination correction is ported on base `b6248f426`; production integration
-checks remain in progress.
+that R4 profile into versioned recipes. As of 30 October 2026, the integration
+and wider coordination correction are locally verified at code commit
+`8c9c01254` on base `b6248f426`. The [factory audition](https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-factory/)
+now supplies all thirteen production recipes at three touch strengths; the
+owner's factory verdict remains separate from the accepted R4 variation.
+
 Constants marked as shape are musical calibration, not measurements of a real
 hide, frame or circuit. The audition generator
 (`./gradlew :synth:generateTremorAudition`) supplies the full diagnostic set.
@@ -279,8 +282,8 @@ byte-identical. The eighteen approved buffers therefore remain exact.
 register anchors and coordination corners. A production counterfactual with the
 correction removed failed as intended (test process exit 1): UNISON at TUNE 0,
 ENSEMBLE 0.8 and STRIKE 0.9 promoted a peak 641.914 cents from the root. The final
-focused production run and complete integration results remain pending; the
-standalone sweeps do not substitute for those exits.
+capped production source passed all 48 focused tests and the full nine-module
+JVM suite; the local verification ledger below records their scope.
 
 ## HOLD
 
@@ -310,15 +313,30 @@ strings and noise. Where the two stretches already match, the blend changes
 nothing. The exported loop played eight times repeats that same join; clicks and
 cyclic changes still require listening.
 
+## Production factory audition, 30 October 2026
+
+The owner-private [factory audition](https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-factory/)
+is published as Site v12 from production engine commit `8c9c01254`. Its 39 clips
+cover all thirteen actual factory recipes at their authored notes and velocities
+0.2, 0.55 and 1. Every native `Velocity` buffer equals the direct model 2 render;
+all thirteen middle-touch renders repeat deterministically. There are zero raw
+rail hits, with a maximum raw peak of 0.98554003. The accepted R4 audition remains
+unchanged.
+
+An independent audit of the published PCM16 files verifies all 39 WAV hashes and
+recipe MIDI values against the manifest. All 39 attack regions and six held-loop
+regions have global spectral peaks within 25 cents of the requested note. The
+largest attack offset is BROKEN RETURN at middle touch, G2, +9.5508 cents; the
+largest held offset is HELD BLOOM at hard touch, A2, +6.4928 cents. Browser checks
+confirm all 39 clip mappings and decodes, six correct held regions, notes and
+verdict export, and mobile/desktop layouts. These checks establish provenance,
+tuning and page operation, not individual musical approval of the recipes.
+
 ## What is not done
 
 - The owner accepted the variation demonstrated by R4. Individual approval of
-  all thirteen current factory recipes remains pending.
-- Model 2's wider coordination correction is ported and the standalone sweeps
-  above passed their stated bounds. Final focused and complete production
-  integration results remain pending; historical prototype measurements and
-  standalone results are not a green production test result.
-- The phone picker is wired. A phone and MPC listening check is still pending.
+  all thirteen current factory recipes remains pending on the published page.
+- Physical phone/MPC listening and measured phone render cost remain pending.
 - The bead tray is one axis, not a plate.
 - The head ratios, the body, the circuit and the coupling gains are shape.
 - "Tremor" was not checked as a product name. The preset names avoid the trademark list
@@ -347,7 +365,7 @@ cyclic changes still require listening.
 
 ## Model 2 integration ledger, 30 October 2026
 
-- **Verified by source on base `b6248f426` plus this integration:** separate
+- **Verified by source at `8c9c01254`, tested on base `b6248f426`:** separate
   frozen/current renderers, saved model decoding and encoding, native velocity
   dispatch, broader contact shaping, independent audible pickups, actual-force
   frame input, an anchor-referenced powered readout budget and prepared-force
@@ -362,8 +380,22 @@ cyclic changes still require listening.
   972 finite UNISON cases and 36 held corners had no open global peaks beyond
   25 cents, and all eighteen approved float buffers remained exact. Source
   identity, offsets and timing bounds are recorded above. The production
-  regressions fail with coordination removed or its initial-window cap removed;
-  final capped focused and complete production test exits remain pending.
+  regressions fail with coordination removed or its initial-window cap removed.
+- **Local JVM verification, 30 October:** the final capped source passed 48
+  focused Tremor tests (exit 0, 3 min 11 s), including the eighteen approved
+  float-buffer goldens, dense UNISON and held ROLL guards, saved-model/native
+  velocity compatibility, legacy velocity and authored/import filing contracts.
+  The complete nine-module JVM suite passed 7,174 tests with zero failures,
+  errors or skips (exit 0, 1 h 26 min 59 s).
+- **Local Android build verification, 30 October:** final-source
+  `:app:assembleDebug` and `:app:compileDebugAndroidTestKotlin` passed together
+  (exit 0, 1 min 43 s); `:app:assembleStrikeFx` also passed (exit 0, 1 min 26 s).
+  Device/emulator tests were not executed locally. The PR emulator check supplies
+  that separate runtime verification; its status belongs to the PR's CI record.
+- **Published factory verification:** Site v12 exposes the 39 production clips
+  with native/direct identity, repeatability, manifest and browser checks, plus
+  independent attack/held tuning checks reported above. The owner's factory
+  listening verdict remains pending.
 - **Disclosed:** the frame connection adds external input; the powered readout
   budget is not a proof of passive feedback. The current HOLD uses periodic
   external micro-strikes, an open actuator return and a constructed
