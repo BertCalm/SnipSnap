@@ -1,11 +1,14 @@
 package com.snipsnap.app.ui
 
+import android.Manifest
+import android.content.ActivityNotFoundException
 import android.graphics.Bitmap
 import android.graphics.Color
 import androidx.activity.compose.LocalActivityResultRegistryOwner
 import androidx.activity.result.ActivityResultRegistry
 import androidx.activity.result.ActivityResultRegistryOwner
 import androidx.activity.result.contract.ActivityResultContract
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
@@ -23,6 +26,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.synth.Photo
 import kotlinx.coroutines.CoroutineScope
@@ -53,6 +57,14 @@ import kotlin.math.sin
  * not flat. Everything after the camera is the screen's own: the reading,
  * the line, the render loop, the build and the write.
  *
+ * The system's permission dialog is the other thing a test cannot press.
+ * TAKE PHOTO checks the CAMERA grant before it launches, and the screen's
+ * `cameraGranted` seam stands in for the real grant (which on a device is
+ * whatever the last `pm revoke` or install left): [show] says granted
+ * unless a test says otherwise, so the suites below do not depend on the
+ * emulator's state, and the registry answers the permission request the
+ * way the dialog would, with whatever the test sets.
+ *
  * Buttons are pressed through their click actions, on the UI thread, as
  * the OVEN suite does: the button rows sit in a scrolling column, and a
  * scroll on the frozen clock is the hazard [ComposeScreenTest] names.
@@ -76,15 +88,38 @@ class SnapScreenTest : ComposeScreenTest() {
     }
 
     /**
-     * Answers every launch with [picture] at once, as a camera app returning
-     * would, and counts the launches.
+     * Answers a camera launch with [picture] at once, as a camera app
+     * returning would, and counts the launches. A permission request is
+     * counted apart and answered the way the system dialog would: with
+     * [permissionAnswer] at once, or not at all while that is null (the
+     * dialog still up), until [answerPending] gives it its answer.
      */
     private class CameraRegistry(private val picture: Bitmap) : ActivityResultRegistry() {
         var launches = 0
+        val permissionsAsked = CopyOnWriteArrayList<String>()
+        var permissionAnswer: Boolean? = true
+        /** Thrown from a camera launch instead of answering it, as the system does. */
+        var launchFailure: RuntimeException? = null
+        private var pendingRequest: Int? = null
+
         override fun <I, O> onLaunch(requestCode: Int, contract: ActivityResultContract<I, O>, input: I, options: ActivityOptionsCompat?) {
+            if (contract is ActivityResultContracts.RequestPermission) {
+                permissionsAsked += input as String
+                val granted = permissionAnswer
+                if (granted == null) pendingRequest = requestCode else dispatchResult(requestCode, granted)
+                return
+            }
             launches++
+            launchFailure?.let { throw it }
             @Suppress("UNCHECKED_CAST")
             dispatchResult(requestCode, picture as O)
+        }
+
+        /** Answers the request that was held, as the player tapping the dialog. Main thread. */
+        fun answerPending(granted: Boolean) {
+            val code = checkNotNull(pendingRequest) { "no permission request is waiting" }
+            pendingRequest = null
+            dispatchResult(code, granted)
         }
     }
 
@@ -111,7 +146,7 @@ class SnapScreenTest : ComposeScreenTest() {
         return KitShelf.Entry(dir, kit)
     }
 
-    private fun show(entry: KitShelf.Entry?) {
+    private fun show(entry: KitShelf.Entry?, cameraGranted: Boolean = true) {
         val owner = object : ActivityResultRegistryOwner {
             override val activityResultRegistry: ActivityResultRegistry = camera
         }
@@ -127,6 +162,7 @@ class SnapScreenTest : ComposeScreenTest() {
                     onBuildChord = { builtChords += it },
                     onFieldPrinted = {},
                     appScope = appScope,
+                    cameraGranted = { cameraGranted },
                 )
             }
         }
@@ -270,5 +306,85 @@ class SnapScreenTest : ComposeScreenTest() {
         waitFor("the generation on ${PadBanks.tag(1)}", timeoutMillis = 60_000) { padOnDisk(entry, 1) != null }
         val pad = requireNotNull(padOnDisk(entry, 1))
         assertLandedAudio(entry, pad)
+    }
+
+    // ---- TAKE PHOTO and the CAMERA grant ----
+
+    @Test
+    fun take_photo_with_the_grant_opens_the_camera_and_asks_nothing() {
+        show(entry = null, cameraGranted = true)
+        takePhoto()
+        assertTrue("a granted camera asks no one: ${camera.permissionsAsked}", camera.permissionsAsked.isEmpty())
+        assertTrue("nothing said: $toasts", toasts.isEmpty())
+    }
+
+    @Test
+    fun take_photo_without_the_grant_asks_then_opens_the_camera_on_the_same_tap() {
+        show(entry = null, cameraGranted = false)
+        // One tap: the request is answered "allow" by the registry, and the
+        // camera opens without a second press. takePhoto() asserts the one
+        // camera launch and waits for the photo's reading.
+        takePhoto()
+        assertEquals(listOf(Manifest.permission.CAMERA), camera.permissionsAsked.toList())
+        assertTrue("nothing said: $toasts", toasts.isEmpty())
+    }
+
+    @Test
+    fun a_refused_camera_says_so_opens_nothing_and_asks_again_on_the_next_tap() {
+        show(entry = null, cameraGranted = false)
+        camera.permissionAnswer = false
+        invokeClick("TAKE PHOTO")
+        assertEquals(listOf(Manifest.permission.CAMERA), camera.permissionsAsked.toList())
+        assertEquals("a refusal opens no camera", 0, camera.launches)
+        assertEquals(listOf(Copy.SNAP_CAMERA_OFF), toasts.toList())
+        assertTrue("still no photo", showing("NO PHOTO"))
+        button("TAKE PHOTO").assertIsEnabled()
+
+        // The refusal cleared the guard: a second tap asks again, and
+        // "allow" this time opens the camera.
+        camera.permissionAnswer = true
+        takePhoto()
+        assertEquals(2, camera.permissionsAsked.size)
+    }
+
+    @Test
+    fun a_second_tap_while_the_dialog_is_up_does_not_stack_a_second_request() {
+        show(entry = null, cameraGranted = false)
+        camera.permissionAnswer = null
+        invokeClick("TAKE PHOTO")
+        invokeClick("TAKE PHOTO")
+        invokeClick("TAKE PHOTO")
+        assertEquals("one dialog, however many taps: ${camera.permissionsAsked}", 1, camera.permissionsAsked.size)
+        assertEquals(0, camera.launches)
+        button("TAKE PHOTO").assertIsEnabled()
+
+        compose.runOnUiThread { camera.answerPending(granted = true) }
+        pump()
+        assertEquals("the one answer opens the camera once", 1, camera.launches)
+        waitFor("the photo's reading") { showing("LINE HORIZON") }
+        assertTrue("nothing said: $toasts", toasts.isEmpty())
+    }
+
+    @Test
+    fun a_launch_the_system_refuses_is_a_dock_line_not_a_crash() {
+        // The grant went away between the tap's check and the launch, or the
+        // check passed on a stale answer: Android throws SecurityException.
+        show(entry = null, cameraGranted = true)
+        camera.launchFailure = SecurityException("Permission Denial: starting Intent { act=android.media.action.IMAGE_CAPTURE } requires android.permission.CAMERA")
+        invokeClick("TAKE PHOTO")
+        assertEquals(1, camera.launches)
+        assertEquals(listOf(Copy.SNAP_CAMERA_OFF), toasts.toList())
+        assertTrue("still no photo", showing("NO PHOTO"))
+        button("TAKE PHOTO").assertIsEnabled()
+    }
+
+    @Test
+    fun a_phone_with_no_camera_app_says_so_instead_of_crashing() {
+        show(entry = null, cameraGranted = true)
+        camera.launchFailure = ActivityNotFoundException("No Activity found to handle Intent { act=android.media.action.IMAGE_CAPTURE }")
+        invokeClick("TAKE PHOTO")
+        assertEquals(1, camera.launches)
+        assertEquals(listOf(Copy.SNAP_NO_CAMERA), toasts.toList())
+        assertTrue("still no photo", showing("NO PHOTO"))
     }
 }
