@@ -148,7 +148,7 @@ class ScourTest {
             val bare = Scour.play(voice, mapOf("HARDEN" to 1f, "SHOT" to 0f), record = true)
             val bareTop = requireNotNull(bare.modeHz).last()[slamTick(bare.trace)]
             assertTrue(bareTop - tops[0] < .2 * (tops[2] - tops[0]), "$voice: HARDEN moved the plate without shots")
-            val bright = Scour.play(voice, mapOf("TUNE" to 1f, "HARDEN" to 1f, "SHOT" to 1f, "BUILD" to 1f, "HOLD" to .98f), record = true)
+            val bright = Scour.play(voice, mapOf("TUNE" to 1f, "HARDEN" to 1f, "SHOT" to 1f, "BUILD" to 1f, "HOLD" to 1f), record = true)
             assertTrue(requireNotNull(bright.modeHz).all { m -> m.all { it < 18_000f } }, "$voice: a mode passed the ceiling")
         }
     }
@@ -179,7 +179,7 @@ class ScourTest {
 
     @Test
     fun `the plate rings down once the slam has stopped the roller, and the check can fail`() {
-        for (voice in ScourVoice.entries) for (macros in listOf(emptyMap(), mapOf("SHOT" to 1f, "RPM" to 1f, "HARDEN" to 1f), mapOf("BUILD" to 0f, "HOLD" to .98f))) {
+        for (voice in ScourVoice.entries) for (macros in listOf(emptyMap(), mapOf("SHOT" to 1f, "RPM" to 1f, "HARDEN" to 1f), mapOf("BUILD" to 0f, "HOLD" to 1f))) {
             val trace = Scour.mechanics(voice, macros)
             val out = Scour.render(voice, macros).samples
             val quiet = ((trace.slamSeconds + .08) * Dsp.RATE).toInt()
@@ -196,7 +196,7 @@ class ScourTest {
                 emptyMap(), mapOf("TUNE" to 0f), mapOf("TUNE" to 1f),
                 mapOf("TUNE" to 1f, "BUILD" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f),
                 mapOf("TUNE" to 0f, "BUILD" to 0f, "RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f),
-                mapOf("HOLD" to .98f, "SHOT" to 1f),
+                mapOf("HOLD" to 1f, "SHOT" to 1f),
             ).map { voice to it }
         }
         for ((voice, macros) in cases) {
@@ -247,7 +247,7 @@ class ScourTest {
         for (voice in ScourVoice.entries) {
             for (macro in timbral) {
                 val low = Scour.render(voice, mapOf(macro to 0f)).samples
-                val high = Scour.render(voice, mapOf(macro to if (macro == "HOLD") .98f else 1f)).samples
+                val high = Scour.render(voice, mapOf(macro to 1f)).samples
                 val d = normalizedDifference(low, high)
                 assertTrue(d > .02, "$voice $macro changes only level or nothing: $d")
             }
@@ -261,17 +261,13 @@ class ScourTest {
     }
 
     @Test
-    fun `HOLD lengthens the ring below its reserved top step, which renders as the step below it`() {
+    fun `HOLD lengthens the ring all the way to its top, never loops, and never moves the build`() {
         for (voice in ScourVoice.entries) {
-            assertFalse(Scour.isLoop(1f))
-            assertContentEquals(
-                Scour.render(voice, mapOf("HOLD" to Scour.LOOP_THRESHOLD)).samples,
-                Scour.render(voice, mapOf("HOLD" to 1f)).samples,
-                "$voice: HOLD's top step must render as the step below it",
-            )
-            val lengths = listOf(0f, .5f, .98f).map { Scour.lengthSeconds(voice, mapOf("HOLD" to it)) }
-            assertTrue(lengths.zipWithNext().all { (a, b) -> b > a }, "$voice: HOLD does not lengthen the ring: $lengths")
-            assertContentEquals(Scour.mechanics(voice, mapOf("HOLD" to 0f)).shotFrames, Scour.mechanics(voice, mapOf("HOLD" to .98f)).shotFrames,
+            val holds = listOf(0f, .5f, .99f, 1f)
+            assertTrue(holds.none { Scour.isLoop(it) }, "$voice: a HOLD setting loops")
+            val lengths = holds.map { Scour.lengthSeconds(voice, mapOf("HOLD" to it)) }
+            assertTrue(lengths.zipWithNext().all { (a, b) -> b > a }, "$voice: HOLD does not lengthen the ring to its top: $lengths")
+            assertContentEquals(Scour.mechanics(voice, mapOf("HOLD" to 0f)).shotFrames, Scour.mechanics(voice, mapOf("HOLD" to 1f)).shotFrames,
                 "$voice: HOLD moved the build")
         }
     }
@@ -346,14 +342,11 @@ class ScourTest {
             val random = Random(7)
             repeat(20) {
                 val scrambled = Scour.scramble(voice, random)
-                assertEquals(0f, scrambled.getValue("HOLD"))
                 assertTrue(scrambled.values.all { it in 0f..1f })
+                assertFalse(Scour.isLoop(scrambled.getValue("HOLD")))
                 ScourPatch("Scrambled", voice, scrambled)
             }
-            assertEquals(1, ScourPresets.forVoice(voice).size)
-            assertTrue(Presets.forVoice(ScourPatch.ENGINE, voice.name).isEmpty(), "$voice is served before its listen")
         }
-        assertTrue(Presets.all().none { it.engine == ScourPatch.ENGINE })
         assertFailsWith<IllegalArgumentException> { ScourPatch("Bad", ScourVoice.PLATE, mapOf("SHOT" to Float.NaN)) }
         assertFailsWith<IllegalArgumentException> { ScourPatch("Bad", ScourVoice.PLATE, mapOf("UNKNOWN" to .5f)) }
         assertFailsWith<JsonException> {

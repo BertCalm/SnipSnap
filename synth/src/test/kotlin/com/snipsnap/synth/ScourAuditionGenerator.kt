@@ -12,15 +12,15 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * SCOUR's third listen (R2, the impact), written to gitignored testkit/scour-audition/.
+ * SCOUR's fourth listen (R3, the kit), written to gitignored testkit/scour-audition/.
  * Run `./gradlew :synth:generateScourAudition`, then open index.html directly.
  *
- * The second listen said no to the riff and the bed and maybe to the impact, so R2 reshaped the gesture
- * into a build and a slam, and this page leads with it where it would be used: into a drop, with the slam
- * on the downbeat, at 120 and 90 BPM, and as short hits on the bar. Then each build alone, PLATE beside
- * PANE, every control swept, and the edges. Single gestures keep the engine's unlevelled output beside an
+ * The third listen said yes to the impact into a drop and to the short hits, so R3 makes SCOUR a kit:
+ * this page leads with its sixteen pads in pad order (builds cut for 120 and 90 BPM, then the eight
+ * presets), then the drops over a beat, each build alone, PLATE beside PANE, every control swept, and
+ * the edges. Single gestures keep the engine's unlevelled output beside an
  * [AuditionLevel] copy of the same render; a phrase is a mix of the engine's own pad renders and THUMP's
- * drums, so it has only the matched copy. No rack effects. HOLD's top step is reserved.
+ * drums, so it has only the matched copy. No rack effects.
  */
 object ScourAuditionGenerator {
 
@@ -48,6 +48,8 @@ object ScourAuditionGenerator {
     )
 
     private val sections = linkedMapOf(
+        "KIT" to ("The kit, pad by pad" to
+            "SynthKits.scour() in pad order, as the MPC program lays it out. A01-A04 are PLATE builds cut for 120 BPM and A05-A08 PANE builds cut for 90 BPM, one beat to two bars: hit one that long before a downbeat and its slam lands on it. A09-A16 are the eight presets."),
         "DROPS" to ("SCOUR into a drop" to
             "The build runs up to the downbeat and the slam lands on it, where the full beat comes in. Before the drop the beat is only a kick and hats. One bar of build at 120 BPM, two bars at 90, and short hits on the bar at 120. Each is the engine's own pad render placed so the slam is on the beat; nothing is added."),
         "BUILDS" to ("Each build alone" to
@@ -55,7 +57,7 @@ object ScourAuditionGenerator {
         "VOICES" to ("PLATE beside PANE" to
             "The same impact on both voices at C3, C4 and C5, every control at its default."),
         "SWEEPS" to ("Each control swept" to
-            "BUILD, RPM, SHOT, HARDEN and HOLD at 0, .5 and 1 (HOLD's top step is reserved, so its last step is .98), the others at their defaults; then velocity at .3, .65 and 1."),
+            "BUILD, RPM, SHOT, HARDEN and HOLD at 0, .5 and 1, the others at their defaults; then velocity at .3, .65 and 1."),
         "EDGES" to ("Edges" to
             "Every control at its low end, at its high end, and the brightest and darkest corners."),
     )
@@ -68,6 +70,12 @@ object ScourAuditionGenerator {
     private fun barSeconds(bpm: Int, bars: Int) = bars * 4 * 60.0 / bpm
 
     private fun cases(): List<Case> = buildList {
+        for ((i, pad) in SynthKits.scour().withIndex()) {
+            val patch = PadRecipe.fromJsonValue(requireNotNull(requireNotNull(pad).recipe)).patch as ScourPatch
+            val slot = "A%02d".format(i + 1)
+            add(Case("KIT", if (i < 8) "Builds (A01-A08)" else "Presets (A09-A16)", slot.lowercase(),
+                "$slot · ${patch.name}", "${title(patch.voice)} · ${patch.name}", patch.voice, patch.macros))
+        }
         val oneBar = Scour.buildFor(barSeconds(120, 1))
         for (voice in ScourVoice.entries) for (harden in listOf(0f, 1f)) add(Case("BUILDS", title(voice),
             "${voice.name.lowercase()}_build_harden${tag(harden)}", "${title(voice)} · one bar, HARDEN ${fmt(harden)}",
@@ -79,16 +87,16 @@ object ScourAuditionGenerator {
             val v = title(voice)
             val low = voice.name.lowercase()
             for (macro in listOf("BUILD", "RPM", "SHOT", "HARDEN", "HOLD")) for (x in listOf(0f, .5f, 1f)) {
-                val value = if (macro == "HOLD" && x == 1f) .98f else x
+                val value = x
                 add(Case("SWEEPS", "$v · $macro", "${low}_${macro.lowercase()}_${tag(value)}",
                     "$v · $macro ${fmt(value)}", "$macro at ${fmt(value)}, the rest at defaults.", voice, mapOf(macro to value)))
             }
             for (vel in listOf(.3f, .65f, 1f)) add(Case("SWEEPS", "$v · velocity", "${low}_velocity_${tag(vel)}",
                 "$v · velocity ${fmt(vel)}", "How hard the slam and the shots land: softer leaves less coverage and a gentler hit.", voice, emptyMap(), velocity = vel))
             val lowEnd = mapOf("BUILD" to 0f, "RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f)
-            val highEnd = mapOf("BUILD" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "HOLD" to .98f)
+            val highEnd = mapOf("BUILD" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "HOLD" to 1f)
             add(Case("EDGES", v, "${low}_all_low", "$v · everything low", "BUILD, RPM, SHOT and HARDEN at 0: a bare hit.", voice, lowEnd))
-            add(Case("EDGES", v, "${low}_all_high", "$v · everything high", "Every control at its top (HOLD .98): an eight-second build.", voice, highEnd))
+            add(Case("EDGES", v, "${low}_all_high", "$v · everything high", "Every control at its top: an eight-second build and the longest ring.", voice, highEnd))
             add(Case("EDGES", v, "${low}_bright", "$v · bright corner", "C5 with everything high.", voice, highEnd + ("TUNE" to 1f)))
             add(Case("EDGES", v, "${low}_dark", "$v · dark corner", "C3 with everything low.", voice, lowEnd + ("TUNE" to 0f)))
         }

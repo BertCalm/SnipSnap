@@ -51,16 +51,14 @@ enum class ScourVoice { PLATE, PANE }
  * R2 reshaped R1's roll-then-blast into this build and hit after the owner's second listen: of three
  * phrases only the impact was a maybe ("a gong with static sounds on top" for the riff), and RING .5,
  * hardening leaving the ring alone, was the owner's pick for both voices, so the ring law is fixed
- * there and HOLD sets the ring's length instead. HOLD's top step is reserved for a held loop and
- * renders as the step below it, as GYRE's does.
+ * there and HOLD sets the ring's length instead. HOLD never loops: after a bed was a no, the owner's
+ * third listen dropped the held loop, so HOLD's whole range, top step included, is how long it rings.
  */
 object Scour {
     /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
     const val MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
-    /** HOLD's top step, reserved for a held loop; [render] treats it as the step below. */
-    const val LOOP_THRESHOLD = 0.99f
     /** The classifier files anything longer than this as LOOP (`Classifier`'s own constant is private). */
     const val LOOP_MIN_SECONDS = 1.5f
     /**
@@ -240,7 +238,7 @@ object Scour {
     /** Each shot's force swells over the build, from [SWELL_FLOOR] to 1. */
     internal fun swell(build: Double, t: Double): Double = SWELL_FLOOR + (1 - SWELL_FLOOR) * (t / build).pow(2)
 
-    /** No step is a loop: HOLD's top step is reserved (see the class KDoc). */
+    /** No HOLD setting is a loop: HOLD sets how long the plate rings (see the class KDoc). */
     @Suppress("UNUSED_PARAMETER")
     fun isLoop(hold: Float): Boolean = false
 
@@ -248,8 +246,8 @@ object Scour {
     private fun rollerTop(rpm: Float) = Dsp.lin(rpm, .15f, 1f).toDouble()
     private fun shotRate(shot: Float) = Dsp.expMap(shot, 3f, 300f).toDouble()
     private val REFERENCE_RATE = shotRate(.5f)
-    /** HOLD lengthens the ring after the slam, up to threefold below its reserved top step. */
-    private fun ringSeconds(s: Shape, hold: Float) = s.t60 * (1 + 2 * hold.coerceAtMost(LOOP_THRESHOLD))
+    /** HOLD lengthens the ring after the slam, up to threefold at its top. */
+    private fun ringSeconds(s: Shape, hold: Float) = s.t60 * (1 + 2 * hold)
 
     /**
      * The render's length: the build, then the root's ring, and never under [MIN_RENDER_SECONDS]. A closed
@@ -268,9 +266,9 @@ object Scour {
     fun drumClassFor(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
         if (renderFrames(voice, macros) > RATE * LOOP_MIN_SECONDS) DrumClass.LOOP else DrumClass.PERC
 
-    /** Random sounds stay finite: HOLD is an explicit choice. */
+    /** Every control is fair game: no setting loops, so every random sound ends. */
     fun scramble(voice: ScourVoice, random: Random = Random.Default): Map<String, Float> =
-        defaults(voice).mapValues { (name, _) -> if (name == "HOLD") 0f else random.nextFloat() }
+        defaults(voice).mapValues { random.nextFloat() }
 
     fun render(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Snip =
         Snip(finish(play(voice, macros, velocity).raw), channels = 1, sampleRate = RATE)

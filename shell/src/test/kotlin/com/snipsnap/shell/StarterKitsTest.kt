@@ -74,6 +74,9 @@ import com.snipsnap.synth.TesseraVoice
 import com.snipsnap.synth.Tangle
 import com.snipsnap.synth.TanglePatch
 import com.snipsnap.synth.TangleVoice
+import com.snipsnap.synth.Scour
+import com.snipsnap.synth.ScourPatch
+import com.snipsnap.synth.ScourVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
@@ -121,6 +124,9 @@ class StarterKitsTest {
         },
         "thaw" to OneEngine(ThawPatch::class.java, ThawVoice.entries.map { it.name }.toSet()) {
             (it as ThawPatch).let { p -> Thaw.drumClassFor(p.voice, p.macros) }
+        },
+        "scour" to OneEngine(ScourPatch::class.java, ScourVoice.entries.map { it.name }.toSet()) {
+            (it as ScourPatch).let { p -> Scour.drumClassFor(p.voice, p.macros) }
         },
         "nimbus" to OneEngine(NimbusPatch::class.java, NimbusVoice.entries.map { it.name }.toSet()) {
             (it as NimbusPatch).let { p -> Nimbus.drumClassFor(p.voice, p.macros) }
@@ -498,7 +504,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

@@ -1378,6 +1378,16 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
+/** Export SCOUR's sixteen dry pads (builds at 120 and 90 BPM, then the presets) to testkit/SnipSnap Scour Kit/. */
+tasks.register<JavaExec>("generateScourKit") {
+    group = "distribution"
+    description = "Export SCOUR's builds cut for 120 and 90 BPM and its eight presets as an MPC kit under testkit/SnipSnap Scour Kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScourKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
+}
+
 /** Render SUTURE's raw/matched mechanical and listening evidence locally. */
 tasks.register<JavaExec>("generateSutureAudition") {
     group = "distribution"

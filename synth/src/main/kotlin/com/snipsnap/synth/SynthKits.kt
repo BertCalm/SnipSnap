@@ -1251,6 +1251,30 @@ object SynthKits {
     }
 
     /**
+     * The SCOUR kit: impacts that build, cut for two tempos. A01–A04 are PLATE builds for 120 BPM and
+     * A05–A08 PANE builds for 90 BPM, each one beat, two beats, one bar and two bars long, so a pad hit
+     * that far before a downbeat lands its slam on it; all at C3, every other control at its default.
+     * A09–A16 are the eight presets. Each dry pad carries its recipe and its own name, and is filed by
+     * SCOUR's drumClassFor (every render passes 1.5 s, so all sixteen are LOOP-class one-shots).
+     */
+    fun scour(): List<ArrangedPad?> {
+        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String) = ScourPatch(
+            "$bpm BPM $label", voice,
+            Scour.defaults(voice) + ("TUNE" to 0f) + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
+        ).let { pad(it, Scour.drumClassFor(it.voice, it.macros)).copy(displayName = it.name) }
+        fun preset(name: String) = ScourPresets.all().first { it.name == name }
+            .let { pad(it, Scour.drumClassFor(it.voice, it.macros)).copy(displayName = it.name) }
+        return listOf(
+            build(ScourVoice.PLATE, 120, 1, "1 BEAT"), build(ScourVoice.PLATE, 120, 2, "2 BEATS"),
+            build(ScourVoice.PLATE, 120, 4, "1 BAR"), build(ScourVoice.PLATE, 120, 8, "2 BARS"),
+            build(ScourVoice.PANE, 90, 1, "1 BEAT"), build(ScourVoice.PANE, 90, 2, "2 BEATS"),
+            build(ScourVoice.PANE, 90, 4, "1 BAR"), build(ScourVoice.PANE, 90, 8, "2 BARS"),
+            preset("IRON SLAM"), preset("FORGE RISE"), preset("GRINDER RUN"), preset("PEENED BELL"),
+            preset("GLASS SNAP"), preset("FROST RISE"), preset("SHATTER RUN"), preset("PANE TOLL"),
+        )
+    }
+
+    /**
      * The THAW kit. A01–A08 walk C minor pentatonic from C3 on BRITTLE. A09–A14 explore the
      * warming runner, melt, channels, frozen bridges, heavy sheet and returning frost; A15–A16
      * are settled held material. Each dry pad carries its full recipe and uses THAW's pitched

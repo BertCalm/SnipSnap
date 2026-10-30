@@ -1,11 +1,12 @@
 # SCOUR Engine: Engineering Specification
-Version 1.4 · 2026-10-30 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+Version 1.5 · 2026-10-30 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
-1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact)
-Status: R1, R1.1 and R2 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
+listen and R3, the presets and the kit)
+Status: R1 to R3 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1), the R1 audition (As built: R1.1) and the R1.1 audition (As built: R2); the R2
-audition is published and not yet heard. The HOLD loop the plan put in R2 is deferred (As built: R2).
+renders (section 20.1) and the R1, R1.1 and R2 auditions; the R3 kit page is published and not yet heard.
+The HOLD loop the plan put in R2 is dropped (As built: R3). The phone's synth picker and a docs page remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -583,7 +584,8 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | PANE's springback reads as glass giving way | not met in R1 ("sounds the same as plate"); heard? for R1.1 | R1.1 gives PANE the square pane's own body |
 | the square plate values (PANE) | verified (solve) | the companion script against Leissa Table 4.65 and the ν = 0.225 bounds (As built: R1.1) |
 | SCOUR earns a place in a phrase | heard: riff no, bed no, impact maybe | the R1.1 audition (As built: R2) |
-| SCOUR earns a place as an impact into a drop | heard? | the R2 audition's drops |
+| SCOUR earns a place as an impact into a drop | heard: yes, and short hits yes | the R2 audition (As built: R3) |
+| the kit's presets and build lengths are the right ones | heard? | the R3 kit page |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -892,3 +894,52 @@ impacts and risers.
    can do for an impact: decide how long it rings.
 5. **The risky decision is still the plate's pitch.** The hit's ring plays the note at every asserted
    corner from 0.2 s on; the first instant of a fully hardened plate does not, as a real gong's does not.
+
+## As built: R3, the kit (2026-10-30)
+
+R3 makes SCOUR a rostered engine with a kit. It adds `ScourPresetsTest.kt` and `ScourKitGenerator.kt`
+(task `generateScourKit`, writing the gitignored `testkit/SnipSnap Scour Kit/`), and changes:
+
+- `ScourPresets.kt`, `Presets.kt`, `SynthKits.kt` and `Scour.kt`;
+- `PatchTypes`, `PresetsTest`, `PatchesTest` and `ScourTest`;
+- the audition generator and page;
+- `StarterKits.kt` and its test;
+- the two READMEs.
+
+### Heard (the owner, R2 audition, 2026-10-30)
+
+| Question | Answer |
+|---|---|
+| Would you use SCOUR as the build and hit into a drop like this? | yes |
+| Would you use the short hits (BUILD 0) on their own? | yes |
+| Does the build sound like it rises toward the hit? | yes, clearly |
+| Which voice would you reach for? | either |
+
+Asked what tempo the kit's builds should be cut for, the owner chose two tempos. Asked whether HOLD's top
+step should stay reserved for a held loop, the owner chose to drop the loop.
+
+### What changed
+
+- **HOLD never loops.** HOLD sets the ring after the slam across its whole range, `t60 · (1 + 2·HOLD)`,
+  top step included. `isLoop` is always false, and `scramble` now draws every control.
+- **Eight presets, four per voice.** All are on C minor pentatonic, dry, and name all six controls.
+  - PLATE: IRON SLAM (a bare hit), FORGE RISE (a one-bar-ish rise), GRINDER RUN (a long grinding run) and
+    PEENED BELL (a short build into a long hardened ring at C4).
+  - PANE: GLASS SNAP, FROST RISE, SHATTER RUN and PANE TOLL.
+  - `ScourPresetsTest` holds them to the house contracts (names, round trips, routing, an effects recipe,
+    velocity), keeps them on the scale, and keeps any two in a voice at least 0.2 apart (RMS over the
+    controls). The first GRINDER RUN sat 0.201 from FORGE RISE and was moved to 0.30.
+- **The kit, `SynthKits.scour()`.**
+  - A01-A04 are PLATE builds cut for 120 BPM and A05-A08 PANE builds cut for 90 BPM, each one beat, two
+    beats, one bar and two bars long, all at C3 with the other controls at their defaults.
+  - The test asserts each slam lands within a frame of its bar length, so a pad hit that long before a
+    downbeat lands on it.
+  - A09-A16 are the presets in roster order. Every pad is dry, one-shot, named for its sound, filed by
+    `drumClassFor` (all LOOP-class, every render passing 1.5 s), and regenerates exactly.
+  - The convention for a melodic engine's A01-A08 (a pentatonic walk over TUNE) gives way to the two-tempo
+    builds the owner asked for. An impact's useful axis is its length, not its pitch.
+- **On the roster, off the picker.** SCOUR leaves `PatchTypes.PROTOTYPES`, its presets join `Presets`, and
+  its kit joins FRESH TAPE as the SCOUR starter, so the app loads it like the other synth kits and
+  `snipsnap synth` renders it. It is not on the phone's synth picker yet; the README names it beside
+  BORE and ARCO as rostered but not shown. The app already leaves "reopen in the synth" off a pad whose
+  engine the picker does not list.
