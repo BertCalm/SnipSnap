@@ -184,3 +184,41 @@ The library design's R3, on the slate:
 - **The refusal in D5, because a board re-renders whole.** Stacking a chip leaves one old sound underneath. Stacking a board would double every pedal on it. Refusing tells the truth; stacking would hide it. Whether the bin should keep those originals longer is the owner's call.
 - **DELAY turns `gated` now and the phone does not change yet**, because the default row holds DELAY and the row may only hold slate pedals, while drawing the new row is the app round's job. Keeping `ROWS` at today's six means nothing on the phone moves until MORE exists to reach what leaves the row.
 - **The one risky decision** is still the library design's: on row seven a tap on a lit chip removes it, and AMT needs a mark. The slate adds two more, D2's AMT 0 and one wah per side. The gate asks about all three.
+
+## As built: the screens (2026-10-29, `app`, compiled by CI)
+
+The owner chose to build the screens in this cloud session, with CI's `android-build` as the compiler and `emulator-tests` as the device. Against section 6:
+
+- **The row** lives in `App.kt` beside `recipeClip`. It is read once from `tapeos` with `PedalSlate.read`, passed to `PadSheetScreen` as `pedalRow`, and written back by `onPedalRowChange`. Neither parameter has a default, as `workshopOpen` has none, so the four existing androidTest call sites pass `PedalSlate.DEFAULT` explicitly.
+- **The card** draws `PadSheet.rows(pedalRow.words)`.
+  - Row seven lights from `PedalSlate.card`.
+  - Rows one to six still light from the single `activeSegment`, which now ignores a pedal word.
+  - A marked chip, or MORE when the marked pedal sits behind it, wears the accent rim that a lit `ActionButton` wears. Lit is also said (`semantics { selected }`), so TalkBack and the device tests can tell.
+  - MORE's visible text is `Copy.pedalMore(count)`; its spoken name stays MORE.
+  - `isNoneState` counts a board. The idle header reads "ONE PER PAD · PEDALS STACK".
+  - An old chip that `boardOf` declines is named on the provenance line ("TREATED: COMPRESSED") and lights nothing.
+- **The taps.** `onSegmentTap` checks four cases before `applyTreatment`:
+  - a PUT ON ROW in waiting (a row chip swaps; any other tap only cancels);
+  - MORE (opens or closes the list);
+  - NONE (as before);
+  - a row pedal (`On` or `Off` from what the card shows, through `applyPedal`).
+
+  `applyPedal` is `applyTreatment`'s shape around one `PedalSlate.land` call: busy and the dock's job raised before the launch, the fresh-kit block, the model swap, the refresh audition and `PedalSlate.toast`. The AMT mark moves only with a change that landed, so a refused tap leaves AMT where it was. `applyTreatment` returns early on MORE. On a pad whose pedals the bin cannot restore, `applyTreatment`, SMEAR, DUST and DUST FROM refuse with `Copy.PEDALS_NOT_BINNED` instead of stacking, so D5 holds across the whole card.
+- **AMT.** With a marked pedal the stepper is named `Copy.pedalAmt(word)` (a wider label), reads the pedal's AMT, and commits `Gesture.Amount`. `pendingAmt` is keyed on the marked key, the amount and a count of refused pedal changes, so the stepper reloads when the mark moves and lets go of a value that never landed.
+- **MORE's list** (`PedalMoreList`) sits under the card, as DUST FROM does. Each line has:
+  - the pedal (lit when on, a tap puts it on or takes it off);
+  - AMT (gives it the mark);
+  - PRE or POST where it can move (sends `Flip` to the other side);
+  - PUT ON ROW where the row does not draw it (lit while it waits).
+
+  The list stays open from pad to pad (keyed on the kit), so a board can be built across a kit, and closes on a box toggle or Aquarium opening. A PUT ON ROW in waiting ends on a change of pad, a box toggle, Aquarium, any other tap on the card, AMT, DUST FROM, COPY or PASTE. Each control carries a test tag (`pedal-more-<key>`, `-amt`, `-side`, `-row`), and its spoken name differs from the row chip's ("TOUCH, ON" beside the chip "TOUCH").
+- **androidTest:** `PedalSlateScreenTest`, eight tests:
+  - on and off, with the last pedal off giving the original back byte for byte;
+  - AMT 0 handing the mark on, and the stepper then reading 70 for the next pedal;
+  - TOUCH from MORE replacing WAH, with MORE · 1;
+  - PUT ON ROW swapping FORGE and writing no file;
+  - a PUT ON ROW in waiting cancelled by the next tap, and MORE treating nothing;
+  - NONE over a board;
+  - the PRE/POST toggle moving SUSTAIN after the amp;
+  - a pad whose original the bin let go: a pedal tap and a CRUSH tap both refuse, and nothing is written.
+- **Not built:** a Back gesture that closes MORE's list (DUST FROM's has none either), and a per-line AMT readout in the list (the stepper shows the marked pedal's).
