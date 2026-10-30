@@ -206,8 +206,10 @@ fun MyVoiceScreen(
     LaunchedEffect(entry?.dir) {
         try {
             destination = entry?.let { current -> offMain {
-                val model = KitBuilderModel.open(current.dir)
-                (1..128).firstOrNull { model.pad(it) == null }
+                KitWrites.mutex.withLock {
+                    val model = KitBuilderModel.open(current.dir)
+                    (1..128).firstOrNull { model.pad(it) == null }
+                }
             } }
         } catch (e: Exception) { if (e is CancellationException) throw e; failed(e) }
     }
@@ -314,10 +316,12 @@ fun MyVoiceScreen(
                 onToast(e.message ?: "The new pad could not be saved.")
                 if (scope.isActive && mounted) {
                     failed(e)
-                    destination = offMain { runCatching {
-                        val fresh = KitBuilderModel.open(target.dir)
-                        (1..128).firstOrNull { fresh.pad(it) == null }
-                    }.getOrNull() }
+                    destination = offMain { KitWrites.mutex.withLock {
+                        runCatching {
+                            val fresh = KitBuilderModel.open(target.dir)
+                            (1..128).firstOrNull { fresh.pad(it) == null }
+                        }.getOrNull()
+                    } }
                 }
             } finally { if (scope.isActive && mounted) saving = false }
         }

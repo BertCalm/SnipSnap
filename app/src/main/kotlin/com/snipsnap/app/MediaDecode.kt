@@ -83,7 +83,7 @@ object MediaDecode {
             // an out-of-memory. Same ceiling the compressed path holds.
             val frames = if (maxDurationSeconds == null) DecodeLimits.MAX_FRAMES else
                 minOf(DecodeLimits.MAX_FRAMES.toLong(), maxDurationSeconds.toLong() * 192_000L).toInt()
-            val decoded = WavReader.read(bytes, frames)
+            val decoded = WavReader.read(bytes, maxFrames = frames)
             require(maxDurationSeconds == null || decoded.frameCount.toLong() <= decoded.sampleRate.toLong() * maxDurationSeconds) {
                 "Choose a short recording of $maxDurationSeconds seconds or less."
             }
