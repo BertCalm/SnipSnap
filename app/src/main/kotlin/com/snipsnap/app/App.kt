@@ -4315,7 +4315,12 @@ fun App(shelf: KitShelf) {
                 ChoiceSheet(
                     rows = p?.kits.orEmpty().map { folder ->
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
-                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) { kitSheetOpen = false; activateKit(folder) }
+                        // A sheet opened just before a job started: the tap does
+                        // nothing visible and the sheet stays, rather than
+                        // closing on a switch `activateKit` would refuse.
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) {
+                            if (busy == null) { kitSheetOpen = false; activateKit(folder) }
+                        }
                     } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
                     onDismiss = { kitSheetOpen = false },
                 )

@@ -621,11 +621,11 @@ fun KitScreen(
                             .weight(1f, fill = false)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = Places.switchKitName(switcherLine), onClick = onSwitchKit)
+                            .tapeClick(label = Places.switchKitName(switcherLine), enabled = !busy, onClick = onSwitchKit)
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, scheme.ink.tape, maxLines = 1)
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
                     }
                     TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
                 }
