@@ -3868,6 +3868,139 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: the camera app is only launched behind the CAMERA grant ----
+
+    /**
+     * Android refuses `ACTION_IMAGE_CAPTURE` (and `ACTION_VIDEO_CAPTURE`) to
+     * an app that declares `android.permission.CAMERA` and has not been
+     * granted it: the launch throws a `SecurityException`, and the camera
+     * app that would have taken the picture is never reached. SNAP's TAKE
+     * PHOTO shipped that way. The manifest declares CAMERA for LIVE (CameraX
+     * needs the grant itself), a comment beside it said the system camera
+     * did not, and a fresh install killed the app on the first tap.
+     *
+     * So any file that launches the system camera (`TakePicture`,
+     * `TakePicturePreview`, `CaptureVideo`, or the raw intent actions) has to
+     * name the three things that make the launch safe: the CAMERA constant,
+     * a `checkSelfPermission` to read the grant, and a `RequestPermission`
+     * contract to ask for it when it is missing. A second camera screen
+     * (a cover photo for a kit, say) that copies the launch and forgets the
+     * ask fails here, not on someone's phone.
+     *
+     * **What this law can and cannot prove.** It is a fence per file, not
+     * per call: SNAP declares the launcher before the function that checks,
+     * so "the check comes first" has no textual order to hold to. It cannot
+     * prove the check guards the launch, or that a refusal is said out loud;
+     * `SnapScreenTest` drives those on a device. It reads code after
+     * comments and string literals are stripped, so a comment that names
+     * `TakePicturePreview` does not put its file under the rule and a comment
+     * that names `checkSelfPermission` does not satisfy it.
+     */
+    private val cameraLaunch = Regex("""ActivityResultContracts\s*\.\s*(?:TakePicture\w*|CaptureVideo)\b|\bACTION_(?:IMAGE|VIDEO)_CAPTURE\b""")
+
+    /** What a camera launch's file has to say, in code, and how the law names each. */
+    private val cameraGuard = listOf(
+        "Manifest.permission.CAMERA" to "name `Manifest.permission.CAMERA`",
+        "checkSelfPermission" to "read the grant with `checkSelfPermission`",
+        "ActivityResultContracts.RequestPermission" to "ask for it with `ActivityResultContracts.RequestPermission`",
+    )
+
+    /** What [name]'s code launches the camera app without: empty when it launches none, or all of it is there. */
+    private fun cameraLaunchProblems(name: String, code: String): List<String> {
+        if (!cameraLaunch.containsMatchIn(code)) return emptyList()
+        return cameraGuard.filter { (needle, _) -> needle !in code }.map { (_, say) -> "$name launches the camera app but never does: $say" }
+    }
+
+    @Test
+    fun `law - the camera app is only launched behind the CAMERA grant`() {
+        // Controls first: a law that cannot see its own failure shape checks nothing.
+        val unguarded = stripCommentsAndStrings(
+            "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n" +
+                "fun takePhoto() { camera.launch(null) }\n",
+        )
+        assertEquals(
+            cameraGuard.size,
+            cameraLaunchProblems("Unguarded.kt", unguarded).size,
+            "the camera law misses a launch with no check at all, which is the bug it exists for",
+        )
+        val checkedNotAsked = stripCommentsAndStrings(
+            "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { }\n" +
+                "fun takePhoto() { if (ContextCompat.checkSelfPermission(c, Manifest.permission.CAMERA) == 0) camera.launch(uri) }\n",
+        )
+        assertTrue(
+            cameraLaunchProblems("CheckedNotAsked.kt", checkedNotAsked).any { "RequestPermission" in it },
+            "the camera law accepts a launch that reads the grant but never asks for it, which leaves a refusal with no way back",
+        )
+        val rawIntent = stripCommentsAndStrings("startActivity(Intent(MediaStore.ACTION_IMAGE_CAPTURE))\n")
+        assertTrue(
+            cameraLaunchProblems("RawIntent.kt", rawIntent).isNotEmpty(),
+            "the camera law misses the raw intent action, which needs the grant just as the contract does",
+        )
+        val guarded = stripCommentsAndStrings(
+            "val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }\n" +
+                "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n" +
+                "fun takePhoto() {\n" +
+                "    if (ContextCompat.checkSelfPermission(c, Manifest.permission.CAMERA) == 0) camera.launch(null)\n" +
+                "    else ask.launch(Manifest.permission.CAMERA)\n" +
+                "}\n",
+        )
+        assertEquals(
+            emptyList(),
+            cameraLaunchProblems("Guarded.kt", guarded),
+            "the camera law flags a launch that checks the grant and asks for it",
+        )
+        val onlyTalksAboutIt = stripCommentsAndStrings(
+            "// uses ActivityResultContracts.TakePicturePreview, see checkSelfPermission(Manifest.permission.CAMERA)\n" +
+                "/* ACTION_IMAGE_CAPTURE */ val x = \"ActivityResultContracts.TakePicture\"\n",
+        )
+        assertEquals(
+            emptyList(),
+            cameraLaunchProblems("Talks.kt", onlyTalksAboutIt),
+            "the camera law counts a comment or a string as a launch",
+        )
+        val commentOnlyCheck = stripCommentsAndStrings(
+            "// checkSelfPermission(Manifest.permission.CAMERA) then ActivityResultContracts.RequestPermission\n" +
+                "val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { }\n",
+        )
+        assertEquals(
+            cameraGuard.size,
+            cameraLaunchProblems("CommentOnly.kt", commentOnlyCheck).size,
+            "the camera law lets a comment stand in for the check",
+        )
+
+        // The rule is about a declared CAMERA permission. If the declaration
+        // goes (LIVE dropped), the rule goes with it: delete this law then,
+        // do not teach it to pass.
+        val manifest = File("../app/src/main/AndroidManifest.xml").readText(Charsets.UTF_8)
+        assertTrue(
+            "android.permission.CAMERA" in manifest,
+            "the manifest no longer declares CAMERA, so Android no longer requires the grant to launch the system camera; " +
+                "this law is moot - remove it together with the declaration rather than loosening it",
+        )
+
+        val sources = File("../app/src/main/kotlin").walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        require(sources.size > 20) { "found only ${sources.size} :app sources - the scan is broken, not the tree." }
+        var launching = 0
+        val problems = mutableListOf<String>()
+        for (file in sources) {
+            val code = stripCommentsAndStrings(file.readText(Charsets.UTF_8))
+            if (cameraLaunch.containsMatchIn(code)) launching++
+            problems += cameraLaunchProblems(file.name, code)
+        }
+        assertTrue(
+            launching >= 1,
+            "expected SnapScreen's TAKE PHOTO to launch the camera app, found $launching files that do - the pattern this " +
+                "law matches must have changed, which would make it pass by checking nothing. Fix the pattern, do not lower this bound.",
+        )
+        assertTrue(
+            problems.isEmpty(),
+            "the system camera is launched without the CAMERA grant behind it. A manifest that declares CAMERA makes " +
+                "ACTION_IMAGE_CAPTURE throw a SecurityException until the user has granted it, so a fresh install dies on the " +
+                "tap. Check the grant at the tap and ask for it when it is missing (SnapScreen.takePhoto):\n  " +
+                problems.joinToString("\n  "),
+        )
+    }
+
     // ==================== Laws: every bench has an opener, and no screen draws its own back label ====================
 
     /**
