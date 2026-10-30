@@ -218,7 +218,7 @@ class TremorSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test fun delayed_yours_restore_cannot_be_replaced_with_a_fresh_renderer() {
-        val source = TremorPatch("DELAYED OLD WIRE", TremorVoice.WIRE,
+        val source = TremorPatch("DELAYED WIRE", TremorVoice.WIRE,
             Tremor.defaults(TremorVoice.WIRE) + ("CAGE" to .23f), model = Tremor.LEGACY_MODEL)
         UserPresets.save(shelf, source, 1L)
         settings["preset.TREMOR.WIRE"] = source.name
