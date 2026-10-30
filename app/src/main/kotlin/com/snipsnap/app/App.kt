@@ -753,7 +753,9 @@ fun App(shelf: KitShelf) {
     // instead of disabling the button (see `assignPendingSnip` below, and
     // the KITS/KIT branches' wiring further down). Cleared the moment the
     // assign lands, or by the MenuRow tab-switch reset below if the user
-    // gives up on the pick without ever long-pressing a pad.
+    // gives up on the pick without ever long-pressing a pad. A kit chosen
+    // from the shelf is the pick's destination, not the user giving up: it
+    // lands through `landPickedKit`, the one departure that keeps the pick.
     var pendingSnipAssign by remember { mutableStateOf<File?>(null) }
     // BREED (XX2 wired in): the kit BREED was pressed from, stashed here
     // while the user picks its cross partner — same shape as
@@ -2872,7 +2874,8 @@ fun App(shelf: KitShelf) {
         // reasoning applies: a tab switch away from KITS
         // mid-pick abandons the → PAD hand-off rather than
         // leaving KitsScreen stuck on "PICK A KIT FOR THIS
-        // SNIP" forever.
+        // SNIP" forever. (A kit chosen for the snip is not giving up: it
+        // lands through [landPickedKit], which puts the pick back.)
         pendingSnipAssign = null
         pendingSnipTarget = null
         pendingAddTo = null
@@ -2900,6 +2903,36 @@ fun App(shelf: KitShelf) {
     fun goToScreen(target: AppScreen) {
         landOn(target)
         clearTransientState()
+    }
+
+    /**
+     * A kit chosen on the shelf, landed on PADS: [goToScreen] with one
+     * exception. A SNIPS → PAD pick waiting in [pendingSnipAssign] survives
+     * the landing, because this kit is what the pick was waiting for. The
+     * shelf asked "PICK A KIT FOR THIS SNIP", and the next empty-pad
+     * long-press places it. A tab switch away from KITS is the user giving
+     * the pick up; a kit tapped is the user answering it. Every other thing
+     * a departure abandons (`pendingAddTo`, `pendingBreedWith`, an armed pad
+     * sheet) is still abandoned.
+     *
+     * The pick is read here, at the landing, not when the kit was tapped: a
+     * user who left for a place while the project opened has given it up,
+     * and this must not bring it back.
+     *
+     * The line is said here too, after the landing, not at the shelf. A line
+     * is scoped to where it was said, and the landing rests one said
+     * somewhere else ([DockModel.moved]). [entry] is the kit as it now
+     * stands: KitScreen shows bank B but always opens on bank A, and
+     * nothing here fills an upper bank, so an "empty pad" instruction is
+     * only followable if bank A has one. A kit already full there has
+     * nothing for the long-press to catch (the v1 "empty pads only" scope),
+     * so the line says so instead of pointing at a pad that does not exist.
+     */
+    fun landPickedKit(entry: KitShelf.Entry) {
+        val waiting = pendingSnipAssign
+        goToScreen(AppScreen.KIT)
+        pendingSnipAssign = waiting
+        if (waiting != null) dock.say(Copy.snipLanding(hasLandingPad(entry.kit)))
     }
 
     /** The place row: a place opens on the stage it was last on, benches closed. */
@@ -2943,6 +2976,10 @@ fun App(shelf: KitShelf) {
      * arrived since the shelf was opened (`ShelfModel.projectForKit`).
      * The kit itself is the one tapped, whatever the project's active kit
      * says: the row the user chose is the kit they want on the grid.
+     *
+     * It lands through [landPickedKit], so a snip waiting for a pad (SNIPS →
+     * PAD, the shelf in pick mode) is still waiting on the grid, and the
+     * dock says what the next empty-pad long-press will do.
      */
     fun openKit(entry: KitShelf.Entry) {
         if (busy != null) return
@@ -2969,8 +3006,9 @@ fun App(shelf: KitShelf) {
             }
             // Re-read after the await: the shelf may have moved under us.
             project = p
-            open = kits.firstOrNull { it.dir == entry.dir } ?: entry
-            goToScreen(AppScreen.KIT)
+            val landed = kits.firstOrNull { it.dir == entry.dir } ?: entry
+            open = landed
+            landPickedKit(landed)
         }
     }
 
@@ -3026,6 +3064,10 @@ fun App(shelf: KitShelf) {
      * kit (`ShelfModel.addKit`, then `activate`), and PADS comes back with
      * it on the grid. The kit is referenced, not copied — edit it in one
      * project and every project sees the edit (`DIRECTION_2026_10.md` §2).
+     *
+     * It lands through [landPickedKit] too. SNIPS stays open on the shelf
+     * while this pick is armed, so a snip can be waiting beside it, and the
+     * header then says "PICK A KIT FOR THIS SNIP".
      */
     fun addKitToProject(target: Project, entry: KitShelf.Entry) {
         if (busy != null) return
@@ -3049,8 +3091,9 @@ fun App(shelf: KitShelf) {
                 busy = null
             }
             project = updated
-            open = kits.firstOrNull { it.dir == entry.dir } ?: entry
-            goToScreen(AppScreen.KIT)
+            val landed = kits.firstOrNull { it.dir == entry.dir } ?: entry
+            open = landed
+            landPickedKit(landed)
         }
     }
 
@@ -3522,26 +3565,13 @@ fun App(shelf: KitShelf) {
                                         // Through the project that holds it (plan
                                         // §3.1): the kit lands on PADS as the open
                                         // project's active kit.
+                                        //
+                                        // A SNIPS → PAD pick still pending rides
+                                        // the landing, and the dock's line about
+                                        // it is said there too (`landPickedKit`):
+                                        // said here, before the project has
+                                        // opened, the landing would rest it.
                                         openKit(entry)
-                                        // A kit opened while a SNIPS → PAD pick is
-                                        // still pending: tell the user what the
-                                        // next empty-pad long-press will do, since
-                                        // `KitScreen` itself carries no hint banner
-                                        // of its own for this mode. KitScreen can
-                                        // show bank B now (September UAT, finding
-                                        // 11) but always opens on bank A, and
-                                        // nothing here fills an upper bank anyway,
-                                        // so an "empty pad" instruction is only
-                                        // actually followable if bank A has one; a
-                                        // kit that's already full there has nothing
-                                        // for the long-press to catch (the v1
-                                        // "empty pads only" scope this task's
-                                        // brief calls out), so the hint says so
-                                        // instead of pointing at a pad that
-                                        // doesn't exist.
-                                        if (pendingSnipAssign != null) {
-                                            dock.say(Copy.snipLanding(hasLandingPad(entry.kit)))
-                                        }
                                     }
                                 },
                                 onFresh = ::fresh,
