@@ -1,5 +1,6 @@
 package com.snipsnap.app.ui
 
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,24 +11,32 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
+import com.snipsnap.app.KitWrites
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
 import com.snipsnap.shell.PedalSlate
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -38,7 +47,7 @@ import java.io.File
  * has had zero on-device coverage until now — this suite is deliberately
  * narrow, not a sweep of it.
  *
- * **What this covers, and why these three things.** `KitBuilderModel`'s
+ * **What this covers, and why these four things.** `KitBuilderModel`'s
  * own edits (`assign`/`save`/undo/etc.) are already exhaustively proven by
  * `KitBuilderTest`/`KitBuilderStemBoundTest`/`KitBuilderLocaleTest` in
  * `:shell` — the same JVM/on-device split `ExportScreenTest`'s own KDoc
@@ -63,18 +72,28 @@ import java.io.File
  *    `GroupBox` strips — a `:shell`-pure function, but the wiring from it
  *    to `PadSheetScreen`'s own `boxes.getValue(...)` calls is `:app`-only
  *    and untested.
+ * 4. The job board: every job the sheet starts is begun on the app's
+ *    [AppJobs] (found at `LocalJobs`), and a write that outlives the sheet
+ *    stays there until it lands. See "the held write" below.
  *
- * **What is deliberately not here.** Every treatment/MUTATE/OUTSIDE apply
- * path sets `busy` from *inside* a coroutine it launches on `appScope`
- * (see `applyTreatment`/`onOutside`), never before, and `busy` itself is a
- * local `remember(model) { mutableStateOf(false) }` — unlike
- * `ExportSession.busy`, there is no hoisted object this suite can poke to
- * force a busy state deterministically. Racing the real coroutine for a
- * one-frame window would be exactly the kind of timing-fragile assertion
- * this repo's own suites have learned to avoid (see `ComposeScreenTest`'s
- * own KDoc on the hand-driven clock), so the busy-gating behaviour
- * (buttons disabled, a selected segment staying selected while busy) is
- * left untested here rather than tested unreliably.
+ * **What is deliberately not here.** `busy` itself is a local
+ * `remember(model) { mutableStateOf(false) }` — unlike `ExportSession.busy`,
+ * there is no hoisted object this suite can poke to force a busy state
+ * deterministically. Racing the real coroutine for a one-frame window would
+ * be exactly the kind of timing-fragile assertion this repo's own suites
+ * have learned to avoid (see `ComposeScreenTest`'s own KDoc on the
+ * hand-driven clock), so the busy-gating behaviour (buttons disabled, a
+ * selected segment staying selected while busy) is left untested here
+ * rather than tested unreliably.
+ *
+ * **The held write.** The job-board tests do not race anything. Every
+ * write on a kit folder takes `KitWrites.mutex` first, so the test takes it
+ * itself ([holdWrites]) before it starts a job: the job's write then waits
+ * at that door, open, for as long as the test likes, and goes through when
+ * [releaseWrites] lets it. That is the real lock, not a stand-in, and it
+ * needs nothing added to the production screen. Whatever a test holds is
+ * given back in [cleanUp], since a lock left held would stop every later
+ * test in the process.
  *
  * **How this suite reaches the MAKE box without ever scrolling.**
  * `PadSheetScreen`'s `openBox` parameter is caller-hoisted (unlike GROOVE/
@@ -107,11 +126,48 @@ class PadSheetScreenTest : ComposeScreenTest() {
     private var currentSlot by mutableStateOf(1)
     private var openBoxState by mutableStateOf<String?>(null)
 
+    /** The app's job board, handed to the sheet the way `App` hands it to every screen. */
+    private val jobs = AppJobs()
+
+    /** Whether the sheet is in the composition: a test takes it out to close the sheet. */
+    private var sheetShown by mutableStateOf(true)
+
+    /** The last kit the sheet reported back through `onKitUpdated`, which is how a test sees a write land. */
+    @Volatile
+    private var lastUpdatedKit: Kit? = null
+
+    private var writesHeld = false
+
     @After
     fun cleanUp() {
+        releaseWrites()
         appScope.cancel()
         kitDirs.forEach { it.deleteRecursively() }
     }
+
+    /** Takes the lock every kit write needs, so a write started from here on waits at the door. See this file's KDoc. */
+    private fun holdWrites() {
+        check(!writesHeld) { "holdWrites() was called twice in one test; this test already holds the write lock" }
+        // Bounded: if another test (or a write that never finished) already
+        // holds the lock, an unbounded `lock()` would hang CI instead of
+        // failing.
+        try {
+            runBlocking { withTimeout(10_000) { KitWrites.mutex.lock() } }
+        } catch (e: TimeoutCancellationException) {
+            throw AssertionError("KitWrites.mutex was already held, so holdWrites() could not take the write lock within 10 s", e)
+        }
+        writesHeld = true
+    }
+
+    /** Gives the lock back (if this test holds it), and the waiting write goes through. */
+    private fun releaseWrites() {
+        if (!writesHeld) return
+        writesHeld = false
+        KitWrites.mutex.unlock()
+    }
+
+    /** What the board would show on the dock right now, or null when no job is on it. */
+    private fun boardLabel(): String? = compose.runOnIdle { jobs.current?.label }
 
     /** A kit with one silent pad per [slots], each its own tiny WAV. */
     private fun padSheetKit(slots: List<Int>): KitShelf.Entry {
@@ -131,26 +187,31 @@ class PadSheetScreenTest : ComposeScreenTest() {
     private fun show(entry: KitShelf.Entry, slot: Int, openBox: String? = null) {
         currentSlot = slot
         openBoxState = openBox
+        sheetShown = true
         setPhoneContent {
-            PadSheetScreen(
-                entry = entry,
-                slot = currentSlot,
-                onSlotChange = { currentSlot = it },
-                onBack = {},
-                onToast = {},
-                onNavigateTape = {},
-                onGrainField = {},
-                onSplice = {},
-                onStack = {},
-                onKitUpdated = {},
-                onShelfAssetWritten = {},
-                appScope = appScope,
-                workshopOpen = false,
-                openBox = openBoxState,
-                onOpenBox = { openBoxState = it },
-                pedalRow = PedalSlate.DEFAULT,
-                onPedalRowChange = {},
-            )
+            CompositionLocalProvider(LocalJobs provides jobs) {
+                if (sheetShown) {
+                    PadSheetScreen(
+                        entry = entry,
+                        slot = currentSlot,
+                        onSlotChange = { currentSlot = it },
+                        onBack = {},
+                        onToast = {},
+                        onNavigateTape = {},
+                        onGrainField = {},
+                        onSplice = {},
+                        onStack = {},
+                        onKitUpdated = { lastUpdatedKit = it },
+                        onShelfAssetWritten = {},
+                        appScope = appScope,
+                        workshopOpen = false,
+                        openBox = openBoxState,
+                        onOpenBox = { openBoxState = it },
+                        pedalRow = PedalSlate.DEFAULT,
+                        onPedalRowChange = {},
+                    )
+                }
+            }
         }
         // KitBuilderModel.open runs inside a LaunchedEffect(entry.dir), so
         // the header doesn't exist on the first frame — mirrors
@@ -274,5 +335,97 @@ class PadSheetScreenTest : ComposeScreenTest() {
             dialledBloom,
             sliderText("BLOOM"),
         )
+    }
+
+    /** Takes the sheet out of the composition, as leaving the screen does, and lets the frames run. */
+    private fun closeTheSheet(slot: Int) {
+        sheetShown = false
+        pump()
+        assertTrue(
+            "the sheet is still on screen",
+            compose.onAllNodesWithText("PAD ${PadBanks.tag(slot)}", useUnmergedTree = true).fetchSemanticsNodes().isEmpty(),
+        )
+    }
+
+    /** Activates a control without a scroll animation, which the frozen clock would never finish. */
+    private fun activate(label: String) {
+        compose.onNodeWithContentDescription(label, useUnmergedTree = true)
+            .performSemanticsAction(SemanticsActions.OnClick) { click ->
+                assertTrue("the button \"$label\" refused its click", click())
+            }
+        pump()
+    }
+
+    /** The pad editor's board card, opened in TREATMENT: KEEP and the HEAR buttons run real jobs on a kit. */
+    private fun showTheBoardCard() {
+        show(padSheetKit(listOf(1)), slot = 1, openBox = PadSheetBoxes.Box.TREATMENT.name)
+        waitFor("the board card", timeoutMillis = 60_000) {
+            compose.onAllNodesWithText("WIDE · STEREO CHARACTER", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
+
+    /**
+     * The point of the board: KEEP writes on `appScope`, so it carries on
+     * after the sheet is gone, and the dock has to keep saying so until it is
+     * done. The write is held at the kit-writes lock, open, while the sheet is
+     * closed; the board must still show it then, and show nothing once it has
+     * landed.
+     */
+    @Test
+    fun a_write_still_running_when_the_sheet_closes_stays_on_the_board_until_it_lands() {
+        showTheBoardCard()
+        assertNull("nothing is running yet", boardLabel())
+
+        holdWrites()
+        activate("KEEP")
+        assertEquals("KEEP started a job and the board knows", Copy.WORKING_BUSY, boardLabel())
+
+        closeTheSheet(slot = 1)
+        assertEquals("the sheet is gone but its write is not: the board must still show it", Copy.WORKING_BUSY, boardLabel())
+        assertNull("the write has not been let through yet", lastUpdatedKit)
+
+        releaseWrites()
+        waitFor("the write to land", timeoutMillis = 60_000) { lastUpdatedKit != null }
+        waitFor("the board to clear once the write landed", timeoutMillis = 60_000) { boardLabel() == null }
+    }
+
+    /**
+     * A job on the sheet's own scope (HEAR plays a preview and writes nothing)
+     * dies with the sheet, and its board entry has to leave the board with it,
+     * or it would sit on the dock for good. The entry is ended by the job's own
+     * `finally` and, as a backstop, when the launched job completes; this pins
+     * that it is gone, not which of the two ended it.
+     */
+    @Test
+    fun a_job_the_sheet_cancels_by_closing_leaves_the_board() {
+        showTheBoardCard()
+
+        holdWrites()
+        activate("HEAR WIDE")
+        assertEquals("HEAR started a job and the board knows", Copy.WORKING_BUSY, boardLabel())
+
+        closeTheSheet(slot = 1)
+        waitFor("the cancelled job to leave the board") { boardLabel() == null }
+    }
+
+    /**
+     * The save the sheet hands on when it closes with an edit the debounce has
+     * not written yet. It sets no `busy` (the sheet is going), so it is the one
+     * job the board alone carries, under the word for a plain write.
+     */
+    @Test
+    fun the_flush_the_sheet_leaves_behind_is_on_the_board_until_it_lands() {
+        show(padSheetKit(listOf(1)), slot = 1)
+        dialSlider("LEVEL", 0.25f)
+        assertNull("the edit is pending, not yet written", lastUpdatedKit)
+
+        holdWrites()
+        closeTheSheet(slot = 1)
+        assertEquals("the flush is a job and the board knows", Copy.SAVING_PAD_BUSY, boardLabel())
+
+        releaseWrites()
+        waitFor("the flush to land", timeoutMillis = 60_000) { lastUpdatedKit != null }
+        waitFor("the board to clear once the flush landed", timeoutMillis = 60_000) { boardLabel() == null }
+        assertNotNull("the flush wrote the edit", lastUpdatedKit)
     }
 }

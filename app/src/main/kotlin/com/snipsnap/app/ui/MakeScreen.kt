@@ -10,7 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
@@ -116,6 +116,7 @@ private const val MAKE_ROW_H = 72
 @Composable
 fun InstrumentsBench(
     instruments: List<KitShelf.InstrumentEntry>,
+    backLabel: String,
     onOpen: (KitShelf.InstrumentEntry) -> Unit,
     onBack: () -> Unit,
 ) {
@@ -132,12 +133,12 @@ fun InstrumentsBench(
         ) {
             Box(
                 Modifier
-                    .width(72.dp)
+                    .widthIn(min = 72.dp)
                     .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                    .tapeClick(label = Bench.INSTRUMENTS.backChip, onClick = onBack),
+                    .tapeClick(label = backLabel, onClick = onBack),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(Bench.INSTRUMENTS.backChip, TapeType.pixel, scheme.lcdInk.tape)
+                TapeText(backLabel, TapeType.pixel, scheme.lcdInk.tape)
             }
             Spacer(Modifier.weight(1f))
             TapeText(Bench.INSTRUMENTS.label, TapeType.lcdHeader, scheme.lcdInk.tape)
