@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -240,7 +240,7 @@ private class LoopRig(dir: File) {
 /**
  * LOOP as a bench under BEAT (`docs/SCREEN_PLAN_2026_10.md` §3.4 and §3.8):
  * the six-track phasing grid, its tempo row and BOUNCE, drawn inside the
- * frame in the scheme's own colours, with a `◄ BEAT` chip back.
+ * frame in the scheme's own colours, with a back chip that reads [backLabel].
  *
  * This is everything the old `LoopActivity` did, with the Activity's
  * lifecycle swapped for the composable's. The engine, its audio thread and
@@ -263,6 +263,8 @@ private class LoopRig(dir: File) {
  */
 @Composable
 fun LoopBench(
+    /** The back chip's words: `Navigation.backChip`, so they name where [onBack] lands (BEAT, when GROOVE opened it). */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onGoToSnips: () -> Unit,
@@ -345,7 +347,7 @@ fun LoopBench(
             Modifier.fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ BEAT", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
         }
 
         // remember, or every recomposition resets the session to what was

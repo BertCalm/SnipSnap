@@ -1449,7 +1449,11 @@ fun App(shelf: KitShelf) {
                 orbitSelected = merged.orbits.size - 1
                 busy = null
                 dock.say(Copy.pathRingMade(ring.name))
-                landOn(AppScreen.ORBIT)
+                // ORBIT opens over SNAP, or wherever the user is by now, not
+                // at a BEAT they never visited: Back and ORBIT's chip return
+                // to where they were.
+                makeRoomForScreen()
+                nav.open(Bench.ORBIT)
             } catch (ex: Exception) {
                 busy = null
                 Log.e(TAG, "buildPathRing: failed", ex)
@@ -1511,7 +1515,10 @@ fun App(shelf: KitShelf) {
                 busy = null
                 dock.say(Copy.chordKitMade(newEntry.kit.name, ring.name))
                 open = newEntry
-                landOn(AppScreen.ORBIT)
+                // Over SNAP, as PATH's ring does above; ORBIT draws the kit
+                // `open` now points at, which is the one just built.
+                makeRoomForScreen()
+                nav.open(Bench.ORBIT)
             } catch (e: Exception) {
                 busy = null
                 Log.e(TAG, "buildChordKit: failed", e)
@@ -4116,9 +4123,15 @@ fun App(shelf: KitShelf) {
                                 // write, under the same one writer SNIPS' → LOOP uses.
                                 onDroneToLoop = { name, recipe, root -> sendDroneToLoop(name, recipe, root) },
                                 // → SURFACE (SIREN, a LOOP): the pad has landed and
-                                // surface.json points at it; the same screen switch a
-                                // MenuRow tap makes, so SURFACE reads the file as it opens.
-                                onOpenSurface = { goToScreen(AppScreen.SURFACE) },
+                                // surface.json points at it, so SURFACE reads the file
+                                // as it opens. It opens over SYNTH, or wherever the user
+                                // is by now (this lands after the write): the frame chip
+                                // reads that screen, and the chip and Back both return
+                                // to it.
+                                onOpenSurface = {
+                                    makeRoomForScreen()
+                                    nav.open(Bench.SURFACE)
+                                },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.
@@ -4129,6 +4142,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
                             onKitUpdated = { updatedKit ->
@@ -4252,8 +4266,9 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == Bench.ORBIT -> {
-                            // The one door to the rings: a bench under BEAT, from
-                            // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
+                            // The one door to the rings: a bench, from GROOVE's
+                            // ORBIT ▸ (plan §3.4) over BEAT, and from SNAP's PATH
+                            // and CHORD over SNAP. It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
                                 NoKitPanel(
@@ -4266,6 +4281,7 @@ fun App(shelf: KitShelf) {
                                 OrbitScreen(
                                     entry = orbitEntry,
                                     kitsRoot = shelf.root,
+                                    backLabel = checkNotNull(nav.backChip) { "ORBIT is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // CLIP ▸ KIT rewrites the open kit's groove.json
@@ -4291,6 +4307,7 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == Bench.LOOP -> LoopBench(
+                            backLabel = checkNotNull(nav.backChip) { "LOOP is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
                             // The empty grid's SNIPS door: SNIPS takes LOOP's place on

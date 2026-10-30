@@ -80,6 +80,7 @@ class OrbitScreenTest : ComposeScreenTest() {
             OrbitScreen(
                 entry = entry,
                 kitsRoot = entry.dir.parentFile!!,
+                backLabel = "◄ BEAT",
                 onBack = {},
                 onToast = { toasts += it },
                 onGrooveWritten = { groovesWritten.incrementAndGet() },
