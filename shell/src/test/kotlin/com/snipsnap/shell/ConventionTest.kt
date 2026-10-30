@@ -3982,30 +3982,27 @@ class ConventionTest {
      * - **PR 3c**: VERSIONS, PAD_CAPTURE and SONG. Their arguments are nulled by
      *   `clearTransientState` while the history still holds the bench, so they
      *   need the place's state record first.
-     * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE and STACK, the pad editor
-     *   family.
+     * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE, STACK and SPREAD, the pad
+     *   editor family.
+     * - **PR 3e**: LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
+     *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
+     *   routed later, not waived as panels that stay in their screen.
      *
-     * The list only shrinks. The law fails when a bench on it gains an opener
-     * (take it off), and when a bench off it has none, so a new bench cannot be
-     * added to the roster without a way to open it, and cannot be added to this
-     * list either: its size is pinned at [NOT_YET_OPENED_CEILING].
+     * The list only shrinks, and the ceiling pins it exactly. The law fails
+     * when a bench on it gains an opener (take it off), and when a bench off it
+     * has none, so a new bench cannot be added to the roster without a way to
+     * open it. The size is asserted equal to [NOT_YET_OPENED_CEILING], not
+     * merely at most it: a change that shrinks the list lowers the constant in
+     * the same diff, and one that grows it has to raise the constant in plain
+     * sight. A ceiling with slack would let the list grow back after a shrink
+     * with nothing failing.
      */
     private val NOT_YET_OPENED: Set<Bench> = setOf(
         Bench.VERSIONS, Bench.PAD_CAPTURE, Bench.SONG,
-        Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK,
+        Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.SPREAD,
+        Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD,
     )
-    private val NOT_YET_OPENED_CEILING = 7
-
-    /**
-     * Benches that stay in their screen: SPREAD (a pad editor tool), and SNAP's
-     * LIVE, DRAW and PHOTO FIELD. They are panels inside a screen, not screens
-     * you go into and come back from, so they are not routed and have no opener.
-     * This is the PR 3b brief's ruling ("waived by the spec"; §7.3.1 in the tree
-     * lists the four as loose state and carries no waiver clause of its own), so
-     * a change of mind is the owner's, and takes them off this set.
-     */
-    private val WAIVED_IN_SCREEN: Set<Bench> = setOf(Bench.SPREAD, Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD)
-    private val WAIVED_IN_SCREEN_CEILING = 4
+    private val NOT_YET_OPENED_CEILING = 11
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -4014,9 +4011,13 @@ class ConventionTest {
      *
      * 1. A call, `nav.open(Bench.X)` or a bare `open(Bench.X)`.
      * 2. `Bench.X` in `locationOf`'s body, which is how `landOn(AppScreen.X)`
-     *    opens one. It counts even for an `AppScreen` value no one calls today
-     *    (SYNTH and SNAP), so the law proves an opener is wired, not that a
-     *    button reaches it.
+     *    opens one. The scan reads the row, not its callers, so it proves an
+     *    opener is wired, not that a button reaches it. What keeps a row honest
+     *    is that an `AppScreen` is deleted when nothing lands on it (ORBIT,
+     *    SURFACE, SYNTH and SNAP were, once their hand-offs became `nav.open`
+     *    calls), so a row that remains has a `landOn` caller today: SPLIT, KEYS
+     *    and the gear's three. A hand-off that opens over where the user is
+     *    is a call (way 1), never a row, because a row lands on a fixed place.
      * 3. A bench in the MAKE list's row source (`ui/MakeScreen.kt`), provided
      *    App opens that list's rows with `nav.open(it)`. That is how SYNTH, SNAP,
      *    SURFACE and INSTRUMENTS are opened.
@@ -4051,23 +4052,18 @@ class ConventionTest {
         return opened
     }
 
-    /** Why the roster and the two lists disagree with what is opened, one line per fault; empty when they agree. */
-    private fun openerProblems(opened: Set<Bench>, notYetOpened: Set<Bench>, waived: Set<Bench>): List<String> {
+    /** Why the roster and the list disagree with what is opened, one line per fault; empty when they agree. */
+    private fun openerProblems(opened: Set<Bench>, notYetOpened: Set<Bench>): List<String> {
         val problems = mutableListOf<String>()
         for (bench in Bench.entries) {
-            val listed = bench in notYetOpened || bench in waived
-            if (bench !in opened && !listed) {
-                problems += "$bench has no opener outside Navigation.kt, and is on neither NOT_YET_OPENED nor WAIVED_IN_SCREEN. " +
+            if (bench !in opened && bench !in notYetOpened) {
+                problems += "$bench has no opener outside Navigation.kt, and is not on NOT_YET_OPENED. " +
                     "Open it with `nav.open(Bench.$bench)`; a bench nothing opens is a screen the roster promises and the app never shows."
             }
             if (bench in opened && bench in notYetOpened) {
                 problems += "$bench is on NOT_YET_OPENED but something opens it now. Take it off the list: the list only shrinks."
             }
-            if (bench in opened && bench in waived) {
-                problems += "$bench is on WAIVED_IN_SCREEN but something opens it as a bench now. Take it off the set."
-            }
         }
-        for (both in notYetOpened intersect waived) problems += "$both is on both NOT_YET_OPENED and WAIVED_IN_SCREEN."
         return problems
     }
 
@@ -4089,15 +4085,16 @@ class ConventionTest {
         for ((bench, how) in oneOfEach) {
             assertTrue(bench in opened, "the scan did not find $bench opened ($how). The scan is broken, not the tree: fix the pattern, do not shrink this check.")
         }
-        val problems = openerProblems(opened, NOT_YET_OPENED, WAIVED_IN_SCREEN)
+        assertEquals(
+            NOT_YET_OPENED_CEILING,
+            NOT_YET_OPENED.size,
+            "lower the ceiling in the same change that shrinks the list (NOT_YET_OPENED only shrinks; a new bench gets an opener, " +
+                "not a place on the list, and raising the ceiling is the visible admission that it grew)",
+        )
+        val problems = openerProblems(opened, NOT_YET_OPENED)
         assertTrue(
             problems.isEmpty(),
             "the benches and their openers disagree (the spec's §7.3.1: every Bench entry has an opener):\n  " + problems.joinToString("\n  "),
-        )
-        assertTrue(
-            NOT_YET_OPENED.size <= NOT_YET_OPENED_CEILING && WAIVED_IN_SCREEN.size <= WAIVED_IN_SCREEN_CEILING,
-            "NOT_YET_OPENED and WAIVED_IN_SCREEN only shrink (ceilings $NOT_YET_OPENED_CEILING and $WAIVED_IN_SCREEN_CEILING). " +
-                "A new bench gets an opener, not a place on a list.",
         )
     }
 
@@ -4107,7 +4104,7 @@ class ConventionTest {
         val blockClose = "*" + "/"
         val app = listOf(
             "fun locationOf(target: AppScreen): Location = when (target) {",
-            "    AppScreen.SYNTH -> Location(Place.MAKE, benches = listOf(Bench.SYNTH))",
+            "    AppScreen.SPLIT -> Location(Place.PROJECT, Stage.PADS, listOf(Bench.SPLIT))",
             "}",
             "// nav.open(Bench.BIN) is said here and never done",
             "$blockOpen nav.open(Bench.DOUBLES) $blockClose",
@@ -4121,7 +4118,7 @@ class ConventionTest {
         val make = "for (bench in listOf(Bench.SNAP, Bench.SURFACE)) { }"
         val found = benchesWithOpeners(mapOf("App.kt" to stripComments(app), "ui/MakeScreen.kt" to stripComments(make)))
         assertEquals(
-            setOf(Bench.SYNTH, Bench.SNIPS, Bench.XRAY, Bench.SNAP, Bench.SURFACE),
+            setOf(Bench.SPLIT, Bench.SNIPS, Bench.XRAY, Bench.SNAP, Bench.SURFACE),
             found,
             "a call, a locationOf entry and a MAKE row are openers; a comment, a draw branch, a chip list and `reopen(` are not",
         )
@@ -4134,24 +4131,24 @@ class ConventionTest {
 
         val everyBench = Bench.entries.toSet()
         assertTrue(
-            openerProblems(setOf(Bench.SNIPS), emptySet(), emptySet()).size == everyBench.size - 1,
-            "every bench but the one that is opened should be reported when both lists are empty",
+            openerProblems(setOf(Bench.SNIPS), emptySet()).size == everyBench.size - 1,
+            "every bench but the one that is opened should be reported when the list is empty",
         )
         assertTrue(
-            openerProblems(everyBench - Bench.BIN, emptySet(), setOf(Bench.BIN)).isEmpty(),
-            "a waived bench with no opener is the allowed state",
+            openerProblems(everyBench - Bench.BIN, setOf(Bench.BIN)).isEmpty(),
+            "a listed bench with no opener is the allowed state",
         )
         assertTrue(
-            openerProblems(everyBench, setOf(Bench.VERSIONS), emptySet()).any { "VERSIONS" in it && "only shrinks" in it },
+            openerProblems(everyBench, setOf(Bench.VERSIONS)).any { "VERSIONS" in it && "only shrinks" in it },
             "a bench on NOT_YET_OPENED that something opens must be reported, or the list can only grow",
         )
         assertTrue(
-            openerProblems(everyBench, emptySet(), setOf(Bench.DRAW)).any { "DRAW" in it },
-            "a bench on WAIVED_IN_SCREEN that something opens must be reported",
+            openerProblems(everyBench, setOf(Bench.DRAW)).any { "DRAW" in it && "only shrinks" in it },
+            "the benches that left the in-screen waiver for PR 3e are on the list like any other, and are reported when something opens them",
         )
         assertTrue(
-            openerProblems(everyBench - Bench.SONG, emptySet(), emptySet()).any { "SONG" in it && "nav.open" in it },
-            "a bench with no opener and on no list must be reported, naming the call that opens it",
+            openerProblems(everyBench - Bench.SONG, emptySet()).any { "SONG" in it && "nav.open" in it },
+            "a bench with no opener and not on the list must be reported, naming the call that opens it",
         )
     }
 
@@ -4161,6 +4158,7 @@ class ConventionTest {
     private enum class WaiverOwner(val why: String) {
         PR_3C("moves to a bench in PR 3c (VERSIONS, PAD_CAPTURE, SONG)"),
         PR_3D("moves to a bench in PR 3d (the pad editor family)"),
+        PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
         IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
         STEPPER("permanent: a stepper (previous pad, previous preset), not a back label"),
     }
@@ -4173,18 +4171,23 @@ class ConventionTest {
      * The hand-drawn back labels still allowed, by file under :app's source
      * root, each with its owner. A label is a string literal in a ui file that
      * starts with the arrow and a capital; a screen that has been moved takes
-     * its words from `Navigation.backChip` and has none. The map only shrinks
-     * (its size is pinned at [BACK_LABEL_WAIVER_CEILING]): the law fails on a
-     * literal that is not here, and on an entry here that no longer exists.
+     * its words from `Navigation.backChip` and has none. The map only shrinks,
+     * and the ceiling pins it exactly: the law fails on a literal that is not
+     * here, on an entry here that no longer exists, and when the number of
+     * literals here is not [BACK_LABEL_WAIVER_CEILING]. A change that removes a
+     * waiver lowers the constant in the same diff; one that adds a waiver has to
+     * raise it in plain sight. A ceiling with slack would let the map grow back
+     * after a shrink with nothing failing.
      *
      * - **PR 3c** moves TakesBinScreen (VERSIONS), PadCaptureScreen and
      *   ArrangeScreen (SONG).
      * - **PR 3d** moves the pad editor family: PadSheetScreen, StackTakesScreen,
-     *   TapeSpliceScreen's back chip, and GrainFieldScreen's default, with the
-     *   "◄ SNAP" SnapScreen passes it.
-     * - **Permanent, an in-screen panel**: LiveSnapScreen (LIVE_SNAP is waived),
-     *   SynthScreen's deleted-presets panel, AquariumPanel, and TapeSpliceScreen's
-     *   "CHOOSE DIFFERENT TAKES".
+     *   TapeSpliceScreen's back chip, and GrainFieldScreen's default.
+     * - **PR 3e** moves Snap's own screens: LiveSnapScreen (LIVE_SNAP) and the
+     *   "◄ SNAP" SnapScreen draws and passes to GrainFieldScreen as FIELD's
+     *   label.
+     * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
+     *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
      * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
      *   previous-preset buttons start with the same arrow and a capital, but
      *   they step through pads and presets and go nowhere.
@@ -4198,8 +4201,8 @@ class ConventionTest {
         "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD") +
             waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
         "ui/GrainFieldScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT"),
-        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3D, "◄ SNAP"),
-        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SNAP"),
+        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
+        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
         "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
         "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
@@ -4237,15 +4240,17 @@ class ConventionTest {
         val ui = appSourcesWithoutComments().filterKeys { it.startsWith("ui/") }
         assertTrue(ui.size > 20, "found ${ui.size} ui files — the scan is broken, not the tree.")
         val found = ui.mapValues { (_, code) -> handDrawnBackLabels(code) }.filterValues { it.isNotEmpty() }
+        assertEquals(
+            BACK_LABEL_WAIVER_CEILING,
+            BACK_LABEL_WAIVERS.values.sumOf { it.size },
+            "lower the ceiling in the same change that removes a waiver (BACK_LABEL_WAIVERS only shrinks; a new screen " +
+                "takes its label from the model, not from a waiver, and raising the ceiling is the visible admission that it grew)",
+        )
         val problems = backLabelProblems(found, BACK_LABEL_WAIVERS)
         assertTrue(
             problems.isEmpty(),
             "the screens and their back labels disagree (the spec's §7.3.1: every hand-written back label is deleted):\n  " +
                 problems.joinToString("\n  "),
-        )
-        assertTrue(
-            BACK_LABEL_WAIVERS.values.sumOf { it.size } <= BACK_LABEL_WAIVER_CEILING,
-            "BACK_LABEL_WAIVERS only shrinks (ceiling $BACK_LABEL_WAIVER_CEILING). A new screen takes its label from the model, not from a waiver.",
         )
     }
 

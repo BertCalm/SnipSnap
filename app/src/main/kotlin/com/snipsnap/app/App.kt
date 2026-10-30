@@ -222,12 +222,6 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
-/** The gear's three open over whatever is showing, and do not count toward [MAX_SCREENS]. */
-private val GEAR_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI)
-
-/** The spec's two-screen limit (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` §7.3): at most this many screens stack above a stage. */
-private const val MAX_SCREENS = 2
-
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
 
@@ -409,7 +403,10 @@ fun App(shelf: KitShelf) {
      * shape — `docs/SCREEN_PLAN_2026_10.md` §2's table, as code. A tab-era
      * screen is a place with a stage, or a bench on one. The gear's three
      * (SETUP, HELP, MIDI) and KEYS open as a bench over wherever you are, so Back
-     * returns there; the rest land somewhere definite.
+     * returns there; the rest land somewhere definite. A bench that opens over
+     * where you are but is not named here (ORBIT, SURFACE, the MAKE labs, X-RAY)
+     * has no [AppScreen]: it is opened by `nav.open(Bench.X)`, and a landing on
+     * a fixed place would be a place the user never visited.
      *
      * Exhaustive on purpose: a new [AppScreen] without a landing here does
      * not compile, which is the same guard the enum's own KDoc describes.
@@ -421,11 +418,7 @@ fun App(shelf: KitShelf) {
         AppScreen.KIT -> Location(Place.PROJECT, Stage.PADS)
         AppScreen.GROOVE -> Location(Place.PROJECT, Stage.BEAT)
         AppScreen.EXPORT -> Location(Place.PROJECT, Stage.OUT)
-        AppScreen.ORBIT -> Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT))
         AppScreen.SPLIT -> Location(Place.PROJECT, Stage.PADS, listOf(Bench.SPLIT))
-        AppScreen.SYNTH -> Location(Place.MAKE, benches = listOf(Bench.SYNTH))
-        AppScreen.SNAP -> Location(Place.MAKE, benches = listOf(Bench.SNAP))
-        AppScreen.SURFACE -> Location(Place.MAKE, benches = listOf(Bench.SURFACE))
         AppScreen.KEYS -> nav.location.copy(benches = nav.location.benches + Bench.KEYS)
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
@@ -450,23 +443,6 @@ fun App(shelf: KitShelf) {
     fun landOn(target: AppScreen) {
         nav.goTo(locationOf(target))
         dock.moved(nav.location)
-    }
-
-    /**
-     * Room for one more screen over where the user is. At most [MAX_SCREENS]
-     * screens stack above a stage (SETUP, HELP and MIDI do not count), so with
-     * two already showing the top one closes first, and the caller opens its
-     * own bench with `nav.open` right after. This only makes room.
-     *
-     * For the jobs that open their screen after an await: X-RAY's reading, the
-     * ring or the chord kit SNAP builds, SYNTH's hand-off to SURFACE. The
-     * location is read here, when the job lands, never captured before the
-     * await: the user may be anywhere by then, and they asked for the result,
-     * so it opens over wherever they are. A loop, not one close, because the
-     * gear's benches can sit on top of the two (closing HELP still leaves two).
-     */
-    fun makeRoomForScreen() {
-        while (nav.location.benches.count { it !in GEAR_BENCHES } >= MAX_SCREENS) nav.closeBench()
     }
 
     /**
@@ -763,6 +739,15 @@ fun App(shelf: KitShelf) {
     // and this var holds just that. It is deliberately not cleared when the
     // place changes (`clearTransientState`): Back can restore the shelf with
     // X-RAY on top, and the screen needs its reading then.
+    //
+    // One slot: it keeps the latest reading only. The history can hold more
+    // than one X-RAY entry (read file A, go to TAPE, read file B), and every
+    // one of them shows the latest file when Back restores it, not the file
+    // that entry was opened for. That is accepted: X-RAY is a one-off look at
+    // a file, not a document to come back to. The null guard where X-RAY is
+    // drawn covers a missing reading: X-RAY opens only after a reading lands,
+    // so none is expected, but a bench with nothing to show closes instead of
+    // drawing a blank screen.
     var xray by remember { mutableStateOf<XRayView?>(null) }
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
@@ -1451,9 +1436,9 @@ fun App(shelf: KitShelf) {
                 dock.say(Copy.pathRingMade(ring.name))
                 // ORBIT opens over SNAP, or wherever the user is by now, not
                 // at a BEAT they never visited: Back and ORBIT's chip return
-                // to where they were.
-                makeRoomForScreen()
-                nav.open(Bench.ORBIT)
+                // to where they were. Not opened twice if the user got to ORBIT
+                // while the ring built (roomFor says so).
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (ex: Exception) {
                 busy = null
                 Log.e(TAG, "buildPathRing: failed", ex)
@@ -1517,8 +1502,7 @@ fun App(shelf: KitShelf) {
                 open = newEntry
                 // Over SNAP, as PATH's ring does above; ORBIT draws the kit
                 // `open` now points at, which is the one just built.
-                makeRoomForScreen()
-                nav.open(Bench.ORBIT)
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (e: Exception) {
                 busy = null
                 Log.e(TAG, "buildChordKit: failed", e)
@@ -1902,9 +1886,9 @@ fun App(shelf: KitShelf) {
                 xray = XRayView(name, reading)
                 // The reading lands whenever the file finishes, so X-RAY opens
                 // over wherever the user is by now, not over the shelf they
-                // asked from.
-                makeRoomForScreen()
-                nav.open(Bench.XRAY)
+                // asked from. A second reading landing while X-RAY shows is
+                // not a second screen: `xray` above is what the one shows.
+                if (nav.roomFor(Bench.XRAY)) nav.open(Bench.XRAY)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -3465,9 +3449,9 @@ fun App(shelf: KitShelf) {
                         )
                         // X-RAY: a bench over whatever is showing, since its
                         // reading lands whenever the file finishes. With no
-                        // reading (a history entry that outlived it) there is
-                        // nothing to show, so it closes, as KEYS does with no
-                        // instrument.
+                        // reading there is nothing to show, so it closes, as
+                        // KEYS does with no instrument. Otherwise it shows the
+                        // latest reading, whichever X-RAY entry this is.
                         top == Bench.XRAY -> {
                             if (xrayView == null) {
                                 nav.closeBench()
@@ -4129,8 +4113,7 @@ fun App(shelf: KitShelf) {
                                 // reads that screen, and the chip and Back both return
                                 // to it.
                                 onOpenSurface = {
-                                    makeRoomForScreen()
-                                    nav.open(Bench.SURFACE)
+                                    if (nav.roomFor(Bench.SURFACE)) nav.open(Bench.SURFACE)
                                 },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
