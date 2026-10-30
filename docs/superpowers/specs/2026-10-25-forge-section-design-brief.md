@@ -293,3 +293,30 @@ It is. DEPTH 1 is the AS BUILT medium the middle was heard on, so at the default
 The snare never lost it: its body share at YIELD 0.25 sits above YIELD 0 at every DEPTH (0.765 against 0.714 at DEPTH 0, 0.635 against 0.609 at DEPTH 1). At CHARGE 1 the kick's harsh row moves to YIELD 0 at DEPTH 0.5 and 0.75 (0.095), a reminder that CHARGE and DEPTH both set the peak the flow threshold is measured against.
 
 So restoring the middle on the shipped medium is a change to propose only if the owner's ear asks for it. `ForgeDepthAuditionGenerator` (`./gradlew :synth:generateForgeDepthAudition`, 24 clips) puts four questions to it: the kick at YIELD 0.25 across DEPTH 0, 0.75 and 1; the snare's surviving harsh middle; and CHARGE 1 at DEPTH 0, 0.25, 0.5, 0.75 and 1 on the bell and the chop. One level trap is recorded on the page: on the kick, YIELD 0.25 at DEPTH 1 plays 1.7 dB louder than at DEPTH 0, and louder can pass for better. Nothing in FORGE changes until the answers are in.
+
+### Heard at the DEPTH gate (2026-10-29)
+
+| Question | Owner's answer | What it settles |
+|---|---|---|
+| 1. On the kick at YIELD 0.25, is the grit back at DEPTH 1? | Yes, DEPTH 1 is enough | The harsh middle stays a DEPTH 1 sound. The shipped medium is not changed to restore it at DEPTH 0, and `ForgeTest` keeps the DEPTH 1 route from being retuned away. |
+| 2. On the snare, YIELD 0.25 is still harsh at DEPTH 0. Keep it? | Keep it | The slew detector stays as is: the first gate's verdict, now heard on the TIGHT medium. |
+| 3. On the bell, does DEPTH move smoothly from TIGHT to AS BUILT? | Smooth | `Medium.forDepth`'s interpolation stays: the log slide of the band, then the sections doubling. |
+| 4. The same on the chop | No answer: "I don't really hear the difference" | Nothing to change; see below. |
+
+The chop's non-answer agrees with the clips' own numbers. Here is the crest factor at CHARGE 1, with loudness against the dry clip:
+
+| DEPTH | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| Bell crest | 9.27 | 9.05 | 8.70 | 8.84 | 7.63 |
+| Bell loudness | -2.19 dB | -1.91 dB | -1.62 dB | -1.82 dB | -0.50 dB |
+| Chop crest | 7.70 | 7.73 | 7.56 | 7.73 | 6.91 |
+| Chop loudness | +2.97 dB | +2.79 dB | +3.43 dB | +3.04 dB | +4.24 dB |
+
+- **The bell** moves at every step.
+- **The chop** barely moves from DEPTH 0 to 0.75: its crest changes by under 0.2, and its loudness by 0.6 dB. Only DEPTH 1 stands apart, at 0.8 lower crest and 1.2 dB louder.
+
+Proposed, not verified: the room recording already carries its own smear (the room's reflections), and it masks the medium's sweep. A bell is a clean strike, so it shows the sweep plainly.
+
+That raises a question about the chop's AS BUILT pick at the CHARGE gate. AS BUILT is the DEPTH 1 medium, the one clip that plays louder, so the pick may have been partly level. DEPTH 1 stays the chop's setting either way, because it costs nothing on a pad where the ear hears little else.
+
+The gate changes no code. FORGE ships as merged in #720 and #736.
