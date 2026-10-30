@@ -1,6 +1,5 @@
 package com.snipsnap.app.ui
 
-import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -41,7 +40,6 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.InstrumentPlayer
 import com.snipsnap.app.MidiInput
 import com.snipsnap.app.MidiOut
-import com.snipsnap.app.PREFS
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
 import com.snipsnap.app.theme.lcdPanel
@@ -55,8 +53,6 @@ import com.snipsnap.shell.KeysMidi
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
-import com.snipsnap.shell.MidiLearn
-import com.snipsnap.shell.MidiLearnStore
 import com.snipsnap.shell.PadHit
 import com.snipsnap.shell.Schemes
 import java.io.File
@@ -132,21 +128,13 @@ fun KeysScreen(
     // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
-    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val learn = remember { MidiLearn(MidiLearnStore.load(prefs.getString(MidiLearnStore.PREFS_KEY, null), KeysMidi.SCREEN)) }
-    var learnedBindings by remember { mutableStateOf(learn.bindings) }
-    var learnArmed by remember { mutableStateOf<String?>(null) }
-    var lastHeard by remember { mutableStateOf<String?>(null) }
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, KeysMidi::prefer)
+    val learn = learnState.learn
     var showLearn by remember { mutableStateOf(false) }
+    LaunchedEffect(showLearn) { learnState.showing = showLearn }
     // Not saved: each visit starts with the instrument as it was made.
     var volume by remember(player) { mutableStateOf(1f) }
     LaunchedEffect(player, volume) { player.setVolume(KeysMidi.gain(volume)) }
-
-    fun saveLearn() {
-        learnedBindings = learn.bindings
-        val saved = MidiLearnStore.save(prefs.getString(MidiLearnStore.PREFS_KEY, null), KeysMidi.SCREEN, learn.bindings)
-        prefs.edit().putString(MidiLearnStore.PREFS_KEY, saved).apply()
-    }
 
     fun stepOctave(step: Int) {
         val next = KeysMidi.octave(octave, step)
@@ -159,14 +147,9 @@ fun KeysScreen(
     val midiListener = remember(player) {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {
-                // Drawn only while the panel shows; a knob swept otherwise must not recompose per message.
-                if (showLearn) MidiLearn.heard(event)?.let { lastHeard = it }
+                learnState.heard(event)
                 val result = learn.handle(event, device?.fingerprint?.key) { if (it == KeysMidi.VOLUME) volume else null }
-                result.learned?.let { learned ->
-                    KeysMidi.settle(learned).takeIf { it != learned }?.let(learn::update)
-                    learnArmed = null
-                    saveLearn()
-                }
+                learnState.learned(result.learned, KeysMidi::settle)
                 val change = KeysMidi.changes(result.actions)
                 change.volume?.let { volume = it }
                 if (change.octaveStep != 0) stepOctave(change.octaveStep)
@@ -256,14 +239,7 @@ fun KeysScreen(
                     enabled = true,
                     dimmed = !showLearn,
                     modifier = Modifier.semantics { selected = showLearn },
-                ) {
-                    showLearn = !showLearn
-                    // Closing the panel stops a learn still waiting, so the next knob is not bound unseen.
-                    if (!showLearn) {
-                        learn.disarm()
-                        learnArmed = null
-                    }
-                }
+                ) { showLearn = !showLearn }
             }
         }
 
@@ -306,23 +282,11 @@ fun KeysScreen(
 
         if (midiSupported && showLearn) {
             MidiLearnPanel(
-                targets = KeysMidi.TARGETS,
-                armed = learnArmed,
-                bindings = learnedBindings,
+                learnState,
+                KeysMidi.TARGETS,
                 supported = true,
                 connected = midiDevices.isNotEmpty(),
-                lastHeard = lastHeard,
                 hint = "${KeysMidi.label(volume)} · A LEARNED KEY PLAYS NO NOTE",
-                onArm = { t ->
-                    if (t == null) learn.disarm() else learn.arm(t, KeysMidi.prefer(t))
-                    learnArmed = t
-                },
-                onForget = { t ->
-                    learn.forget(t)
-                    learn.disarm()
-                    learnArmed = null
-                    saveLearn()
-                },
             )
         }
 
