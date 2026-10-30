@@ -150,16 +150,16 @@ fun PadCaptureScreen(
     // its own new `scope`, not this one. Same idiom as PadSheetScreen's own
     // `onEject` guard (`scope.isActive`) — see its KDoc for the disposal
     // hazard this closes: a GRAB's write outlives this screen on [appScope]
-    // (by design, so a MenuRow tab switch can't cancel a WAV partway onto
-    // disk), so the write can complete, and this closure run, after the user
-    // has already left this screen and possibly opened pad capture on a
-    // DIFFERENT slot. An unconditional `onBack()` in that case would fire
-    // against `App`'s CURRENT `padCaptureSlot` — the new slot the user is
-    // now looking at — not the one this GRAB targeted, closing a screen the
-    // user just opened for no reason they can see.
+    // (by design, so a place tap can't cancel a WAV partway onto disk), so
+    // the write can complete, and this closure run, after the user has
+    // already left this screen and possibly opened pad capture on a
+    // DIFFERENT slot. An unconditional `onBack()` in that case would close
+    // whichever screen is on top NOW — the new slot's capture, which the
+    // user just opened — not the one this GRAB targeted, for no reason they
+    // can see.
     val scope = rememberCoroutineScope()
 
-    // Mirrors the header's own ◄ KIT chip, which is unconditionally
+    // Mirrors the header's own back chip, which is unconditionally
     // enabled here (unlike PAD SHEET's — nothing on this screen debounces
     // a save to flush, so there's nothing extra for Back to await).
     BackHandler(onBack = onBack)
@@ -225,16 +225,15 @@ fun PadCaptureScreen(
                     // No `liveSlot == targetSlot` half, unlike `onEject`'s
                     // guard: this screen has no pad-nav ◄/► that can
                     // reassign `slot` on a live, still-mounted instance the
-                    // way PadSheetScreen's can. `App.kt` only ever sets
-                    // `padCaptureSlot` from null (KitScreen's own
-                    // `onEmptyLongPress`, reachable only while this screen
-                    // is NOT showing, since the `when` branch that renders
-                    // it requires `padCaptureSlot != null`) or back to null
-                    // (this `onBack`, `goToScreen`, `deleteKit`) — never
-                    // from one non-null slot straight to another. So a
-                    // slot-identity check here would be dead code, not
-                    // defense in depth; `scope.isActive` alone is the whole
-                    // guard.
+                    // way PadSheetScreen's can. `App.kt` sets
+                    // `padCaptureSlot` only from KitScreen's CAPTURE door
+                    // and `onEmptyLongPress`, reachable only while this
+                    // screen is NOT showing (KitScreen is not drawn under a
+                    // bench), so a mounted instance keeps its one slot for
+                    // its whole life: another slot is a new arrival, a new
+                    // instance with a new `scope`. So a slot-identity check
+                    // here would be dead code, not defense in depth;
+                    // `scope.isActive` alone is the whole guard.
                     if (scope.isActive) onBack()
                 }
             } catch (e: CancellationException) {

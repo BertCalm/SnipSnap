@@ -154,6 +154,12 @@ object Copy {
      */
     const val NO_KIT_FOR_ORBIT = "ADD A KIT TO THIS PROJECT FIRST. ORBIT PUTS IT ON RINGS."
     /**
+     * SONG with no kit open: reached by Back, to a SONG whose kit has since gone
+     * (SONG is drawn only for the kit it was opened for). Same shape as
+     * [NO_KIT_FOR_ORBIT].
+     */
+    const val NO_KIT_FOR_SONG = "ADD A KIT TO THIS PROJECT FIRST. SONG LAYS ITS GROOVE OUT AS A TRACK."
+    /**
      * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
      * but EXPORT dubs a *kit*, and STARTERS makes one without taping

@@ -3979,9 +3979,6 @@ class ConventionTest {
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 3c**: VERSIONS, PAD_CAPTURE and SONG. Their arguments are nulled by
-     *   `clearTransientState` while the history still holds the bench, so they
-     *   need the place's state record first.
      * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE, STACK and SPREAD, the pad
      *   editor family.
      * - **PR 3e**: LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
@@ -3998,11 +3995,10 @@ class ConventionTest {
      * with nothing failing.
      */
     private val NOT_YET_OPENED: Set<Bench> = setOf(
-        Bench.VERSIONS, Bench.PAD_CAPTURE, Bench.SONG,
         Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.SPREAD,
         Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD,
     )
-    private val NOT_YET_OPENED_CEILING = 11
+    private val NOT_YET_OPENED_CEILING = 8
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]

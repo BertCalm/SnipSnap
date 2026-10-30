@@ -55,8 +55,9 @@ import kotlinx.coroutines.withContext
  * instead of cycled one at a time. When the kit has a user program the
  * variation section is that, not a derived clip: `Arranger` reads it from
  * the sidecar itself, so nothing here has to pass it in. Reached from GROOVE's own "SONG ▸"
- * button, not one of MenuRow's fixed ten — same GROOVE-scoped-overlay shape
- * as PAD SHEET's GRAIN FIELD (see `App.kt`'s `arrangeOpen`).
+ * button: a bench (`Bench.SONG`) over BEAT, opened with GROOVE's swing, feel and
+ * template and drawn only for the kit it was opened for (see `App.kt`'s
+ * `Bench.SONG` branch).
  *
  * The plan (`Arranger.arrange`) is cheap — pure note-list arithmetic over
  * an already-loaded groove — and loads on entry. The mixdown
@@ -191,7 +192,8 @@ fun ArrangeScreen(
     }
     val readoutIndex = if (playing) (activeIndex ?: selectedIndex) else selectedIndex
 
-    BackHandler { onBack() }
+    // System Back stops the mix first, as the header chip does.
+    BackHandler { stopPlayback(); onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
