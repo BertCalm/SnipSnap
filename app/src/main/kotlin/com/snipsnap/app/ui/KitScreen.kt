@@ -80,6 +80,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
@@ -269,6 +270,12 @@ fun KitScreen(
     // host waits out a burst of edits before it rebuilds, and loads the
     // first at once, so this also covers the very first composition.
     LaunchedEffect(host, entry.kit) { host.request(entry) }
+    // The screen's one report to the dock (the sink is a single slot): the
+    // kit's bank is being read. `host.loading` is true only while the read
+    // itself runs, not through the host's wait for a burst of edits to end,
+    // and the value is remembered under it so the sink sees a job start and
+    // end and not a new object on every recomposition.
+    ReportBusy(remember(host.loading) { if (host.loading) Busy(Copy.KIT_LOADING_BUSY) else null })
     // Built at the engine's own polyphony so the status line and the
     // engine cannot drift: at the cap the engine steals exactly the voice
     // the allocator said it would.

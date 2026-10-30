@@ -2833,6 +2833,12 @@ object Copy {
     fun busyCount(done: Int, total: Int): String = "$done OF $total"
     /** The dock's busy line while something loads and there is no name to give it. */
     const val LOADING_BUSY = "LOADING…"
+    /** The dock's line while KIT reads the kit's pads off disk into the engine's bank (on opening it and after an edit, so it shows only if the read is slow). */
+    const val KIT_LOADING_BUSY = "LOADING THE KIT…"
+    /** The dock's line while KEYS reads the instrument's zones off disk into its player; until it ends a key plays nothing. */
+    const val KEYS_LOADING_BUSY = "LOADING THE KEYS…"
+    /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
+    const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**
      * WORKING…, said in two places. On a button it is what TalkBack hears as
      * the state while the job the button started is running: its

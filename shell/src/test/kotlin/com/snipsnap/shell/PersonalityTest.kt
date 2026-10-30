@@ -682,6 +682,10 @@ class PersonalityTest {
         // of every tonal pad, and NEW PROJECT's make-and-open - the same
         // `…`-suffixed dock line as every other *_BUSY constant above.
         "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
+        // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
+        // are read off disk: the same `…`-suffixed dock line as every other
+        // *_BUSY constant above, for a load no control started.
+        "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
     )
 
     /**
