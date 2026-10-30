@@ -452,10 +452,11 @@ val LocalBusySink = staticCompositionLocalOf<(Busy?) -> Unit> { {} }
  * navigated away from mid-job cannot leave its bar on the dock. The report
  * lasts as long as the reporting screen is composed. A job that outlives its
  * screen (the pad editor's treatments run on `appScope` on purpose, so the
- * write survives a tab switch) is not shown once the screen has gone; the
- * app-owned job board in a later change covers that case. A changed [busy]
- * (the count moving on) is a withdrawal followed at once by the new report,
- * so the sink's last word is always the job as it now stands.
+ * write survives a tab switch) is not shown once the screen has gone: it
+ * begins on the app's job board instead, found at [LocalJobs], and stays on
+ * the dock until it ends. A changed [busy] (the count moving on) is a
+ * withdrawal followed at once by the new report, so the sink's last word is
+ * always the job as it now stands.
  *
  * The sink is read as of the latest composition, so the withdrawal always
  * reaches the sink the app has now.

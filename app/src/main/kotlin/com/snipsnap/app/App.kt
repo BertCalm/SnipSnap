@@ -57,6 +57,7 @@ import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.rememberReduceMotion
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
+import com.snipsnap.app.ui.AppJobs
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
@@ -78,6 +79,7 @@ import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LocalBusySink
+import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -463,12 +465,16 @@ fun App(shelf: KitShelf) {
     // The job a screen is carrying on its own (the pad editor's jobs, Split,
     // and a recording being read in TAPE and CHOP), reported through
     // `LocalBusySink` and gone when the screen is: an `appScope` job that
-    // outlives its screen is not shown after it goes (a later app-owned job
-    // board covers that). It is kept apart from `busy` on purpose: `busy` is
-    // App's own job and gates App's own work (`if (busy != null) return`), and
-    // a screen's job must not lock App's actions out. The dock shows App's
-    // first.
+    // outlives its screen is not shown by this once it goes, and is carried by
+    // the job board (`jobs`, below) instead, which the app owns. It is kept
+    // apart from `busy` on purpose: `busy` is App's own job and gates App's
+    // own work (`if (busy != null) return`), and a screen's job must not lock
+    // App's actions out. The dock shows App's first, then the board's.
     var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // The jobs the app owns that outlive the screen that began them, provided
+    // to every screen as `LocalJobs`. Like `screenBusy` it never gates App's
+    // own work; unlike it, an entry stays until its owner ends it.
+    val jobs = remember { AppJobs() }
     // Remembered, so the sink the screens read is one object for the life of
     // the composition: a static local that changed would recompose all of it.
     val busySink = remember { { reported: Busy? -> screenBusy = reported } }
@@ -3256,7 +3262,13 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
+    TapeTheme(
+        scheme,
+        LocalHaptics provides haptics,
+        LocalReduceMotion provides reduceMotion,
+        LocalBusySink provides busySink,
+        LocalJobs provides jobs,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -4213,7 +4225,7 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy ?: screenBusy,
+                    busy = busy ?: jobs.current ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's
