@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -57,6 +58,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
@@ -342,6 +344,19 @@ fun SurfaceScreen(
     var pad2Generation by remember { mutableStateOf(0) }
     var pad3Generation by remember { mutableStateOf(0) }
     var pad4Generation by remember { mutableStateOf(0) }
+    // Pad reads in flight across all four slots (loadPad, loadPad2, loadPad3
+    // and loadPad4 each count their read through `whileReading`). A count, not
+    // a flag: a PAD press and a PAD2 press can be reading at once, and the
+    // first to finish must not put the line down under the other. Not keyed
+    // on the entry: a read belongs to the screen, and a key would start the
+    // new entry's count at 0 while old reads still run (they go on counting
+    // down the old one), so the line would drop under reads still in flight.
+    var readsInFlight by remember { mutableIntStateOf(0) }
+    val readingPad = readsInFlight > 0
+    // The screen's one report to the dock (the sink is a single slot), keyed
+    // on whether any read is running and not on the count, so a second read
+    // starting does not withdraw the report and make it again.
+    ReportBusy(remember(readingPad) { if (readingPad) Busy(Copy.SURFACE_LOADING_BUSY) else null })
     var kitSettings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
     // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
     // separate gesture from SET A..D (which always captures the live
@@ -515,18 +530,31 @@ fun SurfaceScreen(
         }
     }
 
+    // [read] counted as a pad read in flight, from before it starts to after it
+    // ends however it ends (a superseded or cancelled load included).
+    suspend fun <T> whileReading(read: suspend () -> T): T {
+        readsInFlight++
+        try {
+            return read()
+        } finally {
+            readsInFlight--
+        }
+    }
+
     // The voice: one of the kit's pads, read off the shelf, folded to mono
     // in the engine. Its own note is found on the same IO pass (GRAIN snaps
     // to the kit's [key] from wherever this pad actually sits - see
     // SurfaceKey) and handed over with the sample, so the key the engine
     // holds is never for a pad other than the one it is playing.
     suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?, generation: Int) {
-        val loaded = offMain {
-            // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
-            // from an already-bounded Snip — readCapped's 600s ceiling is defense in
-            // depth, not expected to ever bind.
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
-                ?.let { it to SurfaceKey.sourceMidi(it) }
+        val loaded = whileReading {
+            offMain {
+                // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+                // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+                // depth, not expected to ever bind.
+                runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+                    ?.let { it to SurfaceKey.sourceMidi(it) }
+            }
         }
         if (generation != voiceGeneration) return  // a later PAD or RING press already superseded this one
         if (loaded == null) {
@@ -611,8 +639,8 @@ fun SurfaceScreen(
     // left the *previous* sample sitting in the engine would still sound
     // wherever the puck favours that vertex, while padName2 said NO PAD2.
     suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad2Generation) return  // a later press already superseded this one
         if (snip == null) {
@@ -627,8 +655,8 @@ fun SurfaceScreen(
 
     // The engine's third source slot - the sample area's base-right vertex.
     suspend fun loadPad3(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad3Generation) return  // a later press already superseded this one
         if (snip == null) {
@@ -643,8 +671,8 @@ fun SurfaceScreen(
 
     // The engine's fourth source slot - the sample area's base-mid vertex.
     suspend fun loadPad4(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad4Generation) return  // a later press already superseded this one
         if (snip == null) {

@@ -131,7 +131,8 @@ class NavState(private val model: Navigation = Navigation()) {
     val tape get() = model.tape
     val make get() = model.make
 
-    val backChip: String? get() = model.backChip
+    /** [Navigation.backChip], observed: reading [location] first makes a caller recompose when it moves. */
+    val backChip: String? get() { location; return model.backChip }
     val canGoBack: Boolean get() { location; return model.canGoBack }
 
     fun go(place: Place) = sync { model.go(place) }
