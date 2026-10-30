@@ -138,6 +138,9 @@ class PadSheetScreenTest : ComposeScreenTest() {
 
     private var writesHeld = false
 
+    /** How many times the sheet asked to close: the back chip's tap, as `App` answers it with `nav.closeBench()`. */
+    private var backs = 0
+
     @After
     fun cleanUp() {
         releaseWrites()
@@ -196,7 +199,7 @@ class PadSheetScreenTest : ComposeScreenTest() {
                         slot = currentSlot,
                         backLabel = "◄ PADS",
                         onSlotChange = { currentSlot = it },
-                        onBack = {},
+                        onBack = { backs++ },
                         onToast = {},
                         onNavigateTape = {},
                         onGrainField = {},
@@ -243,6 +246,21 @@ class PadSheetScreenTest : ComposeScreenTest() {
             ?: error("\"$label\" has no SetProgress action - is it disabled?")
         assertTrue("setProgress on \"$label\" to $target was refused", action.invoke(target))
         pump()
+    }
+
+    /**
+     * The header's back chip takes its words from the caller (`Navigation.backChip`,
+     * so "◄ PADS" over the grid), reads them in full on a phone, is spoken as
+     * "BACK TO ..." and a tap asks to close once. A one-pad kit: the chip, not the
+     * pad-nav footer, is under test.
+     */
+    @Test
+    fun the_back_chip_reads_the_label_it_is_given_in_full_and_a_tap_closes_the_sheet() {
+        show(padSheetKit(listOf(1)), slot = 1)
+        assertReadsInFull("◄ PADS")
+        assertEquals("nothing has closed it yet", 0, backs)
+        tap("BACK TO PADS")
+        assertEquals("one tap closes it once", 1, backs)
     }
 
     /**
