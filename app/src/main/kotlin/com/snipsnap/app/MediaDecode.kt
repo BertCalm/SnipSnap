@@ -56,7 +56,9 @@ object MediaDecode {
     /** How many bytes of the head decide "this is a WAV" — RIFF….WAVE. */
     private const val SNIFF_BYTES = 12
 
-    fun decode(context: Context, uri: Uri): Snip {
+    /** A finite-import limit refuses excess audio instead of returning a silently shortened take. */
+    fun decode(context: Context, uri: Uri, maxDurationSeconds: Int? = null): Snip {
+        require(maxDurationSeconds == null || maxDurationSeconds > 0) { "The recording duration limit must be positive." }
         val resolver = context.contentResolver
         val mime = resolver.getType(uri) ?: ""
         // A short head is not a failure to open: a stream may hand back
@@ -66,8 +68,12 @@ object MediaDecode {
             ?: throw IllegalArgumentException("the shared file could not be opened")
 
         if (isWav(head) || mime == "audio/wav" || mime == "audio/x-wav" || mime == "audio/wave") {
-            val bytes = resolver.openInputStream(uri)?.use { s -> readUpTo(s, MAX_WAV_BYTES + 1) }
+            val byteLimit = if (maxDurationSeconds == null) MAX_WAV_BYTES else minOf(MAX_WAV_BYTES, 32 * 1024 * 1024)
+            val bytes = resolver.openInputStream(uri)?.use { s -> readUpTo(s, byteLimit + 1) }
                 ?: throw IllegalArgumentException("the shared file could not be opened")
+            require(maxDurationSeconds == null || bytes.size <= byteLimit) {
+                "Choose a short recording of $maxDurationSeconds seconds or less (under 32 MB)."
+            }
             require(bytes.size <= MAX_WAV_BYTES) {
                 "that WAV is over ${MAX_WAV_BYTES / (1024 * 1024)} MB - the tape takes three minutes, trim it first"
             }
@@ -75,9 +81,15 @@ object MediaDecode {
             // ~96M frames (~384 MB as floats), so the byte gate above
             // alone would still let a shared WAV allocate its way into
             // an out-of-memory. Same ceiling the compressed path holds.
-            return WavReader.read(bytes, DecodeLimits.MAX_FRAMES)
+            val frames = if (maxDurationSeconds == null) DecodeLimits.MAX_FRAMES else
+                minOf(DecodeLimits.MAX_FRAMES.toLong(), maxDurationSeconds.toLong() * 192_000L).toInt()
+            val decoded = WavReader.read(bytes, frames)
+            require(maxDurationSeconds == null || decoded.frameCount.toLong() <= decoded.sampleRate.toLong() * maxDurationSeconds) {
+                "Choose a short recording of $maxDurationSeconds seconds or less."
+            }
+            return decoded
         }
-        return decodeCompressed(context, uri)
+        return decodeCompressed(context, uri, maxDurationSeconds)
     }
 
     /** Up to [max] bytes of [stream], looping over short reads; the result is exactly what was there, up to [max]. */
@@ -99,7 +111,7 @@ object MediaDecode {
             head[0] == 'R'.code.toByte() && head[1] == 'I'.code.toByte() && head[2] == 'F'.code.toByte() && head[3] == 'F'.code.toByte() &&
             head[8] == 'W'.code.toByte() && head[9] == 'A'.code.toByte() && head[10] == 'V'.code.toByte() && head[11] == 'E'.code.toByte()
 
-    private fun decodeCompressed(context: Context, uri: Uri): Snip {
+    private fun decodeCompressed(context: Context, uri: Uri, maxDurationSeconds: Int?): Snip {
         val extractor = MediaExtractor()
         try {
             // setDataSource throws IO, Security and IllegalArgument
@@ -134,7 +146,7 @@ object MediaDecode {
             try {
                 codec.configure(trackFormat, null, null, 0)
                 codec.start()
-                return drain(extractor, codec, trackFormat)
+                return drain(extractor, codec, trackFormat, maxDurationSeconds)
             } finally {
                 runCatching { codec.stop() }
                 runCatching { codec.release() }
@@ -156,7 +168,7 @@ object MediaDecode {
      * the cap arithmetic moved to [DecodeLimits], a claimed channel
      * count reached that arithmetic before anything had checked it.
      */
-    private fun drain(extractor: MediaExtractor, codec: MediaCodec, trackFormat: MediaFormat): Snip {
+    private fun drain(extractor: MediaExtractor, codec: MediaCodec, trackFormat: MediaFormat, maxDurationSeconds: Int?): Snip {
         val info = MediaCodec.BufferInfo()
         var rate = trackFormat.getInteger(MediaFormat.KEY_SAMPLE_RATE)
         var channels = trackFormat.getInteger(MediaFormat.KEY_CHANNEL_COUNT)
@@ -199,10 +211,15 @@ object MediaDecode {
                         val buffer = codec.getOutputBuffer(outIndex)!!
                         buffer.position(info.offset)
                         buffer.limit(info.offset + info.size)
-                        val room = DecodeLimits.room(channels, out.size)
+                        val room = if (maxDurationSeconds == null) DecodeLimits.room(channels, out.size) else
+                            minOf(DecodeLimits.room(channels, out.size).toLong(),
+                                (maxDurationSeconds.toLong() * rate * channels - out.size).coerceAtLeast(0L)).toInt()
                         capped = appendPcm(buffer, info.size, floatPcm, out, room, scratch)
                     }
                     codec.releaseOutputBuffer(outIndex, false)
+                    require(maxDurationSeconds == null || !capped) {
+                        "Choose a short recording of $maxDurationSeconds seconds or less."
+                    }
                     // The cap is the end of the decode, not just of the
                     // keeping: an album side past ten minutes is not
                     // decoded to be thrown away. The codec is stopped and
