@@ -491,15 +491,19 @@ private class EmbouchureRestore(
     val pending = mutableStateMapOf<Pair<Engine, Enum<*>>, Boolean>().apply {
         for (pair in seededPresets.keys) {
             if (pair.first == Engine.EMBOUCHURE && pair !in patches && pair !in reopenedPads) put(pair, true)
-            // A named-only TIDAL YOURS restore has no typed performance yet.
+            // A named-only TIDAL or TREMOR YOURS restore has no typed performance yet.
             // Default sliders must not materialize model 2 before its shelf read.
-            if (pair.first == Engine.TIDAL && pair !in reopenedPads &&
-                SynthDrafts.read(settings).none { it is TidalPatch && it.voiceName == pair.second.name } &&
+            if ((pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) && pair !in reopenedPads &&
+                SynthDrafts.read(settings).none { it.engine == pair.first.name && it.voiceName == pair.second.name } &&
                 Presets.byName(pair.first.name, pair.second.name, seededPresets.getValue(pair)) == null) {
                 put(pair, true)
             }
         }
     }
+
+    /** A named recipe's saved model must arrive before default controls can replace it. */
+    fun waitsForRecipe(engine: Engine, voice: Enum<*>): Boolean =
+        (engine == Engine.TIDAL || engine == Engine.TREMOR) && pending.containsKey(engine to voice)
 }
 
 @Composable
@@ -510,6 +514,19 @@ private fun rememberEmbouchureRestore(
 ): EmbouchureRestore {
     val reader = LocalSynthPresetReader.current
     return remember { EmbouchureRestore(settings, seededPresets, reopenedPads, reader) }
+}
+
+/** A visited TREMOR default keeps its renderer when its controls enter the navigation bag. */
+private fun retainTremorDraft(
+    loaded: MutableMap<Pair<Engine, Enum<*>>, Patch>,
+    voice: TremorVoice,
+    macros: Map<String, Float>,
+    model: Int,
+) {
+    val pair = Engine.TREMOR to voice
+    if (pair !in loaded) loaded[pair] = TremorPatch(
+        Engine.TREMOR.patchDisplayName(voice), voice, macros, model = model,
+    )
 }
 
 /** Restore only the selected model's controls; a legacy BRASS recipe never inherits GROW. */
@@ -749,7 +766,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.NACRE) {
+                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -764,6 +781,7 @@ fun SynthScreen(
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
+                        else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v } else null
@@ -836,7 +854,15 @@ fun SynthScreen(
             for ((pair, name) in seed.seededPresets) {
                 if (containsKey(pair)) continue
                 val factory = factoryPresets(pair.first, pair.second).firstOrNull { it.name == name }
-                if (factory != null) put(pair, editablePreset(factory))
+                if (factory != null) {
+                    val editable = editablePreset(factory)
+                    // Before modelled TREMOR recipes, a named factory and macro bag
+                    // described the original renderer. Loading that old bag is not a
+                    // request to replace its sound with today's factory model.
+                    put(pair, if (editable is TremorPatch)
+                        editable.copy(model = seed.tremorModelsWithoutRecipe.getValue(editable.voice))
+                    else editable)
+                }
             }
             // SCANNED CHAIN's saved recipe holds its whole shape and settings.
             for ((v, recipe) in seed.restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, requireNotNull(recipe.patch))
@@ -894,6 +920,12 @@ fun SynthScreen(
     LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
         // Temporary model-2 controls must not replace a still-unread YOURS recipe.
         if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        // Keep a visited default's renderer before persisting its controls, so
+        // a later restore cannot mistake the new macro bag for an old model.
+        if (engine == Engine.TREMOR) retainTremorDraft(
+            loadedPatchesByVoice, voice as TremorVoice, macros,
+            seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+        )
         if (engine == Engine.EMBOUCHURE) {
             val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
             settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
@@ -901,9 +933,9 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is FilamentPatch || patch is TidalPatch || patch is ChamberPatch ||
+        if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -987,6 +1019,15 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: TidalPatch(name, voice as TidalVoice, controls)
+        }
+        if (engine == Engine.TREMOR) {
+            // A queued save or pad update can share the frame of a preset choice.
+            // Read its live recipe so the renderer model cannot lag one frame behind.
+            val current = loadedPatchesByVoice[engine to voice] as? TremorPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: TremorPatch(name, voice as TremorVoice, controls,
+                    model = seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice))
         }
         return loadedPatch?.let {
             if (it is OrphicaPatch) orphicaPatchForControls(it, name, macros)
@@ -1118,6 +1159,10 @@ fun SynthScreen(
                 Engine.CHAMBER -> loadedPatchesByVoice[pair] = ChamberPatch(
                     engine.patchDisplayName(voice), voice as ChamberVoice, macrosByVoice.getValue(pair),
                 )
+                Engine.TREMOR -> retainTremorDraft(
+                    loadedPatchesByVoice, voice as TremorVoice, macrosByVoice.getValue(pair),
+                    seed.tremorModelsWithoutRecipe.getValue(voice as TremorVoice),
+                )
                 Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
                     engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
                 )
@@ -1148,7 +1193,7 @@ fun SynthScreen(
         settings["recipe.PLUCK.UPRIGHT"] = patch.toJsonText()
     }
     fun updateMacro(name: String, value: Float) {
-        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return
+        if (embouchureRestore.waitsForRecipe(engine, voice)) return
         touched = true
         embouchureRestore.pending.remove(engine to voice)
         currentPresetByVoice.remove(engine to voice)
@@ -1337,6 +1382,7 @@ fun SynthScreen(
                         if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
                         if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
+                        if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
                         if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
                         // The named preset is being restored whole. A partial legacy
@@ -1353,7 +1399,7 @@ fun SynthScreen(
         } catch (e: Exception) {
             Log.e("SynthScreen", "presets: unreadable", e)
             for (pair in embouchureRestore.pending.keys.toList()) {
-                if (pair.first == Engine.TIDAL) embouchureRestore.pending[pair] = false
+                if (pair.first == Engine.TIDAL || pair.first == Engine.TREMOR) embouchureRestore.pending[pair] = false
             }
         }
     }
@@ -1508,7 +1554,7 @@ fun SynthScreen(
             rendering = false
             return@LaunchedEffect
         }
-        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) {
+        if (embouchureRestore.waitsForRecipe(engine, voice)) {
             voicePlayer?.stop()
             snip = null
             rendering = false
@@ -1528,7 +1574,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.CHAMBER || engine == Engine.NACRE)
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
                     patch is ChamberPatch -> seed.chamberRenderer.render(patch) {
@@ -1617,7 +1663,7 @@ fun SynthScreen(
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
         if (sendBusy) return
-        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return
+        if (embouchureRestore.waitsForRecipe(engine, voice)) return
         sendBusy = true
         val toSurface = sendToSurface
         appScope.launch {
@@ -2156,7 +2202,7 @@ fun SynthScreen(
 
     fun openSpread() {
         if (spreadOpening || sendBusy || entry == null) return
-        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return
+        if (embouchureRestore.waitsForRecipe(engine, voice)) return
         spreadOpening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
@@ -2722,6 +2768,15 @@ fun SynthScreen(
                     }
                 }
 
+                if (engine == Engine.TREMOR && embouchureRestore.waitsForRecipe(engine, voice)) {
+                    TapeText(
+                        if (embouchureRestore.pending[engine to voice] == false)
+                            "SAVED TREMOR COULD NOT OPEN. CHOOSE A PRESET."
+                        else "RESTORING SAVED TREMOR…",
+                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+                    )
+                }
+
                 // Relay's touch changes excitation and brightness without replacing its
                 // saved sources, handoff schedules or phrase clock.
                 if (engine == Engine.RELAY) {
@@ -3124,7 +3179,7 @@ fun SynthScreen(
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
                 val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
-                    if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) emptyList()
+                    if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
@@ -3149,10 +3204,10 @@ fun SynthScreen(
                     LabButton(
                         "SCRAMBLE",
                         scheme,
-                        enabled = engine != Engine.TIDAL || !embouchureRestore.pending.containsKey(engine to voice),
+                        enabled = !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                     ) {
-                        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return@LabButton
+                        if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
                         touched = true
                         embouchureRestore.pending.remove(engine to voice)
                         currentPresetByVoice.remove(engine to voice)
@@ -3207,21 +3262,21 @@ fun SynthScreen(
                     LabButton(
                         if (saveBusy) "…" else "SAVE PRESET ▸",
                         scheme,
-                        enabled = !saveBusy && (engine != Engine.TIDAL || !embouchureRestore.pending.containsKey(engine to voice)),
+                        enabled = !saveBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SAVE PRESET",
                     ) {
-                        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return@LabButton
+                        if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
                         namingPreset = true
                     }
                     LabButton(
                         if (sendBusy) "…" else "SEND TO PAD ▸",
                         scheme,
-                        enabled = kit != null && !sendBusy && (engine != Engine.TIDAL || !embouchureRestore.pending.containsKey(engine to voice)),
+                        enabled = kit != null && !sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SEND TO PAD",
                     ) {
-                        if (engine == Engine.TIDAL && embouchureRestore.pending.containsKey(engine to voice)) return@LabButton
+                        if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
                         showChooser = true
                     }
                 }
@@ -3252,7 +3307,7 @@ fun SynthScreen(
                     if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
                     scheme,
                     enabled = kit != null && !sendBusy && !spreadOpening &&
-                        (engine != Engine.TIDAL || !embouchureRestore.pending.containsKey(engine to voice)),
+                        !embouchureRestore.waitsForRecipe(engine, voice),
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "SPREAD ACROSS PADS",
                 ) {
@@ -3337,8 +3392,9 @@ fun SynthScreen(
                         .fillMaxWidth()
                         .heightIn(min = Layout.PRIMARY_ACTION_H.dp)
                         .raisedBevel(scheme, fill = classColor.copy(alpha = 0.85f))
-                        .tapeClick(label = "AUDITION", enabled = engine != Engine.TIDAL ||
-                            !embouchureRestore.pending.containsKey(engine to voice)) { snip?.let { audition(it, allowLoop = true) } }
+                        .tapeClick(label = "AUDITION", enabled = !embouchureRestore.waitsForRecipe(engine, voice)) {
+                            snip?.let { audition(it, allowLoop = true) }
+                        }
                         .padding(horizontal = 10.dp),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -3694,6 +3750,13 @@ private class SynthSeed(settings: Map<String, String>) {
         }.toMap()
     }
     val seededPresets = storedPresetNames(settings)
+    // Old macro-only work predates a saved model field. New voices start at the
+    // current renderer and get a typed draft when visited; old work stays legacy.
+    val tremorModelsWithoutRecipe = TremorVoice.entries.associateWith { v ->
+        if (settings.containsKey(presetSettingsKey(Engine.TREMOR, v)) ||
+            Tremor.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.TREMOR, v, it.name)) })
+            Tremor.LEGACY_MODEL else Tremor.MODEL
+    }
     val restoredOhm = restoredOhmPatch(settings)
     val restoredScannedRecipes = run {
         ScannedChainVoice.entries.mapNotNull { v ->

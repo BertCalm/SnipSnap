@@ -1492,6 +1492,8 @@ object Copy {
     fun pedalMore(count: Int): String = if (count <= 0) PadSheet.MORE else "${PadSheet.MORE} · $count"
     /** The AMT stepper's label while it moves a pedal: which one ("AMT · TOUCH"), so a pedal behind MORE is named too. */
     fun pedalAmt(pedal: String): String = "AMT · $pedal"
+    /** MORE's list heading: what a tap on a pedal's line does. */
+    const val PEDAL_MORE_HEADING = "EVERY PEDAL. TAP ONE TO PUT IT ON OR TAKE IT OFF."
     /** The slate's button on a pedal row seven does not draw: a label, not a landing. */
     const val PUT_ON_ROW = "PUT ON ROW"
     /** After PUT ON ROW on [pedal]: the next row-seven tap picks the chip it swaps with; any other tap cancels. */

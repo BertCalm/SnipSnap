@@ -351,14 +351,16 @@ eight KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW presets.
 The SYNTH panel exposes native VELOCITY and note names. Complete phrase recipes,
 sixteen distinct starter pads, FRESH TAPE and the synth picker use the same renderer;
 explicit kit selections keep the starter at sixteen pads as the bank grows.
-Run `./gradlew :synth:generateRelayPerformanceAudition` for the 100-clip page:
+Run `./gradlew :synth:generateRelayPerformanceAudition` for the 88-clip page:
 the full bank, six musical performances, three velocities per voice and every
-starter pad, plus a separate PULSE response comparison, with raw/matched WAVs
+starter pad, plus six PULSE 0-versus-1 pairs, with raw/matched WAVs
 under `testkit/relay-performance-audition/`.
+The page opens on the full-range PULSE diagnostic; each pair changes only PULSE.
 The earlier `generateRelayAudition` engineering matrix remains available.
 [Implementation notes](docs/RELAY.md) explain its clock and loop behavior.
 The owner approved the 36-preset bank's sound on 2026-10-21. Hands-on device
-verification remains open; the optional PULSE mapping has its own listening gate.
+verification remains open. The earlier eased PULSE mapping was not adopted after
+the owner reported no audible difference on 2026-10-26.
 
 TESSERA is a pitched mixed-material engine: wooden bars, paired string courses
 and tubes share a frame inside a chamber whose returning paths change with
