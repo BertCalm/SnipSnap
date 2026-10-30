@@ -73,6 +73,7 @@ class NavigationTest {
         nav.open(Bench.SETUP)
         assertEquals("◄ SHELF", nav.backChip, "the shelf has no stage: its place")
         nav.closeBench()
+        assertFalse(nav.canGoBack, "open then close from a fresh root leaves nothing to go back to")
         nav.go(Place.PROJECT)
         nav.stage(Stage.BEAT)
         nav.open(Bench.HELP)
@@ -213,13 +214,19 @@ class NavigationTest {
     }
 
     @Test
-    fun `closing a bench that was landed on the stage the place is on keeps the stage for later`() {
+    fun `closing a bench records the stage under it, so the place reopens there`() {
         val nav = Navigation()
-        nav.goTo(Location(Place.PROJECT, Stage.OUT, listOf(Bench.HELP)))
-        nav.closeBench()
+        nav.goTo(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)))
+        nav.stage(Stage.BEAT)
+        // Back reaches the landed sheet without touching the stage the place remembers: that is still BEAT.
+        assertTrue(nav.back())
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)), nav.location)
+
+        // So only closing the sheet can put PADS back as the stage to reopen on.
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
         nav.go(Place.SHELF)
         nav.go(Place.PROJECT)
-        assertEquals(Stage.OUT, nav.location.stage, "the place still opens on the stage it was last on")
+        assertEquals(Stage.PADS, nav.location.stage, "the place reopens on the stage the closed bench was over, not BEAT")
     }
 
     @Test
@@ -278,12 +285,12 @@ class NavigationTest {
     }
 
     @Test
-    fun `every bench is filed under a real place and has a short name for a back chip to use`() {
-        val longest = Bench.INSTRUMENTS.backName.length
+    fun `every bench has a label and a back name of at most 11 characters, which the chip over it reads`() {
         for (bench in Bench.entries) {
             assertTrue(bench.label.isNotBlank(), "${bench.name}: a label")
             assertTrue(bench.backName.isNotBlank(), "${bench.name}: a name for the chip over it")
-            assertTrue(bench.backName.length <= longest, "${bench.name}: '${bench.backName}' is longer than the chips were drawn for")
+            // 11 is what a back chip holds beside the title ("INSTRUMENTS" is the longest the chips were drawn for).
+            assertTrue(bench.backName.length <= 11, "${bench.name}: '${bench.backName}' is longer than a back chip holds")
             // Whatever is opened over it, the chip over this bench reads its backName.
             val over = Navigation(Location(Place.PROJECT, Stage.PADS, listOf(bench, Bench.HELP)))
             assertEquals("◄ ${bench.backName}", over.backChip, "${bench.name}: the chip of what is opened over it")
@@ -291,11 +298,20 @@ class NavigationTest {
     }
 
     @Test
-    fun `a bench opened alone over its own place names the stage showing, or the place`() {
+    fun `a bench opened alone names the stage showing or the place, and the BEAT benches are filed under PROJECT and the shelf ones under SHELF`() {
         for (bench in Bench.entries) {
             val stage = Stage.defaultFor(bench.home)
             val nav = Navigation(Location(bench.home, stage, listOf(bench)))
             assertEquals("◄ ${stage?.label ?: bench.home.label}", nav.backChip, bench.name)
+        }
+        // What the retired grouping law pinned, with the home spelled out rather than read back from the bench.
+        for (bench in listOf(Bench.ORBIT, Bench.SONG, Bench.LOOP)) {
+            assertEquals(Place.PROJECT, bench.home, "${bench.name}: filed under PROJECT")
+            assertEquals("◄ BEAT", Navigation(Location(Place.PROJECT, Stage.BEAT, listOf(bench))).backChip, "${bench.name}: over BEAT")
+        }
+        for (bench in listOf(Bench.SNIPS, Bench.BIN, Bench.XRAY, Bench.DOUBLES)) {
+            assertEquals(Place.SHELF, bench.home, "${bench.name}: filed under SHELF")
+            assertEquals("◄ SHELF", Navigation(Location(Place.SHELF, null, listOf(bench))).backChip, "${bench.name}: over the shelf")
         }
     }
 
