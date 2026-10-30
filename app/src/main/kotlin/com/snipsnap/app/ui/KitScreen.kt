@@ -47,6 +47,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -221,6 +222,7 @@ fun KitScreen(
      * player's eye.
      */
     beat: BeatPlayer,
+    onSavePerformance: (com.snipsnap.synth.AquariumPerformanceSettings, (String?) -> Unit) -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -259,6 +261,7 @@ fun KitScreen(
     val haptics = LocalHaptics.current
     val host = rememberPadHost(hosts, entry.dir)
     val player = host.engine
+    DisposableEffect(host) { onDispose { host.revertPerformance() } }
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
@@ -854,6 +857,41 @@ fun KitScreen(
                 .padding(bottom = Layout.DOCK_H.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            var performanceOpen by remember(entry.dir) { mutableStateOf(false) }
+            var performanceSaving by remember(entry.dir) { mutableStateOf(false) }
+            var performanceStatus by remember(entry.dir) { mutableStateOf<String?>(null) }
+            val performanceDirty = host.performance != host.savedPerformance || host.performanceWarning != null
+            GroupBox(
+                legend = "PERFORMANCE",
+                summary = "AQUARIUM · ${if (host.performance.enabled && !host.performance.settings.isBypass) "LIVE" else "DRY"}${if (performanceDirty) " · UNSAVED" else ""}",
+                open = performanceOpen,
+                onToggle = {
+                    if (performanceOpen) host.revertPerformance()
+                    performanceOpen = !performanceOpen
+                    performanceStatus = null
+                },
+                scheme = scheme, enabled = !busy && !performanceSaving,
+                modifier = Modifier.testTag("performance-group"),
+            ) {
+                AquariumPerformancePanel(
+                    settings = host.performance, dirty = performanceDirty, busy = busy || performanceSaving,
+                    streamUp = host.up, pending = host.performancePending, faulted = host.performanceFaulted,
+                    limitedFrames = host.performanceLimitedFrames, bpm = kit.tempoBpm?.toDouble() ?: 0.0,
+                    warning = host.performanceWarning, status = performanceStatus,
+                    scheme = scheme, color = scheme.accent.tape,
+                    onChange = { host.auditionPerformance(it); performanceStatus = null },
+                    onReset = { host.auditionPerformance(host.performance, reset = true) },
+                    onSave = {
+                        performanceSaving = true
+                        performanceStatus = "SAVING PERFORMANCE…"
+                        onSavePerformance(host.performance) { error ->
+                            performanceSaving = false
+                            performanceStatus = error ?: "SAVED TO KIT"
+                        }
+                    },
+                    onRevert = { host.revertPerformance(); performanceStatus = null },
+                )
+            }
             GroupBox(
                 legend = "THIS KIT",
                 summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),

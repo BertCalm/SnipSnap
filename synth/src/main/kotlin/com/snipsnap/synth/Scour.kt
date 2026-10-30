@@ -17,15 +17,19 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** Two plates under the same blast: dense metal that keeps its hardening, and glass that gives it back. */
+/**
+ * Two plates under the same blast: a round metal plate that keeps its hardening, and a square glass
+ * pane that gives it back. Each has its own body: its own sourced overtone pattern.
+ */
 enum class ScourVoice { PLATE, PANE }
 
 /**
  * SCOUR: a free plate is rolled against, then blasted with shot. Each shot dents the surface, the
  * dented fraction (coverage) climbs toward saturation, and the plate's upper partials climb with it
- * while its ring tightens. When the blast stops the plate rings out in the state the blast left.
- * The characteristic gesture is rolling contact, shot blast, coverage builds and the plate stiffens,
- * then a hardened ring that keeps its tuning (PLATE) or gives it back (PANE).
+ * while RING decides whether its ring grows or tightens. When the blast stops the plate rings out in
+ * the state the blast left. The characteristic gesture is rolling contact, shot blast, coverage
+ * builds and the plate stiffens, then a hardened ring that keeps its tuning (PLATE) or gives it back
+ * (PANE).
  *
  * Computed: the roller's Coulomb spin-down, read against a fixed surface at its contact phase; a
  * seeded Poisson shot schedule; coverage by the random-dent recursion `S += κ·e·(1 − S)`; the plate,
@@ -40,13 +44,19 @@ enum class ScourVoice { PLATE, PANE }
  * keeps the mode's energy, so retuning on the control tick cannot pump level. Coverage stays below 1
  * by its own arithmetic: `S + κe(1 − S) = 1 − (1 − S)(1 − κe)`.
  *
- * The strike weights keep the root at full weight wherever the blast lands. A real free plate's root,
- * Leissa's (2,0) mode, has no motion at the centre, so a real centre strike would not sound the note;
- * this departure is deliberate, so TRAVERSE never takes the note away.
+ * The strike weights keep the root at full weight. A real free plate's root (the round plate's (2,0)
+ * mode, the square's twisting mode) has no motion at the centre, so a real centre strike would not
+ * sound the note; this departure is deliberate. The blast lands where R1's TRAVERSE default put it:
+ * the owner heard TRAVERSE change nothing, and its knob went to RING.
  *
  * HOLD's top step is reserved for the R2 loop and renders as the step below it here, as GYRE's does.
  */
 object Scour {
+    /**
+     * Seeds the draws, so it stays 1: no saved SCOUR sound exists (the engine is a prototype, outside
+     * the picker), and keeping the seeds keeps every shot of PLATE's blast where the owner heard it.
+     * Before PLATE's (1,1) mode was quieted, RING .25 rendered R1's PLATE byte for byte (measured).
+     */
     const val MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
@@ -54,6 +64,12 @@ object Scour {
     const val LOOP_THRESHOLD = 0.99f
     /** The classifier files anything longer than this as LOOP (`Classifier`'s own constant is private). */
     const val LOOP_MIN_SECONDS = 1.5f
+    /**
+     * No render is shorter than this. RING 0 can tighten PANE's ring to 1.33 s in all, under the
+     * classifier's 1.5 s, where its feature rules could file a plate as a drum; the floor keeps every
+     * SCOUR sound a LOOP-class phrase, as R1's all were. Below it the render holds the decayed ring.
+     */
+    const val MIN_RENDER_SECONDS = 1.6
 
     internal const val INTERNAL_RATE = RATE * Dsp.OVERSAMPLE
     /** The control tick, in internal samples (about 1 kHz, THAW's): coverage retunes the plate this often. */
@@ -80,35 +96,69 @@ object Scour {
     /** The roller runs on the rim. */
     private const val RIM = .97
     /**
-     * Modes 1 and 2, (0,1) and (3,0), are picked up at this fraction of the gain law and ring for this
-     * fraction of their t60. Their ratios, 1.729 and 2.328 (near 7/4 and 7/3), line up every three root
-     * periods; at full level the house `Pitch.detect` misread the note (often a twelfth low, f0/3) in 59 of
-     * 162 PLATE corners at the onset window. Quieted and shortened, 162 of 162 read within 50 cents at both
-     * the onset and the tail window, and HARDEN's log-spectral reach stayed 1.80 dB (1.72 before): the
-     * stretch lives in the modes above them (measured in R1; the factors are shape).
+     * Where the blast lands, as a fraction from the centre to the rim: R1's TRAVERSE default (.2) through
+     * R1's own float law, so the shots weigh the modes exactly as they did (each shot jitters ±.05).
      */
-    private const val PAIR_LEVEL = .4
-    private const val PAIR_RING = .5
+    private val AIM = Dsp.lin(.2f, .05f, .95f).toDouble()
     private val PULSE = DoubleArray(PULSE_SAMPLES) { sin(PI * (it + .5) / PULSE_SAMPLES) }
 
     /**
-     * Completely free circular plate, Leissa, *Vibration of Plates* (NASA SP-160, 1969), Table 2.5,
-     * ν = 0.33: `λ² = ωa²√(ρh/D)` for modes (n, s) = (2,0) (0,1) (3,0) (1,1) (4,0) (5,0) (2,1) (0,2).
-     * Leissa marks (4,0) and (5,0) "true within 2 percent". Ratios are taken to (2,0), the root.
+     * PLATE's body: the completely free circular plate, Leissa, *Vibration of Plates* (NASA SP-160, 1969),
+     * Table 2.5, ν = 0.33: `λ² = ωa²√(ρh/D)` for modes (n, s) = (2,0) (0,1) (3,0) (1,1) (4,0) (5,0) (2,1)
+     * (0,2). Leissa marks (4,0) and (5,0) "true within 2 percent". Each is proportional to ω, so the
+     * ratios are taken to (2,0), the root.
      */
-    private val LAMBDA2 = doubleArrayOf(5.253, 9.084, 12.23, 20.52, 21.6, 33.1, 35.25, 38.55)
+    private val CIRCLE = doubleArrayOf(5.253, 9.084, 12.23, 20.52, 21.6, 33.1, 35.25, 38.55)
 
-    /** A voice's body and its response to the blast. Every number is shape. */
+    /**
+     * PANE's body: the completely free square plate at ν = 0.225, the Poisson's ratio of Leissa's own
+     * square-plate tables (SP-160, section 4.3.15) and close to glass's. `λ = ωa²√(ρh/D)`, root first.
+     *
+     * The pane is heard at one point on a diagonal, .7205 of the way from the centre to a corner, and
+     * the body is the modes that move there. A point on the diagonal hears only modes symmetric about it
+     * (every other mode of a square is exactly still along it), which drops the diagonal-node mode at
+     * 1.444; at .7205 two more, at 4.347 and 5.489, have their nodes (.7202 and .7208). All three sit
+     * near half-integer ratios (3/2, 9/2, 11/2), which make the pair with the root look like harmonics of
+     * the octave below: heard, they made the house `Pitch.detect` read the note an octave or a twelfth
+     * low. Listening at a node is the mallet maker's move turned round (they strike at the node of the
+     * partial they do not want): a position on the plate, not a filter. Each degenerate pair keeps its
+     * one diagonal-symmetric member, and 7.657 (a tenth of the root's motion there) is left out.
+     *
+     * Leissa's ν = 0.225 tables survive the NTRS scan only in part, so the values come from a
+     * Rayleigh-Ritz solve (Legendre products, converged to 4e-7, in the spec) that reproduces eight entries
+     * of his complete ν = 0.3 table (Table 4.65) to within 3e-5 and lands inside his ν = 0.225 bounds on the
+     * fundamental (14.1028 to 14.1165). Ratios 1, 1.692, 2.549, 4.650, 8.659, 9.413.
+     */
+    private val SQUARE = doubleArrayOf(14.116, 23.878, 35.977, 65.645, 122.234, 132.868)
+
+    /** Each SQUARE mode's motion at the listening point, from the same solve, as a fraction of the root's. */
+    private val SQUARE_HEARD = doubleArrayOf(1.0, .615, .574, .362, .580, .429)
+
+    /** A voice's body and its response to the blast. Every number is shape except the body's ratios. */
     private class Shape(
-        /** Which of [LAMBDA2]'s modes the voice carries, lowest first. */
-        val modes: IntArray,
+        /** The body's modes as frequency parameters, root first; only their ratios to the root are used. */
+        val body: DoubleArray,
+        /**
+         * Modes 1 and 2 are picked up at [pairLevel] of the gain law and ring for [pairRing] of their t60.
+         * On the round plate their ratios, 1.729 and 2.328 (near 7/4 and 7/3), line up every three root
+         * periods; at full level the house `Pitch.detect` misread the note (often a twelfth low, f0/3) in 59
+         * of 162 PLATE corners at the onset. At .4 and .5, 162 of 162 read within 50 cents at both windows
+         * and HARDEN kept its reach (measured in R1). PANE's pair (1.692 and 2.549) was measured the same
+         * way in R1.1; see its shape.
+         */
+        val pairLevel: Double, val pairRing: Double,
+        /**
+         * How strongly each body mode is heard, root 1, a weight on the gain law: PANE's is each mode's
+         * motion at its listening point (the solve); PLATE's quiets one mode for the note (see its shape).
+         */
+        val heard: DoubleArray,
         /** Root ring, seconds, and how much shorter each mode above it rings. */
         val t60: Double, val decay: Double,
         /** Pickup weight falls by this factor per mode. */
         val gain: Double,
         /** Coverage one shot leaves (κ) and the recovery rate per second (ρ). */
         val kappa: Double, val rho: Double,
-        /** How far full coverage at HARDEN 1 lifts the top mode, and how much it shortens the ring. */
+        /** How far full coverage at HARDEN 1 lifts the top mode, and how far it moves the ring (RING picks the way). */
         val shift: Double, val damp: Double,
         /** Roller alone before the blast opens, and how long the blast runs, seconds. */
         val lead: Double, val window: Double,
@@ -116,8 +166,22 @@ object Scour {
         val decel: Double, val roll: Double,
     )
 
-    private val PLATE = Shape(IntArray(8) { it }, 2.2, .80, .72, .012, .15, .35, 1.2, .20, .90, .45, .06)
-    private val PANE = Shape(intArrayOf(0, 1, 2, 3, 5, 7), 1.4, .74, .65, .03, 1.5, .25, .6, .12, .60, .60, .05)
+    /**
+     * PLATE's (1,1) mode, 3.906, is heard at .6 of the gain law. R1's tightening ring kept it short; at a
+     * longer ring and full blast, stretched toward 4.4, it pulled the note sharp in the tail (+116 to +139
+     * cents at SHOT 1, HARDEN 1, RING 1, three of the 37 corners `ScourTest` asserts; silencing it alone
+     * fixed them). At the onset, unstretched near 4, it supports the root, so too little costs a default:
+     * at .5 F♯4's onset read +54 cents. At .7 one corner still read +107; .6 reads all 37 at both windows
+     * (324 and 312 of a 324-corner grid) and raises HARDEN's log-spectral reach from 1.88 to 1.93 dB.
+     */
+    private val PLATE_HEARD = doubleArrayOf(1.0, 1.0, 1.0, .6, 1.0, 1.0, 1.0, 1.0)
+    private val PLATE = Shape(CIRCLE, .4, .5, PLATE_HEARD, 2.2, .80, .72, .012, .15, .35, 1.2, .20, .90, .45, .06)
+    /**
+     * PANE's pair at .5 of the gain law and .7 of its ring: of the 37 corners `ScourTest` asserts, full level
+     * read 34 at the onset and 31 in the tail, .7 and .7 read 36 and 36 (missing the defaults at C3 and C4),
+     * and .5 and .7 read all 37 at both windows (312 and 314 of a 324-corner grid). The rest is R1's shape.
+     */
+    private val PANE = Shape(SQUARE, .5, .7, SQUARE_HEARD, 1.4, .74, .65, .03, 1.5, .25, .6, .12, .60, .60, .05)
 
     private fun shape(voice: ScourVoice) = when (voice) {
         ScourVoice.PLATE -> PLATE
@@ -129,7 +193,7 @@ object Scour {
         MacroSpec("RPM", .3f, neutral = .3f),
         MacroSpec("SHOT", .5f, neutral = .5f),
         MacroSpec("HARDEN", .6f, neutral = .5f),
-        MacroSpec("TRAVERSE", .2f, neutral = .2f),
+        MacroSpec("RING", .75f, neutral = .5f),
         MacroSpec("HOLD", 0f, neutral = 0f),
     )
 
@@ -145,15 +209,17 @@ object Scour {
     fun frequencyFor(voice: ScourVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
 
     /**
-     * Which way hardening moves the ring. R1 ships [TIGHTENS]: every mode rings shorter by
-     * `1 + damp·HARDEN·coverage`. [OPENS] rings longer by the same factor. It exists so the audition can
-     * put the owner's open question to the ear; no saved sound, macro or patch can reach it.
+     * RING: which way, and how far, hardening moves every mode's ring. The factor on t60 is
+     * `(1 + damp·HARDEN·coverage)^(2(2·RING − 1))`: RING .5 leaves the ring alone, .25 is R1's tightening
+     * ring (exponent −1, the "shorter" clip), .75 the "longer" clip the owner picked for both voices
+     * (exponent +1, the default), and the ends double either way. With nothing hardened the factor is
+     * exactly 1, so RING needs HARDEN and shots to be heard, as HARDEN needs shots. A negative exponent
+     * is taken as a reciprocal so that RING .25 is R1's `1 / f` to the bit.
      */
-    internal enum class RingLaw { TIGHTENS, OPENS }
-
-    private fun ringFactor(s: Shape, harden: Double, coverage: Double, law: RingLaw): Double {
+    private fun ringFactor(s: Shape, harden: Double, coverage: Double, ring: Double): Double {
         val f = 1 + s.damp * harden * coverage
-        return if (law == RingLaw.TIGHTENS) 1 / f else f
+        val e = 2 * (2 * ring - 1)
+        return if (e >= 0) f.pow(e) else 1 / f.pow(-e)
     }
 
     /** No step is a loop in R1: HOLD's top step is reserved (see the class KDoc). */
@@ -175,33 +241,32 @@ object Scour {
 
     /**
      * The render's length: the later of the blast closing and the roller stopping, plus the hardened
-     * root's ring. A closed form, so [drumClassFor] never renders. A softer hit leaves less coverage
-     * and so a longer ring: velocity 1 gives the shortest render for any macros.
+     * root's ring, and never under [MIN_RENDER_SECONDS]. A closed form, so [drumClassFor] never renders.
+     * A softer hit leaves less coverage, so the length moves with velocity one way only: longer below
+     * RING .5, shorter above it.
      */
-    fun lengthSeconds(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Double =
-        length(voice, macros, velocity, RingLaw.TIGHTENS)
-
-    private fun length(voice: ScourVoice, macros: Map<String, Float>, velocity: Float, law: RingLaw): Double {
+    fun lengthSeconds(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Double {
         val s = shape(voice)
         val m = settled(voice, macros)
         val close = s.lead + windowSeconds(s, m.getValue("HOLD"))
         val stop = rollerStart(m.getValue("RPM")) / s.decel
-        val tail = s.t60 * ringFactor(s, m.getValue("HARDEN").toDouble(), expectedCoverage(s, m, velocityOf(velocity)), law)
-        return max(close, stop) + tail
+        val coverage = expectedCoverage(s, m, velocityOf(velocity))
+        val tail = s.t60 * ringFactor(s, m.getValue("HARDEN").toDouble(), coverage, m.getValue("RING").toDouble())
+        return max(max(close, stop) + tail, MIN_RENDER_SECONDS)
     }
 
     fun renderFrames(voice: ScourVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = 1f): Int =
-        frames(voice, macros, velocity, RingLaw.TIGHTENS)
-
-    private fun frames(voice: ScourVoice, macros: Map<String, Float>, velocity: Float, law: RingLaw): Int =
-        (length(voice, macros, velocity, law) * RATE).roundToInt()
+        (lengthSeconds(voice, macros, velocity) * RATE).roundToInt()
 
     /**
-     * LOOP when the render passes the classifier's 1.5 s, else PERC; never a drum class. It is read at
-     * velocity 1, the shortest render, so it holds at every velocity whenever it says LOOP.
+     * LOOP when the render passes the classifier's 1.5 s, else PERC; never a drum class. The length is
+     * monotonic in velocity, so its shortest is at velocity 0 or 1, and reading both makes the class hold
+     * at every velocity. [MIN_RENDER_SECONDS] means it is always LOOP today.
      */
-    fun drumClassFor(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
-        if (renderFrames(voice, macros) > RATE * LOOP_MIN_SECONDS) DrumClass.LOOP else DrumClass.PERC
+    fun drumClassFor(voice: ScourVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
+        val shortest = minOf(renderFrames(voice, macros, 0f), renderFrames(voice, macros, 1f))
+        return if (shortest > RATE * LOOP_MIN_SECONDS) DrumClass.LOOP else DrumClass.PERC
+    }
 
     /** Random sounds stay finite: HOLD is an explicit choice. */
     fun scramble(voice: ScourVoice, random: Random = Random.Default): Map<String, Float> =
@@ -232,13 +297,11 @@ object Scour {
      * divided by λ: turning SHOT stretches one schedule instead of reshuffling it, and shot `i` always
      * gets the `i`-th draws.
      */
-    internal fun mechanics(
-        voice: ScourVoice, macros: Map<String, Float>, velocity: Float = 1f, ring: RingLaw = RingLaw.TIGHTENS,
-    ): Trace {
+    internal fun mechanics(voice: ScourVoice, macros: Map<String, Float>, velocity: Float = 1f): Trace {
         val s = shape(voice)
         val m = settled(voice, macros)
         val vel = velocityOf(velocity)
-        val frames = frames(voice, m, vel, ring) * Dsp.OVERSAMPLE
+        val frames = renderFrames(voice, m, vel) * Dsp.OVERSAMPLE
         val lambda = shotRate(m.getValue("SHOT"))
         val open = s.lead
         val close = s.lead + windowSeconds(s, m.getValue("HOLD"))
@@ -249,7 +312,6 @@ object Scour {
         // power is the same at every SHOT. Coverage counts dents, not this audio level.
         val amplitude = SHOT_FORCE * sqrt(REFERENCE_RATE / lambda) * vel
         val dent = vel.toDouble().pow(.8)
-        val aim = Dsp.lin(m.getValue("TRAVERSE"), .05f, .95f).toDouble()
         val shotFrames = ArrayList<Int>()
         val shotAmplitude = ArrayList<Double>()
         val shotAim = ArrayList<Double>()
@@ -264,7 +326,7 @@ object Scour {
             if (frame >= frames) break
             shotFrames += frame
             shotAmplitude += amplitude * (1 + .2 * level)
-            shotAim += (aim + .05 * off).coerceIn(0.0, 1.0)
+            shotAim += (AIM + .05 * off).coerceIn(0.0, 1.0)
             shotCoverage += (1 + .2 * level) * dent
         }
         val ticks = (frames + CTRL - 1) / CTRL
@@ -305,9 +367,9 @@ object Scour {
 
     /** The voice's mode positions (0 is the root) whose hardened frequency stays under the ceiling at [hz]. */
     private fun keptModes(s: Shape, hz: Double): IntArray {
-        val last = (s.modes.size - 1).toDouble()
-        return s.modes.indices.filter { k ->
-            hz * LAMBDA2[s.modes[k]] / LAMBDA2[s.modes[0]] * (1 + s.shift * k / last) < MODE_CEILING_HZ
+        val last = (s.body.size - 1).toDouble()
+        return s.body.indices.filter { k ->
+            hz * s.body[k] / s.body[0] * (1 + s.shift * k / last) < MODE_CEILING_HZ
         }.toIntArray()
     }
 
@@ -345,23 +407,21 @@ object Scour {
         val plateNanos: Long,
     )
 
-    internal fun play(
-        voice: ScourVoice, macros: Map<String, Float>, velocity: Float = 1f, record: Boolean = false,
-        ring: RingLaw = RingLaw.TIGHTENS,
-    ): Played {
+    internal fun play(voice: ScourVoice, macros: Map<String, Float>, velocity: Float = 1f, record: Boolean = false): Played {
         val began = System.nanoTime()
         val s = shape(voice)
         val m = settled(voice, macros)
-        val trace = mechanics(voice, m, velocity, ring)
+        val trace = mechanics(voice, m, velocity)
         val prepared = System.nanoTime()
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
         val harden = m.getValue("HARDEN").toDouble()
+        val ring = m.getValue("RING").toDouble()
         val kept = keptModes(s, hz)
-        val last = (s.modes.size - 1).toDouble()
-        val ratio = DoubleArray(kept.size) { LAMBDA2[s.modes[kept[it]]] / LAMBDA2[s.modes[0]] }
+        val last = (s.body.size - 1).toDouble()
+        val ratio = DoubleArray(kept.size) { s.body[kept[it]] / s.body[0] }
         val grade = DoubleArray(kept.size) { kept[it] / last }
-        val t60s = DoubleArray(kept.size) { s.t60 * s.decay.pow(kept[it]) * if (kept[it] in 1..2) PAIR_RING else 1.0 }
-        val pickup = DoubleArray(kept.size) { s.gain.pow(kept[it]) * if (kept[it] in 1..2) PAIR_LEVEL else 1.0 }
+        val t60s = DoubleArray(kept.size) { s.t60 * s.decay.pow(kept[it]) * if (kept[it] in 1..2) s.pairRing else 1.0 }
+        val pickup = DoubleArray(kept.size) { s.gain.pow(kept[it]) * s.heard[kept[it]] * if (kept[it] in 1..2) s.pairLevel else 1.0 }
         val rim = weights(RIM, kept)
         val shotWeights = Array(trace.shotFrames.size) { weights(trace.shotAim[it], kept) }
         val ticks = trace.smoothed.size

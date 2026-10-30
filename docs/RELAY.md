@@ -121,8 +121,8 @@ The [published Relay audition](https://snipsnap-relay-audition.bertcalm.chatgpt.
 is private to the owner's account and includes raw and matched WAV downloads.
 
 Run `./gradlew --no-daemon :synth:generateRelayPerformanceAudition` to regenerate
-`testkit/relay-performance-audition/`. Revision 5 contains 100 clips: the original
-76 bank, musical, velocity and starter-pad cases, plus 24 PULSE response comparisons.
+`testkit/relay-performance-audition/`. Revision 6 contains 88 clips: the original
+76 bank, musical, velocity and starter-pad cases, plus 12 PULSE endpoint probes.
 The original cases include the full bank, six short musical performances, three
 native velocities for every voice and all sixteen actual starter pads.
 Notes retain the chosen preset's full phrase; musical mixes include every
@@ -131,13 +131,22 @@ The manifest carries full patches, note events, levels and WAV hashes. Listening
 notes stay in the browser. Physical-device timing, touch and listening still need
 hands-on verification.
 
-The optional PULSE comparison uses each voice at nominal positions 0.25 and 0.5.
-Each pair renders the current control value beside an eased candidate that sends
-`nominal^0.75` to the existing engine. The manifest records nominal and effective
-values, the mapping and the complete render patch. This is a listening experiment;
-the production PULSE response, factory macros and saved patch model remain unchanged.
-The candidate mapping awaits its own listening verdict and does not replace the
-approved bank.
+The page opens on six PULSE 0-versus-1 pairs, one for each voice. They use the
+same six finite recipes as the previous comparison. Each pair fixes its note,
+velocity, source definitions, phrase clock and every other macro, changing only
+PULSE from 0 to 1 through the existing renderer. The manifest records the source,
+reference and exact rendered recipes alongside the endpoint and pair ID. Raw
+playback retains native level changes; matched playback supports comparison of
+articulation and color after level matching. The diagnostic tests the existing
+control's full range before deciding whether its mapping or accent behavior needs
+improvement. It makes no new sonic approval claim, and the production PULSE
+response, factory macros and saved patch model remain unchanged.
+
+Revision 5's earlier experiment compared an eased `nominal^0.75` mapping at
+nominal positions 0.25 and 0.5. On 2026-10-26 the owner reported that the eased
+candidate sounded the same. That mapping was not adopted. The endpoint diagnostic
+replaces those 24 subtle comparison clips while retaining the original approved
+76 cases.
 
 The earlier engineering matrix remains reproducible. Run
 `./gradlew --no-daemon :synth:generateRelayAudition` to regenerate

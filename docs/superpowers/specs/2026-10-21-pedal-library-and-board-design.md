@@ -208,3 +208,23 @@ The COMPRESSOR section passed its gate and was built (`2026-10-23-compressor-sec
 
 On a synth pad that still carries its patch, the board now renders around the pad's own landing chain (`PedalBoard.processAround`): PRE picks and the AMP pick in front of the amp, POST picks after it, so a pick's side means the side of the guitar's own amp. The recipe keeps the patch beside `pedals`, and undo writes the patch recipe back. Captured, layered and re-treated pads keep the board on the audio on disk (`2026-10-27-pedals-in-front-of-the-amp-design.md`).
 
+
+## The slate (2026-10-28)
+
+The owner set what row seven's window is (`2026-10-28-pedal-slate-design.md`), and it replaces this design's section 3 window and section 9 width law:
+
+- Row seven draws five pedals the user chooses, the same on every pad of every kit, then MORE. It no longer shows the pad's own pedals first and fills the rest.
+- MORE lists every gated pedal. Each has ON/OFF, and AMT and before/after-the-amp where the pedal is on the pad. PUT ON ROW swaps a pedal onto the row in place of the chip the user taps.
+- MORE lights with a count when the pad carries pedals the row does not show.
+- The width law is five pedals and MORE, which is six chips.
+
+The gestures are this design's (section 3): tap to add, tap a lit chip to remove, AMT on the marked pick. Four changes, all from one law, that a lit pedal is one you hear:
+
+- A new pedal goes on at 70, not at the sheet's AMT. The sheet's AMT is the marked pedal's, and copying it would move the old pedal under the "set AMT, then tap" habit.
+- AMT 0 takes the marked pick off.
+- Decision 4's "the later pick wins that section and the sheet names the owner" becomes: the later pick takes the earlier one's place, and the toast names it. WAH then TOUCH on one side would otherwise light two chips for one wah.
+- A pad whose own pedals the bin cannot restore refuses a change instead of stacking, because a board re-renders whole (that spec's D5).
+
+MORE lists boards once one is gated (decision 6), without PUT ON ROW.
+
+The logic is built in `shell` (`PedalSlate`, `PadSheet.rows`), DELAY turned `gated`, and R2 is now the screens' wiring, listed in that spec's section 6.

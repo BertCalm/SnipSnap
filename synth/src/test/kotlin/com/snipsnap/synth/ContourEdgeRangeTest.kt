@@ -17,7 +17,7 @@ class ContourEdgeRangeTest {
 
     @Test
     fun `contrast broadens all seven complete recipe ranges including adjacent middle settings`() {
-        val affected = ContourPresets.all().filter { it.name !in retained }
+        val affected = ContourPresets.original().filter { it.name !in retained }
         assertTrue(affected.size == 7, "the range review must cover all seven affected recipes")
         for (patch in affected) for (hold in listOf(0f, 1f)) {
             fun spectrum(response: ContourEdgeResponse, edge: Float) = bands(
@@ -47,14 +47,14 @@ class ContourEdgeRangeTest {
 
     @Test
     fun `contrast retains the requested root at maximum EDGE and BODY extremes`() {
-        for (patch in ContourPresets.all().filter { it.name !in retained }) {
+        for (patch in ContourPresets.original().filter { it.name !in retained }) {
             for (body in listOf(0f, 1f)) for (hold in listOf(0f, 1f)) {
                 requireRoot(patch, body, .5f, hold)
             }
         }
         // These lower and upper register cases exposed octave errors in the wider-mix trial.
-        val rounded = ContourPresets.all().single { it.name == "Rounded Edge" }
-        val twin = ContourPresets.all().single { it.name == "Twin Outline" }
+        val rounded = ContourPresets.original().single { it.name == "Rounded Edge" }
+        val twin = ContourPresets.original().single { it.name == "Twin Outline" }
         for (hold in listOf(0f, 1f)) {
             requireRoot(rounded, 1f, .375f, hold)
             for (tune in listOf(.25f, .75f)) requireRoot(twin, 1f, tune, hold)
@@ -73,7 +73,7 @@ class ContourEdgeRangeTest {
 
     @Test
     fun `zero EDGE retains the previous body sound in finite and held recipes`() {
-        for (patch in ContourPresets.all()) for (hold in listOf(0f, 1f)) {
+        for (patch in ContourPresets.original()) for (hold in listOf(0f, 1f)) {
             val macros = patch.macros + mapOf("EDGE" to 0f, "HOLD" to hold)
             val previous = ContourEngine.render(patch.voice, macros, patch.velocity,
                 patch.config.copy(edgeResponse = ContourEdgeResponse.FOREGROUND))

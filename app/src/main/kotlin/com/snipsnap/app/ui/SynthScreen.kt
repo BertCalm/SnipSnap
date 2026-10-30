@@ -282,6 +282,10 @@ import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberRenderer
 import com.snipsnap.synth.ChamberVoice
+import com.snipsnap.synth.Nacre
+import com.snipsnap.synth.NacrePatch
+import com.snipsnap.synth.NacrePresets
+import com.snipsnap.synth.NacreVoice
 import com.snipsnap.synth.CausticInstrument
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
@@ -747,8 +751,8 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER) {
-                        Presets.forVoice(e.name, v.name).firstOrNull {
+                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.NACRE) {
+                        factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
                     } else null
@@ -762,7 +766,9 @@ fun SynthScreen(
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
-                        else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice] else null
+                        else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
+                        else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
+                            .firstOrNull { it.voice == v } else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
@@ -784,7 +790,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite CAUSTIC and CHAMBER reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER) && name == "HOLD") fallback
+                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -831,7 +837,7 @@ fun SynthScreen(
             }
             for ((pair, name) in seed.seededPresets) {
                 if (containsKey(pair)) continue
-                val factory = Presets.forVoice(pair.first.name, pair.second.name).firstOrNull { it.name == name }
+                val factory = factoryPresets(pair.first, pair.second).firstOrNull { it.name == name }
                 if (factory != null) put(pair, editablePreset(factory))
             }
             // SCANNED CHAIN's saved recipe holds its whole shape and settings.
@@ -897,10 +903,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, CHAMBER, PRISM and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, CHAMBER, PRISM, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is ChamberPatch ||
-            patch is PrismPatch ||
+            patch is PrismPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -968,6 +974,14 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: OrigamiPatch(name, voice as OrigamiVoice, controls)
+        }
+        if (engine == Engine.NACRE) {
+            // Use the live draft for same-frame root/velocity and macro edits. Copying it
+            // retains an older saved rendition and the full-width variation seed.
+            val current = loadedPatchesByVoice[engine to voice] as? NacrePatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: NacrePatch(name, voice as NacreVoice, controls)
         }
         if (engine == Engine.PRISM) {
             // Detail edits and accessibility events can share a frame with SAVE or HOLD.
@@ -1113,6 +1127,9 @@ fun SynthScreen(
                 )
                 Engine.CHAMBER -> loadedPatchesByVoice[pair] = ChamberPatch(
                     engine.patchDisplayName(voice), voice as ChamberVoice, macrosByVoice.getValue(pair),
+                )
+                Engine.NACRE -> loadedPatchesByVoice[pair] = NacrePatch(
+                    engine.patchDisplayName(voice), voice as NacreVoice, macrosByVoice.getValue(pair),
                 )
                 else -> Unit
             }
@@ -1321,7 +1338,7 @@ fun SynthScreen(
                     embouchureRestore.pending.remove(pair)
                     continue
                 }
-                val factory = Presets.byName(pair.first.name, pair.second.name, name)
+                val factory = factoryPresets(pair.first, pair.second).firstOrNull { it.name == name }
                 // SHOAL always holds a complete snapshot, so a YOURS name must still be adopted whole.
                 if (loadedPatchesByVoice[pair] != null && (pair.first != Engine.SHOAL || factory != null)) {
                     // OVEN can retain a full edited recipe after its YOURS
@@ -1352,6 +1369,7 @@ fun SynthScreen(
                         if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is ChamberPatch) macrosByVoice[pair] = Chamber.defaults(editable.voice) + editable.macros
+                        if (editable is NacrePatch) macrosByVoice[pair] = Nacre.defaults(editable.voice) + editable.macros
                         // The named preset is being restored whole. A partial legacy
                         // OVERLAP recipe must fill its sliders from its saved model.
                         if (mine is OverlapPatch) {
@@ -1543,7 +1561,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.CHAMBER)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.CHAMBER || engine == Engine.NACRE)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2397,6 +2415,26 @@ fun SynthScreen(
                     TapeText(
                         "ROOT IS THE REFERENCE NOTE. HOLD EXTENDS A FINITE SOUND.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    )
+                }
+
+                if (engine == Engine.NACRE) {
+                    NacreNoteControls(
+                        patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as NacrePatch,
+                        fillColor = classColor,
+                        scheme = scheme,
+                        onRootChange = { root ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(midi = root)
+                        },
+                        onVelocityChange = { value ->
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] =
+                                (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(velocity = value)
+                        },
                     )
                 }
 
@@ -4791,7 +4829,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -4866,6 +4904,7 @@ private enum class Engine {
         FILAMENT -> FilamentVoice.entries
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries
+        NACRE -> NacreVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -4932,6 +4971,7 @@ private enum class Engine {
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
         CHAMBER -> Chamber.macrosFor(voice as ChamberVoice).filter { it.name != "HOLD" }
+        NACRE -> Nacre.macrosFor(voice as NacreVoice).filter { it.name != "HOLD" }
     }
 
     fun defaults(voice: Enum<*>): Map<String, Float> = when (this) {
@@ -4998,6 +5038,7 @@ private enum class Engine {
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
         CHAMBER -> Chamber.defaults(voice as ChamberVoice)
+        NACRE -> Nacre.defaults(voice as NacreVoice)
     }
 
     fun scramble(voice: Enum<*>, random: Random): Map<String, Float> = when (this) {
@@ -5068,6 +5109,12 @@ private enum class Engine {
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
         CHAMBER -> Chamber.scramble(voice as ChamberVoice, random)
+        NACRE -> Nacre.defaults(voice as NacreVoice) + mapOf(
+            "TOUCH" to (.15f + .55f * random.nextFloat()),
+            "DUET" to (.10f + .80f * random.nextFloat()),
+            "CURRENT" to random.nextFloat(), "VENUE" to random.nextFloat(),
+            "BLOOM" to (.10f + .65f * random.nextFloat()), "HOLD" to 0f,
+        )
     }
 
     // Every engine's `render(voice, macros)` takes exactly those two
@@ -5139,6 +5186,7 @@ private enum class Engine {
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
         CHAMBER -> Chamber.render(voice as ChamberVoice, macros)
+        NACRE -> Nacre.render(voice as NacreVoice, macros)
     }
 
     /**
@@ -5212,6 +5260,7 @@ private enum class Engine {
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
         CHAMBER -> Chamber.drumClassFor(voice as ChamberVoice, macros)
+        NACRE -> Nacre.drumClassFor(voice as NacreVoice, macros)
     }
 
     fun buildPatch(name: String, voice: Enum<*>, macros: Map<String, Float>): Patch = when (this) {
@@ -5278,6 +5327,7 @@ private enum class Engine {
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
         CHAMBER -> ChamberPatch(name, voice as ChamberVoice, macros)
+        NACRE -> NacrePatch(name, voice as NacreVoice, macros)
     }
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
@@ -5288,6 +5338,11 @@ private enum class Engine {
         return "$voiceName $engineName"
     }
 }
+
+/** Starting recipes supplied directly by a provisional engine remain available in MAKE. */
+private fun factoryPresets(engine: Engine, voice: Enum<*>): List<Patch> =
+    if (engine == Engine.NACRE) NacrePresets.forVoice(voice as NacreVoice)
+    else Presets.forVoice(engine.name, voice.name)
 
 // ---------- voice ↔ drum class ----------
 //
@@ -5588,7 +5643,7 @@ private fun PresetList(
     // A new voice must not reuse the previous voice's chip nodes. Positional
     // reuse kept the old spoken names, so a later voice's preset (PRISM BASS
     // "Hollow Rise" after the KEY openings) was absent from the tree.
-    val presets = Presets.forVoice(engine.name, voice.name)
+    val presets = factoryPresets(engine, voice)
     key(engine, voice) {
         PresetStrip(engine, voice, presets, current, scheme, label = null, spoken = "PRESET", onSelect = onSelect)
     }
@@ -5757,6 +5812,36 @@ private fun ChamberNoteControls(
     TapeText(
         "FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+    )
+}
+
+/** Root and strike strength travel with the complete finite harp recipe. */
+@Composable
+private fun NacreNoteControls(
+    patch: NacrePatch,
+    fillColor: Color,
+    scheme: Scheme,
+    onRootChange: (Int) -> Unit,
+    onVelocityChange: (Float) -> Unit,
+) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - Nacre.MIN_MIDI).toFloat() / (Nacre.MAX_MIDI - Nacre.MIN_MIDI),
+        fillColor = fillColor,
+        scheme = scheme,
+        readout = Scales.nameOf(patch.midi),
+        onValueChange = { value ->
+            onRootChange((Nacre.MIN_MIDI + value * (Nacre.MAX_MIDI - Nacre.MIN_MIDI)).roundToInt()
+                .coerceIn(Nacre.MIN_MIDI, Nacre.MAX_MIDI))
+        },
+    )
+    MacroSlider(
+        label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
+        onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
+    )
+    TapeText(
+        "PAIRED HARP · FINITE STRUM · SPACE FOLLOWS THE NOTE.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }
 

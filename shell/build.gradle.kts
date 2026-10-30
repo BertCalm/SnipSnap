@@ -185,10 +185,10 @@ tasks.register<JavaExec>("generateCreaseKeysAudition") {
     args(providers.gradleProperty("creaseKeysOutput").orNull ?: "${rootDir}/testkit/crease-keys-audition")
 }
 
-/** Package Contour's accepted nine recipes as held instruments with verified native and compatibility programs. */
+/** Package Contour's 36 factory recipes as held instruments with verified native and compatibility programs. */
 tasks.register<JavaExec>("generateContourStarter") {
     group = "distribution"
-    description = "Render nine CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
+    description = "Render 36 CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.ContourStarterGenerator")
     workingDir = projectDir

@@ -634,6 +634,7 @@ object UserPresets {
         "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
         "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
         "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+        "edgeResponse = ContourEdgeResponse.${c.edgeResponse.name}",
     ).joinToString(", ") + ")"
 
     private fun murmurConfigLiteral(config: MurmurConfig): String {

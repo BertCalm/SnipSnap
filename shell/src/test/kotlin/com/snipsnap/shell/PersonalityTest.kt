@@ -210,8 +210,8 @@ class PersonalityTest {
         assertTrue(busy.startsWith("TREATMENT"), "it replaces the card's own header: $busy")
         // Distinguishable from the idle header, which is the whole point.
         assertTrue(busy != "TREATMENT", busy)
-        // Every segment's label has to fit, not just this one.
-        for (seg in PadSheet.ROWS.flatten()) {
+        // Every segment's label has to fit, not just this one: a slate pedal behind MORE as well.
+        for (seg in PadSheet.ALL_SEGMENTS) {
             val line = Copy.treatmentBusy(PadSheet.displayLabel(seg))
             assertTrue(line.length <= 40, "one line on the card: $line (${line.length})")
         }
@@ -536,6 +536,8 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The pedal slate's PUT ON ROW button: a label, not a landing.
+        "PUT_ON_ROW",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",

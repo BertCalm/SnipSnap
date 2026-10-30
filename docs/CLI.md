@@ -545,9 +545,8 @@ at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
 the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
 gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
-long, dark repeats 225 ms apart (151 ms at AMT 70), fed only the note's first
-120 ms so a held
-note's attack comes back as a repeat) and `forged` (a hit formed against a die:
+long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
+whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
 FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
 with a flash of grit at impact; peak-matched, so it reads louder at the same
 peak).
@@ -566,15 +565,14 @@ own landing amp and the `post` picks after it, and the recipe keeps the patch;
 `--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
 sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
 fixed there), `delayed` (after the amp), and
-`rig` (a board: compressor, drive, slapback); `delayed` and `rig` draw no chip
-until their gates — e.g.
+`rig` (a board: compressor, drive, slapback); every one but `rig` is on the
+PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
 six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
 refused by name. `--undo` restores as for a character.
  On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision) and `delayed` (the DELAY chip
-waits for its listening gate), sit on the PAD SHEET's
+and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
@@ -585,10 +583,14 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE — `driven`, `compressed`,
-`wahed`, `touchwahed`, `rockwahed` and `forged`),
-grouped by what an effect *is*, because a guitarist looks for a pedal by
-its name; tapping any
+the pedals, grouped by what an effect *is*, because a guitarist looks for a
+pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
+DELAY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`
+and `delayed`), of which the row draws five, the user's choice and the same
+in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
+which holds them all; a pad carries up to six at once
+([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);
+the phone draws today's six, DRIVE to FORGE, until its screens are built). Tapping any
 of them changes every file the pad references, velocity layers included.
 
 ### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again

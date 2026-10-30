@@ -128,7 +128,8 @@ export. Phone and MPC listening checks remain open.
 **Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
 the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved sources,
 replay and export contracts. The [first performance backend](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md)
-connects PadEngine playback and stereo PRINT. Remaining routes and PERFORMANCE controls follow
+connects PadEngine playback and stereo PRINT. The [KIT PERFORMANCE panel](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md)
+adds live controls and saved kit settings. Remaining routes and physical-device checks follow
 the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
 
 **Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)

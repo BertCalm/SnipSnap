@@ -9,6 +9,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitStore
 import com.snipsnap.synth.AquariumPerformanceSettings
 import com.snipsnap.synth.AquariumRecipe
+import com.snipsnap.shell.AquariumPerformance
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
@@ -21,6 +22,8 @@ import kotlin.math.abs
 /** Real Oboe/JNI host controls and stereo capture; no claim about audible hardware output. */
 @RunWith(AndroidJUnit4::class)
 class AquariumPerformanceTest {
+    private fun main(action: () -> Unit) =
+        InstrumentationRegistry.getInstrumentation().runOnMainSync(action)
     private fun await(description: String, condition: () -> Boolean) {
         val deadline = System.nanoTime() + 10_000_000_000L
         while (!condition()) {
@@ -110,5 +113,56 @@ class AquariumPerformanceTest {
         assertFalse(engine.configureAquarium(AquariumPerformanceSettings()))
         assertFalse(engine.setAquariumTempo(120.0))
         assertEquals(0L, engine.aquariumLimitedFrames())
+    }
+
+    @Test fun kit_host_restores_settings_and_metadata_saves_do_not_replace_a_sounding_bank() {
+        val root = File(InstrumentationRegistry.getInstrumentation().targetContext.cacheDir,
+            "aquarium-performance-host-${System.nanoTime()}").apply { check(mkdirs()) }
+        val host = PadHost(48000)
+        try {
+            val audio = Snip(FloatArray(44100 * 8) { .2f }, 1, 44100)
+            WavWriter.write(File(root, "pad.wav"), audio)
+            val pad = KitPad(1, "pad.wav")
+            KitStore.save(Kit("PERFORMANCE HOST", listOf(pad), tempoBpm = 123.5f), root)
+            val wetMute = AquariumPerformanceSettings(
+                AquariumRecipe(mapOf("aqua_tide_mix" to 1f, "aqua_tide_depth" to 0f), seed = 0xffff_ffffL),
+                enabled = true, outputGain = 0f,
+            )
+            val saved = AquariumPerformance.save(root, wetMute)
+            main { host.open(); host.request(KitShelf.Entry(root, saved)) }
+            assertTrue(host.up)
+            await("the restored bank") { host.bankReady }
+            settle(host.engine)
+            assertEquals(wetMute, host.savedPerformance)
+            assertEquals(wetMute, host.engine.aquariumSettings())
+            val mute = capture(host.engine, pad, 31)
+            assertEquals(0f, mute.samples.maxOf { abs(it) }, 0f)
+
+            // Keep this one note sounding across the metadata save. Any
+            // accidental bank adoption ends it; the later print then fails.
+            val bypass = wetMute.copy(enabled = false)
+            main { host.auditionPerformance(bypass) }
+            settle(host.engine)
+            assertTrue(host.engine.hit(pad, 1f, 32))
+            val updated = AquariumPerformance.save(root, bypass)
+            main { host.request(KitShelf.Entry(root, updated)) }
+            val afterDebounce = host.engine.framesRendered() + (host.engine.sampleRate() * .5).toLong()
+            await("past any accidental bank reload") { host.engine.framesRendered() >= afterDebounce }
+            assertEquals(bypass, host.savedPerformance)
+            assertTrue(host.engine.armPrint(.04f))
+            await("the post-save print") { host.engine.printState() == PadEngine.PrintState.DONE }
+            val continuous = host.engine.stopPrint()!!
+            assertTrue("saving live metadata must preserve the already sounding note",
+                continuous.samples.maxOf { abs(it) } > .01f)
+            main {
+                host.auditionPerformance(wetMute)
+                host.revertPerformance()
+            }
+            assertEquals(bypass, host.performance)
+            assertEquals(bypass, host.engine.aquariumSettings())
+        } finally {
+            main { host.close() }
+            root.deleteRecursively()
+        }
     }
 }
