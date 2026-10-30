@@ -678,6 +678,10 @@ class PersonalityTest {
         // `…`-suffixed dock line as the named jobs above, for a write no
         // control of its own started.
         "SAVING_PAD_BUSY",
+        // App's own silent operations: setting the kit's key, IN KEY's retune
+        // of every tonal pad, and NEW PROJECT's make-and-open - the same
+        // `…`-suffixed dock line as every other *_BUSY constant above.
+        "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
     )
 
     /**

@@ -926,6 +926,12 @@ object Copy {
     fun inKey(n: Int, key: String): String = "$n ${if (n == 1) "PAD" else "PADS"} RETUNED INTO $key. THE KICK IS UNTOUCHED."
     const val IN_KEY_NONE = "NOTHING MOVED. NO TONAL PAD HOLDS A NOTE THE TUNER IS SURE OF."
     const val IN_KEY_NEEDS_KEY = "SET A KEY FIRST."
+    /** The dock's line while the kit's key is written (KEY, from the KIT panel). It shows only if the write is slow. */
+    const val KEY_BUSY = "SETTING THE KEY…"
+    /** The dock's line while IN KEY reads and retunes every tonal pad of the kit. */
+    const val IN_KEY_BUSY = "TUNING THE PADS TO THE KEY…"
+    /** The dock's line while NEW PROJECT ▸ makes the project and opens it. */
+    const val NEW_PROJECT_BUSY = "STARTING THE PROJECT…"
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
@@ -2831,9 +2837,10 @@ object Copy {
      * WORKING…, said in two places. On a button it is what TalkBack hears as
      * the state while the job the button started is running: its
      * `stateDescription`, beside the label it keeps and the ring drawn at its
-     * edge. On the dock it is the line a screen reports (`ReportBusy`) for a
-     * job it cannot name. It is never a visible label on a button: the
-     * button keeps its own words.
+     * edge. On the dock it is the fallback line for a job that has no name of
+     * its own, whether a screen reports it (`ReportBusy`) or it is begun on
+     * the app's job board (`LocalJobs`). It is never a visible label on a
+     * button: the button keeps its own words.
      */
     const val WORKING_BUSY = "WORKING…"
     // The dock's line for the jobs the pad editor and SPLIT start, each said

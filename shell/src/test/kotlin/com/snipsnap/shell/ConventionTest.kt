@@ -3633,4 +3633,112 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: every App project handler is guarded ----
+
+    /**
+     * The project actions (a project opened, a kit opened or switched or
+     * added, a new project) change which project and kit the whole app is
+     * looking at. `busy` is App's own job: a starter being rendered, a
+     * remix, a pack. A tap on one of these while it runs moved the open
+     * kit out from under the job, and a double tap on NEW PROJECT made two
+     * projects, because the handler launched before anything said it was
+     * under way. Every other App handler that starts work opens with
+     * `if (busy != null) return`; these five were the ones that did not.
+     *
+     * "First" is the law's whole point: a guard placed after
+     * `val p = project ?: return` still guards, but a guard that is not the
+     * first statement is one an edit can slip a launch in front of, and the
+     * first-statement shape is what a reader scanning the handlers sees.
+     * Comment-only and blank lines before it are skipped.
+     *
+     * Two more things hold of NEW PROJECT, because its guard is only worth
+     * having if the flag it reads is raised in time, and because the guard
+     * it shares with [openProject] is a trap for its own landing:
+     *  - `busy` goes up in the handler, before the `launch` (the same rule
+     *    as "a busy guard is raised before its launch"), or two quick taps
+     *    both find it down;
+     *  - `busy` comes down before `openProject(p)` is called. `openProject`
+     *    opens with the guard, so a landing made with the flag still up
+     *    would be refused by the very job that made the project, leaving it
+     *    on the shelf and the screen where it was.
+     */
+    private val projectHandlers = listOf("openProject", "openKit", "activateKit", "addKitToProject", "newProject")
+    private val projectGuard = "if (busy != null) return"
+
+    /** The `{ ... }` body of the one `fun <name>(` in [code] (already stripped of comments and strings), brace-matched. */
+    private fun funBody(code: String, name: String): String {
+        val decls = Regex("""\bfun $name\(""").findAll(code).toList()
+        assertEquals(1, decls.size, "expected exactly one `fun $name(`, found ${decls.size}; this scan reads one body, so a second declaration would be unchecked")
+        val open = code.indexOf('{', decls[0].range.last)
+        assertTrue(open >= 0, "expected a `{` body after `fun $name(`")
+        var depth = 0
+        for (i in open until code.length) {
+            if (code[i] == '{') depth++
+            if (code[i] == '}') {
+                depth--
+                if (depth == 0) return code.substring(open + 1, i)
+            }
+        }
+        fail("unbalanced braces in `fun $name(`")
+    }
+
+    /** The first statement of the body: its first line that is not blank. Comments are gone from [code] already. */
+    private fun firstStatement(body: String): String =
+        body.lines().map { it.trim() }.firstOrNull { it.isNotEmpty() } ?: ""
+
+    @Test
+    fun `every App project handler is guarded`() {
+        // The scan has to see an unguarded handler as unguarded, and a guarded
+        // one, with a comment above its guard, as guarded; otherwise a clean
+        // result would mean nothing.
+        val unguarded = stripCommentsAndStrings(
+            "fun openKit(entry: Entry) {\n        scope.launch {\n            val p = load(entry)\n        }\n    }\n",
+        )
+        assertEquals(
+            "scope.launch {",
+            firstStatement(funBody(unguarded, "openKit")),
+            "the scan no longer reads the first statement of a handler that has no guard",
+        )
+        val guardSecond = stripCommentsAndStrings(
+            "fun activateKit(folder: String) {\n        val p = project ?: return\n        if (busy != null) return\n    }\n",
+        )
+        assertFalse(
+            firstStatement(funBody(guardSecond, "activateKit")) == projectGuard,
+            "the scan accepts a guard that is the second statement; the law means the first",
+        )
+        val guarded = stripCommentsAndStrings(
+            "fun openProject(p: Project) {\n        // Not while a job is under way.\n\n        if (busy != null) return\n        project = p\n    }\n",
+        )
+        assertEquals(
+            projectGuard,
+            firstStatement(funBody(guarded, "openProject")),
+            "the scan no longer sees a guard that has a comment and a blank line above it",
+        )
+
+        val code = stripCommentsAndStrings(appKt.readText(Charsets.UTF_8))
+        val unguardedNames = projectHandlers.filter { firstStatement(funBody(code, it)) != projectGuard }
+        assertTrue(
+            unguardedNames.isEmpty(),
+            "App's project handlers must open with `$projectGuard`: a tap on one while a job runs moves the open " +
+                "project or kit out from under it, and a double tap runs the action twice. Missing from: $unguardedNames",
+        )
+
+        val newProject = funBody(code, "newProject")
+        val raised = newProject.indexOf("busy = Busy(Copy.NEW_PROJECT_BUSY)")
+        val launched = newProject.indexOf("launch")
+        assertTrue(raised >= 0, "`newProject` no longer raises `busy = Busy(Copy.NEW_PROJECT_BUSY)`, so a second tap finds the flag down")
+        assertTrue(
+            launched < 0 || raised < launched,
+            "`newProject` raises `busy` inside or after its launch, so two quick taps both pass the guard. Raise it in the handler, before the `launch`.",
+        )
+        val lowered = newProject.indexOf("busy = null")
+        val landed = newProject.indexOf("openProject(")
+        assertTrue(lowered >= 0, "`newProject` never lowers `busy`, so the first new project would lock App's actions for good")
+        assertTrue(
+            landed < 0 || lowered < landed,
+            "`newProject` calls `openProject(` before it lowers `busy`; `openProject` opens with `$projectGuard`, " +
+                "so the landing would be refused by the job that made the project. Lower the flag first.",
+        )
+    }
+
 }
