@@ -3644,11 +3644,8 @@ class ConventionTest {
      * added, a new project) change which project and kit the whole app is
      * looking at. `busy` is App's own job: a starter being rendered, a
      * remix, a pack. A tap on one of these while it runs moved the open
-     * kit out from under the job, and a double tap on NEW PROJECT could make
-     * two projects, because the handler launched before anything said it was
-     * under way. The handlers that raise `busy` guard with
-     * `if (busy != null) return` before they launch; these five were the
-     * project actions that had no guard at all.
+     * kit out from under the job. These five were the project actions that
+     * had no guard at all, so each opens with `if (busy != null) return`.
      *
      * "First" is the law's whole point: a guard placed after
      * `val p = project ?: return` still guards, but a guard that is not the
@@ -3656,19 +3653,76 @@ class ConventionTest {
      * first-statement shape is what a reader scanning the handlers sees.
      * Comment-only and blank lines before it are skipped.
      *
-     * Two more things hold of NEW PROJECT, because its guard is only worth
-     * having if the flag it reads is raised in time, and because the guard
-     * it shares with [openProject] is a trap for its own landing:
-     *  - `busy` goes up in the handler, before the `launch` (the same rule
-     *    as "a busy guard is raised before its launch"), or two quick taps
-     *    both find it down;
-     *  - `busy` comes down before `openProject(p)` is called. `openProject`
-     *    opens with the guard, so a landing made with the flag still up
-     *    would be refused by the very job that made the project, leaving it
-     *    on the shelf and the screen where it was.
+     * The guard alone does not stop a double tap. It refuses a tap only
+     * while some other job holds `busy`, and four of the five launch
+     * (`openKit`, `activateKit`, `addKitToProject`, `newProject`): `launch`
+     * only schedules, so a second tap in the beat before the coroutine starts
+     * finds nothing saying the first is under way. Two taps on a kit no
+     * project holds could make two projects. So each of those four also
+     * holds, by [raiseProblems]:
+     *  - `busy` goes up in the handler, with the handler's own
+     *    `Busy(Copy.<X>_BUSY)`, before the `launch` (the same rule as "a busy
+     *    guard is raised before its launch"), or two quick taps both find it
+     *    down. After `val p = project ?: return`, if the handler has one, so
+     *    an early return cannot leave the flag up;
+     *  - `busy` comes down in a `finally`, so a failure or a cancel cannot
+     *    lock App's actions for good;
+     *  - `busy` comes down before the handler calls another handler of this
+     *    list. Each of them opens with the guard, so a landing made with the
+     *    flag still up would be refused by the very job that made it. Only
+     *    `newProject` calls one today (`openProject(p)`): the project would
+     *    stay on the shelf and the screen where it was.
+     *
+     * `openProject` launches nothing and raises nothing: it is the landing,
+     * and only guarded.
      */
     private val projectHandlers = listOf("openProject", "openKit", "activateKit", "addKitToProject", "newProject")
     private val projectGuard = "if (busy != null) return"
+
+    /** The handlers of [projectHandlers] that launch, and the `Copy` constant each raises `busy` with. */
+    private val projectRaises = mapOf(
+        "openKit" to "OPENING_KIT_BUSY",
+        "activateKit" to "SWITCHING_KIT_BUSY",
+        "addKitToProject" to "ADDING_KIT_BUSY",
+        "newProject" to "NEW_PROJECT_BUSY",
+    )
+
+    /**
+     * What is wrong with how the project handler [name], whose stripped body
+     * is [body], raises and lowers `busy` around its launch; empty when
+     * nothing is. One sentence per fault, each naming the handler, so the
+     * failure says which guard went and why.
+     */
+    private fun raiseProblems(name: String, body: String, constant: String): List<String> {
+        val problems = mutableListOf<String>()
+        val raise = "busy = Busy(Copy.$constant)"
+        val raised = body.indexOf(raise)
+        val launched = body.indexOf("launch")
+        if (raised < 0) {
+            problems += "`$name` never raises `$raise`, so its guard refuses a tap only while another job holds `busy` and a double tap runs it twice"
+        } else if (launched >= 0 && raised > launched) {
+            problems += "`$name` raises `busy` inside or after its launch, so two quick taps both pass the guard. Raise it in the handler, before the `launch`."
+        }
+        // An early `return` (not `return@launch`, which is the coroutine's own)
+        // after the raise would leave the flag up for good.
+        val lastReturn = Regex("""\breturn\b(?!@)""").findAll(body).map { it.range.first }.filter { launched < 0 || it < launched }.maxOrNull()
+        if (raised >= 0 && lastReturn != null && lastReturn > raised) {
+            problems += "`$name` can return after it raises `busy`, leaving the flag up; raise it after the last early `return`"
+        }
+        val lowered = body.indexOf("busy = null")
+        if (!Regex("""finally\s*\{\s*busy = null""").containsMatchIn(body)) {
+            problems += "`$name` does not lower `busy` in a `finally { busy = null }`, so a failure or a cancel would lock App's actions for good"
+        }
+        for (other in projectHandlers) {
+            if (other == name) continue
+            val call = Regex("""(?<![.\w])$other\(""").find(body) ?: continue
+            if (lowered < 0 || lowered > call.range.first) {
+                problems += "`$name` calls `$other(` before it lowers `busy`; `$other` opens with `$projectGuard`, " +
+                    "so the landing would be refused by the job that made it. Lower the flag first."
+            }
+        }
+        return problems
+    }
 
     /** The `{ ... }` body of the one `fun <name>(` in [code] (already stripped of comments and strings), brace-matched. */
     private fun funBody(code: String, name: String): String {
@@ -3720,29 +3774,75 @@ class ConventionTest {
             "the scan no longer sees a guard that has a comment and a blank line above it",
         )
 
+        // The raise check has to see each fault it names, and let a right
+        // handler through; otherwise a clean result would mean nothing. The
+        // second body guards and launches and lowers, but never raises: the
+        // shape the three kit handlers had.
+        val right = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.OPENING_KIT_BUSY)\n        scope.launch {\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n            project = p\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            raiseProblems("openKit", right, "OPENING_KIT_BUSY"),
+            "the raise check rejects a handler that raises before its launch and lowers in a finally",
+        )
+        val guardsNeverRaises = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n            project = p\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", guardsNeverRaises, "OPENING_KIT_BUSY").any { "never raises" in it },
+            "the raise check accepts a handler that guards but never raises `busy`",
+        )
+        val raisesInside = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            busy = Busy(Copy.OPENING_KIT_BUSY)\n            val p = try {\n                load(entry)\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", raisesInside, "OPENING_KIT_BUSY").any { "inside or after its launch" in it },
+            "the raise check accepts a handler that raises `busy` inside its launch",
+        )
+        val landsFirst = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.NEW_PROJECT_BUSY)\n        scope.launch {\n            try {\n                openProject(make())\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("newProject", landsFirst, "NEW_PROJECT_BUSY").any { "calls `openProject(` before it lowers" in it },
+            "the raise check accepts a handler that lands through `openProject(` with `busy` still up",
+        )
+        val neverLowers = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.OPENING_KIT_BUSY)\n        scope.launch {\n            val p = load(entry)\n            busy = null\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("openKit", neverLowers, "OPENING_KIT_BUSY").any { "does not lower" in it },
+            "the raise check accepts a handler that lowers `busy` outside a `finally`",
+        )
+        val raisesBeforeReturn = stripCommentsAndStrings(
+            "if (busy != null) return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        val p = project ?: return\n        scope.launch {\n            try {\n                save(p)\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertTrue(
+            raiseProblems("activateKit", raisesBeforeReturn, "SWITCHING_KIT_BUSY").any { "can return after" in it },
+            "the raise check accepts a handler that raises `busy` and then returns early, leaving the flag up",
+        )
+        val returnsBeforeRaise = stripCommentsAndStrings(
+            "if (busy != null) return\n        val p = project ?: return\n        busy = Busy(Copy.SWITCHING_KIT_BUSY)\n        scope.launch {\n            try {\n                save(p)\n                return@launch\n            } finally {\n                busy = null\n            }\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            raiseProblems("activateKit", returnsBeforeRaise, "SWITCHING_KIT_BUSY"),
+            "the raise check rejects a handler that returns early before it raises, or reads a `return@launch` as an early return",
+        )
+
         val code = stripCommentsAndStrings(appKt.readText(Charsets.UTF_8))
         val unguardedNames = projectHandlers.filter { firstStatement(funBody(code, it)) != projectGuard }
         assertTrue(
             unguardedNames.isEmpty(),
             "App's project handlers must open with `$projectGuard`: a tap on one while a job runs moves the open " +
-                "project or kit out from under it, and a double tap runs the action twice. Missing from: $unguardedNames",
+                "project or kit out from under it. Missing from: $unguardedNames",
         )
 
-        val newProject = funBody(code, "newProject")
-        val raised = newProject.indexOf("busy = Busy(Copy.NEW_PROJECT_BUSY)")
-        val launched = newProject.indexOf("launch")
-        assertTrue(raised >= 0, "`newProject` no longer raises `busy = Busy(Copy.NEW_PROJECT_BUSY)`, so a second tap finds the flag down")
+        val raiseFaults = projectRaises.flatMap { (name, constant) -> raiseProblems(name, funBody(code, name), constant) }
         assertTrue(
-            launched < 0 || raised < launched,
-            "`newProject` raises `busy` inside or after its launch, so two quick taps both pass the guard. Raise it in the handler, before the `launch`.",
-        )
-        val lowered = newProject.indexOf("busy = null")
-        val landed = newProject.indexOf("openProject(")
-        assertTrue(lowered >= 0, "`newProject` never lowers `busy`, so the first new project would lock App's actions for good")
-        assertTrue(
-            landed < 0 || lowered < landed,
-            "`newProject` calls `openProject(` before it lowers `busy`; `openProject` opens with `$projectGuard`, " +
-                "so the landing would be refused by the job that made the project. Lower the flag first.",
+            raiseFaults.isEmpty(),
+            "the guard refuses a tap only while another job holds `busy`; a handler that launches must raise its own " +
+                "`busy` before the launch, or a double tap on it runs it twice, and lower it in a `finally`. $raiseFaults",
         )
     }
 

@@ -2937,6 +2937,11 @@ fun App(shelf: KitShelf) {
      */
     fun openKit(entry: KitShelf.Entry) {
         if (busy != null) return
+        // Raised here, before the launch, so a second tap in the beat before
+        // the coroutine starts finds it up and does nothing: `projectForKit`
+        // is not synchronised, so two taps on a kit no project holds could
+        // make two projects.
+        busy = Busy(Copy.OPENING_KIT_BUSY)
         scope.launch {
             val p = try {
                 withContext(Dispatchers.IO) { shelfModel.projectForKit(entry.dir.name).activated(entry.dir.name) }
@@ -2946,6 +2951,12 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "openKit: no project for ${entry.dir.name}", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // The landing below sets state directly and calls no guarded
+                // handler, so nothing needs the flag down first; it comes down
+                // here, in the same place as `newProject`'s, so a failure or a
+                // cancel cannot leave it up.
+                busy = null
             }
             // Re-read after the await: the shelf may have moved under us.
             project = p
@@ -2974,6 +2985,9 @@ fun App(shelf: KitShelf) {
     fun activateKit(kitFolder: String) {
         if (busy != null) return
         val p = project ?: return
+        // After the `project ?: return` above, so a refused call cannot leave
+        // the flag up; before the launch, so a second tap finds it.
+        busy = Busy(Copy.SWITCHING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) { shelfModel.activate(p.name, kitFolder) }
@@ -2983,6 +2997,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "activateKit: failed", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             val activated = kits.firstOrNull { it.dir.name == kitFolder }
@@ -3002,6 +3020,8 @@ fun App(shelf: KitShelf) {
      */
     fun addKitToProject(target: Project, entry: KitShelf.Entry) {
         if (busy != null) return
+        // Raised here, before the launch, so a second tap finds it up.
+        busy = Busy(Copy.ADDING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) {
@@ -3014,6 +3034,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "addKitToProject: failed", e)
                 dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             open = kits.firstOrNull { it.dir == entry.dir } ?: entry
@@ -3029,7 +3053,7 @@ fun App(shelf: KitShelf) {
         if (busy != null) return
         // Raised here, before the launch, so a second tap in the beat before
         // the coroutine starts finds it up and does nothing: two quick taps
-        // made two projects.
+        // could make two projects.
         busy = Busy(Copy.NEW_PROJECT_BUSY)
         scope.launch {
             val p = try {

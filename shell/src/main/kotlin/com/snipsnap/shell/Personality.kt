@@ -930,8 +930,18 @@ object Copy {
     const val KEY_BUSY = "SETTING THE KEY…"
     /** The dock's line while IN KEY reads and retunes every tonal pad of the kit. */
     const val IN_KEY_BUSY = "TUNING THE PADS TO THE KEY…"
-    /** The dock's line while NEW PROJECT ▸ makes the project and opens it. */
+    /**
+     * The dock's line while NEW PROJECT ▸ makes the project. It comes down
+     * before the project opens, not after, so the open is not refused by the
+     * job that made the project.
+     */
     const val NEW_PROJECT_BUSY = "STARTING THE PROJECT…"
+    /** The dock's line while a kit row on the shelf finds or makes the project that holds it, before the kit opens. */
+    const val OPENING_KIT_BUSY = "OPENING THE KIT…"
+    /** The dock's line while `+ FROM SHELF`'s pick joins the kit to the open project and makes it the active kit. */
+    const val ADDING_KIT_BUSY = "ADDING THE KIT…"
+    /** The dock's line while the kit switcher saves the project's active kit. */
+    const val SWITCHING_KIT_BUSY = "SWITCHING KITS…"
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
