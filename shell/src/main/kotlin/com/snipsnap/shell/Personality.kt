@@ -926,6 +926,22 @@ object Copy {
     fun inKey(n: Int, key: String): String = "$n ${if (n == 1) "PAD" else "PADS"} RETUNED INTO $key. THE KICK IS UNTOUCHED."
     const val IN_KEY_NONE = "NOTHING MOVED. NO TONAL PAD HOLDS A NOTE THE TUNER IS SURE OF."
     const val IN_KEY_NEEDS_KEY = "SET A KEY FIRST."
+    /** The dock's line while the kit's key is written (KEY, from the KIT panel). It shows only if the write is slow. */
+    const val KEY_BUSY = "SETTING THE KEY…"
+    /** The dock's line while IN KEY reads and retunes every tonal pad of the kit. */
+    const val IN_KEY_BUSY = "TUNING THE PADS TO THE KEY…"
+    /**
+     * The dock's line while NEW PROJECT ▸ makes the project. It comes down
+     * before the project opens, not after, so the open is not refused by the
+     * job that made the project.
+     */
+    const val NEW_PROJECT_BUSY = "STARTING THE PROJECT…"
+    /** The dock's line while a kit row on the shelf finds or makes the project that holds it, before the kit opens. */
+    const val OPENING_KIT_BUSY = "OPENING THE KIT…"
+    /** The dock's line while `+ FROM SHELF`'s pick joins the kit to the open project and makes it the active kit. */
+    const val ADDING_KIT_BUSY = "ADDING THE KIT…"
+    /** The dock's line while the kit switcher saves the project's active kit. */
+    const val SWITCHING_KIT_BUSY = "SWITCHING KITS…"
 
     // ---- Settings: teach the machine (X4.4) ----
     const val TEACHING_ON = "TEACHING ON. THE MACHINE LEARNS FROM YOUR CORRECTIONS."
@@ -2829,19 +2845,31 @@ object Copy {
     fun busyCount(done: Int, total: Int): String = "$done OF $total"
     /** The dock's busy line while something loads and there is no name to give it. */
     const val LOADING_BUSY = "LOADING…"
+    /** The dock's line while KIT reads the kit's pads off disk into the engine's bank (on opening it and after an edit, so it shows only if the read is slow). */
+    const val KIT_LOADING_BUSY = "LOADING THE KIT…"
+    /** The dock's line while KEYS reads the instrument's zones off disk into its player; until it ends a key plays nothing. */
+    const val KEYS_LOADING_BUSY = "LOADING THE KEYS…"
+    /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
+    const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**
      * WORKING…, said in two places. On a button it is what TalkBack hears as
      * the state while the job the button started is running: its
      * `stateDescription`, beside the label it keeps and the ring drawn at its
-     * edge. On the dock it is the line a screen reports (`ReportBusy`) for a
-     * job it cannot name. It is never a visible label on a button: the
-     * button keeps its own words.
+     * edge. On the dock it is the fallback line for a job that has no name of
+     * its own, whether a screen reports it (`ReportBusy`) or it is begun on
+     * the app's job board (`LocalJobs`). It is never a visible label on a
+     * button: the button keeps its own words.
      */
     const val WORKING_BUSY = "WORKING…"
     // The dock's line for the jobs the pad editor and SPLIT start, each said
     // in the word of the control that started it. A treatment says its own
-    // name through `treatmentBusy`; a job with no word at all (SAVE, a file
-    // decode, the mic trip, UNDO) falls back to WORKING_BUSY.
+    // name through `treatmentBusy`. SAVING_PAD_BUSY is what `commitPadEditNow`
+    // says when its caller gives it no word (PASTE, SOFT HITS, EJECT, and
+    // both UNDOs) and what the flush the editor hands on when it closes says.
+    // Every other job the editor starts falls back to WORKING_BUSY, and that
+    // includes some writes (a board or AQUARIUM KEEP, NONE, KEEP ROOM, MAKE
+    // A GATHERING, the debounced save) as well as decodes, the mic trip and
+    // previews.
     /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
     const val MUTATE_BUSY = "MUTATING…"
     /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
@@ -2854,6 +2882,16 @@ object Copy {
     const val SPREAD_BUSY = "SPREADING…"
     /** The dock's line while SPLIT takes a pad apart into its three parts. */
     const val SPLIT_BUSY = "SPLITTING…"
+    /**
+     * The dock's line for two kinds of write in the pad editor: the ones
+     * `commitPadEditNow` runs for a caller that gives it no word of its own
+     * (PASTE, SOFT HITS, EJECT, and both UNDOs), and the flush the editor
+     * hands on when it closes with an edit the debounce had not written. That
+     * last one is why the line exists: the write outlives the editor, and the
+     * job board keeps it on the dock until it lands. Other writes the editor
+     * starts say [WORKING_BUSY].
+     */
+    const val SAVING_PAD_BUSY = "SAVING THE PAD…"
     /** The KITS screen's placeholder line while the library is read from disk. */
     const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
     /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */

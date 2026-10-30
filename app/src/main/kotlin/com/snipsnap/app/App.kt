@@ -57,6 +57,7 @@ import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.rememberReduceMotion
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
+import com.snipsnap.app.ui.AppJobs
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
@@ -78,6 +79,7 @@ import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LocalBusySink
+import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -461,15 +463,21 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
-    // The job a screen is carrying on its own (the pad editor's jobs, Split,
-    // and a recording being read in TAPE and CHOP), reported through
-    // `LocalBusySink` and gone when the screen is: an `appScope` job that
-    // outlives its screen is not shown after it goes (a later app-owned job
-    // board covers that). It is kept apart from `busy` on purpose: `busy` is
-    // App's own job and gates App's own work (`if (busy != null) return`), and
-    // a screen's job must not lock App's actions out. The dock shows App's
-    // first.
+    // The job a screen is carrying on its own (Split, and a recording being
+    // read in TAPE and CHOP), reported through `LocalBusySink` and gone when
+    // the screen is. Work that outlives its screen is not reported here: the
+    // pad editor, whose writes run on `appScope`, begins its jobs on the job
+    // board (`jobs`, below, found by the screens as `LocalJobs`), which the
+    // app owns and which keeps an entry until its job ends. This is kept
+    // apart from `busy` on purpose: `busy` is App's own job and gates App's
+    // own work (`if (busy != null) return`), and a screen's job must not lock
+    // App's actions out. The dock shows App's first, then the board's, then
+    // this.
     var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // The jobs the app owns that outlive the screen that began them, provided
+    // to every screen as `LocalJobs`. Like `screenBusy` it never gates App's
+    // own work; unlike it, an entry stays until its owner ends it.
+    val jobs = remember { AppJobs() }
     // Remembered, so the sink the screens read is one object for the life of
     // the composition: a static local that changed would recompose all of it.
     val busySink = remember { { reported: Busy? -> screenBusy = reported } }
@@ -1537,24 +1545,33 @@ fun App(shelf: KitShelf) {
     fun setKey(key: com.snipsnap.audio.KeySpec?) {
         val source = open ?: return
         if (busy != null) return
+        // On the job board, not on `busy`: the dock says SETTING THE KEY… if
+        // the write is slow (it shows only after the latch's 200 ms), while
+        // every other control stays live, as it always was for this write.
+        // Begun here, before the launch, and ended in the launch's `finally`.
+        val job = jobs.begin(Busy(Copy.KEY_BUSY))
         scope.launch {
-            val entry = try {
-                // KitShelf.setKey is its own open→mutate→save on this kit's
-                // kit.json — the same file PAD SHEET/PAD CAPTURE/SYNTH/TAKES+BIN
-                // write, so it goes through the same KitWrites lock they do.
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
-            } catch (e: Exception) {
-                Log.e(TAG, "setKey: failed", e)
-                dock.say(Copy.KEY_FAILED)
-                return@launch
+            try {
+                val entry = try {
+                    // KitShelf.setKey is its own open→mutate→save on this kit's
+                    // kit.json — the same file PAD SHEET/PAD CAPTURE/SYNTH/TAKES+BIN
+                    // write, so it goes through the same KitWrites lock they do.
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
+                } catch (e: Exception) {
+                    Log.e(TAG, "setKey: failed", e)
+                    dock.say(Copy.KEY_FAILED)
+                    return@launch
+                }
+                // Same identity guard as the KIT branch's onKitUpdated closures
+                // above: this write ran against `source.dir`, not necessarily
+                // whichever kit is open by the time it lands (setKey sets no
+                // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                dock.say(key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF)
+            } finally {
+                job.end()
             }
-            // Same identity guard as the KIT branch's onKitUpdated closures
-            // above: this write ran against `source.dir`, not necessarily
-            // whichever kit is open by the time it lands (setKey sets no
-            // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
-            if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            dock.say(key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF)
         }
     }
 
@@ -2791,21 +2808,29 @@ fun App(shelf: KitShelf) {
             dock.say(Copy.IN_KEY_NEEDS_KEY)
             return
         }
+        // On the job board, like setKey above: it reads and retunes every
+        // tonal pad of the kit, which is the longer of the two, so the line
+        // matters here.
+        val job = jobs.begin(Busy(Copy.IN_KEY_BUSY))
         scope.launch {
-            val (entry, moved) = try {
-                // Same reasoning as setKey above: inKey is an
-                // open→mutate→save on kit.json.
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
-            } catch (e: Exception) {
-                Log.e(TAG, "inKey: failed", e)
-                dock.say(Copy.IN_KEY_FAILED)
-                return@launch
+            try {
+                val (entry, moved) = try {
+                    // Same reasoning as setKey above: inKey is an
+                    // open→mutate→save on kit.json.
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
+                } catch (e: Exception) {
+                    Log.e(TAG, "inKey: failed", e)
+                    dock.say(Copy.IN_KEY_FAILED)
+                    return@launch
+                }
+                // Same identity guard as setKey above — inKey sets no `busy`
+                // either, so nothing stops a tab-away-and-reopen mid-write.
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                dock.say(if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key)))
+            } finally {
+                job.end()
             }
-            // Same identity guard as setKey above — inKey sets no `busy`
-            // either, so nothing stops a tab-away-and-reopen mid-write.
-            if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            dock.say(if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key)))
         }
     }
 
@@ -2904,6 +2929,7 @@ fun App(shelf: KitShelf) {
      * opens with no kit, which PADS already says.
      */
     fun openProject(p: Project) {
+        if (busy != null) return
         project = p
         open = kits.firstOrNull { it.dir.name == p.activeKit }
         goToScreen(AppScreen.KIT)
@@ -2917,6 +2943,12 @@ fun App(shelf: KitShelf) {
      * says: the row the user chose is the kit they want on the grid.
      */
     fun openKit(entry: KitShelf.Entry) {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap in the beat before
+        // the coroutine starts finds it up and does nothing: `projectForKit`
+        // is not synchronised, so two taps on a kit no project holds could
+        // make two projects.
+        busy = Busy(Copy.OPENING_KIT_BUSY)
         scope.launch {
             val p = try {
                 withContext(Dispatchers.IO) { shelfModel.projectForKit(entry.dir.name).activated(entry.dir.name) }
@@ -2926,6 +2958,12 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "openKit: no project for ${entry.dir.name}", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // The landing below sets state directly and calls no guarded
+                // handler, so nothing needs the flag down first; it comes down
+                // here, in the same place as `newProject`'s, so a failure or a
+                // cancel cannot leave it up.
+                busy = null
             }
             // Re-read after the await: the shelf may have moved under us.
             project = p
@@ -2952,7 +2990,11 @@ fun App(shelf: KitShelf) {
      * it. A failure says so and leaves the grid where it was.
      */
     fun activateKit(kitFolder: String) {
+        if (busy != null) return
         val p = project ?: return
+        // After the `project ?: return` above, so a refused call cannot leave
+        // the flag up; before the launch, so a second tap finds it.
+        busy = Busy(Copy.SWITCHING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) { shelfModel.activate(p.name, kitFolder) }
@@ -2962,6 +3004,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "activateKit: failed", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             val activated = kits.firstOrNull { it.dir.name == kitFolder }
@@ -2980,6 +3026,9 @@ fun App(shelf: KitShelf) {
      * project and every project sees the edit (`DIRECTION_2026_10.md` §2).
      */
     fun addKitToProject(target: Project, entry: KitShelf.Entry) {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap finds it up.
+        busy = Busy(Copy.ADDING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) {
@@ -2992,6 +3041,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "addKitToProject: failed", e)
                 dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             open = kits.firstOrNull { it.dir == entry.dir } ?: entry
@@ -3004,6 +3057,11 @@ fun App(shelf: KitShelf) {
      * Its name is a roll ([Names.roll]) against the projects already on the shelf, not "New Project 2".
      */
     fun newProject() {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap in the beat before
+        // the coroutine starts finds it up and does nothing: two quick taps
+        // could make two projects.
+        busy = Busy(Copy.NEW_PROJECT_BUSY)
         scope.launch {
             val p = try {
                 withContext(Dispatchers.IO) {
@@ -3015,6 +3073,11 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "newProject: failed", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // Down before the landing below, not after it: `openProject`
+                // opens with `if (busy != null) return`, and would refuse the
+                // project this job just made.
+                busy = null
             }
             openProject(p)
         }
@@ -3263,7 +3326,13 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
+    TapeTheme(
+        scheme,
+        LocalHaptics provides haptics,
+        LocalReduceMotion provides reduceMotion,
+        LocalBusySink provides busySink,
+        LocalJobs provides jobs,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -4225,7 +4294,7 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy ?: screenBusy,
+                    busy = busy ?: jobs.current ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's
@@ -4258,7 +4327,12 @@ fun App(shelf: KitShelf) {
                 ChoiceSheet(
                     rows = p?.kits.orEmpty().map { folder ->
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
-                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) { kitSheetOpen = false; activateKit(folder) }
+                        // A sheet opened just before a job started: the tap does
+                        // nothing visible and the sheet stays, rather than
+                        // closing on a switch `activateKit` would refuse.
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) {
+                            if (busy == null) { kitSheetOpen = false; activateKit(folder) }
+                        }
                     } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
                     onDismiss = { kitSheetOpen = false },
                 )
