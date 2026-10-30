@@ -851,13 +851,6 @@ fun SynthScreen(
                     else editable)
                 }
             }
-            for (v in TremorVoice.entries) {
-                val pair = Engine.TREMOR to v
-                if (!containsKey(pair) && !embouchureRestore.waitsForRecipe(pair.first, pair.second)) {
-                    put(pair, TremorPatch(Engine.TREMOR.patchDisplayName(v), v,
-                        macrosByVoice.getValue(pair), model = seed.tremorModelsWithoutRecipe.getValue(v)))
-                }
-            }
             // SCANNED CHAIN's saved recipe holds its whole shape and settings.
             for ((v, recipe) in seed.restoredScannedRecipes) put(Engine.SCANNED_CHAIN to v, requireNotNull(recipe.patch))
             // A reopened pad's working recipe replaces the draft and preset
@@ -908,18 +901,6 @@ fun SynthScreen(
         }
     }
     val macros = macrosByVoice.getValue(engine to voice)
-    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
-    // (engine, voice), so this is the one place the bag needs to follow; the
-    // pairs the player left earlier already wrote theirs when they were open.
-    LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
-        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
-        if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
-        if (engine == Engine.EMBOUCHURE) {
-            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
-            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
-        }
-        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
-    }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
@@ -1168,6 +1149,21 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as TidalVoice, macrosByVoice.getValue(pair),
             )
         }
+    }
+    // Every macro write (a slider, a preset, SCRAMBLE) lands on the current
+    // (engine, voice), so this is the one place the bag needs to follow; the
+    // pairs the player left earlier already wrote theirs when they were open.
+    LaunchedEffect(engine, voice, macros, embouchureRestore.pending.containsKey(engine to voice)) {
+        // Temporary model-2 controls must not replace a still-unread YOURS recipe.
+        if (embouchureRestore.pending.containsKey(engine to voice)) return@LaunchedEffect
+        // Keep a visited default's renderer before persisting its controls, so
+        // a later restore cannot mistake the new macro bag for an old model.
+        if (engine == Engine.TREMOR) ensureNativeDraft()
+        if (engine == Engine.EMBOUCHURE) {
+            val prefix = "$SETTINGS_MACRO_PREFIX${engine.name}.${voice.name}."
+            settings.keys.removeAll { it.startsWith(prefix) && it.removePrefix(prefix) !in macros }
+        }
+        for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun updateUprightVelocity(value: Float) {
         if (engine != Engine.PLUCK || voice != PluckVoice.UPRIGHT) return
@@ -3738,7 +3734,7 @@ private class SynthSeed(settings: Map<String, String>) {
     }
     val seededPresets = storedPresetNames(settings)
     // Old macro-only work predates a saved model field. New voices start at the
-    // current renderer and immediately get a typed draft; old work stays legacy.
+    // current renderer and get a typed draft when visited; old work stays legacy.
     val tremorModelsWithoutRecipe = TremorVoice.entries.associateWith { v ->
         if (settings.containsKey(presetSettingsKey(Engine.TREMOR, v)) ||
             Tremor.macrosFor(v).any { settings.containsKey(macroSettingsKey(Engine.TREMOR, v, it.name)) })

@@ -59,13 +59,15 @@ class TremorSynthScreenTest : ComposeScreenTest() {
     }
 
     private fun show(
-        voice: TremorVoice,
+        voice: TremorVoice? = null,
         patch: TremorPatch? = null,
         kit: Boolean = false,
         reader: ((File) -> Pair<List<UserPresets.Saved>, List<UserPresets.Binned>>)? = null,
     ) {
-        settings["engine"] = "TREMOR"
-        settings["voice"] = voice.name
+        if (voice != null) {
+            settings["engine"] = "TREMOR"
+            settings["voice"] = voice.name
+        }
         patch?.let { SynthDrafts.write(settings, listOf(it)) }
         if (kit) {
             val dir = File(shelf, "kit").apply { mkdirs() }
@@ -102,12 +104,29 @@ class TremorSynthScreenTest : ComposeScreenTest() {
     private fun draft(voice: TremorVoice): TremorPatch? = SynthDrafts.read(settings)
         .filterIsInstance<TremorPatch>().firstOrNull { it.voice == voice }
 
+    @Test fun opening_another_engine_does_not_create_tremor_work() {
+        show()
+        button("ENGINE THUMP. CHOOSE ENGINE").assertExists()
+        assertEquals(emptyList<TremorPatch>(), SynthDrafts.read(settings).filterIsInstance<TremorPatch>())
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals(emptyList<TremorPatch>(), SynthDrafts.read(settings).filterIsInstance<TremorPatch>())
+    }
+
     @Test fun fresh_work_and_explicit_factory_choices_use_the_current_renderer() {
         show(TremorVoice.WIRE)
         waitFor("current Tremor draft") { draft(TremorVoice.WIRE)?.model == Tremor.MODEL }
+        assertEquals(listOf(TremorVoice.WIRE), SynthDrafts.read(settings).filterIsInstance<TremorPatch>().map { it.voice })
         dial("CAGE", .73f)
+        press("ROLL")
+        waitFor("later visited Tremor default") { draft(TremorVoice.ROLL)?.model == Tremor.MODEL }
+        assertEquals(setOf(TremorVoice.WIRE, TremorVoice.ROLL),
+            SynthDrafts.read(settings).filterIsInstance<TremorPatch>().map { it.voice }.toSet())
         compose.runOnIdle { generation++ }
         pump()
+        assertEquals(Tremor.MODEL, draft(TremorVoice.ROLL)!!.model)
+        assertEquals(Tremor.defaults(TremorVoice.ROLL), draft(TremorVoice.ROLL)!!.macros)
+        press("WIRE")
         assertEquals(Tremor.MODEL, draft(TremorVoice.WIRE)!!.model)
         assertEquals(.73f, progress("CAGE"), 1e-6f)
         press("PRESET DRY CAGE")
