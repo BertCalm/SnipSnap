@@ -12,7 +12,7 @@ on 26 October 2026. That verdict covers the variation demonstrated there, not
 individual approval of every factory recipe or phone/MPC playback. Model 2 takes
 that R4 profile into versioned recipes. As of 30 October 2026, the integration
 and wider coordination correction are locally verified at engine commit
-`8c9c01254` on base `b6248f426`, with the editor follow-up at `a36667b3b` also
+`8c9c01254` on base `b6248f426`, with the editor follow-up at `828ce0793` also
 locally verified. The [factory audition](https://bertcalm-snipsnap-auditions.bertcalm.chatgpt.site/tremor-factory/)
 now supplies all thirteen production recipes at three touch strengths; the
 owner's factory verdict remains separate from the accepted R4 variation.
@@ -228,15 +228,17 @@ velocity rendering passes the saved model through. The editor retains typed
 recipes through edits, drafts, saving and sending; old macro-only work selects
 model 1, while an explicit current factory choice selects model 2.
 
-The editor follow-up at `a36667b3b` materializes a typed Tremor draft only for a
+The editor follow-up at `828ce0793` materializes a typed Tremor draft only for a
 voice the player visits, before persisting that voice's macro values. Opening
 another engine no longer creates six unsolicited Tremor drafts. A newly visited
 voice therefore saves its model 2 identity before its macro bag can be mistaken
 for legacy work on recreation. The Compose coverage includes opening/recreating
 THUMP with no Tremor drafts and visiting exactly WIRE and ROLL with their typed
 model 2 recipes surviving recreation. Pending named-recipe restoration remains
-authoritative. This follow-up changes editor persistence, not DSP or audition
-audio.
+authoritative. The early macro-persistence effect calls a small private
+top-level `retainTremorDraft` helper. This keeps it from capturing the larger
+editor-local helper, which produced an invalid constructor receiver in DEX and
+an ART verification failure. DSP and audition audio are unchanged.
 
 The R4 prototype's ninety-case Kotlin harness recorded no raw rail hits. Its
 54 ordinary voice/note/touch cases had a worst open spectral-peak offset of
@@ -382,11 +384,11 @@ tuning and page operation, not individual musical approval of the recipes.
   frame input, an anchor-referenced powered readout budget and prepared-force
   timing coordination, including recurring/main held-contact planning and the
   explicit 12 ms initial-contact ceiling.
-- **Editor follow-up at `a36667b3b`:** only visited Tremor voices materialize a
-  typed draft before macro persistence. Seven Compose methods cover model
-  retention, legacy migration and restoration, including unrelated-engine and
-  visited-default regressions. Factory audio remains sourced from the unchanged
-  engine at `8c9c01254`.
+- **Editor follow-up at `828ce0793`:** only visited Tremor voices materialize a
+  typed draft before macro persistence, through the small top-level helper.
+  Seven Compose methods cover model retention, legacy migration and restoration,
+  including unrelated-engine and visited-default regressions. Factory audio
+  remains sourced from the unchanged engine at `8c9c01254`.
 - **Contract findings:** legacy classifier alignment remains model-specific;
   model 2's import classifications and the unchanged authored factory roles are
   recorded separately. WIRE's signed `circuitWork` can be negative with an active
@@ -404,17 +406,21 @@ tuning and page operation, not individual musical approval of the recipes.
   The complete nine-module JVM suite passed 7,174 tests with zero failures,
   errors or skips (exit 0, 1 h 26 min 59 s).
 - **Post-editor local JVM recertification, 30 October:** the full nine-module
-  command also passed after `a36667b3b` (exit 0, 10 min 58 s; 41 tasks up to date,
-  one executed). Shell's 1,606 tests reran because its inputs include app sources;
-  the other eight modules reused their up-to-date results. Current reports still
-  total 7,174 tests with zero failures, errors or skips.
-- **Latest local Android verification, 30 October:** at editor `a36667b3b`,
+  command passed after `a36667b3b` (exit 0, 10 min 58 s) and again after the final
+  helper change at `828ce0793` (exit 0, 11 min 2 s). Each run had 41 tasks up to
+  date and one executed. Shell's 1,606 tests reran because its inputs include app
+  sources; the other eight modules reused their up-to-date results. Current
+  reports total 7,174 tests with zero failures, errors or skips.
+- **Latest local Android verification, 30 October:** at editor `828ce0793`,
   `:app:assembleDebug`, `:app:assembleStrikeFx` and
-  `:app:compileDebugAndroidTestKotlin` passed together (exit 0, 2 min 41 s).
-  The final corrected test-fixture source then passed a separate
-  `:app:compileDebugAndroidTestKotlin` run (exit 0, 23 s).
-  Device/emulator tests were not executed locally. The PR emulator check supplies
-  that separate runtime verification; its status belongs to the PR's CI record.
+  `:app:assembleDebugAndroidTest` passed together (exit 0, 2 min 50 s).
+- **Local runtime scope at this documentation snapshot:** an API 34 software
+  emulator reproduced the earlier ART verifier failure on opening THUMP. The
+  rebuilt `828ce0793` loaded successfully and passed the pre-model macro-bag
+  case, exercising legacy migration, voice switching, explicit factory choice
+  and recreation. This records one completed runtime case. Results for the
+  complete selected Tremor/Contour run belong to the PR runtime record and
+  artifacts.
 - **Published factory verification:** Site v12 exposes the 39 production clips
   with native/direct identity, repeatability, manifest and browser checks, plus
   independent attack/held tuning checks reported above. The owner's factory
