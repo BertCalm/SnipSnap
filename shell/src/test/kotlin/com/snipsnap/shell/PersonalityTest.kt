@@ -674,6 +674,10 @@ class PersonalityTest {
         // above: a line the dock says while the job runs, not a landing.
         // Each job's own landing toast is a separate line.
         "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
+        // The pad editor's plain save and its close-time flush: the same
+        // `…`-suffixed dock line as the named jobs above, for a write no
+        // control of its own started.
+        "SAVING_PAD_BUSY",
     )
 
     /**

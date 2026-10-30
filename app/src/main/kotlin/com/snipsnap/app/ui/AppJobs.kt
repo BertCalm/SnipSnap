@@ -29,8 +29,10 @@ import com.snipsnap.shell.JobBoard
  *
  * Safe to call from any thread, which a job on `appScope` needs: the board's
  * operations are synchronised, and [current] is Compose state written through
- * a snapshot of its own, so the write is never made from inside a
- * composition and the dock recomposes on the next frame.
+ * a snapshot of its own, so the dock recomposes on the next frame. That write
+ * is still a state write, so call [begin], [JobHandle.update] and
+ * [JobHandle.end] from an event handler, an effect or a coroutine, never from
+ * the body of a composition.
  */
 class AppJobs {
 

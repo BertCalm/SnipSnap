@@ -2838,8 +2838,10 @@ object Copy {
     const val WORKING_BUSY = "WORKING…"
     // The dock's line for the jobs the pad editor and SPLIT start, each said
     // in the word of the control that started it. A treatment says its own
-    // name through `treatmentBusy`; a job with no word at all (SAVE, a file
-    // decode, the mic trip, UNDO) falls back to WORKING_BUSY.
+    // name through `treatmentBusy`; a write to the kit that no control named
+    // (UNDO, PASTE, the flush when the editor closes) says SAVING_PAD_BUSY;
+    // a job with no word at all (a file decode, the mic trip, a preview)
+    // falls back to WORKING_BUSY.
     /** The dock's line while a MUTATE or a DRIFT is rendered for the pad: HEAR, KEEP and DRIFT all say it. */
     const val MUTATE_BUSY = "MUTATING…"
     /** The dock's line while DE-SAMPLE finds the nearest patch and writes it over the pad. */
@@ -2852,6 +2854,14 @@ object Copy {
     const val SPREAD_BUSY = "SPREADING…"
     /** The dock's line while SPLIT takes a pad apart into its three parts. */
     const val SPLIT_BUSY = "SPLITTING…"
+    /**
+     * The dock's line while the pad editor writes an edit to the kit and no
+     * control gave the write a word of its own: UNDO, PASTE, and the flush
+     * that hands a pending edit on when the editor closes. That last one is
+     * why the line exists: the write outlives the editor, and the job board
+     * keeps it on the dock until it lands.
+     */
+    const val SAVING_PAD_BUSY = "SAVING THE PAD…"
     /** The KITS screen's placeholder line while the library is read from disk. */
     const val LIBRARY_LOADING = "LOADING THE LIBRARY…"
     /** RECORD's and CHOP's placeholder line, and the dock's, while a recording is decoded from disk. */
