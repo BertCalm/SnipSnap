@@ -84,12 +84,13 @@ one performer, 23 ms for two, 46 ms for four, and 15 ms for solo at either nearb
 two-semitone limit. One native solo render took 144 ms. This small host probe is
 not a phone benchmark or a listening verdict.
 
-Verification in progress:
+Verification ledger:
 
 - Kotlin DSP qualification, mutation, determinism, nearby-note and cached-render probes: 12 tests and the host benchmark passed, including the real vowel's nonzero crop.
-- Raw/canonical persistence, selection/root tampering, failed-save and path/symlink tests.
-- Preview/save/reload equality, occupied-pad and stale-source refusal, backup restore after deleting the donor library.
-- Android recording ownership, screen workflow, app compilation and device tests.
+- Personal library, workshop and breeding: 16 tests passed through a direct Jupiter launcher against the current compiled production/test classes. These cover raw/canonical persistence, selection/root tampering, failed saves, path/symlink refusal, preview/save/reload equality, occupied pads, stale sources and regeneration after deleting donor files.
+- Kit capacity, native source backup/restore, merge and ordinary XPN demotion: 17 focused tests passed through Gradle.
+- Android app and instrumentation APKs assembled successfully, including all four native ABIs. On an API 35 software emulator without KVM, seven of nine focused device tests passed: four recorder cases, two import cases and the MAKE entry. Both source-reopening screen tests exceeded their existing 60-second waits before reaching later preview/trim assertions. ART tracing showed runnable correlation calculations; package compilation attempts remained in verification mode and instrumentation reported classloader-context mismatches. These failures remain recorded. The full screen workflows require the KVM-backed CI run; no phone performance or microphone/listening verdict is claimed.
+- Full JVM catalogue inventory: **7,240 tests across 882 classes covered successfully**. A workspace restart interrupted the initial full run. JUnit discovery and compiled annotations agreed on the complete inventory; 3,720 Synth tests had unambiguous complete-class pass records, all other eight modules completed successfully (3,350 tests), and 16 incomplete or ambiguous Synth classes were rerun in full (170 tests). Both resumed Gradle processes exited zero. The final union audit found no missing test IDs, unsuccessful final results or skipped tests. This is audited interrupted-and-resumed coverage, not a claim of one uninterrupted successful command. The rerun also caught and resolved the app's kit-read locking convention and updated the existing bounded ByteArray-decode exception with its reviewed allocation limits.
 
 ## Why it is built this way
 
