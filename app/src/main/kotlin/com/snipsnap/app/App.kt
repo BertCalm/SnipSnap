@@ -82,6 +82,7 @@ import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
+import com.snipsnap.app.ui.MyVoiceScreen
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
@@ -493,6 +494,7 @@ fun App(shelf: KitShelf) {
     // whenever the user leaves for another place or stage (see
     // `clearTransientState` below).
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+    var myVoiceOpen by remember { mutableStateOf(false) }
 
     /**
      * Open PAD SHEET on [slot]: the one door, for every way in — the pad
@@ -2851,6 +2853,7 @@ fun App(shelf: KitShelf) {
      * the back stack fixes.
      */
     fun clearTransientState() {
+        myVoiceOpen = false
         // Leaving KIT for another tab must not leave the
         // sheet armed to reopen on the same slot next time
         // KIT comes back into view.
@@ -3297,7 +3300,7 @@ fun App(shelf: KitShelf) {
         Stage.PADS -> padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
             padCaptureSlot != null
         Stage.BEAT -> arrangeOpen
-        null -> location.place == Place.SHELF && (binOpen || doublesOpen || xray != null)
+        null -> (location.place == Place.MAKE && myVoiceOpen) || (location.place == Place.SHELF && (binOpen || doublesOpen || xray != null))
         else -> false
     }
     val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen || captureSheetOpen || kitSheetOpen
@@ -4276,7 +4279,22 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
+                        top == null && location.place == Place.MAKE && myVoiceOpen -> {
+                            val voiceEntry = open
+                            MyVoiceScreen(
+                                entry = voiceEntry,
+                                appScope = scope,
+                                onBack = { myVoiceOpen = false },
+                                onToast = { dock.say(it) },
+                                onKitUpdated = { updated ->
+                                    if (open?.dir == voiceEntry?.dir) open = open?.copy(kit = updated)
+                                    scope.launch { kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) } }
+                                },
+                            )
+                        }
+                        top == null && location.place == Place.MAKE -> MakeList(
+                            onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { myVoiceOpen = true },
+                        )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
