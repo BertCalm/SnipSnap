@@ -874,6 +874,13 @@ object Copy {
     /** TAKE PHOTO asks the system camera; a phone with no camera app to answer says so instead of crashing. */
     const val SNAP_NO_CAMERA = "NO CAMERA APP ANSWERED. NOTHING WAS TAKEN."
     /**
+     * TAKE PHOTO without the CAMERA grant: the player said no to the system
+     * dialog (or said no for good, and the system answered for them), or
+     * the grant went away between the tap and the launch. The camera is not
+     * opened. Names the way back, since a second refusal gets no dialog.
+     */
+    const val SNAP_CAMERA_OFF = "CAMERA ACCESS IS OFF. ALLOW IT IN SETTINGS TO TAKE A PHOTO."
+    /**
      * The camera app handed back more pixels than the phone had memory
      * to read (an `OutOfMemoryError`, which is not an `Exception` and
      * would otherwise take the process down). The photo is dropped and
