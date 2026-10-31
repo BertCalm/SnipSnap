@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Sixteen finite Libration notes; native touch zones retain their energy. */
+    fun libration(): List<ArrangedPad> = LibrationKits.arranged()
+
     /** Finite model-two colors with three native velocity zones per pad. */
     fun trefoil(): List<ArrangedPad?> = TrefoilKits.build()
 

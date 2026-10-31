@@ -21,6 +21,7 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockHeld
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
@@ -514,6 +515,10 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is LibrationPatch) {
+            return "LibrationPatch(\"$name\", LibrationVoice.${patch.voice}, mapOf($macros), " +
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}),"
+        }
         if (patch is OnsetPatch) {
             return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
         }
