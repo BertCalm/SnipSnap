@@ -4,6 +4,8 @@
 **Builds on:** the pedal library design (`2026-10-21-pedal-library-and-board-design.md`: sections 2, 3, 7, 9 and R2 in section 12), whose row-seven window this design replaces, and DELAY's spec (`2026-10-22-delay-head-design.md`, "The quick check and the recipe"), where the owner chose a slate over a seventh chip or a second pedal row.
 **Who this is for:** the owner first, then the implementing session. Plain words for what a user taps; code names only where the next step has to go there.
 
+> **2026-10-30:** the owner kept this row and replaced MORE's plain list (section 6, item 5) with the PEDALS card: the pad's pedals drawn as a chain of stompboxes, the library behind + ADD PEDAL. MORE opens that card. See `2026-10-30-pad-pedalboard-card-design.md`.
+
 ## 1. Why
 
 Row seven draws six pedals (DRIVE, SUSTAIN, WAH, TOUCH, ROCK, FORGE), and six is the card's ceiling: `PadSheetTest` holds every row to six chips so they stay a usable size on a phone. DELAY passed its gate on 2026-10-28 and has no place. TREM and FLANGE (Stage 4) will follow. The library design planned for this (row seven as "a window onto the registry", with MORE behind it), and the owner has now said what the window is: **a slate**. Five pedals on the row, chosen by the user, the same everywhere. MORE holds every pedal.

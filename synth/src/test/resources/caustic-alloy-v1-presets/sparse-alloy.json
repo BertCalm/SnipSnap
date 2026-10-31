@@ -1,0 +1,16 @@
+{
+  "engine": "CAUSTIC",
+  "version": 1,
+  "name": "Sparse Alloy",
+  "voice": "ALLOY",
+  "macros": {
+    "SOURCE": 0.5,
+    "FOCUS": 0.8500000238418579,
+    "BODY": 1,
+    "LENGTH": 1,
+    "HOLD": 0
+  },
+  "model": 1,
+  "midi": 60,
+  "velocity": 0.75
+}

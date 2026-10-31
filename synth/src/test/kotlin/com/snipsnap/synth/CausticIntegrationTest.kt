@@ -15,6 +15,29 @@ import kotlin.test.assertTrue
 
 /** Saved native notes and production routing; numerical probes live in CausticInstrumentTest. */
 class CausticIntegrationTest {
+    @Test fun `every native voice preserves a sparse saved recipe through edits and dry pad replay`() {
+        for (voice in CausticVoice.entries) {
+            val patch = CausticPatch("Saved direction", voice,
+                mapOf("SOURCE" to .63f, "LENGTH" to 0f), midi = 55, velocity = .41f, model = 1)
+            val restored = assertIs<CausticPatch>(Patches.fromJsonText(patch.toJsonText()))
+            assertEquals(patch, restored)
+            assertEquals(voice.name, restored.toJsonValue().entries.getValue("voice").str())
+            val edited = assertIs<CausticPatch>(Patches.edited(restored, "Moved pickup",
+                restored.macros + ("FOCUS" to .31f)))
+            assertEquals(patch.copy(name = "Moved pickup", macros = patch.macros + ("FOCUS" to .31f)), edited)
+            val pad = PadRecipe.fromJsonText(PadRecipe(edited).toJsonText())
+            assertEquals(edited, pad.patch)
+            assertNull(pad.fx)
+            assertContentEquals(edited.render().samples, pad.render().samples, voice.name)
+            assertContentEquals(edited.copy(velocity = .23f).render().samples,
+                Velocity.atVelocity(edited, .23f).samples, "native touch routing for $voice")
+            val error = assertFailsWith<IllegalArgumentException> {
+                edited.copy(macros = edited.macros + ("HOLD" to .01f))
+            }
+            assertTrue(error.message.orEmpty().contains("HOLD"), voice.name)
+        }
+    }
+
     @Test fun `native patch round trips explicit performance state and partial controls`() {
         val patch = CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("FOCUS" to .28f, "BODY" to .6f),
             midi = 55, velocity = .63f, model = 1)

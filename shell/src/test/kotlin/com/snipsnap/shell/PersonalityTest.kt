@@ -538,6 +538,8 @@ class PersonalityTest {
     private val notASentence = setOf(
         // The pedal slate's PUT ON ROW button: a label, not a landing.
         "PUT_ON_ROW",
+        // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
+        "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",

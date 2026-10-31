@@ -1551,6 +1551,20 @@ object Copy {
     /** A printed board pad ([PrintedPads]: WIDE, RUSH, AQUARIUM) takes no pedals; [label] names it. */
     fun pedalsPrinted(label: String): String = "REMOVE $label BEFORE ADDING PEDALS."
 
+    // ---- PAD SHEET: the PEDALS card (docs/superpowers/specs/2026-10-30-pad-pedalboard-card-design.md) ----
+    /** The PEDALS card's summary with no pedals on the pad. */
+    const val PEDALS_NONE = "NO PEDALS ON THIS PAD"
+    /**
+     * The PEDALS card's summary line and its accessible name: the chain in the order the sound
+     * meets it, the pad's amp named where it sits ("WAH → SUSTAIN → AMP → DELAY").
+     */
+    fun pedalChain(chain: PedalSlate.Chain): String {
+        if (chain.isEmpty) return PEDALS_NONE
+        val (pre, amp, post) = chain.passes.map { pass -> pass.links.map { it.word } }
+        val words = pre + amp + (if (chain.aroundTheAmp) listOf("AMP") else emptyList()) + post
+        return words.joinToString(" → ")
+    }
+
     // ---- DUST: the tape's own hiss and room under a pad (docs/DUST.md) ----
     /** DUST ALL's busy line while every pad's print is read and applied — the DUBBING…/BREEDING… shape. */
     const val DUSTING_BUSY = "DUSTING…"
