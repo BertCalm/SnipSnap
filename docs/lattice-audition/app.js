@@ -6,7 +6,8 @@
   const audio = $('#audition-audio');
   const state = { manifest: null, clips: [], hero: null, current: null, mode: 'common', filter: 'all', loadAttempt: 0, playbackRequest: 0, metadataResume: null };
   const sectionInfo = {
-    focus: { title: 'From pluck to ringing trace', label: 'New comparison', description: 'The same musical phrase, first plain, then through moving gates.' },
+    focus: { title: 'The accepted movement', label: 'Reference', description: 'The original plain-versus-moving comparison, preserved from R4.' },
+    trace: { title: 'Choose the movement speed', label: 'TRACE', description: 'Native saved patches: reference speed, slower, and quicker.' },
     instrument: { title: 'Playable voices', label: 'Voices', description: 'Native saved presets on the same short phrase.' },
     hold: { title: 'Keep the passage open', label: 'HOLD', description: 'Four consecutive loop cycles, with no crossfade or makeup gain.' },
     source: { title: 'The accepted source choices', label: 'Sources', description: 'The original short source phrases from the accepted R2 audition.' },
@@ -18,7 +19,7 @@
     range: { title: 'Across the keyboard', label: 'Range', description: 'The same source at different pitches and velocities.' },
     gesture: { title: 'The complete gesture', label: 'Gesture', description: 'Follow the original tone as the passage closes and rebuilds.' },
   };
-  const sectionOrder = ['focus', 'instrument', 'hold', 'source', 'comparison', 'reference', 'color', 'rejection', 'musical', 'range', 'gesture'];
+  const sectionOrder = ['focus', 'trace', 'instrument', 'hold', 'source', 'comparison', 'reference', 'color', 'rejection', 'musical', 'range', 'gesture'];
   const playIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3.5v13l10-6.5z" fill="currentColor"/></svg>';
   const pauseIcon = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 4h3v12H5zM12 4h3v12h-3z" fill="currentColor"/></svg>';
   const linkIcon = '<svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10 10 2M2 2h8v8" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>';
@@ -53,6 +54,7 @@
   function clipSection(clip) {
     const raw = String(clip.section || 'reference').toLowerCase();
     if (raw === 'focus') return 'focus';
+    if (raw === 'trace') return 'trace';
     if (/instrument|native|preset/.test(raw)) return 'instrument';
     if (/hold|loop/.test(raw)) return 'hold';
     if (/source/.test(raw)) return 'source';
@@ -71,6 +73,7 @@
   function recipeUrl(clip, mode) { return mode === 'matched' && safeUrl(clip.matchedRecipeFile) ? safeUrl(clip.matchedRecipeFile) : safeUrl(clip.recipeFile); }
   function cardModeText(clip) { return `${effectiveMode(clip) === 'matched' ? 'RMS-MATCHED' : 'COMMON GAIN'}${clipCues(clip).length > 1 ? ' · A/B' : ''}`; }
   function isFeatured(clip) {
+    if (state.clips.some(item => clipSection(item) === 'trace')) return clipSection(clip) === 'trace';
     const native = state.clips.some(item => clipSection(item) === 'instrument');
     return native ? ['instrument', 'hold'].includes(clipSection(clip)) : clipSection(clip) === 'source';
   }
@@ -118,7 +121,8 @@
     const cues = clipCues(clip);
     const file = clipUrl(clip, 'common');
     const recipe = recipeUrl(clip, 'common');
-    const downloads = `<div class="hero-downloads clip-links">${recipe ? `<a href="${escape(recipe)}" download aria-label="Download common-gain recipe for ${escape(clip.title)}">Recipe</a>` : ''}${file ? `<a href="${escape(file)}" download aria-label="Download WAV for ${escape(clip.title)}">WAV ${linkIcon}</a>` : ''}</div>`;
+    const patch = safeUrl(clip.patchFile);
+    const downloads = `<div class="hero-downloads clip-links">${patch ? `<a href="${escape(patch)}" download data-hero-patch-link aria-label="Download saved TRACE patch">Patch</a>` : ''}${recipe ? `<a href="${escape(recipe)}" download aria-label="Download common-gain recipe for ${escape(clip.title)}">Recipe</a>` : ''}${file ? `<a href="${escape(file)}" download aria-label="Download WAV for ${escape(clip.title)}">WAV ${linkIcon}</a>` : ''}</div>`;
     $('#hero-player').innerHTML = `<div class="hero-controls"><button class="play-button hero-play" data-play="${escape(clip.id)}" data-hero="true" type="button" aria-label="Play ${escape(clip.title)}">${playIcon}</button>${waveform(clip, true)}<span class="hero-time" data-elapsed="${escape(clip.id)}">${time(clip.duration)}</span></div>${cues.length ? `<div class="hero-cues${focus ? ' focus-cues' : ''}" style="grid-template-columns:repeat(${cues.length},minmax(0,1fr))">${cues.map((cue, index) => `<button class="hero-cue${index === 0 ? ' active' : ''}" type="button" data-cue="${Number(cue.time) || 0}" title="${escape(cue.label)}" aria-label="Play ${escape(cue.label)} at ${time(cue.time)}">${escape(cueLabel(cue.label))}<span>${time(cue.time)}</span></button>`).join('')}</div>` : ''}${downloads}`;
   }
 
@@ -148,10 +152,11 @@
   function renderSources() {
     const clips = state.clips.filter(isFeatured).sort((a, b) => sectionOrder.indexOf(clipSection(a)) - sectionOrder.indexOf(clipSection(b)));
     const native = clips.some(clip => clipSection(clip) === 'instrument');
+    const trace = clips.some(clip => clipSection(clip) === 'trace');
     $('#source-listen').hidden = !clips.length;
-    $('#source-listen-title').textContent = native ? 'Short notes. Held tones.' : 'Find a source you like.';
-    $('#source-listen-intro').innerHTML = native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
-    $('#source-footnote').textContent = native ? clipSection(state.hero || {}) === 'focus' ? 'These saved presets hold the gates at fixed settings. Each HOLD recording repeats its loop four times. The moving example above is an audition prototype; its motion is not saved in these patches.' : 'The first row plays native preset phrases. The second row repeats each HOLD loop four times. Patch downloads open as saved SnipSnap instruments.' : 'Each source uses the same phrase. Compare the source character, then try the listening studies.';
+    $('#source-listen-title').textContent = trace ? 'One motion. Three speeds.' : native ? 'Short notes. Held tones.' : 'Find a source you like.';
+    $('#source-listen-intro').innerHTML = trace ? 'Keep the reference.<br>Then try slower or quicker.' : native ? 'Three playable voices.<br>Then four unmodified loop cycles.' : 'Short phrases, before<br>the listening comparisons.';
+    $('#source-footnote').textContent = trace ? 'Choose LATTICE → TRACE in SnipSnap. SPEED .5 keeps B; lower values slow the movement and higher values speed it up. HOLD extends a finite note. Each Patch download saves these controls.' : native ? 'These three source voices keep their original fixed gate settings. Each HOLD recording repeats its loop four times. Their patches and the earlier listening studies remain available below.' : 'Each source uses the same phrase. Compare the source character, then try the listening studies.';
     $('#source-clips').innerHTML = clips.map(renderCard).join('');
     const firstTarget = state.hero ? '#passage-proof' : clips.length ? '#source-listen' : '#listen';
     $('.skip-link').href = firstTarget;
@@ -200,7 +205,7 @@
     if (engine.sourceCommit) facts.push(['SOURCE BASE', String(engine.sourceCommit).slice(0, 10)]);
     $('#engine-facts').innerHTML = facts.map(([key, value]) => `<div><dt>${escape(key)}</dt><dd>${escape(value)}</dd></div>`).join('');
     const downloads = manifest.downloads || {};
-    const links = [['kit', '16-pad MPC kit · MPC 3 + XPM', '↓'], ['patches', '12 native SnipSnap patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Measurements JSON', '↗'], ['source', 'Engine source', '↗'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
+    const links = [['traceKit', 'TRACE · 16 finite MPC pads', '↓'], ['tracePatches', 'TRACE · 3 saved speed patches', '↓'], ['traceNote', 'Ringing Trace · C3 note, PCM24', '↓'], ['kit', 'Original 16-pad MPC kit', '↓'], ['patches', 'Original 12 static patches', '↓'], ['zip', 'Download the audition pack', '↓'], ['measurements', 'Measurements JSON', '↗'], ['source', 'Engine source', '↗'], ['motionReference', 'Accepted R4 motion audition', '↓'], ['previous', 'Previous R3 instrument audition', '↓'], ['accepted', 'Accepted R2 audition archive', '↓'], ['original', 'Original R1 audition archive', '↓']].filter(([key]) => safeUrl(downloads[key]));
     $('#download-links').innerHTML = links.length ? links.map(([key, title, arrow]) => `<a href="${escape(safeUrl(downloads[key]))}" download>${title}<span aria-hidden="true">${arrow === '↗' ? linkIcon : arrow}</span></a>`).join('') : '<span class="muted">Use the WAV and recipe links on each study.</span>';
     const date = new Date(manifest.generatedAt);
     $('#footer-build').textContent = `Lattice instrument study${manifest.revision ? ` · R${manifest.revision}` : ''}${!Number.isNaN(date.getTime()) ? ' · ' + date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }) : ''}`;

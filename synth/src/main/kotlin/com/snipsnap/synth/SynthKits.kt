@@ -25,7 +25,9 @@ object SynthKits {
                 "rootMidi" to patch.midi.toString(), "rootNote" to Scales.nameOf(patch.midi),
                 "factoryPreset" to factoryName,
             ))
-        val voices = LatticeVoice.entries
+        // Keep this published starter's sixteen pads and three held source choices stable.
+        // TRACE is a separate finite motion voice, available from the factory preset picker.
+        val voices = listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW)
         val finite = voices.associateWith { voice ->
             LatticePresets.forVoice(voice).filterNot { Lattice.isLoop((Lattice.defaults(voice) + it.macros).getValue("HOLD")) }
         }

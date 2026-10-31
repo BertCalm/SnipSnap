@@ -15,8 +15,8 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlin.random.Random
 
-/** The three source characters accepted in the second listening round. */
-enum class LatticeVoice { WARM, PLUCK, HOLLOW }
+/** The accepted source characters plus the accepted pluck-to-ring motion. */
+enum class LatticeVoice { WARM, PLUCK, HOLLOW, TRACE }
 
 /**
  * LATTICE, directional passage and a rejected outline, model 2.
@@ -28,8 +28,9 @@ enum class LatticeVoice { WARM, PLUCK, HOLLOW }
  *
  * The source has a fixed gain for a given note, velocity and source profile. No output loudness normalization,
  * independent branch normalization, bypass oscillator or samples are used here. Finite notes
- * retain the model-2 source and projection path. HOLD extends the same source effort; its top
- * step returns a periodic, settled version of that path, with no new excitation at the wrap.
+ * retain the model-2 source and projection path. Source-voice HOLD extends the same effort and
+ * returns periodic sustain at its top step. TRACE instead gives the accepted moving pluck a
+ * saved SPEED and a bounded finite HOLD; it never promises a loop.
  * Timbral constants are authored choices, not measured physical parameters.
  */
 object Lattice {
@@ -50,17 +51,22 @@ object Lattice {
     const val HALO_FULL_VECTOR_GAIN_BOUND = 25.2
     const val RESTORATION_DURATION_SECONDS = 9.6
     const val RESTORATION_EXCITATION_SECONDS = 8.5
-    private const val CONTROL_BLOCK = 64
+    internal const val CONTROL_BLOCK = 64
     private const val SOURCE_RMS = .13
     private const val HALO_GAIN = 1.5
     private const val BANDWIDTH_HZ = 18_000.0
     private const val LOG_1000 = 6.907755278982137
 
     fun macrosFor(voice: LatticeVoice): List<MacroSpec> {
+        // TRACE exposes the one accepted motion and its timing, rather than duplicating its
+        // authored geometry as extra controls. Existing source voices retain their full contract.
+        if (voice == LatticeVoice.TRACE) return listOf(MacroSpec("TUNE", .5f, .5f),
+            MacroSpec("SPEED", .5f, .5f), MacroSpec("HOLD", 0f, 0f))
         val d = when (voice) {
             LatticeVoice.WARM -> floatArrayOf(1f, sqrt(6f / 14f), .5f, .45f, 0f)
             LatticeVoice.PLUCK -> floatArrayOf(.85f, sqrt(2f / 14f), .78f, .7f, .35f)
             LatticeVoice.HOLLOW -> floatArrayOf(.85f, sqrt(2f / 14f), .5f, .7f, .15f)
+            LatticeVoice.TRACE -> error("TRACE uses its motion controls")
         }
         return listOf(MacroSpec("TUNE", .5f, .5f), MacroSpec("TURN", d[0], 0f),
             MacroSpec("STAGES", d[1], 0f), MacroSpec("TWIST", d[2], .5f),
@@ -86,21 +92,26 @@ object Lattice {
 
     fun isLoop(hold: Float): Boolean = hold.isFinite() && hold >= HOLD_LOOP
 
+    /** TRACE HOLD is a bounded note extension, not a periodic sustain segment. */
+    fun isLoop(voice: LatticeVoice, hold: Float): Boolean = voice != LatticeVoice.TRACE && isLoop(hold)
+
     fun drumClassFor(voice: LatticeVoice, macros: Map<String, Float> = emptyMap()): DrumClass =
-        if (isLoop(settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
+        if (isLoop(voice, settled(voice, macros).getValue("HOLD"))) DrumClass.LOOP else DrumClass.TONAL
 
     fun scramble(voice: LatticeVoice, random: Random, temperature: Float = .35f, near: Patch? = null): Map<String, Float> =
         Dsp.scrambleNear(settled(voice, near?.macros ?: emptyMap()), temperature, random)
             .toMutableMap().also { it["HOLD"] = it.getValue("HOLD").coerceAtMost(.95f) }
 
     /**
-     * Native instrument entry point. Below full HOLD, effort stays open before the accepted
-     * pluck decay begins; it never adds another strike. The macro does not level the result.
+     * Native instrument entry point. Source voices retain their established static geometry and
+     * periodic HOLD. TRACE renders one saved motion with finite effort; no route adds strikes
+     * or levels the result.
      */
     fun render(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
         velocity: Float = .75f, cancelled: () -> Boolean = { false }): Snip {
         stopIfUnwanted(cancelled)
         val m = settled(voice, macros)
+        if (voice == LatticeVoice.TRACE) return traceProbe(m, midi, velocity, cancelled).snip
         val hold = m.getValue("HOLD")
         val settings = settingsFor(voice, m, midi, velocity)
         if (isLoop(hold)) return heldProbe(settings, cancelled).snip
@@ -112,6 +123,8 @@ object Lattice {
         velocity: Float = .75f): Settings {
         val m = settled(voice, macros)
         val hold = m.getValue("HOLD")
+        if (voice == LatticeVoice.TRACE) return LatticeMotion.settings(m.getValue("SPEED"), hold,
+            midiFor(voice, m.getValue("TUNE"), midi), velocity)
         val excitation = .26 + 3.24 * (hold / HOLD_LOOP).coerceIn(0f, 1f)
         return Settings(midi = midiFor(voice, m.getValue("TUNE"), midi), velocity = velocity,
             turn = m.getValue("TURN").toDouble(), stages = m.getValue("STAGES").toDouble(),
@@ -121,8 +134,23 @@ object Lattice {
     }
 
     fun renderLoop(voice: LatticeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, cancelled: () -> Boolean = { false }): FloatArray =
-        render(voice, macros + ("HOLD" to 1f), midi, velocity, cancelled).samples
+        velocity: Float = .75f, cancelled: () -> Boolean = { false }): FloatArray {
+        require(voice != LatticeVoice.TRACE) { "TRACE HOLD extends one finite motion; it does not render a loop" }
+        return render(voice, macros + ("HOLD" to 1f), midi, velocity, cancelled).samples
+    }
+
+    /** The native motion's real branch output, available to numerical and audition probes. */
+    internal fun traceProbe(macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
+        velocity: Float = .75f, cancelled: () -> Boolean = { false }): Probe {
+        stopIfUnwanted(cancelled)
+        val m = settled(LatticeVoice.TRACE, macros)
+        val plan = LatticeMotion.plan(m.getValue("SPEED"), cancelled)
+        val holdSeconds = LatticeMotion.MAX_HOLD_SECONDS * m.getValue("HOLD")
+        val referenceHold = holdSeconds / plan.scale
+        val settings = settingsFor(LatticeVoice.TRACE, m, midi, velocity)
+        return perform(settings, controls = null, effortHoldSeconds = referenceHold, cancelled = cancelled,
+            motion = plan, referenceExcitationSeconds = LatticeMotion.REFERENCE_EXCITATION_SECONDS + referenceHold)
+    }
 
     private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
         if (Thread.currentThread().isInterrupted || cancelled())
@@ -338,10 +366,16 @@ object Lattice {
         perform(settings, controls)
 
     private fun perform(settings: Settings, controls: ((Double) -> Controls)?, effortHoldSeconds: Double = 0.0,
-        cancelled: () -> Boolean = { false }): Probe {
+        cancelled: () -> Boolean = { false }, motion: LatticeMotion.Plan? = null,
+        referenceExcitationSeconds: Double = settings.excitationSeconds): Probe {
         val started = System.nanoTime()
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
-        val frames = (settings.durationSeconds * rate).roundToInt().coerceAtLeast(1)
+        // Native motion owns a whole output-frame budget. Rounding at the internal rate
+        // first can leave two surplus samples, which the two 2:1 decimators floor away at
+        // half-frame durations. The established probe/static path keeps its original budget.
+        val frames = if (motion != null) {
+            (settings.durationSeconds * Dsp.RATE).roundToInt().coerceAtLeast(1) * Dsp.OVERSAMPLE
+        } else (settings.durationSeconds * rate).roundToInt().coerceAtLeast(1)
         val dryRaw = FloatArray(frames)
         val haloRaw = FloatArray(frames)
         val mixedRaw = FloatArray(frames)
@@ -350,8 +384,8 @@ object Lattice {
         val stageEnergy = DoubleArray(SLOTS)
         val groupEnergy = DoubleArray(GROUPS)
         val groupSamples = DoubleArray(GROUPS)
-        var geometry = compile(controls?.invoke(0.0) ?: settings.controls())
-        var drives = halo?.drives(geometry)
+        var geometry = motion?.block(0)?.geometry ?: compile(controls?.invoke(0.0) ?: settings.controls())
+        var drives = if (halo == null) null else motion?.block(0)?.drives ?: halo.drives(geometry)
         var residual = geometry.groups.maxOf { abs(it.allocationResidual) }
         var rawPeak = 0.0
         var mixAmount = settings.reject
@@ -359,7 +393,7 @@ object Lattice {
             Contour.SUSTAIN -> .040 - .020 * settings.velocity
             Contour.PLUCK -> .025 - .013 * settings.velocity
         }
-        val release = min(.16, settings.excitationSeconds * .3)
+        val release = min(.16, referenceExcitationSeconds * .3)
         // One decaying source excites the same gates and collector. No unrelated pluck or
         // post-chain filter is mixed in to disguise the original steady source.
         val decaySeconds = when (settings.sourceProfile) {
@@ -382,19 +416,28 @@ object Lattice {
             if (i % CONTROL_BLOCK == 0) {
                 stopIfUnwanted(cancelled)
                 if (i > 0) collectBlockEnergy()
-                val c = controls?.invoke(i.toDouble() / rate) ?: settings.controls()
-                if (controls != null || i == 0) {
-                    geometry = compile(c)
-                    drives = halo?.drives(geometry)
+                if (motion != null) {
+                    val block = motion.block(i / CONTROL_BLOCK)
+                    geometry = block.geometry
+                    drives = if (halo == null) null else block.drives
                     residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
+                    mixAmount = block.reject
+                } else {
+                    val c = controls?.invoke(i.toDouble() / rate) ?: settings.controls()
+                    if (controls != null || i == 0) {
+                        geometry = compile(c)
+                        drives = halo?.drives(geometry)
+                        residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
+                    }
+                    mixAmount = c.reject
                 }
-                mixAmount = c.reject
             }
-            val t = i.toDouble() / rate
+            val physicalTime = i.toDouble() / rate
+            val t = motion?.sourceTime(physicalTime) ?: physicalTime
             val envelope = when {
-                t >= settings.excitationSeconds -> 0.0
+                t >= referenceExcitationSeconds -> 0.0
                 t < attack -> .5 - .5 * cos(PI * t / attack)
-                t > settings.excitationSeconds - release -> .5 - .5 * cos(PI * (settings.excitationSeconds - t) / release)
+                t > referenceExcitationSeconds - release -> .5 - .5 * cos(PI * (referenceExcitationSeconds - t) / release)
                 else -> 1.0
             }
             val decayTime = if (effortHoldSeconds > 0.0) max(0.0, t - effortHoldSeconds) else t
@@ -670,20 +713,10 @@ object Lattice {
         private val x2 = DoubleArray(HALO_MODES)
         private val y1 = DoubleArray(HALO_MODES)
         private val y2 = DoubleArray(HALO_MODES)
-        private val collector = Array(HALO_MODES) { DoubleArray(SLOTS) }
+        private val collector = COLLECTOR
 
         init {
             for (m in 0 until HALO_MODES) {
-                // Low modes favor late rejection; upper modes favor earlier rejection. All slots
-                // retain a restrained baseline send; no stage falls into an uncollected blind spot.
-                val preferred = .88 - .76 * m / (HALO_MODES - 1)
-                for (s in 0 until SLOTS) {
-                    val position = s.toDouble() / (SLOTS - 1)
-                    val distance = (position - preferred) / .24
-                    collector[m][s] = .18 + .82 * exp(-distance * distance)
-                }
-                val norm = sqrt(collector[m].sumOf { it * it })
-                for (s in 0 until SLOTS) collector[m][s] /= norm
                 val hz = ratios[m] * fundamental
                 if (hz >= BANDWIDTH_HZ) continue
                 val t60 = 1.8 - 1.0 * m / (HALO_MODES - 1)
@@ -697,11 +730,29 @@ object Lattice {
             }
         }
 
-        fun drives(geometry: Geometry): Array<DoubleArray> = Array(HALO_MODES) { m ->
-            DoubleArray(GROUPS) { g ->
-                var sum = 0.0
-                for (s in 0 until SLOTS) sum += collector[m][s] * geometry.groups[g].rejection[s]
-                sum
+        fun drives(geometry: Geometry): Array<DoubleArray> = drivesFor(geometry)
+
+        companion object {
+            // These normalized rows depend on stage position only. Sharing them lets a SPEED
+            // plan cache its collector sends across notes without changing resonator state.
+            private val COLLECTOR = Array(HALO_MODES) { m ->
+                val preferred = .88 - .76 * m / (HALO_MODES - 1)
+                val row = DoubleArray(SLOTS) { s ->
+                    val position = s.toDouble() / (SLOTS - 1)
+                    val distance = (position - preferred) / .24
+                    .18 + .82 * exp(-distance * distance)
+                }
+                val norm = sqrt(row.sumOf { it * it })
+                for (s in row.indices) row[s] /= norm
+                row
+            }
+
+            fun drivesFor(geometry: Geometry): Array<DoubleArray> = Array(HALO_MODES) { m ->
+                DoubleArray(GROUPS) { g ->
+                    var sum = 0.0
+                    for (s in 0 until SLOTS) sum += COLLECTOR[m][s] * geometry.groups[g].rejection[s]
+                    sum
+                }
             }
         }
 
@@ -771,6 +822,9 @@ object Lattice {
             return sqrt(real.indices.sumOf { real[it] * real[it] + imaginary[it] * imaginary[it] })
         }
     }
+
+    /** The collector map is independent of pitch; native motion caches it with geometry. */
+    internal fun motionDrives(geometry: Geometry): Array<DoubleArray> = Halo.drivesFor(geometry)
 
     private fun smooth(t: Double): Double = t * t * (3.0 - 2.0 * t)
     private fun mix(a: Double, b: Double, amount: Double): Double = a + (b - a) * amount

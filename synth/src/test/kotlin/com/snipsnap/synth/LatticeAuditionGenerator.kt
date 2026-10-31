@@ -1,12 +1,15 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Pitch
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
+import com.snipsnap.kit.ArrangedPad
 import com.snipsnap.kit.Mpc3Exporter
 import java.io.File
 import java.security.MessageDigest
@@ -23,7 +26,7 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * The fourth LATTICE audition: one moving pluck beside its plain source, plus preserved earlier studies.
+ * The fifth LATTICE audition: the accepted moving pluck as native TRACE patches, plus preserved studies.
  * Every primary clip retains the engine's common
  * source gain. Optional matched files are separate listening aids, never the restoration proof.
  *
@@ -41,6 +44,7 @@ object LatticeAuditionGenerator {
         "synth/src/main/kotlin/com/snipsnap/synth/Lattice.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/LatticePatch.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/LatticePresets.kt",
+        "synth/src/main/kotlin/com/snipsnap/synth/LatticeMotion.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Patches.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Velocity.kt",
         "synth/src/main/kotlin/com/snipsnap/synth/Presets.kt",
@@ -51,6 +55,7 @@ object LatticeAuditionGenerator {
         "cli/src/main/kotlin/com/snipsnap/cli/SynthCommand.kt",
         "cli/src/main/kotlin/com/snipsnap/cli/Main.kt",
         "app/src/main/kotlin/com/snipsnap/app/ui/SynthScreen.kt",
+        "app/src/androidTest/kotlin/com/snipsnap/app/ui/LatticeSynthScreenTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/LatticeTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/LatticePatchTest.kt",
         "synth/src/test/kotlin/com/snipsnap/synth/LatticeHeldTest.kt",
@@ -226,8 +231,8 @@ object LatticeAuditionGenerator {
         ))
         add(
             "pluck-to-outline", "A plain pluck. A body that becomes a ringing tail.",
-            "A plays the plain three-note phrase. B plays the same notes while the body thins and gives way to a tuned ringing tail. Compare the change of body and the space after each note. This moving version is an audition prototype; native patches remain static.",
-            "focus", listOf("START HERE", "SAME THREE NOTES", "COMMON GAIN"), focused,
+            "The preserved R4 comparison: A plays the plain phrase; B is the moving-pluck reference accepted with ‘B sounds cool’. The native TRACE comparison above reproduces this performance through saved patches.",
+            "focus", listOf("ACCEPTED R4", "SAME THREE NOTES", "COMMON GAIN"), focused,
             cues = sequenceCues(focused),
         )
 
@@ -343,7 +348,8 @@ object LatticeAuditionGenerator {
             )
         }
 
-        val nativePresets = LatticePresets.all()
+        val legacyVoices = listOf(LatticeVoice.WARM, LatticeVoice.PLUCK, LatticeVoice.HOLLOW)
+        val nativePresets = LatticePresets.all().filter { it.voice in legacyVoices }
         check(nativePresets.size == 12) { "the native listening bank must contain twelve patches" }
         val patchFiles = nativePresets.associateWith { patch ->
             val file = "patches/${patch.voice.name.lowercase()}-${slug(patch.name)}.json"
@@ -352,7 +358,7 @@ object LatticeAuditionGenerator {
             file
         }
         archive(File(output, "lattice-patches.zip"), patchFiles.values.map { it to File(output, it) })
-        for (voice in LatticeVoice.entries) {
+        for (voice in legacyVoices) {
             val preset = nativePresets.first { it.voice == voice && !Lattice.isLoop(it.macros.getValue("HOLD")) }
             add(
                 "native-${voice.name.lowercase()}", "${preset.name} · native patch",
@@ -370,6 +376,48 @@ object LatticeAuditionGenerator {
         }
         val starterKit = exportNativeKit(output)
 
+        val tracePresets = LatticePresets.forVoice(LatticeVoice.TRACE)
+        check(tracePresets.size == 3) { "TRACE requires its reference, slow and quick native patches" }
+        val tracePatchFiles = tracePresets.associateWith { patch ->
+            val file = "trace-patches/${slug(patch.name)}.json"
+            File(output, file).apply { parentFile.mkdirs(); writeText(patch.toJsonText()) }
+            check(Patches.fromJsonText(File(output, file).readText()) == patch) { "TRACE patch did not round-trip" }
+            file
+        }
+        archive(File(output, "lattice-trace-patches.zip"), tracePatchFiles.values.map { it to File(output, it) })
+        val traceReference = tracePresets.first { it.macros.getValue("SPEED") == .5f && it.macros.getValue("HOLD") == 0f }
+        val nativeReferenceRecipe = tracePhraseRecipe(traceReference)
+        val oracle = renderRecipe(json(gesturePhraseRecipe(moving = true)).obj()).snip
+        val nativeReference = renderRecipe(json(nativeReferenceRecipe).obj()).snip
+        check(oracle.samples.contentEquals(nativeReference.samples)) { "native TRACE changed the accepted B performance" }
+        val nativeComparison = sequenceRecipe(listOf(
+            "A · Plain pluck" to gesturePhraseRecipe(moving = false),
+            "B · Saved TRACE patch" to nativeReferenceRecipe,
+        ))
+        check(renderRecipe(json(focused).obj()).snip.samples.contentEquals(renderRecipe(json(nativeComparison).obj()).snip.samples)) {
+            "the native TRACE comparison must preserve the accepted R4 audio"
+        }
+        add(
+            "trace-native", "B, now a saved TRACE patch",
+            "A is the plain source. B is the same accepted movement rendered from saved TRACE patches. The reference speed preserves B exactly; use Patch to save it in SnipSnap, then change SPEED to choose how quickly the body gives way to its ringing tail.",
+            "focus", listOf("NATIVE TRACE", "ACCEPTED B"), nativeComparison,
+            cues = sequenceCues(nativeComparison), patchFile = tracePatchFiles.getValue(traceReference),
+        )
+        for (patch in tracePresets) {
+            val speed = patch.macros.getValue("SPEED")
+            val description = when {
+                speed < .5f -> "The same three notes with slower gate movement. The source effort follows that timing; the pitch and resonators keep their tuning. This speed is a new listening proposal."
+                speed > .5f -> "The same three notes with quicker gate movement. Compare how soon the solid attack gives way to ringing. This speed is a new listening proposal."
+                else -> "The accepted B movement, now rendered by an ordinary saved native TRACE patch. SPEED is at its reference midpoint and HOLD is zero."
+            }
+            add("trace-${slug(patch.name)}", patch.name, description, "trace",
+                listOf("NATIVE PATCH", "SPEED ${"%.2f".format(java.util.Locale.ROOT, speed)}"), tracePhraseRecipe(patch),
+                patchFile = tracePatchFiles.getValue(patch))
+        }
+        val traceNoteFile = "trace/ringing-trace-c3.wav"
+        WavWriter.write(File(output, traceNoteFile).apply { parentFile.mkdirs() }, traceReference.render(), WavWriter.BitDepth.PCM_24)
+        val traceKit = exportTraceKit(output, tracePresets)
+
         // Silence is measured as evidence, rather than occupying another source-choice card.
         val nullProbe = Lattice.probe(sourceBase.copy(
             turn = 1.0, gateCount = 2.0, contour = Lattice.Contour.SUSTAIN,
@@ -381,7 +429,7 @@ object LatticeAuditionGenerator {
         val referenceChecks = referenceChecks()
         val peak = clips.maxOf { ((it.getValue("metrics") as Map<*, *>)["peak"] as Number).toDouble() }
         val maxResidual = evidence.maxOf { ((it.getValue("diagnostics") as Map<*, *>)["allocationResidual"] as? Number)?.toDouble() ?: 0.0 }
-        check(clips.size == 19 && replayCount == 22 && matchedCount == 3) { "incomplete Lattice R4 listening pack" }
+        check(clips.size == 23 && replayCount == 26 && matchedCount == 3) { "incomplete Lattice R5 listening pack" }
         check(silentPeak == 0.0) { "crossed fixture is not digital silence after PCM16 export: $silentPeak" }
         check(referenceChecks.all { abs((it.getValue("error") as Number).toDouble()) < 1e-12 }) { "analytic reference failed" }
         val validation = linkedMapOf<String, Any?>(
@@ -392,11 +440,15 @@ object LatticeAuditionGenerator {
             "maxAllocationResidual" to maxResidual,
             "finiteOnly" to false, "externalEffects" to false,
             "commonGainReference" to true, "phraseAssemblyGain" to PHRASE_GAIN,
-            "holdImplemented" to true, "nativePresetCount" to nativePresets.size,
+            "holdImplemented" to true, "nativePresetCount" to (nativePresets.size + tracePresets.size),
+            "legacyNativePresetCount" to nativePresets.size,
+            "tracePresetCount" to tracePresets.size, "traceDefaultMatchesAcceptedB" to true,
+            "traceMotionSavedInPatch" to true, "traceHoldIsFinite" to true,
             "heldClipCount" to clips.count { it["section"] == "hold" },
             "maxHeldSeamError" to clips.mapNotNull { (it["metrics"] as? Map<*, *>)?.get("seamError") as? Number }.maxOf { it.toDouble() },
             "starterKitPadCount" to starterKit.getValue("padCount"),
-            "listeningVerdict" to "The owner accepted the R2 source improvement and clearer comparisons. Moving pluck character, native factory phrases, HOLD and MPC playback await listening review.",
+            "traceKitPadCount" to traceKit.getValue("padCount"),
+            "listeningVerdict" to "The owner accepted the R2 sources and clarity, then the R4 moving pluck: ‘B sounds cool’. Native TRACE preserves that reference. New speed/HOLD settings and hardware playback still need their own listening/device review.",
         )
         val engine = linkedMapOf<String, Any?>(
             "name" to "Lattice", "model" to MODEL, "sourceCommit" to revision,
@@ -410,29 +462,36 @@ object LatticeAuditionGenerator {
                 "R3 adds twelve native patches, three factory phrases, three periodic HOLD studies and a dry sixteen-pad MPC starter. Held studies repeat one settled source cycle four times without seam repair or makeup gain.",
                 "Standard patch, preset, velocity, CLI and phone-picker registration is present in source. Phone behavior and hardware MPC playback require their own device checks.",
                 "R4 adds one authored moving-pluck A/B phrase using the unchanged projection and reject collector. The curve is saved in its audition recipe; native patches and HOLD remain static.",
+                "R5 carries the accepted R4 B movement into native TRACE patches. TUNE changes pitch, SPEED changes the movement timing, and HOLD extends finite source effort. TRACE never exports an indefinite loop.",
+                "The R5 default native phrase and the complete plain/native comparison are sample-identical to the R4 reference. The three legacy voices, their twelve patch downloads and their original sixteen-pad kit remain separate and unchanged.",
             ),
         )
         val measurements = linkedMapOf<String, Any?>(
             "generatedAt" to Instant.now().toString(), "engine" to engine,
             "metricDefinition" to "Peak/RMS/DC and pitch are measured from exported PCM16 WAVs; gate allocation diagnostics are calculated inside the actual Kotlin engine. Waveform display alone is normalized per clip.",
             "matchedDefinition" to "Diagnostic A/B condition scalar, applied before sequence assembly: min(0.04 / condition RMS, 0.55 / condition sample peak). Each repeated condition retains the same scalar. Authoritative matched recipes save every gain; this is not engine output leveling.",
-            "referenceChecks" to referenceChecks, "validation" to validation, "starterKit" to starterKit, "clips" to evidence,
+            "referenceChecks" to referenceChecks, "validation" to validation, "starterKit" to starterKit, "traceKit" to traceKit, "clips" to evidence,
         )
         File(output, "measurements.json").writeText(Json.write(json(measurements)))
         val manifest = linkedMapOf<String, Any?>(
-            "revision" to 4,
-            "title" to "Lattice · from pluck to ringing tail",
-            "subtitle" to "One plain pluck beside the same notes losing their body into a tuned ringing tail.",
-            "revisionTitle" to "A pluck.\nThen its ringing trace.",
-            "revisionSummary" to "Start with one short A/B phrase. A is the plain source; B changes its harmonic balance and closes the direct path, leaving a resonant tail. Earlier source, native instrument and HOLD studies remain below.",
-            "revisionNote" to "The moving example is an audition prototype using the existing engine. It has not added automatic motion to native patches, and its musical character still needs your listening verdict.",
-            "heroClipId" to "pluck-to-outline",
+            "revision" to 5,
+            "title" to "Lattice · TRACE, saved and playable",
+            "subtitle" to "The accepted ringing pluck, now a native SnipSnap patch with a SPEED control.",
+            "revisionTitle" to "Keep B.\nChoose its speed.",
+            "revisionSummary" to "B is now TRACE, a saved SnipSnap voice. The reference speed keeps the accepted movement exactly. Try slower or quicker movement below, then take the patches and dry MPC kit with you.",
+            "revisionNote" to "You accepted the reference: ‘B sounds cool’. The default native TRACE rendering preserves it. Slower, quicker and extended HOLD settings are new listening proposals.",
+            "heroClipId" to "trace-native",
+            "heroTitle" to "Plain pluck → saved TRACE",
+            "heroEyebrow" to "THE ACCEPTED MOVEMENT · NOW A SAVED PATCH",
+            "heroDescription" to "A plays the plain notes. B uses saved TRACE patches to reproduce the accepted ringing movement. Download Patch, then use SPEED in SnipSnap to change how quickly it happens.",
+            "heroFootnote" to "The notes and source gain stay the same. The native B rendering matches the accepted reference exactly.",
             "preferredComparisonMode" to "matched",
             "generatedAt" to Instant.now().toString(), "engine" to engine,
             "clips" to clips, "referenceChecks" to referenceChecks, "validation" to validation,
             "downloads" to mapOf("zip" to "lattice-audition.zip", "measurements" to "measurements.json", "source" to "lattice-source.zip",
-                "patches" to "lattice-patches.zip", "kit" to "lattice-mpc-kit.zip"),
-            "starterKit" to starterKit,
+                "patches" to "lattice-patches.zip", "kit" to "lattice-mpc-kit.zip",
+                "tracePatches" to "lattice-trace-patches.zip", "traceKit" to "lattice-trace-mpc-kit.zip", "traceNote" to traceNoteFile),
+            "starterKit" to starterKit, "traceKit" to traceKit,
         )
         File(output, "manifest.json").writeText(Json.write(json(manifest)))
         // Retain the same listening interface for local regeneration and hosted publication.
@@ -442,7 +501,7 @@ object LatticeAuditionGenerator {
             if (template.isFile) template.copyTo(File(output, name), overwrite = true)
         }
         File(output, "REPLAY.txt").writeText("""
-            LATTICE — moving pluck, native instrument and HOLD audition, model $MODEL
+            LATTICE — native TRACE motion, source instrument and HOLD audition, model $MODEL
 
             Generate from the SnipSnap checkout:
               ./gradlew --no-daemon :synth:generateLatticeAudition
@@ -454,11 +513,17 @@ object LatticeAuditionGenerator {
 
             recipes/pluck-to-outline.json compares identical PLUCK source notes with authored gate motion.
             Its motion-phrase events save every TURN/STAGES-equivalent gate count/TWIST/COLOR/REJECT
-            keyframe and smoothstep interpolation. The curve is an audition proposal, not a native macro.
+            keyframe and smoothstep interpolation. This preserved R4 wrapper is the accepted reference.
             The direct path closes at .44 s, source effort ends at .46 s, and the later tail comes
             from the existing signed-rejection resonators. No extra oscillator or effect is added.
             recipes/ contains audition-performance wrappers, not app Patch/PadRecipe files.
-            patches/ and lattice-patches.zip contain all twelve standard native LATTICE patches.
+            patches/ and lattice-patches.zip retain the twelve legacy static native LATTICE patches.
+            trace-patches/ and lattice-trace-patches.zip contain Ringing Trace, Slow Trace and Quick Trace.
+            TRACE saves TUNE, SPEED and HOLD. SPEED .5/HOLD 0 preserves the accepted B motion.
+            TRACE HOLD extends finite effort; it does not create an indefinite loop or new strikes.
+            recipes/trace-native.json compares the plain source with the actual saved TRACE patch;
+            the entire comparison is sample-identical to the preserved R4 pluck-to-outline audio.
+            trace/ringing-trace-c3.wav is the unattenuated native C3 note in PCM24.
             native-phrase wrappers save a full native patch for every note. native-hold wrappers
             save a full held patch and repeatCount4, repeating its one native loop without fades.
             Primary WAVs retain common source gain. Matched COLOR/TWIST WAVs have their own recipes,
@@ -470,8 +535,11 @@ object LatticeAuditionGenerator {
             for each HOLD study; measurements.json records the engine's measured seam and pitch fit.
             lattice-mpc-kit.zip contains the sixteen-pad native MPC3 track, MPC2 twin and source kit.
             Enable whole-sample looping manually on MPC pads A14–A16 for indefinite HOLD.
-            The accepted R2 source choices and comparisons remain; new presets and HOLD still
-            need listening review, and phone/MPC behavior needs device checks. No external effects.
+            lattice-trace-mpc-kit.zip is a separate sixteen-pad native TRACE kit, with MPC3 and
+            MPC2 programs plus complete editable pad recipes. All TRACE pads are finite one-shots;
+            no sample looping should be enabled for them. Speed and HOLD are baked into each WAV.
+            The accepted R2 sources and R4 B reference remain. New speed/HOLD settings still need
+            listening review, and phone/MPC behavior needs device checks. No external effects.
             Source revision: $revision
             Exact working-tree source fingerprints are in manifest.json and each recipe.
         """.trimIndent() + "\n")
@@ -513,7 +581,7 @@ object LatticeAuditionGenerator {
                 for (event in events) {
                     val obj = event.obj()
                     val patch = nativePatch(obj.getValue("patch"))
-                    require(!Lattice.isLoop(patch.macros.getValue("HOLD"))) { "a native phrase note must be finite" }
+                    require(!Lattice.isLoop(patch.voice, patch.macros.getValue("HOLD"))) { "a native phrase note must be finite" }
                     val time = obj.getValue("timeSeconds").num()
                     require(time.isFinite() && time in 0.0..duration) { "native phrase event starts outside render" }
                     val note = patch.render()
@@ -529,7 +597,7 @@ object LatticeAuditionGenerator {
             }
             "native-hold" -> {
                 val patch = nativePatch(recipe.getValue("patch"))
-                require(Lattice.isLoop(patch.macros.getValue("HOLD"))) { "a held wrapper requires a native HOLD patch" }
+                require(Lattice.isLoop(patch.voice, patch.macros.getValue("HOLD"))) { "a held wrapper requires a native HOLD patch" }
                 val repeat = recipe.getValue("repeatCount").int()
                 require(repeat in 1..8) { "HOLD repeat count must be 1..8" }
                 val settings = Lattice.settingsFor(patch.voice, patch.macros, patch.midi, patch.velocity)
@@ -643,6 +711,26 @@ object LatticeAuditionGenerator {
     private fun nativePatch(value: JsonValue): LatticePatch =
         Patches.fromJsonValue(value) as? LatticePatch ?: error("audition native recipe must contain a LATTICE patch")
 
+    /** Same notes, offsets and assembly gain as the accepted R4 B performance. */
+    private fun tracePhraseRecipe(patch: LatticePatch): Map<String, Any?> {
+        require(patch.voice == LatticeVoice.TRACE) { "the motion phrase requires a TRACE patch" }
+        val notes = listOf(48, 55, 51)
+        val events = notes.mapIndexed { index, midi ->
+            mapOf("timeSeconds" to index * .85, "patch" to patch.copy(midi = midi).toJsonValue())
+        }
+        val noteFrames = notes.maxOf { midi ->
+            (Lattice.settingsFor(patch.voice, patch.macros, midi, patch.velocity).durationSeconds * RATE).roundToInt()
+        }
+        val lastOffset = (notes.lastIndex * .85 * RATE).roundToInt()
+        return linkedMapOf(
+            "kind" to "native-phrase", "assemblyGain" to PHRASE_GAIN,
+            "durationSeconds" to ((lastOffset + noteFrames).toDouble() / RATE),
+            "settings" to mapOf("sourceProfile" to "PLUCK", "voice" to "TRACE", "midi" to patch.midi,
+                "velocity" to patch.velocity, "macros" to patch.macros),
+            "events" to events,
+        )
+    }
+
     private fun gesturePhraseRecipe(moving: Boolean): Map<String, Any?> {
         val notes = listOf(48, 55, 51)
         val settings = LatticeGestureStudy.settings()
@@ -731,6 +819,73 @@ object LatticeAuditionGenerator {
             "program" to exported.program.relativeTo(output).invariantSeparatorsPath,
             "mpc2Twin" to true, "externalEffects" to false, "sampleLoopingNeedsManualSetup" to true,
             "download" to zip.name, "zipSha256" to sha256(zip))
+    }
+
+    /** Ordinary dry native recipes through the same MPC exporters as the legacy starter. */
+    private fun exportTraceKit(output: File, presets: List<LatticePatch>): Map<String, Any?> {
+        val reference = presets.first { it.macros.getValue("SPEED") == .5f }
+        val semitones = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val notes = semitones.map { semitone ->
+            reference.copy(name = "Trace ${Scales.nameOf(48 + semitone)}", midi = 48 + semitone)
+        }
+        val speedRows = listOf(48, 60).flatMap { midi ->
+            presets.map { it.copy(name = "${it.name} ${Scales.nameOf(midi)}", midi = midi) }
+        }
+        val held = listOf(
+            reference.copy(name = "Trace Longer C3", midi = 48, macros = reference.macros + ("HOLD" to .35f)),
+            reference.copy(name = "Trace Longer G3", midi = 55, macros = reference.macros + ("HOLD" to .7f)),
+        )
+        val patches = notes + speedRows + held
+        check(patches.size == 16 && patches.all { it.voice == LatticeVoice.TRACE })
+        val arranged = patches.map { patch ->
+            val recipe = PadRecipe(patch)
+            val saved = PadRecipe.fromJsonValue(recipe.toJsonValue())
+            check(saved == recipe) { "TRACE pad recipe did not round-trip" }
+            val audio = recipe.render()
+            check(audio.samples.contentEquals(saved.render().samples)) { "saved TRACE pad changed its audio" }
+            check(Lattice.drumClassFor(patch.voice, patch.macros) == DrumClass.TONAL) { "TRACE pads must stay finite" }
+            ArrangedPad(audio, DrumClass.TONAL, recipe.toJsonValue(), oneShot = true,
+                displayName = patch.name, source = mapOf(
+                    "engine" to patch.engine, "voice" to patch.voiceName, "rootMidi" to patch.midi.toString(),
+                    "rootNote" to Scales.nameOf(patch.midi), "speed" to patch.macros.getValue("SPEED").toString(),
+                    "hold" to patch.macros.getValue("HOLD").toString(), "model" to patch.model.toString(),
+                ))
+        }
+        val root = File(output, "trace-kit")
+        val source = File(root, "source-kit")
+        val kit = KitAssembler.assembleArranged("SnipSnap Lattice Trace", arranged, source)
+        val exported = Mpc3Exporter.exportTrack(kit, source, File(root, "mpc"), overwrite = true, mpc2Twin = true)
+        check(kit.pads.size == 16 && kit.pads.all { it.oneShot && it.drumClass == DrumClass.TONAL })
+        File(root, "pad-recipes.json").writeText(Json.write(json(kit.pads.map { pad ->
+            mapOf("slot" to pad.slot, "name" to pad.displayName, "sampleFile" to pad.sampleFile,
+                "source" to pad.source, "recipe" to pad.recipe)
+        })))
+        File(root, "README.txt").writeText("""
+            SnipSnap Lattice TRACE — saved motion on sixteen finite one-shot pads
+
+            Open mpc/SnipSnap Lattice Trace.xtd on MPC 3, keeping its _[TrackData] folder beside it.
+            The same folder contains the MPC 2 compatibility .xpm and PCM24 WAVs.
+            source-kit/ retains kit.json, every complete native patch recipe and the source WAVs.
+
+            A01–A08: Ringing Trace at the accepted reference speed, C-minor pentatonic from C3.
+            A09–A11: Ringing Trace, Slow Trace and Quick Trace at C3.
+            A12–A14: the same three saved speed positions at C4.
+            A15–A16: finite HOLD extensions at C3 and G3.
+
+            All sixteen pads are finite one-shots. Leave sample looping disabled for TRACE.
+            SPEED and HOLD are baked into the WAV; edit the saved patch in SnipSnap to re-render.
+            HOLD extends one source effort and then releases; it adds no strikes or indefinite loop.
+            No external effects, converter treatment or result-level normalization are applied.
+            Every saved pad recipe is re-rendered and checked sample-identical before export.
+            Actual phone and MPC hardware playback still require device verification.
+        """.trimIndent() + "\n")
+        val zip = File(output, "lattice-trace-mpc-kit.zip")
+        archive(zip, root.walkTopDown().filter { it.isFile }.map { "lattice-trace/${it.relativeTo(root).invariantSeparatorsPath}" to it }.toList())
+        return mapOf("padCount" to kit.pads.size, "finiteOneShotPads" to kit.pads.size,
+            "sourceKit" to "trace-kit/source-kit/kit.json", "recipes" to "trace-kit/pad-recipes.json",
+            "program" to exported.program.relativeTo(output).invariantSeparatorsPath,
+            "mpc2Twin" to true, "externalEffects" to false, "allPadRecipesSampleIdentical" to true,
+            "sampleLoopingEnabled" to false, "download" to zip.name, "zipSha256" to sha256(zip))
     }
 
     private fun phraseRecipe(
