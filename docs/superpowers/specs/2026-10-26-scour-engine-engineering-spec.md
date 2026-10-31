@@ -1023,6 +1023,10 @@ its listen.
   times the root under 1 % of the hit's energy at C3. At the first listening point, a .78 gain law gave
   4 %. If SHEET reads as a low gong, the gain law is the lever, and C2's pitch read is what it costs.
 - Bank B's "short hits" are short to the slam (0.25 s); each still rings 6.4 s.
+- SHEET's root, 65 to 262 Hz over TUNE, has not been heard on a phone speaker or through an MPC, where
+  the lowest octave may thin out.
+- The R4 page compares the voices at the same TUNE, which puts SHEET an octave under the other two; it does
+  not set SHEET against PLATE and PANE at the same pitch (SHEET at TUNE .5 against them at TUNE 0).
 - `MODEL_VERSION` stays 1. SHEET is new, and PLATE's and PANE's renders are unchanged to the bit (their trim
   share is exactly 1).
 - BEAM, the phone's synth picker and a docs page are still to come.

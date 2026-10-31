@@ -1407,7 +1407,7 @@ tasks.register<JavaExec>("generateScourAudition") {
     args("${rootDir}/testkit/scour-audition")
 }
 
-/** Export SCOUR's sixteen dry pads (builds at 120 and 90 BPM, then the presets) to testkit/SnipSnap Scour Kit/. */
+/** Export SCOUR's thirty-two dry pads over two banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's) to testkit/SnipSnap Scour Kit/. */
 tasks.register<JavaExec>("generateScourKit") {
     group = "distribution"
     description = "Export SCOUR's two banks (builds cut for 120 and 90 BPM, its twelve presets and SHEET's low hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
