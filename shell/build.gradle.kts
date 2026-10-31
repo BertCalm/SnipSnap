@@ -163,10 +163,10 @@ tasks.register<JavaExec>("generateFlockVelocityInstrument") {
     args(providers.gradleProperty("flockVelocityOutput").orNull ?: "${rootDir}/testkit/flock-velocity-instrument")
 }
 
-/** Three provisional model-3 OHM studies through the production keygroup handoff. */
+/** Three provisional expanded OHM studies through the production keygroup handoff. */
 tasks.register<JavaExec>("generateOhmExpandedHandoff") {
     group = "distribution"
-    description = "Export three provisional OHM model-3 keygroups, complete source recipes, MPC 2/3 packages and a verified ZIP."
+    description = "Export three provisional OHM keygroups, complete source recipes, MPC 2/3 packages and a verified ZIP."
     maxHeapSize = "768m"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.OhmExpandedHandoffGenerator")

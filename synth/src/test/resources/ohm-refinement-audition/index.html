@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="Three focused OHM comparisons: bowing, audio grains, and captured sound memory, with the shared-body sound kept as the starting point.">
+  <title>OHM — Three ways to extend the shared sound</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2387ae73'/%3E%3Cpath d='M8 16h16M16 8v16' stroke='%23252e25' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#player">Skip to the player</a>
+  <header class="site-header wrap">
+    <a class="brand" href="../">SnipSnap <span>/ OHM</span></a>
+    <button id="stop-all" class="quiet-button" type="button" disabled>Stop <kbd>Esc</kbd></button>
+  </header>
+  <main class="wrap">
+    <section class="introduction" aria-labelledby="page-title">
+      <p class="eyebrow">A FOCUSED FOLLOW-UP</p>
+      <h1 id="page-title">Three ways to extend the shared sound.</h1>
+      <p class="premise">Keep the string and its companions together. Try a bow, a little grain texture, or a memory of the sound.</p>
+      <p>Compare the two versions in each pair. Tell me which you would use, or if the difference is unclear.</p>
+      <a class="back-link" href="../">← Back to the three original sounds</a>
+    </section>
+
+    <p id="library-status" class="library-status" role="status">Opening the recordings…</p>
+    <div id="library-error" class="audio-error" role="alert" hidden><p id="library-error-message">The recordings could not load.</p><button id="retry-library" type="button" class="secondary-button">Try again</button></div>
+
+    <section class="listening-panel" id="player" aria-labelledby="sound-title" hidden>
+      <nav class="steps" id="comparisons" aria-label="Choose a comparison"></nav>
+      <div class="player-body">
+        <p id="current-kind" class="eyebrow"></p>
+        <h2 id="sound-title"></h2>
+        <p id="sound-description"></p>
+        <p id="listening-prompt" class="listening-prompt"></p>
+        <div id="variants" class="variant-buttons" role="group" aria-label="Choose a version to play"></div>
+        <p id="selected-sound" class="selected-sound"></p>
+        <div class="transport" aria-label="Playback controls">
+          <button id="play-pause" type="button" class="play-button"><span id="play-icon" aria-hidden="true">▶</span> <span id="play-label">Play</span></button>
+          <button id="replay" type="button" class="secondary-button">Replay from start</button>
+        </div>
+        <div class="progress-row">
+          <span id="elapsed" aria-hidden="true">0:00</span>
+          <label class="sr-only" for="progress">Playback position</label>
+          <input id="progress" type="range" min="0" max="1" value="0" step="0.01" disabled aria-valuetext="0 seconds">
+          <span id="duration" aria-hidden="true">0:00</span>
+        </div>
+        <p id="audio-status" class="audio-status" role="status" aria-live="polite"></p>
+        <div id="audio-error" class="audio-error" role="alert" hidden><p id="error-message">This recording could not load.</p><button id="retry" type="button" class="secondary-button">Try again</button></div>
+        <div class="recording-links"><a id="audio-download" download>Download this WAV ↓</a><a id="recipe-download" download>Saved recipe ↓</a></div>
+        <div id="step-navigation" class="step-navigation">
+          <button id="previous" type="button" class="quiet-button" disabled>← Previous</button>
+          <button id="next" type="button" class="quiet-button">Next →</button>
+        </div>
+        <button id="return-comparison" type="button" class="quiet-button return-button" hidden>← Return to the comparison</button>
+      </div>
+      <p class="comparison-note">Each pair uses the same note, playing strength, and shared-body settings at comparable listening levels. Choose a version to play it. Changing comparison pauses playback.</p>
+      <audio id="audio" preload="metadata"></audio>
+    </section>
+
+    <div id="extra-content" hidden>
+      <details class="depth-references">
+        <summary>Hear the original depth references</summary>
+        <div class="details-body">
+          <p>These are the unchanged recordings from steps 2 and 3 of the original guide. Use them to revisit the direction you liked.</p>
+          <div id="references" class="reference-buttons" role="group" aria-label="Play the original depth references"></div>
+          <p class="small-copy">They use an earlier version of OHM. Compare each new pair with itself when judging an addition.</p>
+        </div>
+      </details>
+      <section class="feedback" aria-labelledby="feedback-title">
+        <h2 id="feedback-title">What to tell me</h2>
+        <p>For each pair, name the version you would keep and describe what changed for you. A plain description in the chat is enough.</p>
+      </section>
+      <details class="source-details">
+        <summary>Recordings, recipes, and downloads</summary>
+        <div class="details-body">
+          <p>These are actual Kotlin-rendered recordings. Each new pair uses OHM model 4 on both sides, with the same C4 note, playing strength, seed, and shared-body settings. The original depth references remain model 2, with their audio unchanged.</p>
+          <p>Listening files use the same level rule: match the loudest 200 milliseconds, with a peak guard. Raw renders and the applied gains are included in the downloads.</p>
+          <p>Grains read short pieces of source audio. Memory repeats captured source-buffer audio; it is not spectral freeze. These examples are finite notes, with HOLD off.</p>
+          <p class="download-links"><a id="bundle-download" download>Download the audition ZIP ↓</a><a href="assets/manifest.json" download>Manifest ↓</a><a href="assets/diagnostics.json" download>Diagnostics ↓</a><a id="raw-download" download>Current raw WAV ↓</a></p>
+        </div>
+      </details>
+    </div>
+    <noscript><p>This player needs JavaScript. The recordings and recipes are also available in the <a href="assets/ohm-refinements.zip" download>audition ZIP</a>.</p></noscript>
+  </main>
+  <footer class="site-footer wrap"><span>OHM / SnipSnap</span><span>Recorded examples. Press Play when you are ready.</span></footer>
+</body>
+</html>

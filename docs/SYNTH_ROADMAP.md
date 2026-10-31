@@ -543,7 +543,12 @@ material; `:shell:generateOhmExpandedHandoff` exports three provisional C3–C5
 instruments. [Extension notes](OHM_EXPANDED.md) record source limits, loop
 evidence, host costs and the listening status.
 
-The model-3 sources and their combination studies remain unheard. Phone
+Model 4 repairs source-memory preparation and provides three focused
+comparisons through `:synth:generateOhmRefinementAudition`. Saved models 1–3
+retain their renderer; EXTEND starts new source studies on model 4, while
+UPDATE SOURCES explicitly upgrades an existing model-3 patch. The owner
+liked the depth of the model-2 answering and shared-body guide stages;
+new source refinements still await a listening verdict. Phone
 response, phone save/reopen and MPC hardware acceptance remain open.
 Separate rendered notes continue to start fresh ensembles.
 

@@ -7,7 +7,7 @@ import com.snipsnap.json.JsonValue
 enum class OhmExciter { PLUCK, BOW, CAPTURED }
 
 /**
- * Model-3 source choices. These sit beside the six performance macros so the
+ * Source choices for model 3 and later. These sit beside the six performance macros so the
  * relationship controls keep the same meaning across the different exciters.
  * FM index is phase deviation in radians; freeze holds an actual audio buffer.
  */

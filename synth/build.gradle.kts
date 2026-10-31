@@ -278,6 +278,23 @@ tasks.register<JavaExec>("generateOhmExpandedAudition") {
     }
 }
 
+/** Three focused model-4 additions with complete, byte-pinned model-2 depth references. */
+tasks.register<JavaExec>("generateOhmRefinementAudition") {
+    group = "distribution"
+    description = "Render three OHM shared-depth comparisons, exact reference notes and portable replay evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmRefinementAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("ohmRefinementReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("ohmRefinementReplayOutput").get(),
+            providers.gradleProperty("ohmRefinementReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("ohmRefinementOutput").orNull ?: "${rootDir}/testkit/ohm-refinement-audition")
+    }
+}
+
 /** Sixteen dry OHM factory notes, shared MPC 3 / MPC 2 audio and editable recipes. */
 tasks.register<JavaExec>("generateOhmKit") {
     group = "distribution"
