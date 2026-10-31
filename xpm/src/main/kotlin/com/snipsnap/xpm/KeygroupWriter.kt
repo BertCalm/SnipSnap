@@ -105,6 +105,12 @@ class KeygroupWriter {
         sb.append("  </Version>\n")
         sb.append("  <Program type=\"Keygroup\">\n")
         sb.append("    <ProgramName>").append(program.name.esc()).append("</ProgramName>\n")
+        val voice = program.voiceMode
+        sb.append("    <Mono>").append(voice.mono.xmlBool()).append("</Mono>\n")
+        sb.append("    <Program_Polyphony>").append(voice.polyphony).append("</Program_Polyphony>\n")
+        sb.append("    <PortamentoTime>").append(voice.portamentoSeconds.f()).append("</PortamentoTime>\n")
+        sb.append("    <PortamentoLegato>").append(voice.legato.xmlBool()).append("</PortamentoLegato>\n")
+        sb.append("    <PortamentoQuantized>False</PortamentoQuantized>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
             appendInstrument(sb, index, kg, program.volumeRelease, program.explicitNoteOn)
@@ -233,3 +239,5 @@ class KeygroupWriter {
         }
     }
 }
+
+private fun Boolean.xmlBool(): String = if (this) "True" else "False"

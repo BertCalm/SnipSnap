@@ -134,6 +134,29 @@ class KeygroupWriterTest {
      * invention, not omission.
      */
     @Test
+    fun `a POLY program says so in the header`() {
+        val xml = KeygroupWriter().write(program())
+        assertTrue("<Mono>False</Mono>" in xml)
+        assertTrue("<Program_Polyphony>0</Program_Polyphony>" in xml)
+        assertTrue("<PortamentoTime>0.000000</PortamentoTime>" in xml)
+        assertTrue("<PortamentoLegato>False</PortamentoLegato>" in xml)
+        assertTrue("<PortamentoQuantized>False</PortamentoQuantized>" in xml)
+        assertTrue(xml.indexOf("<Mono>") in xml.indexOf("<ProgramName>")..xml.indexOf("<Instruments>"))
+    }
+
+    @Test
+    fun `LEAD and GLIDE headers`() {
+        val lead = KeygroupWriter().write(program().copy(voiceMode = VoiceMode.LEAD))
+        assertTrue("<Mono>True</Mono>" in lead)
+        assertTrue("<Program_Polyphony>1</Program_Polyphony>" in lead)
+        assertTrue("<PortamentoLegato>False</PortamentoLegato>" in lead)
+        val glide = KeygroupWriter().write(program().copy(voiceMode = VoiceMode.GLIDE))
+        assertTrue("<Mono>True</Mono>" in glide)
+        assertTrue("<PortamentoTime>0.100000</PortamentoTime>" in glide)
+        assertTrue("<PortamentoLegato>True</PortamentoLegato>" in glide)
+    }
+
+    @Test
     fun `emits no element absent from real programs`() {
         val dir = File("../reference/golden/keygroup")
         val corpus = dir.listFiles { f -> f.extension == "xpm" }
