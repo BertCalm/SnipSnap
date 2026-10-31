@@ -94,13 +94,19 @@ fun KeysScreen(
     onBack: () -> Unit,
     // Where a failed voice-mode save is told; the app wires the dock's toast, a screen shown alone drops it.
     onToast: (String) -> Unit = {},
+    // Told with the re-read instrument after a voice-mode save, so the caller's copy is not left stale. Does not re-key the player or reseed the label.
+    onSaved: (InstrumentStore.Instrument) -> Unit = {},
 ) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
     // Keyed on both: a re-read sidecar (same file, new contents) reloads the
     // player. The zones' WAVs are read off the main thread; until they land
     // a key plays nothing, never a stale instrument.
-    val player = remember(sidecar, instrument) { InstrumentPlayer(context) }
+    // A voice-mode save hands the caller a re-read instrument that differs only
+    // in its mode; that must not reload the player, so the mode is left out of
+    // the key (the player and the label already hold it).
+    val loadKey = instrument.copy(voiceMode = VoiceMode.POLY)
+    val player = remember(sidecar, loadKey) { InstrumentPlayer(context) }
     DisposableEffect(player) { onDispose { player.close() } }
     // True from the player's birth until its zones have been read. Keyed on
     // the player, so a superseded open's `finally` lowers the flag of the
@@ -124,12 +130,13 @@ fun KeysScreen(
     // the package's three descriptors in the background. A failed save puts
     // the label (and the player) back. Work that dies with the screen, so it
     // reports through ReportBusy.
-    var voiceMode by remember(instrument) { mutableStateOf(instrument.voiceMode) }
-    var savingVoice by remember(instrument) { mutableStateOf(false) }
+    var voiceMode by remember(sidecar, loadKey) { mutableStateOf(instrument.voiceMode) }
+    var savingVoice by remember(sidecar, loadKey) { mutableStateOf(false) }
     ReportBusy(remember(savingVoice) { if (savingVoice) Busy(Copy.KEYS_VOICE_BUSY) else null })
     val scope = rememberCoroutineScope()
     fun cycleVoiceMode() {
-        if (savingVoice) return
+        // Not while the zones load: the player has no instrument to change yet, and the load would overwrite the choice.
+        if (savingVoice || opening) return
         val previous = voiceMode
         val next = VoiceMode.entries[(previous.ordinal + 1) % VoiceMode.entries.size]
         voiceMode = next
@@ -145,6 +152,9 @@ fun KeysScreen(
                         instrument.toProgram().copy(voiceMode = next),
                     )
                 }
+                // The write is done; a failed re-read only leaves the caller's copy stale.
+                val saved = withContext(Dispatchers.IO) { runCatching { InstrumentStore.read(sidecar) }.getOrNull() }
+                if (saved != null) onSaved(saved)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -287,7 +297,7 @@ fun KeysScreen(
             ActionButton(backLabel, scheme, enabled = true, onClick = ::requestBack)
             ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { stepOctave(-1) })
             ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { stepOctave(+1) })
-            ActionButton("VOICE ${voiceMode.name}", scheme, enabled = !savingVoice, working = savingVoice, modifier = Modifier.weight(1f), onClick = ::cycleVoiceMode)
+            ActionButton("VOICE ${voiceMode.name}", scheme, enabled = !savingVoice && !opening, working = savingVoice, modifier = Modifier.weight(1f), onClick = ::cycleVoiceMode)
             // Only where a keyboard could be heard at all, like the line under the grid.
             if (midiSupported) {
                 ActionButton(
