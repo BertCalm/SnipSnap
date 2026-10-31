@@ -401,6 +401,9 @@ testkit/caustic-instrument-audition/
 testkit/.caustic-instrument-building-*/
 testkit/.caustic-audition-kit-*/
 testkit/caustic-kit/
+testkit/caustic-character-study/
+testkit/.caustic-character-*/
+scripts/__pycache__/
 
 # RUSH's listening audio and measurements regenerate from the shared board DSP.
 testkit/rush-audition/
@@ -425,6 +428,11 @@ testkit/tidal-hold-audition/
 testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
+
+# Reproducible finite TREFOIL listening renders and evidence.
+testkit/trefoil-audition/
+testkit/trefoil-model-two-audition/
+testkit/trefoil-playable-bank/
 
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/
@@ -455,6 +463,8 @@ testkit/murmur-luthier-audition/
 testkit/obliterate-core-inputs/
 testkit/obliterate-core-audition/
 testkit/obliterate-kotlin-audition/
+testkit/obliterate-shimmer-audition/
+experiments/obliterate-shimmer/__pycache__/
 experiments/obliterate-core/__pycache__/
 
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
@@ -475,6 +485,11 @@ testkit/obbligato-conversation-audition/
 
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
+
+# Rebuildable native CAUSTIC voice comparisons and four-voice kit.
+testkit/caustic-native-voices-audition/
+testkit/caustic-native-voices-kit/
+testkit/.caustic-native-*/
 
 # Saved playable NACRE revision and musical comparison exports.
 testkit/nacre-playable-audition/

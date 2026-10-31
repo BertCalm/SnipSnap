@@ -1,10 +1,10 @@
 package com.snipsnap.synth
 
 /**
- * Eight finite starting positions for the first native Alloy instrument.
- * Preferred Alloy and Fuller Body retain the heard timbral anchors. The other
- * six positions are new variations awaiting listening, not approved new voices.
- * Native leveling and LENGTH are delivery choices separate from the old WAVs.
+ * The eight original Alloy recipes, plus one starting patch for each approved
+ * character direction. The three new directions were heard as listening
+ * prototypes; their Kotlin ports and control variations still await listening.
+ * Six Alloy variations likewise remain new positions rather than heard anchors.
  */
 object CausticPresets {
     private data class Entry(val patch: CausticPatch, val description: String, val heardAnchor: Boolean = false)
@@ -17,7 +17,8 @@ object CausticPresets {
         name: String, description: String,
         source: Float = .5f, focus: Float = .19f, body: Float = 1f, length: Float = 1f,
         midi: Int = 60, velocity: Float = .75f, heardAnchor: Boolean = false,
-    ) = Entry(CausticPatch(name, CausticVoice.ALLOY, linkedMapOf(
+        voice: CausticVoice = CausticVoice.ALLOY,
+    ) = Entry(CausticPatch(name, voice, linkedMapOf(
         "SOURCE" to source, "FOCUS" to focus, "BODY" to body, "LENGTH" to length, "HOLD" to 0f,
     ), midi, velocity, model = 1), description, heardAnchor)
 
@@ -30,6 +31,12 @@ object CausticPresets {
         entry("Sparse Alloy", "New native position: a sparse pickup exposes the quiet pitched support.", focus = .85f),
         entry("Short Glint", "New position: a short, lighter metal accent at C5.", body = .3f, length = 0f, midi = 72, velocity = .7f),
         entry("Low Vessel", "New position: a lower, moderately full body at C2.", body = .75f, length = .55f, midi = 36, velocity = .8f),
+        entry("Hollow Mallet", "The approved hollow-knock direction. This native port awaits listening.",
+            body = .5f, heardAnchor = true, voice = CausticVoice.HOLLOW_MALLET),
+        entry("Rubbed Ring", "The approved pressure-swell direction. This native port awaits listening.",
+            body = .5f, heardAnchor = true, voice = CausticVoice.RUBBED_RING),
+        entry("Travelling Catches", "The approved moving-contact direction. This native port awaits listening.",
+            body = 0f, heardAnchor = true, voice = CausticVoice.TRAVELLING_CATCHES),
     )
 
     fun all(): List<CausticPatch> = roster.map { it.patch }

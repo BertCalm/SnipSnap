@@ -1,6 +1,5 @@
 package com.snipsnap.app.ui
 
-import android.content.Context
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -45,7 +44,6 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.MidiInput
-import com.snipsnap.app.PREFS
 import com.snipsnap.app.SurfaceEngine
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.deviceSampleRate
@@ -66,8 +64,6 @@ import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.MidiDeviceId
-import com.snipsnap.shell.MidiLearn
-import com.snipsnap.shell.MidiLearnStore
 import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
@@ -429,40 +425,23 @@ fun SurfaceScreen(
     // A keyboard's hand on the pad, through MIDI learn (the MIDI panel):
     // learned knobs move the puck, a learned key or pad is the finger
     // down. The rules are `:shell`'s SurfaceMidi and MidiLearn; this side
-    // opens the keyboard with the lifecycle, below, and keeps the bindings
-    // in the app's preferences beside every other screen's.
-    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val learn = remember {
-        MidiLearn(MidiLearnStore.of(SurfaceMidi.SCREEN, MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))))
-    }
+    // opens the keyboard with the lifecycle, below; MidiLearnState keeps
+    // the bindings beside every other screen's.
+    val learnState = rememberMidiLearn(SurfaceMidi.SCREEN) { SurfaceMidi.prefer(it) }
+    val learn = learnState.learn
     val hand = remember { SurfaceMidi() }
-    var learnedBindings by remember { mutableStateOf(learn.bindings) }
-    var learnArmed by remember { mutableStateOf<String?>(null) }
-    var lastHeard by remember { mutableStateOf<String?>(null) }
     var midiDevices by remember { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     var midiSupported by remember { mutableStateOf(false) }
     // A finger on the pad owns the puck; MIDI's moves wait until it lifts.
     var fingerDown by remember { mutableStateOf(false) }
 
-    fun saveLearn() {
-        learnedBindings = learn.bindings
-        val all = MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))
-        val merged = MidiLearnStore.replace(all, SurfaceMidi.SCREEN, learn.bindings)
-        prefs.edit().putString(MidiLearnStore.PREFS_KEY, MidiLearnStore.write(merged)).apply()
-    }
-
     val midi = remember { MidiInput(context) }
     val midiListener = remember {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {
-                // The live readout is only drawn on the MIDI panel; a knob
-                // sweeping elsewhere must not recompose the screen per message.
-                if (panel == Panel.MIDI) MidiLearn.heard(event)?.let { lastHeard = it }
+                learnState.heard(event)
                 val heard = hand.handle(event, device?.fingerprint?.key, learn)
-                if (heard.learned != null) {
-                    learnArmed = null
-                    saveLearn()
-                }
+                learnState.learned(heard.learned)
                 if (heard.moved && !fingerDown) target = hand.reading(mode)
             }
 
@@ -477,14 +456,8 @@ fun SurfaceScreen(
         }
     }
 
-    // A learn left waiting on another panel would bind the next knob
-    // turned there without the player seeing why.
-    LaunchedEffect(panel) {
-        if (panel != Panel.MIDI) {
-            learn.disarm()
-            learnArmed = null
-        }
-    }
+    // Only the MIDI panel shows the learn; leaving it stops a learn still waiting.
+    LaunchedEffect(panel) { learnState.showing = panel == Panel.MIDI }
 
     fun started(up: Boolean) {
         engineUp = up
@@ -1597,62 +1570,13 @@ fun SurfaceScreen(
             if (panel == Panel.MIDI) {
                 Spacer(Modifier.height(6.dp))
 
-                // MIDI learn: tap a target, move a control on the keyboard.
-                // A lit chip is waiting for its control; tapping it again
-                // stops waiting, FORGET drops what the waiting one had.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    for ((t, chip) in SurfaceMidi.TARGETS) {
-                        ActionButton(
-                            chip,
-                            scheme,
-                            enabled = midiSupported,
-                            dimmed = learnArmed != t,
-                            modifier = Modifier.weight(1f).semantics { selected = learnArmed == t },
-                        ) {
-                            if (learnArmed == t) {
-                                learn.disarm()
-                                learnArmed = null
-                            } else {
-                                learn.arm(t, SurfaceMidi.prefer(t))
-                                learnArmed = t
-                            }
-                        }
-                    }
-                    val armedNow = learnArmed
-                    ActionButton(
-                        "FORGET",
-                        scheme,
-                        enabled = armedNow != null && learnedBindings.any { it.target == armedNow },
-                        modifier = Modifier.weight(1.4f),
-                    ) {
-                        if (armedNow != null) {
-                            learn.forget(armedNow)
-                            learn.disarm()
-                            learnArmed = null
-                            saveLearn()
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-                val armedLabel = SurfaceMidi.TARGETS.firstOrNull { it.first == learnArmed }?.second
-                TapeText(
-                    when {
-                        !midiSupported -> "THIS PHONE HAS NO MIDI"
-                        midiDevices.isEmpty() -> "PLUG IN A KEYBOARD TO LEARN"
-                        armedLabel != null -> "MOVE A CONTROL FOR $armedLabel"
-                        else -> "TAP A TARGET, THEN MOVE A CONTROL"
-                    },
-                    TapeType.pixel,
-                    scheme.ink.tape,
+                MidiLearnPanel(
+                    learnState,
+                    SurfaceMidi.TARGETS,
+                    supported = midiSupported,
+                    connected = midiDevices.isNotEmpty(),
+                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
                 )
-                TapeText("KNOBS MOVE THE PUCK, HOLD SOUNDS IT", TapeType.pixel, scheme.ink.tape)
-                for ((t, chip) in SurfaceMidi.TARGETS) {
-                    val bound = learnedBindings.firstOrNull { it.target == t }
-                    TapeText("$chip  ${bound?.let { MidiLearn.describe(it.source) } ?: "-"}", TapeType.pixel, scheme.amber.tape)
-                }
-                TapeText("LAST  ${lastHeard ?: "-"}", TapeType.pixel, scheme.ink.tape)
             }
 
             if (panel == Panel.MOD) {

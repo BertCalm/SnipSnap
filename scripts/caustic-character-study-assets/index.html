@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111513">
+  <title>CAUSTIC · Four directions</title>
+  <script>if(location.protocol!=='file:'&&!location.pathname.endsWith('/')&&!/\.[a-z0-9]+$/i.test(location.pathname)){const b=document.createElement('base');b.href=location.pathname+'/';document.head.append(b);}</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#directions">Skip to the sounds</a>
+  <header class="wrap masthead">
+    <a class="wordmark" href="../instrument/">SNIP<span>SNAP</span><i>/</i>CAUSTIC</a>
+    <a class="back-link" href="../instrument/">Current instrument <span aria-hidden="true">→</span></a>
+  </header>
+  <main class="wrap">
+    <section class="intro" aria-labelledby="study-heading">
+      <div><p class="eyebrow">CHARACTER STUDY / FOUR DIRECTIONS</p><h1 id="study-heading">Give the vessel<br>a different voice<span>.</span></h1></div>
+      <div class="intro-copy"><p>Compare the attack, the body and the motion at the same pitch.</p><p class="muted">Fuller Body is the unchanged native reference. The other three are listening prototypes, not factory presets.</p></div>
+    </section>
+
+    <section class="listening-bench" aria-labelledby="player-name">
+      <div class="bench-top">
+        <div class="current-recording" aria-live="polite" aria-atomic="true"><p class="eyebrow" id="player-status">READY TO PLAY</p><h2 id="player-name">Fuller Body · C4</h2><p id="player-detail">Select a sound below to hear its recording.</p></div>
+        <div class="level-switch" role="group" aria-label="Playback level"><button type="button" id="matched-mode" aria-pressed="true">Level matched</button><button type="button" id="raw-mode" aria-pressed="false">Renderer level</button></div>
+      </div>
+      <audio id="audio" controls preload="none" aria-label="Current Caustic recording"></audio>
+      <div class="bench-bottom">
+        <label class="volume" for="volume"><span>Volume</span><input id="volume" type="range" min="0" max="1" step="0.01" value="0.7"><output id="volume-value" for="volume">70%</output></label>
+        <div class="recording-links"><a id="current-recipe" hidden download>Study recipe JSON</a><a id="current-wav" hidden download>WAV</a></div>
+      </div>
+      <p class="level-note" id="level-note">Level matched reduces loudness differences so you can compare character.</p>
+      <p id="playback-error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="directions" class="directions" aria-labelledby="directions-heading">
+      <div class="direction-toolbar">
+        <div><h2 id="directions-heading">Same pitch. Four gestures.</h2><p>Every Play button plays the sound named on that card.</p></div>
+        <div class="register-switch" role="group" aria-label="Register"><button type="button" data-midi="36" aria-pressed="false">C2 <span>Low</span></button><button type="button" data-midi="60" aria-pressed="true">C4 <span>Middle</span></button><button type="button" data-midi="84" aria-pressed="false">C6 <span>High</span></button></div>
+      </div>
+      <div class="reference-row"><button type="button" id="reference-play" disabled>Play Fuller Body</button><span>The native reference at the selected pitch.</span></div>
+      <div id="sound-cards" class="sound-grid"><p class="loading">Loading the listening study…</p></div>
+    </section>
+
+    <section class="study-notes" aria-label="About this comparison">
+      <p><strong>Listen to the whole gesture.</strong> First compare the attack and the weight of the body, then the motion and the way the note lets go.</p>
+      <p>The page plays fixed recordings. Prototype JSON describes this listening study; only Fuller Body is an existing native instrument sound.</p>
+      <a id="zip-download" class="zip-download" hidden download>Download the compact listening pack <span aria-hidden="true">↓</span></a>
+    </section>
+    <details class="provenance"><summary>Recording details</summary><div id="provenance-content"></div><a href="manifest.json" download>Full manifest and measurements</a></details>
+  </main>
+  <footer class="wrap"><span>SNIPSNAP / CAUSTIC</span><nav aria-label="Related studies"><a href="../instrument/">Current presets</a><a href="../">Earlier studies</a></nav></footer>
+  <script src="manifest.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

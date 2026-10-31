@@ -35,9 +35,15 @@ class InstrumentPlayer(context: Context) {
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
 
+    /** A sounding voice: its key, and the gain its zone and velocity gave it before [volume]. */
+    private class Voice(val note: Int, val gain: Float)
+
     /** Sounding voices by id, in the order they started - the oldest first. */
-    private val voices = LinkedHashMap<Int, Int>() // voice id -> note
+    private val voices = LinkedHashMap<Int, Voice>()
     private var nextVoice = 1
+
+    /** The player's master gain, 1 = the instrument as made; see [setVolume]. */
+    private var volume = 1f
 
     /**
      * Load the instrument the sidecar describes: every zone's WAV read
@@ -95,6 +101,20 @@ class InstrumentPlayer(context: Context) {
         instrument = instrument?.copy(release = seconds)
     }
 
+    /**
+     * Every voice's gain times [gain] (0..1, already through the screen's
+     * volume law): new notes start at it, and held ones glide to it over a
+     * fader's glide, so a knob turned under a chord moves the chord without
+     * a step.
+     */
+    @Synchronized
+    fun setVolume(gain: Float) {
+        require(gain.isFinite() && gain in 0f..1f)
+        volume = gain
+        if (!open) return
+        for ((id, v) in voices) NativePads.setVoiceGain(handle, id, v.gain * gain, v.gain * gain, PadEngine.FADER_GLIDE_MS)
+    }
+
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
     @Synchronized
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
@@ -116,10 +136,10 @@ class InstrumentPlayer(context: Context) {
         val id = nextVoice++
         val queued = NativePads.noteOn(
             handle, id, sample,
-            0L, hit.frames, hit.loopStartFrame, hit.gain, hit.gain, hit.pitchRatio,
+            0L, hit.frames, hit.loopStartFrame, hit.gain * volume, hit.gain * volume, hit.pitchRatio,
             reverse = false,
         )
-        if (queued) voices[id] = note
+        if (queued) voices[id] = Voice(note, hit.gain)
         return queued
     }
 
@@ -128,7 +148,7 @@ class InstrumentPlayer(context: Context) {
     fun noteOff(note: Int) {
         if (!open) return
         val release = instrument?.let { KeyHit.releaseMs(it) } ?: 1f
-        for (id in voices.filterValues { it == note }.keys.toList()) {
+        for (id in voices.filterValues { it.note == note }.keys.toList()) {
             NativePads.stopVoice(handle, id, release)
             voices.remove(id)
         }
