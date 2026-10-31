@@ -2408,3 +2408,14 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
 }
+
+/** Sixteen finite harp pads for the MPC listening trial, retaining exact native strikes. */
+tasks.register<JavaExec>("generateNacreKit") {
+    group = "distribution"
+    description = "Export the Nacre MPC starter trial, native MPC 3 track, MPC 2 twin, recipes and listening page."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacreKitGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("nacreKitOutput").orNull ?: "${rootDir}/testkit")
+}
