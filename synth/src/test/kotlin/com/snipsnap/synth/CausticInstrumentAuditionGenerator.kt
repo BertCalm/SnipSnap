@@ -123,7 +123,7 @@ object CausticInstrumentAuditionGenerator {
             messages
         }
         val summary = linkedMapOf<String, Any?>(
-            "clipCount" to records.size, "voiceCount" to 1, "presetCount" to CausticPresets.all().size,
+            "clipCount" to records.size, "voiceCount" to 1, "presetCount" to CausticPresets.forVoice(CausticVoice.ALLOY).size,
             "sampleRate" to WavWriter.MPC_SAMPLE_RATE, "channels" to 1, "bitDepth" to 24,
             "maximumNativePeak" to maximumPeak, "worstSampleHeadroomDb" to -20 * log10(maximumPeak),
             "worstPitchCents" to heard.mapNotNull { it.metrics["pitchCents"] as? Double }.maxOfOrNull { abs(it) },
@@ -199,7 +199,7 @@ object CausticInstrumentAuditionGenerator {
     }
 
     private fun cases(): List<Case> {
-        val base = CausticPresets.all().first { it.name == "Fuller Body" }
+        val base = CausticPresets.forVoice(CausticVoice.ALLOY).first { it.name == "Fuller Body" }
         fun moved(name: String, vararg macros: Pair<String, Float>) = base.copy(name = name, macros = base.macros + macros.toMap())
         val cases = mutableListOf(
             Case("default-c4", "Fuller Body / C4", "The native default: SOURCE .50, FOCUS .19, BODY 1 and LENGTH 1.", "anchors", base, null),
@@ -219,7 +219,7 @@ object CausticInstrumentAuditionGenerator {
             Case("short-preferred", "BODY × LENGTH / Preferred, medium", "Use the preferred bright body with medium LENGTH. Compare with the fuller body at the same duration.", "pairs", moved("Medium Preferred", "BODY" to 0f, "LENGTH" to .5f), "length-half"),
         )
         fun sameSound(a: CausticPatch, b: CausticPatch) = a.voice == b.voice && a.macros == b.macros && a.midi == b.midi && a.velocity == b.velocity && a.model == b.model
-        for (preset in CausticPresets.all()) {
+        for (preset in CausticPresets.forVoice(CausticVoice.ALLOY)) {
             val index = cases.indexOfFirst { sameSound(it.patch, preset) }
             if (index >= 0) cases[index] = cases[index].copy(presetNames = cases[index].presetNames + preset.name)
             else cases += Case("preset-" + preset.name.lowercase().replace(' ', '-'), preset.name,

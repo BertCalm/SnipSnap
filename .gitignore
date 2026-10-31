@@ -401,6 +401,9 @@ testkit/caustic-instrument-audition/
 testkit/.caustic-instrument-building-*/
 testkit/.caustic-audition-kit-*/
 testkit/caustic-kit/
+testkit/caustic-character-study/
+testkit/.caustic-character-*/
+scripts/__pycache__/
 
 # RUSH's listening audio and measurements regenerate from the shared board DSP.
 testkit/rush-audition/
@@ -475,6 +478,11 @@ testkit/obbligato-conversation-audition/
 
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
+
+# Rebuildable native CAUSTIC voice comparisons and four-voice kit.
+testkit/caustic-native-voices-audition/
+testkit/caustic-native-voices-kit/
+testkit/.caustic-native-*/
 
 # Saved playable NACRE revision and musical comparison exports.
 testkit/nacre-playable-audition/

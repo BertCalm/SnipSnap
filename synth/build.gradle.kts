@@ -2176,6 +2176,17 @@ tasks.register<JavaExec>("generateCausticInstrumentAudition") {
     args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
 }
 
+/** Four permanent native voices, kept separate from the preserved listening studies. */
+tasks.register<JavaExec>("generateCausticCharactersAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's four native voices, focused control comparisons and portable patch/WAV packs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticCharactersAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticCharactersOutput").orNull ?: "${rootDir}/testkit/caustic-native-voices-audition")
+}
+
 tasks.register<JavaExec>("generateCausticKit") {
     group = "distribution"
     description = "Export CAUSTIC's sixteen dry finite pads, editable recipes and both MPC program formats."
