@@ -241,11 +241,11 @@ with saved terminal fades; they do not create held pads. Native instrument
 loops remain untouched. ROOT remains a geometry
 reference, and sampler release differs from the prototype's physical resonator
 decay. The owner accepted the
-MPC held trial on 2026-10-31 without supplying model/OS details. An earlier
-checkpoint passed focused JVM checks, all twelve complete accepted-WAV
-comparisons, the cache-copy mutation guard and local Android APK builds.
-The final SEND/SPREAD delivery correction is being rechecked; full JVM and
-on-device/emulator execution remain pending. The
+MPC held trial on 2026-10-31 without supplying model/OS details. Final clean
+source `617ba1b7` passed 78 focused JVM tests, all twelve complete accepted-WAV
+comparisons and all three local Android APK builds. The cache-copy mutation
+guard is proven. Full unfiltered JVM and on-device/emulator execution remain
+pending. The
 [OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
 separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase

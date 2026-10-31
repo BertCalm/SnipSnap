@@ -530,12 +530,12 @@ instrument loops remain untouched. Held SPREAD uses the authored reference,
 while finite OVERLAP keeps its existing pitch detector.
 PULSE, LOCK and GLOW stay zero, HOLD stays one. The owner accepted the held
 MPC trial on 2026-10-31 without supplying model/OS or per-check measurements;
-an earlier checkpoint passed 54 focused JVM tests and all twelve complete
-accepted-WAV comparisons.
+final clean source `617ba1b7` passed 78 focused JVM tests and all twelve
+complete accepted-WAV comparisons, including the SEND/SPREAD delivery checks.
 Removing the defensive copy makes its cache-ownership test fail; restoring
 the exact source passes all seven held tests. Local debug, StrikeFx and
-instrumentation APK builds passed at that checkpoint. Final SEND/SPREAD
-delivery revalidation, full JVM and on-device/emulator execution
+instrumentation APK builds passed on that same clean source. Full unfiltered
+JVM and on-device/emulator execution
 remain pending; phone performance and touch lifecycle need their own device pass.
 Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
 reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records

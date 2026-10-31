@@ -417,8 +417,8 @@ Loopable breathing and GLOW remain deferred.
 | Finite factory bank | The owner accepted the twelve model-2 musical recipes. Their registration and finite audio remain separate from held playback. |
 | Steady held listening proof | The owner accepted the steady proof. Its recorded host tests establish recurrence, independent-neighbour seam checks and source-withdrawal behavior under the tested settings. |
 | Held MPC keygroup trial | Owner accepted in conversation on 2026-10-31. No MPC model, OS/firmware or per-check hardware measurements were supplied. Do not infer a particular device, measured release time or polyphony limit. |
-| Phone integration | Authorized on 2026-10-31. An earlier checkpoint passed focused JVM checks and local Android APK builds. The final SEND/SPREAD delivery correction is being rechecked; full JVM and emulator/physical-device execution remain pending. |
-| Production audio compatibility | At that checkpoint, all twelve complete production CLI/maker PCM24 WAVs, including sampler metadata, were byte-identical to the retained accepted trial. The final pad-delivery correction leaves the native instrument loop path unchanged. |
+| Phone integration | Authorized on 2026-10-31. Final focused validation passed 78 JVM tests and all three local Android APK builds at clean source `617ba1b7`. Full unfiltered JVM and emulator/physical-device execution remain pending. |
+| Production audio compatibility | All twelve complete production CLI/maker PCM24 WAVs, including sampler metadata, were rechecked at clean `617ba1b7` and remain byte-identical to the retained accepted trial. SEND/SPREAD's saved finite fades leave native instrument loops unchanged. |
 
 Owner acceptance is a listening and use decision. It does not replace a measured
 latency, pitch, aliasing or sampler-envelope report. The existing held package
@@ -430,10 +430,9 @@ the same peak without protection.
 
 The integration adds explicit saved held playback, dry touch preview and
 ordinary instrument-library/MPC export. The baseline for this update is
-`2b3e1688`. An earlier checkpoint passed focused JVM checks, the complete
-accepted-audio comparison and local Android APK builds. Final SEND/SPREAD
-delivery revalidation, full JVM and emulator/physical-device execution remain
-pending.
+`2b3e1688`. Final focused JVM checks, the complete accepted-audio comparison
+and local Android APK builds passed at clean implementation source `617ba1b7`.
+Full unfiltered JVM and emulator/physical-device execution remain pending.
 No physical phone measurements are claimed here.
 
 ### Saved playback and controls
@@ -525,20 +524,16 @@ audition recipes remain distinct from these normal `OverlapPatch` files.
 
 ### Host measurements and verification
 
-The results below describe the checkpoint before the final SEND/SPREAD
-delivery correction. Three new shell regressions now cover saved finite fades
-without changing the source, actual SPREAD apply/reopen/replay/tuning, and
-finite-detector fallback. Focused validation including `SpreadTest` is running;
-no passing result is claimed yet for those additions.
-
-At the earlier checkpoint, the focused Gradle process exited `0`: `54` JVM
-tests passed (`43` synth,
-`9` shell and `2` CLI), with no failures, errors or skips. Coverage includes
+At clean implementation source `617ba1b7`, the final focused Gradle process
+exited `0`: `78` JVM tests passed (`43` synth, `33` shell and `2` CLI), with no
+failures, errors or skips. The shell count contains eight `OverlapPadMakerTest`,
+four integration and twenty-one `SpreadTest` cases. Coverage includes
 finite JSON/audio compatibility, held round trip and version refusal, strict
 steady-control validation, cache ownership/eviction, cancellation without
 publication, loop/sample bounds, saved preset handling and complete
-instrument-library/export replay. The new focused suites include
-`OverlapHeldTest`, `OverlapPadMakerTest` and `OverlapHeldCommandTest`.
+instrument-library/export replay. The final shell regressions also verify saved
+finite delivery fades without changing the source, actual SPREAD
+apply/reopen/replay/tuning, and finite-detector fallback.
 
 A negative control removed the completed-cache defensive sample copy. The
 named cache-ownership test then failed with the expected caller-mutation
@@ -548,8 +543,9 @@ the restored seven-test `OverlapHeldTest` run exited `0` without failures,
 errors or skips. This demonstrates that the ownership guard detects its
 intended failure rather than only passing the implementation.
 
-All twelve complete WAVs exported through the installed production CLI and
-`OverlapPadMaker` are byte-identical to the retained accepted trial, including
+All twelve complete WAVs were rechecked through the final installed production
+CLI and `OverlapPadMaker` at clean `617ba1b7`. They remain byte-identical to the
+retained accepted trial, including
 PCM24 audio and `smpl` root/loop metadata. The references are MIDI `36`, `48`
 and `60` for all four topologies; every approved capture kept gain `1`.
 
@@ -573,18 +569,17 @@ JVM startup measurements. Reproduce the report with a new output filename:
 ./gradlew :synth:benchmarkOverlapHeld -PoverlapHeldBenchmarkOutput=/absolute/path/new-held-report.json
 ```
 
-The local Android build exited `0` on 2026-10-31, completing
+The final local Android build exited `0` on 2026-10-31 at clean `617ba1b7`, completing
 `:app:assembleDebug`, `:app:assembleStrikeFx` and
 `:app:assembleDebugAndroidTest`. Debug, StrikeFx and instrumentation APKs were
-built. The initial four `OverlapHeldSynthScreenTest` cases compiled for explicit
+built. All four `OverlapHeldSynthScreenTest` cases compiled for explicit
 mode/finite return, same-frame performance edits and saved one-shot delivery,
 prepared release without name/release recapture, and MAKE INSTRUMENT's three
-roots. The save/send cases now also exercise the actual SPREAD overlay and
-compare complete recipes and PCM; their updated compile/run checks remain
-pending. APK builds do not execute the instrumentation cases.
+roots. The save/send cases also exercise the actual SPREAD overlay and compare
+complete recipes and PCM. APK builds do not execute the instrumentation cases.
 
-Final delivery revalidation, full JVM and on-device/emulator execution remain
-pending. A physical phone pass must check press, early release, cancellation,
+Full unfiltered JVM and on-device/emulator execution remain pending. A physical
+phone pass must check press, early release, cancellation,
 background/focus loss,
 saved preset/instrument reopening and MPC export from the phone. Record
 device/build and cold/warm timing rather than treating the host benchmark,
