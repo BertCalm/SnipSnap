@@ -139,6 +139,18 @@ class NavState(private val model: Navigation = Navigation()) {
     fun stage(stage: Stage) = sync { model.stage(stage) }
     fun open(bench: Bench) = sync { model.open(bench) }
     fun closeBench() = sync { model.closeBench() }
+
+    /**
+     * [Navigation.roomFor]: true when the caller should [open] [bench] now. It
+     * closes benches through the model, so [location] is copied after, whether
+     * or not the answer is to open.
+     */
+    fun roomFor(bench: Bench): Boolean {
+        val open = model.roomFor(bench)
+        location = model.location
+        return open
+    }
+
     fun take(door: Door) = sync { model.take(door) }
     fun goTo(target: Location) = sync { model.goTo(target) }
 
