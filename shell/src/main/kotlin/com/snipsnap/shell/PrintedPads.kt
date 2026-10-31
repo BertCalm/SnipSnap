@@ -28,6 +28,18 @@ object PrintedPads {
         }
     }
 
+    /**
+     * The pad a printed pad's REMOVE would bring back: its saved source's main file, velocity layers
+     * and recipe, on the printed pad's slot. The kit bin's sweep reads it ([KitBuilderModel.binHolds])
+     * to keep the original that pad's NONE would need, so it checks the source snapshot's own hash
+     * but does not re-hash the saved audio. Throws when [pad] is not printed or its source will not read.
+     */
+    fun sourcePad(kitDir: File, pad: KitPad): KitPad = when {
+        pad.recipe?.entries?.containsKey("aquariumPad") == true -> AquariumPadSheet.sourcePad(kitDir, pad)
+        pad.recipe?.entries?.containsKey("boardPad") == true -> BoardSheet.sourcePad(kitDir, pad)
+        else -> throw IllegalArgumentException("pad ${pad.slot} is not a printed pad")
+    }
+
     /** Individual-pad copying carries the immutable editing source, rather than only the wet WAVs. */
     fun importPad(sourceDir: File, targetDir: File, original: KitPad, copied: KitPad): KitPad =
         when {

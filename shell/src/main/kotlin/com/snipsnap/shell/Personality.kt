@@ -1181,6 +1181,8 @@ object Copy {
     const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
     const val BIN_ITEM_GONE = "ALREADY GONE."
+    /** THE BIN's row for an original a pad still needs, in place of its day count; [pad] is the pad that keeps it. */
+    fun binKeptFor(pad: String): String = "KEPT FOR $pad"
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
@@ -1542,9 +1544,11 @@ object Copy {
     /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
     const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
     /**
-     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a take 30 days):
-     * the board re-renders whole from the original, so it would play every pedal already in the
-     * audio twice. Refused; the pedals are part of the sound now.
+     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a pad's original
+     * as long as the pad needs it, so, for example, the bin was emptied by hand, BACK on the pad's
+     * kept row in THE BIN took the original out, or the recipe came from another pad): the board
+     * re-renders whole from the original, so it would play every pedal already in the audio twice.
+     * Refused; the pedals are part of the sound now.
      */
     const val PEDALS_NOT_BINNED =
         "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
