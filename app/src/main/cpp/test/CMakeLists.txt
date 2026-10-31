@@ -106,3 +106,15 @@ add_executable(aquarium_performance_tests
 target_include_directories(aquarium_performance_tests PRIVATE "${ENGINE_DIR}")
 target_compile_options(aquarium_performance_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME aquarium_performance_tests COMMAND aquarium_performance_tests)
+
+add_executable(surface_aquarium_tests
+    surface_aquarium_tests.cpp
+    oboe_stubs.cpp
+    "${ENGINE_DIR}/SurfaceEngine.cpp"
+    "${ENGINE_DIR}/aquarium/PerformanceBus.cpp"
+    "${ENGINE_DIR}/aquarium/AquariumProcessor.cpp"
+)
+target_include_directories(surface_aquarium_tests PRIVATE "${ENGINE_DIR}" "${CMAKE_CURRENT_SOURCE_DIR}/stub" "${OBOE_INCLUDE_DIR}")
+target_compile_options(surface_aquarium_tests PRIVATE -Wall -Wextra -include cstring)
+target_link_libraries(surface_aquarium_tests PRIVATE Threads::Threads)
+add_test(NAME surface_aquarium_tests COMMAND surface_aquarium_tests)

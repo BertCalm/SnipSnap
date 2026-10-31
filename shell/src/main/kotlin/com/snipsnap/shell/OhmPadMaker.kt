@@ -30,7 +30,7 @@ object OhmPadMaker {
 
     /** The portable patch owns release, source recording and every performance choice. */
     data class Spec(val patch: OhmPatch) {
-        init { require(supports(patch)) { "OHM instruments require a model-3 held patch" } }
+        init { require(supports(patch)) { "OHM instruments require a model-3 or later held patch" } }
         val releaseSeconds: Float get() = patch.releaseSeconds
     }
 

@@ -23,7 +23,7 @@ struct PerformanceSettings {
 bool validPerformanceSettings(const PerformanceSettings& settings) noexcept;
 
 /**
- * One continuous stereo effect after a PadEngine's existing summed/clamped mix.
+ * One continuous stereo effect after the owning host's existing mix.
  * prepare/release and publish belong to one serialized control producer.
  * beginCallback/process/clearTail belong to the audio consumer. Preparation,
  * release and destruction require stopped callbacks; only preparation allocates.
@@ -38,7 +38,7 @@ bool validPerformanceSettings(const PerformanceSettings& settings) noexcept;
  * Output gain precedes a stereo-linked, instantaneous-attack sample-peak guard,
  * with a 50 ms exponential release. It is outside every DSP feedback loop.
  * Static bypass is the original finite stereo bus, bit for bit. During a
- * transition the dry branch can reach its existing +/-1 ceiling; fully wet
+ * transition the dry branch retains its host's existing range; fully wet
  * output is bounded by kOutputCeiling. This is not true-peak protection.
  */
 class PerformanceBus {

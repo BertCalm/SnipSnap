@@ -169,6 +169,35 @@ class UatSimTest {
         journey("reach HELP from a pad bench", planned = 1, setup = { go(Place.PROJECT); open(Bench.PAD_SHEET) }) {
             open(Bench.HELP) // the gear, from anywhere
         }
+        // Back from a pad tool lands on the pad editor, not on the grid (the spec's
+        // §7.3.1, PR 3d). The model half; ConventionTest pins the App's wiring.
+        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)) {
+            var landed: Location? = null
+            journey("Back from ${tool.label} to the pad editor", planned = 2, setup = { go(Place.PROJECT); open(Bench.PAD_SHEET) }) {
+                open(tool) // GRAIN ▸, SPLICE ▸ or STACK ▸ on the editor
+                closeBench() // the chip, or system Back
+                landed = location
+            }
+            if (landed?.top != Bench.PAD_SHEET) {
+                finding("J11-${tool.name}-back", "Back from ${tool.label} landed on ${landed?.top?.label ?: "the grid"}, not the pad editor")
+            } else {
+                note("Back from ${tool.label} lands on the pad editor")
+            }
+        }
+        // AUDITION ▸ switches stage and keeps the editor in the history: Back from BEAT is the editor.
+        run {
+            var landed: Location? = null
+            journey("Back from AUDITION to the pad editor", planned = 2, setup = { go(Place.PROJECT); open(Bench.PAD_SHEET) }) {
+                goTo(Location(Place.PROJECT, Stage.BEAT)) // GROOVE, where the comparison plays
+                back()
+                landed = location
+            }
+            if (landed?.top != Bench.PAD_SHEET) {
+                finding("J11-AUDITION-back", "Back from AUDITION landed on ${landed?.top?.label ?: "the grid"}, not the pad editor")
+            } else {
+                note("Back from AUDITION lands on the pad editor")
+            }
+        }
         journey("tune a synth, hear it, tune again", planned = 4, setup = { go(Place.MAKE); open(Bench.SYNTH) }) {
             make.settings(Bench.SYNTH)["engine"] = "RESIN"
             go(Place.PROJECT) // hear the pad

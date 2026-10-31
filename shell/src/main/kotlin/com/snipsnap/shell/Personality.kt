@@ -154,6 +154,12 @@ object Copy {
      */
     const val NO_KIT_FOR_ORBIT = "ADD A KIT TO THIS PROJECT FIRST. ORBIT PUTS IT ON RINGS."
     /**
+     * SONG with no kit open: reached by Back, to a SONG whose kit has since gone
+     * (SONG is drawn only for the kit it was opened for). Same shape as
+     * [NO_KIT_FOR_ORBIT].
+     */
+    const val NO_KIT_FOR_SONG = "ADD A KIT TO THIS PROJECT FIRST. SONG LAYS ITS GROOVE OUT AS A TRACK."
+    /**
      * EXPORT with no kit in the project — distinct from [EMPTY_SHELF], which this
      * screen used to borrow: EMPTY_SHELF claims nothing has been taped,
      * but EXPORT dubs a *kit*, and STARTERS makes one without taping
@@ -1175,6 +1181,8 @@ object Copy {
     const val BIN_EMPTY_STATE = "THE BIN IS EMPTY."
     /** `restoreFromBin` returned null: the row was stale by the time BACK was tapped (already pulled, or purged). */
     const val BIN_ITEM_GONE = "ALREADY GONE."
+    /** THE BIN's row for an original a pad still needs, in place of its day count; [pad] is the pad that keeps it. */
+    fun binKeptFor(pad: String): String = "KEPT FOR $pad"
 
     // ---- TAKES + BIN: the rule the screen states plainly (X2.3) ----
     const val TAKES_BIN_RULE =
@@ -1536,9 +1544,11 @@ object Copy {
     /** A pedal past a pad's limit ([com.snipsnap.synth.PedalBoard.MAX_PICKS]): nothing changed. */
     const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
     /**
-     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a take 30 days):
-     * the board re-renders whole from the original, so it would play every pedal already in the
-     * audio twice. Refused; the pedals are part of the sound now.
+     * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a pad's original
+     * as long as the pad needs it, so, for example, the bin was emptied by hand, BACK on the pad's
+     * kept row in THE BIN took the original out, or the recipe came from another pad): the board
+     * re-renders whole from the original, so it would play every pedal already in the audio twice.
+     * Refused; the pedals are part of the sound now.
      */
     const val PEDALS_NOT_BINNED =
         "THE BIN NO LONGER HOLDS THIS PAD'S ORIGINAL, SO ITS PEDALS ARE PART OF THE SOUND NOW. THEY STAY AS THEY ARE."
@@ -2541,6 +2551,8 @@ object Copy {
     const val GRAB_NOTHING_YET = "NOTHING TO GRAB YET."
     /** HOLD's own empty snapshot - released before a single frame landed. */
     const val HOLD_NOTHING_RECORDED = "NOTHING RECORDED."
+    /** GRAB/HOLD found the pad filled when the write took its turn (another capture landed, or a snip was placed, while the user was away), so nothing was written. */
+    const val PAD_CAPTURE_SLOT_TAKEN = "THAT PAD WAS FILLED WHILE YOU WERE AWAY. NOTHING WAS REPLACED."
     /** GRAB/HOLD's own landing toast: [verb] the gesture's own past-tense word ("GRABBED"/"RECORDED"), [pad] the pad it landed on. */
     fun padGestureLanded(verb: String, pad: String): String = "$verb → PAD $pad."
     /**

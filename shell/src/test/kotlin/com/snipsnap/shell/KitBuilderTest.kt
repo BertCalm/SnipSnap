@@ -1129,7 +1129,7 @@ class KitBuilderTest {
     }
 
     @Test
-    fun `a velocity-layered pad's bin entries never get a tombstone - reconstructing a multi-file pad is out of scope`() {
+    fun `a velocity-layered pad's eject is marked but never reinstated - reconstructing a multi-file pad is out of scope`() {
         val dir = File(temp, "BinLayered")
         val m = KitBuilderModel.create("BinLayered", dir)
         m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
@@ -1139,7 +1139,13 @@ class KitBuilderTest {
         m.clear(1)
         val bin = m.binContents()
         assertTrue(bin.size >= 2, "every file the layered pad referenced was binned")
-        assertTrue(bin.all { it.padSnapshot == null }, "a layered pad's bin entries carry no tombstone")
+        assertTrue(bin.all { it.padSnapshot == null }, "a layered pad's bin entries carry no pad for BACK to reinstate")
+        assertTrue(
+            bin.all { File(it.file.parentFile, "${it.file.name}.json").isFile },
+            "but each is marked as an eject record, so a new pad on its name never keeps it (binHolds)",
+        )
+        m.restoreFromBin(bin.first())
+        assertNull(m.pad(1), "BACK brings the audio back, not the pad")
     }
 
     @Test
@@ -1161,6 +1167,380 @@ class KitBuilderTest {
         )
         assertEquals(0, m.binContents().size)
         assertEquals(0, binDir.listFiles()?.size ?: 0, "the tombstone was purged along with its WAV, not left behind")
+    }
+
+    // ---- the bin keeps what a pad needs (docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md) ----
+
+    private val dayMs = 24L * 60 * 60 * 1000
+
+    /**
+     * The launch sweep as `App.kt` runs it (a fresh open of the saved kit), with every entry already
+     * old enough to go: whatever is left afterwards is what the bin keeps, not what is too young.
+     */
+    private fun sweepEverythingOld(dir: File): Int =
+        KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+
+    /** Re-stamps one bin entry, tombstone and all, for a test where two entries need different ages. */
+    private fun restamp(entry: KitBuilderModel.BinEntry, millis: Long) {
+        val bin = entry.file.parentFile
+        val tombstone = File(bin, "${entry.file.name}.json")
+        assertTrue(entry.file.renameTo(File(bin, "${millis}_${entry.originalName}")), "test setup: rename must succeed")
+        if (tombstone.isFile) assertTrue(tombstone.renameTo(File(bin, "${millis}_${entry.originalName}.json")), "test setup: rename must succeed")
+    }
+
+    /** A small DUST print built in place, so the door needs no tape on a shelf: a hiss bed and a short room. */
+    private fun dustPrint(): com.snipsnap.audio.Dust.Print {
+        val r = java.util.Random(3)
+        val hiss = com.snipsnap.audio.Snip(FloatArray(4_410) { (r.nextGaussian() * 0.01).toFloat() }, 1, 44_100)
+        val room = com.snipsnap.audio.Snip(FloatArray(2_205) { (r.nextGaussian() * 0.05 * Math.exp(-it / 500.0)).toFloat() }, 1, 44_100)
+        return com.snipsnap.audio.Dust.Print(hiss, room)
+    }
+
+    /**
+     * The owner's answer, door by door: every treated pad keeps its original past the sweep, and the
+     * undo each door already has gives it back. The ninth pad is a chain with its recipe stripped:
+     * `Robin.undo` reads only `chain`, so the chain alone has to be enough.
+     */
+    @Test
+    fun `a treated pad's original outlives the sweep, and its own undo gives it back byte for byte`() {
+        val dir = File(temp, "BinKeeps")
+        val m = KitBuilderModel.create("BinKeeps", dir)
+        for (slot in 1..9) m.assign(slot, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val originals = (1..9).associateWith { File(dir, m.pad(it)!!.sampleFile).readBytes() }
+
+        m.eraPad(1, "tape", 1f)
+        m.characterPad(2, "smeared", 0.6f)
+        m.smearPad(3, 0.5f)
+        m.dustPad(4, 0.6f, "tape.wav", dustPrint())
+        m.pedalPad(5, com.snipsnap.synth.PedalBoard(listOf(com.snipsnap.synth.PedalBoard.Pick("driven", 0.7f))))
+        Mutate.apply(m, 6, listOf(Mutate.Source("BinKeeps:A01", DrumSynth.kick())), Mutate.Mode.SPLICE)
+        m.treatPad(7, "crushed") // an fx-only recipe, what the CLI's `treat --undo` pops
+        Robin.apply(m, 8, takes = 2, seed = 1)
+        Robin.apply(m, 9, takes = 2, seed = 1)
+        m.update(9) { it.copy(recipe = null) }
+        m.save()
+        val named = mapOf(1 to "era", 2 to "character", 3 to "SMEAR", 4 to "DUST", 5 to "pedals", 6 to "MUTATE", 7 to "fx-only", 8 to "chain", 9 to "bare chain")
+        val holds = m.binHolds()
+        for ((slot, what) in named) {
+            assertEquals(slot, holds.single { it.entry.originalName == m.pad(slot)!!.sampleFile }.keptFor, "the $what pad keeps its original")
+        }
+
+        assertEquals(0, sweepEverythingOld(dir), "every entry is a pad's original, and every pad still needs its own")
+
+        for (slot in 1..5) m.unEraPad(slot)
+        Mutate.undo(m, 6)
+        m.untreatPad(7)
+        Robin.undo(m, 8)
+        Robin.undo(m, 9)
+        for ((slot, what) in named) {
+            assertTrue(File(dir, m.pad(slot)!!.sampleFile).readBytes().contentEquals(originals.getValue(slot)), "the $what pad came back byte for byte")
+        }
+    }
+
+    @Test
+    fun `only the newest entry under a pad's file is kept, and the levels under it leave on the clock`() {
+        val dir = File(temp, "BinNewest")
+        val m = KitBuilderModel.create("BinNewest", dir)
+        val pad = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        m.treatPad(2, "crushed") // bins the original
+        val crushed = File(dir, pad.sampleFile).readBytes()
+        m.treatPad(2, "washed", amount = 0.6f) // bins the crushed take: the newest, the one every undo reads
+        m.save()
+        val (newer, older) = m.binContents()
+
+        assertEquals(1, sweepEverythingOld(dir), "only the newest entry under a name is what the pad's undo reads; the one under it leaves")
+        assertEquals(listOf(newer.file), m.binContents().map { it.file }, "the newest entry stays")
+        assertFalse(older.file.exists(), "the older level left")
+        m.untreatPad(2)
+        assertTrue(File(dir, pad.sampleFile).readBytes().contentEquals(crushed), "the pad's undo still lands")
+    }
+
+    @Test
+    fun `a pad after NONE keeps nothing, and its leftover takes leave on the clock`() {
+        val dir = File(temp, "BinAfterNone")
+        val m = KitBuilderModel.create("BinAfterNone", dir)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        m.treatPad(2, "crushed")
+        m.treatPad(2, "washed", amount = 0.6f)
+        m.unEraPad(2) // NONE: the newest comes back and the recipe comes off; the first original is left over
+        m.save()
+        assertNull(m.pad(2)!!.recipe, "test setup: the pad is untreated")
+        val leftover = m.binHolds().single()
+        assertNull(leftover.keptFor, "an untreated pad keeps nothing")
+
+        assertEquals(1, sweepEverythingOld(dir))
+        assertFalse(leftover.entry.file.exists(), "the leftover take left on the clock")
+    }
+
+    @Test
+    fun `a velocity-layered pad keeps one entry per file it plays`() {
+        val dir = File(temp, "BinLayers")
+        val m = KitBuilderModel.create("BinLayers", dir)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.addGhostLayers(2)
+        m.save()
+        val files = (listOf(m.pad(2)!!.sampleFile) + m.pad(2)!!.velocityLayers.map { it.sampleFile }).distinct()
+        assertTrue(files.size > 1, "the fixture is layered")
+        val originals = files.associateWith { File(dir, it).readBytes() }
+        m.eraPad(2, "tape", 1f)
+        m.save()
+
+        assertEquals(0, sweepEverythingOld(dir), "every layer's original stays")
+        val holds = m.binHolds()
+        assertEquals(files.sorted(), holds.map { it.entry.originalName }.sorted(), "one entry per file, no more")
+        assertTrue(holds.all { it.keptFor == 2 && it.purgeAtMillis == null }, "every one kept for A02")
+        m.unEraPad(2)
+        for ((f, bytes) in originals) assertTrue(File(dir, f).readBytes().contentEquals(bytes), "$f back byte for byte")
+    }
+
+    /**
+     * An eject writes a tombstone holding the whole pad, recipe included, and BACK brings that pad
+     * back; its NONE then needs the original under the eject record. So the original lives exactly as
+     * long as the tombstone, past its own 30 days, and goes in the same sweep.
+     */
+    @Test
+    fun `an ejected treated pad's original is kept while its tombstone stays, leaves with it, and NONE works after BACK`() {
+        val dir = File(temp, "BinEjected")
+        val m = KitBuilderModel.create("BinEjected", dir)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        val snare = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        val original = File(dir, kick.sampleFile).readBytes()
+        for (slot in 1..2) {
+            m.eraPad(slot, "tape", 1f) // the original goes in with no tombstone: a treatment bins without one
+            m.clear(slot) // the eject record goes in with a tombstone holding the era'd pad
+        }
+        m.save()
+        val now = System.currentTimeMillis()
+        for (name in listOf(kick.sampleFile, snare.sampleFile)) {
+            val treatedFrom = m.binContents().single { it.originalName == name && it.padSnapshot == null }
+            restamp(treatedFrom, now - 31 * dayMs) // the originals went in 31 days ago, the ejects a moment ago
+        }
+        val snareEject = m.binContents().single { it.originalName == snare.sampleFile && it.padSnapshot != null }
+
+        assertEquals(0, KitBuilderModel.open(dir).purgeBin(nowMillis = now), "the originals outlive their 30 days while their pads can still come back")
+        val snareOriginal = m.binHolds().single { it.entry.originalName == snare.sampleFile && it.entry.padSnapshot == null }
+        assertNull(snareOriginal.keptFor, "no live pad keeps it; its tombstone does")
+        assertEquals(snareEject.binnedAtMillis + 30 * dayMs, snareOriginal.purgeAtMillis, "it leaves with the tombstone")
+
+        // BACK brings the era'd pad back with its recipe, and its NONE needs the original.
+        assertTrue(m.restoreFromBin(m.binContents().single { it.originalName == kick.sampleFile && it.padSnapshot != null }) != null)
+        assertTrue(PadSheet.read(m.pad(1)!!.recipe) != null, "test setup: the pad came back era'd")
+        m.unEraPad(1)
+        assertTrue(File(dir, kick.sampleFile).readBytes().contentEquals(original), "NONE after BACK gives the original back")
+
+        // The first sweep after the snare's tombstone runs out takes both, the tombstone with them.
+        assertEquals(2, KitBuilderModel.open(dir).purgeBin(nowMillis = snareEject.binnedAtMillis + 30 * dayMs + 1))
+        assertEquals(0, File(dir, KitBuilderModel.BIN_DIR).listFiles()?.size ?: 0, "the original left in the same sweep as its tombstone")
+    }
+
+    /**
+     * EVIL TWINS rerolled: the old twins are ejected with tombstones, and the new twins take their
+     * file names and carry recipes the rule counts. Only an eject writes a tombstone, so an entry
+     * with one is a record of an ejected pad, never a live pad's original, and a new pad on the same
+     * name must not pin a stranger's sound forever. A torn tombstone still says so: the guard asks
+     * whether the file is there, not whether it parses.
+     */
+    @Test
+    fun `a new pad reusing an ejected pad's file name does not keep the ejected pad's entry`() {
+        val dir = File(temp, "BinReroll")
+        val m = KitBuilderModel.create("BinReroll", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
+        m.remixBankB(seed = 5)
+        val names = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }.map { it.sampleFile }
+        m.remixBankB(seed = 6)
+        m.save()
+        val twins = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }
+        assertEquals(names, twins.map { it.sampleFile }, "test setup: the reroll reused every name")
+        assertTrue(twins.all { KitBuilderModel.dependsOnBin(it) }, "test setup: the new twins carry recipes the rule counts")
+        val ejected = m.binContents()
+        assertEquals(names.sorted(), ejected.map { it.originalName }.sorted())
+        assertTrue(ejected.all { it.padSnapshot != null }, "test setup: every entry is an eject record")
+        File(ejected.first().file.parentFile, "${ejected.first().file.name}.json").writeText("{ torn")
+
+        assertTrue(m.binHolds().all { it.keptFor == null }, "a stranger's eject record is never kept for a new pad on its name")
+        assertEquals(names.size, sweepEverythingOld(dir))
+        assertEquals(0, File(dir, KitBuilderModel.BIN_DIR).listFiles()?.size ?: 0, "the eject records left with their tombstones")
+    }
+
+    /**
+     * The guard comes after "newest": a live pad whose newest entry is an eject record keeps
+     * nothing, never the entry underneath it. Here the first twin was era'd, so its own original
+     * sits under its eject record, and the reroll's new twin plays the same name.
+     */
+    @Test
+    fun `a new pad whose newest entry is an eject record keeps nothing, not the entry under it`() {
+        val dir = File(temp, "BinUnderEject")
+        val m = KitBuilderModel.create("BinUnderEject", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.remixBankB(seed = 5)
+        val name = m.pad(17)!!.sampleFile
+        m.eraPad(17, "tape", 1f) // the first twin's original goes in with no tombstone
+        m.remixBankB(seed = 6) // its eject record goes in on top, and the new twin takes the name
+        m.save()
+        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
+        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
+        val (eject, original) = m.binContents().filter { it.originalName == name }
+        assertTrue(eject.padSnapshot != null && original.padSnapshot == null, "test setup: the newest is the eject record")
+
+        val hold = m.binHolds().single { it.entry.file == original.file }
+        assertNull(hold.keptFor, "the new twin must not pin the old twin's original")
+        assertEquals(eject.binnedAtMillis + 30 * dayMs, hold.purgeAtMillis, "it rides its own eject record's tombstone instead")
+    }
+
+    /**
+     * Clause (c) keeps the entry BACK-then-NONE reads: the newest under the tombstone's name that
+     * went in before it. When that is an earlier eject record (a reroll's), the tombstone keeps
+     * nothing, and an eject record is never stretched by a later one either. The first twin's own
+     * original then leaves with the first twin's eject record, and the second twin's NONE refuses
+     * rather than playing the first twin's sound.
+     */
+    @Test
+    fun `a tombstone never reaches past an earlier eject record, and never stretches it`() {
+        val dir = File(temp, "BinPastEject")
+        val m = KitBuilderModel.create("BinPastEject", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.remixBankB(seed = 5)
+        val name = m.pad(17)!!.sampleFile
+        m.treatPad(17, "crushed") // the first twin's own original, no tombstone
+        m.remixBankB(seed = 6) // the first twin's eject record; the second twin takes the name
+        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
+        m.clear(17) // the second twin's eject record, its slot left empty for BACK
+        m.save()
+        val (secondEject, firstEject, firstOriginal) = m.binContents()
+        assertTrue(secondEject.padSnapshot != null && firstEject.padSnapshot != null && firstOriginal.padSnapshot == null, "test setup")
+        val now = System.currentTimeMillis()
+        restamp(secondEject, now - dayMs)
+        restamp(firstEject, now - 40 * dayMs)
+        restamp(firstOriginal, now - 50 * dayMs)
+        val holds = m.binHolds().associateBy { it.entry.binnedAtMillis }
+        assertEquals(now - 10 * dayMs, holds.getValue(now - 40 * dayMs).purgeAtMillis, "the first eject record keeps its own clock")
+        assertEquals(now - 10 * dayMs, holds.getValue(now - 50 * dayMs).purgeAtMillis, "the first original rides the first eject record, not the second")
+
+        assertEquals(2, KitBuilderModel.open(dir).purgeBin(nowMillis = now), "both go in the same sweep")
+        val left = m.binContents().single()
+        assertEquals(now - dayMs, left.binnedAtMillis, "only the second eject record is left")
+        m.restoreFromBin(left) // BACK: the second twin, with its copied recipe
+        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: BACK brought the second twin back")
+        assertFailsWith<IllegalArgumentException>("NONE refuses rather than playing a stranger's sound") { m.untreatPad(17) }
+    }
+
+    /** An untreated pad's tombstone needs nothing from the bin, so the leftover under it keeps its own 30 days. */
+    @Test
+    fun `an untreated pad's tombstone does not stretch a leftover take under it`() {
+        val dir = File(temp, "BinUntreatedEject")
+        val m = KitBuilderModel.create("BinUntreatedEject", dir)
+        val snare = m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.save()
+        m.treatPad(2, "crushed")
+        m.treatPad(2, "washed", amount = 0.6f)
+        m.unEraPad(2) // NONE: the first original is left over
+        assertNull(m.pad(2)!!.recipe, "test setup: untreated")
+        m.clear(2)
+        m.save()
+        val leftover = m.binContents().single { it.originalName == snare.sampleFile && it.padSnapshot == null }
+
+        val hold = m.binHolds().single { it.entry.file == leftover.file }
+        assertNull(hold.keptFor)
+        assertEquals(leftover.binnedAtMillis + 30 * dayMs, hold.purgeAtMillis, "the tombstone of a pad that needs nothing keeps nothing")
+    }
+
+    /**
+     * A GHOSTS-layered twin gets no pad snapshot BACK could reinstate, but its eject is still
+     * marked, so the next twin on the same name keeps nothing of it and its NONE refuses once the
+     * sweep has taken the old twin's audio, rather than playing it.
+     */
+    @Test
+    fun `a layered pad's eject is marked, so a new pad on its name keeps nothing of it`() {
+        val dir = File(temp, "BinLayeredReroll")
+        val m = KitBuilderModel.create("BinLayeredReroll", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.remixBankB(seed = 5)
+        val name = m.pad(17)!!.sampleFile
+        m.addGhostLayers(17) // a twin keeps its stamp under GHOSTS, so the reroll still takes it
+        m.remixBankB(seed = 6)
+        m.save()
+        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
+        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
+        val ejected = m.binContents()
+        assertTrue(ejected.size >= 2 && ejected.all { it.padSnapshot == null }, "test setup: the layered twin's files, no pad to reinstate")
+
+        assertTrue(m.binHolds().all { it.keptFor == null }, "the new twin keeps nothing of the old one")
+        assertEquals(ejected.size, sweepEverythingOld(dir))
+        assertFailsWith<IllegalArgumentException> { m.unEraPad(17) }
+    }
+
+    /**
+     * DE-SAMPLE leaves a plain patch recipe, the shape a synth send leaves, but `snipsnap desample
+     * --undo` reads the bin for the capture, so the `desampled` stamp makes the pad count.
+     */
+    @Test
+    fun `a de-sampled pad keeps its capture past the sweep, and desample --undo gives it back`() {
+        val dir = File(temp, "BinDesampled")
+        val m = KitBuilderModel.create("BinDesampled", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.save()
+        val capture = File(dir, m.pad(1)!!.sampleFile).readBytes()
+        m.desamplePad(1, evenIfFar = true)
+        m.save()
+        assertEquals(1, m.binHolds().single().keptFor, "the capture is kept for A01")
+
+        assertEquals(0, sweepEverythingOld(dir))
+        m.untreatPad(1) // what `snipsnap desample --undo` runs
+        assertTrue(File(dir, m.pad(1)!!.sampleFile).readBytes().contentEquals(capture), "the capture came back byte for byte")
+    }
+
+    @Test
+    fun `daysLeft rounds up, reads 0 exactly when the sweep would take the entry, and is null for a kept entry`() {
+        val dir = File(temp, "BinDaysLeft")
+        val m = KitBuilderModel.create("BinDaysLeft", dir)
+        val kick = m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.assign(2, DrumSynth.snare(), DrumClass.SNARE)
+        m.eraPad(2, "tape", 1f)
+        m.clear(1)
+        m.save()
+        val holds = m.binHolds()
+
+        val ejected = holds.single { it.entry.originalName == kick.sampleFile }
+        val at = ejected.entry.binnedAtMillis
+        assertNull(ejected.keptFor)
+        assertEquals(at + 30 * dayMs, ejected.purgeAtMillis)
+        assertEquals(30, ejected.daysLeft(at), "a fresh entry reads the bin's own days")
+        assertEquals(2, ejected.daysLeft(at + 28 * dayMs + dayMs / 2), "a day and a half left reads 2")
+        assertEquals(1, ejected.daysLeft(at + 29 * dayMs), "one whole day left reads 1")
+        assertEquals(1, ejected.daysLeft(at + 30 * dayMs), "the last moment the sweep still leaves it reads 1, not 0")
+        assertEquals(0, KitBuilderModel.open(dir).purgeBin(nowMillis = at + 30 * dayMs), "and the sweep does leave it then")
+        assertEquals(0, ejected.daysLeft(at + 30 * dayMs + 1), "0 the moment the sweep would take it")
+        assertEquals(0, ejected.daysLeft(at + 31 * dayMs), "never negative")
+        val forged = KitBuilderModel.BinHold(ejected.entry, keptFor = null, purgeAtMillis = Long.MAX_VALUE)
+        assertEquals(Int.MAX_VALUE, forged.daysLeft(at), "a time the sweep never reaches reads as far off, not as a wrapped count")
+
+        val kept = holds.single { it.entry.originalName == m.pad(2)!!.sampleFile }
+        assertEquals(2, kept.keptFor)
+        assertNull(kept.purgeAtMillis)
+        assertNull(kept.daysLeft(at + 365 * dayMs), "a kept entry has no countdown")
+        assertEquals("KEPT FOR A02", Copy.binKeptFor("A02"), "what THE BIN draws in place of its day count")
+
+        assertEquals(1, KitBuilderModel.open(dir).purgeBin(nowMillis = at + 30 * dayMs + 1), "the eject goes; the kept original stays")
+        assertEquals(listOf(kept.entry.file), m.binContents().map { it.file })
+    }
+
+    @Test
+    fun `EMPTY THE BIN NOW still empties what a pad keeps`() {
+        val dir = File(temp, "BinEmptyKept")
+        val m = KitBuilderModel.create("BinEmptyKept", dir)
+        m.assign(1, DrumSynth.kick(), DrumClass.KICK)
+        m.eraPad(1, "tape", 1f)
+        m.save()
+        assertEquals(1, m.binHolds().single().keptFor, "test setup: the original is kept")
+
+        assertEquals(1, m.emptyBin(), "a choice made on purpose empties everything")
+        assertTrue(m.binContents().isEmpty())
+        assertFailsWith<IllegalArgumentException> { m.unEraPad(1) }
     }
 
     @Test

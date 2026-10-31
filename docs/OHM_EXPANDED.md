@@ -5,6 +5,68 @@ passed. The new sounds have not been heard by the owner. Repository baseline:
 `5e953da5`. Models 1 and 2,
 the five accepted factory recipes and the finite starter kit remain available.
 
+## Source-memory refinement
+
+The owner liked the added depth in the guided audition's second and third
+stages: the answering companions and their interaction through the shared
+body. Those model-2 recordings remain the listening references. That feedback
+does not approve the optional source sounds.
+
+The published model-3 grain and freeze comparisons revealed a real weakness:
+their ON and OFF PCM16 samples differed by at most one count. They observed
+the short dry force used to excite the string, so most of their 250 ms history
+contained silence. A long join also suppressed the brief populated onset.
+
+Model 4 keeps the main string, companions, shared bridge, radiation filters,
+bow and FM source. For grains and freeze only, the dry drive first excites a
+separate passive resonator at the native note. Its ringing audio populates
+the history. Grains rearrange pieces of the populated onset bank. Seeded
+selection changes the stored cycles and their envelopes while retaining the
+native note's phase at each grain onset. Hann-weighted centering keeps the
+shaped grains free of a DC force, including at the 20 ms setting. Freeze
+repeats a captured stretch from the point that continues its source clock.
+Free plucked and captured primaries give their finite memory the same decay;
+the bow continues until its contact is released.
+
+Fixed source calibration and a loss-scaled injection budget keep preparation
+separate from output leveling. Captured banks additionally use a smooth,
+bounded gain: at most 32 times, approaching RMS .20 with a peak cap of .80.
+The gain is one scalar for the bank, preserving its waveform and pitch;
+zero stays zero and sufficiently quiet input retains its level dependence.
+This makes a weak root response usable without applying the same large
+fixed boost to an already strong response. Coupled
+body audio and finished output never enter this preparation. Source-state
+guards refuse invalid renders rather than clipping the physical feedback.
+The captured-buffer join retains more of its populated beginning and reads
+the material at native speed.
+
+Models 1, 2 and 3 retain their renderer. Model 4 with both memory amounts at
+zero follows model 3's existing arithmetic, including its bow and FM. Default
+finite recipes and factory presets remain model 2. EXTEND selects model 4 for
+new source studies; an existing model-3 patch stays on its saved version until
+UPDATE SOURCES is explicitly chosen. Complete recipes retain that choice in
+the phone, CLI, preset shelf and native-pitch instrument exports.
+
+The focused refinement audition asks three questions: plucked or bowed;
+grains at a middle setting; and captured memory at a middle setting. Every
+new pair compares model 4 with itself at the same shared-body settings.
+The unchanged model-2 references are provided separately. Numerical
+differences, pitch and loop checks are evidence about the implementation;
+the new sounds still need the owner's listening verdict.
+
+Why it is built this way:
+
+- A ringing source gives grains and memory actual audio to retain after the
+  initiating touch. A force impulse alone did not make a useful demonstration.
+- Memory enters the companion resonator before the shared bridge, so it can
+  influence the main string through the same relationship that supplied the
+  liked depth.
+- Fixed calibration and bounded captured-bank conditioning retain quiet
+  inputs while giving the controls a usable range. Their balance against
+  the pluck remains a listening choice.
+- A new saved renderer version protects existing patches and keeps the old
+  audition reproducible.
+
 The characteristic gesture is **attack → answering companions → shared body
 → sustained relationship → release**. Family behaviour is an authored musical
 analogy. Waveguide propagation, friction at the bow and reciprocal bridge
@@ -39,7 +101,7 @@ an actual captured audio buffer and names it accordingly.
 native note, velocity, seed, five macros + HOLD, source options
                |
      pluck / friction bow / embedded capture
-               |                       dry exciter history
+               |                       source memory (by revision)
                |                         |           |
                |                    Hann grains   buffer freeze
                |                         |           |
@@ -52,8 +114,10 @@ native note, velocity, seed, five macros + HOLD, source options
                   finite ending / loop-only pad / attack+sustain KeyNote
 ```
 
-Every note owns fresh state. The history source observes dry excitation;
-no resonator or finished output is recirculated into it. `OhmOptions` stores
+Every note owns fresh state. Model 3 stores dry excitation in its history;
+model 4 stores the native-mode response prepared from that excitation.
+Neither the coupled resonators nor the finished output feed this memory.
+`OhmOptions` stores
 the exciter, elder/grain/freeze amounts, FM ratio/index, grain duration and
 optional captured PCM beside the macro map. FM index is in radians, bounded
 to 0–3, with ratio 0.5–2 and a note-aware upper-band allowance. Grain duration
@@ -76,8 +140,9 @@ The original five performance controls keep their roles:
 | COMMUNE | .45 | Shared bridge influence, independent radiation and pitch wander |
 | HOLD | 0 | Finite driven duration below .99; continuing captured sustain at the top |
 
-The phone explicitly opts into model 3 through EXTEND. Existing model-1/2
-recipes retain their renderer. The source options and HOLD survive edits,
+The phone explicitly opts into model 4 through EXTEND. Existing model-1/2/3
+recipes retain their renderer; UPDATE SOURCES upgrades a model-3 recipe.
+The source options and HOLD survive edits,
 save/reopen, native velocity rendering, pad recipes and preset promotion.
 The original factory bank is not expanded with unheard presets.
 
@@ -106,7 +171,7 @@ Release is saved with the patch, in 0.02–3 seconds, and playback owns note-off
 The warm-host target is tens of milliseconds for short finite previews and
 roughly 300 ms for a typical held render, with a bounded 12-second settling
 horizon, one future cycle and filter context, and frequent cancellation checks.
-At LENGTH .65, a final-core JDK 17 amd64 benchmark measured finite renders at
+For the earlier model-3 core at LENGTH .65, a JDK 17 amd64 benchmark measured finite renders at
 120–234 ms and held renders at 126–235 ms across the three exciters and MIDI
 48/60/72. Two warmups and five timed calls per case gave a worst individual
 call of 285 ms. This is a small timing sample, not a worst-case guarantee.
@@ -131,8 +196,34 @@ Verified: existing shared primitives and instrument/export paths were read
 at `5e953da5`. Proposed: new gains, gesture timing and render budgets.
 Measured: initial Kotlin source/held tests, including actual future audio,
 and the host timing sample above; full integration checks are in progress.
-Heard: only the earlier model-2 plucked sound has owner feedback; model 3
-remains unheard.
+Heard: the owner endorsed the depth of the model-2 answering and shared-body
+guide stages. The optional source choices remain provisional.
+
+## Model-4 verification
+
+The coordinated refinement run passed 93 focused tests: 79 synth, 6 shell
+and 8 CLI tests. It preserved all 134 model-2 baseline recipes and 50
+model-3 finite/held recipes at raw/final Float and PCM16 level, including
+held markers. Memory-free model 4 also retains model 3's finite, held and
+loop-only output. Decoded native-note checks cover early and late windows,
+middle and maximum amounts, and the 20 ms captured-grain corner cases.
+
+Android assembly and device-test compilation passed; the device tests have
+not been run locally. The production exporter generated and checked three
+model-4 instruments with 27 C3–C5 zones. The focused audition retains the
+two accepted reference WAVs byte for byte and exports complete replay
+recipes, raw/matched WAVs and diagnostics.
+
+In the generated shared-body C4 comparison, grains at .60 change decoded
+matched RMS by 6.56% after 300 ms. The source-clock and scale-independent
+shape checks distinguish a waveform change from a fitted output gain.
+These are numerical measurements, not a listening verdict.
+
+Three pre-existing late model-3/OFF pitch selections are recorded separately
+by the native-note regression test. It refuses a new wrong-note window or a
+worse inherited selection. Highly sustained loud captures can also reach
+the existing physical-state refusal; protection of older recipes retains
+that guard. Physical phone response and MPC hardware acceptance remain open.
 
 ## As built and measured
 

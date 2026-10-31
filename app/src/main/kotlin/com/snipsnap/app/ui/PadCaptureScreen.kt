@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,7 +50,9 @@ import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.audio.Classifier
+import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.PadCapture
+import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
@@ -108,6 +111,43 @@ private enum class Gesture { GRAB, HOLD }
 // mutation itself is behind the lock; the snapshot/DSP/classify work above
 // it is read-only and stays concurrent.
 
+/** What [writeCaptureToPad] came to. */
+internal sealed interface CaptureWrite {
+    /** The capture is on the pad, and [kit] is the kit as saved. */
+    class Landed(val kit: Kit) : CaptureWrite
+
+    /** The pad held a sample when the write took its turn, so nothing was written and nothing was replaced. */
+    object SlotTaken : CaptureWrite
+}
+
+/**
+ * The write behind GRAB and HOLD: open the kit's folder, put [snip] on [slot],
+ * save. [KitBuilderModel.assign] replaces whatever the pad holds without
+ * asking, so the pad is looked at here, after the lock is taken and on the
+ * kit as it is on disk now, and a pad that has been filled since the screen
+ * opened is left as it is. That is the check that holds whatever navigation
+ * did: a GRAB still in flight when the user left and came back, or a
+ * long-press on the same pad meanwhile, cannot make a second capture replace
+ * the first.
+ *
+ * Open, check, assign and save share one lock acquisition, as every write to
+ * a kit folder must (`KitWrites`). The tape the capture came from is already
+ * on the shelf by now, so a refused capture is kept as a snip, not lost.
+ */
+internal suspend fun writeCaptureToPad(
+    dir: File,
+    slot: Int,
+    snip: Snip,
+    drumClass: DrumClass,
+    source: Map<String, String>,
+): CaptureWrite = KitWrites.mutex.withLock {
+    val model = KitBuilderModel.open(dir)
+    if (model.pad(slot) != null) return@withLock CaptureWrite.SlotTaken
+    model.assign(slot, snip, drumClass, drumClass.name.replace('_', ' '), source = source)
+    model.save()
+    CaptureWrite.Landed(model.kit)
+}
+
 /**
  * The capture surface: what a long-press on an empty [KitScreen] pad opens.
  * One slot, one job — arm the mic (if it isn't already), watch the meter for
@@ -126,6 +166,8 @@ fun PadCaptureScreen(
     slot: Int,
     armed: Boolean,
     onRequestArm: () -> Unit,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
@@ -150,16 +192,16 @@ fun PadCaptureScreen(
     // its own new `scope`, not this one. Same idiom as PadSheetScreen's own
     // `onEject` guard (`scope.isActive`) — see its KDoc for the disposal
     // hazard this closes: a GRAB's write outlives this screen on [appScope]
-    // (by design, so a MenuRow tab switch can't cancel a WAV partway onto
-    // disk), so the write can complete, and this closure run, after the user
-    // has already left this screen and possibly opened pad capture on a
-    // DIFFERENT slot. An unconditional `onBack()` in that case would fire
-    // against `App`'s CURRENT `padCaptureSlot` — the new slot the user is
-    // now looking at — not the one this GRAB targeted, closing a screen the
-    // user just opened for no reason they can see.
+    // (by design, so a place tap can't cancel a WAV partway onto disk), so
+    // the write can complete, and this closure run, after the user has
+    // already left this screen and possibly opened pad capture on a
+    // DIFFERENT slot. An unconditional `onBack()` in that case would close
+    // whichever screen is on top NOW — the new slot's capture, which the
+    // user just opened — not the one this GRAB targeted, for no reason they
+    // can see.
     val scope = rememberCoroutineScope()
 
-    // Mirrors the header's own ◄ KIT chip, which is unconditionally
+    // Mirrors the header's own back chip, which is unconditionally
     // enabled here (unlike PAD SHEET's — nothing on this screen debounces
     // a save to flush, so there's nothing extra for Back to await).
     BackHandler(onBack = onBack)
@@ -190,27 +232,29 @@ fun PadCaptureScreen(
         committing = gesture
         appScope.launch {
             try {
-                val updated: Kit? = withContext(Dispatchers.IO) {
+                val written: CaptureWrite? = withContext(Dispatchers.IO) {
                     val landing = producer() ?: return@withContext null
                     val tape = SnipStore.commitPrepared(landing.tape, snipsRoot, System.currentTimeMillis())
                     val snip = landing.pad
                     val cls = Classifier.classify(snip).drumClass
-                    KitWrites.mutex.withLock {
-                        val model = KitBuilderModel.open(entry.dir)
-                        model.assign(slot, snip, cls, cls.name.replace('_', ' '), source = PadTape.tag(tape, landing))
-                        model.save()
-                        model.kit
-                    }
+                    writeCaptureToPad(entry.dir, slot, snip, cls, PadTape.tag(tape, landing))
                 }
-                if (updated == null) {
-                    // Distinguish the two null paths live, not off the
-                    // composition's `armed` param — a session can eject
-                    // mid-commit (EJECT from the notification, most likely),
-                    // and this read is what keeps the toast honest about
-                    // which of the two actually happened.
-                    onToast(if (!MicSessionService.armed.value) Copy.PAD_CAPTURE_NOT_LISTENING else nothingLabel)
+                if (written !is CaptureWrite.Landed) {
+                    // Tell the three apart live, not off the composition's
+                    // `armed` param — a session can eject mid-commit (EJECT
+                    // from the notification, most likely), and this read is
+                    // what keeps the toast honest about which of the null
+                    // paths actually happened. A pad filled meanwhile is a
+                    // third: it says so, and the screen stays as it is.
+                    onToast(
+                        when {
+                            written == CaptureWrite.SlotTaken -> Copy.PAD_CAPTURE_SLOT_TAKEN
+                            !MicSessionService.armed.value -> Copy.PAD_CAPTURE_NOT_LISTENING
+                            else -> nothingLabel
+                        },
+                    )
                 } else {
-                    onKitUpdated(updated)
+                    onKitUpdated(written.kit)
                     onToast(successLabel)
                     // `scope.isActive` guards ONLY this navigation — see the
                     // KDoc on `scope`'s declaration above for the disposed-
@@ -225,16 +269,15 @@ fun PadCaptureScreen(
                     // No `liveSlot == targetSlot` half, unlike `onEject`'s
                     // guard: this screen has no pad-nav ◄/► that can
                     // reassign `slot` on a live, still-mounted instance the
-                    // way PadSheetScreen's can. `App.kt` only ever sets
-                    // `padCaptureSlot` from null (KitScreen's own
-                    // `onEmptyLongPress`, reachable only while this screen
-                    // is NOT showing, since the `when` branch that renders
-                    // it requires `padCaptureSlot != null`) or back to null
-                    // (this `onBack`, `goToScreen`, `deleteKit`) — never
-                    // from one non-null slot straight to another. So a
-                    // slot-identity check here would be dead code, not
-                    // defense in depth; `scope.isActive` alone is the whole
-                    // guard.
+                    // way PadSheetScreen's can. `App.kt` sets
+                    // `padCaptureSlot` only from KitScreen's CAPTURE door
+                    // and `onEmptyLongPress`, reachable only while this
+                    // screen is NOT showing (KitScreen is not drawn under a
+                    // bench), so a mounted instance keeps its one slot for
+                    // its whole life: another slot is a new arrival, a new
+                    // instance with a new `scope`. So a slot-identity check
+                    // here would be dead code, not defense in depth;
+                    // `scope.isActive` alone is the whole guard.
                     if (scope.isActive) onBack()
                 }
             } catch (e: CancellationException) {
@@ -300,7 +343,7 @@ fun PadCaptureScreen(
                 // heightIn, not a fixed height — Layout.LCD_HEADER_H (40dp) is
                 // shorter than Layout.MIN_HIT_TARGET (44dp), and this header
                 // (unlike KitsScreen's own, which holds no tappable chip)
-                // holds the ◄ KIT back chip; a fixed parent height would clip
+                // holds the back chip; a fixed parent height would clip
                 // that chip's min hit target. Same fix PadSheetScreen's own
                 // header already applies.
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
@@ -308,7 +351,7 @@ fun PadCaptureScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), onClick = onBack)
             Spacer(Modifier.weight(1f))
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))
