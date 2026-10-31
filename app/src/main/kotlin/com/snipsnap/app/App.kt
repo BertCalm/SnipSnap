@@ -2173,6 +2173,14 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // True while BACK ONTO's write is running (set and cleared by `backOnto`).
+    // System Back on the TAPE deck is swallowed meanwhile (the root handler,
+    // below): RE-TRIM ▸ leaves the editor in the history, so a Back that
+    // landed on it now would be followed by the write's own return to the
+    // same location, which re-keys nothing and leaves the editor showing the
+    // pad as it was before the cut.
+    var backOntoWriting by remember { mutableStateOf(false) }
+
     /**
      * BACK ONTO (docs/RETRIM.md §4): [range] of [request]'s tape, read at
      * the file's own rate and cut as CHOP's slice would be (`Retrim.cut`),
@@ -2185,6 +2193,7 @@ fun App(shelf: KitShelf) {
     fun backOnto(request: RetrimRequest, range: IntRange) {
         if (busy != null) return
         busy = Busy(Copy.RETRIM_BUSY)
+        backOntoWriting = true
         scope.launch {
             try {
                 val (updated, treatment) = withContext(Dispatchers.IO) {
@@ -2224,6 +2233,7 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "backOnto: failed", e)
                 dock.say(Copy.RETRIM_FAILED)
             } finally {
+                backOntoWriting = false
                 busy = null
             }
         }
@@ -3406,6 +3416,14 @@ fun App(shelf: KitShelf) {
             location.top != Bench.KEYS &&
             note == null && !captureBlocked && !micPermissionDenied,
     ) {
+        // BACK ONTO is writing onto the pad this deck was opened from, and
+        // lands on the editor when it is done (`backOnto`). Back now would
+        // restore that editor early, from the history, and the landing would
+        // then find it already open and leave it showing the pad as it was
+        // before the cut. So TAPE's Back waits for the write, as SPLICE's and
+        // STACK's do for theirs; the root handler stays registered, so Back is
+        // swallowed, never handed to the Activity.
+        if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler
         val from = nav.location
         nav.back()
         // Popping a bench returns to what was under it, as it was — SETUP

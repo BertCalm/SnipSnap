@@ -9,6 +9,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.theme.LocalReduceMotion
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.PadBanks
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -22,6 +23,14 @@ import java.util.concurrent.atomic.AtomicInteger
  * editor), says it aloud as "BACK TO ...", and a tap calls `onBack`, which
  * App answers with `nav.closeBench()` and so lands on the editor.
  *
+ * Every test hands the screen [LABEL], which none of them ever drew as a
+ * literal: GRAIN FIELD's old chip read "◄ KIT" and SPLICE's and STACK's read
+ * "◄ PAD", so a screen that went back to its own words (or built them some
+ * way these tests do not read) fails here instead of passing on a coincidence.
+ *
+ * SPLICE and STACK also name the pad in their header, as GRAIN FIELD does,
+ * because Back can restore them after the editor moved to another pad.
+ *
  * The kit has no `kit.json`, so SPLICE and STACK draw their refusal shell and
  * GRAIN FIELD finds no pad to analyze; the header, and so the chip, is there
  * either way. GRAIN FIELD also backs out on its own when it finds no pad (it
@@ -32,6 +41,15 @@ import java.util.concurrent.atomic.AtomicInteger
  */
 @RunWith(AndroidJUnit4::class)
 class PadToolBackChipTest : ComposeScreenTest() {
+
+    private companion object {
+        /** A back label no screen ever hard-coded, and what it is spoken as. */
+        const val LABEL = "◄ TEST"
+        const val SPOKEN = "BACK TO TEST"
+
+        /** The pad every fixture opens on (`slot = 1`). */
+        val PAD = PadBanks.tag(1)
+    }
 
     private val backs = AtomicInteger(0)
     private val kitDirs = mutableListOf<File>()
@@ -78,7 +96,7 @@ class PadToolBackChipTest : ComposeScreenTest() {
                 )
             }
         }
-        waitFor("the splice refusal shell") { compose.onAllNodesWithContentDescription("BACK TO PAD").fetchSemanticsNodes().isNotEmpty() }
+        waitFor("the splice refusal shell") { compose.onAllNodesWithContentDescription(SPOKEN).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private fun showStack(backLabel: String) {
@@ -95,7 +113,7 @@ class PadToolBackChipTest : ComposeScreenTest() {
                 )
             }
         }
-        waitFor("the stack refusal shell") { compose.onAllNodesWithContentDescription("BACK TO PAD").fetchSemanticsNodes().isNotEmpty() }
+        waitFor("the stack refusal shell") { compose.onAllNodesWithContentDescription(SPOKEN).fetchSemanticsNodes().isNotEmpty() }
     }
 
     /** The chip is there, whole, spoken as "BACK TO ...", and one tap calls `onBack` once. */
@@ -109,20 +127,34 @@ class PadToolBackChipTest : ComposeScreenTest() {
     }
 
     @Test
-    fun grain_field_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_the_editor() {
-        showGrain("◄ PAD")
-        assertChip("◄ PAD", "BACK TO PAD")
+    fun grain_field_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_it() {
+        showGrain(LABEL)
+        assertChip(LABEL, SPOKEN)
     }
 
     @Test
-    fun splice_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_the_editor() {
-        showSplice("◄ PAD")
-        assertChip("◄ PAD", "BACK TO PAD")
+    fun splice_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_it() {
+        showSplice(LABEL)
+        assertChip(LABEL, SPOKEN)
     }
 
     @Test
-    fun stack_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_the_editor() {
-        showStack("◄ PAD")
-        assertChip("◄ PAD", "BACK TO PAD")
+    fun stack_back_chip_reads_the_label_it_is_given_and_is_spoken_as_back_to_it() {
+        showStack(LABEL)
+        assertChip(LABEL, SPOKEN)
+    }
+
+    /** The header says which pad SPLICE is on, whole on one line at phone width. */
+    @Test
+    fun splice_header_names_the_pad_it_works_on() {
+        showSplice(LABEL)
+        assertReadsInFull("SPLICE · $PAD")
+    }
+
+    /** The header says which pad STACK is on, whole on one line at phone width. */
+    @Test
+    fun stack_header_names_the_pad_it_works_on() {
+        showStack(LABEL)
+        assertReadsInFull("STACK THE TAKES · $PAD")
     }
 }

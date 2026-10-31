@@ -42,6 +42,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.StackTakes
 import java.io.File
@@ -146,7 +147,7 @@ fun StackTakesScreen(
     @Composable
     fun refusalShell(text: String) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            StackHeader(backLabel, busy, onBack, scheme)
+            StackHeader(backLabel, busy, onBack, stackTitle(slot), scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(text, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
@@ -257,7 +258,7 @@ fun StackTakesScreen(
     val zoneNames = if (picked.isEmpty()) emptyList() else StackTakes.zoneNames(picked.size)
     val livePeak = liveRow.facts?.peak
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        StackHeader(backLabel, busy, onBack, scheme)
+        StackHeader(backLabel, busy, onBack, stackTitle(slot), scheme)
         TapeText(
             "PICK UP TO THREE PRIOR TAKES AS SOFT ZONES UNDER LIVE. FIRST PICKED IS SOFTEST; ▲ MOVES ONE SOFTER.",
             TapeType.pixelSmall,
@@ -334,8 +335,11 @@ fun StackTakesScreen(
     }
 }
 
+/** The header's words: the tool and the pad it is working on, as [spliceTitle] says for SPLICE. */
+private fun stackTitle(slot: Int): String = "STACK THE TAKES · ${PadBanks.tag(slot)}"
+
 @Composable
-private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, scheme: Scheme) {
+private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, title: String, scheme: Scheme) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -354,7 +358,7 @@ private fun StackHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, sc
             modifier = Modifier.widthIn(min = 72.dp),
             onClick = onBack,
         )
-        TapeText("STACK THE TAKES", TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f).padding(start = 8.dp))
+        TapeText(title, TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f).padding(start = 8.dp))
     }
 }
 

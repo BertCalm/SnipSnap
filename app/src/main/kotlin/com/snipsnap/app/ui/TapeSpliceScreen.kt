@@ -50,6 +50,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PeaksPyramid
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.SpliceNeedle
@@ -127,7 +128,7 @@ fun TapeSpliceScreen(
 
     if (loadFailed) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
+            SpliceHeader(backLabel, busy, onBack, spliceTitle(slot), scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(Copy.SPLICE_KIT_GONE, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
             }
@@ -143,7 +144,7 @@ fun TapeSpliceScreen(
     // stated in words, matching this app's own law over a dead button.
     if (candidates.size < 2) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
+            SpliceHeader(backLabel, busy, onBack, spliceTitle(slot), scheme)
             Box(Modifier.fillMaxSize().weight(1f).lcdPanel(scheme).padding(14.dp), contentAlignment = Alignment.Center) {
                 TapeText(Copy.SPLICE_NEEDS_HISTORY, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 4)
             }
@@ -203,7 +204,7 @@ fun TapeSpliceScreen(
     val lt = loadedTail
     val refusal = pairRefusal
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SpliceHeader(backLabel, busy, onBack, "SPLICE", scheme)
+        SpliceHeader(backLabel, busy, onBack, spliceTitle(slot), scheme)
         if (lh != null && lt != null) {
             NeedleStep(
                 head = lh,
@@ -299,6 +300,14 @@ fun TapeSpliceScreen(
         }
     }
 }
+
+/**
+ * The header's words: the tool and the pad it is working on. SPLICE is a bench
+ * over the pad editor and Back can restore it after the editor was left on
+ * another pad (the history keeps one pad slot, latest opening wins), so the
+ * pad has to be on screen for the user to see which one COMMIT will splice.
+ */
+private fun spliceTitle(slot: Int): String = "SPLICE · ${PadBanks.tag(slot)}"
 
 @Composable
 private fun SpliceHeader(backLabel: String, busy: Boolean, onBack: () -> Unit, title: String, scheme: Scheme) {
