@@ -249,6 +249,7 @@ class NavigationTest {
         assertEquals("◄ LOOP", chip(Place.PROJECT, Stage.BEAT, Bench.LOOP, Bench.SNIPS), "SNIPS over LOOP, which is over BEAT")
         assertEquals("◄ INSTRUMENTS", chip(Place.MAKE, null, Bench.INSTRUMENTS, Bench.KEYS), "KEYS over INSTRUMENTS")
         assertEquals("◄ BEAT", chip(Place.PROJECT, Stage.BEAT, Bench.ORBIT), "ORBIT over BEAT")
+        assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SPLIT), "SPLIT over PADS")
         assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SPLICE), "SPLICE over PAD_SHEET")
         assertEquals("◄ PADS", chip(Place.PROJECT, Stage.PADS, Bench.SETUP), "SETUP over PADS")
         assertEquals("◄ PAD", chip(Place.PROJECT, Stage.PADS, Bench.PAD_SHEET, Bench.SETUP), "SETUP over PAD_SHEET")
@@ -259,6 +260,156 @@ class NavigationTest {
         assertEquals("◄ STACK", chip(Place.PROJECT, Stage.PADS, Bench.STACK, Bench.HELP), "a long label gives its short name")
         assertEquals("◄ VERSIONS", chip(Place.PROJECT, Stage.PADS, Bench.VERSIONS, Bench.HELP), "a long label gives its short name")
         assertNull(chip(Place.PROJECT, Stage.PADS), "a bare stage has nothing to go back from")
+    }
+
+    // Hand-offs open over where the user is (PR 3b): the chip, system Back and the screen's own
+    // close all return to the same place, and the chip names it.
+
+    /** Builds a location with [build], then closes the top bench by the chip in one session and by system Back in another. */
+    private fun assertChipAndBackAgree(expected: Location, expectedChip: String, build: Navigation.() -> Unit) {
+        val viaChip = Navigation().apply(build)
+        assertEquals(expectedChip, viaChip.backChip)
+        assertEquals(expected, viaChip.closeBench(), "the chip")
+        val viaBack = Navigation().apply(build)
+        assertTrue(viaBack.back())
+        assertEquals(expected, viaBack.location, "system Back")
+    }
+
+    @Test
+    fun `ORBIT opened over SNAP returns to SNAP by the chip and by Back, not to a BEAT nobody visited`() {
+        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SNAP)), "◄ SNAP") {
+            go(Place.MAKE)
+            open(Bench.SNAP)
+            open(Bench.ORBIT)
+        }
+    }
+
+    @Test
+    fun `SURFACE opened over SYNTH returns to SYNTH by the chip and by Back`() {
+        assertChipAndBackAgree(Location(Place.MAKE, null, listOf(Bench.SYNTH)), "◄ SYNTH") {
+            go(Place.MAKE)
+            open(Bench.SYNTH)
+            open(Bench.SURFACE)
+        }
+    }
+
+    @Test
+    fun `BIN opened over SNIPS returns to SNIPS, and SNIPS then names the stage it is over`() {
+        val over = Location(Place.PROJECT, Stage.PADS, listOf(Bench.SNIPS))
+        assertChipAndBackAgree(over, "◄ SNIPS") {
+            go(Place.PROJECT)
+            open(Bench.SNIPS)
+            open(Bench.BIN)
+        }
+        val nav = Navigation().apply {
+            go(Place.PROJECT)
+            open(Bench.SNIPS)
+            open(Bench.BIN)
+            closeBench()
+        }
+        assertEquals("◄ PADS", nav.backChip, "SNIPS over PADS, not the shelf it is usually reached from")
+    }
+
+    // Room for a screen that opens after an await: one already showing is never opened twice,
+    // and at most two screens (the gear's three not counted) stack above a stage.
+
+    /** PROJECT ▸ BEAT with [benches] opened one over the other, so the history is what those taps would have left. */
+    private fun beatWith(vararg benches: Bench) = Navigation().apply {
+        go(Place.PROJECT)
+        stage(Stage.BEAT)
+        benches.forEach { open(it) }
+    }
+
+    @Test
+    fun `with two screens showing, room for a third closes the top one and says to open`() {
+        val nav = beatWith(Bench.LOOP, Bench.SNIPS)
+
+        assertTrue(nav.roomFor(Bench.XRAY))
+        assertEquals(listOf(Bench.LOOP), nav.location.benches, "the top screen closed; the one under it stays")
+
+        nav.open(Bench.XRAY)
+        assertEquals("◄ LOOP", nav.backChip)
+        assertEquals(beatWith(Bench.LOOP, Bench.XRAY).walkBack(), nav.walkBack(), "the history is as if SNIPS had never been opened")
+    }
+
+    @Test
+    fun `a gear bench over two screens closes, and then one screen closes, because the gear does not count`() {
+        val nav = beatWith(Bench.LOOP, Bench.SNIPS, Bench.HELP)
+
+        assertTrue(nav.roomFor(Bench.XRAY))
+        assertEquals(listOf(Bench.LOOP), nav.location.benches, "HELP closed (two screens were still showing) and then SNIPS")
+    }
+
+    @Test
+    fun `a gear bench over one screen leaves room, so nothing closes`() {
+        val nav = beatWith(Bench.LOOP, Bench.MIDI)
+        val taps = nav.taps
+
+        assertTrue(nav.roomFor(Bench.XRAY))
+        assertEquals(listOf(Bench.LOOP, Bench.MIDI), nav.location.benches)
+        assertEquals(taps, nav.taps, "nothing closed")
+    }
+
+    @Test
+    fun `when there is room already, nothing closes and the answer is to open`() {
+        val bare = beatWith()
+        val bareTaps = bare.taps
+        assertTrue(bare.roomFor(Bench.ORBIT))
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), bare.location)
+        assertEquals(bareTaps, bare.taps)
+
+        val one = beatWith(Bench.SNIPS)
+        val oneTaps = one.taps
+        assertTrue(one.roomFor(Bench.XRAY))
+        assertEquals(listOf(Bench.SNIPS), one.location.benches)
+        assertEquals(oneTaps, one.taps)
+    }
+
+    @Test
+    fun `a screen that is already on top is not opened again, and nothing moves`() {
+        val nav = beatWith(Bench.ORBIT)
+        val location = nav.location
+        val taps = nav.taps
+
+        assertFalse(nav.roomFor(Bench.ORBIT))
+        assertEquals(location, nav.location)
+        assertEquals(taps, nav.taps, "no navigation happened")
+        assertEquals(beatWith(Bench.ORBIT).walkBack(), nav.walkBack(), "and no history was pushed")
+    }
+
+    @Test
+    fun `a screen showing lower down is brought to the top by closing what is over it, and not opened again`() {
+        val nav = beatWith(Bench.ORBIT, Bench.HELP)
+
+        assertFalse(nav.roomFor(Bench.ORBIT))
+        assertEquals(listOf(Bench.ORBIT), nav.location.benches, "HELP closed; ORBIT is on top")
+        assertEquals("◄ BEAT", nav.backChip, "ORBIT's chip names the stage under it, not itself")
+        assertEquals(beatWith(Bench.ORBIT).walkBack(), nav.walkBack(), "closing HELP took it off the history")
+    }
+
+    @Test
+    fun `a screen showing under a screen and a gear bench is brought to the top too`() {
+        val nav = beatWith(Bench.LOOP, Bench.SNIPS, Bench.SETUP)
+
+        assertFalse(nav.roomFor(Bench.LOOP))
+        assertEquals(listOf(Bench.LOOP), nav.location.benches)
+    }
+
+    @Test
+    fun `a screen the user leaves for another place is restored by Back with its screen on top`() {
+        // X-RAY (its reading kept by the app) and DOUBLES (whose GO lands on a pad) both rely on this.
+        val nav = Navigation()
+        nav.open(Bench.XRAY)
+        nav.go(Place.TAPE)
+        assertTrue(nav.back())
+        assertEquals(Location(Place.SHELF, null, listOf(Bench.XRAY)), nav.location)
+
+        val doubles = Navigation()
+        doubles.open(Bench.DOUBLES)
+        doubles.goTo(Location(Place.PROJECT, Stage.PADS))
+        assertTrue(doubles.back())
+        assertEquals(Location(Place.SHELF, null, listOf(Bench.DOUBLES)), doubles.location, "Back from the pad lands on the list GO came from")
+        assertEquals("◄ SHELF", doubles.backChip)
     }
 
     @Test
