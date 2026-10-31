@@ -69,20 +69,37 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (54 starters including STRIKE FX, CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (55 starters including STRIKE FX, CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER and MERIDIAN,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 65 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 66 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
-MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL and CHAMBER.
+MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and MERIDIAN.
+
+MERIDIAN adds SWEEP, eight saved factory presets and seven macros. ROOT
+(MIDI 36–96) and native VELOCITY preserve the complete loaded model and noise
+context; TUNE transposes relative to ROOT, with .5 as its center. Model 1 stays
+finite even at HOLD 1. Model 2 selects fixed-alignment sustain at HOLD ≥ .975.
+Its SYNTH preview is a bounded short capture, as the caption states. SEND TO PAD
+and SPREAD always deliver finite TONAL one-shots with the authored root. Held
+captures save a terminal fade of at least 20 ms; reopened recipes retain the
+complete rack, board and pedal placement. MAKE INSTRUMENT accepts only actual
+model-2 held patches and samples thirteen native roots, MIDI 36–72 in minor
+thirds, at three physical velocities (.30, .65, 1.0). The phone/MPC packages keep
+the real second-cycle loops and note-off release, including explicit NoteOn
+playback in the MPC 2 program. Neighboring keys transpose by at most one semitone,
+which also changes the sampled swing cadence. FRESH TAPE → MERIDIAN retains the
+existing sixteen-pad bank and its authored roots without assigning a global
+kit key. Physical phone timing, listening and MPC loading remain separate checks.
+See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD

@@ -2329,3 +2329,49 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
 }
+
+/** One dry finite MERIDIAN voice, replayable recipes and measured warm render cost. */
+tasks.register<JavaExec>("generateMeridianAudition") {
+    group = "distribution"
+    description = "Render MERIDIAN contact, macro, register and touch comparisons with saved recipes and warm JVM timings."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MeridianAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("meridianOutput").orNull ?: "${rootDir}/testkit/meridian-audition")
+}
+
+/** The accepted finite reference beside the current finite and genuine fixed-alignment held paths. */
+tasks.register<JavaExec>("generateMeridianPlayabilityAudition") {
+    group = "distribution"
+    description = "Render MERIDIAN round-two finite/held comparisons, sampler loop markers and eight-repeat listening files."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MeridianPlayabilityAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("meridianPlayabilityOutput").orNull ?: "${rootDir.parentFile}/meridian-round2-audition")
+    args(providers.gradleProperty("meridianOriginalAudition").orNull ?: "${rootDir.parentFile}/meridian-kotlin-audition")
+}
+
+/** Eight saved MERIDIAN candidates, their supported pad/keyboard exports and a dry musical phrase. */
+tasks.register<JavaExec>("generateMeridianBankAudition") {
+    group = "distribution"
+    description = "Render the MERIDIAN candidate preset bank, playable sixteen-pad page and actual kit-sample phrase."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MeridianBankAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1536m"
+    args(providers.gradleProperty("meridianBankOutput").orNull ?: "${rootDir.parentFile}/meridian-bank-audition")
+    args(providers.gradleProperty("meridianBankReference").orNull ?: "${rootDir.parentFile}/meridian-round2-audition")
+}
+
+/** Regenerate the finite Meridian drum kit and two genuinely sustained keyboards. */
+tasks.register<JavaExec>("generateMeridianKit") {
+    group = "distribution"
+    description = "Export MERIDIAN's sixteen finite pads and two C2-C5 multisampled held instruments in both MPC formats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.MeridianKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1536m"
+    args(providers.gradleProperty("meridianKitOutput").orNull ?: "${rootDir}/testkit/meridian-kit")
+}

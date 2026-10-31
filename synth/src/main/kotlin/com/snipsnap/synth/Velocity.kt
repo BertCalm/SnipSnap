@@ -227,6 +227,7 @@ object Velocity {
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
         is GyrePatch -> Gyre.macrosFor(patch.voice)
+        is MeridianPatch -> Meridian.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
         is BallastPatch -> Ballast.macrosFor(patch.voice)
@@ -413,6 +414,7 @@ object Velocity {
         // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
         is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
+        is MeridianPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.
         is StoopPatch -> patch.copy(velocity = v).render()
