@@ -4,7 +4,6 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
 import android.util.Log
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -69,7 +68,6 @@ import kotlinx.coroutines.sync.withLock
 fun MyVoiceScreen(
     entry: KitShelf.Entry?,
     appScope: CoroutineScope,
-    onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (Kit) -> Unit,
 ) {
@@ -198,7 +196,6 @@ fun MyVoiceScreen(
         owner.lifecycle.addObserver(observer)
         onDispose { mounted = false; stopRequests(); owner.lifecycle.removeObserver(observer) }
     }
-    BackHandler { stopRequests(); onBack() }
     LaunchedEffect(library) {
         try { voices = offMain { ConfluencePersonalWorkshop.listVoices(library) } }
         catch (e: Exception) { if (e is CancellationException) throw e; failed(e) }
@@ -369,7 +366,6 @@ fun MyVoiceScreen(
     val idle = working == null && !saving
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionButton("◄ MAKE", scheme, enabled = true, onClick = { stopRequests(); onBack() })
             TapeText("MY VOICE", TapeType.lcdHeader, scheme.ink.tape, Modifier.weight(1f))
         }
         TapeText("HOLD ONE COMFORTABLE AH OR OO FOR ABOUT 4–6 SECONDS. QUIET ROOM, NO MUSIC. PREPARED ON THIS PHONE. IMPORTS: ${ConfluencePersonalVoice.MAX_SOURCE_SECONDS} SECONDS OR LESS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = Int.MAX_VALUE)

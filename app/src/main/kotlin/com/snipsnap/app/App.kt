@@ -222,7 +222,7 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
  * SPLIT, VERSIONS, PAD CAPTURE, SONG), so they come from the model either way.
  */
-private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.MY_VOICE)
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -4564,7 +4564,6 @@ fun App(shelf: KitShelf) {
                             MyVoiceScreen(
                                 entry = voiceEntry,
                                 appScope = scope,
-                                onBack = { nav.closeBench() },
                                 onToast = { dock.say(it) },
                                 onKitUpdated = { updated ->
                                     if (open?.dir == voiceEntry?.dir) open = open?.copy(kit = updated)
