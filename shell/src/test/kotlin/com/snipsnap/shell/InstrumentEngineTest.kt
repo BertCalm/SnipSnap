@@ -3,6 +3,7 @@ package com.snipsnap.shell
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.xpm.VoiceMode
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -228,6 +229,48 @@ class InstrumentEngineTest {
         assertTrue(engine.noteOn(57))
         render(engine, 30f / rate)
         assertTrue(engine.activeNotes.isEmpty(), "the one-frame loop ended")
+    }
+
+    private fun withMode(mode: VoiceMode): InstrumentEngine.Loaded {
+        val base = looped()
+        return InstrumentEngine.Loaded(base.instrument.copy(voiceMode = mode), rate, base.samples)
+    }
+
+    @Test
+    fun `LEAD and GLIDE let one note sound at a time`() {
+        for (mode in listOf(VoiceMode.LEAD, VoiceMode.GLIDE)) {
+            val engine = InstrumentEngine(withMode(mode), rate)
+            assertTrue(engine.noteOn(60))
+            render(engine, 0.005f)
+            assertTrue(engine.noteOn(64))
+            assertEquals(listOf(64), engine.activeNotes, "$mode: the first note was choked")
+            val out = render(engine, 0.2f)
+            assertTrue(rms(out, 0.5f, 1f) > 0.1, "$mode: the second note sustains")
+            // One voice at the sine's level, not two summed: a stack would peak near twice this.
+            assertTrue(out.peak() < 1.3f * 0.8f * InstrumentEngine.VOICE_LEVEL, "$mode: one voice's level, ${out.peak()}")
+        }
+    }
+
+    @Test
+    fun `releasing the old key does not stop the new one`() {
+        val engine = InstrumentEngine(withMode(VoiceMode.LEAD), rate)
+        engine.noteOn(60)
+        engine.noteOn(64)
+        engine.noteOff(60)
+        assertEquals(listOf(64), engine.activeNotes, "60 was choked by 64, not left fading")
+        val out = render(engine, 0.5f)
+        assertEquals(listOf(64), engine.activeNotes)
+        assertTrue(rms(out, 0.8f, 1f) > 0.1, "the held 64 is still sounding")
+    }
+
+    @Test
+    fun `POLY still stacks`() {
+        val engine = InstrumentEngine(withMode(VoiceMode.POLY), rate)
+        engine.noteOn(60)
+        engine.noteOn(64)
+        assertEquals(listOf(60, 64), engine.activeNotes)
+        render(engine, 0.1f)
+        assertEquals(listOf(60, 64), engine.activeNotes, "both keep sounding")
     }
 
     @Test

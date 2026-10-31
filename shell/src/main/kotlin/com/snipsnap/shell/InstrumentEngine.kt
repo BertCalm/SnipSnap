@@ -89,7 +89,11 @@ class InstrumentEngine(
         } ?: return false
         val sample = instrument.sampleFor(hit.sampleFile, zoneIndex) ?: return false
         val step = hit.pitchRatio * instrument.sampleRate / outRate
-        if (voices.count { !it.dead } >= maxVoices) {
+        // LEAD and GLIDE are monophonic: a note that sounds chokes every voice still sounding, released ones included,
+        // the way the steal below takes a voice. GLIDE's pitch slide is the hardware's; the player does not slide.
+        if (instrument.instrument.voiceMode.mono) {
+            for (v in voices) v.dead = true
+        } else if (voices.count { !it.dead } >= maxVoices) {
             // Steal the oldest.
             voices.filter { !it.dead }.minByOrNull { it.born }?.dead = true
         }
