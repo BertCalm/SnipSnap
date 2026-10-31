@@ -14,9 +14,15 @@ const controlText = {
 const escape = (value) => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const seconds = (clip) => `${Number(clip.metrics?.durationSeconds || 0).toFixed(2)} s`;
 function note(midi) { const names=['C','C♯','D','D♯','E','F','F♯','G','G♯','A','A♯','B']; return names[midi%12]+(Math.floor(midi/12)-1); }
-function button(clip, label, className='play-button') {
+function button(clip, label, className='play-button', context='') {
   if (!clip) return '';
-  return `<button type="button" class="${className}" data-play="${escape(clip.id)}" aria-label="Play ${escape(clip.voice+' '+clip.title)}" aria-pressed="false"><span>${escape(label || clip.title)}</span><span class="triangle" aria-hidden="true">▶</span></button>`;
+  return `<button type="button" class="${className}" data-play="${escape(clip.id)}" aria-label="Play ${escape((context?context+' ':'')+clip.voice+' '+clip.title)}" aria-pressed="false"><span>${escape(label || clip.title)}</span><span class="triangle" aria-hidden="true">▶</span></button>`;
+}
+function renderBank() {
+  const presets=library.filter(c=>c.section==='bank');
+  if(!presets.length){$('bank').hidden=true;document.querySelector('.hero .primary').href='#listen';return;}
+  $('bank-demo').innerHTML=button(byId.get('bank-kit-phrase'),'Play the full kit ↗');
+  $('bank-presets').innerHTML=Object.keys(voiceTitles).map(voice=>`<div class="bank-voice"><div class="bank-voice-heading"><span class="voice-name">${voice}</span><span>${voice==='LOOP'?'Basses':voice==='GLINT'?'Keys & plucks':'Knocks, rings & textures'}</span></div><div class="bank-grid">${presets.filter(c=>c.voice===voice).map(c=>`<article class="bank-card"><span class="bank-role">${escape(c.role)}</span><h3>${escape(c.title)}</h3><p>${escape(c.description)}</p>${wave(c)}<div class="clip-info">${note(c.midi)} · ${seconds(c)}</div><div class="bank-actions">${button(c,'Single note','play-button','bank')}${button(byId.get(`${c.id}-phrase`),'Phrase','play-button','bank')}${button(byId.get(`${c.id}-touch`),'Soft → hard','play-button','bank')}</div><a class="recipe-link" href="${escape(c.files.patch)}" download>Saved patch ↓</a></article>`).join('')}</div></div>`).join('');
 }
 function wave(clip) {
   const peaks=clip.waveform || [], max=Math.max(...peaks, .001);
@@ -122,7 +128,7 @@ async function load(){
     const fetchJson=async(url)=>{const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw new Error(`${url}: ${response.status}`);return response.json();};
     const [manifest,contour]=await Promise.all([fetchJson('manifest.json'),fetchJson('geometry.json')]);
     library=manifest.clips;byId=new Map(library.map(c=>[c.id,c]));geometry=contour;buildId=manifest.sourceRevision;model=manifest.model;
-    renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();renderRevision();
+    renderBank();renderStarters();renderSweeps();renderCausal();renderBench();renderGeometry();renderRevision();
     document.querySelectorAll('a[download][href]').forEach(link=>{link.href=assetURL(link.getAttribute('href'));});
     $('bench-count').textContent=`${library.filter(c=>['register','interactions','stress'].includes(c.section)).length} tests`;
     $('build-info').textContent=`${library.length} rendered clips · ${manifest.sampleRate.toLocaleString()} Hz · ${manifest.oversample}× internal DSP · ${new Date(manifest.generatedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}`;

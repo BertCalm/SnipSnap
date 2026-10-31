@@ -39,7 +39,7 @@ class RimeTest {
 
     @Test fun `model four preserves the preferred first half and all three starters sample exactly`() {
         for (voice in RimeVoice.entries) {
-            val original = RimePresets.forVoice(voice).single().copy(model = 3)
+            val original = RimePresets.starter(voice).copy(model = 3)
             assertContentEquals(original.render().samples, original.copy(model = 4).render().samples, "$voice starter")
             for (angle in listOf(0f, .25f, .5f, 1f)) {
                 val patch = original.copy(macros = original.macros + ("ANGLE" to angle))
@@ -50,7 +50,7 @@ class RimeTest {
 
     @Test fun `angle return gives the weak middle more overtone range and stays continuous at anchors`() {
         for (voice in RimeVoice.entries) {
-            val p = RimePresets.forVoice(voice).single()
+            val p = RimePresets.starter(voice)
             fun at(angle: Float, model: Int = 4, gate: Float = p.gateSeconds) =
                 p.copy(macros = p.macros + ("ANGLE" to angle), gateSeconds = gate, model = model).render().samples
             val old = at(.75f, 3)
@@ -113,7 +113,7 @@ class RimeTest {
 
     @Test fun `body changes spectral shape throughout the range on every normal voice`() {
         for (voice in RimeVoice.entries) {
-            val p = RimePresets.forVoice(voice).single()
+            val p = RimePresets.starter(voice)
             val notes = listOf(0f, .5f, 1f).map { value -> p.copy(macros = p.macros + ("BODY" to value)).render().samples }
             for ((a, b) in listOf(0 to 1, 1 to 2, 0 to 2)) {
                 val distance = RimeControlMeasure.distance(notes[a], notes[b], p.gateSeconds.toDouble())
@@ -124,7 +124,7 @@ class RimeTest {
     }
 
     @Test fun `loop unfold changes fine structure during a normal bass note`() {
-        val p = RimePresets.forVoice(RimeVoice.LOOP).single()
+        val p = RimePresets.starter(RimeVoice.LOOP)
         val immediate = p.copy(macros = p.macros + ("UNFOLD" to 0f)).render().samples
         val unfolding = p.copy(macros = p.macros + ("UNFOLD" to 1f)).render().samples
         val distance = RimeControlMeasure.distance(immediate, unfolding, p.gateSeconds.toDouble())
@@ -137,7 +137,7 @@ class RimeTest {
 
     @Test fun `angle quarter turns change normal preset spectra while a whole turn closes`() {
         for (voice in RimeVoice.entries) {
-            val p = RimePresets.forVoice(voice).single()
+            val p = RimePresets.starter(voice)
             val zero = p.copy(macros = p.macros + ("ANGLE" to 0f)).render().samples
             val turns = listOf(.25f, .5f, .75f).map { value -> p.copy(macros = p.macros + ("ANGLE" to value)).render().samples }
             val distance = turns.maxOf { RimeControlMeasure.distance(zero, it, p.gateSeconds.toDouble()) }
@@ -149,7 +149,7 @@ class RimeTest {
 
     @Test fun `angle open and rounded positions change overtone power on every normal voice`() {
         for (voice in RimeVoice.entries) {
-            val p = RimePresets.forVoice(voice).single()
+            val p = RimePresets.starter(voice)
             val open = p.copy(macros = p.macros + ("ANGLE" to 0f)).render().samples
             val rounded = p.copy(macros = p.macros + ("ANGLE" to .5f)).render().samples
             val distance = RimeControlMeasure.distance(open, rounded, p.gateSeconds.toDouble())

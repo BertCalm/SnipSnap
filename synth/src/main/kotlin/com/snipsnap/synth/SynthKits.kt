@@ -718,6 +718,9 @@ object SynthKits {
     /** Four accepted OBBLIGATO relationships across C4, Eb4, F4 and G4, with native velocity zones. */
     fun obbligato(): List<ArrangedPad?> = ObbligatoKits.build()
 
+    /** The nine finite RIME recipes plus a minor-pentatonic bass walk. */
+    fun rime(): List<ArrangedPad?> = RimeKits.build()
+
     /**
      * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor
      * pentatonic from C3. A09–A14 contain the six voice defaults, A15 adds the next

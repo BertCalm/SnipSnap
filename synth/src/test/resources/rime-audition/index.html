@@ -7,15 +7,15 @@
   <meta name="description" content="Listen to Rime, a contour synthesis prototype for SnipSnap. Three dry starter sounds, musical phrases and controlled listening comparisons.">
   <title>Rime — SnipSnap listening room</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=4">
-  <script src="app.js?v=4" defer></script>
+  <link rel="stylesheet" href="style.css?v=bank1">
+  <script src="app.js?v=bank1" defer></script>
 </head>
 <body>
-  <a class="skip" href="#listen">Skip to the sounds</a>
+  <a class="skip" href="#bank">Skip to the sounds</a>
   <header class="masthead wrap">
     <a class="wordmark" href="#top" aria-label="Rime listening room home"><span class="mark">✳</span> SNIPSNAP <span class="divider">/</span> RIME</a>
-    <nav aria-label="Page sections"><a href="#listen">Listen</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
-    <span class="edition">REFINED TRAVEL <i></i> 04</span>
+    <nav aria-label="Page sections"><a href="#bank">The bank</a><a href="#controls">Controls</a><a href="#compare">Inside the note</a><a href="#notes">Your notes</a></nav>
+    <span class="edition">MUSICAL BANK <i></i> 01</span>
   </header>
   <main id="top">
     <section class="hero wrap">
@@ -23,8 +23,8 @@
         <p class="eyebrow">A contour instrument for SnipSnap</p>
         <h1>Rime<span class="period">.</span></h1>
         <p class="hero-line">One silhouette.<br>Increasingly elaborate edges.</p>
-        <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. This room is the first dry listening pass.</p>
-        <a class="primary" href="#listen">Meet the three sounds <span aria-hidden="true">↘</span></a>
+        <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. Nine finite presets turn that contour into basses, keys and textures.</p>
+        <a class="primary" href="#bank">Play the musical bank <span aria-hidden="true">↘</span></a>
         <p class="small muted">Finite prototype · No external samples or rack effects</p>
       </div>
       <figure class="contour-study">
@@ -44,8 +44,15 @@
         </figcaption>
       </figure>
     </section>
-    <div class="facts wrap"><span><b>03</b> starter sounds</span><span><b>05</b> timbral controls</span><span><b>44.1</b> kHz mono WAVs</span><span><b>Dry</b> source → body</span></div>
+    <div class="facts wrap"><span><b>03</b> contour voices</span><span><b>09</b> musical presets</span><span><b>16</b> MPC pads</span><span><b>Dry</b> source → body</span></div>
     <p id="load-status" class="wrap status" role="status">Loading the rendered library…</p>
+    <section id="bank" class="section wrap bank-section" aria-labelledby="bank-heading">
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">A small playable bank</p><h2 id="bank-heading">Nine ways to play the contour.</h2><p>Try a single note, its musical phrase, then three strikes from soft to hard. Touch clips keep their relative dynamics in both playback modes. The accepted starter sounds remain in the bank.</p></div></div>
+      <div class="bank-kit-study"><div><strong>The full kit / 104 BPM</strong><p>An original four-bar study of the same recipes used in the MPC kit.</p></div><div id="bank-demo"></div></div>
+      <div id="bank-presets"></div>
+      <div class="bank-downloads"><a href="downloads/rime-musical-bank.zip" download><strong>9 native notes + patches</strong><span>WAV + JSON · ZIP ↓</span></a><a href="downloads/rime-mpc-kit.zip" download><strong>16-pad MPC kit</strong><span>MPC 3 + MPC 2 · ZIP ↓</span></a><a href="downloads/rime-pad-map.json" download><strong>Pad map & layer recipes</strong><span>JSON ↓</span></a></div>
+      <p class="footnote">The kit has an eight-note bass walk plus the other eight presets, with three velocity layers per pad. Downloads contain native one-shots. This bank is finite; HOLD and phone picker integration are later work. Hardware loading and musical acceptance still need your check.</p>
+    </section>
     <section id="revision" class="revision-section wrap" aria-labelledby="revision-heading">
       <div class="revision-heading"><div><p class="eyebrow">Revision 04 · Building on your preferred direction</p><h2 id="revision-heading">Explore the rest of the turn.</h2><p>The rounded/open contrast and all three starter sounds are preserved. Try the positions between 180° and 360°, then compare the return with the previous version.</p></div><label class="revision-voice">Voice for ANGLE & BODY<select id="revision-voice"><option value="LOOP">LOOP · Round Seed</option><option value="GLINT" selected>GLINT · Fine Frost</option><option value="VESSEL">VESSEL · Open Vessel</option></select></label></div>
       <div id="revision-comparisons"></div>
@@ -86,7 +93,7 @@
       <div><p class="eyebrow">Keep the work</p><h2>Every sound has a recipe.</h2><p>The downloads retain the controls and performance. Causal recipes also record which internal path was removed. The source bundle includes the Kotlin renderer, tests and replay instructions.</p></div>
       <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Prototype source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
     </section>
-    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 4</span></span><p>Refined finite listening prototype. Models 1 through 3 remain replayable. HOLD, the remaining voices, the full preset bank and phone integration are later work. Listening of this refinement is pending.</p><span id="build-info" class="small muted"></span></footer>
+    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 4 / BANK 1</span></span><p>Nine finite musical presets. Accepted controls and starters are unchanged; earlier recipes remain replayable. HOLD, remaining voices and phone picker integration are later work. Musical-bank and hardware acceptance are pending.</p><span id="build-info" class="small muted"></span></footer>
   </main>
   <aside class="transport" aria-label="Audition player"><div class="transport-inner wrap">
     <div class="now-playing"><span class="playing-dot" id="playing-dot"></span><div><span class="eyebrow">Listening room</span><p id="now-title" aria-live="polite">Choose a sound above</p></div></div>

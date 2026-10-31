@@ -1,5 +1,66 @@
 # Rime — revised finite listening prototype
 
+## Musical bank 1 — nine finite recipes and an MPC kit
+
+The owner accepted the model-4 direction. The engine and its accepted controls
+remain unchanged; this pass authors nine recipes using the existing macros,
+note lengths and native velocity. It keeps the three original starters exactly.
+
+| Voice | Presets | Musical roles |
+| --- | --- | --- |
+| LOOP | Round Seed, Firm Step, Edged Root | round, punchy and edged bass |
+| GLINT | Soft Snow, Hollow Frost, Fine Frost | soft keys, hollow pluck and bright strike |
+| VESSEL | Pebble Knock, Ringing Stone, Open Vessel | short knock, resonant tone and unfolding texture |
+
+The bank is pinned to model 4. `RimePresets.starter(voice)` retains the listening
+anchors, while `forVoice` and `all` now return the three-per-voice musical bank.
+The original 161-clip bench still uses the explicit starters. CLI `--all` renders
+the three named presets for the selected RIME voice. The phone factory picker
+remains deferred until an Android integration pass.
+
+Each preset has a single note, an original C-minor phrase at 104 BPM, and a touch
+study with native .3/.6/.8 strikes. The touch study leaves complete tails between
+strikes and matches the whole clip once, retaining relative dynamics. Phrases
+retain the preset's complete gate and body tail and persist every note, onset,
+velocity and seed in ordinary `RIME_SCORE` recipes. The full audition now has
+189 clips. The native one-shot download contains nine kit-main WAVs and nine
+ordinary, replayable patches; it does not apply audition gain matching.
+
+`RimeKits` supplies a complete sixteen-pad bank A. A01–A08 walk Round Seed through
+C2, Eb2, F2, G2, Bb2, C3, Eb3 and F3. A09–A16 contain the remaining eight named
+presets. Every pad is a finite, dry one-shot with native .3/.6/.8 strikes: soft
+layers are peak-matched to the .8 reference, and hardware velocity owns level.
+The written zones are 1–41, 42–84 and 85–127; velocity zero remains note-off.
+
+The downloadable kit includes an MPC 3 XTD and an MPC 2 XPM twin sharing the same
+48 PCM24 mono 44.1 kHz samples. The XTD carries an original four-bar pattern. Set the MPC project tempo to
+104 BPM to match the audition; a standalone track does not set project tempo. `kit.json` preserves editable pad recipes; `pad-map.json` adds every
+zone's complete patch, matching rule and WAV checksum. The web kit study uses
+the same main-zone recipes and the house preview mix, not a hardware recording.
+
+```sh
+./gradlew :synth:generateRimeAudition -PrimeOutput=/absolute/audition
+./gradlew :synth:generateRimeKit -PrimeKitOutput=/absolute/output
+```
+
+`RimeBankTest` checks all nine patch round trips, spectral separation at a fixed
+note/gate/velocity, native notes over three registers, and the actual dual-format
+kit. Its 27 measured roots track within .20 cents; normalized spectral distances
+between presets of the same voice range from .190 to .912. Both written programs
+pass the repository's read-back, and all 48 layer WAVs reproduce exactly from
+their saved recipe and native-velocity matching rule. Read-back proves agreement
+with the repository's reader; physical MPC loading and owner listening remain open.
+
+Why it is built this way:
+
+- Existing controls and note lengths provide nine roles without changing the accepted instrument.
+- Fixed-note spectral comparisons prevent a bank distinguished only by pitch, level or length.
+- Native soft strikes retain physical contact changes; peak matching leaves hardware volume in charge.
+- The same recipes drive the audition, downloadable notes and MPC kit so edits remain reproducible.
+
+These are proposed musical recipes for owner listening. HOLD, additional voices,
+the full preset bank and phone picker integration are subsequent work.
+
 ## Revision 4 — refine the return of ANGLE
 
 The owner preferred model 3's direction and contact spacing. This revision keeps

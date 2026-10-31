@@ -2,10 +2,21 @@ plugins {
     kotlin("jvm")
 }
 
+/** Nine finite RIME recipes as a sixteen-pad, three-zone MPC 3 / MPC 2 kit. */
+tasks.register<JavaExec>("generateRimeKit") {
+    group = "distribution"
+    description = "Export the RIME musical bank with native velocity zones, recipes and MPC programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeKitGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("rimeKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
 /** RIME finite first-listen bench; diagnostic recipes are replayable with -PrimeReplay. */
 tasks.register<JavaExec>("generateRimeAudition") {
     group = "distribution"
-    description = "Render RIME's three finite starters, controls, causal comparisons, phrases and saved recipes."
+    description = "Render RIME's nine-preset musical bank, MPC kit, retained listening bench and saved recipes."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.RimeAuditionGenerator")
     maxHeapSize = "768m"

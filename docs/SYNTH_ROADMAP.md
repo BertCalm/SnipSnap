@@ -1,13 +1,16 @@
 # Synth roadmap — generate kits, not just capture them
 
-**RIME — refined finite listening prototype (2026-10-26).** LOOP, GLINT and VESSEL
+**RIME — nine-preset musical bank (2026-10-31).** LOOP, GLINT and VESSEL
 project the same finite Koch contour through two pickups into an eight-mode body.
 DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,
 gate, seed and model round-trip in the patch. Model 4 refines ANGLE's return travel,
 retaining the preferred model-3 anchors and all three starters sample-exact.
 Models 1 through 3 remain replayable.
-`generateRimeAudition` supplies 161 dry clips, retained previous versions, controlled
-path removals, nine-point ANGLE sweeps, return comparisons, phrases and replayable recipes.
+`RimePresets` now supplies three finite recipes per voice, with the three accepted
+starters kept explicit. `generateRimeAudition` supplies 189 clips, musical phrases,
+touch studies and the retained control bench. `generateRimeKit` exports sixteen
+editable, three-zone pads as MPC 3 XTD and MPC 2 XPM, with a four-bar pattern and
+complete layer provenance. Native one-shots and patches are separate downloads.
 HOLD is explicitly refused; phone integration and the full library follow listening.
 See [RIME.md](RIME.md). Owner sonic acceptance is pending.
 

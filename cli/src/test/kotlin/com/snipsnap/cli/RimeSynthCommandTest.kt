@@ -10,10 +10,18 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.*
 
 class RimeSynthCommandTest {
+    @Test fun `all renders the three named musical presets for a RIME voice`() {
+        val root=createTempDirectory("rime-cli-bank").toFile()
+        try {
+            assertEquals(0,SynthCommand.run(listOf("RIME","GLINT","--all","--out",root.path),PrintStream(ByteArrayOutputStream())))
+            assertEquals(3,root.listFiles()!!.count { it.extension=="wav" })
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun `RIME replays an authored patch with note velocity controls duration and seed preserved`() {
         val root=createTempDirectory("rime-cli").toFile()
         try {
-            val patch=RimePresets.forVoice(RimeVoice.GLINT).single().copy(gateSeconds=.25f)
+            val patch=RimePresets.starter(RimeVoice.GLINT).copy(gateSeconds=.25f)
             val source=File(root,"patch.json").apply{writeText(patch.toJsonText())}
             val destination=File(root,"render")
             val args=listOf("RIME","GLINT","--patch",source.path,"--midi","65","--velocity",".6","--seconds",".3","--seed","2718",
