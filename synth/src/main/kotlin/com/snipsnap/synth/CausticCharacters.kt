@@ -29,19 +29,19 @@ import kotlin.math.tan
  */
 internal object CausticCharacters {
     data class Audio(val internal: FloatArray, val frequencies: DoubleArray)
-    private data class Mode(val ratio: Double, val gain: Double, val t60: Double)
-    private val hollowModes = arrayOf(
+    data class Mode(val ratio: Double, val gain: Double, val t60: Double)
+    val hollowModes = arrayOf(
         Mode(1.0, 1.0, .46), Mode(2.0, .16, .24), Mode(3.005, 3.2, .38),
         Mode(4.02, .08, .12), Mode(5.01, 1.2, .24), Mode(7.03, .40, .16),
     )
-    private val rubbedModes = arrayOf(
+    val rubbedModes = arrayOf(
         Mode(1.0, .95, 1.05), Mode(2.0, .08, .30), Mode(3.0, 3.6, .85),
         Mode(4.0, .04, .18), Mode(5.0, 2.6, .55), Mode(7.0, 1.4, .30), Mode(9.0, .60, .18),
     )
-    private val hollowHarmonics = intArrayOf(1, 2, 3, 4, 5, 7)
-    private val hollowWeights = doubleArrayOf(.90, .08, .55, .04, .26, .10)
-    private val rubbedHarmonics = intArrayOf(1, 2, 3, 4, 5, 7, 9)
-    private val rubbedWeights = doubleArrayOf(.90, .05, .66, .025, .36, .17, .08)
+    val hollowHarmonics = intArrayOf(1, 2, 3, 4, 5, 7)
+    val hollowWeights = doubleArrayOf(.90, .08, .55, .04, .26, .10)
+    val rubbedHarmonics = intArrayOf(1, 2, 3, 4, 5, 7, 9)
+    val rubbedWeights = doubleArrayOf(.90, .05, .66, .025, .36, .17, .08)
     private const val TAU = 2.0 * PI
     private const val DELAY_CYCLES = .65
     private const val STUDY_SEED_MODEL = 1
@@ -125,7 +125,7 @@ internal object CausticCharacters {
         return Audio(raw, frequencies)
     }
 
-    private fun harmonic(time: Double, hz: Double, harmonics: IntArray, weights: DoubleArray,
+    fun harmonic(time: Double, hz: Double, harmonics: IntArray, weights: DoubleArray,
         tilt: Double): Double {
         var value = 0.0
         for (i in harmonics.indices) {
@@ -137,7 +137,7 @@ internal object CausticCharacters {
         return value
     }
 
-    private fun hollowSource(hz: Double, midi: Int, velocity: Double, deviation: Double,
+    fun hollowSource(hz: Double, midi: Int, velocity: Double, deviation: Double,
         scale: Double, rate: Int): Pair<DoubleArray, DoubleArray?> {
         val width = (.025 + (.015 - .025) * velocity) * scale * 2.0.pow(-.65 * deviation)
         val count = ceil(width * rate).toInt() + 1
@@ -156,7 +156,7 @@ internal object CausticCharacters {
         return source to null
     }
 
-    private fun rubbedSource(hz: Double, midi: Int, velocity: Double, deviation: Double,
+    fun rubbedSource(hz: Double, midi: Int, velocity: Double, deviation: Double,
         scale: Double, rate: Int): Pair<DoubleArray, DoubleArray?> {
         val rise = .34 * scale * 2.0.pow(-.7 * deviation)
         val hold = 1.18 * scale

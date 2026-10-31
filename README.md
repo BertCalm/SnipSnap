@@ -451,15 +451,15 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-CAUSTIC has four finite voices: ALLOY, HOLLOW_MALLET, RUBBED_RING and
-TRAVELLING_CATCHES. A metallic bloom, soft hollow knock, rough pressure swell
-and four spatial catches share SOURCE/FOCUS geometry, voice-specific BODY and
-.5–8-second LENGTH, with saved ROOT and VELOCITY. The owner chose all three
-character-study gestures for native development. Integration passes the
-7,001-test JVM gate; the production ports and new control positions still need
-listening. Native model-1 ALLOY patches and
-archived study models 1–4 retain their interpretation. Eleven starting patches
-and a dry sixteen-pad kit include the four voices. HOLD is reserved.
+CAUSTIC's ALLOY, HOLLOW_MALLET, RUBBED_RING and TRAVELLING_CATCHES
+voices share coherent SOURCE/FOCUS paths and voice-specific BODY. Native
+model 2 is being completed with MOTION, real sustained HOLD and onset-preserving
+keygroups, retaining saved ROOT and VELOCITY. Below full HOLD, LENGTH and HOLD
+scale the finite gesture; full HOLD uses a separate periodic render. The new
+held/moving sounds remain proposed and unheard; the finite native ports also
+await an explicit listening verdict on the selected study directions. Eleven
+existing model-1 presets and archived study models 1–4 retain their interpretation. The earlier
+finite integration passed its 7,001-test gate; completion validation is pending.
 Run `./gradlew :synth:generateCausticCharactersAudition :synth:generateCausticKit`
 for the four-voice control study and dual-generation MPC starter. The archived listening
 studies remain unchanged. The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)

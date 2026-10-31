@@ -1,19 +1,144 @@
-# Caustic: four finite voices
+# Caustic: four voices and instrument completion
 
 Caustic turns an ordinary source into a position-dependent singing body through
-reflected paths. The native instrument now develops four gestures within the
-same CAUSTIC engine: ALLOY, HOLLOW_MALLET, RUBBED_RING and
-TRAVELLING_CATCHES. SOURCE and FOCUS retain the circular geometry; BODY changes
-the contact or pressure appropriate to the voice, and LENGTH shapes a finite
-gesture. Root and excitation velocity remain explicit saved fields. HOLD is
-reserved. The working name has not been checked for release.
+reflected paths. ALLOY, HOLLOW_MALLET, RUBBED_RING and TRAVELLING_CATCHES are
+the four implemented finite voices. The owner selected the earlier study
+directions; the production ports still await an explicit listening verdict.
+Native model 2 develops them into sustained
+instruments with moving source/pickup geometry and onset-preserving keygroups.
+That completion is being implemented; its new held and moving sounds remain
+proposed and unheard. Root and excitation velocity remain explicit saved
+fields. The working name has not been checked for release.
 
-## Native character expansion
+## Model-2 completion: current contract
+
+Status on 2026-10-31: implementation in progress, with technical validation
+and new listening acceptance pending. The
+[completion design brief](superpowers/specs/2026-10-31-caustic-completion.md)
+records the selected design and proof requirements. Older measurements below
+belong to their named finite-model revisions.
+
+The characteristic gesture is **contact → singing body → recurring moving
+concentration → played release**. Each voice keeps its established finite
+character. A bounded ongoing source or contact pattern drives its passive
+body during HOLD; a longer decay alone does not constitute sustain.
+
+### Six controls
+
+| Control | Model-2 default | Meaning |
+| --- | --- | --- |
+| SOURCE | .5 | The existing illumination/source-distance control. Motion varies the actual source geometry around this setting. |
+| FOCUS | .19 | The existing finite pickup band. Motion carries it through positions around this setting. |
+| BODY | ALLOY 1; Hollow/Rubbed .5; Catches 0 | Voice-specific excitation/contact pressure or metallic fullness, retaining the finite reference positions. |
+| LENGTH | 1 | Finite gesture and release scale below full HOLD; planned loop span at full HOLD. |
+| MOTION | 0 | Exact stationary geometry at zero; positive values move prepared reflection paths before modal excitation. |
+| HOLD | 0 | Below 1, lengthens actual source and modal release by up to four seconds. At 1, selects a genuinely sustained periodic render. |
+
+For `0 <= HOLD < 1`, the finite duration contract is
+`.5 + 7.5 * LENGTH + 4 * HOLD` seconds. The renderer uses the corresponding
+internal effective LENGTH, so this changes the gesture and release rather
+than appending silence or replaying a fixed note. At HOLD=1, a separate
+pitch-preserving loop plan determines the frame count. The loop is always
+filed as LOOP; long finite notes can also retain duration-based LOOP metadata.
+
+### Reflection motion and sustained state
+
+```text
+bounded voice source/contact + periodic SOURCE/FOCUS trajectory
+  → smoothly weighted emission windows through prepared reflection states
+  → signed causal path delays and pickup/modal participation
+  → shared passive modal body
+  → continuous native filtering and decimation
+  → pure sustain loop, or real onset followed by that sustain region
+```
+
+Motion changes the coherent excitation received by the body. Source windows
+are sent through their own prepared path responses and combined before the
+passive bank; this preserves each state's signed delay contribution. It is a
+musical emission-window approximation to changing geometry, not a full
+moving-wave or Doppler solver. Motion at zero introduces no background drift.
+The circular boundary remains a two-dimensional, single-reflection model.
+
+The HOLD contract requires a real zero-state onset and settling trajectory,
+followed by three genuinely rendered periodic cycles for modal-state and
+filter-continuation checks. The implementation may solve the passive bank's
+periodic state exactly; it must still verify the actual emitted samples and
+filter history before selecting a loop. Duplicating a cropped buffer cannot
+serve as the continuation reference. Seam, pitch and state-error measurements
+remain pending for this completion.
+
+### Drum pads and held instruments
+
+Full-HOLD drum pads receive a pure loop `Snip`. Held keygroups receive a
+`KeyNote` containing the actual onset and a positive `loopStartFrame`. These
+are different playback contracts: the keygroup must not start by replaying an
+already-settled loop as a pretend attack.
+
+`CausticPadMaker` captures up to nine minor-third roots around the saved note,
+covering its two-octave neighbourhood within MIDI 36–84. Near the register
+edges it uses fewer roots and includes the clipped boundary. Each root has
+one captured velocity layer. The saved source patch retains its original
+HOLD value; zone rendering requests full sustain without mutating that recipe.
+The existing instrument player supplies live note velocity gain and a separate
+.1–1.5-second note-off release, default .6 seconds. Both MPC formats must
+retain the onset, root, loop start, loop end and release settings.
+
+### Compatibility and cost
+
+The eleven existing factory presets and archived native JSON remain model 1.
+Missing or null native `model` still decodes as 1. Model 1 continues to reject
+positive HOLD and new MOTION fields in its strict saved-patch contract. New
+native patches default to model 2. Explicit HOLD, MOTION or INSTRUMENT actions
+can promote an editor working copy; ordinary replay does not upgrade the
+source patch, and stale stored controls cannot request promotion.
+
+At model-2 MOTION=0 and HOLD=0, the compatibility target is exact earlier
+finite PCM. This must be checked independently of the legacy model-1 canaries.
+The archived `CausticRecipe` models 1–4 remain a separate format.
+
+Prepared geometry stays outside the audio loop. A moving render prepares a
+bounded set of states, then reuses their responses during source-window
+interpolation. Audio/filter state belongs to the note. Cache keys must include
+the geometry and trajectory settings they affect; a render cache must also
+identify model, voice, note, velocity and output settings. Preparation, steady
+render and keygroup-zone costs need separate measurements before a phone
+latency claim. The historical finite timings below do not establish this cost.
+
+### Why it is built this way
+
+- The four finite voices remain the anchors. Sustaining them extends the
+  selected study directions without replacing saved finite notes.
+- Motion enters before the resonator. Moving only a finished note's gain would
+  leave the reflection pattern and spectral excitation unchanged.
+- Drum loops and keygroup samples have different starts. Keeping a real onset
+  makes a held key feel played while the drum pad receives a reusable loop.
+- Modal and filter continuation are checked before cropping. A quiet join
+  alone would not prove that the resonator state or repeated gesture closes.
+- Versioned working-copy promotion preserves old recipes while making a new
+  HOLD, MOTION or INSTRUMENT action explicit and reproducible.
+
+### Completion evidence ledger
+
+- **Heard:** the owner preferred Alloy/Fuller Body and selected the three
+  character-study directions for development. Native finite ports still await
+  a listening verdict; new sustain, motion and held-key behaviour are unheard.
+- **Verified:** baseline repository `d7c2379c1` and the current model-2
+  macro/version/editing/keygroup contracts were read. The baseline
+  `:synth:classes` build completed with exit 0 before completion validation.
+- **Proposed:** held excitation, motion timing/depth, settling and loop
+  selection remain sound-design choices until the implementation probes and
+  the owner's audition. The periodic-state and onset requirements above are
+  acceptance contracts, not reported measurements.
+- **Measured:** model-2 preservation, motion activity, state/PCM seams, pitch,
+  aliasing, cancellation, keygroup readback and preparation/render costs are
+  pending. The earlier 7,001-test result below applies to the finite expansion.
+
+## Finite model-1 instrument and retained evidence
 
 The owner heard the three character-study candidates as distinct and chose to
-develop all three. That verdict applies to the study recordings. The Kotlin
-ports, their intermediate controls and their native output conditioning still
-need the owner's listening verdict.
+develop all three. That approval applies to the study directions; the native
+finite ports are implemented and measured, with listening acceptance still
+open. The contracts and evidence below document that retained model-1 baseline.
 
 | Native voice | Characteristic gesture | BODY reference position |
 | --- | --- | --- |
@@ -105,8 +230,9 @@ do not increase the engine count or claim a held instrument export.
 ### Expansion evidence ledger
 
 - **Heard:** the owner heard distinct Hollow Mallet, Rubbed Ring and Travelling
-  Catches study gestures and requested native development of all three. The
-  production ports and new control positions have not yet been heard.
+  Catches study gestures and requested native development. The production
+  ports and new control positions still await a listening verdict. New
+  model-2 held/moving sounds are separate, unheard listening candidates.
 - **Verified:** the shared CAUSTIC geometry, saved root/velocity contract,
   original native model 1 and archived models 1–4 were read at `53366f9c` before
   this expansion. The published pack and completed build stage use clean source
@@ -198,9 +324,10 @@ TONAL/LOOP filing, following the existing authored-instrument approach used
 for low ARCO notes. The measured heuristic result remains in diagnostics;
 it is not presented as universally safe drum classification.
 
-The production ports still need listening, phone performance and MPC hardware
-load/play checks. HOLD, live moving geometry and held keygroup export remain
-outside this finite expansion.
+The finite production ports still need listening, phone performance and MPC
+hardware load/play checks. Model-2 HOLD, moving geometry and held keygroup
+export are covered by the completion contract above, not by these finite-pack
+measurements.
 
 ## Character listening study
 
@@ -500,12 +627,12 @@ phone budgets or a sonic acceptance verdict.
 
 ## Later work
 
-Deformation, SCATTER, exact-stop ORBIT, verified sustained HOLD, further
-voices, the broader preset bank and held keygroup export remain later work.
-The finite instrument includes native patch/kit registration and the phone
-picker. Phone latency and the new kit's hardware load/play check remain
-device verification, separate from JVM and export-reader checks. No real-time
-ray-traced engine is required for this sample workflow.
+Surface deformation, SCATTER, a broader voice/preset bank and a full moving-wave
+solver remain outside the current completion. Sustained HOLD, SOURCE/FOCUS
+motion and onset-preserving keygroups are the current model-2 work. Phone
+latency, hardware load/play and listening to the new held sounds remain
+separate from numerical and export-reader checks. No real-time ray-traced
+engine is required for this sample workflow.
 
 ## Original native model-1 evidence
 

@@ -112,6 +112,9 @@ import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
+import com.snipsnap.shell.CausticPadMaker
+import com.snipsnap.shell.CausticPad
+import com.snipsnap.shell.CausticEditing
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.DroneMaker
@@ -615,7 +618,7 @@ private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<Str
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
     is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
-    is CausticPatch -> CausticInstrument.defaults(editable.voice, editable.model)
+    is CausticPatch -> CausticEditing.controls(editable)
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
     is TidalPatch -> Tidal.defaults(editable.voice, editable.model)
     is OhmPatch -> Ohm.defaults(editable.model)
@@ -776,7 +779,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
+                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.CAUSTIC) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -792,6 +795,8 @@ fun SynthScreen(
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
+                        else if (e == Engine.CAUSTIC) (seededDrafts.filterIsInstance<CausticPatch>()
+                            .firstOrNull { it.voice == v } ?: nativeFactory as? CausticPatch)
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
                             .firstOrNull { it.voice == v } else null
@@ -808,6 +813,10 @@ fun SynthScreen(
                         workingPatch != null -> editableDefaults(e.defaults(v), workingPatch) + editableMacros(workingPatch)
                         e == Engine.OHM && seed.restoredOhm != null -> Ohm.defaults(seed.restoredOhm.model) + seed.restoredOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
+                        recipe is CausticPatch -> CausticEditing.controls(recipe,
+                            CausticInstrument.defaults(recipe.voice, 2).mapValues { (name, fallback) ->
+                                settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() ?: fallback
+                            })
                         recipe is TidalPatch -> Tidal.defaults(recipe.voice, recipe.model) + recipe.macros
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
@@ -816,7 +825,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
+                            if ((e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -945,8 +954,9 @@ fun SynthScreen(
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
+        if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
+        else if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+            patch is PrismPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -973,6 +983,7 @@ fun SynthScreen(
                 // ORPHICA's sliders include controls derived from its config;
                 // keep only real overrides, as buildCurrentPatch does.
                 recipe.copy(patch = if (patch is OrphicaPatch) orphicaPatchForControls(patch, patch.name, macrosByVoice.getValue(pair))
+                    else if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
                     else Patches.edited(patch, patch.name, macrosByVoice.getValue(pair))),
                 reopenedPadsByVoice[pair],
             )
@@ -1007,6 +1018,11 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.CAUSTIC) {
+            val current = loadedPatchesByVoice[engine to voice] as? CausticPatch
+                ?: CausticPatch(name, voice as CausticVoice, emptyMap())
+            return CausticEditing.edited(current, name, macrosByVoice.getValue(engine to voice))
+        }
         if (engine == Engine.ORIGAMI) {
             // Expression, gesture and pitch events can share a frame. Preserve
             // the newest complete recipe instead of the last composed snapshot.
@@ -1179,6 +1195,9 @@ fun SynthScreen(
         // that edited recipe so onDispose can flush it before navigation.
         if (pair !in loadedPatchesByVoice) {
             when (engine) {
+                Engine.CAUSTIC -> loadedPatchesByVoice[pair] = CausticPatch(
+                    engine.patchDisplayName(voice), voice as CausticVoice, macrosByVoice.getValue(pair),
+                )
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
                     engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
                 )
@@ -1225,6 +1244,12 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         val bounded = value.coerceIn(macroRange(name))
         val values = macrosByVoice.getValue(engine to voice) + (name to bounded)
+        if (engine == Engine.CAUSTIC) {
+            val current = loadedPatchesByVoice[engine to voice] as? CausticPatch
+                ?: CausticPatch(engine.patchDisplayName(voice), voice as CausticVoice, emptyMap())
+            loadedPatchesByVoice[engine to voice] = CausticEditing.edited(current, macros = values,
+                requestExtension = bounded > 0f && name in setOf("MOTION", "HOLD"))
+        }
         macrosByVoice[engine to voice] = values
         // Navigation can replace this screen before its state effect runs.
         settings[macroSettingsKey(engine, voice, name)] = bounded.toString()
@@ -1589,7 +1614,9 @@ fun SynthScreen(
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
         v.start(0, loop = if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
-            (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f))))
+            (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f)) ||
+            (engine == Engine.CAUSTIC && CausticInstrument.isLoop(voice as CausticVoice, macros,
+                (loadedPatchesByVoice[engine to voice] as? CausticPatch)?.model ?: 2))))
             0 until heard.frameCount else null)
     }
 
@@ -1654,6 +1681,10 @@ fun SynthScreen(
                         patch.voice, patch.macros, patch.midi, patch.velocity, patch.seed, patch.model,
                         cancelled = { previewJob?.isActive == false || Thread.currentThread().isInterrupted },
                     )
+                    patch is CausticPatch -> if (CausticInstrument.isLoop(patch.voice, patch.macros, patch.model))
+                        CausticInstrument.renderLoop(patch.voice, patch.macros, patch.midi, patch.velocity, patch.model) {
+                            previewJob?.isActive == false || Thread.currentThread().isInterrupted
+                        } else patch.render()
                     patch != null -> patch.render()
                     else -> engine.render(voice, macros)
                 }
@@ -1859,6 +1890,7 @@ fun SynthScreen(
                             model.update(slot) { ApsisPad.configure(it, patch) }
                         }
                         if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
+                        if (patch is CausticPatch) model.update(slot) { CausticPad.configure(it, patch) }
                         model.save()
                         alreadyThere to model.kit
                     }
@@ -1923,7 +1955,7 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
+    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CAUSTIC || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -1959,6 +1991,8 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.CAUSTIC -> HeldSpec.Caustic(CausticPadMaker.spec(
+            buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, heldSheet.holdAttack, heldSheet.holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, heldSheet.holdRelease))
@@ -2052,7 +2086,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Caustic || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2063,7 +2097,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament || spec is HeldSpec.Caustic) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3251,7 +3285,7 @@ fun SynthScreen(
                 val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
-                    else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, loadedPatch.model)
+                    else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, 2)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else engine.macrosFor(voice)
                 }
@@ -3318,6 +3352,7 @@ fun SynthScreen(
                         // ORIGAMI's six controls describe one finite pitched note.
                         // Reroll its geometry while retaining the displayed/saved pitch.
                         val values = when (engine) {
+                            Engine.CAUSTIC -> CausticInstrument.defaults(voice as CausticVoice, 2) + next
                             Engine.ORIGAMI -> next + ("TUNE" to macros.getValue("TUNE"))
                             Engine.OHM -> next + macros.filterKeys { it == "HOLD" }
                             else -> next
@@ -3419,6 +3454,11 @@ fun SynthScreen(
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "MAKE INSTRUMENT",
                     ) {
+                        if (engine == Engine.CAUSTIC) {
+                            val current = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch
+                            loadedPatchesByVoice[engine to voice] = CausticEditing.edited(current,
+                                requestExtension = true)
+                        }
                         makingInstrument = true
                     }
                     if (!heldInstrumentReady) {
@@ -3861,7 +3901,7 @@ private fun MacroSliders(
                     readout = macroReadout(spec.name, engine, voice, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported),
                     onValueChange = { v -> onMacro(spec.name, v) },
                     valueRange = macroRange(spec.name),
-                    enabled = (spec.name != "HOLD" || (shoalHoldSupported && engine != Engine.CAUSTIC)) &&
+                    enabled = (spec.name != "HOLD" || shoalHoldSupported) &&
                         (engine != Engine.TRIO || Trio.isMacroActive(voice as TrioVoice, spec.name)),
                     semanticRange = if (engine == Engine.PRISM && spec.name == "HOLD")
                         ({ macroRange(spec.name) }) else null,
@@ -3967,7 +4007,9 @@ private fun macroReadout(
     engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && name == "TUNE" ->
         Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
-    engine == Engine.CAUSTIC && name == "HOLD" -> "OFF"
+    engine == Engine.CAUSTIC && name == "HOLD" -> if (macros.getValue(name) == 1f) "LOOP"
+        else if (macros.getValue(name) == 0f) "NOTE"
+        else "%.1fs".format(Locale.ROOT, CausticInstrument.durationSeconds(voice as CausticVoice, macros, 2))
     engine == Engine.PRISM && name == "HOLD" && prismFiniteMotion(loadedPatch as? PrismPatch) -> "NOTE"
     engine == Engine.SHOAL && name == "HOLD" && !shoalHoldSupported -> "NOTE"
     engine == Engine.OVERLAP && name == "HOLD" -> {
@@ -4474,6 +4516,18 @@ private sealed interface HeldSpec {
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(RegistersPadMaker.renderZone(spec, midi, cancelled))
         override fun preview(cancelled: () -> Boolean) = RegistersPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) = RegistersPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
+    class Caustic(private val spec: CausticPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = CausticPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val knobLabel get() = "RELEASE ${CausticPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() =
+            "KEEPS THE ARRIVAL, THEN REPEATS THE VESSEL WHILE HELD. KEY TOUCH CHANGES VOLUME."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(CausticPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = CausticPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            CausticPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Crease(private val spec: CreasePadMaker.Spec) : HeldSpec {
@@ -6057,7 +6111,8 @@ private fun CausticNoteControls(
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
     )
     TapeText(
-        "FINITE NOTE · LENGTH SETS DECAY · HOLD RESERVED.",
+        if (patch.model == 1) "ORIGINAL FINITE NOTE · MOVE HOLD OR MOTION TO EXPLORE FURTHER."
+        else "LENGTH SETS THE NOTE · THE TOP HOLD STEP SUSTAINS.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
 }

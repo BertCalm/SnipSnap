@@ -502,6 +502,8 @@ testkit/crease-release-experiment/
 # Rebuildable native CAUSTIC voice comparisons and four-voice kit.
 testkit/caustic-native-voices-audition/
 testkit/caustic-native-voices-kit/
+testkit/caustic-complete-audition/
+testkit/.caustic-complete-*/
 testkit/.caustic-native-*/
 
 # Saved playable NACRE revision and musical comparison exports.
