@@ -229,7 +229,7 @@ TEST(print_buffer_stereo_counts_frames_and_cuts_on_a_frame_boundary) {
     CHECK_NEAR(p.data()[4], 1.0f, 1e-6);
     CHECK_NEAR(p.data()[5], -1.0f, 1e-6);
     p.clear();
-    // Back to one channel by default, so the surface's print is untouched.
+    // Generic callers can still arm a mono buffer.
     CHECK(p.arm(4));
     CHECK_EQ(p.channels(), 1);
     p.requestStop();
@@ -872,7 +872,7 @@ TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {
     CHECK(peak(out) < 1e-3f);  // and closed again
 }
 
-TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
+TEST(surface_engine_prints_the_stereo_bus_and_finishes_on_the_callback) {
     SurfaceEngine e(kRate);
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate);
@@ -889,7 +889,9 @@ TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
     callback(e, 64);
     CHECK(e.printState() == PrintBuffer::State::Done);
     CHECK_EQ(static_cast<int>(e.printFrames()), 128);
-    // The print is the bus: a mono copy of what went to the left channel.
+    // Default dry output is duplicated mono, captured as complete stereo frames.
+    CHECK_EQ(e.printSamples(), 256u);
+    for (size_t i = 0; i < e.printFrames(); ++i) CHECK_EQ(e.printData()[2 * i], e.printData()[2 * i + 1]);
     auto out = callback(e, 1);
     CHECK(std::fabs(e.printData()[127]) > 0.01f);
     CHECK_NEAR(e.printData()[127], e.printData()[126], 0.05f);
