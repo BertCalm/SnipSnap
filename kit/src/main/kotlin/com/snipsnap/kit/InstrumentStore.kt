@@ -3,7 +3,10 @@ package com.snipsnap.kit
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
+import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 
 /**
@@ -63,6 +66,8 @@ object InstrumentStore {
         /** Seconds, the amp envelope's release once a note lets go. */
         val release: Float,
         val zones: List<Zone>,
+        /** How the keys share the voice; a sidecar that does not say is polyphonic. */
+        val voiceMode: VoiceMode = VoiceMode.POLY,
     ) {
         /**
          * [release] as a player may use it: finite, not negative, at most
@@ -82,6 +87,24 @@ object InstrumentStore {
         /** Every layer must load, including soft samples that are not a zone's headline. */
         val sampleFiles: List<String> get() = zones.flatMap { it.playableLayers }.map { it.sample }.distinct()
     }
+
+    /** The program this instrument was written from: one keygroup per zone, one layer per playable layer. */
+    fun Instrument.toProgram(): KeygroupProgram = KeygroupProgram(
+        name = name,
+        keygroups = zones.map { zone ->
+            Keygroup(
+                zone.lowNote, zone.highNote, zone.rootNote,
+                zone.playableLayers.map { l ->
+                    VelocityLayer(
+                        l.sample.substringAfterLast('/').substringAfterLast('\\').removeSuffix(".wav"),
+                        l.frameCount, l.velStart, l.velEnd, l.loopStartFrame,
+                    )
+                },
+            )
+        },
+        volumeRelease = playableRelease,
+        voiceMode = voiceMode,
+    )
 
     fun sidecar(destRoot: File, name: String): File = File(destRoot, "$name$SUFFIX")
 
@@ -114,6 +137,7 @@ object InstrumentStore {
                 "version" to JsonValue.Num(VERSION.toDouble()),
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
+                "voiceMode" to JsonValue.Str(program.voiceMode.name),
                 "zones" to JsonValue.Arr(zones),
             ),
         )
@@ -141,6 +165,7 @@ object InstrumentStore {
             throw JsonException("instrument release isn't a length of time: $releaseRaw")
         }
         val release = releaseRaw.toFloat().coerceAtMost(MAX_RELEASE_SECONDS)
+        val voiceMode = VoiceMode.parse(obj["voiceMode"]?.str())
         val folder = file.absoluteFile.parentFile
         val zones = (obj["zones"] as? JsonValue.Arr)?.items?.map { z ->
             val o = z.obj()
@@ -189,7 +214,7 @@ object InstrumentStore {
             zone
         } ?: throw JsonException("instrument has no zones")
         if (zones.isEmpty()) throw JsonException("instrument has no zones")
-        return Instrument(name, release, zones)
+        return Instrument(name, release, zones, voiceMode)
     }
 
     private val MIDI = 0..127
