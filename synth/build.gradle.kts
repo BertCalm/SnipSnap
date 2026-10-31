@@ -83,6 +83,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
 }
 
+/** The current wind-duet handoff beside a slightly longer overlap. */
+tasks.register<JavaExec>("generateObbligatoMoreOverlapAudition") {
+    group = "distribution"
+    description = "Compare current and slightly longer OBBLIGATO overlaps, melodies and actual player taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMoreOverlapAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMoreOverlapOutput").orNull ?: "${rootDir}/testkit/obbligato-more-overlap-audition")
+}
+
 /** A focused comparison of previous and overlapping duet handoffs. */
 tasks.register<JavaExec>("generateObbligatoOverlapAudition") {
     group = "distribution"
