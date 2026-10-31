@@ -2,6 +2,37 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateLibrationMusicalBank") {
+    group = "distribution"
+    description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationMusicalGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("librationMusicalOutput").orNull ?: "${rootDir}/testkit/libration-musical")
+}
+
+/** Finite first-listen proof, including actual trajectories and causal audio comparisons. */
+tasks.register<JavaExec>("generateLibrationAudition") {
+    group = "distribution"
+    description = "Render Libration's three dry voices, controlled comparisons, recipes and measured diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("librationOutput").orNull ?: "${rootDir}/testkit/libration-audition")
+}
+
+tasks.register<JavaExec>("replayLibrationAudition") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("--replay", providers.gradleProperty("librationRecipe").orNull ?: "",
+        providers.gradleProperty("librationReplayOutput").orNull ?: "${rootDir}/testkit/libration-replay.wav")
+}
+
 tasks.register<JavaExec>("generateTrefoilPlayableBank") {
     group = "distribution"
     description = "Render twelve Trefoil presets, three native velocity layers, sixteen MPC pads and two musical performances."
