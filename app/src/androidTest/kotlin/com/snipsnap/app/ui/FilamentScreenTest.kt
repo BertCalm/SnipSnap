@@ -1,5 +1,7 @@
 package com.snipsnap.app.ui
 
+import android.os.SystemClock
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +9,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithContentDescription
@@ -295,7 +299,48 @@ class FilamentScreenTest : ComposeScreenTest() {
     @Test
     fun current_curl_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.CURL)
 
-    private fun makeInstrument(voice: FilamentVoice) {
+    @Test
+    fun curl_makes_three_real_touch_layers_at_each_root_without_rewriting_its_source() =
+        makeInstrument(FilamentVoice.CURL, touchLayers = true)
+
+    @Test
+    fun touch_choice_opens_enabled_for_each_voice_and_reopens_without_changing_the_recipe() {
+        val root = shelfRoot()
+        for (voice in FilamentVoice.entries) {
+            settings["recipe.FILAMENT.${voice.name}"] = FilamentPresets.forVoice(voice).first().copy(
+                midi = 57, velocity = .7f, config = FilamentConfig(seed = 73, profile = FilamentProfile.LATE),
+            ).toJsonText()
+        }
+        show(root)
+        for (voice in FilamentVoice.entries) {
+            activate(voice.name)
+            val before = currentPatch(voice)
+            activate("MAKE INSTRUMENT")
+            button("TOUCH LAYERS").assertIsSelected()
+            assertReadsInFull("TOUCH LAYERS ON")
+            compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.").assertExists()
+            activate("TOUCH LAYERS")
+            button("TOUCH LAYERS").assertIsNotSelected()
+            assertReadsInFull("TOUCH LAYERS OFF")
+            closeInstrumentSheet()
+            activate("MAKE INSTRUMENT")
+            button("TOUCH LAYERS").assertIsNotSelected()
+            activate("TOUCH LAYERS")
+            button("TOUCH LAYERS").assertIsSelected()
+            closeInstrumentSheet()
+            assertEquals(before, currentPatch(voice))
+        }
+        val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
+        assertTrue(!instruments.exists() || instruments.listFiles().isNullOrEmpty())
+    }
+
+    private fun closeInstrumentSheet() {
+        val node = compose.onAllNodesWithContentDescription("CANCEL", useUnmergedTree = true).fetchSemanticsNodes().last()
+        compose.runOnIdle { assertTrue(requireNotNull(node.config[SemanticsActions.OnClick].action).invoke()) }
+        pump(16)
+    }
+
+    private fun makeInstrument(voice: FilamentVoice, touchLayers: Boolean = false) {
         val root = shelfRoot()
         val source = FilamentPresets.forVoice(voice).first().copy(
             midi = 57, velocity = .7f,
@@ -305,24 +350,70 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["recipe.FILAMENT.${source.voiceName}"] = source.toJsonText()
         show(root)
         activate("MAKE INSTRUMENT")
+        button("TOUCH LAYERS").assertIsSelected()
+        if (!touchLayers) activate("TOUCH LAYERS")
         slider("RELEASE").assertExists()
         slider("ATTACK").assertDoesNotExist()
-        compose.onNodeWithText("C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
+        compose.onNodeWithText(if (touchLayers)
+            "C3–C5 · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE; LET GO TO FADE."
+        else "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
         dial("RELEASE", 1f)
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         activate("MAKE")
         val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
-        waitFor("the three $voice roots and their source recipe", timeoutMillis = 180_000) {
-            instruments.isDirectory && instruments.walkTopDown().any { it.name == FilamentPadMaker.PATCH_FILE }
+        waitForInstrument("$voice ${if (touchLayers) "nine touch captures" else "three roots"}",
+            timeoutMillis = if (touchLayers) 420_000 else 180_000) {
+            instruments.isDirectory && instruments.walkTopDown().any {
+                it.name == if (touchLayers) FilamentPadMaker.TOUCH_FILE else FilamentPadMaker.PATCH_FILE
+            }
         }
         val (_, instrument) = InstrumentStore.list(instruments).single()
         assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
         assertEquals(1.5f, instrument.release, 0f)
         assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
+        assertEquals(if (touchLayers) 9 else 3, instrument.sampleFiles.size)
+        for (zone in instrument.zones) {
+            assertEquals(if (touchLayers) listOf(1..42, 43..84, 85..127) else listOf(1..127),
+                zone.playableLayers.map { it.velStart..it.velEnd })
+            for (layer in zone.playableLayers) {
+                assertTrue(layer.loopStartFrame > 0 && layer.loopStartFrame < layer.frameCount - 1)
+                assertTrue(File(instruments, layer.sample).isFile)
+            }
+        }
         val recipe = instruments.walkTopDown().single { it.name == FilamentPadMaker.PATCH_FILE }
         val kept = FilamentPatch.fromJsonText(recipe.readText())
         assertEquals(source.copy(name = kept.name), kept)
         assertEquals(0f, kept.macros.getValue("HOLD"), 0f)
+    }
+
+    /** Pace real DSP work instead of spinning Compose's manual frame clock against its worker. */
+    private fun waitForInstrument(what: String, timeoutMillis: Long, condition: () -> Boolean) {
+        fun progress(): String = compose.onAllNodes(SemanticsMatcher("instrument progress") { node ->
+            node.config.getOrNull(SemanticsProperties.ProgressBarRangeInfo) != null &&
+                node.config.getOrNull(SemanticsProperties.ContentDescription)?.any { it.startsWith("RENDERING ") } == true
+        }).fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.ContentDescription)
+            ?.joinToString() ?: "no instrument progress on screen"
+        val started = SystemClock.elapsedRealtime()
+        var latest = progress()
+        var changedAt = started
+        var nextReport = started + 1_000
+        while (!condition()) {
+            val now = SystemClock.elapsedRealtime()
+            if (now - started >= timeoutMillis || now - changedAt >= 150_000)
+                throw AssertionError("$what did not complete after ${now - started} ms; last $latest; toast ${latestToast.get()}")
+            SystemClock.sleep(40)
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+            if (SystemClock.elapsedRealtime() >= nextReport) {
+                val current = progress()
+                if (current != latest) {
+                    latest = current
+                    changedAt = SystemClock.elapsedRealtime()
+                    Log.i("FilamentScreenTest", "$what: $latest at ${changedAt - started} ms")
+                }
+                nextReport = SystemClock.elapsedRealtime() + 1_000
+            }
+        }
     }
 
     @Test

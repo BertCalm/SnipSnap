@@ -223,9 +223,12 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.FilamentKeysAuditionGenerator")
     workingDir = rootDir
+    maxHeapSize = "1g"
     val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
+    val touch = providers.gradleProperty("filamentKeysTouchLayers").orElse("false").get().toBooleanStrict()
     val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory-keys").get(), voice)
+    val touchTag = if (touch) "-touch" else ""
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$touchTag-keys").get(), voice, touch.toString())
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */

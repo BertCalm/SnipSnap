@@ -1991,7 +1991,9 @@ fun SynthScreen(
         }
         Engine.FILAMENT -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
-            if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(patch, heldSheet.holdRelease)) else null
+            if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(
+                patch, heldSheet.holdRelease, heldSheet.holdFilamentTouchLayers,
+            )) else null
         }
         else -> null
     }
@@ -2004,7 +2006,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2049,7 +2051,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3583,6 +3585,7 @@ fun SynthScreen(
                     onTouchLayers = {
                         flockHeldPreview?.silence()
                         if (engine == Engine.FLOCK) heldSheet.holdFlockTouchLayers = it
+                        else if (engine == Engine.FILAMENT) heldSheet.holdFilamentTouchLayers = it
                         else heldSheet.holdTouchLayers = it
                     },
                     onPreview = ::previewHeld,
@@ -3863,6 +3866,7 @@ private class HeldSheetState {
     var holdTouchLayers by mutableStateOf(false)
     // FLOCK opens with physical touch enabled without changing CREASE's existing choice.
     var holdFlockTouchLayers by mutableStateOf(true)
+    var holdFilamentTouchLayers by mutableStateOf(true)
     // Completed zones (or touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
     var holdTotal by mutableStateOf(0)
@@ -4540,12 +4544,18 @@ private sealed interface HeldSpec {
     class Filament(private val spec: FilamentPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = FilamentPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
+        override val progressPerZone get() = spec.layerCount
+        override val touchLayers get() = spec.touchLayers
+        override val touchLayersNote get() =
+            "ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
         override val knobLabel get() = "RELEASE ${FilamentPadMaker.secondsLabel(spec.releaseSeconds)}"
-        override val instrumentNote get() = "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(FilamentPadMaker.renderZone(spec, midi, cancelled))
+        override val instrumentNote get() = if (spec.touchLayers)
+            "C3–C5 · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE; LET GO TO FADE."
+        else "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = FilamentPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FilamentPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            FilamentPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            FilamentPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 }
 
