@@ -237,3 +237,14 @@ tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("bellowsPlaybackOutput").orElse("${rootDir}/testkit/bellows-playback-audition").get())
 }
+
+/** One opening before a separately marked sustain region, compared with unchanged PRISM pad renders. */
+tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
+    group = "distribution"
+    description = "Render PRISM OPEN, pure HOLD and opening-once keygroup notes with sampler metadata and eight-sustain proofs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.PrismOpeningSustainAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
+}

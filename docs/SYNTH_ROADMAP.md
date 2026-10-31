@@ -728,6 +728,11 @@ fitted cycle readouts and enough complete cycles for loop classification.
 Existing recipes keep their default finite rendering and JSON shape. A new
 bounded audition compares the actual editor/source results and repeated exports;
 phone response and physical MPC playback remain device checks.
+The [opening instrument](PRISM_OPENING_SUSTAIN.md) uses MAKE INSTRUMENT to keep
+one opening before a continuously moving sustain. Nine minor-third roots,
+explicit internal loop markers and note-off release use the shared keygroup
+writer for the phone and MPC 2/3. It retains the complete authored source and
+motion recipe in a versioned delivery companion.
 
 ### SHOAL — materials animated by moving energy
 

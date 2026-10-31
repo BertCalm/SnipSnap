@@ -504,3 +504,6 @@ testkit/scour-audition/
 
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/
+
+# PRISM opening-once / repeating-sustain listening evidence.
+testkit/prism-opening-sustain-audition/
