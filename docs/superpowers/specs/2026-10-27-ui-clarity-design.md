@@ -279,6 +279,18 @@ SnapScreen's `showLive`, `drawing` and `showField`, and the pad editor's
 - No `*Screen.kt` draws its own back label.
 - `UatSimTest` journeys show Back from Grain landing on the pad editor.
 
+**Amendment (2026-10-30), PR 3d.** Three things differ from the target
+above:
+
+- Bench arguments live in `App` variables beside the navigation model, not
+  in `PadsState`. `NavState` isn't saved across process death, so the two
+  are equivalent in-process.
+- Keeping the pad editor's staged panels across a trip to Grain, Splice or
+  Stack (the `SaveableStateHolder`) moves to PR 4, after that PR reshapes
+  the panels. The open section and saved edits survive already.
+- SPREAD moves to PR 4, with the inline panels. It stays a panel inside the
+  pad editor until then.
+
 ### 7.4 Every hold gets a visible equivalent
 
 | Hold or gesture today | Visible control |

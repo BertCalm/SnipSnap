@@ -84,12 +84,14 @@ the shared melodic reference and restores velocity dynamics afterward.
 There is no per-layer normalization or feedback limiter.
 
 Models 1 and 2 are finite samples. Separate notes and pads start fresh ensembles.
-The optional model-3 extension adds bowed and captured excitation, FM elder,
+The optional extension, available from model 3, adds bowed and captured excitation, FM elder,
 source-audio grains, captured-buffer freeze and HOLD. It is explicitly selected
-through EXTEND; the accepted factory recipes remain model 2. See
+through EXTEND; new extensions use model 4's repaired ringing-source history
+for grains and captured memory. Existing model-3 recipes keep their renderer
+until UPDATE SOURCES is chosen. The accepted factory recipes remain model 2. See
 [the extension notes](OHM_EXPANDED.md) for its source, loop and instrument contracts.
 
-In model 3, HOLD below .99 extends the finite driven duration; at .99 or above,
+In models 3 and 4, HOLD below .99 extends the finite driven duration; at .99 or above,
 ordinary pads contain just the repeating region. MAKE INSTRUMENT preserves the
 arrival once and then loops the sustain until note-off. Bowed HOLD captures and
 joins a stretch of physical bowing; plucked/captured HOLD uses periodic driven
@@ -190,7 +192,7 @@ fingerprints guard against attaching a recipe to a changed recording.
 ./gradlew :synth:generateOhmExpandedAudition
 ./gradlew :shell:generateOhmExpandedHandoff
 ./gradlew :cli:run --args="synth OHM STRING --all --midi 60 --velocity 0.8 --seed 731 --out /tmp/ohm"
-./gradlew :cli:run --args="synth OHM STRING --model 3 --macros HOLD=1 --instrument --release 0.3 --out /tmp/ohm-keys"
+./gradlew :cli:run --args="synth OHM STRING --model 4 --macros HOLD=1 --instrument --release 0.3 --out /tmp/ohm-keys"
 ```
 
 The extended audition writes `testkit/ohm-expanded-audition/`, preserving the

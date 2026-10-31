@@ -2,6 +2,7 @@ package com.snipsnap.kit
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SongBus
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.mpc3.Mpc3Clip
 import com.snipsnap.mpc3.Mpc3Note
@@ -54,7 +55,7 @@ class SessionMixdownTest {
         val longer = KitPreview.render(KitStore.load(b), b, tempoBpm = 120f)
         assertEquals(longer.frameCount, mix.frameCount, "the mix runs as long as the longest kit")
         assertEquals(2, mix.channels)
-        assertTrue(mix.peak() > 0.05f && mix.peak() <= SessionMixdown.PEAK + 1e-4f)
+        assertTrue(mix.peak() > 0.05f && mix.peak() <= SongBus.PEAK + 1e-4f)
         assertTrue(
             mix.samples.contentEquals(SessionMixdown.render(listOf(a, b), tempoBpm = 120f).samples),
             "same session, same bytes",

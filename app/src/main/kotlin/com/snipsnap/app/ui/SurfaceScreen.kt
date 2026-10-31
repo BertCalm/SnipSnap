@@ -74,6 +74,8 @@ import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceLoop
 import com.snipsnap.shell.SurfaceMidi
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SurfaceAquarium
+import com.snipsnap.shell.SurfaceSettingsWrites
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
 import com.snipsnap.shell.TouchSurface.Reading
@@ -88,7 +90,7 @@ import kotlinx.coroutines.sync.withLock
  * The panels of controls above the pad, in strip order - one shows
  * at a time (see the strip's own comment in [SurfaceScreen]).
  */
-private enum class Panel { VOICE, SHAPE, MOD, MIDI }
+private enum class Panel { VOICE, SHAPE, MOD, MIDI, FX }
 
 // The keys SURFACE writes into its MAKE bag (`SurfaceScreen`'s `settings`
 // parameter, §3.6): the player's unkeyed work, so leaving to hear a pad
@@ -286,7 +288,7 @@ fun SurfaceScreen(
      * pad. Not Compose state - the vars below stay the live state, seeded
      * from it when the screen composes and written back to it when they
      * change. Keys, all text: `mode` (a [Mode] name, default XY), `panel`
-     * (VOICE / SHAPE / MOD / MIDI, default VOICE), `printToPad` ("true" for → PAD,
+     * (VOICE / SHAPE / MOD / MIDI / FX, default VOICE), `printToPad` ("true" for → PAD,
      * default → TAPE), `bars` (the BARS index into [PrintLength.BARS],
      * default 0 = FREE), and the row picks `grainKnob`, `swarmKnob`,
      * `modSlot`, `modField` (indices, default 0). The kit's own sound is
@@ -358,6 +360,7 @@ fun SurfaceScreen(
     // starting does not withdraw the report and make it again.
     ReportBusy(remember(readingPad) { if (readingPad) Busy(Copy.SURFACE_LOADING_BUSY) else null })
     var kitSettings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    val settingsWrites = remember { SurfaceSettingsWrites() }
     // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
     // separate gesture from SET A..D (which always captures the live
     // touch): arming only picks a target, it never itself changes a
@@ -498,6 +501,7 @@ fun SurfaceScreen(
         hand.release()
         hand.followed(Reading.REST, learn)
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
+        engine.panic()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     val audioVoice = remember(engine) { object : AudioVoice { override fun silence() = silenceSurface() } }
@@ -691,18 +695,11 @@ fun SurfaceScreen(
 
     fun persist(dir: File, next: SurfaceStore.Settings) {
         kitSettings = next
+        settingsWrites.stage(dir, next)
         scope.launch {
-            // Write `kitSettings` fresh here, not the `next` this call
-            // captured: two persist() calls close together (a fast PAD3
-            // double-tap, say) each launch their own IO write, and those
-            // can finish in either order - a write of its own captured
-            // value could let an older call's write land on disk after a
-            // newer one's and leave a stale choice there. By the time any
-            // of these coroutines actually runs, every synchronous
-            // `kitSettings = next` above it has already happened, so reading
-            // `kitSettings` here means every one of them writes the same,
-            // latest content - the write order stops mattering.
-            offMain { runCatching { SurfaceStore.save(dir, kitSettings) } }
+            // Each directory keeps its own latest snapshot. A later kit
+            // switch must never write its settings into this directory.
+            offMain { runCatching { settingsWrites.save(dir) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: kitSettings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -1178,6 +1175,26 @@ fun SurfaceScreen(
     val keepGestureNow by rememberUpdatedState({ gesture: Gesture -> keepGesture(gesture) })
     val finishPrintNow by rememberUpdatedState({ finishPrint() })
 
+    val surfaceSettingsReady = entry != null && settingsLoadedFor == entry.dir
+    val surfaceRouteOn = surfaceSettingsReady && kitSettings.aquariumFromKit
+    // Touch painting recomposes every frame; decode/validate saved JSON
+    // only when the sound, tempo or routing choice actually changes.
+    val aquariumRoute = remember(entry?.kit?.aquariumPerformance, entry?.kit?.tempoBpm, surfaceRouteOn) {
+        SurfaceAquarium.route(entry?.kit, surfaceRouteOn)
+    }
+    var aquariumPriorKit by remember { mutableStateOf<File?>(null) }
+    var aquariumWasOn by remember { mutableStateOf(false) }
+    var aquariumFaulted by remember { mutableStateOf(false) }
+    var aquariumPending by remember { mutableStateOf(false) }
+    var aquariumLimited by remember { mutableStateOf(0L) }
+    LaunchedEffect(engine, entry?.dir, surfaceSettingsReady, surfaceRouteOn, aquariumRoute.settings, aquariumRoute.bpm) {
+        val reset = aquariumPriorKit != entry?.dir || (surfaceRouteOn && !aquariumWasOn)
+        engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset)
+        aquariumPriorKit = entry?.dir
+        aquariumWasOn = surfaceRouteOn
+        aquariumPending = engine.hasPendingAquariumControls()
+    }
+
     // Screen-rate loop: read the clock and the room, hand the frame to
     // `SurfaceLoop`, then do what only this side can - poll the engine,
     // mirror state for the rows, paint, send. The arithmetic between
@@ -1189,6 +1206,9 @@ fun SurfaceScreen(
             val now = withFrameNanos { it }
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
+                aquariumFaulted = engine.aquariumFaulted()
+                aquariumPending = engine.hasPendingAquariumControls()
+                aquariumLimited = engine.aquariumLimitedFrames()
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
             val frame = loop.step(
@@ -1437,6 +1457,21 @@ fun SurfaceScreen(
                 }
             }
 
+            if (panel == Panel.FX) {
+                SurfaceAquariumPanel(
+                    route = aquariumRoute, optedIn = surfaceRouteOn,
+                    ready = surfaceSettingsReady, busy = printing || finishing,
+                    streamUp = engineUp, faulted = aquariumFaulted, pending = aquariumPending,
+                    limitedFrames = aquariumLimited, scheme = scheme,
+                    onToggle = {
+                        val dir = entry?.dir
+                        if (dir != null && settingsLoadedFor == dir && !printing && !finishing) {
+                            persist(dir, kitSettings.copy(aquariumFromKit = !kitSettings.aquariumFromKit))
+                        }
+                    },
+                    onReset = { engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset = true) },
+                )
+            }
             if (panel == Panel.SHAPE) {
                 if (mode == Mode.GRAIN) {
                     Spacer(Modifier.height(6.dp))

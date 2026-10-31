@@ -2,6 +2,8 @@
 (docs/superpowers/specs/2026-10-31-room-section-design-brief.md).
 
 Python harness, not Kotlin. Its numbers are measurements of this file; nothing here has been heard.
+Round 2 (after the owner's prototype gate): SIZE reaches a hall, the mic walks out on a log scale, the late level
+follows the decay, the decay is calibrated, and DISTANCE changes the drum's own tone. Room.kt follows this round.
 
 What it holds:
   spring()      Spring.kt ported line for line (max error 1.3e-7 against the Kotlin render of a THUMP snare)
@@ -33,6 +35,13 @@ SPEED = 343.0              # ChamberRoom.SPEED_OF_SOUND
 ORDER = 2                  # reflections up to two bounces (24 paths); the network takes over after
 SPREAD = (0.015, 0.08)     # delay lines 15 to 80 ms at SIZE 0.5: shorter sang (tonal peaks), longer filled in late
 WET_TRIM = 0.35            # the room against the hit: at the default a snare plays 0.5 dB louder at the same peak
+# Round 1's default room (4.86 x 3.81 x 3.29 m, absorption 0.182): Sabine's diffuse level and RT60 there. Round 2
+# anchors the late level to them, so the room the owner heard keeps its wet level.
+DIFFUSE_AT_DEFAULT = math.sqrt(16 * math.pi / (2 * (4.86 * 3.81 + 4.86 * 3.29 + 3.81 * 3.29) * 0.182 / 0.818))
+RT_AT_DEFAULT = 0.161 * 4.86 * 3.81 * 3.29 / (2 * (4.86 * 3.81 + 4.86 * 3.29 + 3.81 * 3.29) * 0.182)
+RT_CALIBRATION = 1.3      # round 2: the network's measured RT60 ran 0.75 to 0.78 of Sabine's; this brings it back
+PROXIMITY_DB = 5.0        # round 2: a close mic's bass lift on the direct sound (gone by 2 m)
+DARKEN_DB_PER_DOUBLING = 3.0  # round 2: the direct sound's top falls this much per doubling of distance past 0.4 m
 
 
 # ------------------------------------------------------------------ small tools
@@ -161,8 +170,8 @@ def spring_ir(size, seconds=1.4):
 # ------------------------------------------------------------------ ROOM
 
 def geometry(size):
-    lo, hi = np.array([2.4, 2.0, 2.2]), np.array([14.0, 10.0, 6.0])
-    return lo * (hi / lo) ** size                     # a booth to a hall-sized live room, each side on a log scale
+    lo, hi = np.array([2.4, 2.0, 2.2]), np.array([28.0, 20.0, 11.0])
+    return lo * (hi / lo) ** size                     # a booth to a hall (round 2: the owner wanted bigger), log scale
 
 
 def absorption(walls):
@@ -170,10 +179,13 @@ def absorption(walls):
 
 
 def placement(dims, distance):
+    """Round 2: the mic walks out on a log scale, 0.4 m to the far corner. Round 1 walked it linearly, which put the
+    default mic halfway across a hall, where the floor bounce lands with the drum and the room reads small."""
     src = np.array([dims[0] * 0.33, dims[1] * 0.45, 0.9])
     far = np.array([dims[0] * 0.85, dims[1] * 0.8, 1.6])
     span = np.linalg.norm(far - src)
-    return src, src + (far - src) * ((0.4 + (span - 0.4) * distance) / span)   # the mic walks from 0.4 m out
+    want = exp_map(distance, 0.4, max(span, 0.41))     # log from 0.4 m to the far corner: every step of the knob moves
+    return src, src + (far - src) * (want / span)
 
 
 def early(dims, src, mic, alpha, n, seed=7):
@@ -205,7 +217,7 @@ def early(dims, src, mic, alpha, n, seed=7):
 def network(excite, size, rt_dc, hf_ratio):
     """16 lines, orthonormal Hadamard feedback, Jot's one-pole absorbent filter per line (RT at Nyquist =
     hf_ratio x RT at DC), so every mode in a band decays at the same rate."""
-    L = primes_near(np.geomspace(*SPREAD, 16) * RATE * exp_map(size, 0.6, 1.6))
+    L = primes_near(np.geomspace(*SPREAD, 16) * RATE * exp_map(size, 0.6, 2.2))
     g = np.array([10 ** (-3 * l / (rt_dc * RATE)) for l in L])
     b = np.clip([math.log(10) / 4 * math.log10(gi) * (1 - 1 / hf_ratio ** 2) for gi in g], 0.0, 0.9)
     bufs = [np.zeros(l) for l in L]; heads = [0] * 16
@@ -225,7 +237,7 @@ def network(excite, size, rt_dc, hf_ratio):
 _IRS = {}
 
 
-def room_ir(size=0.4, walls=0.5, distance=0.5, seconds=1.2):
+def room_ir(size=0.3, walls=0.5, distance=0.5, seconds=1.2):
     """The wet response alone, relative to the direct arrival. ROOM is linear, so the Kotlin section can run
     the same taps and network on the signal directly; the prototype convolves for speed of writing."""
     key = (size, walls, distance, seconds)
@@ -246,12 +258,15 @@ def room_ir(size=0.4, walls=0.5, distance=0.5, seconds=1.2):
     V = dims.prod()
     S = 2 * (dims[0] * dims[1] + dims[0] * dims[2] + dims[1] * dims[2])
     rt60 = min(0.161 * V / (S * alpha), 0.9)          # Sabine, held under the rack's cap
+    rt_drive = min(rt60 * RT_CALIBRATION, 1.0)        # what the network is told, so the measured decay lands on rt60
     start = int(np.argmax(er[2] != 0)) if np.any(er[2]) else int(0.01 * RATE)
     feed = np.zeros(n); feed[start] = 1.0
     for d, gg in ((142, .7), (107, .7)):              # short diffusers only: a 379-sample one fluttered at 8.6 ms
         feed = allpass(feed, d, gg)
-    late = highpass(network(feed, size, rt60, lin(walls, 0.25, 0.75)), 40.0)
-    diffuse = math.sqrt(16 * math.pi / (S * alpha / (1 - alpha)))   # Sabine's diffuse level (shape, not measured)
+    late = highpass(network(feed, size, rt_drive, lin(walls, 0.25, 0.75)), 40.0)
+    # Round 2: the late level follows the decay (energy in proportion to RT60), anchored to round 1's heard default
+    # room. Sabine's own diffuse level falls as a room grows, which made the hall drier than the default.
+    diffuse = DIFFUSE_AT_DEFAULT * math.sqrt(rt60 / RT_AT_DEFAULT)
     late *= diffuse / (np.sqrt(np.sum(late ** 2)) + 1e-12) * 0.5
     ir = out + late
     cap, fade = int(MAX_TAIL_SECONDS * RATE), int(0.05 * RATE)
@@ -261,16 +276,42 @@ def room_ir(size=0.4, walls=0.5, distance=0.5, seconds=1.2):
     return _IRS[key]
 
 
-def room(x, size=0.4, walls=0.5, distance=0.5):
+def shelf(x, hz, gain_db, high):
+    """RBJ shelving biquad, slope 1: the house Dsp.Biquad shelves' cookbook."""
+    if abs(gain_db) < 1e-3:
+        return np.asarray(x, float)
+    A = 10 ** (gain_db / 40)
+    w = 2 * math.pi * hz / RATE
+    cw, sw = math.cos(w), math.sin(w)
+    al = sw / 2 * math.sqrt(2)
+    k = 1 if high else -1
+    b0 = A * ((A + 1) + k * (A - 1) * cw + 2 * math.sqrt(A) * al)
+    b1 = -2 * k * A * ((A - 1) + k * (A + 1) * cw)
+    b2 = A * ((A + 1) + k * (A - 1) * cw - 2 * math.sqrt(A) * al)
+    a0 = (A + 1) - k * (A - 1) * cw + 2 * math.sqrt(A) * al
+    a1 = 2 * k * ((A - 1) - k * (A + 1) * cw)
+    a2 = (A + 1) - k * (A - 1) * cw - 2 * math.sqrt(A) * al
+    return lfilter([b0 / a0, b1 / a0, b2 / a0], [1, a1 / a0, a2 / a0], x)
+
+
+def direct_tone(x, d):
+    """What moving the mic does to the drum itself: a close mic lifts the bass (proximity, gone by 2 m) and a far
+    one hears less top (air plus the drum's own off-axis dulling, exaggerated here as a cue)."""
+    prox = PROXIMITY_DB * min(max((2.0 - d) / 1.6, 0.0), 1.0) ** 2
+    dark = -DARKEN_DB_PER_DOUBLING * max(math.log2(d / 0.4), 0.0)
+    return shelf(shelf(x, 150.0, prox, high=False), 3500.0, dark, high=True)
+
+
+def room(x, size=0.3, walls=0.5, distance=0.5):
     x = np.asarray(x, np.float32)
     if distance <= 0.001:                             # DISTANCE 0 is the neutral: no room at all
         return x.copy()
     ir, _ = room_ir(size, walls, distance)
     src, mic = placement(geometry(size), distance)
-    direct = 0.4 / max(float(np.linalg.norm(src - mic)), 0.4)
+    d = max(float(np.linalg.norm(src - mic)), 0.4)
     n = len(x) + int(MAX_TAIL_SECONDS * RATE)
     out = np.zeros(n)
-    out[: len(x)] += direct * x
+    out[: len(x)] += (0.4 / d) * direct_tone(x, d)
     out += np.convolve(x, ir)[:n] * 0.4 * WET_TRIM
     out = highpass(out, 20.0)
     ip = np.max(np.abs(x))
@@ -283,11 +324,12 @@ def room(x, size=0.4, walls=0.5, distance=0.5):
     return out.astype(np.float32)
 
 
-ROOMS = {
-    "booth": dict(size=0.1, walls=0.3, distance=0.4), "default": dict(size=0.4, walls=0.5, distance=0.5),
-    "live": dict(size=0.7, walls=0.7, distance=0.6), "soft": dict(size=0.4, walls=0.0, distance=0.5),
-    "hard": dict(size=0.4, walls=1.0, distance=0.5), "close": dict(size=0.4, walls=0.5, distance=0.15),
-    "far": dict(size=0.4, walls=0.5, distance=1.0), "big": dict(size=1.0, walls=0.6, distance=0.6),
+ROOMS = {   # round 2: SIZE reaches a hall, so the round-1 rooms sit lower on the knob (default 0.4 -> 0.3)
+    "booth": dict(size=0.07, walls=0.3, distance=0.4), "default": dict(size=0.3, walls=0.5, distance=0.5),
+    "live": dict(size=0.55, walls=0.7, distance=0.6), "soft": dict(size=0.3, walls=0.0, distance=0.5),
+    "hard": dict(size=0.3, walls=1.0, distance=0.5), "close": dict(size=0.3, walls=0.5, distance=0.15),
+    "far": dict(size=0.3, walls=0.5, distance=1.0), "big": dict(size=0.78, walls=0.6, distance=0.6),
+    "hall": dict(size=1.0, walls=0.7, distance=0.7),
 }
 
 

@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -31,6 +31,10 @@ import com.snipsnap.json.JsonValue
  *
  * valve after forge and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
+ *
+ * room after spring and before motion: a spring tank is a device, and the
+ * room is where everything, the tank included, is heard. ROOM is the last
+ * space, and the tape still stops with the room on it.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -82,6 +86,7 @@ data class FxChain(
     val wah: Map<String, Float>? = null,
     val compressor: Map<String, Float>? = null,
     val forge: Map<String, Float>? = null,
+    val room: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -238,6 +243,7 @@ data class FxChain(
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
+            Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
             Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
         )
 

@@ -20,12 +20,9 @@ namespace snipsnap {
  *    to Done when the buffer fills or a Stop request arrives - the audio
  *    thread always makes the last write, so `take` on the UI thread only
  *    reads once the state says Done.
- *  - One or two channels, chosen at `arm`, because the two engines' buses
- *    differ: the surface's DSP is mono duplicated to both channels, so
- *    its print keeps one copy, while the pads mix every voice under its
- *    own left and right gain - printing one channel of that would be a
- *    different record than the one that was heard. Two channels are
- *    stored interleaved, the way every other buffer in this app is.
+ *  - Channel count is chosen at `arm`. Both live engines now print their
+ *    stereo output, including Aquarium width. Mono remains available to
+ *    other callers. Stereo is interleaved, as every other app buffer is.
  */
 class PrintBuffer {
 public:

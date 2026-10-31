@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -55,8 +55,9 @@ import kotlinx.coroutines.withContext
  * instead of cycled one at a time. When the kit has a user program the
  * variation section is that, not a derived clip: `Arranger` reads it from
  * the sidecar itself, so nothing here has to pass it in. Reached from GROOVE's own "SONG ▸"
- * button, not one of MenuRow's fixed ten — same GROOVE-scoped-overlay shape
- * as PAD SHEET's GRAIN FIELD (see `App.kt`'s `arrangeOpen`).
+ * button: a bench (`Bench.SONG`) over BEAT, opened with GROOVE's swing, feel and
+ * template and drawn only for the kit it was opened for (see `App.kt`'s
+ * `Bench.SONG` branch).
  *
  * The plan (`Arranger.arrange`) is cheap — pure note-list arithmetic over
  * an already-loaded groove — and loads on entry. The mixdown
@@ -75,6 +76,8 @@ import kotlinx.coroutines.withContext
 @Composable
 fun ArrangeScreen(
     entry: KitShelf.Entry,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     swingPercent: Int? = null,
@@ -191,7 +194,8 @@ fun ArrangeScreen(
     }
     val readoutIndex = if (playing) (activeIndex ?: selectedIndex) else selectedIndex
 
-    BackHandler { onBack() }
+    // System Back stops the mix first, as the header chip does.
+    BackHandler { stopPlayback(); onBack() }
 
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
@@ -199,7 +203,7 @@ fun ArrangeScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            HeaderChip("◄ GROOVE", scheme, Modifier.width(72.dp), onClick = { stopPlayback(); onBack() })
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = { stopPlayback(); onBack() })
             TapeText("ARRANGE", TapeType.lcd(21), scheme.lcdInk.tape)
             val p = plan
             TapeText(

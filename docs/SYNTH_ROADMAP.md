@@ -107,7 +107,9 @@ and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
 replayable. Playback shares the diagnostic DSP core while skipping optional
 capture work, supports cancellation and uses a bounded dry-preview cache.
 The model-3 THREAD/PULSE/CURL keygroups retain actual startup before settled
-sustain, with C3/C4/C5 roots, one velocity layer and host note-off release.
+sustain, with C3/C4/C5 roots, one or three velocity layers and host note-off release.
+Touch captures scale velocity and INJECT while preserving the hard anchor;
+each layer has its own onset, loop and recorded source recipe.
 Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
@@ -178,6 +180,22 @@ rule itself: this roadmap, design specs, and implementation plans may name
 machines when the point is naming the rule that forbids naming them.
 
 ## The engines
+
+### LIBRATION — finite orbital gestures (native integration)
+
+GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
+trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
+NUDGE, SWARM and RESONANCE shape the sound; ROOT, TOUCH and finite LENGTH
+remain saved performance fields. Twelve owner-approved presets, the SYNTH
+picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
+soft/hard velocity layers through both MPC export formats.
+
+A bounded preview cache reuses trajectories and previously rendered audio.
+Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
+phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
+and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
+records the preserved rendering versions, audition generators, measured limits
+and hardware acceptance checks.
 
 ### CREASE — pressure memory in a phase map (native integration)
 
@@ -541,7 +559,12 @@ material; `:shell:generateOhmExpandedHandoff` exports three provisional C3–C5
 instruments. [Extension notes](OHM_EXPANDED.md) record source limits, loop
 evidence, host costs and the listening status.
 
-The model-3 sources and their combination studies remain unheard. Phone
+Model 4 repairs source-memory preparation and provides three focused
+comparisons through `:synth:generateOhmRefinementAudition`. Saved models 1–3
+retain their renderer; EXTEND starts new source studies on model 4, while
+UPDATE SOURCES explicitly upgrades an existing model-3 patch. The owner
+liked the depth of the model-2 answering and shared-body guide stages;
+new source refinements still await a listening verdict. Phone
 response, phone save/reopen and MPC hardware acceptance remain open.
 Separate rendered notes continue to start fresh ensembles.
 
@@ -2635,3 +2658,19 @@ the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
 gate on release; both drum exporters write the corresponding slice-loop and
 sustain settings. Finite notes retain complete one-shot tails. Dedicated
 keyboard multisampling and physical phone/MPC acceptance remain separate.
+
+## ORIGAMI velocity expression
+
+Model-4 ORIGAMI now has an opt-in LEVEL/FOLD velocity selector. Hit strength
+scales the authored fold depth while preserving source spectra, pitch and
+gesture timing. Existing recipes and factory sounds stay LEVEL; full velocity
+retains the accepted folded reference exactly. BLOOM and UNFOLD continue to
+play once and settle before their held loop.
+
+Native held instruments use three touch layers per pitch zone in FOLD mode;
+finite pads reach the same native expression through SOFT HITS after SEND.
+Preview hit selection is temporary and keeps the authored recipe intact.
+The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records implementation, cost, verification and the new listening gate. Owner
+acceptance of the expression curve and physical MPC playback remain listening
+and hardware checks.

@@ -3,7 +3,7 @@
 **Date:** 2026-10-18  
 **Design:** [Aquarium integration — pads and a shared environment](../specs/2026-10-18-aquarium-integration-design.md)  
 **Base:** `45ba33832950530bb0148435378b4556045c6cf6`  
-**Current implementation scope:** the foundation, offline bridge and PAD control panel are complete. Stage 2 now has its first continuous backend: PadEngine playback and stereo PRINT, with typed/JNI control APIs, bounded transitions and an explicit output policy. The shared-host PERFORMANCE controls and kit persistence are now implemented; other mixers and physical-device checks remain work to do.
+**Current implementation scope:** the foundation, offline bridge and PAD control panel are complete. Stage 2 now has its first continuous backend: PadEngine playback and stereo PRINT, with typed/JNI control APIs, bounded transitions and an explicit output policy. The shared-host PERFORMANCE controls and kit persistence are now implemented; SURFACE now has its explicit per-kit route and stereo PRINT; other mixers and physical-device checks remain work to do.
 
 ## Accepted direction
 
@@ -101,3 +101,8 @@ The PAD portion is implemented ahead of Stage 2: TREATMENT → AQUARIUM opens a 
 Biolume's feedforward harmonic path retains an unwindowed 2x pitch-ring seam about every 100 ms at 48 kHz, its approximate high-pass and no connected octave-feedback loop. Reef retains the 5000-sample ceiling. Fathom retains complementary one-pole crossovers and level-sensitive upward compression. Tide keeps its audition shapes; neither the concept's lunar waveform nor the pedal's starts-open behavior is added here.
 
 Preserve those model-1 facts in the port. If a later improvement changes the accepted sound, make the model/version and comparison explicit, retain saved behavior as appropriate, and collect useful listening evidence for that difference. Do not infer mobile safety/performance or hardware acceptance from the owner's sonic verdict.
+
+
+### SURFACE route milestone, 2026-10-31
+
+The [SURFACE stereo contract](../specs/2026-10-31-aquarium-surface-stereo-design.md) extends the accepted bus to SURFACE after its existing mono chain. FX → USE KIT FX is an explicit per-kit opt-in to the saved PERFORMANCE controls; SURFACE owns independent history. PRINT now keeps the actual stereo output through native/JNI/Kotlin and the existing TAPE/PAD landing paths. Ordinary release keeps tails; priority panic handles focus/background release. Sidecar writes retain each directory's latest snapshot. Remaining transport mixers, phone timing/power/recovery and physical MPC acceptance are still open.
