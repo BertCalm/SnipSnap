@@ -157,7 +157,7 @@ object StarterKits {
         ) { SynthKits.thaw() },
         Starter(
             "scour", "SCOUR",
-            "Metal and glass impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            "Metal, glass and thunder-sheet impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scour() },

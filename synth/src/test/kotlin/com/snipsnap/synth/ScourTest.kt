@@ -314,18 +314,26 @@ class ScourTest {
     }
 
     @Test
-    fun `PLATE and PANE ring with different bodies, each heard and neither in the other`() {
-        // Three partials of each body, as ratios to its root. The two bodies' nearest pair, PLATE's 1.729 and
-        // PANE's 1.692 (2 % apart), is left out: one would leak into the other's bins.
-        val round = listOf(2.328, 3.906, 4.112)
-        val square = listOf(2.549, 4.650, 8.659)
+    fun `each voice rings with its own body, heard, and in no other voice`() {
+        // Three partials of each body, as ratios to its root, none within 3 % of another body's partial (the
+        // closest, PANE's 8.659 and SHEET's 8.947, sit 28 bins apart at SHEET's C3). PLATE's 1.729 and PANE's
+        // 1.692 (2 % apart) would leak into each other's bins, as would PLATE's 3.906 and 6.301 and SHEET's
+        // 3.881 and 6.328 (under 1 %), and PANE's 9.413 and SHEET's 9.331. The narrowest margin is SHEET's at C3,
+        // 15.6 dB over the floor at PLATE's ratios: its louder roller raises the floor (measured).
+        val bodies = mapOf(
+            ScourVoice.PLATE to listOf(2.328, 4.112, 6.711),
+            ScourVoice.PANE to listOf(2.549, 4.650, 8.659),
+            ScourVoice.SHEET to listOf(2.778, 10.222, 13.821),
+        )
         for (tune in listOf(.5f, 1f)) {
-            for ((voice, own, other) in listOf(Triple(ScourVoice.PLATE, round, square), Triple(ScourVoice.PANE, square, round))) {
+            for ((voice, own) in bodies) {
                 val mine = partials(voice, tune, own)
-                val theirs = partials(voice, tune, other)
                 assertTrue(mine.max() > -35.0, "$voice TUNE $tune: its own body is not heard: $mine")
-                // The other body's ratios read the build's noise floor (the roller and the shots), not a partial.
-                assertTrue(theirs.max() < mine.max() - 15.0, "$voice TUNE $tune: rings at the other voice's partials: $theirs against $mine")
+                for ((other, ratios) in bodies) if (other != voice) {
+                    // The other body's ratios read the build's noise floor (the roller and the shots), not a partial.
+                    val theirs = partials(voice, tune, ratios)
+                    assertTrue(theirs.max() < mine.max() - 15.0, "$voice TUNE $tune: rings at $other's partials: $theirs against $mine")
+                }
             }
         }
     }

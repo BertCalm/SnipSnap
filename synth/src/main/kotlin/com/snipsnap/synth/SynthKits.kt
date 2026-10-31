@@ -1256,26 +1256,39 @@ object SynthKits {
     }
 
     /**
-     * The SCOUR kit: impacts that build, cut for two tempos. A01–A04 are PLATE builds for 120 BPM and
-     * A05–A08 PANE builds for 90 BPM, each one beat, two beats, one bar and two bars long, so a pad hit
-     * that far before a downbeat lands its slam on it; all at C3, every other control at its default.
-     * A09–A16 are the eight presets. Each dry pad carries its recipe and its own name, and is filed by
-     * SCOUR's drumClassFor (every render passes 1.5 s, so all sixteen are LOOP-class one-shots).
+     * The SCOUR kit: impacts that build, cut for two tempos, over two banks. A01–A04 are PLATE builds for
+     * 120 BPM and A05–A08 PANE builds for 90 BPM, each one beat, two beats, one bar and two bars long, so a
+     * pad hit that far before a downbeat lands its slam on it; all at C3, every other control at its
+     * default. A09–A16 are PLATE's and PANE's eight presets. Bank B is SHEET, an octave lower: B01–B08 the
+     * same builds at C2 (120 BPM, then 90), B09–B12 its four presets, and B13–B16 short hits on C2, E♭2, F2
+     * and G2 for a low line. Each dry pad carries its recipe and its own name, and is filed by SCOUR's
+     * drumClassFor (every render passes 1.5 s, so all thirty-two are LOOP-class one-shots).
      */
     fun scour(): List<ArrangedPad?> {
-        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String) = ScourPatch(
-            "$bpm BPM $label", voice,
-            Scour.defaults(voice) + ("TUNE" to 0f) + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
-        ).let { pad(it, Scour.drumClassFor(it.voice, it.macros)).copy(displayName = it.name) }
-        fun preset(name: String) = ScourPresets.all().first { it.name == name }
-            .let { pad(it, Scour.drumClassFor(it.voice, it.macros)).copy(displayName = it.name) }
-        return listOf(
-            build(ScourVoice.PLATE, 120, 1, "1 BEAT"), build(ScourVoice.PLATE, 120, 2, "2 BEATS"),
-            build(ScourVoice.PLATE, 120, 4, "1 BAR"), build(ScourVoice.PLATE, 120, 8, "2 BARS"),
-            build(ScourVoice.PANE, 90, 1, "1 BEAT"), build(ScourVoice.PANE, 90, 2, "2 BEATS"),
-            build(ScourVoice.PANE, 90, 4, "1 BAR"), build(ScourVoice.PANE, 90, 8, "2 BARS"),
+        fun named(patch: ScourPatch) = pad(patch, Scour.drumClassFor(patch.voice, patch.macros)).copy(displayName = patch.name)
+        fun build(voice: ScourVoice, bpm: Int, beats: Int, label: String) = named(
+            ScourPatch(
+                (if (voice == ScourVoice.SHEET) "SHEET $bpm" else "$bpm BPM") + " $label", voice,
+                Scour.defaults(voice) + ("TUNE" to 0f) + ("BUILD" to Scour.buildFor(beats * 60.0 / bpm)),
+            ),
+        )
+        fun preset(name: String) = named(ScourPresets.all().first { it.name == name })
+        // The shortest build, a short ring, on a note of C minor pentatonic from C2.
+        fun hit(note: String, semitone: Int) = named(
+            ScourPatch(
+                "SHEET $note", ScourVoice.SHEET,
+                Scour.defaults(ScourVoice.SHEET) + ("TUNE" to semitone / Scour.TUNE_SEMITONES.toFloat()) + ("BUILD" to 0f) + ("HOLD" to .3f),
+            ),
+        )
+        fun builds(voice: ScourVoice, bpm: Int) = listOf(
+            build(voice, bpm, 1, "1 BEAT"), build(voice, bpm, 2, "2 BEATS"), build(voice, bpm, 4, "1 BAR"), build(voice, bpm, 8, "2 BARS"),
+        )
+        return builds(ScourVoice.PLATE, 120) + builds(ScourVoice.PANE, 90) + listOf(
             preset("IRON SLAM"), preset("FORGE RISE"), preset("GRINDER RUN"), preset("PEENED BELL"),
             preset("GLASS SNAP"), preset("FROST RISE"), preset("SHATTER RUN"), preset("PANE TOLL"),
+        ) + builds(ScourVoice.SHEET, 120) + builds(ScourVoice.SHEET, 90) + listOf(
+            preset("STEEL BOOM"), preset("SHEET RISE"), preset("THUNDER RUN"), preset("DISTANT STORM"),
+            hit("C2", 0), hit("Eb2", 3), hit("F2", 5), hit("G2", 7),
         )
     }
 

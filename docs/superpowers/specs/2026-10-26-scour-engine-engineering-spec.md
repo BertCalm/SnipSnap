@@ -1,12 +1,15 @@
 # SCOUR Engine: Engineering Specification
-Version 1.5 · 2026-10-30 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+Version 1.6 · 2026-10-31 (adapts the 2026-10-25 draft, version 1.0, to the repository;
 1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
 1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
-listen and R3, the presets and the kit)
-Status: R1 to R3 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, the SHEET voice and the
+kit's bank B)
+Status: R1 to R4 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
 the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
-renders (section 20.1) and the R1, R1.1 and R2 auditions; the R3 kit page is published and not yet heard.
-The HOLD loop the plan put in R2 is dropped (As built: R3). The phone's synth picker and a docs page remain.
+renders (section 20.1) and the R1, R1.1, R2 and R3 auditions; the R4 page is published and not yet heard.
+The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
+voices as built are in the As built sections. BEAM is next, after the R4 listen. The phone's synth picker
+and a docs page remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -585,7 +588,10 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | the square plate values (PANE) | verified (solve) | the companion script against Leissa Table 4.65 and the ν = 0.225 bounds (As built: R1.1) |
 | SCOUR earns a place in a phrase | heard: riff no, bed no, impact maybe | the R1.1 audition (As built: R2) |
 | SCOUR earns a place as an impact into a drop | heard: yes, and short hits yes | the R2 audition (As built: R3) |
-| the kit's presets and build lengths are the right ones | heard? | the R3 kit page |
+| the kit's presets and build lengths are the right ones | heard: the kit yes, the lengths yes | the R3 kit page (As built: R4) |
+| the free 3:1 rectangle values (SHEET) | verified (solve) | the same solve reproduces the square at 1:1 and approaches the free-free beam at 8:1 (As built: R4) |
+| SHEET's note reads down to C2 | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a low-register grid (As built: R4) |
+| SHEET sounds like a thunder sheet and earns bank B | heard? | the R4 page |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -943,3 +949,93 @@ step should stay reserved for a held loop, the owner chose to drop the loop.
   `snipsnap synth` renders it. It is not on the phone's synth picker yet; the README names it beside
   BORE and ARCO as rostered but not shown. The app already leaves "reopen in the synth" off a pad whose
   engine the picker does not list.
+
+## As built: R4, the thunder sheet (2026-10-31)
+
+R4 adds a third voice, SHEET, and fills the kit's bank B with it. It changes `Scour.kt`, `ScourPresets.kt`
+and `SynthKits.kt`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; and
+the audition and kit generators and the page.
+
+### Heard (the owner, R3 kit page, 2026-10-31)
+
+| Question | Answer |
+|---|---|
+| Would you load this kit as it is? | yes |
+| Are these the build lengths you would reach for? | yes |
+
+Asked whether other voices should be built, the owner chose both proposals, SHEET first and BEAM after
+its listen.
+
+### What changed
+
+- **SHEET's body.** A completely free steel rectangle three times as long as it is wide (a theatre
+  thunder sheet, 0.6 by 1.8 m), ν = 0.3, from the Rayleigh-Ritz solve that gave PANE its square
+  (Legendre products, the first twenty modes converged to 5e-8 between 30×14 and 34×16 terms).
+  - The solve reproduces the square's values at 1:1, and at 8:1 its bending modes approach the free-free
+    beam's `(βL)²·√(1 − ν²)` (Leissa Table 4.72's beam row).
+  - The first sixteen modes run from ratio 1 to 18.95. Bending and twisting modes interleave (1, 1.837,
+    2.778, 3.881, 5.468 ...), and above nine times the root they crowd together, which is the rumble.
+- **SHEET is heard on a nodal line.** The listening point is .8036 of the way from the centre along the
+  half-length and .40 across the half-width, on the nodal line of the third bending mode, 5.468. The
+  fourteen of the first sixteen modes that move at least a tenth as much as the root there are kept
+  (5.468 is still; 18.952 moves .090).
+- **SHEET's voicing.**
+  - The pair (1.837 and 2.778) sits at .5 of the gain law and .7 of its ring, as PANE's does, under a
+    gain law of .75 and an upper decay of .88.
+  - The root rings 4 s. Steel keeps its hardening (κ .02, ρ .1/s), the stretch is .3, and the roller is
+    louder than PLATE's (.1).
+  - SHEET takes .55 of the output trim, so its unlevelled audio stays inside PCM range (below). Every
+    render is levelled, so the trim changes no levelled sound.
+- **SHEET plays from C2**, an octave under PLATE and PANE: `Scour.rootMidi(voice)`, with
+  `SHEET_ROOT_MIDI` 36. C2 is 65.4 Hz, above the house `Pitch.detect`'s 40 Hz floor.
+- **Four SHEET presets**, on C minor pentatonic from C2:
+  - STEEL BOOM, a bare hit;
+  - SHEET RISE, a rise;
+  - THUNDER RUN, a long run at full roller;
+  - DISTANT STORM, a soft build into the longest ring at G2.
+- **Bank B.** `SynthKits.scour()` now returns thirty-two pads; bank A is unchanged.
+  - B01-B04 are SHEET builds cut for 120 BPM and B05-B08 for 90 BPM, the same lengths as bank A's, at C2.
+    They are named `SHEET 120 1 BEAT` and so on, so they do not share bank A's names.
+  - B09-B12 are SHEET's presets.
+  - B13-B16 are SHEET's shortest build (0.25 s) with HOLD .3 on C2, E♭2, F2 and G2, for a low line.
+  - The SCOUR starter fills both banks, and `StarterKitsTest` expects thirty-two slots for it. The starter's
+    blurb now names the thunder sheet.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| First voicing (heard at .91 and .27, the pair at full level, gain law .88, upper decay .92) | root read 21 of 37 asserted corners at both windows; every miss at C2, about 60 to 130 cents off either way |
+| Why C2 misread | the 5.468 mode, near 11/2, is at the bottom of its swing when the root is at the top of its own, so it splits the autocorrelation peak at the root's period. A partial at ratio r flattens that peak by about its power times r², so 5.468 must stay under 1/30 of the root's power (−15 dB). At the first listening point even a .65 gain law left one corner failing (C2, BUILD 1, RPM 1, SHOT 0, HARDEN 0): the ring the roller had built partly cancelled the root at the slam. That left 5.468 13 dB under the root, and the peak split into lags 653 and 702 around the true 674. At C2 a semitone is under two bins of the detector's 0.25 s spectral refine, so the refine cannot correct it; from about E♭2 up it can |
+| On the nodal line, pair at full level | 15 of 17 C2 corners at both windows at a .75 gain law, fewer at gentler ones (flat: 1.837 and 2.778 sit under 2 and 3) |
+| On the nodal line, pair at .5 and .7 | all 17 C2 corners for gain laws .75 to .85; on 243 corners at C2, E♭2 and F2 (every other control at 0, .5 and 1), .75 reads 243 and 243, .80 241 and 243, .85 231 and 241 |
+| As built, `ScourTest`'s 37 corners | 37 of 37 at both windows, SHEET included |
+| Raw peak before SHEET's trim | 1.26 at C2 after the longest build at full roller and blast, 0.46 at the default; 0.69 and 0.25 after it |
+| Hit over build (default) | the slam's first 0.2 s stands 11.0 dB over the loudest 0.2 s of the build |
+| Render cost | the default (6.0 s) in about 95 ms, the longest render (20 s) in about 320 ms |
+| Three bodies apart | each voice's own partials stand at least 15.6 dB over the others' ratios (the narrowest is SHEET at C3 against PLATE's: its louder roller raises the floor) |
+| Tests | `ScourTest` 13, `ScourPresetsTest` 6, the SCOUR determinism canary, `PresetsTest` 8, `PadRecipeTest` 20, `PatchesTest` 3, `StarterKitsTest` 7 and `ConventionTest` 54, all passing |
+| Audition | 9 phrases and 53 gestures, 115 24-bit WAVs in 12.5 s; the published page carries 62 16-bit clips at one shared gain of 11 dB |
+
+### Disclosed, not fixed
+
+- The rumble is quieter than the first sketch. The gain law that lets C2 read leaves the modes above 4.5
+  times the root under 1 % of the hit's energy at C3. At the first listening point, a .78 gain law gave
+  4 %. If SHEET reads as a low gong, the gain law is the lever, and C2's pitch read is what it costs.
+- Bank B's "short hits" are short to the slam (0.25 s); each still rings 6.4 s.
+- `MODEL_VERSION` stays 1. SHEET is new, and PLATE's and PANE's renders are unchanged to the bit (their trim
+  share is exactly 1).
+- BEAM, the phone's synth picker and a docs page are still to come.
+
+### Why R4 is built this way
+
+1. **A thunder sheet is a plate, so it gets a plate solve.** The same Ritz solve that checks against Leissa
+   gives the long sheet its own overtones, rather than a borrowed table.
+2. **The note is fixed where it is heard, not with a filter.** Moving the listening point onto a mode's
+   nodal line is what PANE did in R1.1. It removes the one partial that fought the root, and it leaves
+   every other partial's level physical.
+3. **An octave down is the reason for the voice.** PLATE and PANE already cover C3 to C5. SHEET's job is
+   weight under a drop, so its lowest note is C2, and the voicing was measured at C2, where reading the
+   pitch is hardest.
+4. **Bank B, not a reshuffle.** The owner said yes to bank A as it is, so SHEET's pads go beside it in
+   the same order: builds at two tempos, then presets, plus a low line of hits.

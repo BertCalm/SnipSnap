@@ -18,18 +18,19 @@ import kotlin.math.sqrt
 import kotlin.random.Random
 
 /**
- * Two plates under the same blast: a round metal plate that keeps its hardening, and a square glass
- * pane that gives it back. Each has its own body: its own sourced overtone pattern.
+ * Three bodies under the same blast: a round metal plate that keeps its hardening, a square glass pane
+ * that gives it back, and a long thin steel sheet an octave lower, a thunder sheet. Each has its own
+ * body: its own sourced overtone pattern.
  */
-enum class ScourVoice { PLATE, PANE }
+enum class ScourVoice { PLATE, PANE, SHEET }
 
 /**
  * SCOUR: an impact that builds. A roller spins up against a free plate while shot rains on it faster and
  * harder; each shot dents the surface, the dented fraction (coverage) climbs, and the plate's upper
  * partials climb with it, so the build rises. Then one heavy slam lands and the hardened plate rings
  * out. The characteristic gesture is the roller spins up, the shot rain accelerates, the plate stiffens
- * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE) or
- * giving it back as it rings (PANE).
+ * and its ring climbs, the slam lands, and the hardened plate rings: keeping its tuning (PLATE, and
+ * SHEET an octave down) or giving it back as it rings (PANE).
  *
  * Computed: the roller's spin-up, read against a fixed surface at its contact phase; a seeded Poisson
  * shot schedule whose rate rises twentyfold over the build; coverage by the random-dent recursion
@@ -57,7 +58,10 @@ enum class ScourVoice { PLATE, PANE }
 object Scour {
     /** Seeds the draws. It stays 1: no saved SCOUR sound exists (the engine is a prototype, outside the picker). */
     const val MODEL_VERSION = 1
+    /** PLATE's and PANE's lowest note, C3. */
     const val ROOT_MIDI = 48
+    /** SHEET's lowest note, C2: an octave down for weight, and still above the house `Pitch.detect`'s 40 Hz floor. */
+    const val SHEET_ROOT_MIDI = 36
     const val TUNE_SEMITONES = 24
     /** The classifier files anything longer than this as LOOP (`Classifier`'s own constant is private). */
     const val LOOP_MIN_SECONDS = 1.5f
@@ -101,8 +105,11 @@ object Scour {
     private const val OUTPUT_DC_HZ = 20f
     /**
      * Fixed radiation trim, never per render. Measured over the {0, 1} corners of TUNE, BUILD, RPM, SHOT and
-     * HARDEN: the loudest raw peak after the output stage is 0.73 (PLATE at C3 with BUILD 0 and RPM 1, the slam
-     * landing on a roller at full speed), and the defaults sit at 0.53 (PLATE) and 0.43 (PANE).
+     * HARDEN: PLATE's and PANE's loudest raw peak after the output stage is 0.73 (PLATE at C3 with BUILD 0 and
+     * RPM 1, the slam landing on a roller at full speed), and their defaults sit at 0.53 (PLATE) and 0.43
+     * (PANE). SHEET, an octave lower and ringing longer, would peak at 1.26 (C2 after the longest build at
+     * full roller and blast), so it takes [Shape.trim] .55 of the trim: 0.69 at that corner and 0.25 at its
+     * default, inside PCM range for the audition's unlevelled copies.
      */
     private const val OUTPUT_TRIM = 36.0
     /** The roller runs on the rim. */
@@ -147,6 +154,30 @@ object Scour {
     /** Each SQUARE mode's motion at the listening point, from the same solve, as a fraction of the root's. */
     private val SQUARE_HEARD = doubleArrayOf(1.0, .615, .574, .362, .580, .429)
 
+    /**
+     * SHEET's body: a completely free steel rectangle three times as long as it is wide (a theatre thunder
+     * sheet, 0.6 by 1.8 m), ν = 0.3. `λ = ωa²√(ρh/D)` with a the long side, root first. The values come from
+     * the same Rayleigh-Ritz solve as PANE's, run on the rectangle (converged to 1.3e-7). That solve
+     * reproduces the square's entries at 1:1, and its long-plate bending modes approach the free-free
+     * beam's `(βL)²·√(1 − ν²)` (Leissa Table 4.72's beam row, 22.373, 61.673, 120.903, 199.860).
+     *
+     * The sheet is heard near one end, .8036 of the way from the centre along the half-length and .40
+     * across the half-width: on the nodal line of its third bending mode, 5.468. That mode sits near 11/2,
+     * so one root period later it is in opposite phase: heard (first at .91 and .27, where it moves
+     * two-thirds as much as the root) it split the house `Pitch.detect`'s autocorrelation peak at the
+     * root's period in two, and C2 read a semitone flat or sharp. PANE's move again: a position on the sheet, not a filter. Of the
+     * first sixteen modes, the fourteen that move at least a tenth as much as the root there are kept
+     * (18.952, at .090, is left out). Its overtones crowd together above nine times the root, which is the
+     * rumble. Ratios 1, 1.837, 2.778, 3.881, 6.328, 8.947, 9.331, 9.357, 10.222, 12.035, 13.112, 13.821,
+     * 15.143, 17.676.
+     */
+    private val RECT = doubleArrayOf(
+        21.44, 39.38, 59.55, 83.19, 135.65, 191.81, 200.04, 200.60, 219.13, 258.00, 281.08, 296.29, 324.64, 378.94,
+    )
+
+    /** Each RECT mode's motion at SHEET's listening point, from the same solve, as a fraction of the root's. */
+    private val SHEET_HEARD = doubleArrayOf(1.0, .678, .452, .528, .327, .161, .361, .103, .413, .236, .119, .711, .199, .313)
+
     /** A voice's body and its response to the blast. Every number is shape except the body's ratios. */
     private class Shape(
         /** The body's modes as frequency parameters, root first; only their ratios to the root are used. */
@@ -175,6 +206,8 @@ object Scour {
         val shift: Double,
         /** The roller's force against a shot's. */
         val roll: Double,
+        /** The voice's share of [OUTPUT_TRIM]: a fixed level, never per render. */
+        val trim: Double = 1.0,
     )
 
     /**
@@ -193,10 +226,23 @@ object Scour {
      * and .5 and .7 read all 37 at both windows (312 and 314 of a 324-corner grid). The rest is R1's shape.
      */
     private val PANE = Shape(SQUARE, .5, .7, SQUARE_HEARD, 1.4, .74, .65, .03, 1.5, .25, .05)
+    /**
+     * SHEET's pair at .5 of the gain law and .7 of its ring, as PANE's, under a gain law of .75. Measured at
+     * C2, where the house `Pitch.detect` cannot lean on its spectral refine (a semitone there is under two
+     * FFT bins). At the listening point, with the pair at full level and a gain law of .75, 15 of the 17 C2
+     * corners `ScourTest` asserts read at both windows (1.837 and 2.778 sit under 2 and 3 and pull the period long); at .5 and
+     * .7 all 17 read under gain laws from .75 to .85. On a 243-corner grid at C2, E♭2 and F2 (every other
+     * control at 0, .5 and 1), .75 reads all 243 at both windows, .80 241 and 243, .85 231 and 241. The rest
+     * is shape: a 4 s root ring with each mode above .88 as long, steel that keeps its hardening (κ .02,
+     * ρ .1), a smaller stretch than PLATE's, and a louder roller, since a sheet rumbles under anything that
+     * rubs it.
+     */
+    private val SHEET = Shape(RECT, .5, .7, SHEET_HEARD, 4.0, .88, .75, .02, .1, .3, .1, trim = .55)
 
     private fun shape(voice: ScourVoice) = when (voice) {
         ScourVoice.PLATE -> PLATE
         ScourVoice.PANE -> PANE
+        ScourVoice.SHEET -> SHEET
     }
 
     fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: ScourVoice): List<MacroSpec> = listOf(
@@ -214,7 +260,7 @@ object Scour {
     internal fun settled(voice: ScourVoice, macros: Map<String, Float>): Map<String, Float> =
         defaults(voice).mapValues { (k, default) -> (macros[k]?.takeIf { it.isFinite() } ?: default).coerceIn(0f, 1f) }
 
-    fun rootMidi(@Suppress("UNUSED_PARAMETER") voice: ScourVoice): Int = ROOT_MIDI
+    fun rootMidi(voice: ScourVoice): Int = if (voice == ScourVoice.SHEET) SHEET_ROOT_MIDI else ROOT_MIDI
     fun midiFor(voice: ScourVoice, tune: Float): Int =
         rootMidi(voice) + ((tune.takeIf { it.isFinite() } ?: .5f).coerceIn(0f, 1f) * TUNE_SEMITONES).roundToInt()
     fun frequencyFor(voice: ScourVoice, tune: Float): Float = Keys.midiHz(midiFor(voice, tune))
@@ -474,7 +520,7 @@ object Scour {
             val k = n - trace.slamFrame
             if (k in SLAM_PULSE.indices) for (i in force.indices) force[i] += slamWeights[i] * slam * SLAM_PULSE[k]
             bank.drive(force, 1.0)
-            out[n] = (bank.velocityAlong(pickup) * OUTPUT_TRIM).toFloat()
+            out[n] = (bank.velocityAlong(pickup) * OUTPUT_TRIM * s.trim).toFloat()
         }
         val done = System.nanoTime()
         return Played(out, trace, modeHz, kept.size, prepared - began, done - prepared)

@@ -10,18 +10,19 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/** Product contracts: the named roster, saved recipes, filing, the two-tempo kit, velocity and spread. */
+/** Product contracts: the named roster, saved recipes, filing, the two-bank, two-tempo kit, velocity and spread. */
 class ScourPresetsTest {
 
     @Test
-    fun `the eight impacts name every control and round-trip both voices`() {
+    fun `the twelve impacts name every control and round-trip every voice`() {
         val names = setOf(
             "IRON SLAM", "FORGE RISE", "GRINDER RUN", "PEENED BELL",
             "GLASS SNAP", "FROST RISE", "SHATTER RUN", "PANE TOLL",
+            "STEEL BOOM", "SHEET RISE", "THUNDER RUN", "DISTANT STORM",
         )
         val all = ScourPresets.all()
         assertEquals(names, all.map { it.name }.toSet())
-        assertEquals(8, all.size)
+        assertEquals(12, all.size)
         for (voice in ScourVoice.entries) {
             assertEquals(4, ScourPresets.forVoice(voice).size, "$voice has four impacts")
             assertEquals(ScourPresets.forVoice(voice), Presets.forVoice("SCOUR", voice.name))
@@ -63,33 +64,46 @@ class ScourPresetsTest {
     }
 
     @Test
-    fun `the dry kit cuts its builds for 120 and 90 BPM and ends with the presets`() {
+    fun `the dry kit cuts its builds for 120 and 90 BPM in both banks and ends each with its presets`() {
         val kit = SynthKits.scour()
-        assertEquals(16, kit.size)
+        assertEquals(32, kit.size)
         val voices = mutableSetOf<ScourVoice>()
-        // A01-A04 at 120 BPM on PLATE, A05-A08 at 90 BPM on PANE: one beat, two beats, one bar, two bars.
+        // Slots 1-4 of each bank at 120 BPM, 5-8 at 90 BPM: one beat, two beats, one bar, two bars. Bank A
+        // builds PLATE then PANE at C3; bank B builds SHEET at C2.
         val builds = listOf(120 to 1, 120 to 2, 120 to 4, 120 to 8, 90 to 1, 90 to 2, 90 to 4, 90 to 8)
         for ((i, maybePad) in kit.withIndex()) {
+            val slot = "${'A' + i / 16}%02d".format(i % 16 + 1)
+            val inBank = i % 16
             val pad = requireNotNull(maybePad)
             val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
             val patch = recipe.patch as ScourPatch
             voices += patch.voice
-            assertEquals(null, recipe.fx, "A${i + 1} is dry")
+            assertEquals(null, recipe.fx, "$slot is dry")
             assertFalse(recipe.alias)
-            assertTrue(pad.oneShot, "A${i + 1} plays once, whole")
-            assertEquals(patch.name, pad.displayName, "A${i + 1} is named for its sound")
+            assertTrue(pad.oneShot, "$slot plays once, whole")
+            assertEquals(patch.name, pad.displayName, "$slot is named for its sound")
             assertEquals(Scour.drumClassFor(patch.voice, patch.macros), pad.drumClass)
-            assertContentEquals(pad.snip.samples, recipe.render().samples, "A${i + 1} regenerates exactly")
-            if (i < builds.size) {
-                val (bpm, beats) = builds[i]
-                assertEquals(if (bpm == 120) ScourVoice.PLATE else ScourVoice.PANE, patch.voice, "A${i + 1}")
-                assertEquals(Scour.ROOT_MIDI, Scour.midiFor(patch.voice, patch.macros.getValue("TUNE")), "A${i + 1} is at C3")
-                // The slam lands this far into the sample, to the frame: a pad hit that long before a downbeat lands on it.
-                val seconds = beats * 60.0 / bpm
-                val slam = Scour.mechanics(patch.voice, patch.macros).slamSeconds
-                assertTrue(abs(slam - seconds) * Dsp.RATE < 1.0, "A${i + 1}: the slam is at $slam s, not $seconds s")
-            } else {
-                assertEquals(ScourPresets.all()[i - builds.size], patch, "A${i + 1} is the preset in roster order")
+            assertContentEquals(pad.snip.samples, recipe.render().samples, "$slot regenerates exactly")
+            val midi = Scour.midiFor(patch.voice, patch.macros.getValue("TUNE"))
+            when {
+                inBank < builds.size -> {
+                    val (bpm, beats) = builds[inBank]
+                    val voice = if (i >= 16) ScourVoice.SHEET else if (bpm == 120) ScourVoice.PLATE else ScourVoice.PANE
+                    assertEquals(voice, patch.voice, slot)
+                    assertEquals(Scour.rootMidi(voice), midi, "$slot is at its voice's root")
+                    // The slam lands this far into the sample, to the frame: a pad hit that long before a downbeat lands on it.
+                    val seconds = beats * 60.0 / bpm
+                    val slam = Scour.mechanics(patch.voice, patch.macros).slamSeconds
+                    assertTrue(abs(slam - seconds) * Dsp.RATE < 1.0, "$slot: the slam is at $slam s, not $seconds s")
+                }
+                i < 16 -> assertEquals(ScourPresets.all()[inBank - builds.size], patch, "$slot is the preset in roster order")
+                inBank < 12 -> assertEquals(ScourPresets.forVoice(ScourVoice.SHEET)[inBank - builds.size], patch, "$slot is the preset in roster order")
+                else -> {
+                    // B13-B16: SHEET's shortest build on C2, E-flat 2, F2 and G2.
+                    assertEquals(ScourVoice.SHEET, patch.voice, slot)
+                    assertEquals(listOf(36, 39, 41, 43)[inBank - 12], midi, slot)
+                    assertEquals(0f, patch.macros.getValue("BUILD"), slot)
+                }
             }
         }
         assertEquals(ScourVoice.entries.toSet(), voices)
