@@ -359,5 +359,25 @@
   "completeReportSha256": "063073a1e7dcb8b9c190280fe75c60224a11e629d72874e1bb73c4c733a9c108",
   "allCases": "https://snipsnap-crease-audition.bertcalm.chatgpt.site/playable/report.json",
   "phoneIntegration": "blocked; no production files changed",
-  "ownerListening": "not claimed"
+  "ownerListening": "not claimed",
+  "fullJvmGate": {
+    "exitCode": 0,
+    "tests": 7266,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "modules": [
+      "audio",
+      "cli",
+      "json",
+      "kit",
+      "loop",
+      "mpc3",
+      "shell",
+      "synth",
+      "xpm"
+    ],
+    "environment": "complete JDK 21, configured proxy, no Android SDK",
+    "log": "/workspace/scratch/crease-playable-jvm-jdk.log"
+  }
 }

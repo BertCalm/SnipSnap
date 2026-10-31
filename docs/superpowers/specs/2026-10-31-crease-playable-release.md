@@ -133,6 +133,8 @@ PCM residency, not total browser heap or a multisample-bank memory prediction.
   keyboard/touch/preset studies pass regression checks. Existing media remain
   byte-identical. The fifteen new fixed recordings use the existing player.
 
+The complete repository JVM gate also passed with exit 0: 7,266 tests across 9 modules, zero failures/errors. The initial attempt stopped at a JRE-only compiler selection; the successful run explicitly selected the complete JDK 21. This gate does not test Android UI or physical-device interaction.
+
 The first analysis contained a missing coefficient in fractional interpolation,
 which attenuated constant signals. Its source, raw provenance, measurements and
 cache were preserved before correction. The actual Kotlin captures were not
