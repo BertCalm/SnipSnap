@@ -36,6 +36,9 @@ class LoopEngine(
 
     private var block = FloatArray(residency.session().intervalFrames * 2)
 
+    /** One per playback, as one per bounce: it carries the last interval's gain into the next, edits included. */
+    private val ceiling = IntervalCeiling()
+
     fun position(): Int = interval.get()
 
     /** Queue an edited session. Takes effect at the next interval boundary. */
@@ -70,6 +73,7 @@ class LoopEngine(
         val session = residency.session()
 
         Mixer.mix(residency.buffersFor(i), session.tracks, block)
+        ceiling.apply(block, session.sampleRate)
 
         // Submitted before the blocking write, not after: write blocks for
         // roughly one interval, and that is the window the bake pool needs

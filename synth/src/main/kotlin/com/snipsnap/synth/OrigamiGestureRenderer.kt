@@ -190,6 +190,9 @@ object OrigamiGestureRenderer {
         cancelled: () -> Boolean = { false },
     ): FloatArray {
         stop(cancelled)
+        if (patch.expression != OrigamiExpression.LEVEL) {
+            return renderRaw(OrigamiExpressions.appliedPatch(patch), midi, diagnostic, cancelled)
+        }
         val macros = patch.resolvedMacros()
         val played = midi ?: Origami.midiFor(patch.voice, macros.getValue("TUNE"))
         if (patch.gesture == OrigamiGesture.STEADY || macros.getValue("FOLD") == 0f ||
@@ -230,6 +233,9 @@ object OrigamiGestureRenderer {
 
     fun render(patch: OrigamiPatch, cancelled: () -> Boolean = { false }): Snip {
         stop(cancelled)
+        if (patch.expression != OrigamiExpression.LEVEL) {
+            return render(OrigamiExpressions.appliedPatch(patch), cancelled)
+        }
         if (patch.gesture == OrigamiGesture.STEADY || patch.resolvedMacros().getValue("FOLD") == 0f) {
             val played = patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
             val audio = OrigamiHeld.reference(patch.voice, played, cancelled) {

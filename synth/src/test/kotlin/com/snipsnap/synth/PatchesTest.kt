@@ -52,6 +52,7 @@ class PatchesTest {
         NacrePresets.all().first(),
         FerryPresets.all().first(),
         ScourPresets.all().first(),
+        LibrationPresets.references().first(),
     )
 
     @Test

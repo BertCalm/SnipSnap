@@ -197,7 +197,7 @@ in the October 26 audition and MPC packages. The name avoids the separate
 FILAMENT engine added upstream. Its macros, note, velocity, model and seed are
 unchanged; saved recipes still retain their original names and sound.
 
-The Android picker adds MERIDIAN as engine 66 while retaining the other 65
+The Android picker adds MERIDIAN as engine 67 while retaining the other 66
 engines. SWEEP exposes the eight-preset bank and seven macros. ROOT selects the
 native base MIDI note from 36 to 96; VELOCITY changes the physical excitation.
 TUNE remains a relative transposition with .5 at the center. Macro edits,

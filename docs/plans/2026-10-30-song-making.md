@@ -66,6 +66,31 @@ clipping.
 
 **Why first:** phases 2, 3, 7 and 8 all write audio through this bus, so it has to exist before them.
 
+#### Phase 1, as built (2026-10-31)
+
+- `SongBus` (`audio/.../SongBus.kt`) holds `PEAK`, `peakOf` and an in-place `ceiling(samples)`.
+  - It works on the bare buffer every caller already held, not on a `Snip`.
+  - `KitPreview.render`, `KitPreview.renderLoop`, `SessionMixdown.render` and `Arranger.mixdown` now call it.
+  - `SessionMixdown.PEAK` is gone; its one test reads `SongBus.PEAK`.
+- **Byte-identical, measured:** a scratch test hashed all four paths on a fixture hot enough to engage the ceiling (each at exactly 0.950), before and after the change. The hashes matched on all four. The test was deleted after the run. `SongBusTest` pins the arithmetic against the old inline form.
+- The grid's ceiling is `IntervalCeiling` (`loop/.../IntervalCeiling.kt`). `LoopEngine.playOne` and `Bouncer.toSink` each call it after `Mixer.mix` and before the sink.
+- **Changed against the design: a cut is immediate and only a rise is ramped.**
+  - The design said to ramp from the previous gain over 10 ms. A downward ramp cannot hold the ceiling: the first frames of a loud interval would play at the old, higher gain, and a downbeat kick lives in those frames. There is no lookahead across the boundary, because the next interval is not mixed yet while this one plays.
+  - So a cut lands at the boundary in one step, and a rise eases over `RAMP_MS = 10`. Any gain on the way up is under the target, so the ceiling holds everywhere.
+- **Measured:** `IntervalCeilingTest`.
+  - The six-kick fixture sums past 4 raw and bounces at the ceiling.
+  - Under the ceiling, the bounce equals the raw mix byte for byte.
+  - Four intervals of `LoopEngine` playback equal `Bouncer.render`, sample for sample, through both the cut and the ease.
+  - With the bounce's `ceiling.apply` removed alone, two named tests fail. One reports "bounce peak 5.145858 over 0.95", the review's number.
+- **Disclosed, not fixed:**
+  - On a sound that runs straight through a boundary (a drone, a repeating loop), a cut is a level step of `(old − new) × |sample|` at that frame.
+  - The gain is set per interval, so an interval with one loud hit plays quieter than its neighbours. The level steps at interval scale, which is a mild pumping.
+  - Both are the price of a ceiling that never bends a waveform. A user who hears either should turn the track levels down, and a later screen can say how far the ceiling turned an interval down (`IntervalCeiling.gain`).
+- **Found while building, not in scope:**
+  - ORBIT (`OrbitEngine`) has no ceiling either.
+  - It mixes continuous voices in about 43 ms blocks, so a per-block gain there would act as a limiter, pumping every block. It needs its own design and its own decision. It is not folded into this phase.
+- **Heard:** nothing.
+
 ### Phase 2. Arranger sections on the grid, and the right bass notes (S to M)
 
 **Goal:** every section starts on its bar, and the bed plays the written note.

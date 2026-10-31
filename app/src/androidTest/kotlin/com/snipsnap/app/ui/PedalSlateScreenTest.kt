@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.onAllNodesWithContentDescription
@@ -13,6 +14,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -53,7 +55,8 @@ import kotlin.math.sin
  * PedalSlateTest's; these tests check the wiring: a row chip puts a pedal on and takes it off,
  * AMT moves the marked pedal and hands the mark on at 0, MORE lights with a count and its list
  * puts on what the row hides and moves a pedal across the amp, PUT ON ROW swaps the app-wide row,
- * a tap on MORE treats nothing, and a pad whose original the bin let go keeps its pedals.
+ * a tap on MORE treats nothing, a pad whose original the bin let go keeps its pedals, and a pad
+ * whose original went in past the bin's days still has it after the sweep, and says so.
  *
  * WidePadSheetScreenTest's harness: TREATMENT open from the start, semantic clicks rather than
  * scrolled taps, every wait on something observable. Pads carry no recipe, so taking the last
@@ -92,6 +95,7 @@ class PedalSlateScreenTest : ComposeScreenTest() {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
+                backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
                 onBack = {},
                 onToast = { toasts += it },
@@ -310,7 +314,8 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         val pad = padName(entry)
         activate("DRIVE")
         waitForToast(Copy.treated("DRIVE", pad))
-        // What 30 days do to the bin: the original DRIVE rendered from is gone.
+        // The bin emptied by hand: the original DRIVE rendered from is gone. Age alone no longer
+        // does this, since the bin keeps a pad's original for as long as the pad needs it.
         KitBuilderModel.open(entry.dir).emptyBin()
         val before = files(entry.dir)
 
@@ -324,6 +329,41 @@ class PedalSlateScreenTest : ComposeScreenTest() {
         assertEquals(listOf("driven"), savedKeys(entry))
         assertEquals("nothing was touched", before, files(entry.dir))
         selected("DRIVE").assertIsSelected()
+    }
+
+    /**
+     * docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md, section 5: a pedal
+     * pad whose original went into the bin more than [KitBuilderModel.BIN_KEEP_DAYS] ago outlives
+     * the launch sweep, the sheet says the bin keeps it, and NONE gives it back. DRIVE goes on
+     * through the model before the sheet opens, as the sweep runs at launch before any sheet, and
+     * the sheet reads the bin when it mounts.
+     */
+    @Test
+    fun a_pad_whose_original_went_in_past_the_bins_days_still_has_it_and_none_gives_it_back() {
+        val entry = kit()
+        val original = File(entry.dir, "hit1.wav").readBytes()
+        val m = KitBuilderModel.open(entry.dir)
+        assertTrue("DRIVE landed", PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")) is PedalSlate.Landed.Applied)
+        m.save()
+        // Renamed to the stamp the bin would have given it a day past its keep: the sweep's clock alone would take it.
+        val binned = m.binContents().single()
+        val agedAt = System.currentTimeMillis() - (KitBuilderModel.BIN_KEEP_DAYS + 1).toLong() * 86_400_000
+        val aged = File(binned.file.parentFile, "${agedAt}_${binned.originalName}")
+        assertTrue("the bin file took its old stamp", binned.file.renameTo(aged))
+        assertEquals("the sweep leaves DRIVE's original", 0, KitBuilderModel.open(entry.dir).purgeBin())
+        assertTrue("DRIVE's original is still in the bin", aged.isFile)
+
+        show(entry)
+        val pad = padName(entry)
+        waitFor("the provenance line to say the bin keeps the original", timeoutMillis = 60_000) {
+            compose.onAllNodesWithText("original in bin, kept", substring = true, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("original in bin, kept", substring = true, useUnmergedTree = true).assertIsDisplayed()
+
+        activate(PadSheet.NONE)
+        waitForToast(Copy.unTreated(pad))
+        assertNull(KitStore.load(entry.dir).pad(1)?.recipe)
+        assertTrue("the original, byte for byte", original.contentEquals(File(entry.dir, "hit1.wav").readBytes()))
     }
 
     @Test

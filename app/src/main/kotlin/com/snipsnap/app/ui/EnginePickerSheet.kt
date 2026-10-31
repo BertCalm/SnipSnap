@@ -2,7 +2,6 @@ package com.snipsnap.app.ui
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.view.WindowManager
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -192,32 +191,8 @@ private fun BottomSheetWindow(
     val scheme = LocalScheme.current
     val still = LocalReduceMotion.current
     // The scrim is drawn below, so the window's own dim would darken it twice.
-    // Back reaches this window only while it holds focus. The window manager
-    // has been leaving the new dialog unfocused: the header test waited ten
-    // seconds for that focus and it never came, so the key would have fallen
-    // through to the screen under the sheet. Adding NOT_FOCUSABLE and then
-    // clearing it is a layout change, which is what makes the window manager
-    // hand focus over; clearing a flag that was never set does nothing by
-    // itself. Once, and only while it is still unfocused, so a sheet that
-    // already holds focus is left alone.
     val window = (LocalView.current.parent as? DialogWindowProvider)?.window
-    var claimedFocus by remember { mutableStateOf(false) }
-    SideEffect {
-        val dialogWindow = window ?: return@SideEffect
-        dialogWindow.setDimAmount(0f)
-        if (claimedFocus) return@SideEffect
-        val decor = dialogWindow.decorView
-        if (decor.hasWindowFocus()) {
-            claimedFocus = true
-            return@SideEffect
-        }
-        claimedFocus = true
-        decor.post {
-            if (!decor.isAttachedToWindow || decor.hasWindowFocus()) return@post
-            dialogWindow.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-            dialogWindow.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE)
-        }
-    }
+    SideEffect { window?.setDimAmount(0f) }
     val latestDismiss by rememberUpdatedState(onDismiss)
     // 0 is below the bottom edge, 1 is seated. Seated from the first frame when motion is off.
     val seated = remember { Animatable(if (still) 1f else 0f) }

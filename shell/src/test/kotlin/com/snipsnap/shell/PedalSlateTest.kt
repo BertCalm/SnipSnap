@@ -618,6 +618,30 @@ class PedalSlateTest {
         assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")))
     }
 
+    /**
+     * The open question D5 left (docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md):
+     * a pedal pad left alone past the bin's days still changes, because the bin keeps its original.
+     */
+    @Test
+    fun `a pedal pad's next change after the bin's sweep lands, because the bin kept its original`() {
+        val dir = File(temp, "Swept")
+        val m = KitBuilderModel.create("Swept", dir)
+        val snare = DrumSynth.snare()
+        m.assign(1, snare, DrumClass.SNARE)
+        m.assign(2, snare, DrumClass.SNARE)
+        m.save()
+        PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven"))
+        m.save()
+        val swept = KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(0, swept, "the sweep took the pedal pad's original")
+
+        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 0.7f))
+        assertEquals(PedalSlate.Landed.Applied(expected, stacked = false), PedalSlate.land(m, 1, PedalSlate.Gesture.On("delayed")))
+        m.pedalPad(2, expected)
+        m.save()
+        assertContentEquals(samples(m, dir, 2), samples(m, dir, 1), "DELAY joined DRIVE over the original, not over DRIVE's audio")
+    }
+
     @Test
     fun `TOUCH on a pad with WAH lands in WAH's place, and the line says so`() {
         val dir = File(temp, "Replace")

@@ -38,10 +38,10 @@
   @media(max-width: 480px) { body { padding: 16px; } h1 { font-size: 2rem; } select,input[type=search] { width: 100%; } }
 </style>
 <header>
-  <small>SNIPSNAP · SCOUR R1.1 · SECOND LISTEN</small>
+  <small>SNIPSNAP · SCOUR R2 · THE IMPACT</small>
   <h1>Scour</h1>
-  <p>A free plate is rolled against, then blasted with shot. Each shot dents the surface, and as the dents cover it the plate stiffens: its upper ring climbs, and RING sets how far its ring lengthens or tightens. When the blast stops, the plate rings out in the state the blast left it in. PLATE, a round metal plate, keeps its hardening; PANE, a square glass pane, gives it back as it rings.</p>
-  <p>Start with <strong>SCOUR in a phrase</strong>, then <strong>PLATE beside PANE</strong> and <strong>How far should hardening lengthen the ring?</strong>: the three things the first listen asked for. Every single gesture has a raw version and a version matched to the other clips' loudness; a phrase is a mix and has only the matched one. HOLD's loop arrives in R2.</p>
+  <p>An impact that builds: a roller spins up against a free plate while shot rains on it faster and harder, the dents spread and the plate's upper ring climbs, then one heavy slam lands and the hardened plate rings out. PLATE, a round metal plate, keeps its hardening; PANE, a square glass pane, gives it back as it rings; SHEET, a long steel thunder sheet an octave lower, keeps it too.</p>
+  <p>Start with <strong>SCOUR into a drop</strong>: the slam lands on the downbeat where the beat comes in. Every single gesture has a raw version and a version matched to the other clips' loudness; a phrase is a mix and has only the matched one. HOLD sets how long it rings.</p>
   <div class="controls">
     <label for="section">Listen to</label>
     <select id="section"></select>
@@ -65,7 +65,7 @@
   const search = document.getElementById('search');
   const audio = document.getElementById('audio');
   const repeat = document.getElementById('repeat');
-  const notesKey = 'snipsnap_scour_r1_1_listening';
+  const notesKey = 'snipsnap_scour_r2_listening';
   let notes = {};
   try { notes = JSON.parse(localStorage.getItem(notesKey) || '{}'); } catch (_) { /* Notes remain usable in memory. */ }
   let playingCard = null;
@@ -107,8 +107,8 @@
     const m = clip.metrics;
     metric(dl, 'Duration', `${number(m.durationSeconds)} s`);
     if (clip.kind !== 'PHRASE') {
-      metric(dl, 'Shots / coverage at close', `${m.shots} / ${number(m.coverageAtClose)}`);
-      metric(dl, 'Top mode rise at close', `${number(m.topModeRisePercent, 1)} %`);
+      metric(dl, 'Build / shots / coverage at the slam', `${number(m.buildSeconds, 2)} s / ${m.shots} / ${number(m.coverageAtClose)}`);
+      metric(dl, 'Top mode rise at the slam', `${number(m.topModeRisePercent, 1)} %`);
       metric(dl, 'Raw peak / RMS', `${number(m.raw.peak, 5)} / ${number(m.raw.rms, 5)}`);
       metric(dl, 'Raw loudness / DC', `${number(m.raw.loudness, 5)} / ${Number(m.raw.dc).toExponential(2)}`);
     }

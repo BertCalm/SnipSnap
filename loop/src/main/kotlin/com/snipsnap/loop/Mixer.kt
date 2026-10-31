@@ -6,9 +6,11 @@ import kotlin.math.min
 /**
  * Sums the engaged tracks into one output block.
  *
- * This is the only code that runs on the audio thread, so it does exactly one
- * thing: reads floats and adds them. No decoding, no allocation, no branching
- * on block type — the baker already made every buffer the same shape.
+ * This and [IntervalCeiling] are the only code that runs on the audio thread,
+ * so this does exactly one thing: reads floats and adds them. No decoding, no
+ * allocation, no branching on block type — the baker already made every
+ * buffer the same shape. Keeping the sum under full scale is the ceiling's
+ * job, applied to what this returns.
  *
  * Constant-power panning would need two sqrt calls per track per block; a
  * linear law costs two multiplies and is inaudibly different at the small pan

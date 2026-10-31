@@ -21,6 +21,7 @@ class ObbligatoConversation internal constructor(
     mischief: Float,
     seed: Int,
     private val overlap: Boolean = false,
+    private val moreOverlap: Boolean = false,
 ) {
     enum class Mode { PLAY, FIGHT, PROTECT }
     enum class Player { AIR, REED }
@@ -52,7 +53,7 @@ class ObbligatoConversation internal constructor(
     private val reedPersonality = noise.next().toDouble()
     private val gestures = ArrayList<Gesture>()
     private val ledger = ArrayList<Event>()
-    private val live = PerformanceReader(gestures, overlap)
+    private val live = PerformanceReader(gestures, overlap, moreOverlap)
     private var seconds = 0.0
     private var turnAge = 0.0
     private var turnIntegral = 0.0
@@ -230,12 +231,14 @@ class ObbligatoConversation internal constructor(
         turnFirst = 0.0
         turnLast = 0.0
         bodyStarted = false
-        bodyStartsAt = (if (overlap && passing) OVERLAP_SECONDS else CROSSOVER) + .04
+        bodyStartsAt = (if (overlap && passing) {
+            if (moreOverlap) MORE_OVERLAP_SECONDS else OVERLAP_SECONDS
+        } else CROSSOVER) + .04
         readiness = 0.0
         live.at(seconds)
     }
 
-    internal fun performanceReader() = PerformanceReader(gestures, overlap)
+    internal fun performanceReader() = PerformanceReader(gestures, overlap, moreOverlap)
 
     internal data class Gesture(
         val seconds: Double, val actor: Player, val kind: String, val strength: Double,
@@ -251,7 +254,14 @@ class ObbligatoConversation internal constructor(
     internal class PerformanceReader internal constructor(
         private val gestures: List<Gesture>,
         private val overlap: Boolean = false,
+        moreOverlap: Boolean = false,
     ) {
+        // Saved model 9 keeps its original shape. Model 10 adds time at the edges,
+        // leaving the near-equal middle brief enough to preserve a distinct lead.
+        private val prelude = if (moreOverlap) MORE_OVERLAP_PRELUDE else OVERLAP_PRELUDE
+        private val tail = if (moreOverlap) MORE_OVERLAP_TAIL else OVERLAP_TAIL
+        private val overlapSeconds = if (moreOverlap) MORE_OVERLAP_SECONDS else OVERLAP_SECONDS
+        private val support = if (moreOverlap) MORE_OVERLAP_SUPPORT else OVERLAP_SUPPORT
         private var index = 0
         var airPresence = 1.0
             private set
@@ -300,30 +310,30 @@ class ObbligatoConversation internal constructor(
                 val fromOut = if (airActive) g.fromReed else g.fromAir
                 val targetIn = if (airActive) a else r
                 val targetOut = if (airActive) r else a
-                val joinIn = maxOf(fromIn, minOf(OVERLAP_SUPPORT, targetIn))
-                val joinOut = maxOf(targetOut, OVERLAP_SUPPORT)
+                val joinIn = maxOf(fromIn, minOf(support, targetIn))
+                val joinOut = maxOf(targetOut, support)
                 val incoming: Double
                 val outgoing: Double
                 when {
-                    age < OVERLAP_PRELUDE -> {
-                        incoming = mix(fromIn * fromIn, joinIn * joinIn, smooth(age / OVERLAP_PRELUDE))
+                    age < prelude -> {
+                        incoming = mix(fromIn * fromIn, joinIn * joinIn, smooth(age / prelude))
                         outgoing = fromOut * fromOut
                     }
-                    age < OVERLAP_PRELUDE + CROSSOVER -> {
-                        val f = smooth((age - OVERLAP_PRELUDE) / CROSSOVER)
+                    age < prelude + CROSSOVER -> {
+                        val f = smooth((age - prelude) / CROSSOVER)
                         incoming = mix(joinIn * joinIn, targetIn * targetIn, f)
                         outgoing = mix(fromOut * fromOut, joinOut * joinOut, f)
                     }
                     else -> {
                         incoming = targetIn * targetIn
                         outgoing = mix(joinOut * joinOut, targetOut * targetOut,
-                            smooth((age - OVERLAP_PRELUDE - CROSSOVER) / OVERLAP_TAIL))
+                            smooth((age - prelude - CROSSOVER) / tail))
                     }
                 }
                 // Both retain one common power budget; overlapping does not grant a
                 // second full-strength voice or independently normalize either player.
                 val budget = mix(g.fromAir * g.fromAir + g.fromReed * g.fromReed,
-                    a * a + r * r, smooth(age / OVERLAP_SECONDS))
+                    a * a + r * r, smooth(age / overlapSeconds))
                 val correction = minOf(1.0, budget / (incoming + outgoing).coerceAtLeast(1e-12))
                 airPresence = sqrt((if (airActive) incoming else outgoing) * correction).coerceIn(FLOOR, 1.0)
                 reedPresence = sqrt((if (airActive) outgoing else incoming) * correction).coerceIn(FLOOR, 1.0)
@@ -362,6 +372,10 @@ class ObbligatoConversation internal constructor(
         const val OVERLAP_TAIL = .04
         const val OVERLAP_SECONDS = .24
         const val OVERLAP_SUPPORT = .35
+        const val MORE_OVERLAP_PRELUDE = .085
+        const val MORE_OVERLAP_TAIL = .065
+        const val MORE_OVERLAP_SECONDS = MORE_OVERLAP_PRELUDE + CROSSOVER + MORE_OVERLAP_TAIL
+        const val MORE_OVERLAP_SUPPORT = .40
         private const val AUDIBLE = .025
     }
 }

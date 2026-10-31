@@ -38,7 +38,8 @@ object Obbligato {
     const val MUSICAL_MODEL = 7
     const val CONVERSATION_MODEL = 8
     const val OVERLAP_MODEL = 9
-    const val MAX_MODEL = OVERLAP_MODEL
+    const val MORE_OVERLAP_MODEL = 10
+    const val MAX_MODEL = MORE_OVERLAP_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
@@ -252,7 +253,7 @@ object Obbligato {
             null -> 0.0
         }.coerceIn(0.0, 1.0)
         val conversation = conversationMode?.let { ObbligatoConversation(it, heldSeconds, mischief, seed,
-            overlap = model == OVERLAP_MODEL) }
+            overlap = model >= OVERLAP_MODEL, moreOverlap = model == MORE_OVERLAP_MODEL) }
         val interaction = if (conversation == null && model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
             ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.
