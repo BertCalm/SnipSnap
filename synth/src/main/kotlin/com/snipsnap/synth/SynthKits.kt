@@ -545,6 +545,33 @@ object SynthKits {
     }
 
     /**
+     * The KEEL first-listen kit: REDUCE up the C minor pentatonic from C2 on the first two rows (A01-A08), every
+     * knob at its default, so the row is the FM bass before anyone touches it; then two one-shot presets each for
+     * UPRIGHT (A09-A10), BELLY (A11-A12) and REDUCE (A13-A14), and the two held loops (A15 UPRIGHT, A16 BELLY; the
+     * walk already gives REDUCE eight pads). The walk moves the patch's
+     * saved root, not TUNE: TUNE spans only plus or minus 12 semitones and the walk climbs 17 above C2. Every pad is
+     * dry (KEEL has no landing chain) and filed by [Keel.drumClassFor]: TONAL for the fourteen one-shots, LOOP for
+     * the two loops. The presets are provisional until the owner has heard them; this kit is where they are heard.
+     */
+    fun keel(): List<ArrangedPad?> {
+        fun note(n: Int, semitone: Int) = KeelPatch(
+            "Walk $n", KeelVoice.REDUCE, Keel.defaults(KeelVoice.REDUCE),
+            midi = Keel.DEFAULT_MIDI + semitone,
+        ).let { pad(it, Keel.drumClassFor(it.voice, it.macros)) }
+        fun preset(voice: KeelVoice, name: String) = KeelPresets.forVoice(voice).first { it.name == name }
+            .let { pad(it, Keel.drumClassFor(it.voice, it.macros)) }
+
+        return listOf(
+            note(1, PENTATONIC[0]), note(2, PENTATONIC[1]), note(3, PENTATONIC[2]), note(4, PENTATONIC[3]),   // A01-A04
+            note(5, PENTATONIC[4]), note(6, PENTATONIC[5]), note(7, PENTATONIC[6]), note(8, PENTATONIC[7]),   // A05-A08
+            preset(KeelVoice.UPRIGHT, "WARM GUT"), preset(KeelVoice.UPRIGHT, "BRIGHT PICK"),                // A09 A10
+            preset(KeelVoice.BELLY, "SOFT PILLOW"), preset(KeelVoice.BELLY, "TOOTH MARK"),                   // A11 A12
+            preset(KeelVoice.REDUCE, "QUICK SINK"), preset(KeelVoice.REDUCE, "LOW HULL"),                     // A13 A14
+            preset(KeelVoice.UPRIGHT, "BOWED NOTE"), preset(KeelVoice.BELLY, "WARM HUSH"),                    // A15 A16 (loops)
+        )
+    }
+
+    /**
      * The AEROSTAT acceptance kit. A01–A08 walk the minor pentatonic from C3 with
      * every other knob at its default, so the row is the instrument before anyone
      * touches it. A09–A13 are the five factory presets. A14 and A15 climb two

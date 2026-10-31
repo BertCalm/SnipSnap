@@ -617,4 +617,30 @@ object Keys {
     /** FORK's own keyboard range: two octaves plus a fourth around C3, wide enough for a genuinely playable instrument without reaching past [Fork.TUNE_SEMITONES]'s own snapped range. */
     const val FORK_LOW_MIDI = Fork.ROOT_MIDI
     const val FORK_HIGH_MIDI = Fork.ROOT_MIDI + Fork.TUNE_SEMITONES
+
+    // ---------- KEEL, held ----------
+    // docs/superpowers/specs/2026-10-23-keel-bass-engine-design.md (section 10, the keygroup)
+
+    /**
+     * The nine KEEL pad zones: every minor third from C1 to C3 (MIDI 24 to
+     * 48), the register a bass line lives in. Both voices share the layout,
+     * as [sirenPadMidis] does.
+     */
+    fun keelPadMidis(): List<Int> = (0..24 step 3).map { Keel.MIDI_MIN + it }
+
+    /**
+     * KEEL held - one keygroup zone at exact MIDI pitch: the note's attack
+     * and its settle, then the settled state as a loop ([Keel.renderKey]),
+     * with the loop marker a quarter second after the settle stops. TUNE is
+     * centred, so [midi] is the note; SLIDE, LENGTH and HOLD play no part (a
+     * held key sustains), and the other knobs play as they do in the one-shot.
+     * Rendered at full touch, the velocity a kit pad renders at. A zone whose
+     * loop does not close throws, naming the zone, rather than shipping a click.
+     */
+    fun keelPad(voice: KeelVoice, macros: Map<String, Float>, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
+        require(midi in Keel.MIDI_MIN..Keel.MIDI_MAX) { "KEEL pads are MIDI ${Keel.MIDI_MIN}..${Keel.MIDI_MAX}, got $midi" }
+        val held = Keel.renderKey(voice, macros + ("TUNE" to .5f), midi, cancelled)
+        requireSeam("KEEL $voice at MIDI $midi", held.audio, held.loopStart)
+        return KeyNote(Snip(held.audio, channels = 1, sampleRate = RATE), loopStartFrame = held.loopStart.toLong())
+    }
 }

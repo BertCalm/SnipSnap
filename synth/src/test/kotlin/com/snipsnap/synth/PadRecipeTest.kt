@@ -78,6 +78,8 @@ class PadRecipeTest {
         // CHAMBER is a finite prototype too; its patch carries a saved note, velocity and exact seed.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
+        // KEEL is rostered, but every factory preset sits on the default root at full velocity; this patch carries a saved note and velocity.
+        KeelPatch("Settle Test", KeelVoice.REDUCE, mapOf("SETTLE" to .3f, "WEIGHT" to .7f), midi = 42, velocity = .6f),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),
             midi = 57, velocity = .6f, seed = -7, gesture = OhmGesture.GATHER),
     )

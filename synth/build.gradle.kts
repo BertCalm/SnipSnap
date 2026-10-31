@@ -72,6 +72,17 @@ tasks.register<JavaExec>("generateTidalAudition") {
     }
 }
 
+/** First KEEL listen: the WEIGHT check on top, every macro swept below it as optional. */
+tasks.register<JavaExec>("generateKeelAudition") {
+    group = "distribution"
+    description = "Render the KEEL WEIGHT check, each macro swept, SLIDE at five settings and the corners, with a listening page."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KeelAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("keelOutput").orNull ?: "${rootDir}/testkit/keel-audition")
+}
+
 /** Dry, finite OHM family encounters and their replayable listening evidence. */
 tasks.register<JavaExec>("generateOhmAudition") {
     group = "distribution"
@@ -1755,6 +1766,17 @@ tasks.register<JavaExec>("generateOvenKit") {
     workingDir = projectDir
     maxHeapSize = "768m"
     args("${rootDir}/testkit/oven-kit")
+}
+
+/** A dry sixteen-pad KEEL first-listen kit with native and compatibility MPC exports. */
+tasks.register<JavaExec>("generateKeelKit") {
+    group = "distribution"
+    description = "Render KEEL's regenerable sixteen-pad MPC first-listen kit under testkit/keel-kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KeelKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "768m"
+    args("${rootDir}/testkit/keel-kit")
 }
 
 /** The first static circular SOURCE/FOCUS listening experiment, with portable recipes. */

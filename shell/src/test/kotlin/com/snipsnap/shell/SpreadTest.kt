@@ -12,6 +12,9 @@ import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.PluckPatch
@@ -54,6 +57,21 @@ class SpreadTest {
                 midi = midi, velocity = .35f, model = 1)
             assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "BODY $body must retain MIDI $midi")
         }
+    }
+
+    @Test
+    fun `keel spreads use the saved root and relative tune, under the detector's floor too`() {
+        // KEEL's C1 (32.7 Hz) and D#1 (38.9 Hz) lie under Pitch.detect's 40 Hz floor, so the recipe has to say.
+        val snip = tone(220.0)
+        for (voice in KeelVoice.entries) {
+            for (midi in listOf(24, 36, 48)) {
+                for (tune in listOf(0f, .5f, 1f)) {
+                    val patch = KeelPatch("Keel", voice, mapOf("TUNE" to tune), midi = midi)
+                    assertEquals(Keel.midiFor(voice, tune, midi).toFloat(), Spread.detect(snip, patch), "$voice root $midi, TUNE $tune")
+                }
+            }
+        }
+        assertEquals(24f, Spread.detect(snip, KeelPatch("Low", KeelVoice.REDUCE, mapOf("TUNE" to 0f), midi = 36)))
     }
 
     @Test

@@ -37,7 +37,8 @@ class PatchesTest {
      * One saved sound of every engine: its first factory preset, or for the engines with no roster
      * ([PatchTypes.ROSTERLESS]) one built here, so each carries the fields its own engine requires.
      * A prototype held outside [Presets] ([PatchTypes.PROTOTYPES]) sends its first provisional recipe;
-     * VENT also sends a legacy model-1 comparison beside its model-2 factory entry.
+     * VENT also sends a legacy model-1 comparison beside its model-2 factory entry, and KEEL a patch with a saved
+     * note and velocity beside its first factory preset (the set of engines below ignores the repeat).
      */
     private fun onePatchPerEngine(): List<Patch> = Presets.all().distinctBy { it.engine } + listOf(
         SnapPatch("Door", SnapVoice.ORBIT, emptyMap(), IntArray(Snap.TABLE_SIZE) { (it * 255) / (Snap.TABLE_SIZE - 1) }),
@@ -51,6 +52,8 @@ class PatchesTest {
         NacrePresets.all().first(),
         ChamberPresets.all().first(),
         TidalPresets.all().first(),
+        // KEEL is rostered (its factory presets all sit on the default root at full velocity); this one carries a saved note and velocity.
+        KeelPatch("Octave Test", KeelVoice.UPRIGHT, mapOf("WEIGHT" to .7f, "SETTLE" to .3f), midi = 42, velocity = .6f),
     )
 
     @Test

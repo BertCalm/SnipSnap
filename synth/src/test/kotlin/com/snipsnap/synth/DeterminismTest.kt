@@ -429,4 +429,20 @@ class DeterminismTest {
             assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
         }
     }
+
+    @Test
+    fun `KEEL is byte-identical across renders, every voice`() {
+        for (voice in KeelVoice.entries) {
+            val patch = KeelPatch("Canary", voice, Keel.defaults(voice), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
+
+    @Test
+    fun `KEEL's held loop is byte-identical across renders, every voice`() {
+        for (voice in KeelVoice.entries) {
+            val patch = KeelPatch("Canary", voice, Keel.defaults(voice) + ("HOLD" to 1f), midi = 36, velocity = .8f)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+        }
+    }
 }
