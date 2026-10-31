@@ -4001,4 +4001,431 @@ class ConventionTest {
         )
     }
 
+    // ==================== Laws: every bench has an opener, and no screen draws its own back label ====================
+
+    /**
+     * Source with block comments and line comments blanked and string literals
+     * kept. [stripCommentsAndStrings] blanks the strings too, which is right for
+     * most laws and wrong for these two: App's comments quote `nav.open(Bench.X)`
+     * as often as the code calls it, and the ui folder's KDocs quote the very
+     * labels the back-label law is looking for, so a plain text search counts
+     * the sentence about a call as the call. The label itself is a string, so it
+     * has to survive.
+     *
+     * Newlines inside a comment are kept, so a match keeps its line. Handles
+     * nested block comments, raw strings, a `${...}` template that holds quotes
+     * of its own, and the char literal for a double quote. The comparisons use
+     * single characters, never the two-character comment delimiters, because the
+     * law against a comment ending by accident reads this file too.
+     */
+    private fun stripComments(src: String): String {
+        val n = src.length
+        fun at(k: Int): Char = if (k < n) src[k] else '\u0000'
+        val out = StringBuilder(n)
+        var i = 0
+        while (i < n) {
+            val c = src[i]
+            if (c == '/' && at(i + 1) == '/') {
+                while (i < n && src[i] != '\n') i++
+            } else if (c == '/' && at(i + 1) == '*') {
+                var depth = 1
+                i += 2
+                while (i < n && depth > 0) {
+                    if (src[i] == '/' && at(i + 1) == '*') {
+                        depth++
+                        i += 2
+                    } else if (src[i] == '*' && at(i + 1) == '/') {
+                        depth--
+                        i += 2
+                    } else {
+                        if (src[i] == '\n') out.append('\n')
+                        i++
+                    }
+                }
+            } else if (c == '"' && at(i + 1) == '"' && at(i + 2) == '"') {
+                val end = src.indexOf("\"\"\"", i + 3).let { if (it < 0) n else it + 3 }
+                out.append(src, i, end)
+                i = end
+            } else if (c == '"') {
+                val end = skipString(src, i)
+                out.append(src, i, end)
+                i = end
+            } else if (c == '\'') {
+                val start = i
+                i++
+                if (at(i) == '\\') i += 2 else i++
+                while (i < n && src[i] != '\'' && src[i] != '\n') i++
+                i = minOf(i + 1, n)
+                out.append(src, start, i)
+            } else {
+                out.append(c)
+                i++
+            }
+        }
+        return out.toString()
+    }
+
+    /** The index just past the string literal whose opening quote is at [open]. A `${...}` template inside it may hold quotes of its own. */
+    private fun skipString(src: String, open: Int): Int {
+        var i = open + 1
+        while (i < src.length) {
+            when (src[i]) {
+                '\\' -> i += 2
+                '"' -> return i + 1
+                '\n' -> return i
+                '$' -> i = if (i + 1 < src.length && src[i + 1] == '{') skipTemplate(src, i + 2) else i + 1
+                else -> i++
+            }
+        }
+        return src.length
+    }
+
+    /** The index just past the brace that closes a template whose body starts at [from]. */
+    private fun skipTemplate(src: String, from: Int): Int {
+        var depth = 1
+        var i = from
+        while (i < src.length && depth > 0) {
+            when (src[i]) {
+                '{' -> {
+                    depth++
+                    i++
+                }
+                '}' -> {
+                    depth--
+                    i++
+                }
+                '"' -> i = skipString(src, i)
+                else -> i++
+            }
+        }
+        return i
+    }
+
+    /** All of :app's sources, comments blanked and strings kept, keyed by path under the source root ("App.kt", "ui/MakeScreen.kt"). */
+    private fun appSourcesWithoutComments(): Map<String, String> =
+        requireAppKotlinFiles().associate { it.relativeToAppRoot() to stripComments(it.readText(Charsets.UTF_8)) }
+
+    // ---- Law: every bench has an opener ----
+
+    /**
+     * Benches that nothing outside `Navigation.kt` opens yet. Each one's screen
+     * is still a `remember` var in App, wiped on every move (the spec's
+     * §7.3.1), and its steps of the routing work give it an opener:
+     *
+     * - **PR 3c**: VERSIONS, PAD_CAPTURE and SONG. Their arguments are nulled by
+     *   `clearTransientState` while the history still holds the bench, so they
+     *   need the place's state record first.
+     * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE, STACK and SPREAD, the pad
+     *   editor family.
+     * - **PR 3e**: LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
+     *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
+     *   routed later, not waived as panels that stay in their screen.
+     *
+     * The list only shrinks, and the ceiling pins it exactly. The law fails
+     * when a bench on it gains an opener (take it off), and when a bench off it
+     * has none, so a new bench cannot be added to the roster without a way to
+     * open it. The size is asserted equal to [NOT_YET_OPENED_CEILING], not
+     * merely at most it: a change that shrinks the list lowers the constant in
+     * the same diff, and one that grows it has to raise the constant in plain
+     * sight. A ceiling with slack would let the list grow back after a shrink
+     * with nothing failing.
+     */
+    private val NOT_YET_OPENED: Set<Bench> = setOf(
+        Bench.VERSIONS, Bench.PAD_CAPTURE, Bench.SONG,
+        Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.SPREAD,
+        Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD,
+    )
+    private val NOT_YET_OPENED_CEILING = 11
+
+    /**
+     * The benches something in :app opens, by the three ways it does. [sources]
+     * are comment-stripped, keyed by path under :app's source root. Only these
+     * count, and the draw `when`'s `top == Bench.X` is not one of them:
+     *
+     * 1. A call, `nav.open(Bench.X)` or a bare `open(Bench.X)`.
+     * 2. `Bench.X` in `locationOf`'s body, which is how `landOn(AppScreen.X)`
+     *    opens one. The scan reads the row, not its callers, so it proves an
+     *    opener is wired, not that a button reaches it. What keeps a row honest
+     *    is that an `AppScreen` is deleted when nothing lands on it (ORBIT,
+     *    SURFACE, SYNTH and SNAP were, once their hand-offs became `nav.open`
+     *    calls), so a row that remains has a `landOn` caller today: SPLIT, KEYS
+     *    and the gear's three. A hand-off that opens over where the user is
+     *    is a call (way 1), never a row, because a row lands on a fixed place.
+     * 3. A bench in the MAKE list's row source (`ui/MakeScreen.kt`), provided
+     *    App opens that list's rows with `nav.open(it)`. That is how SYNTH, SNAP,
+     *    SURFACE and INSTRUMENTS are opened.
+     */
+    private fun benchesWithOpeners(sources: Map<String, String>): Set<Bench> {
+        val opened = mutableSetOf<Bench>()
+        fun add(names: Sequence<String>) {
+            for (name in names) Bench.entries.firstOrNull { it.name == name }?.let { opened += it }
+        }
+        val benchName = Regex("""\bBench\.([A-Z_]+)""")
+
+        val call = Regex("""\bopen\(\s*Bench\.([A-Z_]+)\s*\)""")
+        for (text in sources.values) add(call.findAll(text).map { it.groupValues[1] })
+
+        val app = sources["App.kt"]
+        if (app != null) {
+            val at = app.indexOf("fun locationOf(")
+            val open = if (at >= 0) app.indexOf('{', at) else -1
+            val close = if (open >= 0) matchingBrace(app, open + 1) else null
+            if (open >= 0 && close != null) add(benchName.findAll(app.substring(open, close)).map { it.groupValues[1] })
+        }
+
+        val makeListIsOpenedByNav = sources.values.any {
+            Regex("""\bMakeList\(\s*onOpen\s*=\s*\{\s*nav\.open\(it\)\s*\}""").containsMatchIn(it)
+        }
+        val make = sources["ui/MakeScreen.kt"]
+        if (makeListIsOpenedByNav && make != null) {
+            for (rows in Regex("""for\s*\(\s*bench\s+in\s+listOf\(([^)]*)\)""").findAll(make)) {
+                add(benchName.findAll(rows.groupValues[1]).map { it.groupValues[1] })
+            }
+        }
+        return opened
+    }
+
+    /** Why the roster and the list disagree with what is opened, one line per fault; empty when they agree. */
+    private fun openerProblems(opened: Set<Bench>, notYetOpened: Set<Bench>): List<String> {
+        val problems = mutableListOf<String>()
+        for (bench in Bench.entries) {
+            if (bench !in opened && bench !in notYetOpened) {
+                problems += "$bench has no opener outside Navigation.kt, and is not on NOT_YET_OPENED. " +
+                    "Open it with `nav.open(Bench.$bench)`; a bench nothing opens is a screen the roster promises and the app never shows."
+            }
+            if (bench in opened && bench in notYetOpened) {
+                problems += "$bench is on NOT_YET_OPENED but something opens it now. Take it off the list: the list only shrinks."
+            }
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - every bench has an opener outside the navigation model, or is on a list that only shrinks`() {
+        val sources = appSourcesWithoutComments()
+        assertTrue(
+            "App.kt" in sources && "ui/MakeScreen.kt" in sources,
+            "expected App.kt and ui/MakeScreen.kt under :app's source root; the scan reads those two for openers.",
+        )
+        val opened = benchesWithOpeners(sources)
+        // One bench per way of opening, so a scanner that stopped working fails here
+        // and not by quietly reporting every bench as unopened or opened.
+        val oneOfEach = mapOf(
+            Bench.SNIPS to "a nav.open call",
+            Bench.KEYS to "Bench.X in locationOf",
+            Bench.INSTRUMENTS to "the MAKE list's rows",
+        )
+        for ((bench, how) in oneOfEach) {
+            assertTrue(bench in opened, "the scan did not find $bench opened ($how). The scan is broken, not the tree: fix the pattern, do not shrink this check.")
+        }
+        assertEquals(
+            NOT_YET_OPENED_CEILING,
+            NOT_YET_OPENED.size,
+            "lower the ceiling in the same change that shrinks the list (NOT_YET_OPENED only shrinks; a new bench gets an opener, " +
+                "not a place on the list, and raising the ceiling is the visible admission that it grew)",
+        )
+        val problems = openerProblems(opened, NOT_YET_OPENED)
+        assertTrue(
+            problems.isEmpty(),
+            "the benches and their openers disagree (the spec's §7.3.1: every Bench entry has an opener):\n  " + problems.joinToString("\n  "),
+        )
+    }
+
+    @Test
+    fun `law - the opener law fails on a bench nobody opens and on a listed bench that someone does`() {
+        val blockOpen = "/" + "*"
+        val blockClose = "*" + "/"
+        val app = listOf(
+            "fun locationOf(target: AppScreen): Location = when (target) {",
+            "    AppScreen.SPLIT -> Location(Place.PROJECT, Stage.PADS, listOf(Bench.SPLIT))",
+            "}",
+            "// nav.open(Bench.BIN) is said here and never done",
+            "$blockOpen nav.open(Bench.DOUBLES) $blockClose",
+            "val a = { nav.open(Bench.SNIPS) }",
+            "val b = { open(Bench.XRAY) }",
+            "val c = top == Bench.LOOP",
+            "val d = FRAME_CHIP_BENCHES.contains(Bench.HELP)",
+            "val e = { reopen(Bench.ORBIT) }",
+            "MakeList(onOpen = { nav.open(it) }, hasKit = true)",
+        ).joinToString("\n")
+        val make = "for (bench in listOf(Bench.SNAP, Bench.SURFACE)) { }"
+        val found = benchesWithOpeners(mapOf("App.kt" to stripComments(app), "ui/MakeScreen.kt" to stripComments(make)))
+        assertEquals(
+            setOf(Bench.SPLIT, Bench.SNIPS, Bench.XRAY, Bench.SNAP, Bench.SURFACE),
+            found,
+            "a call, a locationOf entry and a MAKE row are openers; a comment, a draw branch, a chip list and `reopen(` are not",
+        )
+
+        // The MAKE rows only count when App opens them with nav.open(it).
+        val unwired = benchesWithOpeners(
+            mapOf("App.kt" to stripComments("MakeList(onOpen = { somethingElse(it) }, hasKit = true)"), "ui/MakeScreen.kt" to make),
+        )
+        assertEquals(emptySet(), unwired, "MakeScreen's rows are not openers unless App opens them with nav.open(it)")
+
+        val everyBench = Bench.entries.toSet()
+        assertTrue(
+            openerProblems(setOf(Bench.SNIPS), emptySet()).size == everyBench.size - 1,
+            "every bench but the one that is opened should be reported when the list is empty",
+        )
+        assertTrue(
+            openerProblems(everyBench - Bench.BIN, setOf(Bench.BIN)).isEmpty(),
+            "a listed bench with no opener is the allowed state",
+        )
+        assertTrue(
+            openerProblems(everyBench, setOf(Bench.VERSIONS)).any { "VERSIONS" in it && "only shrinks" in it },
+            "a bench on NOT_YET_OPENED that something opens must be reported, or the list can only grow",
+        )
+        assertTrue(
+            openerProblems(everyBench, setOf(Bench.DRAW)).any { "DRAW" in it && "only shrinks" in it },
+            "the benches that left the in-screen waiver for PR 3e are on the list like any other, and are reported when something opens them",
+        )
+        assertTrue(
+            openerProblems(everyBench - Bench.SONG, emptySet()).any { "SONG" in it && "nav.open" in it },
+            "a bench with no opener and not on the list must be reported, naming the call that opens it",
+        )
+    }
+
+    // ---- Law: no screen draws its own back label ----
+
+    /** Who gets a hand-drawn back label off a screen, and why it may stay until then. */
+    private enum class WaiverOwner(val why: String) {
+        PR_3C("moves to a bench in PR 3c (VERSIONS, PAD_CAPTURE, SONG)"),
+        PR_3D("moves to a bench in PR 3d (the pad editor family)"),
+        PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
+        IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
+        STEPPER("permanent: a stepper (previous pad, previous preset), not a back label"),
+    }
+
+    private data class BackLabelWaiver(val literal: String, val owner: WaiverOwner)
+
+    private fun waive(owner: WaiverOwner, vararg literals: String): List<BackLabelWaiver> = literals.map { BackLabelWaiver(it, owner) }
+
+    /**
+     * The hand-drawn back labels still allowed, by file under :app's source
+     * root, each with its owner. A label is a string literal in a ui file that
+     * starts with the arrow and a capital; a screen that has been moved takes
+     * its words from `Navigation.backChip` and has none. The map only shrinks,
+     * and the ceiling pins it exactly: the law fails on a literal that is not
+     * here, on an entry here that no longer exists, and when the number of
+     * literals here is not [BACK_LABEL_WAIVER_CEILING]. A change that removes a
+     * waiver lowers the constant in the same diff; one that adds a waiver has to
+     * raise it in plain sight. A ceiling with slack would let the map grow back
+     * after a shrink with nothing failing.
+     *
+     * - **PR 3c** moves TakesBinScreen (VERSIONS), PadCaptureScreen and
+     *   ArrangeScreen (SONG).
+     * - **PR 3d** moves the pad editor family: PadSheetScreen, StackTakesScreen,
+     *   TapeSpliceScreen's back chip, and GrainFieldScreen's default.
+     * - **PR 3e** moves Snap's own screens: LiveSnapScreen (LIVE_SNAP) and the
+     *   "◄ SNAP" SnapScreen draws and passes to GrainFieldScreen as FIELD's
+     *   label.
+     * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
+     *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
+     * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
+     *   previous-preset buttons start with the same arrow and a capital, but
+     *   they step through pads and presets and go nowhere.
+     */
+    private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
+        "ui/TakesBinScreen.kt" to waive(WaiverOwner.PR_3C, "◄ KIT", "◄ KIT"),
+        "ui/PadCaptureScreen.kt" to waive(WaiverOwner.PR_3C, "◄ KIT"),
+        "ui/ArrangeScreen.kt" to waive(WaiverOwner.PR_3C, "◄ GROOVE"),
+        "ui/PadSheetScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT", "◄ KIT"),
+        "ui/StackTakesScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD"),
+        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD") +
+            waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
+        "ui/GrainFieldScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT"),
+        "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
+        "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
+        "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
+        "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
+        "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
+    )
+    private val BACK_LABEL_WAIVER_CEILING = 20
+
+    /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
+    private fun handDrawnBackLabels(code: String): List<String> =
+        Regex(""""(◄ [A-Z](?:[^"\\\n]|\\.)*)"""").findAll(code).map { it.groupValues[1] }.toList()
+
+    /** Why the labels found and the waivers disagree, one line per fault; empty when they match, repeats included. */
+    private fun backLabelProblems(found: Map<String, List<String>>, waivers: Map<String, List<BackLabelWaiver>>): List<String> {
+        val problems = mutableListOf<String>()
+        for (file in (found.keys + waivers.keys).sorted()) {
+            val have = found[file].orEmpty()
+            val allowed = waivers[file].orEmpty().map { it.literal }
+            val unlisted = have.toMutableList().also { rest -> allowed.forEach { rest.remove(it) } }
+            val gone = allowed.toMutableList().also { rest -> have.forEach { rest.remove(it) } }
+            for (literal in unlisted) {
+                problems += "$file draws its own back label \"$literal\". Take the words from Navigation.backChip " +
+                    "(a `backLabel` parameter, as KeysScreen does); if the screen is not a bench yet, waive the literal in " +
+                    "BACK_LABEL_WAIVERS with the PR that moves it."
+            }
+            for (literal in gone) {
+                val owner = waivers[file].orEmpty().first { it.literal == literal }.owner
+                problems += "$file: the waiver for \"$literal\" (${owner.why}) no longer matches a literal in the file. " +
+                    "Delete the entry; the map only shrinks."
+            }
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - no screen draws its own back label, except the ones waived with an owner`() {
+        val ui = appSourcesWithoutComments().filterKeys { it.startsWith("ui/") }
+        assertTrue(ui.size > 20, "found ${ui.size} ui files — the scan is broken, not the tree.")
+        val found = ui.mapValues { (_, code) -> handDrawnBackLabels(code) }.filterValues { it.isNotEmpty() }
+        assertEquals(
+            BACK_LABEL_WAIVER_CEILING,
+            BACK_LABEL_WAIVERS.values.sumOf { it.size },
+            "lower the ceiling in the same change that removes a waiver (BACK_LABEL_WAIVERS only shrinks; a new screen " +
+                "takes its label from the model, not from a waiver, and raising the ceiling is the visible admission that it grew)",
+        )
+        val problems = backLabelProblems(found, BACK_LABEL_WAIVERS)
+        assertTrue(
+            problems.isEmpty(),
+            "the screens and their back labels disagree (the spec's §7.3.1: every hand-written back label is deleted):\n  " +
+                problems.joinToString("\n  "),
+        )
+    }
+
+    @Test
+    fun `law - the back-label law finds a hand-drawn label, and skips comments, steppers and templates`() {
+        val blockOpen = "/" + "*"
+        val blockClose = "*" + "/"
+        val source = listOf(
+            "$blockOpen a KDoc that says \"◄ SHELF\" $blockClose",
+            "// HeaderChip(\"◄ GROOVE\")",
+            "HeaderChip(\"◄ SHELF\", scheme, Modifier.width(72.dp), onClick = onBack)",
+            "HeaderChip(prebuilt?.backLabel ?: \"◄ KIT\", scheme)",
+            "ActionButton(\"◄\", scheme) { }",
+            "ActionButton(\"◄ \${PadBanks.tag(1)}\", scheme) { }",
+            "TapeText(\"PAD ◄\")",
+            "TapeText(\"◀ BEFORE\")",
+            "TapeText(\"◄ a lower-case word\")",
+            "val ch = '\"'",
+            "HeaderChip(\"◄ SHELF\", scheme)",
+        ).joinToString("\n")
+        assertEquals(
+            listOf("◄ SHELF", "◄ KIT", "◄ SHELF"),
+            handDrawnBackLabels(stripComments(source)),
+            "the arrow and a capital in a string is a back label, in code; a comment, a lone arrow, a template, the other arrow and lower case are not",
+        )
+
+        val one = mapOf("ui/XScreen.kt" to listOf("◄ SHELF"))
+        assertEquals(1, backLabelProblems(one, emptyMap()).size, "a literal with no waiver must be reported")
+        assertEquals(
+            1,
+            backLabelProblems(emptyMap(), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3C, "◄ SHELF"))).size,
+            "a waiver whose literal is gone must be reported",
+        )
+        assertEquals(
+            emptyList(),
+            backLabelProblems(one, mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3D, "◄ SHELF"))),
+            "a waived literal is the allowed state",
+        )
+        assertEquals(
+            1,
+            backLabelProblems(mapOf("ui/XScreen.kt" to listOf("◄ KIT", "◄ KIT")), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT"))).size,
+            "two literals against one waiver: the second has no owner",
+        )
+    }
 }

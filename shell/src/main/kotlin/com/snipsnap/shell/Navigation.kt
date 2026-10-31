@@ -98,6 +98,34 @@ class Navigation(start: Location = Location(Place.SHELF)) {
         return location
     }
 
+    /**
+     * Room for [bench] to open over what is showing. False when [bench] is
+     * already open: the benches above it close, so it is on top, and there is
+     * nothing to open. True otherwise, after closing from the top while
+     * [MAX_SCREENS] or more benches that count toward the limit are showing
+     * (SETUP, HELP and MIDI don't count). The caller then opens it.
+     *
+     * For the jobs that open their screen after an await (X-RAY's reading,
+     * the ring or chord kit SNAP builds, SYNTH's hand-off to SURFACE): the
+     * user may be anywhere by the time one lands, and may have opened the
+     * very screen it is about to open. Opening it again would stack a second
+     * copy whose chip names itself and whose first Back looks dead, so this
+     * decides, and the caller keeps its own `open(Bench.X)` call.
+     *
+     * Every close goes through [closeBench], so the history rules hold: what
+     * was opened and closed leaves no trace for Back to find. A loop, not one
+     * close, because a gear bench can sit on top of the two screens (closing
+     * it still leaves two).
+     */
+    fun roomFor(bench: Bench): Boolean {
+        if (bench in location.benches) {
+            while (location.top != bench) closeBench()
+            return false
+        }
+        while (location.benches.count { it !in GEAR_BENCHES } >= MAX_SCREENS) closeBench()
+        return true
+    }
+
     /** A door — the dock's standing offer, or a button that lands somewhere else. */
     fun take(door: Door): Location = goTo(door.target)
 
@@ -173,6 +201,12 @@ class Navigation(start: Location = Location(Place.SHELF)) {
 
     companion object {
         private const val MAX_HISTORY = 64
+
+        /** The spec's two-screen limit (`docs/superpowers/specs/2026-10-27-ui-clarity-design.md` §7.3): at most this many screens stack above a stage. */
+        const val MAX_SCREENS = 2
+
+        /** The gear's three open over whatever is showing, and do not count toward [MAX_SCREENS]. */
+        val GEAR_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI)
     }
 }
 
