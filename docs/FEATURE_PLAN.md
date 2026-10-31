@@ -79,20 +79,45 @@ bounded macro rolls, and two generated kits are hardware-verified.
 | # | Work | Owner | Size | Exit test |
 |---|---|---|---|---|
 | F4.1 | ✓ done: starter-kit registry — `StarterKits` in `:shell`: name → builder → blurb → seed policy, wrapping the main-source builders so the FRESH TAPE menu is data-driven | CORE | S | registry renders every kit through assemble→preflight in a test |
-| F4.2 | **built, device-unverified** — NEW KIT menu: first launch opens the starter list (six starters + BLANK TAPE), a pick renders and lands on the grid, seeded starters reroll by re-tapping. Replaces first-run auto-seeding entirely (`seedIfEmpty` deleted). On `claude/f42-starter-menu`, stacked on M0. | APP | S | first-run user has a playable kit in 30 s, empty grid never shows — **not yet measured**; see the note below |
+| F4.2 | **built, device-checked 2026-08-29** — NEW KIT menu: first launch opens the starter list (six starters + BLANK TAPE), a pick renders and lands on the grid, seeded starters reroll by re-tapping. Replaces first-run auto-seeding entirely (`seedIfEmpty` deleted). On `claude/f42-starter-menu`, stacked on M0. | APP | S | first-run user has a playable kit in 30 s, empty grid never shows — **met**: 457 ms cold launch, under 1 s to a rendered kit; see the note below |
 | F4.3 | SYNTH screen — macro panels over `Patches`, SCRAMBLE, RENDER TO PAD (= the M5 synth half) | APP | M | prototype's Thump Lab behaviour, on device |
 
 Also yields rights-clean Play Store demo content for free.
 
-**F4.2 still owes a device check.** The build is green (690 tests) and the
-naming logic is covered — including the `LUCKY DIP A/B` slash, which is not
-MPC-safe and would otherwise throw on the third menu row. What is unverified
-is everything a test cannot see: how the menu reads on a real screen, and
-whether launch-to-playable-grid actually meets the 30 s exit test. The one
-prior measurement of a starter render (~24 s) was taken on an 8 GB host that
-was swapping and later crashed the emulator, so treat it as an upper bound on
-bad hardware rather than a figure to design against. Re-measure on a real
-phone before calling this row done.
+**F4.2 checked on device (2026-08-29).** Ran on a real phone (1260×2800,
+density 440, Android device `A024`) from a debug build of `704fd55`, using
+`pm clear` before each run for a genuine first-run shelf.
+
+What the device confirmed:
+
+- **The menu reads.** An empty shelf opens the starter list on launch, over
+  `MY KITS · 0 TAPES`, and stays there waiting — reproduced across four
+  clear-and-launch cycles. Nothing auto-seeds; `seedIfEmpty` is gone and the
+  shelf stays bare until something is picked.
+- **A pick renders and lands on the grid.** `CHIP`, `LUCKY DIP`, and
+  `LUCKY DIP A/B` were each rendered and landed on a filled Bank A.
+- **The slash case survives a real filesystem.** `LUCKY DIP A/B` writes as
+  `LUCKY DIP A_B` and opens normally — the third menu row does not throw.
+- **The kit is real, not a shell.** 16 WAVs, `A01`–`A16`, kick/snare/closed
+  hat/open hat in the conventional slots, plus `kit.json`.
+
+The 30 s exit test is met with room to spare. Cold launch is **457 ms**
+(`am start -W`, `LaunchState: COLD`). A scripted cold-launch-to-kit-on-disk
+run measured **2.26 s**, and 1.5 s of that was a deliberate wait before the
+tap — so under a second of actual machine time. **The ~24 s figure was an
+emulator artifact and should not be carried forward**; on real hardware a
+starter render is sub-second, which is the difference between a wait the UI
+must own and a blip. The comment in `MainActivity.renderStarter` still cites
+the 24 s emulator number as its reason for `Dispatchers.Default`; the choice
+is still right, but the number is not.
+
+**Pads sound.** Struck by hand on the device during the same session and
+audible, so `PadPlayer` is wired end to end — starter render → WAV on disk →
+pad hit → output.
+
+Still unverified: the 30 s test with a human's decision time rather than a
+scripted tap, and whether a kit built this way loads on the MPC Live III —
+that last one is W-row work, not F4.2's.
 
 ## F5 — In-key capture
 
