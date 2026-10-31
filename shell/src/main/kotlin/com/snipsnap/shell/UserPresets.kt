@@ -51,6 +51,7 @@ import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
@@ -486,10 +487,10 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch || patch is TrioPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch || patch is TrefoilPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            val constructor = when (patch) { is TrioPatch -> "TrioPatch"; is TrefoilPatch -> "TrefoilPatch"; else -> "LacquerPatch" }
             return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")

@@ -1,0 +1,16 @@
+{
+  "engine": "CAUSTIC",
+  "version": 1,
+  "name": "Short Glint",
+  "voice": "ALLOY",
+  "macros": {
+    "SOURCE": 0.5,
+    "FOCUS": 0.1899999976158142,
+    "BODY": 0.30000001192092896,
+    "LENGTH": 0,
+    "HOLD": 0
+  },
+  "model": 1,
+  "midi": 72,
+  "velocity": 0.699999988079071
+}

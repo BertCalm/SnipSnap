@@ -131,13 +131,26 @@ class NavState(private val model: Navigation = Navigation()) {
     val tape get() = model.tape
     val make get() = model.make
 
-    val backChip: String? get() = model.backChip
+    /** [Navigation.backChip], observed: reading [location] first makes a caller recompose when it moves. */
+    val backChip: String? get() { location; return model.backChip }
     val canGoBack: Boolean get() { location; return model.canGoBack }
 
     fun go(place: Place) = sync { model.go(place) }
     fun stage(stage: Stage) = sync { model.stage(stage) }
     fun open(bench: Bench) = sync { model.open(bench) }
     fun closeBench() = sync { model.closeBench() }
+
+    /**
+     * [Navigation.roomFor]: true when the caller should [open] [bench] now. It
+     * closes benches through the model, so [location] is copied after, whether
+     * or not the answer is to open.
+     */
+    fun roomFor(bench: Bench): Boolean {
+        val open = model.roomFor(bench)
+        location = model.location
+        return open
+    }
+
     fun take(door: Door) = sync { model.take(door) }
     fun goTo(target: Location) = sync { model.goTo(target) }
 

@@ -11,6 +11,17 @@ provides finite attacks, settled holds and held EDGE endpoints; the instrument
 bank expands to 36 programs / 612 roots. New presets await listening, and physical
 Android/MPC playback remains a separate check. See [CONTOUR.md](CONTOUR.md).
 
+**Trefoil model-two playable bank (2026-10-24).** The revised sound direction has
+positive owner feedback. Twelve finite presets, three native velocity layers,
+a sixteen-pad MPC starter and two exported-sample musical studies extend that
+baseline without changing its DSP. Preset, phone-adapter, starter and complete
+saved-recipe registration are implemented. `generateTrefoilPlayableBank` rebuilds
+the kit, MPC 3/MPC 2 programs, browser bank and replay artifacts. The original and
+revised physics/causal auditions remain available. HOLD, PAIR, on-device performance
+and physical MPC acceptance remain later work. Owner feedback on the playable
+bank was positive on 2026-10-26.
+See [TREFOIL.md](TREFOIL.md) for the model and reproduction.
+
 **Ferry first Kotlin port (2026-10-27).** PASSAGE ports the approved Python
 wood-to-wire handoff and nine register/speed references to one passive 22-state
 network. An independent quiet root and full-network fundamental cap preserve
@@ -101,17 +112,30 @@ Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
 
-**Caustic finite instrument (2026-10-23).** The owner selected Alloy and
-heard the fuller tonal body after finding Bloom/Deep indistinguishable. The
-first native ALLOY voice adds SOURCE, FOCUS, BODY and LENGTH with saved ROOT,
-VELOCITY and native model 1; HOLD is reserved. Static coherent paths feed the
-same 24-mode material, with an exact linear response and a bounded geometry
-cache. Native patch/preset/velocity/CLI/phone routing, eight starter positions,
-and a dry sixteen-pad MPC kit develop that heard direction. Six starter
-positions are new listening candidates. The archived 48 recordings, recipes
-and four archives remain unchanged. Deformation, SCATTER, ORBIT, true sustained
-HOLD, additional voices and hardware checks remain later work. See
-[CAUSTIC.md](CAUSTIC.md) for the control contract, verification and limitations.
+**Caustic finite instrument and character expansion (2026-10-28).** The owner
+selected Alloy, heard the fuller tonal body, then chose all three distinct
+character-study gestures for native development. HOLLOW_MALLET, RUBBED_RING
+and TRAVELLING_CATCHES join ALLOY within the same engine. Soft low/odd-mode
+contact, a finite rough pressure swell and four scheduled spatial catches use
+the shared circular source/pickup geometry. SOURCE, FOCUS, BODY and LENGTH
+retain saved ROOT and VELOCITY; BODY changes voice-specific contact/pressure
+or metal fullness, LENGTH scales the .5–8-second gesture, and HOLD is reserved.
+Hollow and rubbed use BODY=.5 reference positions; catches use BODY=0 and sum
+four raw responses before one output stage. Native ALLOY model 1 and archived
+models 1–4 retain their interpretation. The study recordings have been heard;
+the native ports and their new control positions still need listening. Current
+validation is recorded separately from the earlier twenty-clip ALLOY pack.
+The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+provides 42 clips and six downloads. Native patch/WAV hashes, all six ZIP CRCs,
+32 MPC pad readbacks and browser checks from 320 to 1440 pixels pass. The
+sixteen compiled character checks pass at published render source `8f988463`;
+they also pass on CI-matched Temurin 17 with all 78 cross-runtime stage hashes
+unchanged. Merged `04071091` completes all nine JVM `testClasses` tasks and
+both Android APK builds on JDK 17. The full gate passes at `d17359db` with
+7,001 results, zero failures/errors/skips; its final run repeats all 421 loop
+tests and reuses the eight unchanged modules' successful Gradle results.
+Deformation, SCATTER, ORBIT, sustained HOLD and hardware checks remain later
+work. See [CAUSTIC.md](CAUSTIC.md) for the control contract and evidence ledger.
 
 ## Why this is cheaper than it sounds
 

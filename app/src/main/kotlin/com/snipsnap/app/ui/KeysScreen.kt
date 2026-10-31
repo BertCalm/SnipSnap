@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.disabled
 import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -46,8 +47,10 @@ import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.MidiWire
-import com.snipsnap.shell.Bench
+import com.snipsnap.shell.Busy
+import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KeysLayout
+import com.snipsnap.shell.KeysMidi
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.MidiKeys
@@ -71,6 +74,10 @@ import kotlinx.coroutines.withContext
  * pedal, the panics) are tested there. The grid and the keyboard are two
  * hands on one instrument, so a keyboard note and a grid note share the
  * eight voices and steal from each other's oldest.
+ *
+ * LEARN opens MIDI learn: a knob on the player's volume and keys or pads
+ * on OCT − and OCT +, through `:shell`'s `KeysMidi`, kept beside the other
+ * screens' bindings.
  */
 private val GRID_ROWS = WINDOW_GRID_ROWS
 
@@ -78,6 +85,7 @@ private val GRID_ROWS = WINDOW_GRID_ROWS
 fun KeysScreen(
     sidecar: File,
     instrument: InstrumentStore.Instrument,
+    backLabel: String,
     onBack: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -87,8 +95,18 @@ fun KeysScreen(
     // a key plays nothing, never a stale instrument.
     val player = remember(sidecar, instrument) { InstrumentPlayer(context) }
     DisposableEffect(player) { onDispose { player.close() } }
+    // True from the player's birth until its zones have been read. Keyed on
+    // the player, so a superseded open's `finally` lowers the flag of the
+    // player it was opening and never the new one's.
+    var opening by remember(player) { mutableStateOf(true) }
+    // The screen's one report to the dock (the sink is a single slot).
+    ReportBusy(remember(opening) { if (opening) Busy(Copy.KEYS_LOADING_BUSY) else null })
     LaunchedEffect(player) {
-        withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
+        try {
+            withContext(Dispatchers.IO) { player.open(sidecar, instrument) }
+        } finally {
+            opening = false
+        }
     }
 
     var layout by remember(sidecar) { mutableStateOf(KeysLayout.DEFAULT_LAYOUT) }
@@ -117,17 +135,45 @@ fun KeysScreen(
     // otherwise restart the stream ON_STOP had just silenced.
     var midiDevices by remember(player) { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     var midiSupported by remember(player) { mutableStateOf(false) }
+
+    // MIDI learn (the LEARN panel): a knob on the player's volume, keys or
+    // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
+    // MidiLearn; a control learned here is consumed, so it no longer plays
+    // a note, and anything not learned reaches MidiKeys as before.
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, KeysMidi::prefer)
+    val learn = learnState.learn
+    var showLearn by remember { mutableStateOf(false) }
+    LaunchedEffect(showLearn) { learnState.showing = showLearn }
+    // Not saved: each visit starts with the instrument as it was made.
+    var volume by remember(player) { mutableStateOf(1f) }
+    LaunchedEffect(player, volume) { player.setVolume(KeysMidi.gain(volume)) }
+
+    fun stepOctave(step: Int) {
+        val next = KeysMidi.octave(octave, step)
+        if (next == octave) return
+        silence()
+        octave = next
+    }
+
     val midi = remember(player) { MidiInput(context) }
     val midiListener = remember(player) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = midiKeys.handle(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {
+                learnState.heard(event)
+                val result = learn.handle(event, device?.fingerprint?.key) { if (it == KeysMidi.VOLUME) volume else null }
+                learnState.learned(result.learned, KeysMidi::settle)
+                val change = KeysMidi.changes(result.actions)
+                change.volume?.let { volume = it }
+                if (change.octaveStep != 0) stepOctave(change.octaveStep)
+                if (!result.consumed) midiKeys.handle(event)
+            }
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
             override fun onDeviceRemoved() = midiKeys.allOff()
         }
     }
 
-    // ◄ MAKE's own path (the chip reads `Bench.KEYS.backChip`) — shared by the chip and system Back so both
+    // The back chip's own path (it reads [backLabel], the model's `Navigation.backChip`) — shared by the chip and system Back so both
     // silence the instrument before leaving.
     fun requestBack() {
         silence()
@@ -186,13 +232,27 @@ fun KeysScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             TapeText(instrument.name.uppercase(java.util.Locale.ROOT), TapeType.lcdHeader, scheme.lcdInk.tape, Modifier.weight(1f, fill = false))
-            TapeText("ROOT ${KeysLayout.label(root)}  OCT ${if (octave >= 0) "+" else ""}$octave", TapeType.lcdSmall, scheme.amber.tape)
+            TapeText(
+                "ROOT ${KeysLayout.label(root)}  OCT ${if (octave >= 0) "+" else ""}$octave" + if (volume < 1f) "  ${KeysMidi.label(volume)}" else "",
+                TapeType.lcdSmall,
+                scheme.amber.tape,
+            )
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton(Bench.KEYS.backChip, scheme, enabled = true, onClick = ::requestBack)
-            ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { silence(); octave-- })
-            ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { silence(); octave++ })
+            ActionButton(backLabel, scheme, enabled = true, onClick = ::requestBack)
+            ActionButton("OCT −", scheme, enabled = octave > KeysLayout.OCTAVE_MIN, modifier = Modifier.weight(1f), onClick = { stepOctave(-1) })
+            ActionButton("OCT +", scheme, enabled = octave < KeysLayout.OCTAVE_MAX, modifier = Modifier.weight(1f), onClick = { stepOctave(+1) })
+            // Only where a keyboard could be heard at all, like the line under the grid.
+            if (midiSupported) {
+                ActionButton(
+                    "LEARN",
+                    scheme,
+                    enabled = true,
+                    dimmed = !showLearn,
+                    modifier = Modifier.semantics { selected = showLearn },
+                ) { showLearn = !showLearn }
+            }
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -230,6 +290,16 @@ fun KeysScreen(
                     }
                 }
             }
+        }
+
+        if (midiSupported && showLearn) {
+            MidiLearnPanel(
+                learnState,
+                KeysMidi.TARGETS,
+                supported = true,
+                connected = midiDevices.isNotEmpty(),
+                hint = "${KeysMidi.label(volume)} · A LEARNED KEY PLAYS NO NOTE",
+            )
         }
 
         // The keyboard line, PLAY's own hint row's shape: what is plugged

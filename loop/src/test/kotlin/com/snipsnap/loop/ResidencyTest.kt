@@ -5,7 +5,9 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -275,14 +277,18 @@ class ResidencyTest {
         // to prevent. Moving the call to a background dispatcher looked like
         // a fix and was not: it moved the enqueue, not the wait.
         val s = session(1, 1, 1, 1, 1, 1)
-        val source = CountingSource(s.intervalFrames)
+        val faster = s.copy(bpm = 100f)
+        // This tests waiting, not transient analysis during tempo fitting.
+        // Already-fitting source audio keeps bake cost out of warm's bounded
+        // deadline; the real two-thread queue and 40ms delay below still make
+        // returning after submission fail the count and cold-cache assertions.
+        val source = CountingSource(faster.intervalFrames)
         val pool = Executors.newFixedThreadPool(2)
         // Every bake made slow enough that a warm which does not wait is
         // certain to return first, rather than racing the assertion.
         val slow = Executor { task -> pool.execute { Thread.sleep(40); task.run() } }
         try {
             val r = Residency(s, source, slow)
-            val faster = s.copy(bpm = 100f)
             assertTrue(faster.intervalFrames != s.intervalFrames, "a tempo change has to resize the interval")
 
             r.warm(faster, 1)
@@ -444,15 +450,34 @@ class ResidencyTest {
      * A drone renderer that blocks until the test lets it go, standing in for
      * the seconds a real drone takes (the drone spec's probe finding 3).
      */
-    private class SlowDroneSource(private val frames: Int) : SampleSource {
+    private class SlowDroneSource(
+        private val frames: Int,
+        private val forbiddenCallerThread: Thread? = null,
+    ) : SampleSource {
         val release = CountDownLatch(1)
+        val droneEntered = CountDownLatch(1)
+        val droneFinished = CountDownLatch(1)
+        val executionThread = AtomicReference<Thread?>(null)
+        val invokedOnCaller = AtomicBoolean(false)
         val droneCalls = AtomicInteger(0)
         override fun loop(sampleFile: String): Snip = Snip(FloatArray(frames * 2) { 0.5f }, 2, 48_000)
         override fun pad(kit: String, slot: Int): Snip? = null
         override fun drone(recipe: com.snipsnap.json.JsonValue, rootMidi: Int, frames: Long, sampleRate: Int, cancelled: () -> Boolean): Snip {
+            val thread = Thread.currentThread()
+            executionThread.set(thread)
+            val onCaller = thread === forbiddenCallerThread
+            if (onCaller) invokedOnCaller.set(true)
             droneCalls.incrementAndGet()
-            release.await(10, TimeUnit.SECONDS)
-            return Snip(FloatArray(frames.toInt()) { 0.25f }, 1, sampleRate)
+            droneEntered.countDown()
+            try {
+                // Fail immediately on an inline render, and keep the observed
+                // thread/flag so a renderer exception cannot hide that call.
+                if (onCaller) throw AssertionError("drone renderer ran on the buffersFor caller thread")
+                release.await(10, TimeUnit.SECONDS)
+                return Snip(FloatArray(frames.toInt()) { 0.25f }, 1, sampleRate)
+            } finally {
+                droneFinished.countDown()
+            }
         }
     }
 
@@ -467,14 +492,20 @@ class ResidencyTest {
     @Test
     fun `a drone that isn't ready is silence on its own track, never a bake on the caller`() {
         val s = withDrone()
-        val src = SlowDroneSource(s.intervalFrames)
+        val caller = Thread.currentThread()
+        val src = SlowDroneSource(s.intervalFrames, forbiddenCallerThread = caller)
         val pool = Executors.newFixedThreadPool(2)
         try {
             val r = Residency(s, src, pool)
-            val t0 = System.nanoTime()
             val buffers = r.buffersFor(0)
-            val ms = (System.nanoTime() - t0) / 1_000_000
-            assertTrue(ms < 50, "buffersFor waited ${ms}ms for a drone")
+            // The five ordinary tracks may bake on this caller. Prove the
+            // drone handoff directly: it has started elsewhere and remains
+            // blocked after buffersFor returned, independent of CPU load.
+            assertTrue(src.droneEntered.await(10, TimeUnit.SECONDS), "the background drone renderer never started")
+            assertTrue(!src.invokedOnCaller.get(), "drone renderer ran on the buffersFor caller thread")
+            assertTrue(src.executionThread.get() !== caller, "drone renderer ran on the buffersFor caller thread")
+            assertEquals(1L, src.release.count, "buffersFor opened the drone release gate")
+            assertEquals(1L, src.droneFinished.count, "buffersFor waited for the blocked drone to finish")
             assertTrue(buffers[0].samples.all { it == 0f }, "the drone's track should be silent while it renders")
             assertEquals(s.intervalFrames, buffers[0].frameCount)
             for (i in 1 until 6) assertEquals(0.5f, buffers[i].samples[0], "track $i should play on")

@@ -11,7 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +34,9 @@ import com.snipsnap.shell.Scheme
 
 /**
  * X-RAY: "what's inside this file," read-only. Reached from the shelf's
- * own X-RAY ▸ INSPECT A FILE button, a shelf-level overlay — same shape
- * as SNIPS/DELETED KITS — never a MenuRow tab.
+ * own X-RAY ▸ INSPECT A FILE button, a bench (`Bench.XRAY`) that opens over
+ * wherever the user is when the reading lands — never a MenuRow tab. Its back
+ * chip reads [backLabel].
  *
  * Renders whatever [MpcXRay.read] came back with, however partial: a
  * refusal ([MpcXRay.Reading.unreadable]) reads plainly, an empty slot
@@ -46,7 +47,13 @@ import com.snipsnap.shell.Scheme
  * own bytes say it is, and no control on this screen can change that.
  */
 @Composable
-fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
+fun XRayScreen(
+    fileName: String,
+    reading: MpcXRay.Reading,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
+    onBack: () -> Unit,
+) {
     val scheme = LocalScheme.current
     BackHandler { onBack() }
 
@@ -59,7 +66,7 @@ fun XRayScreen(fileName: String, reading: MpcXRay.Reading, onBack: () -> Unit) {
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("X-RAY", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(fileName.uppercase(), TapeType.pixelSmall, scheme.lcdInk2, maxLines = 1)

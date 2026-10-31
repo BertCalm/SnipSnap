@@ -52,7 +52,7 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
 /**
  * DELETED SNIPS, a section of the BIN bench (`BinScreen.kt`) — it used to be a
  * screen of its own (`DeletedSnipsScreen`, reached from SNIPS) and is now the
- * lower of the bench's two lists. The bench owns the header row, the ◄ SHELF
+ * lower of the bench's two lists. The bench owns the header row, the back
  * chip and Back; this section draws one heading line and the list under it,
  * nothing more.
  *

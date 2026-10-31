@@ -57,6 +57,7 @@ import com.snipsnap.app.theme.rememberDeskBrush
 import com.snipsnap.app.theme.rememberReduceMotion
 import com.snipsnap.app.theme.tape
 import com.snipsnap.app.theme.windowFrame
+import com.snipsnap.app.ui.AppJobs
 import com.snipsnap.app.ui.AppScreen
 import com.snipsnap.app.ui.ArrangeScreen
 import com.snipsnap.app.ui.BenchNoteDialog
@@ -78,6 +79,7 @@ import com.snipsnap.app.ui.KitScreen
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.KitsScreen
 import com.snipsnap.app.ui.LocalBusySink
+import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
 import com.snipsnap.app.ui.MessageBox
@@ -213,7 +215,10 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * from `Navigation.backChip`. The tab-era screens never needed a chip —
  * a tab is left by another tab — and SETUP and HELP were tabs. The list
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
- * three labs gain `◄ MAKE` with the MAKE step, the gear's three stay here.
+ * three labs gain a chip of their own with the MAKE step, the gear's three
+ * stay here. A screen that draws its own chip is handed the words by
+ * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
+ * SPLIT), so they come from the model either way.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
@@ -283,7 +288,7 @@ private class CatchSession {
     val landed = LinkedHashSet<Int>()
 }
 
-/** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
+/** X-RAY's argument: the picked file's display name and what [MpcXRay.read] made of it. Whether the screen is open is the navigation model's (`Bench.XRAY`), not this value's; with no reading, X-RAY has nothing to show and closes. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
@@ -398,7 +403,10 @@ fun App(shelf: KitShelf) {
      * shape — `docs/SCREEN_PLAN_2026_10.md` §2's table, as code. A tab-era
      * screen is a place with a stage, or a bench on one. The gear's three
      * (SETUP, HELP, MIDI) and KEYS open as a bench over wherever you are, so Back
-     * returns there; the rest land somewhere definite.
+     * returns there; the rest land somewhere definite. A bench that opens over
+     * where you are but is not named here (ORBIT, SURFACE, the MAKE labs, X-RAY)
+     * has no [AppScreen]: it is opened by `nav.open(Bench.X)`, and a landing on
+     * a fixed place would be a place the user never visited.
      *
      * Exhaustive on purpose: a new [AppScreen] without a landing here does
      * not compile, which is the same guard the enum's own KDoc describes.
@@ -410,11 +418,7 @@ fun App(shelf: KitShelf) {
         AppScreen.KIT -> Location(Place.PROJECT, Stage.PADS)
         AppScreen.GROOVE -> Location(Place.PROJECT, Stage.BEAT)
         AppScreen.EXPORT -> Location(Place.PROJECT, Stage.OUT)
-        AppScreen.ORBIT -> Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT))
         AppScreen.SPLIT -> Location(Place.PROJECT, Stage.PADS, listOf(Bench.SPLIT))
-        AppScreen.SYNTH -> Location(Place.MAKE, benches = listOf(Bench.SYNTH))
-        AppScreen.SNAP -> Location(Place.MAKE, benches = listOf(Bench.SNAP))
-        AppScreen.SURFACE -> Location(Place.MAKE, benches = listOf(Bench.SURFACE))
         AppScreen.KEYS -> nav.location.copy(benches = nav.location.benches + Bench.KEYS)
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
@@ -461,15 +465,21 @@ fun App(shelf: KitShelf) {
         dock.offer(message, Door(label, locationOf(target)))
     }
     var busy by remember { mutableStateOf<Busy?>(null) }
-    // The job a screen is carrying on its own (the pad editor's jobs, Split,
-    // and a recording being read in TAPE and CHOP), reported through
-    // `LocalBusySink` and gone when the screen is: an `appScope` job that
-    // outlives its screen is not shown after it goes (a later app-owned job
-    // board covers that). It is kept apart from `busy` on purpose: `busy` is
-    // App's own job and gates App's own work (`if (busy != null) return`), and
-    // a screen's job must not lock App's actions out. The dock shows App's
-    // first.
+    // The job a screen is carrying on its own (Split, and a recording being
+    // read in TAPE and CHOP), reported through `LocalBusySink` and gone when
+    // the screen is. Work that outlives its screen is not reported here: the
+    // pad editor, whose writes run on `appScope`, begins its jobs on the job
+    // board (`jobs`, below, found by the screens as `LocalJobs`), which the
+    // app owns and which keeps an entry until its job ends. This is kept
+    // apart from `busy` on purpose: `busy` is App's own job and gates App's
+    // own work (`if (busy != null) return`), and a screen's job must not lock
+    // App's actions out. The dock shows App's first, then the board's, then
+    // this.
     var screenBusy by remember { mutableStateOf<Busy?>(null) }
+    // The jobs the app owns that outlive the screen that began them, provided
+    // to every screen as `LocalJobs`. Like `screenBusy` it never gates App's
+    // own work; unlike it, an entry stays until its owner ends it.
+    val jobs = remember { AppJobs() }
     // Remembered, so the sink the screens read is one object for the life of
     // the composition: a static local that changed would recompose all of it.
     val busySink = remember { { reported: Busy? -> screenBusy = reported } }
@@ -506,13 +516,12 @@ fun App(shelf: KitShelf) {
     var roomsRevision by remember { mutableStateOf(0) }
     // BIN (the plan's §3.1, over the bin-restore plan's DELETED KITS): the
     // shelf's own gate for the `BIN ▸` row — how many kits and snips the two
-    // bins hold right now. `binOpen` is in this effect's key list, not just
-    // `kits`/`onShelf`/`roomsRevision`: EMPTY THE BIN NOW changes nothing
-    // else this effect already watches, so without that key, emptying a bin
-    // and returning to the shelf would leave a stale count (and the row
-    // itself) showing after the door behind it is empty.
+    // bins hold right now. BIN being on top (`binOnTop`, below) is in this
+    // effect's key list, not just `kits`/`onShelf`/`roomsRevision`: EMPTY THE
+    // BIN NOW changes nothing else this effect already watches, so without
+    // that key, emptying a bin and returning to the shelf would leave a stale
+    // count (and the row itself) showing after the door behind it is empty.
     var binnedCount by remember { mutableStateOf(0) }
-    var binOpen by remember { mutableStateOf(false) }
     // The projects on the shelf (`docs/DIRECTION_2026_10.md` §2): the
     // library's project list, read with the rest of the shelf, and the one
     // that is open. `ShelfModel` is the project half of the shelf beside
@@ -521,8 +530,10 @@ fun App(shelf: KitShelf) {
     var projects by remember { mutableStateOf<List<ShelfModel.ProjectRow>>(emptyList()) }
     var project by remember { mutableStateOf<Project?>(null) }
     // Keyed on the place, not the whole location: a bench opening over the
-    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf.
+    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf. The
+    // one exception is BIN, whose leaving is the edge that re-counts the bins.
     val onShelf = location.place == Place.SHELF
+    val binOnTop = location.top == Bench.BIN
     // The instruments are MAKE's list now (plan §3.6), read when MAKE is the
     // place and re-read when a lab writes one (`roomsRevision` bumps on
     // every shelf asset a lab writes).
@@ -530,7 +541,7 @@ fun App(shelf: KitShelf) {
     LaunchedEffect(onMake, roomsRevision) {
         if (onMake) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
     }
-    LaunchedEffect(kits, onShelf, roomsRevision, binOpen) {
+    LaunchedEffect(kits, onShelf, roomsRevision, binOnTop) {
         if (onShelf) {
             // Opening the shelf adopts every unheld kit into a project of
             // its own name (`ProjectMigration.adopt`, idempotent) — the one
@@ -718,22 +729,26 @@ fun App(shelf: KitShelf) {
     // bench under BEAT now, and its session lives in this one folder. Held
     // here because SNIPS' own → LOOP and SYNTH's drone send both fill it.
     val loopDir = remember(context) { LoopWrites.dir(context) }
-    // X-RAY: same shelf-level shape as snipsOpen above, reached from
-    // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
-    // it could belong to even in principle (the file picked is never
-    // landed anywhere), so it carries its own reading rather than a bare
-    // boolean.
+    // X-RAY, BIN and DOUBLES are benches (`Bench.XRAY`, `Bench.BIN`,
+    // `Bench.DOUBLES`), opened with `nav.open` like SNIPS, so there is no
+    // boolean for them here. BIN and DOUBLES take nothing: BIN lists what the
+    // two bins hold and DOUBLES measures the shelf itself on mount. X-RAY is
+    // the one with an argument — reached from KitsScreen's own X-RAY ▸ INSPECT
+    // A FILE row, but there's no kit it could belong to even in principle (the
+    // file picked is never landed anywhere), so it carries its own reading,
+    // and this var holds just that. It is deliberately not cleared when the
+    // place changes (`clearTransientState`): Back can restore the shelf with
+    // X-RAY on top, and the screen needs its reading then.
+    //
+    // One slot: it keeps the latest reading only. The history can hold more
+    // than one X-RAY entry (read file A, go to TAPE, read file B), and every
+    // one of them shows the latest file when Back restores it, not the file
+    // that entry was opened for. That is accepted: X-RAY is a one-off look at
+    // a file, not a document to come back to. The null guard where X-RAY is
+    // drawn covers a missing reading: X-RAY opens only after a reading lands,
+    // so none is expected, but a bench with nothing to show closes instead of
+    // drawing a blank screen.
     var xray by remember { mutableStateOf<XRayView?>(null) }
-    // DOUBLES: shelf-level too, same shape as X-RAY — reachable from
-    // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
-    // measures the shelf itself on mount.
-    var doublesOpen by remember { mutableStateOf(false) }
-    // BIN (plan §3.1, over Task 2 of the bin-restore plan): same shape as
-    // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
-    // from `KitsScreen`'s own `BIN ▸` row and from SNIPS' own door.
-    // `binOpen` itself is declared earlier in this function (with
-    // `binnedCount`, above) since the shelf's refresh effect needs it as
-    // a key; this comment marks where `snipsOpen`'s own sibling lives.
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
     // ever reached from the shelf, where no kit is open by definition, so
@@ -1419,7 +1434,11 @@ fun App(shelf: KitShelf) {
                 orbitSelected = merged.orbits.size - 1
                 busy = null
                 dock.say(Copy.pathRingMade(ring.name))
-                landOn(AppScreen.ORBIT)
+                // ORBIT opens over SNAP, or wherever the user is by now, not
+                // at a BEAT they never visited: Back and ORBIT's chip return
+                // to where they were. Not opened twice if the user got to ORBIT
+                // while the ring built (roomFor says so).
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (ex: Exception) {
                 busy = null
                 Log.e(TAG, "buildPathRing: failed", ex)
@@ -1481,7 +1500,9 @@ fun App(shelf: KitShelf) {
                 busy = null
                 dock.say(Copy.chordKitMade(newEntry.kit.name, ring.name))
                 open = newEntry
-                landOn(AppScreen.ORBIT)
+                // Over SNAP, as PATH's ring does above; ORBIT draws the kit
+                // `open` now points at, which is the one just built.
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (e: Exception) {
                 busy = null
                 Log.e(TAG, "buildChordKit: failed", e)
@@ -1537,24 +1558,33 @@ fun App(shelf: KitShelf) {
     fun setKey(key: com.snipsnap.audio.KeySpec?) {
         val source = open ?: return
         if (busy != null) return
+        // On the job board, not on `busy`: the dock says SETTING THE KEY… if
+        // the write is slow (it shows only after the latch's 200 ms), while
+        // every other control stays live, as it always was for this write.
+        // Begun here, before the launch, and ended in the launch's `finally`.
+        val job = jobs.begin(Busy(Copy.KEY_BUSY))
         scope.launch {
-            val entry = try {
-                // KitShelf.setKey is its own open→mutate→save on this kit's
-                // kit.json — the same file PAD SHEET/PAD CAPTURE/SYNTH/TAKES+BIN
-                // write, so it goes through the same KitWrites lock they do.
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
-            } catch (e: Exception) {
-                Log.e(TAG, "setKey: failed", e)
-                dock.say(Copy.KEY_FAILED)
-                return@launch
+            try {
+                val entry = try {
+                    // KitShelf.setKey is its own open→mutate→save on this kit's
+                    // kit.json — the same file PAD SHEET/PAD CAPTURE/SYNTH/TAKES+BIN
+                    // write, so it goes through the same KitWrites lock they do.
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.setKey(source, key) } }
+                } catch (e: Exception) {
+                    Log.e(TAG, "setKey: failed", e)
+                    dock.say(Copy.KEY_FAILED)
+                    return@launch
+                }
+                // Same identity guard as the KIT branch's onKitUpdated closures
+                // above: this write ran against `source.dir`, not necessarily
+                // whichever kit is open by the time it lands (setKey sets no
+                // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                dock.say(key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF)
+            } finally {
+                job.end()
             }
-            // Same identity guard as the KIT branch's onKitUpdated closures
-            // above: this write ran against `source.dir`, not necessarily
-            // whichever kit is open by the time it lands (setKey sets no
-            // `busy`, so nothing here stops a tab-away-and-reopen mid-write).
-            if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            dock.say(key?.let { Copy.keySet(com.snipsnap.shell.KeyPicker.label(it)) } ?: Copy.KEY_OFF)
         }
     }
 
@@ -1854,6 +1884,11 @@ fun App(shelf: KitShelf) {
                     }
                 }
                 xray = XRayView(name, reading)
+                // The reading lands whenever the file finishes, so X-RAY opens
+                // over wherever the user is by now, not over the shelf they
+                // asked from. A second reading landing while X-RAY shows is
+                // not a second screen: `xray` above is what the one shows.
+                if (nav.roomFor(Bench.XRAY)) nav.open(Bench.XRAY)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2791,21 +2826,29 @@ fun App(shelf: KitShelf) {
             dock.say(Copy.IN_KEY_NEEDS_KEY)
             return
         }
+        // On the job board, like setKey above: it reads and retunes every
+        // tonal pad of the kit, which is the longer of the two, so the line
+        // matters here.
+        val job = jobs.begin(Busy(Copy.IN_KEY_BUSY))
         scope.launch {
-            val (entry, moved) = try {
-                // Same reasoning as setKey above: inKey is an
-                // open→mutate→save on kit.json.
-                withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
-            } catch (e: Exception) {
-                Log.e(TAG, "inKey: failed", e)
-                dock.say(Copy.IN_KEY_FAILED)
-                return@launch
+            try {
+                val (entry, moved) = try {
+                    // Same reasoning as setKey above: inKey is an
+                    // open→mutate→save on kit.json.
+                    withContext(Dispatchers.IO) { KitWrites.mutex.withLock { shelf.inKey(source) } }
+                } catch (e: Exception) {
+                    Log.e(TAG, "inKey: failed", e)
+                    dock.say(Copy.IN_KEY_FAILED)
+                    return@launch
+                }
+                // Same identity guard as setKey above — inKey sets no `busy`
+                // either, so nothing stops a tab-away-and-reopen mid-write.
+                if (open?.dir == source.dir) open = entry
+                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                dock.say(if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key)))
+            } finally {
+                job.end()
             }
-            // Same identity guard as setKey above — inKey sets no `busy`
-            // either, so nothing stops a tab-away-and-reopen mid-write.
-            if (open?.dir == source.dir) open = entry
-            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-            dock.say(if (moved.isEmpty()) Copy.IN_KEY_NONE else Copy.inKey(moved.size, com.snipsnap.shell.KeyPicker.label(key)))
         }
     }
 
@@ -2858,15 +2901,12 @@ fun App(shelf: KitShelf) {
         // some later visit to some other kit.
         kitBankRequest = null
         tapeOpenOverride = null
-        // DELETED KITS is shelf-level too — same reasoning
-        // as SNIPS above: a tab switch away from KITS must
-        // not leave this overlay armed to reopen on top of
-        // whatever tab comes back into view later.
-        binOpen = false
-        // X-RAY is shelf-level too, same reasoning again.
-        xray = null
-        // DOUBLES likewise.
-        doublesOpen = false
+        // Not here: BIN, DOUBLES and X-RAY. They are benches, and a bench
+        // closes by itself when the place or stage changes (`Navigation.go`
+        // and `stage` land with no benches), so there is nothing left armed to
+        // reopen later. X-RAY's reading (`xray`) is kept on purpose: Back from
+        // the next place pops to the shelf with X-RAY on top, and clearing it
+        // here would leave that screen with nothing to show.
     }
 
     /** The user leaving for [target]: the landing, and everything transient abandoned. */
@@ -2904,6 +2944,7 @@ fun App(shelf: KitShelf) {
      * opens with no kit, which PADS already says.
      */
     fun openProject(p: Project) {
+        if (busy != null) return
         project = p
         open = kits.firstOrNull { it.dir.name == p.activeKit }
         goToScreen(AppScreen.KIT)
@@ -2917,6 +2958,12 @@ fun App(shelf: KitShelf) {
      * says: the row the user chose is the kit they want on the grid.
      */
     fun openKit(entry: KitShelf.Entry) {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap in the beat before
+        // the coroutine starts finds it up and does nothing: `projectForKit`
+        // is not synchronised, so two taps on a kit no project holds could
+        // make two projects.
+        busy = Busy(Copy.OPENING_KIT_BUSY)
         scope.launch {
             val p = try {
                 withContext(Dispatchers.IO) { shelfModel.projectForKit(entry.dir.name).activated(entry.dir.name) }
@@ -2926,6 +2973,12 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "openKit: no project for ${entry.dir.name}", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // The landing below sets state directly and calls no guarded
+                // handler, so nothing needs the flag down first; it comes down
+                // here, in the same place as `newProject`'s, so a failure or a
+                // cancel cannot leave it up.
+                busy = null
             }
             // Re-read after the await: the shelf may have moved under us.
             project = p
@@ -2952,7 +3005,11 @@ fun App(shelf: KitShelf) {
      * it. A failure says so and leaves the grid where it was.
      */
     fun activateKit(kitFolder: String) {
+        if (busy != null) return
         val p = project ?: return
+        // After the `project ?: return` above, so a refused call cannot leave
+        // the flag up; before the launch, so a second tap finds it.
+        busy = Busy(Copy.SWITCHING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) { shelfModel.activate(p.name, kitFolder) }
@@ -2962,6 +3019,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "activateKit: failed", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             val activated = kits.firstOrNull { it.dir.name == kitFolder }
@@ -2980,6 +3041,9 @@ fun App(shelf: KitShelf) {
      * project and every project sees the edit (`DIRECTION_2026_10.md` §2).
      */
     fun addKitToProject(target: Project, entry: KitShelf.Entry) {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap finds it up.
+        busy = Busy(Copy.ADDING_KIT_BUSY)
         scope.launch {
             val updated = try {
                 withContext(Dispatchers.IO) {
@@ -2992,6 +3056,10 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "addKitToProject: failed", e)
                 dock.say(Copy.KIT_ADD_FAILED)
                 return@launch
+            } finally {
+                // Nothing below calls a guarded handler. Down here, as in
+                // `newProject`, so a failure or a cancel cannot leave it up.
+                busy = null
             }
             project = updated
             open = kits.firstOrNull { it.dir == entry.dir } ?: entry
@@ -3004,6 +3072,11 @@ fun App(shelf: KitShelf) {
      * Its name is a roll ([Names.roll]) against the projects already on the shelf, not "New Project 2".
      */
     fun newProject() {
+        if (busy != null) return
+        // Raised here, before the launch, so a second tap in the beat before
+        // the coroutine starts finds it up and does nothing: two quick taps
+        // could make two projects.
+        busy = Busy(Copy.NEW_PROJECT_BUSY)
         scope.launch {
             val p = try {
                 withContext(Dispatchers.IO) {
@@ -3015,6 +3088,11 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "newProject: failed", e)
                 dock.say(Copy.PROJECT_OPEN_FAILED)
                 return@launch
+            } finally {
+                // Down before the landing below, not after it: `openProject`
+                // opens with `if (busy != null) return`, and would refuse the
+                // project this job just made.
+                busy = null
             }
             openProject(p)
         }
@@ -3219,7 +3297,7 @@ fun App(shelf: KitShelf) {
     // dispatcher is LIFO and those are registered deeper/later), Back pops
     // `Navigation`'s stack — a bench, then a stage, then a place, the order
     // they were pushed (J11). One exclusion remains, for the screen that
-    // owns its own one-level back door: KEYS (its own "◄ SHELF" chip, via
+    // owns its own one-level back door: KEYS (its own back chip, via
     // `onBack`, which also silences the instrument before leaving — this
     // generic pop does not). SPLIT used to be excluded too, which left Back
     // on it to finish the Activity; as a bench it pops like any other.
@@ -3232,7 +3310,6 @@ fun App(shelf: KitShelf) {
         Stage.PADS -> padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
             padCaptureSlot != null
         Stage.BEAT -> arrangeOpen
-        null -> location.place == Place.SHELF && (binOpen || doublesOpen || xray != null)
         else -> false
     }
     val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen || captureSheetOpen || kitSheetOpen
@@ -3263,7 +3340,13 @@ fun App(shelf: KitShelf) {
         if (to.place != from.place || to.stage != from.stage) clearTransientState()
     }
 
-    TapeTheme(scheme, LocalHaptics provides haptics, LocalReduceMotion provides reduceMotion, LocalBusySink provides busySink) {
+    TapeTheme(
+        scheme,
+        LocalHaptics provides haptics,
+        LocalReduceMotion provides reduceMotion,
+        LocalBusySink provides busySink,
+        LocalJobs provides jobs,
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -3296,11 +3379,14 @@ fun App(shelf: KitShelf) {
                 }
                 // A bench that has no back chip of its own gets the frame's,
                 // reading what the model says it returns to. The screens
-                // that draw their own (KEYS, SPLIT, ORBIT, the pad benches)
-                // keep theirs until their own step of the plan rewords them.
+                // that draw their own chip (KEYS, SPLIT, ORBIT, BIN and the
+                // rest) are handed the same words as `backLabel`; the pad
+                // benches keep a hand-drawn one until their own step of the
+                // plan.
                 val top = location.top
-                if (top != null && top in FRAME_CHIP_BENCHES) {
-                    DoorChip(nav.backChip ?: top.backChip, onClick = { nav.closeBench() })
+                val backChip = nav.backChip
+                if (top != null && top in FRAME_CHIP_BENCHES && backChip != null) {
+                    DoorChip(backChip, onClick = { nav.closeBench() })
                 }
                 Box(Modifier.weight(1f)) {
                     // Captured once, like `open`'s own `sheetEntry`/`songEntry`
@@ -3324,13 +3410,12 @@ fun App(shelf: KitShelf) {
                         top == Bench.SNIPS -> SnipsScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "SNIPS is a bench, so it has something to go back to" },
                             onBack = { pendingSnipTarget = null; nav.closeBench() },
-                            onBin = {
-                                // BIN is the shelf's: land there first, then
-                                // open it (the landing clears the overlays).
-                                goToScreen(AppScreen.KITS)
-                                binOpen = true
-                            },
+                            // BIN opens over SNIPS, wherever SNIPS is (the
+                            // shelf, PADS, DECK): Back from BIN returns here,
+                            // and a pick still pending for a pad survives it.
+                            onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
                             onOpenInTape = { file ->
                                 nav.closeBench()
@@ -3362,53 +3447,66 @@ fun App(shelf: KitShelf) {
                             onSendToLoop = ::sendSnipToLoop,
                             onShare = ::shareSnip,
                         )
-                        top == null && location.place == Place.SHELF -> if (xrayView != null) {
-                            XRayScreen(
-                                fileName = xrayView.fileName,
-                                reading = xrayView.reading,
-                                onBack = { xray = null },
-                            )
-                        } else if (binOpen) {
-                            BinScreen(
-                                shelf = shelf,
-                                snipsRoot = context.filesDir,
-                                onBack = { binOpen = false },
-                                onToast = { dock.say(it) },
-                                onKitRestored = {
-                                    // The section already owns its own toast
-                                    // and its own list refresh — this only
-                                    // needs to catch the shelf back up, the
-                                    // same reload `deleteKit`/`renameKit`
-                                    // already do after their own move. The
-                                    // `binnedCount` effect above is keyed
-                                    // on `kits`, so this refresh alone is
-                                    // also what re-reads the bin count.
-                                    scope.launch {
-                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                    }
-                                },
-                                // A snip back on its list changes nothing the
-                                // shelf shows; the count re-reads when BIN closes.
-                                onSnipRestored = {},
-                            )
-                        } else if (doublesOpen) {
-                            DoublesScreen(
-                                shelf = shelf,
-                                onBack = { doublesOpen = false },
-                                onToast = { dock.say(it) },
-                                onGoTo = { entry, slot ->
-                                    // The shelf's own onOpen, plus the pad:
-                                    // land on that kit with its PAD SHEET
-                                    // already up on the double in question.
-                                    doublesOpen = false
-                                    landKit(entry)
-                                    // Through openPadSheet (J16): DOUBLES' GO was
-                                    // the second of the three doors that opened
-                                    // the sheet without retiring its hint.
-                                    openPadSheet(slot)
-                                },
-                            )
-                        } else {
+                        // X-RAY: a bench over whatever is showing, since its
+                        // reading lands whenever the file finishes. With no
+                        // reading there is nothing to show, so it closes, as
+                        // KEYS does with no instrument. Otherwise it shows the
+                        // latest reading, whichever X-RAY entry this is.
+                        top == Bench.XRAY -> {
+                            if (xrayView == null) {
+                                nav.closeBench()
+                            } else {
+                                XRayScreen(
+                                    fileName = xrayView.fileName,
+                                    reading = xrayView.reading,
+                                    backLabel = checkNotNull(nav.backChip) { "X-RAY is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
+                                )
+                            }
+                        }
+                        top == Bench.BIN -> BinScreen(
+                            shelf = shelf,
+                            snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "BIN is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onKitRestored = {
+                                // The section already owns its own toast
+                                // and its own list refresh — this only
+                                // needs to catch the shelf back up, the
+                                // same reload `deleteKit`/`renameKit`
+                                // already do after their own move. The
+                                // `binnedCount` effect above is keyed
+                                // on `kits`, so this refresh alone is
+                                // also what re-reads the bin count.
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            // A snip back on its list changes nothing the
+                            // shelf shows; the count re-reads when BIN closes.
+                            onSnipRestored = {},
+                        )
+                        top == Bench.DOUBLES -> DoublesScreen(
+                            shelf = shelf,
+                            backLabel = checkNotNull(nav.backChip) { "DOUBLES is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onGoTo = { entry, slot ->
+                                // The shelf's own onOpen, plus the pad:
+                                // land on that kit with its PAD SHEET
+                                // already up on the double in question.
+                                // DOUBLES stays in the history (the shelf with
+                                // DOUBLES on top), so Back from the pad lands
+                                // on the list the user came from.
+                                landKit(entry)
+                                // Through openPadSheet (J16): DOUBLES' GO was
+                                // the second of the three doors that opened
+                                // the sheet without retiring its hint.
+                                openPadSheet(slot)
+                            },
+                        )
+                        top == null && location.place == Place.SHELF -> {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
@@ -3476,7 +3574,7 @@ fun App(shelf: KitShelf) {
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
-                                onDoubles = { doublesOpen = true },
+                                onDoubles = { nav.open(Bench.DOUBLES) },
                                 onSnips = { nav.open(Bench.SNIPS) },
                                 assigningSnip = pendingSnipAssign != null,
                                 addingTo = pendingAddTo?.name,
@@ -3490,7 +3588,7 @@ fun App(shelf: KitShelf) {
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
                                 binnedCount = binnedCount,
-                                onBin = { binOpen = true },
+                                onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
                                 onToggleSort = { setShelfSort(if (shelfSort == KitShelf.ShelfSort.RECENT) KitShelf.ShelfSort.ALPHA else KitShelf.ShelfSort.RECENT) },
                             )
@@ -4009,9 +4107,14 @@ fun App(shelf: KitShelf) {
                                 // write, under the same one writer SNIPS' → LOOP uses.
                                 onDroneToLoop = { name, recipe, root -> sendDroneToLoop(name, recipe, root) },
                                 // → SURFACE (SIREN, a LOOP): the pad has landed and
-                                // surface.json points at it; the same screen switch a
-                                // MenuRow tap makes, so SURFACE reads the file as it opens.
-                                onOpenSurface = { goToScreen(AppScreen.SURFACE) },
+                                // surface.json points at it, so SURFACE reads the file
+                                // as it opens. It opens over SYNTH, or wherever the user
+                                // is by now (this lands after the write): the frame chip
+                                // reads that screen, and the chip and Back both return
+                                // to it.
+                                onOpenSurface = {
+                                    if (nav.roomFor(Bench.SURFACE)) nav.open(Bench.SURFACE)
+                                },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.
@@ -4022,6 +4125,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
                             onKitUpdated = { updatedKit ->
@@ -4145,8 +4249,9 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == Bench.ORBIT -> {
-                            // The one door to the rings: a bench under BEAT, from
-                            // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
+                            // The one door to the rings: a bench, from GROOVE's
+                            // ORBIT ▸ (plan §3.4) over BEAT, and from SNAP's PATH
+                            // and CHORD over SNAP. It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
                                 NoKitPanel(
@@ -4159,6 +4264,7 @@ fun App(shelf: KitShelf) {
                                 OrbitScreen(
                                     entry = orbitEntry,
                                     kitsRoot = shelf.root,
+                                    backLabel = checkNotNull(nav.backChip) { "ORBIT is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // CLIP ▸ KIT rewrites the open kit's groove.json
@@ -4184,6 +4290,7 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == Bench.LOOP -> LoopBench(
+                            backLabel = checkNotNull(nav.backChip) { "LOOP is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
                             // The empty grid's SNIPS door: SNIPS takes LOOP's place on
@@ -4199,6 +4306,7 @@ fun App(shelf: KitShelf) {
                                 KeysScreen(
                                     sidecar = inst.sidecar,
                                     instrument = inst.instrument,
+                                    backLabel = checkNotNull(nav.backChip) { "KEYS is a bench, so it has something to go back to" },
                                     onBack = { openInstrument = null; nav.closeBench() },
                                 )
                             }
@@ -4206,15 +4314,16 @@ fun App(shelf: KitShelf) {
                         top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
+                            backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
                         )
                         // The pad benches (PAD SHEET, GRAIN FIELD, SPLICE,
-                        // STACK, SPREAD, VERSIONS, PAD CAPTURE), BIN, SNIPS,
-                        // SONG, LOOP and the rest of the bench roster are
-                        // still PADS', SHELF's and BEAT's own overlays above,
-                        // and nothing opens them as a bench yet. Their steps
-                        // of the plan move them here; until then this draws
+                        // STACK, SPREAD, VERSIONS, PAD CAPTURE), SONG and
+                        // SNAP's own panels (LIVE, DRAW, FIELD) are still
+                        // PADS', BEAT's and SNAP's own overlays above, and
+                        // nothing opens them as a bench yet. Their steps of
+                        // the plan move them here; until then this draws
                         // nothing rather than something false.
                         else -> Unit
                     }
@@ -4225,7 +4334,7 @@ fun App(shelf: KitShelf) {
                 // the dock's.
                 Dock(
                     dock = dock,
-                    busy = busy ?: screenBusy,
+                    busy = busy ?: jobs.current ?: screenBusy,
                     onArm = { captureSheetOpen = true },
                     // The transport is a button wherever a kit is open, and while
                     // the beat plays: the clock is App's, so the chip is the beat's
@@ -4258,7 +4367,12 @@ fun App(shelf: KitShelf) {
                 ChoiceSheet(
                     rows = p?.kits.orEmpty().map { folder ->
                         val name = kits.firstOrNull { it.dir.name == folder }?.kit?.name ?: folder
-                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) { kitSheetOpen = false; activateKit(folder) }
+                        // A sheet opened just before a job started: the tap does
+                        // nothing visible and the sheet stays, rather than
+                        // closing on a switch `activateKit` would refuse.
+                        SheetRow(Places.kitRow(name, folder == p?.activeKit)) {
+                            if (busy == null) { kitSheetOpen = false; activateKit(folder) }
+                        }
                     } + SheetRow(Places.SHEET_ADD_FROM_SHELF) { kitSheetOpen = false; addFromShelf() },
                     onDismiss = { kitSheetOpen = false },
                 )
