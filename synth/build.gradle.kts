@@ -68,6 +68,33 @@ tasks.register<JavaExec>("generateGlintAudition") {
     args("${rootDir}/testkit/glint-audition")
 }
 
+/**
+ * THROWAWAY SPIKE — renders the GLINT Phase 1 probe clips into
+ * testkit/glint-probe/ (gitignored, not committed). See GlintProbeGenerator.
+ * Pass the subset with -Pprobe=shipped or -Pprobe=slow (default: shipped).
+ */
+tasks.register<JavaExec>("generateGlintProbe") {
+    group = "distribution"
+    description = "Render the GLINT length/BODY/BLOOM probe clips under testkit/glint-probe/. Pass -Pprobe=shipped or -Pprobe=slow."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintProbeGenerator")
+    workingDir = projectDir
+    args((project.findProperty("probe") as String?) ?: "shipped", "${rootDir}/testkit/glint-probe")
+}
+
+/**
+ * THROWAWAY SPIKE — renders the GLINT structural probe clips into
+ * testkit/glint-struct/ (gitignored, not committed). See GlintStructProbe.
+ */
+tasks.register<JavaExec>("generateGlintStruct") {
+    group = "distribution"
+    description = "Render the GLINT structural probe clips (V0-V4) under testkit/glint-struct/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.GlintStructProbe")
+    workingDir = projectDir
+    args("${rootDir}/testkit/glint-struct")
+}
+
 /** Render the factory kit as a native MPC 3 track into testkit/. See Mpc3KitGenerator. */
 tasks.register<JavaExec>("generateMpc3Kit") {
     group = "distribution"

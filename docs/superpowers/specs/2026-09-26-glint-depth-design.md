@@ -2,7 +2,7 @@
 
 **Status:** design, approved in conversation 2026-09-26. Not implemented.
 **Date:** 2026-09-26
-**Plan:** to be written (`docs/superpowers/plans/2026-09-26-glint-depth.md`)
+**Plan:** D1 written — [`docs/superpowers/plans/2026-09-26-glint-depth-d1.md`](../plans/2026-09-26-glint-depth-d1.md). D2 and D3 are planned after their gates.
 **Parent:** [`2026-09-25-glint-phase-distortion-design.md`](2026-09-25-glint-phase-distortion-design.md) — Phase 1, shipped as roadmap S10. This is the depth pass its audition demanded.
 **Roadmap:** the `SYNTH_ROADMAP.md` row is amended when implementation starts, not now.
 

@@ -1,0 +1,601 @@
+<title>Glint Depth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=VT323&family=Silkscreen&family=Michroma&family=Rock+Salt&display=swap">
+<style>
+  /* TapeOS OILSLICK - tokens from shell/Schemes.kt and design/HANDOFF.md.
+     The scheme is dark by design (light shells were cut), so this page
+     commits to one theme and paints every surface explicitly.
+     (Reused verbatim from glint-audition.html - the repo's audition look.) */
+  :root {
+    --desk1: #0C0618;
+    --desk2: #140B24;
+    --desk-glow: #2A1050;
+    --win: #1A1424;
+    --win2: #120E1A;
+    --field: #161020;
+    --field-border: #34285A;
+    --raised1: #221A34;
+    --raised2: #161020;
+    --gray-hi: #40306A;
+    --lcd: #0A0714;
+    --lcd-ink: #C8B2F8;
+    --lcd-glow: rgba(154, 108, 240, .9);
+    --cyan: #40E0E8;
+    --cyan-glow: rgba(64, 224, 232, .8);
+    --warn: #FFB000;
+    --ink: #C8B2F8;
+    --ink2: #8D80AE;
+    --ink3: #584A80;
+    --title-ink: #FFFFFF;
+    --accent: #E040C8;
+    --bin-red: #C86050;
+    --oil: conic-gradient(from 210deg at 50% 40%, #5A2AE0, #E040C8 25%, #40E0E8 50%, #8A5AF0 75%, #5A2AE0);
+    --f-lcd: "VT323", "Courier New", monospace;
+    --f-pixel: "Silkscreen", "Courier New", monospace;
+    --f-display: "Michroma", "Arial Black", sans-serif;
+    --f-marker: "Rock Salt", "Comic Sans MS", cursive;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding-block: 16px 48px;
+    padding-inline: 16px;
+    color: var(--ink);
+    background:
+      radial-gradient(ellipse at 50% 110%, var(--desk-glow) 0%, transparent 60%),
+      repeating-linear-gradient(90deg, rgba(90, 42, 224, .12) 0 1px, transparent 1px 22px),
+      repeating-linear-gradient(0deg, rgba(224, 64, 200, .08) 0 1px, transparent 1px 22px),
+      repeating-conic-gradient(var(--desk1) 0 25%, var(--desk2) 0 50%) 0 0 / 6px 6px;
+    background-color: var(--desk1);
+    font-family: var(--f-lcd);
+    font-size: 17px;
+    line-height: 1.25;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .win {
+    max-width: 430px;
+    margin: 0 auto;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    background:
+      linear-gradient(var(--win), var(--win2)) padding-box,
+      var(--oil) border-box;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, .6);
+  }
+
+  .titlebar {
+    border-radius: 5px 5px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 34px;
+    padding-inline: 12px;
+    background: linear-gradient(90deg, #5A2AE0, #E040C8);
+    color: var(--title-ink);
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .titlebar .tag {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    opacity: .85;
+  }
+
+  /* LCD surfaces: dark, inset, scanlined. Sound lives here. */
+  .lcd {
+    position: relative;
+    background: var(--lcd);
+    box-shadow: inset 0 2px 8px #000;
+    color: var(--lcd-ink);
+    text-shadow: 0 0 6px var(--lcd-glow);
+  }
+  .lcd::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, rgba(0, 0, 0, .3) 0 1px, transparent 1px 3px);
+  }
+  .lcd > * { position: relative; z-index: 1; }
+
+  a { color: var(--cyan); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
+    outline: 2px solid var(--cyan);
+    outline-offset: 2px;
+  }
+
+  /* ---------- meta strip: the spec's own front matter ---------- */
+  .meta {
+    margin: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 16px;
+    line-height: 1.5;
+    display: grid;
+    gap: 4px;
+  }
+  .meta .row { display: flex; gap: 8px; }
+  .meta .k {
+    flex: none;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+    padding-top: 4px;
+    min-width: 62px;
+  }
+  .meta .v { color: var(--lcd-ink); }
+
+  /* ---------- short version: decisions up top ---------- */
+  .short {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .short-hd {
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .short-hd h2 {
+    margin: 0 0 2px;
+    font-family: var(--f-display);
+    font-size: 13px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--accent);
+    text-shadow: 0 0 10px rgba(224, 64, 200, .4);
+  }
+  .short-hd p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--ink2);
+  }
+  .short .tbl-wrap { margin: 10px; }
+
+  /* ---------- document sections ---------- */
+  .doc-section {
+    margin: 0 12px 12px;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    background: var(--field);
+    overflow: hidden;
+  }
+  .doc-hd {
+    padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--field-border);
+    background: linear-gradient(var(--raised1), var(--field));
+  }
+  .doc-hd h2 {
+    margin: 0;
+    font-family: var(--f-display);
+    font-size: 13px;
+    letter-spacing: 2px;
+    font-weight: 400;
+    color: var(--title-ink);
+    text-wrap: balance;
+  }
+  .doc-body { padding: 12px; display: grid; gap: 14px; }
+  .doc-body h3 {
+    margin: 4px 0 -6px;
+    font-family: var(--f-display);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    font-weight: 400;
+    color: var(--cyan);
+    text-shadow: 0 0 6px var(--cyan-glow);
+  }
+  .doc-body p {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.55;
+  }
+  .doc-body ul {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 8px;
+    font-size: 19px;
+    line-height: 1.5;
+  }
+  .doc-body li::marker { color: var(--cyan); }
+  .lede {
+    font-family: var(--f-pixel);
+    font-size: 9px;
+    letter-spacing: .5px;
+    color: var(--ink2);
+  }
+
+  /* ---------- block quotations: a rail, not a caption ---------- */
+  blockquote {
+    margin: 0;
+    padding: 10px 14px;
+    border-left: 3px solid var(--accent);
+    background: rgba(224, 64, 200, .06);
+    border-radius: 0 6px 6px 0;
+    display: grid;
+    gap: 6px;
+  }
+  blockquote.cyan { border-left-color: var(--cyan); background: rgba(64, 224, 232, .06); }
+  blockquote p {
+    margin: 0;
+    font-size: 19px;
+    line-height: 1.5;
+    font-style: italic;
+    color: var(--ink);
+  }
+  blockquote cite {
+    font-family: var(--f-marker);
+    font-style: normal;
+    font-size: 13px;
+    color: var(--accent);
+  }
+  blockquote.cyan cite { color: var(--cyan); }
+
+  /* ---------- tables: scroll, don't squash ---------- */
+  .tbl-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--field-border);
+    border-radius: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  table {
+    width: 100%;
+    min-width: 480px;
+    border-collapse: collapse;
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  table.wide { min-width: 620px; }
+  th, td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--field-border);
+    text-align: left;
+    vertical-align: top;
+  }
+  thead th {
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--cyan);
+    text-transform: uppercase;
+    background: var(--raised1);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(odd) { background: rgba(255, 255, 255, .015); }
+  td strong { color: var(--warn); }
+
+  /* ---------- code-ish bits ---------- */
+  code {
+    font-family: var(--f-lcd);
+    font-size: 1.05em;
+    background: var(--lcd);
+    color: var(--cyan);
+    padding: 1px 5px;
+    border-radius: 3px;
+    box-shadow: inset 0 1px 4px #000;
+  }
+  .formula {
+    margin: 0;
+    padding: 12px;
+    border-radius: 6px;
+    font-size: 20px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  sub { font-size: .7em; }
+
+  .foot {
+    margin: 4px 12px 12px;
+    font-family: var(--f-pixel);
+    font-size: 8px;
+    letter-spacing: .5px;
+    color: var(--ink3);
+    line-height: 1.6;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { scroll-behavior: auto !important; }
+  }
+</style>
+
+<div class="win">
+  <div class="titlebar">
+    <span>Glint Depth</span>
+    <span class="tag">DESIGN SPEC &middot; NOT IMPLEMENTED</span>
+  </div>
+
+  <div class="meta lcd">
+    <div class="row"><span class="k">TITLE</span><span class="v">GLINT depth &mdash; a voice is a mechanism, and BODY gets a second source</span></div>
+    <div class="row"><span class="k">STATUS</span><span class="v">design, approved in conversation 2026-09-26. Not implemented.</span></div>
+    <div class="row"><span class="k">DATE</span><span class="v">2026-09-26</span></div>
+    <div class="row"><span class="k">PLAN</span><span class="v">D1 written &mdash; <code>docs/superpowers/plans/2026-09-26-glint-depth-d1.md</code>. D2 and D3 are planned after their gates.</span></div>
+    <div class="row"><span class="k">PARENT</span><span class="v"><code>2026-09-25-glint-phase-distortion-design.md</code> &mdash; Phase 1, shipped as roadmap S10. This is the depth pass its audition demanded.</span></div>
+    <div class="row"><span class="k">ROADMAP</span><span class="v">the <code>SYNTH_ROADMAP.md</code> row is amended when implementation starts, not now.</span></div>
+  </div>
+
+  <div class="short">
+    <div class="short-hd">
+      <h2>THE SHORT VERSION</h2>
+      <p>The decisions taken in conversation, 2026-09-26 &mdash; the full section sits at the bottom in its own place too.</p>
+    </div>
+    <div class="tbl-wrap">
+      <table class="wide">
+        <thead><tr><th>Question</th><th>Decision</th></tr></thead>
+        <tbody>
+          <tr><td>Should the four probe variants be switches?</td><td>No &mdash; switches would be a patchbay and break the macro budget. They become voices.</td></tr>
+          <tr><td>All four as voices?</td><td>Three become voices (CICADA, RATCHET, PLATE). The fourth, the second formant, becomes how BODY works on every voice &mdash; a dead macro on five of six voices is not defensible.</td></tr>
+          <tr><td>Split BLOOM into rate and depth?</td><td>No &mdash; that is a seventh macro. BLOOM becomes depth at a fixed slow rate, which removes the coupling without adding a knob.</td></tr>
+          <tr><td>Keep KAZOO alongside RATCHET?</td><td>Yes. They share a window and differ in mechanism, which is exactly what a voice now means.</td></tr>
+          <tr><td>When does TRACE land?</td><td>After D3. It multiplies costumes until there is a second actor.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <section class="doc-section" id="why">
+    <div class="doc-hd"><h2>WHY</h2></div>
+    <div class="doc-body">
+      <p>Phase 1 shipped an engine that measures exactly as designed and does not sound like an instrument. Josh auditioned 32 clips on 2026-09-26. Six clips out of 32 earned KEEP &mdash; the three glass tails and the three upper harmonics. Nothing earned DROP. Almost everything earned OK, which in that vocabulary means mediocre.</p>
+      <p class="lede">HIS WORDS, VERBATIM, ARE THE DESIGN INPUT</p>
+      <blockquote>
+        <p>&ldquo;Kazoo sounds like a bleep. Like an 8 bit instrument. Bottle sounds like a beep. Reed is a boing sound.&rdquo;</p>
+        <p>&ldquo;Like the harmonics &mdash; the voice itself needs some work, sounds like a boing. Like a jawharp.&rdquo;</p>
+        <p>&ldquo;Body 1 doesn&rsquo;t really seem to have an impact.&rdquo;</p>
+        <p>&ldquo;I don&rsquo;t get a sense of movement.&rdquo;</p>
+        <p>&ldquo;It sounds like a blip.&rdquo;</p>
+        <cite>&mdash; Josh, audition notes</cite>
+      </blockquote>
+      <p>Every one of those words describes a short, simple, toy-like sound. Not glassy, not vocal, not resonant.</p>
+
+      <h3>The probe</h3>
+      <p>A throwaway probe tested one hypothesis &mdash; that the envelope-driven macros finish before they can be heard. Partly right, and wrong in an instructive way:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Tested</th><th>Verdict</th></tr></thead>
+          <tbody>
+            <tr><td>Longer note (0.55 s &rarr; 1.48 s)</td><td>&ldquo;It&rsquo;s better but still jawharpy&rdquo; &mdash; short and long marked <strong>equally</strong> OK</td></tr>
+            <tr><td>BODY given room at the long length</td><td><strong>&ldquo;Not really&rdquo;</strong></td></tr>
+            <tr><td>BLOOM slowed sevenfold</td><td><strong>&ldquo;Most improved on slow&rdquo;</strong> &mdash; the only KEEP</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Measured: at its shipped speed BLOOM&rsquo;s spectral centroid falls to 0.92&times; and then sits flat for the rest of the note. Slowed to a 0.45 s sweep it travels to 0.35&times; over 300 ms.</p>
+      <blockquote class="cyan">
+        <p>&ldquo;He shrugged at 1.48 seconds but leaned forward for the slow bloom. He is not asking for longer notes. He is asking for slower change.&rdquo;</p>
+        <cite>&mdash; Klaus Schulze</cite>
+      </blockquote>
+
+      <h3>The seance</h3>
+      <p>Eight designers reviewed the engine. Six of eight independently named BLOOM&rsquo;s amount-speed coupling as the defect. Four of eight independently reached the same finding about BODY. Don Buchla stated the root cause most sharply:</p>
+      <blockquote>
+        <p>&ldquo;There is only one source of harmonic content in this entire engine &mdash; the window&rsquo;s edge. Everything else is that same edge, restated. REED, BOTTLE, KAZOO are not three instruments &mdash; they are one window function with its corners rounded differently.&rdquo;</p>
+        <cite>&mdash; Don Buchla</cite>
+      </blockquote>
+      <p>Bob Moog reached it from the other side:</p>
+      <blockquote>
+        <p>&ldquo;A second voice needs a second <strong>source</strong> of spectral information, not a second copy of the first one.&rdquo;</p>
+        <cite>&mdash; Bob Moog</cite>
+      </blockquote>
+      <p>That is the whole diagnosis. GLINT&rsquo;s elegance &mdash; the window doubling as the body waveform, so BODY cost one macro and no second oscillator &mdash; is exactly why BODY is inaudible and why three voices sound like one.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="what-changes">
+    <div class="doc-hd"><h2>WHAT CHANGES</h2></div>
+    <div class="doc-body">
+      <p>Three things, in order of importance.</p>
+
+      <h3>1 &middot; A voice becomes a mechanism, not a window shape</h3>
+      <p>Every other engine in the fleet defines a voice as a whole character with its own mechanism: SKIN&rsquo;s KICK/SNARE/HAT, THUMP&rsquo;s eight, TIDE&rsquo;s BONGO/DRIP/GONG/FLARE. GLINT is the only engine whose voices are one function with different corners &mdash; which is Buchla&rsquo;s complaint restated as an architecture problem.</p>
+      <p>Six voices, four mechanisms:</p>
+      <div class="tbl-wrap">
+        <table class="wide">
+          <thead><tr><th>Voice</th><th>Window</th><th>Mechanism</th><th>Character</th></tr></thead>
+          <tbody>
+            <tr><td><strong>REED</strong></td><td>saw</td><td>one window, one carrier</td><td>buzzy, bright &mdash; unchanged</td></tr>
+            <tr><td><strong>BOTTLE</strong></td><td>triangle</td><td>one window, one carrier</td><td>hollow, woody &mdash; unchanged</td></tr>
+            <tr><td><strong>KAZOO</strong></td><td>trapezoid</td><td>one window, one carrier</td><td>nasal, toy &mdash; unchanged</td></tr>
+            <tr><td><strong>CICADA</strong></td><td>triangle</td><td>carrier re-clocks inside every cycle</td><td>dense, a lattice of edges</td></tr>
+            <tr><td><strong>RATCHET</strong></td><td>trapezoid</td><td>the formant steps between fixed harmonics, never glides &mdash; a hard jump every ~150 ms, no interpolation</td><td>a tuning dial, deliberately toylike</td></tr>
+            <tr><td><strong>PLATE</strong></td><td>saw</td><td>the formant falls with the amplitude envelope, no separate clock</td><td>struck, physical</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Each voice supplies its own <em>kind</em> of movement, which is why removing BLOOM&rsquo;s rate knob costs nothing: a sweep, a lattice, a ladder of steps, and a fall tied to loudness are four different motions, and choosing between them is choosing a voice.</p>
+      <p>CICADA takes the triangle deliberately: it is the softest base, so the nesting supplies the edge rather than doubling one that is already there. RATCHET takes the trapezoid because the toy character is the point. PLATE takes the saw because a struck plate is brightest at the strike.</p>
+      <p>The names continue the existing family &mdash; objects that buzz or ring. A cicada is a nested-clock buzzer. A ratchet clicks through fixed positions. A struck plate&rsquo;s brightness tracks its loudness.</p>
+
+      <h3>2 &middot; BODY becomes a real second source, on every voice</h3>
+      <p>Not a new voice &mdash; a repair applied to all six. <code>body&middot;(w &minus; mean)</code> is replaced by a <strong>second windowed burst</strong> at its own ratio:</p>
+      <pre class="formula lcd">out = amp(t) &middot; [ w(&phi;)&middot;sin(2&pi;&middot;k(t)&middot;&phi;)
+               + BODY &middot; env<sub>2</sub>(t) &middot; w(&phi;)&middot;sin(2&pi;&middot;k<sub>2</sub>&middot;&phi;) ]</pre>
+      <ul>
+        <li><code>k<sub>2</sub> &asymp; k / 5.6</code> &mdash; roughly two and a half octaves below the main formant, clamped to <code>K_MIN</code></li>
+        <li><code>env<sub>2</sub></code> decays at &asymp;0.8&times; the amp <code>t60</code>, <strong>single-enveloped</strong> &mdash; not compounded the way the old BODY was</li>
+        <li>mixed at about 0.7 of the main burst at BODY 1</li>
+      </ul>
+      <p>Measured in the structural probe: centroid 0.72&ndash;0.85&times; of the reference, a low colour that was not there before. Isao Tomita&rsquo;s framing is the one to keep in the code comment:</p>
+      <blockquote class="cyan">
+        <p>&ldquo;Two formants, two speeds, is a vowel and the room it sits in. One formant doing double duty is a kazoo.&rdquo;</p>
+        <cite>&mdash; Isao Tomita</cite>
+      </blockquote>
+      <p>The old BODY&rsquo;s double-envelope bug disappears with the old BODY.</p>
+
+      <h3>3 &middot; BLOOM loses its coupling and keeps its macro</h3>
+      <p>Six ghosts said split BLOOM into rate and depth. That would be a seventh macro and break the roadmap&rsquo;s 3&ndash;6 rule, so instead:</p>
+      <p><strong>BLOOM becomes depth only, at a fixed slow rate.</strong></p>
+      <p><code>BLOOM_FAST_T60</code> and <code>BLOOM_SLOW_T60</code> collapse into a single <code>BLOOM_T60 = 0.45f</code> &mdash; the value the probe tested and Josh preferred. BLOOM&rsquo;s macro sets depth alone. The inverse coupling disappears because the rate is no longer coupled to anything; it is constant.</p>
+      <p>Nothing is lost. The fast sweep measured as static (0.92&times;) and nobody wanted it. Movement at other speeds is now a <em>voice</em> choice &mdash; PLATE&rsquo;s formant moves with the amplitude envelope, RATCHET&rsquo;s steps &mdash; rather than a knob position.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="macros">
+    <div class="doc-hd"><h2>MACROS &middot; STILL SIX, UNCHANGED NAMES</h2></div>
+    <div class="doc-body">
+      <div class="tbl-wrap">
+        <table class="wide">
+          <thead><tr><th>Macro</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td><strong>TUNE</strong></td><td>none</td></tr>
+            <tr><td><strong>PEAK</strong></td><td>none, except the velocity fix below</td></tr>
+            <tr><td><strong>FOLLOW</strong></td><td>none</td></tr>
+            <tr><td><strong>BODY</strong></td><td>same macro, mixes a second formant instead of a redundant window copy</td></tr>
+            <tr><td><strong>BLOOM</strong></td><td><strong>how far the formant travels.</strong> Rate is no longer a macro: on REED/BOTTLE/KAZOO/CICADA it is a sweep at a fixed <code>BLOOM_T60 = 0.45f</code>; on PLATE it is the depth of the loudness coupling (<code>k(t) = kBase&middot;(1 + BLOOM&middot;amp_env(t))</code>); on RATCHET it is how far up the harmonic ladder the steps climb. One meaning &mdash; the extent of the formant&rsquo;s travel &mdash; and each voice supplies <em>how</em> it travels</td></tr>
+            <tr><td><strong>DECAY</strong></td><td>none. Its 0.12&ndash;1.4 s range stays: the probe showed length is not what was missing</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="doc-section" id="velocity-bug">
+    <div class="doc-hd"><h2>THE VELOCITY BUG</h2></div>
+    <div class="doc-body">
+      <p>Dave Smith found a defect rather than a taste, and it is verified:</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>PEAK</th><th>hard k</th><th>soft k</th><th></th></tr></thead>
+          <tbody>
+            <tr><td>0.03&ndash;0.06</td><td>2</td><td>2</td><td><strong>byte-identical renders &mdash; no velocity response at all</strong></td></tr>
+            <tr><td>0.075 and up</td><td>3</td><td>2</td><td>works</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p><code>Velocity.atVelocity</code> scales the brightness macro by <code>VELOCITY_FLOOR_RATIO = 0.28125</code>, and because <code>PEAK</code> snaps to integers, both the soft and hard values quantise onto <code>k = 2</code> below about PEAK 0.06. The two renders come out the same bytes.</p>
+      <p><strong>Fix:</strong> render velocity layers from the <strong>unsnapped</strong> ratio. Snapping stays for the player&rsquo;s knob and for the value stored in the patch; the soft/hard pair is computed at full resolution.</p>
+      <blockquote>
+        <p>&ldquo;Quantization for the ear, full resolution for the diff &mdash; never conflate them again.&rdquo;</p>
+        <cite>&mdash; Dave Smith</cite>
+      </blockquote>
+      <p>This matters beyond GLINT: the patch format and the velocity system are shared with ten sibling engines, and GLINT is the first to snap a brightness macro.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="data-flow">
+    <div class="doc-hd"><h2>DATA FLOW AND COMPATIBILITY</h2></div>
+    <div class="doc-body">
+      <p><code>GlintVoice</code> grows from three entries to six. That is a <strong>breaking change to any stored GLINT patch</strong> &mdash; but there are none: GLINT ships no presets, and no factory kit places a GLINT pad. <code>Patches.decode</code> rejects an unknown voice name already, so a hand-written patch naming a removed voice fails loudly rather than rendering the wrong sound. Nothing to migrate.</p>
+      <p>Registration points, and this table is <strong>not exhaustive</strong> &mdash; Phase 1 learned that the hard way:</p>
+      <div class="tbl-wrap">
+        <table class="wide">
+          <thead><tr><th>File</th><th>Change</th></tr></thead>
+          <tbody>
+            <tr><td><code>Glint.kt</code></td><td>three new mechanisms, BODY redefined, BLOOM&rsquo;s constants collapsed, <code>macrosFor</code> returns five for RATCHET and PLATE</td></tr>
+            <tr><td><code>GlintTest.kt</code></td><td>the new mechanisms&rsquo; tests; existing tests re-pointed at six voices</td></tr>
+            <tr><td><code>Velocity.kt</code></td><td>velocity computed from the unsnapped ratio</td></tr>
+            <tr><td><code>SynthScreen.kt</code></td><td>nothing &mdash; voices come from <code>GlintVoice.entries</code>, and <code>drumClass</code> already maps every voice to TONAL</td></tr>
+            <tr><td><code>docs/SYNTH_ROADMAP.md</code></td><td>amend the S10 row</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Before implementation, grep for every exhaustive <code>when</code> over <code>Patch</code> and every hardcoded engine or voice list rather than trusting this table. Phase 1&rsquo;s &ldquo;exhaustive&rdquo; registration table missed <code>Velocity.macroSpecsFor</code>&rsquo;s sealed <code>when</code> &mdash; which stops <code>:synth</code> compiling &mdash; and <code>shell</code>&rsquo;s <code>UserPresetsTest</code> roster.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="testing">
+    <div class="doc-hd"><h2>TESTING</h2></div>
+    <div class="doc-body">
+      <p>Everything Phase 1 proved must keep passing, re-pointed at six voices. In particular:</p>
+      <ul>
+        <li><strong>Periodicity</strong> &mdash; the correlation at the exact fractional one-period lag, threshold 0.98, at both BLOOM extremes. <strong>CICADA is the risk</strong>: a carrier that re-clocks inside the cycle must still leave the output periodic at <code>f0</code>, because its sub-cycles divide the cycle an integer number of times. If CICADA cannot hold 0.98, its sub-division is wrong, not the test.</li>
+        <li><strong>The formant lands where it is named</strong> &mdash; the Goertzel test, extended to the second formant: energy at <code>k<sub>2</sub>&middot;f0</code> must exceed its decoys.</li>
+        <li><strong>No click</strong> &mdash; at fractional part 0.25, where the discontinuity is maximal. CICADA&rsquo;s inner restarts must each land on silence too, or it will click at every sub-cycle rather than once per cycle.</li>
+        <li><strong>Velocity</strong> &mdash; a new test that the soft and hard renders differ at every PEAK from 0 to 1, which is the bug above stated as an assertion.</li>
+        <li><strong>RATCHET&rsquo;s steps</strong> &mdash; the centroid must be piecewise constant, not a ramp: measure in windows and assert the plateaus.</li>
+        <li><strong>PLATE&rsquo;s coupling</strong> &mdash; the centroid&rsquo;s fall must track the amplitude envelope&rsquo;s fall, not a separate curve.</li>
+      </ul>
+      <p>Every new threshold is set from a measurement taken during implementation, never from a prediction. Phase 1 lost three rounds to predicted numbers that were wrong by up to 10&times;.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="phasing">
+    <div class="doc-hd"><h2>PHASING AND GATES</h2></div>
+    <div class="doc-body">
+      <div class="tbl-wrap">
+        <table class="wide">
+          <thead><tr><th>Phase</th><th>Ships</th><th>Gate</th></tr></thead>
+          <tbody>
+            <tr><td><strong>D1</strong></td><td>BODY as a second formant, on the existing three voices; BLOOM decoupled; the velocity fix</td><td>audition before D2</td></tr>
+            <tr><td><strong>D2</strong></td><td>CICADA, RATCHET, PLATE</td><td>D1 audition passed</td></tr>
+            <tr><td><strong>D3</strong></td><td>the preset roster, authored by ear</td><td>D2 audition passed</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>D1 first because it is the repair the whole council agreed on, it touches every voice, and it can be heard on the engine that already exists. Building three new mechanisms on top of a broken BODY would mean auditioning six voices that all share one known defect.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="displaces">
+    <div class="doc-hd"><h2>WHAT THIS DISPLACES</h2></div>
+    <div class="doc-body">
+      <p><strong>TRACE &mdash; the voice whose window comes from a captured snip or a photograph &mdash; moves behind all of this.</strong> It was Phase 2 and it is now after D3.</p>
+      <p>Buchla&rsquo;s warning is the reason, and it is worth quoting in full because TRACE was the most attractive idea in the original design:</p>
+      <blockquote>
+        <p>&ldquo;Ship TRACE before you fix this and you&rsquo;ll just get photographs of jawharps. A user-supplied window doesn&rsquo;t add a new mechanism, it adds new <em>content</em> to the same single mechanism &mdash; you&rsquo;ll have infinite costumes on the same one-note actor. Depth isn&rsquo;t more shapes. It&rsquo;s more independent things happening per sample.&rdquo;</p>
+        <cite>&mdash; Don Buchla</cite>
+      </blockquote>
+      <p>TRACE multiplies variety. It does not add depth. It is worth building once there is a second source for it to sit against &mdash; at which point a captured window shaping <em>two</em> formants is a genuinely different proposition.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="dissent">
+    <div class="doc-hd"><h2>THE DISSENT, RECORDED</h2></div>
+    <div class="doc-body">
+      <p>Ikutaro Kakehashi argued against the other seven, and this spec does not follow him. It should be on the record that he may be right:</p>
+      <blockquote class="cyan">
+        <p>&ldquo;Your owner did not describe a failure, he described a <em>lineage</em>. &lsquo;Bleep,&rsquo; &lsquo;8-bit,&rsquo; &lsquo;jawharp&rsquo; &mdash; these are the exact words people used for the TB-303 before it was acid... You built a fretting instrument and are apologizing for the fret buzz. Don&rsquo;t fix the jawharp. Feature it. Ship the bleep.&rdquo;</p>
+        <cite>&mdash; Ikutaro Kakehashi</cite>
+      </blockquote>
+      <p>RATCHET is his position given a voice rather than the whole engine. If the D2 audition finds RATCHET is the one people reach for, that is Kakehashi&rsquo;s verdict arriving late, and the roadmap should follow it rather than defend this spec.</p>
+    </div>
+  </section>
+
+  <section class="doc-section" id="scope">
+    <div class="doc-hd"><h2>OUT OF SCOPE</h2></div>
+    <div class="doc-body">
+      <ul>
+        <li><strong>Stereo, space, width.</strong> Tomita wanted distance and air; the engine is mono by design and the FX rack owns reverb. Not this pass.</li>
+        <li><strong>A seventh macro.</strong> The 3&ndash;6 rule holds. Movement variety comes from voices.</li>
+        <li><strong>Extending DECAY past 1.4 s.</strong> Length was measured not to be the problem.</li>
+        <li><strong>Real-time performance, aftertouch, note-off.</strong> GLINT renders one-shots; that is the engine&rsquo;s contract.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="doc-section" id="decisions">
+    <div class="doc-hd"><h2>DECISIONS TAKEN IN CONVERSATION &middot; 2026-09-26</h2></div>
+    <div class="doc-body">
+      <div class="tbl-wrap">
+        <table class="wide">
+          <thead><tr><th>Question</th><th>Decision</th></tr></thead>
+          <tbody>
+            <tr><td>Should the four probe variants be switches?</td><td>No &mdash; switches would be a patchbay and break the macro budget. They become voices.</td></tr>
+            <tr><td>All four as voices?</td><td>Three become voices (CICADA, RATCHET, PLATE). The fourth, the second formant, becomes how BODY works on every voice &mdash; a dead macro on five of six voices is not defensible.</td></tr>
+            <tr><td>Split BLOOM into rate and depth?</td><td>No &mdash; that is a seventh macro. BLOOM becomes depth at a fixed slow rate, which removes the coupling without adding a knob.</td></tr>
+            <tr><td>Keep KAZOO alongside RATCHET?</td><td>Yes. They share a window and differ in mechanism, which is exactly what a voice now means.</td></tr>
+            <tr><td>When does TRACE land?</td><td>After D3. It multiplies costumes until there is a second actor.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">
+    SOURCE: docs/superpowers/specs/2026-09-26-glint-depth-design.md &middot; TRANSCRIBED, NOT REWRITTEN &middot; TAPEOS OILSLICK
+  </div>
+</div>
