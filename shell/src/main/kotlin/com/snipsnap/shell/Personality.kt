@@ -2870,6 +2870,10 @@ object Copy {
     const val KIT_LOADING_BUSY = "LOADING THE KIT…"
     /** The dock's line while KEYS reads the instrument's zones off disk into its player; until it ends a key plays nothing. */
     const val KEYS_LOADING_BUSY = "LOADING THE KEYS…"
+    /** The dock's line while KEYS rewrites an instrument's three descriptors for a new voice mode (no sample is touched). */
+    const val KEYS_VOICE_BUSY = "SAVING THE VOICE MODE…"
+    /** The toast when KEYS could not rewrite the instrument's descriptors; the button goes back to the mode it had. */
+    const val KEYS_VOICE_FAILED = "COULDN'T SAVE THE VOICE MODE."
     /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
     const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**

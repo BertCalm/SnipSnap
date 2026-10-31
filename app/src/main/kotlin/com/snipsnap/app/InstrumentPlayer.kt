@@ -7,6 +7,7 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
 import com.snipsnap.shell.KeyHit
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 
 /**
@@ -101,6 +102,12 @@ class InstrumentPlayer(context: Context) {
         instrument = instrument?.copy(release = seconds)
     }
 
+    /** Change how a captured instrument's keys share voices (see [VoiceMode]) without loading or rendering anything again. */
+    @Synchronized
+    fun setVoiceMode(mode: VoiceMode) {
+        instrument = instrument?.copy(voiceMode = mode)
+    }
+
     /**
      * Every voice's gain times [gain] (0..1, already through the screen's
      * volume law): new notes start at it, and held ones glide to it over a
@@ -128,6 +135,11 @@ class InstrumentPlayer(context: Context) {
         val inst = instrument ?: return false
         val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
         val sample = sampleIndex[hit.sampleFile] ?: return false
+        // LEAD and GLIDE are one voice: a new note takes every sounding one with it.
+        if (inst.voiceMode.mono) {
+            for (id in voices.keys.toList()) NativePads.stopVoice(handle, id, PadEngine.CHOKE_FADE_MS)
+            voices.clear()
+        }
         while (voices.size >= InstrumentEngine.MAX_VOICES) {
             val oldest = voices.keys.first()
             NativePads.stopVoice(handle, oldest, PadEngine.CHOKE_FADE_MS)
