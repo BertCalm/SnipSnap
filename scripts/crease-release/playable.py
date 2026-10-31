@@ -30,7 +30,7 @@ FADE_FRAMES = 0
 while _fade_gain > 0:
     _fade_gain = np.maximum(np.float32(0),np.float32(_fade_gain-_fade_step))
     FADE_FRAMES += 1
-CROSSFADE = round(.005 * RATE)
+CROSSFADE = int(.005 * RATE + .5)
 
 
 def write(path, value):
@@ -105,7 +105,7 @@ def cubic(x, position, loop_start=None):
         return x[np.clip(at,0,len(x)-1)]
     t2=t*t; t3=t2*t
     return (.5*(2*t2-t3-t)*tap(-1)+(1-2.5*t2+1.5*t3)*tap(0)
-            +(.5*t+t2-1.5*t3)*tap(1)+.5*(t3-t2)*tap(2))
+            +(.5*t+2*t2-1.5*t3)*tap(1)+.5*(t3-t2)*tap(2))
 
 
 def neighbours(cut, grid, meta):
@@ -190,7 +190,8 @@ def analyse(out,receipt):
     references={cut:np.fromfile(raw/f'exact-{cut:07d}.f32',dtype='<f4')[:FADE_FRAMES].astype(np.float64)*gain*fade
                 for cut in meta['testCuts']}
     report={'scope':'Python/SciPy measurements of actual Kotlin circuit captures and actual PCM16 cache',
-            'renderSource':receipt['sourceCommit'],'capture':meta,'commonGain':gain,
+            'renderSource':receipt['sourceCommit'],'analysisSource':p.git('rev-parse','HEAD'),
+            'analysisScriptSha256':sha(Path(__file__).read_bytes()),'capture':meta,'commonGain':gain,
             'thresholds':{'normalizedErrorRms':.031623,'peakError':.025,'harmonicTv':.02,
                           'keyUpStepError':.001,'pcmBytes':32*1024**2,'compressedBytes':12*1024**2},
             'candidates':[]}
@@ -272,7 +273,10 @@ def main():
     started=time.monotonic()
     if args.analyse_only:
         receipt=json.loads((raw/'provenance.json').read_text())
-        p.require(receipt['sources']==source_hashes(),'source hashes differ from saved execution')
+        # Explicit raw reuse: analysis may change; the actual Java/circuit/protocol may not.
+        saved={k:v for k,v in receipt['sources'].items() if k!='scripts/crease-release/playable.py'}
+        current={k:v for k,v in source_hashes().items() if k!='scripts/crease-release/playable.py'}
+        p.require(saved==current,'render source hashes differ from saved execution')
         p.require(receipt['jars']=={str(j):sha(j.read_bytes()) for j in p.classpath()},'runtime JARs changed')
     else:
         p.require(not p.git('status','--porcelain'),'commit the experiment before rendering')
