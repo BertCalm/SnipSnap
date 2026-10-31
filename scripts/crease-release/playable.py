@@ -24,7 +24,12 @@ import prototype as p
 ROOT = Path(__file__).resolve().parents[2]
 RATE = 44100
 SECONDS = 1.2
-FADE_FRAMES = round(SECONDS * RATE)
+_fade_gain = np.float32(1)
+_fade_step = np.float32(1)/np.float32(np.float32(SECONDS)*RATE)
+FADE_FRAMES = 0
+while _fade_gain > 0:
+    _fade_gain = np.maximum(np.float32(0),np.float32(_fade_gain-_fade_step))
+    FADE_FRAMES += 1
 CROSSFADE = round(.005 * RATE)
 
 
@@ -244,7 +249,8 @@ def analyse(out,receipt):
               'loopStart':meta['loopStart'],'loopFrames':meta['loopFrames'],'heldFrames':len(held_pcm),
               'rootCycles':meta['rootCycles'],'hz':meta['hz'],'leadFrames':meta['leadFrames'],
               'tailFrames':meta['tailFrames'],'tailCuts':grid,'positionsPerPeriod':n,
-              'releaseSeconds':SECONDS,'crossfadeFrames':CROSSFADE,'maxVoices':8,
+              'releaseSeconds':SECONDS,'releaseFrames':FADE_FRAMES,
+              'crossfadeFrames':CROSSFADE,'maxVoices':8,
               'approximationPassed':bool(selected['passed']),'container':container,'clips':clips,
               'cacheIdentity':{'patch':{'preset':'reed-mark','midi':60,'velocity':meta['velocity'],'model':3,'macros':meta['macros']},
                                'sourceHashes':receipt['sources'],'jarHashes':receipt['jars'],
