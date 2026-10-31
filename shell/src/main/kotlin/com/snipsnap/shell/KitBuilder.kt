@@ -476,7 +476,7 @@ class KitBuilderModel private constructor(
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val padRecipe = Breed.recipeOf(pad)
-        require(pad.recipe == null || padRecipe != null) { "pad $slot carries a recipe STRIKE FX can't keep alongside" }
+        require(pad.recipe == null || padRecipe != null) { Copy.STRIKE_FX_KEEPS_HISTORY }
         val banked = com.snipsnap.synth.StrikeFxBank.isStrikeFx(padRecipe) && pad.velocityLayers.size == 3
         val sourceFile = strikeFxSource(slot)
         val source = com.snipsnap.audio.WavReader.read(sourceFile)
@@ -484,13 +484,12 @@ class KitBuilderModel private constructor(
         val recipeJson = (padRecipe ?: com.snipsnap.synth.PadRecipe(layers = com.snipsnap.synth.StrikeFxBank.layers(room, slap)))
             .copy(layers = com.snipsnap.synth.StrikeFxBank.layers(room, slap)).toJsonValue()
 
-        val names = if (banked) {
-            pad.velocityLayers.take(2).map { it.sampleFile }
-        } else {
-            // The old soft files go first so their names can be reused.
-            pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }.forEach { File(kitDir, it).delete() }
-            freeLayerNames(pad.sampleStem, 2)
-        }
+        // Fresh names on a first keep: the old soft files are still referenced
+        // until update(), so freeLayerNames skips them. They are deleted only
+        // after update, as clearGhostLayers does, so a failed write leaves the
+        // pad as it was.
+        val oldSoft = if (banked) emptyList() else pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
+        val names = if (banked) pad.velocityLayers.take(2).map { it.sampleFile } else freeLayerNames(pad.sampleStem, 2)
         // DRY: the source's own bytes, never re-encoded. On a re-keep the DRY
         // file is the source already.
         val dryFile = File(kitDir, names[0])
@@ -502,7 +501,9 @@ class KitBuilderModel private constructor(
         val files = names + pad.sampleFile
         val labels = com.snipsnap.synth.StrikeFxBank.NAMES
         val layers = files.mapIndexed { i, f -> com.snipsnap.kit.KitLayer(f, windows[i].first, windows[i].last, labels[i]) }
-        return update(slot) { it.copy(velocityLayers = layers, recipe = recipeJson) }
+        val kept = update(slot) { it.copy(velocityLayers = layers, recipe = recipeJson) }
+        oldSoft.forEach { File(kitDir, it).delete() }
+        return kept
     }
 
     /** STRIKE FX, CLEAR: DRY goes back over the pad's file, ROOM and DRY files are deleted, the bank leaves the recipe. */

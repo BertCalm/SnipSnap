@@ -169,4 +169,34 @@ class StrikeFxLayersTest {
         }
         assertEquals(listOf(0, 1, 2), layers)
     }
+
+    @Test
+    fun `keep over stacked takes replaces them and deletes their files`() {
+        val f = fixture("stacked")
+        f.m.treatPad(1, "reversed")
+        f.m.treatPad(1, "punched")
+        f.m.update(1) { it.copy(recipe = null) } // treatments leave a non-synth recipe
+        val prior = f.m.priorTakes(1)
+        val stacked = f.m.stackTakes(1, listOf(prior[1], prior[0]))
+        val main = stacked.sampleFile
+        val old = stacked.velocityLayers.map { it.sampleFile }.filter { it != main }
+        assertEquals(2, old.size)
+        val pad = f.m.strikeFxLayers(1, 0.42f, 0.9f)
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), pad.velocityLayers.map { it.displayName })
+        old.forEach { assertFalse(File(f.dir, it).exists(), it) }
+        assertTrue(pad.velocityLayers.all { File(f.dir, it.sampleFile).isFile })
+    }
+
+    @Test
+    fun `an era style recipe is refused and nothing changes`() {
+        val f = fixture("era")
+        val era = JsonValue.Obj(mapOf("era" to JsonValue.Str("tape"), "amount" to JsonValue.Num(0.5)))
+        f.m.update(1) { it.copy(recipe = era) }
+        val before = f.dir.listFiles()!!.associate { it.name to it.readBytes().toList() }
+        val e = assertFailsWith<IllegalArgumentException> { f.m.strikeFxLayers(1, 0.42f, 0.9f) }
+        assertEquals(Copy.STRIKE_FX_KEEPS_HISTORY, e.message)
+        assertEquals(era, f.m.kit.pad(1)!!.recipe)
+        assertTrue(f.m.kit.pad(1)!!.velocityLayers.isEmpty())
+        assertEquals(before, f.dir.listFiles()!!.associate { it.name to it.readBytes().toList() })
+    }
 }
