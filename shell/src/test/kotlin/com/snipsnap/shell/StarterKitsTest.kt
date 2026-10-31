@@ -505,7 +505,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

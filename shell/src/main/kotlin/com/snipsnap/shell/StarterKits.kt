@@ -121,6 +121,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "libration", "LIBRATION",
+            "Wood, glass and departing orbits. Sixteen finite notes with soft and hard touch.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.libration() },
+        Starter(
             "tidal", "TIDAL",
             "String and metal populations in C minor pentatonic. Gather, pass, and unravel into ringing strands.",
             seeded = false,

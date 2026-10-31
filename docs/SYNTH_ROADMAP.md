@@ -181,6 +181,22 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
+### LIBRATION — finite orbital gestures (native integration)
+
+GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
+trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
+NUDGE, SWARM and RESONANCE shape the sound; ROOT, TOUCH and finite LENGTH
+remain saved performance fields. Twelve owner-approved presets, the SYNTH
+picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
+soft/hard velocity layers through both MPC export formats.
+
+A bounded preview cache reuses trajectories and previously rendered audio.
+Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
+phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
+and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
+records the preserved rendering versions, audition generators, measured limits
+and hardware acceptance checks.
+
 ### CREASE — pressure memory in a phase map (native integration)
 
 ROUND, PINCH and RUBBER share two smooth, monotonic phase-distortion layers.
