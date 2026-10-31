@@ -34,7 +34,9 @@
       const selected = id === clip.id;
       card.root.classList.toggle('active', selected);
       card.play.classList.toggle('is-playing', selected && !audio.paused);
-      card.play.setAttribute('aria-label', `${selected && !audio.paused ? 'Pause' : 'Play'} ${card.clip.title}`);
+      const action = selected && !audio.paused ? 'Pause' : 'Play';
+      card.play.textContent = `${action} this sound`;
+      card.play.setAttribute('aria-label', `${action} this sound: ${card.clip.title}`);
       card.wav.href = address(path(card.clip));
       card.wav.download = path(card.clip).split('/').pop();
     });
@@ -56,17 +58,18 @@
     const root = el('article', 'clip'); root.id = `clip-${clip.id}`;
     const top = el('div', 'clip-top');
     top.append(el('span', 'clip-label', `${String(index + 1).padStart(2, '0')} / ${note(clip.midi)} / ${fmt(clip.seconds)} SEC`));
-    const play = el('button', 'clip-play'); play.type = 'button'; play.setAttribute('aria-label', `Play ${clip.title}`); play.addEventListener('click', () => select(clip)); top.append(play);
+    const play = el('button', 'clip-play', 'Play this sound'); play.type = 'button'; play.setAttribute('aria-label', `Play this sound: ${clip.title}`); play.addEventListener('click', () => select(clip));
     root.append(top, el('h3', '', clip.title));
     if (clip.presetNames?.length) root.append(el('p', 'preset-tags', `STARTING PATCH · ${clip.presetNames.join(' / ')}`));
     root.append(el('p', 'clip-description', clip.description));
+    root.append(play);
     const macros = el('div', 'macro-values');
     ['SOURCE', 'FOCUS', 'BODY', 'LENGTH'].forEach(name => { const value = el('span', '', name); value.append(el('strong', '', fmt(clip.macros[name]))); macros.append(value); });
     root.append(macros);
     const links = el('div', 'clip-links'); const ref = state.clips.find(c => c.id === clip.comparison);
-    if (ref) { const compare = el('button', 'reference-button', 'Play reference →'); compare.type = 'button'; compare.addEventListener('click', () => select(ref)); links.append(compare); }
+    if (ref) { const name = ref.presetNames?.[0] || ref.title; const compare = el('button', 'reference-button', `Compare ${name}`); compare.type = 'button'; compare.setAttribute('aria-label', `Compare ${name}: play reference ${ref.title}`); compare.addEventListener('click', () => select(ref)); links.append(compare); }
     else links.append(el('span', '', 'Native model 1'));
-    const files = el('div'); const patch = el('a', '', 'Patch ↓'); patch.href = address(clip.recipe); patch.download = clip.recipe.split('/').pop();
+    const files = el('div'); const patch = el('a', '', 'Download patch ↓'); patch.href = address(clip.recipe); patch.download = clip.recipe.split('/').pop();
     const wav = el('a', '', 'WAV ↓'); wav.href = address(path(clip)); wav.download = path(clip).split('/').pop(); files.append(patch, wav); links.append(files); root.append(links);
     state.cards.set(clip.id, { root, play, wav, clip }); return root;
   }

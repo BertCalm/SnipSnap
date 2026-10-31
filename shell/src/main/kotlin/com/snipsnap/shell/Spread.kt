@@ -18,6 +18,7 @@ import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
@@ -115,6 +116,7 @@ object Spread {
         is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
+        is TrefoilPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()

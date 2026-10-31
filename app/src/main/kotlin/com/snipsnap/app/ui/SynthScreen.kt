@@ -236,6 +236,9 @@ import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.MurmurVoice
 import com.snipsnap.synth.Trio
 import com.snipsnap.synth.TrioPatch
+import com.snipsnap.synth.Trefoil
+import com.snipsnap.synth.TrefoilPatch
+import com.snipsnap.synth.TrefoilVoice
 import com.snipsnap.synth.TrioVoice
 import com.snipsnap.synth.OpenSky
 import com.snipsnap.synth.OpenSkyPatch
@@ -933,10 +936,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, NACRE and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is NacrePatch ||
+            patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -997,6 +1000,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.TREFOIL) {
+            // SAVE or SEND can arrive in the same frame as a root/touch/contact edit.
+            // Read the current recipe map rather than the previous composition's snapshot.
+            val current = loadedPatchesByVoice[engine to voice] as? TrefoilPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: TrefoilPatch(name, voice as TrefoilVoice, controls)
+        }
         if (engine == Engine.NACRE) {
             // Use the live draft for same-frame root/velocity and macro edits. Copying it
             // retains an older saved rendition and the full-width variation seed.
@@ -1691,6 +1702,7 @@ fun SynthScreen(
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is TrefoilPatch -> patch.midi
                     is ApsisPatch -> patch.midi
                     is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
                     is FilamentPatch -> patch.midi
@@ -1700,6 +1712,7 @@ fun SynthScreen(
                     is TidalPatch -> patch.midi
                     is OhmPatch -> patch.midi
                     is ChamberPatch -> patch.midi
+                    is CausticPatch -> patch.midi
                     else -> null
                 }
                 val authoredSource = authoredMidi?.let {
@@ -3074,6 +3087,35 @@ fun SynthScreen(
                             ) { updateTrioPatch { it.copy(config = it.config.copy(beats = beats)) } }
                         }
                     }
+                }
+
+                if (engine == Engine.TREFOIL) {
+                    val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
+                    MacroSlider(
+                        label = "ROOT", value = (patch.midi - Trefoil.MIN_MIDI).toFloat() / (Trefoil.MAX_MIDI - Trefoil.MIN_MIDI),
+                        fillColor = classColor, scheme = scheme, readout = Scales.nameOf(patch.midi),
+                        onValueChange = { value ->
+                            touched = true; currentPresetByVoice.remove(engine to voice)
+                            val midi = (Trefoil.MIN_MIDI + value * (Trefoil.MAX_MIDI - Trefoil.MIN_MIDI)).roundToInt().coerceIn(Trefoil.MIN_MIDI, Trefoil.MAX_MIDI)
+                            loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(midi = midi)
+                        },
+                    )
+                    MacroSlider(
+                        label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
+                        onValueChange = { value ->
+                            touched = true; currentPresetByVoice.remove(engine to voice)
+                            loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(velocity = value.coerceIn(0f, 1f))
+                        },
+                    )
+                    MacroSlider(
+                        label = "CONTACT", value = (patch.activeSeconds - .05f) / (patch.seconds - .15f),
+                        fillColor = classColor, scheme = scheme, readout = "%.2fs".format(Locale.ROOT, patch.activeSeconds),
+                        onValueChange = { value ->
+                            touched = true; currentPresetByVoice.remove(engine to voice)
+                            val current = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
+                            loadedPatchesByVoice[engine to voice] = current.copy(activeSeconds = (.05f + value * (current.seconds - .15f)).coerceIn(.05f, current.seconds - .1f))
+                        },
+                    )
                 }
 
                 if (engine == Engine.TRIO) {
@@ -4776,7 +4818,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -4822,6 +4864,7 @@ private enum class Engine {
         REVEL -> RevelVoice.entries
         MURMUR -> MurmurVoice.entries
         TRIO -> TrioVoice.entries
+        TREFOIL -> TrefoilVoice.entries
         OSPREY -> OspreyVoice.entries
         FLOCK -> FlockVoice.entries
         OPENSKY -> OpenSkyVoice.entries
@@ -4891,6 +4934,7 @@ private enum class Engine {
         REVEL -> Revel.macrosFor(voice as RevelVoice)
         MURMUR -> Murmur.macrosFor(voice as MurmurVoice)
         TRIO -> Trio.macrosFor(voice as TrioVoice)
+        TREFOIL -> Trefoil.macrosFor(voice as TrefoilVoice).filter { it.name != "HOLD" }
         OSPREY -> Osprey.macrosFor(voice as OspreyVoice)
         FLOCK -> Flock.macrosFor(voice as FlockVoice)
         OPENSKY -> OpenSky.macrosFor(voice as OpenSkyVoice)
@@ -4958,6 +5002,7 @@ private enum class Engine {
         REVEL -> Revel.defaults(voice as RevelVoice)
         MURMUR -> Murmur.defaults(voice as MurmurVoice)
         TRIO -> Trio.defaults(voice as TrioVoice)
+        TREFOIL -> Trefoil.defaults(voice as TrefoilVoice)
         OSPREY -> Osprey.defaults(voice as OspreyVoice)
         FLOCK -> Flock.defaults(voice as FlockVoice)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().macros
@@ -5027,6 +5072,7 @@ private enum class Engine {
         REVEL -> Revel.scramble(voice as RevelVoice, random)
         MURMUR -> Murmur.scramble(voice as MurmurVoice, random)
         TRIO -> Trio.macrosFor(voice as TrioVoice).associate { it.name to random.nextFloat() }
+        TREFOIL -> Trefoil.macrosFor(voice as TrefoilVoice).associate { it.name to if (it.name == "HOLD") 0f else random.nextFloat() }
         OSPREY -> Osprey.scramble(voice as OspreyVoice, random)
         FLOCK -> Flock.scramble(voice as FlockVoice, random)
         OPENSKY -> OpenSky.scramble(voice as OpenSkyVoice, random)
@@ -5106,6 +5152,7 @@ private enum class Engine {
         REVEL -> Revel.render(voice as RevelVoice, macros)
         MURMUR -> Murmur.render(voice as MurmurVoice, macros)
         TRIO -> Trio.render(voice as TrioVoice, macros)
+        TREFOIL -> Trefoil.render(voice as TrefoilVoice, macros)
         OSPREY -> Osprey.render(voice as OspreyVoice, macros)
         FLOCK -> Flock.render(voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(macros = macros).render()
@@ -5179,6 +5226,7 @@ private enum class Engine {
         REVEL -> Revel.drumClassFor(voice as RevelVoice, macros)
         MURMUR -> Murmur.drumClassFor(voice as MurmurVoice, macros)
         TRIO -> DrumClass.TONAL
+        TREFOIL -> DrumClass.TONAL
         OSPREY -> Osprey.drumClassFor(voice as OspreyVoice, macros)
         FLOCK -> Flock.drumClassFor(voice as FlockVoice, macros)
         OPENSKY -> OpenSky.drumClassFor(voice as OpenSkyVoice, macros)
@@ -5247,6 +5295,7 @@ private enum class Engine {
         REVEL -> RevelPatch(name, voice as RevelVoice, macros)
         MURMUR -> MurmurPatch(name, voice as MurmurVoice, macros)
         TRIO -> TrioPatch(name, voice as TrioVoice, macros)
+        TREFOIL -> TrefoilPatch(name, voice as TrefoilVoice, macros)
         OSPREY -> OspreyPatch(name, voice as OspreyVoice, macros)
         FLOCK -> FlockPatch(name, voice as FlockVoice, macros)
         OPENSKY -> OpenSkyPresets.forVoice(voice as OpenSkyVoice).first().copy(name = name, macros = macros)
@@ -5407,7 +5456,7 @@ private val GlintVoice.drumClass: DrumClass
 /**
  * Chip/header label. THUMP and SKIN keep prototype-verbatim abbreviations
  * (`HAT_CLOSED` → "HAT CL", `HAT_OPEN` → "HAT OP" — the rest are already
- * short enough as-is); every other engine's voice names are already one
+ * short enough as-is). CAUSTIC keeps the full heard character names; other voice names are one
  * short word (BELL, SQUELCH, KALIMBA, …) with no underscore to break up, so
  * the raw enum name reads fine unmodified. Without this, this picker's
  * one-line visible label and TalkBack announcement both fall back to the
@@ -5424,6 +5473,12 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
     }
     Engine.OBBLIGATO -> "AIR + REED"
     Engine.BALLAST -> (voice as BallastVoice).displayName
+    Engine.CAUSTIC -> when (voice as CausticVoice) {
+        CausticVoice.ALLOY -> "ALLOY"
+        CausticVoice.HOLLOW_MALLET -> "Hollow Mallet"
+        CausticVoice.RUBBED_RING -> "Rubbed Ring"
+        CausticVoice.TRAVELLING_CATCHES -> "Travelling Catches"
+    }
     else -> voice.name
 }
 
@@ -5485,9 +5540,9 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 @Composable
 private fun VoicePicker(engine: Engine, current: Enum<*>, scheme: Scheme, onSelect: (Enum<*>) -> Unit) {
     val voices = engine.voices()
-    // Small voice rosters fit one row. Larger ones, including THAW's six,
-    // split evenly across two rows.
-    val rows = if (voices.size <= 4) {
+    // CAUSTIC's four full character names need two rows on a phone. Other
+    // small rosters fit one row; larger rosters split evenly across two.
+    val rows = if (voices.size <= 4 && engine != Engine.CAUSTIC) {
         listOf(voices)
     } else {
         val half = (voices.size + 1) / 2

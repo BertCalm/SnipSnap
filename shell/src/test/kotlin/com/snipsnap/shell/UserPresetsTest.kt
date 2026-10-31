@@ -302,7 +302,13 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.ApsisPatch) {
+            if (preset is com.snipsnap.synth.TrefoilPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                val promoted = com.snipsnap.synth.TrefoilPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "complete Trefoil model, note, touch, time and seed promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.ApsisPatch) {
                 val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
                 val promoted = com.snipsnap.synth.ApsisPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: complete orbital recipe promotion")
@@ -908,6 +914,9 @@ class UserPresetsTest {
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("OnsetPatch("))
                 assertTrue("modelVersion = " in UserPresets.rosterLine(patch))
+            } else if (engine == com.snipsnap.synth.TrefoilPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.TrefoilPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.TrefoilPatch::class.java, decoder.returnType)
             } else if (engine == com.snipsnap.synth.ApsisPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.ApsisPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ApsisPatch::class.java, decoder.returnType,
