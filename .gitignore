@@ -463,6 +463,8 @@ testkit/murmur-luthier-audition/
 testkit/obliterate-core-inputs/
 testkit/obliterate-core-audition/
 testkit/obliterate-kotlin-audition/
+testkit/obliterate-shimmer-audition/
+experiments/obliterate-shimmer/__pycache__/
 experiments/obliterate-core/__pycache__/
 
 # SPARK's regenerated audio, expression recipes and MPC audition kit.
