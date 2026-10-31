@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
@@ -8,6 +9,7 @@ import com.snipsnap.kit.KitStore
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -352,5 +354,47 @@ class PadRecipeTest {
         val recipe = PadRecipe.fromJsonValue(treated.recipe)
         assertEquals("crushed", recipe.treatment)
         assertEquals(0.4f, recipe.amount)
+    }
+
+    @Test fun `a version 2 recipe reads with no layers and re-saves as version 3 unchanged otherwise`() {
+        val v2 = Json.parse("""{"recipe":2,"fx":{"fx":1,"spring":{"SIZE":0.25}},"alias":false}""")
+        val parsed = PadRecipe.fromJsonValue(v2)
+        assertNull(parsed.layers)
+        val again = parsed.toJsonValue()
+        assertEquals(3, again.entries["recipe"]!!.int())
+        // FxChain writes its defaulted reverse flag, so raw entries differ; every field must still survive.
+        assertEquals(parsed, PadRecipe.fromJsonValue(again))
+        assertTrue("layers" !in again.entries)
+        assertEquals(false, (again.entries["alias"] as JsonValue.Bool).value)
+    }
+
+    @Test fun `a banked recipe round-trips its layers`() {
+        val bank = listOf(
+            LayerRecipe("DRY"),
+            LayerRecipe("ROOM", FxChain(spring = mapOf("SIZE" to 0.42f, "TONE" to 0.7f, "MIX" to 1f)), 4f),
+            LayerRecipe("ECHO", FxChain(echo = mapOf("TIME" to 0.9f, "REPEAT" to 0.55f, "TONE" to 0.8f, "MIX" to 0.9f)), 4f),
+        )
+        val recipe = PadRecipe(layers = bank)
+        assertEquals(recipe, PadRecipe.fromJsonValue(recipe.toJsonValue()))
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), PadRecipe.fromJsonValue(recipe.toJsonValue()).layers!!.map { it.name })
+    }
+
+    @Test fun `layers alone satisfy the empty-recipe guard`() {
+        PadRecipe(layers = listOf(LayerRecipe("DRY")))
+        assertFailsWith<IllegalArgumentException> { PadRecipe(layers = emptyList()) }
+    }
+
+    @Test fun `an unknown version is still refused`() {
+        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
+    }
+
+    @Test fun `processBank returns DRY untouched then one snip per layer`() {
+        val source = Snip(FloatArray(4410) { if (it == 0) 0.8f else 0f }, 1, 44100)
+        val bank = PadRecipe(layers = listOf(LayerRecipe("DRY"), LayerRecipe("ROOM", FxChain(spring = mapOf("SIZE" to 0.42f, "TONE" to 0.7f, "MIX" to 1f)), 4f)))
+        val out = bank.processBank(source)
+        assertEquals(2, out.size)
+        assertContentEquals(source.samples, out[0].samples)
+        assertTrue(out[1].frameCount > source.frameCount)
+        assertTrue(out[1].samples.all { it.isFinite() })
     }
 }

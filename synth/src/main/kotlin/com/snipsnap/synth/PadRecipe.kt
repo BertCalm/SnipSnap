@@ -70,9 +70,19 @@ data class PadRecipe(
      * before [board]. Null preserves existing recipes and their exact audio.
      */
     val pedals: PedalBoard? = null,
+    /**
+     * A velocity-layer bank, bottom to top, DRY first: one pad sample turned into
+     * several layers, each its own finishing chain ([LayerRecipe]). The source is the
+     * DRY layer, so [processBank] never runs [process] on it first. Null preserves
+     * existing recipes and their exact audio.
+     */
+    val layers: List<LayerRecipe>? = null,
 ) {
     init {
-        require(patch != null || fx != null || board != null || pedals != null) { "an empty recipe records nothing" }
+        require(patch != null || fx != null || board != null || pedals != null || !layers.isNullOrEmpty()) {
+            "an empty recipe records nothing"
+        }
+        layers?.let { require(it.isNotEmpty()) { "a bank has at least one layer" } }
         terminalFadeMs?.let {
             require(it.isFinite() && it in 1f..100f) { "terminal fade must be finite and within 1..100 ms" }
         }
@@ -99,8 +109,18 @@ data class PadRecipe(
         return terminalFade(board?.process(pedalled) ?: pedalled)
     }
 
-    private fun terminalFade(snip: Snip): Snip {
-        val ms = terminalFadeMs ?: return snip
+    /** The bank's layers from [render]'s audio, bottom to top. */
+    fun renderBank(): List<Snip> = processBank(render())
+
+    /** One snip per layer, bottom to top, DRY first. The [source] is the DRY layer. */
+    fun processBank(source: Snip): List<Snip> = layers.orEmpty().map { l ->
+        val wet = l.fx?.process(source) ?: source
+        l.terminalFadeMs?.let { ms -> fadeTail(wet, ms) } ?: wet
+    }
+
+    private fun terminalFade(snip: Snip): Snip = terminalFadeMs?.let { fadeTail(snip, it) } ?: snip
+
+    private fun fadeTail(snip: Snip, ms: Float): Snip {
         val samples = snip.samples.copyOf()
         Dsp.fadeTail(samples, ms = ms, rate = snip.sampleRate, channels = snip.channels)
         return snip.copy(samples = samples)
@@ -117,6 +137,7 @@ data class PadRecipe(
         board?.let { obj["board"] = it.toJsonValue() }
         terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
         pedals?.let { obj["pedals"] = it.toJsonValue() }
+        layers?.let { obj["layers"] = JsonValue.Arr(it.map(LayerRecipe::toJsonValue)) }
         return JsonValue.Obj(obj)
     }
 
@@ -129,9 +150,10 @@ data class PadRecipe(
          * renders for the same patch, and [alias] is new — there is no
          * migration path for a v1 recipe, by design (see the doc's own
          * "take the clean break now" recommendation). `testkit/`'s 369
-         * WAVs were regenerated alongside this bump.
+         * WAVs were regenerated alongside this bump. Version 3 added [layers]
+         * and is a pure superset: version 2 files still read.
          */
-        const val VERSION = 2
+        const val VERSION = 3
 
         /**
          * The [alias] default: true where grit is deliberately the point
@@ -146,7 +168,7 @@ data class PadRecipe(
         fun fromJsonValue(value: JsonValue): PadRecipe {
             val obj = value.obj()
             val version = obj["recipe"]?.int() ?: throw JsonException("not a pad recipe: no recipe version")
-            if (version != VERSION) throw JsonException("unsupported recipe version $version")
+            if (version != 2 && version != VERSION) throw JsonException("unsupported recipe version $version")
             val patch = obj["patch"]?.let { Patches.fromJsonValue(it) }
             val fx = obj["fx"]?.let { FxChain.fromJsonValue(it) }
             return PadRecipe(
@@ -158,9 +180,43 @@ data class PadRecipe(
                 board = obj["board"]?.let { BoardRecipe.fromJsonValue(it) },
                 terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
                 pedals = obj["pedals"]?.let { PedalBoard.fromJsonValue(it) },
+                layers = obj["layers"]?.takeUnless { it is JsonValue.Null }?.arr()?.map { LayerRecipe.fromJsonValue(it) },
             )
         }
 
         fun fromJsonText(text: String): PadRecipe = fromJsonValue(Json.parse(text))
+    }
+}
+
+/** Whether this recipe carries a layer bank. */
+val PadRecipe.isBanked: Boolean get() = !layers.isNullOrEmpty()
+
+/** One layer of a [PadRecipe] bank: a name, an optional finishing chain, an optional tail fade (ms). */
+data class LayerRecipe(
+    val name: String,
+    val fx: FxChain? = null,
+    val terminalFadeMs: Float? = null,
+) {
+    init {
+        require(name.isNotBlank()) { "a layer needs a name" }
+    }
+
+    fun toJsonValue(): JsonValue.Obj {
+        val obj = LinkedHashMap<String, JsonValue>()
+        obj["name"] = JsonValue.Str(name)
+        fx?.let { obj["fx"] = it.toJsonValue() }
+        terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
+        return JsonValue.Obj(obj)
+    }
+
+    companion object {
+        fun fromJsonValue(value: JsonValue): LayerRecipe {
+            val obj = value.obj()
+            return LayerRecipe(
+                name = obj["name"]?.str() ?: throw JsonException("not a layer: no name"),
+                fx = obj["fx"]?.let { FxChain.fromJsonValue(it) },
+                terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
+            )
+        }
     }
 }
