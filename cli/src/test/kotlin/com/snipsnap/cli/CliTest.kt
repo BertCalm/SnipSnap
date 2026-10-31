@@ -596,9 +596,16 @@ class CliTest {
         val one = File(temp, "one-tile")
         assertEquals(
             0,
-            cli("art", kitDir, "--style", "grid", "--scheme", "petrol", "--out", one.path, "--size", "128").first,
+            cli("art", kitDir, "--style", "grid", "--scheme", "opensky", "--out", one.path, "--size", "128").first,
         )
         assertEquals(listOf("ArtKit_grid.png"), one.list()!!.toList())
+
+        // The schemes retired with the classic look are gone from the flag,
+        // and the error names the ones there are, in picker order, and no others.
+        val (retiredCode, _, retiredErr) = cli("art", kitDir, "--scheme", "petrol")
+        assertEquals(2, retiredCode)
+        assertContains(retiredErr, "unknown scheme 'petrol'")
+        assertContains(retiredErr, "schemes: vent,dusk,phosphor,opensky,tide,memo,riso,sage")
 
         val (badCode, _, badErr) = cli("art", kitDir, "--style", "cubist")
         assertEquals(2, badCode)

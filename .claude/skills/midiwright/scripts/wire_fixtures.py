@@ -6,11 +6,17 @@ events a correct parser emits. The rules mirror MidiWire's documented contract:
 
   - a message may be split across deliveries
   - running status carries across deliveries
-  - real-time bytes (F8..FF) land anywhere, are stepped over, and do not cancel running status
+  - real-time bytes (F8..FF) land anywhere and do not cancel running status or disturb the
+    message around them; F8, FA, FB, FC come out as ("Clock"|"Start"|"Continue"|"Stop", stamp)
+    at the position they arrive (inside a SysEx too), F9, FD, FE, FF are dropped
+  - the stamp is the delivery's own clock reading; only the real-time tuples carry it (it is
+    the last element), the note tuples are still unstamped
   - system common (F1..F7) cancels running status
   - SysEx is skipped byte by byte until F7 or the next non-real-time status byte
   - note-on with velocity 0 is a note-off
-  - pitch bend, aftertouch and program change are length-honoured and dropped
+  - pitch bend (14-bit, LSB first, centred: -8192..8191), channel pressure and poly pressure
+    come out as ("PitchBend", ch, value), ("ChannelPressure", ch, value),
+    ("PolyPressure", ch, note, value); program change is length-honoured and dropped
 
 The script runs its own reference parser over every fixture and refuses to print a set
 whose expected events disagree with the reference, so a typo in a fixture is caught here
@@ -33,6 +39,7 @@ class Fixture:
     why: str
     deliveries: list[list[int]]
     expected: list[tuple] = field(default_factory=list)
+    stamps: list[int] | None = None   # one clock reading per delivery; 0 each when omitted
 
 
 # ---------------------------------------------------------------------------
@@ -51,10 +58,14 @@ class RefWire:
             return 1
         return 2
 
-    def feed(self, chunk: list[int]) -> list[tuple]:
+    REALTIME = {0xF8: "Clock", 0xFA: "Start", 0xFB: "Continue", 0xFC: "Stop"}
+
+    def feed(self, chunk: list[int], stamp: int = 0) -> list[tuple]:
         out: list[tuple] = []
         for b in chunk:
-            if b >= 0xF8:              # real-time: step over, keep everything else
+            if b >= 0xF8:              # real-time: report the four, touch nothing else
+                if b in self.REALTIME:
+                    out.append((self.REALTIME[b], stamp))
                 continue
             if self.in_sysex:
                 if b == 0xF7:
@@ -97,7 +108,13 @@ class RefWire:
             return [("NoteOff", ch, d[0])]
         if hi == 0xB0:
             return [("Control", ch, d[0], d[1])]
-        return []                      # bend, aftertouch, program: honoured, dropped
+        if hi == 0xE0:                 # bend: LSB first, centred on 8192
+            return [("PitchBend", ch, ((d[1] << 7) | d[0]) - 8192)]
+        if hi == 0xD0:
+            return [("ChannelPressure", ch, d[0])]
+        if hi == 0xA0:
+            return [("PolyPressure", ch, d[0], d[1])]
+        return []                      # program change: honoured, dropped
 
 
 # ---------------------------------------------------------------------------
@@ -116,8 +133,19 @@ FIXTURES: list[Fixture] = [
             [[0x90, 60, 100], [64, 90]], [("NoteOn", 0, 60, 100), ("NoteOn", 0, 64, 90)]),
     Fixture("velocity_zero_is_off", "note-on at velocity 0 is a note-off",
             [[0x90, 60, 0]], [("NoteOff", 0, 60)]),
-    Fixture("clock_between_status_and_data", "F8 lands between status and data and is stepped over",
-            [[0x90, 0xF8, 60, 0xF8, 100]], [("NoteOn", 0, 60, 100)]),
+    Fixture("clock_inside_message_is_heard", "F8 between status and data and between data bytes is heard, the note still assembles",
+            [[0x90, 0xF8, 60, 0xF8, 100]], [("Clock", 0), ("Clock", 0), ("NoteOn", 0, 60, 100)]),
+    Fixture("clock_between_status_and_data", "a clock in its own delivery between a status byte and its data",
+            [[0x90], [0xF8], [60, 100]], [("Clock", 2), ("NoteOn", 0, 60, 100)], stamps=[1, 2, 3]),
+    Fixture("clock_flood", "1000 clocks inside running status: one event each, both notes survive",
+            [[0x91, 60, 100] + [0xF8] * 1000 + [62, 100]],
+            [("NoteOn", 1, 60, 100)] + [("Clock", 0)] * 1000 + [("NoteOn", 1, 62, 100)]),
+    Fixture("transport_bytes_in_order", "start, clock, continue, stop come out in order with the delivery's stamp",
+            [[0xFA, 0xF8, 0xFB, 0xFC]], [("Start", 7), ("Clock", 7), ("Continue", 7), ("Stop", 7)], stamps=[7]),
+    Fixture("dropped_realtime_bytes", "F9, FD, FE and FF produce nothing",
+            [[0xF9, 0xFD, 0xFE, 0xFF]], []),
+    Fixture("clock_inside_sysex", "a clock inside a SysEx is heard; the SysEx data stays skipped",
+            [[0xF0, 0x7E, 0xF8, 0x01, 0xF7]], [("Clock", 0)]),
     Fixture("active_sensing_in_running_status", "FE does not cancel running status",
             [[0x90, 60, 100, 0xFE, 64, 90]], [("NoteOn", 0, 60, 100), ("NoteOn", 0, 64, 90)]),
     Fixture("song_position_cancels_running_status", "F2 cancels running status; data after it is orphaned",
@@ -132,14 +160,24 @@ FIXTURES: list[Fixture] = [
             [[0xF0, 0x41, 0x10, 0x42], [0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
     Fixture("long_sysex_8k", "an 8192-byte SysEx (the BLE and RtMidi failure size) does not stall",
             [[0xF0] + [0x55] * 8190 + [0xF7], [0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
-    Fixture("pitch_bend_dropped_length_honoured", "E0 takes two data bytes; the note after stays in step",
-            [[0xE0, 0x00, 0x40, 0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
+    Fixture("pitch_bend_dropped_length_honoured", "E0 takes two data bytes; the bend is read and the note after stays in step",
+            [[0xE0, 0x00, 0x40, 0x90, 60, 100]], [("PitchBend", 0, 0), ("NoteOn", 0, 60, 100)]),
+    Fixture("bend_lsb_first", "the first data byte is the low seven bits: centre, top and bottom",
+            [[0xE0, 0x00, 0x40], [0xE0, 0x7F, 0x7F], [0xE0, 0x00, 0x00]],
+            [("PitchBend", 0, 0), ("PitchBend", 0, 8191), ("PitchBend", 0, -8192)]),
+    Fixture("bend_running_status", "status once, two bends on channel 3",
+            [[0xE3, 0x00, 0x40, 0x10, 0x40]], [("PitchBend", 3, 0), ("PitchBend", 3, 16)]),
+    Fixture("bend_split_across_deliveries", "a bend in three deliveries completes on the last",
+            [[0xE0], [0x00], [0x50]], [("PitchBend", 0, 2048)]),
+    Fixture("clock_inside_bend", "a clock between a bend's two data bytes is heard and the bend stays whole",
+            [[0xE0, 0x00, 0xF8, 0x40]], [("Clock", 0), ("PitchBend", 0, 0)]),
     Fixture("program_change_one_byte", "C0 takes one data byte",
             [[0xC0, 5, 0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
     Fixture("channel_pressure_one_byte_running", "D0 with running status takes one byte each",
-            [[0xD0, 10, 20, 0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
+            [[0xD0, 10, 20, 0x90, 60, 100]],
+            [("ChannelPressure", 0, 10), ("ChannelPressure", 0, 20), ("NoteOn", 0, 60, 100)]),
     Fixture("poly_aftertouch_two_bytes", "A0 takes two data bytes",
-            [[0xA0, 60, 50, 0x90, 60, 100]], [("NoteOn", 0, 60, 100)]),
+            [[0xA0, 60, 50, 0x90, 60, 100]], [("PolyPressure", 0, 60, 50), ("NoteOn", 0, 60, 100)]),
     Fixture("control_change", "a CC on channel 2",
             [[0xB1, 64, 127]], [("Control", 1, 64, 127)]),
     Fixture("sustain_then_note_off_running", "CC 64 then running-status CC 64 off",
@@ -166,8 +204,8 @@ def validate() -> list[str]:
     for f in FIXTURES:
         wire = RefWire()
         got: list[tuple] = []
-        for chunk in f.deliveries:
-            got.extend(wire.feed(chunk))
+        for i, chunk in enumerate(f.deliveries):
+            got.extend(wire.feed(chunk, f.stamps[i] if f.stamps else 0))
         if got != f.expected:
             errors.append(f"{f.name}: expected {f.expected} got {got}")
     return errors

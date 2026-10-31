@@ -2,6 +2,7 @@ package com.snipsnap.app
 
 import android.content.Context
 import com.snipsnap.app.ui.TAPE_LOAD_MAX_SEC
+import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.shell.InstrumentEngine
@@ -34,9 +35,15 @@ class InstrumentPlayer(context: Context) {
     private var sampleIndex: Map<String, Int> = emptyMap()
     private var framesOf: Map<String, Long> = emptyMap()
 
+    /** A sounding voice: its key, and the gain its zone and velocity gave it before [volume]. */
+    private class Voice(val note: Int, val gain: Float)
+
     /** Sounding voices by id, in the order they started - the oldest first. */
-    private val voices = LinkedHashMap<Int, Int>() // voice id -> note
+    private val voices = LinkedHashMap<Int, Voice>()
     private var nextVoice = 1
+
+    /** The player's master gain, 1 = the instrument as made; see [setVolume]. */
+    private var volume = 1f
 
     /**
      * Load the instrument the sidecar describes: every zone's WAV read
@@ -45,6 +52,21 @@ class InstrumentPlayer(context: Context) {
      */
     fun open(sidecar: File, instrument: InstrumentStore.Instrument) {
         val dir = sidecar.parentFile ?: File(".")
+        load(instrument) { file ->
+            runCatching { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        }
+    }
+
+    /**
+     * Load an offline-rendered preview without writing a temporary package.
+     * Sample copying belongs on a worker dispatcher, just like [open]'s WAV reads.
+     * Note-on still uses the same zone, loop and release map as a shelf instrument.
+     */
+    fun open(instrument: InstrumentStore.Instrument, samples: Map<String, Snip>) {
+        load(instrument) { samples[it] }
+    }
+
+    private fun load(instrument: InstrumentStore.Instrument, sample: (String) -> Snip?) {
         val index = HashMap<String, Int>()
         val frames = HashMap<String, Long>()
         synchronized(this) {
@@ -54,7 +76,7 @@ class InstrumentPlayer(context: Context) {
         }
         for (file in instrument.sampleFiles) {
             // Load every velocity layer once; a missing soft sample must not silently play the hard one.
-            val snip = runCatching { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }.getOrNull() ?: continue
+            val snip = sample(file) ?: continue
             val i = synchronized(this) {
                 if (!open) return
                 NativePads.addSample(handle, snip.samples, snip.channels, snip.sampleRate)
@@ -70,6 +92,27 @@ class InstrumentPlayer(context: Context) {
             framesOf = frames
             voices.clear()
         }
+    }
+
+    /** Change a captured instrument's note-off fade without loading or rendering its samples again. */
+    @Synchronized
+    fun setReleaseSeconds(seconds: Float) {
+        require(seconds.isFinite() && seconds in 0f..InstrumentStore.MAX_RELEASE_SECONDS)
+        instrument = instrument?.copy(release = seconds)
+    }
+
+    /**
+     * Every voice's gain times [gain] (0..1, already through the screen's
+     * volume law): new notes start at it, and held ones glide to it over a
+     * fader's glide, so a knob turned under a chord moves the chord without
+     * a step.
+     */
+    @Synchronized
+    fun setVolume(gain: Float) {
+        require(gain.isFinite() && gain in 0f..1f)
+        volume = gain
+        if (!open) return
+        for ((id, v) in voices) NativePads.setVoiceGain(handle, id, v.gain * gain, v.gain * gain, PadEngine.FADER_GLIDE_MS)
     }
 
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
@@ -93,10 +136,10 @@ class InstrumentPlayer(context: Context) {
         val id = nextVoice++
         val queued = NativePads.noteOn(
             handle, id, sample,
-            0L, hit.frames, hit.loopStartFrame, hit.gain, hit.gain, hit.pitchRatio,
+            0L, hit.frames, hit.loopStartFrame, hit.gain * volume, hit.gain * volume, hit.pitchRatio,
             reverse = false,
         )
-        if (queued) voices[id] = note
+        if (queued) voices[id] = Voice(note, hit.gain)
         return queued
     }
 
@@ -105,7 +148,7 @@ class InstrumentPlayer(context: Context) {
     fun noteOff(note: Int) {
         if (!open) return
         val release = instrument?.let { KeyHit.releaseMs(it) } ?: 1f
-        for (id in voices.filterValues { it == note }.keys.toList()) {
+        for (id in voices.filterValues { it.note == note }.keys.toList()) {
             NativePads.stopVoice(handle, id, release)
             voices.remove(id)
         }

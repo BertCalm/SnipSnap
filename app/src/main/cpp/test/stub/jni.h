@@ -5,7 +5,7 @@
 // `jni.cpp` — 31 entry points and the marshalling every pad hit crosses —
 // which no test could do while the file needed a JVM to link.
 //
-// Only what `jni.cpp` uses is here. A function it does not call is a
+// Only what `jni.cpp` and `AquariumJni.cpp` use is here. A function it does not call is a
 // function this header does not declare, so a new call site fails to
 // compile rather than silently going untested.
 #pragma once
@@ -23,16 +23,20 @@ typedef jint jsize;
 // passed where a jintArray is wanted. Keeping that here means the stub
 // catches the same mix-ups the NDK header would.
 class _jobject {};
+class _jclass : public _jobject {};
 class _jarray : public _jobject {};
 class _jbooleanArray : public _jarray {};
 class _jintArray : public _jarray {};
 class _jfloatArray : public _jarray {};
+class _jlongArray : public _jarray {};
 
 typedef _jobject* jobject;
+typedef _jclass* jclass;
 typedef _jarray* jarray;
 typedef _jbooleanArray* jbooleanArray;
 typedef _jintArray* jintArray;
 typedef _jfloatArray* jfloatArray;
+typedef _jlongArray* jlongArray;
 
 #define JNI_FALSE 0
 #define JNI_TRUE 1
@@ -51,6 +55,12 @@ struct JNINativeInterface_ {
     jintArray (*NewIntArray)(JNIEnv*, jsize);
     void (*SetFloatArrayRegion)(JNIEnv*, jfloatArray, jsize, jsize, const jfloat*);
     void (*SetIntArrayRegion)(JNIEnv*, jintArray, jsize, jsize, const jint*);
+    // Appended so the pre-existing engine bridge fake retains its table layout.
+    jclass (*FindClass)(JNIEnv*, const char*) = nullptr;
+    jint (*ThrowNew)(JNIEnv*, jclass, const char*) = nullptr;
+    jboolean (*ExceptionCheck)(JNIEnv*) = nullptr;
+    void (*DeleteLocalRef)(JNIEnv*, jobject) = nullptr;
+    void (*SetLongArrayRegion)(JNIEnv*, jlongArray, jsize, jsize, const jlong*) = nullptr;
 };
 
 // C++ callers reach the table through member functions, exactly as they do
@@ -66,4 +76,9 @@ struct JNIEnv_ {
     jintArray NewIntArray(jsize n) { return functions->NewIntArray(this, n); }
     void SetFloatArrayRegion(jfloatArray a, jsize s, jsize n, const jfloat* b) { functions->SetFloatArrayRegion(this, a, s, n, b); }
     void SetIntArrayRegion(jintArray a, jsize s, jsize n, const jint* b) { functions->SetIntArrayRegion(this, a, s, n, b); }
+    jclass FindClass(const char* name) { return functions->FindClass(this, name); }
+    jint ThrowNew(jclass type, const char* message) { return functions->ThrowNew(this, type, message); }
+    jboolean ExceptionCheck() { return functions->ExceptionCheck(this); }
+    void DeleteLocalRef(jobject object) { functions->DeleteLocalRef(this, object); }
+    void SetLongArrayRegion(jlongArray a, jsize s, jsize n, const jlong* b) { functions->SetLongArrayRegion(this, a, s, n, b); }
 };

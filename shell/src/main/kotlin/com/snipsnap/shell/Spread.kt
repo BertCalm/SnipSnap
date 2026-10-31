@@ -9,17 +9,28 @@ import com.snipsnap.audio.Tuner
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.synth.Ballast
+import com.snipsnap.synth.ApsisPatch
+import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.Lattice
+import com.snipsnap.synth.LatticePatch
+import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.StoopPatch
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.TidalPatch
 import kotlin.math.roundToInt
 
 /**
@@ -98,13 +109,21 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is ApsisPatch -> patch.midi.toFloat()
+        is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
+        is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
+        is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
+        is LibrationPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
+        is TrefoilPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
         is ObbligatoPatch -> patch.midi.toFloat()
         is CreasePatch -> patch.midi.toFloat()
+        is CausticPatch -> patch.midi.toFloat()
+        is ChamberPatch -> patch.midi.toFloat()
         is OrigamiPatch -> (patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))).toFloat()
         else -> detect(snip)
     }
@@ -200,9 +219,12 @@ object Spread {
      */
     fun apply(model: KitBuilderModel, snip: Snip, plan: Plan, sound: Sound): List<Note> {
         // SPREAD renames the main WAV and lands single-sample pads. Carrying
-        // an active board's old file inventory would strand REMOVE/UNDO.
-        require(sound.recipe?.entries?.containsKey("boardPad") != true &&
-            sound.like?.recipe?.entries?.containsKey("boardPad") != true) { Copy.boardRemoveBeforeSpread(BoardSheet.read(sound.recipe)?.type?.name ?: BoardSheet.read(sound.like?.recipe)?.type?.name ?: "BOARD") }
+        // an active treatment's old file inventory would strand REMOVE/UNDO.
+        require(!PrintedPads.has(sound.recipe) && !PrintedPads.has(sound.like?.recipe)) {
+            val recipe = sound.recipe?.takeIf(PrintedPads::has) ?: sound.like?.recipe
+            Copy.boardRemoveBeforeSpread(PrintedPads.label(recipe))
+        }
+        val tidal = sound.recipe?.let { runCatching { PadRecipe.fromJsonValue(it).patch }.getOrNull() } as? TidalPatch
         val color = sound.colorHex
         val rootColor = rootTint(color)
         for (note in plan.notes) {
@@ -233,6 +255,7 @@ object Spread {
                     humanize = like.humanize,
                 )
             }
+            if (tidal != null) model.update(note.slot) { TidalPad.configure(it, tidal) }
         }
         return plan.notes
     }

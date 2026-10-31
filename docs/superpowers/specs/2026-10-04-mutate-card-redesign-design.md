@@ -612,6 +612,11 @@ KEEP always mean "this move on my pad".
   whether that take is the original (FROM_BEFORE, below). Nothing can do better:
   the record does not exist. The case shrinks to nothing as old takes purge
   (`BIN_KEEP_DAYS`, `KB:1291`).
+  > 2026-10-31: this case no longer shrinks with time. The bin now keeps the
+  > newest take of a pad that carries a MUTATE for as long as the pad needs it.
+  > That rule reads any tombstoned entry as an eject record, so building Safety
+  > fix 2's tombstones means changing it too. See
+  > `2026-10-31-bin-keeps-what-a-pad-needs-design.md`.
 - **What the skipped entries cost.** The entries between the original and the live
   file (a chain's in-between results, the take a DRIFT replaced, another screen's
   untombstoned takes) stay in the bin. KEEP re-bins the restored original when it
@@ -673,6 +678,11 @@ KEEP always mean "this move on my pad".
   | FROM_BEFORE | restore-first, and no entry records the original (a pad mutated before M3, or binned without a tombstone), so the newest take was used | `MADE FROM THE NEWEST TAKE IN THE BIN, WHICH THE BIN DOES NOT MARK AS THE ORIGINAL. WHAT THE PAD HELD IS REPLACED.` |
   | ON_TOP | BUILD ON THIS was on, on a pad that carries a MUTATE | `BUILT ON THE LAST RESULT, WHICH SLEEPS IN THE BIN.` |
   | NO_ORIGINAL | the pad carries a MUTATE but the bin holds no earlier take (purged after 30 days, emptied, or a copied twin) | `OVER THE LAST RESULT - NO EARLIER TAKE IN THE BIN TO START FROM.` |
+
+  > 2026-10-31: "purged after 30 days" no longer reaches a pad that carries a
+  > MUTATE: the bin keeps its newest take for as long as the pad needs it.
+  > NO_ORIGINAL now follows an emptied bin, a copied twin, or a take swept before
+  > that change. See `2026-10-31-bin-keeps-what-a-pad-needs-design.md`.
 
   NO_ORIGINAL is SMEAR's `treatedStacked` honesty applied to MUTATE
   (`COPY:1455-1456`, `PSS:682-686`). Under Decision 15's alternative (one step
@@ -1312,6 +1322,10 @@ reuses it. M2 therefore builds it to R4's description:
 - **No original in the bin** (purged after 30 days, `BIN_KEEP_DAYS`, `KB:1291`; the
   bin emptied; a bank-B twin's copied recipe). KEEP builds on the current audio and
   says so (NO_ORIGINAL); UNDO is dimmed and says why (NOT_BINNED).
+  > 2026-10-31: a mutated pad's newest take no longer purges after 30 days: the
+  > bin keeps it for as long as the pad needs it. The other two causes stand, and a
+  > take swept before that change joins them. See
+  > `2026-10-31-bin-keeps-what-a-pad-needs-design.md`.
 - **A pad mutated before M3** has no tombstone behind it. KEEP restores the newest
   take and says `MADE FROM THE NEWEST TAKE IN THE BIN, WHICH THE BIN DOES NOT MARK
   AS THE ORIGINAL. WHAT THE PAD HELD IS REPLACED.`; UNDO reads `ONE STEP BACK` and
@@ -1319,6 +1333,9 @@ reuses it. M2 therefore builds it to R4's description:
   after one UNDO while the pad holds the first mutation: the bin never recorded
   otherwise. This is the one place the card cannot know the truth, and it shrinks to
   nothing as old takes purge.
+  > 2026-10-31: it no longer shrinks with time. While such a pad carries its
+  > MUTATE, the bin keeps its newest take, so the case lasts until UNDO uses it.
+  > See `2026-10-31-bin-keeps-what-a-pad-needs-design.md`.
 - **A slow render** (PGHI, convolution) shows as `busy` on every control, as today.
   A HEAR-stage label, such as the house's `LISTENING…` idiom, is out of scope.
 
@@ -1846,6 +1863,10 @@ owner says otherwise.
 | 15 | What a default KEEP starts from when one step back is not the original (after a BUILD ON THIS chain, after a DRIFT on a kept pad, after another screen's recipe-keeping rewrite) | **The brief's: the original, the entry the tombstones mark, restored directly**; on a pad whose bin marks no original (mutated before M3), the newest take, said plainly (FROM_BEFORE) | One step back, as DUST and SMEAR restore, said in the toast (`MADE FROM AN EARLIER RESULT. THE LAST ONE IS REPLACED.`) | The default follows the brief wherever the bin records the original. Its costs: the chain's final result is replaced without binning (as every second KEEP's is, Decision 5), and the in-between entries stay in the bin behind the re-binned original. On a pre-M3 pad nothing records the original, so no rule can reach it; that one exception shrinks as old takes purge. One step back departs from the brief in all three cases |
 | 16 | Where the knob's meaning sits | **After the value, on the knob's own line, as the brief's sketch draws it** | A caption line under the bar, inside the knob's row | The default leaves the bar about 86 dp wide on a 390 dp sheet (*estimate*, measured first in the M1 plan). The caption keeps the bar full width but changes the approved layout and adds about 14 dp to each knob row, 28 dp to the card; it needs the owner's yes |
 | 17 | KEEP's label when `KEEP · <MOVE> × <partner>` does not fit the half row | **Two lines in the half row, `KEEP · <MOVE>` over `× <partner>`, the second cut only past the partner's tag** | KEEP on a full row with DRIFT on the row below; or a wider KEEP and a narrower DRIFT; or one line with the partner cut | Two lines need `ActionButton` to take `maxLines` and fit 48 dp (*estimate*). The full row departs from the brief's side-by-side sketch and adds a row. A narrower DRIFT ellipsizes its 20 characters. One line cut to 21 drops the partner entirely on `KEEP · TRANSPLANT × …`, so the button no longer says what it saves |
+
+> 2026-10-31: Decision 15's "that one exception shrinks as old takes purge" no
+> longer holds: the bin keeps a mutated pad's newest take for as long as the pad
+> needs it. See `2026-10-31-bin-keeps-what-a-pad-needs-design.md`.
 
 ## Appendices
 

@@ -94,14 +94,14 @@ class AlloyPatchTest {
     }
 
     @Test
-    fun `thirty six factory presets cover every voice and expose dry pitched routing`() {
+    fun `twenty four factory presets cover every voice and expose dry pitched routing`() {
         val presets = AlloyPresets.all()
-        assertEquals(36, presets.size)
-        assertEquals(36, presets.map { it.name }.distinct().size)
+        assertEquals(24, presets.size)
+        assertEquals(24, presets.map { it.name }.distinct().size)
         assertTrue(Presets.all().containsAll(presets))
         for (voice in AlloyVoice.entries) {
             val group = AlloyPresets.forVoice(voice)
-            assertEquals(6, group.size)
+            assertEquals(4, group.size)
             assertEquals(group, Presets.forVoice("ALLOY", voice.name))
             for (preset in group) {
                 assertEquals(preset, Presets.byName("ALLOY", voice.name, preset.name))
@@ -119,8 +119,11 @@ class AlloyPatchTest {
                 assertTrue(PresetTestSupport.rmsDistance(group[i].macros, group[j].macros) >= .10f,
                     "$voice ${group[i].name} / ${group[j].name} need a useful contrast")
             }
-            assertEquals(1, group.count { Alloy.isLoop(it.macros.getValue("HOLD")) },
-                "$voice needs one distinct settled held starting point")
+            assertEquals(0, group.count { Alloy.isLoop(it.macros.getValue("HOLD")) },
+                "$voice factory choices must preserve the approved finite roles")
+            assertEquals(1, AlloyPresets.heldReferences().count {
+                it.voice == voice && Alloy.isLoop(it.macros.getValue("HOLD"))
+            }, "$voice must retain its settled held reference outside the active bank")
         }
         assertTrue(Presets.forVoice("ALLOY", "UNKNOWN").isEmpty())
     }

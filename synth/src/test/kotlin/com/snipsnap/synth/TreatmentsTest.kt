@@ -40,7 +40,7 @@ class TreatmentsTest {
                 "reversed", "crushed", "slapback", "washed", "punched",
                 "smeared", "ghosted", "stopped", "started", "skimmed", "dubbed", "swelled",
                 "spiked", "ringed", "vinyl", "phased", "pitched", "contoured", "ensembled", "amped", "sectioned",
-                "driven", "compressed", "wahed", "touchwahed", "rockwahed",
+                "driven", "compressed", "wahed", "touchwahed", "rockwahed", "delayed", "forged",
             ),
             Treatments.names,
         )
@@ -107,10 +107,12 @@ class TreatmentsTest {
     fun `the pedal recipes set only their own section, and none sits on a neutral`() {
         val expected = mapOf(
             "driven" to "valve",
-            "compressed" to "squash",
+            "compressed" to "compressor",
             "wahed" to "wah",
             "touchwahed" to "wah",
             "rockwahed" to "wah",
+            "delayed" to "echo",
+            "forged" to "forge",
         )
         for ((name, section) in expected) {
             val chain = Treatments.chain(name)
@@ -124,6 +126,7 @@ class TreatmentsTest {
                 assertTrue(v != neutrals.getValue(macro), "$name.$macro sits on its neutral $v: AMT could never move it")
             }
         }
+        assertTrue(Treatments.chain("delayed", 0f).isBypass, "delayed at AMT 0 is not a bypass")
     }
 
     @Test
@@ -175,6 +178,28 @@ class TreatmentsTest {
     private fun pct(v: Double) = String.format(Locale.ROOT, "%.2f", v)
 
     /**
+     * The fade law on DRIVE, heard as distortion: `driven` on a steady 220 Hz sine at AMT 0.1 to 1. THD
+     * never falls as AMT rises (a tolerance of half a point for the tube's own wobble near the top), and
+     * at the pad sheet's AMT 0.7 the LOG walk makes more THD than the old linear walk of the knob did,
+     * which is what the Stage 0 "not enough" asked for. The measured table is in the benchmark spec's
+     * F2 As built note.
+     */
+    @Test
+    fun `DRIVE's THD rises with AMT, and the LOG walk is hotter than the linear one at the sheet's 0_7`() {
+        val rate = 44_100
+        val sine = Snip(FloatArray(rate) { (0.5 * sin(2.0 * PI * 220.0 * it / rate)).toFloat() }, 1, rate)
+        val steps = (1..10).map { it / 10f }
+        val thd = steps.map { thdPercent(Treatments.chain("driven", it).process(sine)) }
+        for (i in 1 until thd.size) {
+            assertTrue(thd[i] >= thd[i - 1] - 0.5, "THD fell from ${pct(thd[i - 1])} at AMT ${steps[i - 1]} to ${pct(thd[i])} at ${steps[i]}")
+        }
+        val linear = thdPercent(Treatments.linearFade(Treatments.chain("driven", 1f), 0.7f).process(sine))
+        val log = thd[6]
+        assertTrue(log > linear + 1.0, "at AMT 0.7 the LOG walk makes ${pct(log)} percent THD, the linear walk ${pct(linear)}")
+    }
+
+
+    /**
      * What makes DRIVE a drive pedal and not a speaker in front of a clean tube: the recipe's own
      * VALVE, run on a steady 220 Hz sine at peak 0.5 (VALVE normalises its input, so the level does
      * not matter), makes real harmonics. Measured: 35.99 percent at the pad sheet's default AMT 0.7
@@ -214,33 +239,31 @@ class TreatmentsTest {
     }
 
     /**
-     * What makes COMP a compressor pedal: it leans on the body and lets the tail stand up. Two
-     * measures, both at AMT 1, for the owner's recipe (SQUASH AMOUNT 1.0, ATTACK 0.05). On the snare,
-     * the tail (100 to 200 ms) against the body (5 to 50 ms) rises 7.78 dB (-23.42 dry, -15.64
-     * compressed); the bar is 6 (the first recipe, AMOUNT 0.7 with ATTACK 0.55, rose 4.42). On the
-     * choir, whose body is held, the peak-to-RMS ratio falls from 10.64 to 7.28 (3.36); the bar is
-     * 2.35, about 70 percent of the drop (the first recipe fell to 9.46, a drop of 1.19). The
-     * snare's own peak-to-RMS ratio does NOT fall: it goes from 11.58 to 11.80 (14.58 for the first
-     * recipe), because a fast one-shot's 2 ms attack lets the hit through and SQUASH takes the body,
-     * so COMP on a drum is a punchier hit with a longer tail, not a flatter one. That is why the
-     * snare is measured by its tail and not by its crest.
+     * What makes SUSTAIN a sustain pedal: it leans on the body and lets the tail stand up. Two measures, both at
+     * AMT 1, for the recipe (COMPRESSOR at AMOUNT 1, ATTACK and RECOVER at their defaults). On the snare, the tail
+     * (100 to 200 ms) against the body (5 to 50 ms) rises 19.64 dB (-23.42 dry, -3.79 sustained); the bar is 15.
+     * The chip's earlier recipe, SQUASH at its strongest, rose 7.78 against a bar of 6, and the owner heard that
+     * as too little twice. On the choir, whose body is held, the peak-to-RMS ratio falls from 10.64 to 7.39
+     * (3.25); the bar stays 2.35 (SQUASH fell 3.36). The snare's own peak-to-RMS ratio does not fall (11.58 to
+     * 12.62): the hit keeps its headroom over the body (ATTACK's limiter) while the tail comes up, so on a drum
+     * the pedal is a longer ring, not a flatter hit. That is why the snare is measured by its tail.
      */
     @Test
-    fun `COMP lifts a snare's tail against its body and flattens a choir`() {
+    fun `SUSTAIN lifts a snare's tail against its body and flattens a choir`() {
         val snare = Thump.render(ThumpVoice.SNARE)
-        val squashed = Treatments.apply("compressed", snare, 1f).snip
+        val sustained = Treatments.apply("compressed", snare, 1f).snip
         val dryTail = rmsDb(snare, 100, 200) - rmsDb(snare, 5, 50)
-        val tail = rmsDb(squashed, 100, 200) - rmsDb(squashed, 5, 50)
+        val tail = rmsDb(sustained, 100, 200) - rmsDb(sustained, 5, 50)
         assertTrue(
-            tail - dryTail >= 6.0,
-            "COMP lifts the snare's tail against its body by ${pct(tail - dryTail)} dB (${pct(dryTail)} dry, ${pct(tail)} compressed), under the 6 dB bar (7.78 measured)",
+            tail - dryTail >= 15.0,
+            "SUSTAIN lifts the snare's tail against its body by ${pct(tail - dryTail)} dB (${pct(dryTail)} dry, ${pct(tail)} sustained), under the 15 dB bar (19.64 measured)",
         )
         val choir = Vox.render(VoxVoice.CHOIR)
         val dryCrest = crestFactor(choir)
         val crest = crestFactor(Treatments.apply("compressed", choir, 1f).snip)
         assertTrue(
             dryCrest - crest >= 2.35,
-            "COMP lowers the choir's peak-to-RMS by ${pct(dryCrest - crest)} (${pct(dryCrest)} dry, ${pct(crest)} compressed), under the 2.35 bar (3.36 measured)",
+            "SUSTAIN lowers the choir's peak-to-RMS by ${pct(dryCrest - crest)} (${pct(dryCrest)} dry, ${pct(crest)} sustained), under the 2.35 bar (3.25 measured)",
         )
     }
 
@@ -292,9 +315,12 @@ class TreatmentsTest {
 
     /**
      * The fade is the tail's alone. Read off a pad of ones, so the samples are the gain itself: it is
-     * a fade of tens of milliseconds, at most 110 at full (95 shipped) and 40 at the pad sheet's AMT
-     * 0.7 (33 shipped), shorter at the lower amount; it ends at silence and falls all the way; and it
-     * never reaches the first half of a pad, however short the pad is (a 20 ms pad fades its last 10).
+     * a fade of tens of milliseconds, at most 110 at full (95 shipped) and 70 at the pad sheet's AMT
+     * 0.7 (54 shipped since DRIVE's fade law became LOG: the amp then lifts by 57 percent of its full
+     * lift in dB, and the fade's length follows the lift; under the old linear walk it lifted by 35
+     * percent and the fade was 33 ms), shorter at the lower amount; it ends at silence and falls all
+     * the way; and it never reaches the first half of a pad, however short the pad is (a 20 ms pad
+     * fades its last 10).
      */
     @Test
     fun `the end fade is the tail's alone - tens of milliseconds, shorter at a lower AMT, never the first half of a pad`() {
@@ -303,7 +329,7 @@ class TreatmentsTest {
         val seventy = fadeMs(Treatments.endFaded(long, "driven", 0.7f))
         val full = fadeMs(Treatments.endFaded(long, "driven", 1f))
         assertTrue(full in 50.0..110.0, "the fade at full is $full ms of a long pad, outside 50 to 110 (95 shipped)")
-        assertTrue(seventy in 10.0..40.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 10 to 40 (33 shipped)")
+        assertTrue(seventy in 40.0..70.0, "the fade at AMT 0.7 is $seventy ms of a long pad, outside 40 to 70 (54 shipped)")
         assertTrue(seventy < full, "the fade at AMT 0.7 ($seventy ms) is shorter than at full ($full ms)")
         for (ms in listOf(20, 60, 120, 333, 1500)) {
             for (amount in listOf(0.7f, 1f)) {
@@ -320,8 +346,8 @@ class TreatmentsTest {
     }
 
     /**
-     * Where the amp does not lift (its gain at or under 1, DRIVE up to about 0.46, so AMT up to about
-     * 0.46) there is no fade: the door's output is the chain's, byte for byte. There is no click to
+     * Where the amp does not lift (its gain at or under 1, DRIVE up to about 0.46, which DRIVE's LOG
+     * fade law reaches at AMT about 0.30) there is no fade: the door's output is the chain's, byte for byte. There is no click to
      * hide there, and a fade ahead of a nearly clean amp would only shorten the pad's tail.
      */
     @Test

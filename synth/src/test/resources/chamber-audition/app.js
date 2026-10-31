@@ -21,10 +21,12 @@
     returns: ['Energy returning to the instruments', 'Listen for the effect on the instrument’s decay.'],
     sources: ['Inside the quartet', 'Hear the sources separately.'],
     controls: ['The controls', 'Change one parameter at a time.'],
+    interactions: ['Controls together', 'Four corners of each control pair, with the same note and room.'],
+    performance: ['On the pads', 'Short phrases made from the exact exported kit samples.'],
     notes: ['Notes & velocity', 'Hear how the quartet behaves across pitch and strike energy.'],
     timpani: ['Previous / revised timpani', 'The same room, note and strike. Quartet and dry membrane solos share the revised quartet’s gain.'],
   };
-  const storageKey = 'snipsnap-chamber-listening-notes-v1';
+  let storageKey = 'snipsnap-chamber-listening-notes-v1';
   let manifest, clips = [], firstIds = new Set(), mode = 'matched', notes = {}, storageAvailable = true;
   let context, source, buffer, currentClip, currentUrl, offset = 0, startedAt = 0;
   let status = 'idle', repeating = false, requestId = 0, frame = 0;
@@ -44,8 +46,10 @@
     } catch { return null; }
   }
   function soundPath(clip) { return fileUrl(mode === 'raw' ? (clip.raw || clip.matched) : (clip.matched || clip.raw)); }
+  function downloadLabel(clip) { return mode === 'raw' && /\.flac(?:$|[?#])/i.test(clip.raw || '') ? 'Raw FLAC ↓' : 'WAV ↓'; }
   function roomOf(clip) { return /aquarium/i.test([clip.voice, clip.title, clip.id, ...(clip.tags || [])].join(' ')) ? 'AQUARIUM' : /hybrid/i.test([clip.voice, clip.title, clip.id, ...(clip.tags || [])].join(' ')) ? 'HYBRID' : ''; }
   function noteName(midi) {
+    if (midi === null || midi === undefined || midi === '') return '';
     if (!Number.isFinite(Number(midi))) return '';
     const n = Math.round(Number(midi));
     return ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'][((n % 12) + 12) % 12] + (Math.floor(n / 12) - 1);
@@ -127,7 +131,7 @@
     const bottom = create('div', 'clip-bottom');
     const localLabel = create('span', '', 'Rendered audio');
     const downloads = create('div', 'clip-downloads');
-    const wav = create('a', '', 'WAV ↓'); wav.download = ''; wav.dataset.download = 'wav';
+    const wav = create('a', '', downloadLabel(clip)); wav.download = ''; wav.dataset.download = 'wav';
     const path = soundPath(clip); if (path) wav.href = path; else wav.hidden = true;
     downloads.append(wav);
     if (fileUrl(clip.recipe)) { const recipe = create('a', '', 'Recipe ↓'); recipe.href = fileUrl(clip.recipe); recipe.download = ''; downloads.append(recipe); }
@@ -203,6 +207,22 @@
       $('first-intro').textContent = 'Start with the revised C3 quartet in each room. Then compare previous and revised strikes at C3 and C4 below. The room, controls and note stay fixed within each group.';
       $('comparison-intro').textContent = 'Previous and revised full quartets, followed by their dry timpani sources. Each room and note uses one gain from the revised quartet.';
     }
+    if (manifest.auditionRevision === 'timpani-boost') {
+      const lift = Number(manifest.membraneMixLiftDb);
+      const liftText = Number.isFinite(lift) ? String(lift) : '3';
+      $('hero-eyebrow').textContent = 'TIMPANI MIX LIFT';
+      $('hero-note').textContent = `The same timpani sound, with ${liftText} dB more presence in the quartet. Compare the accepted and boosted mix, then hear the membrane source at the same playback gain.`;
+      $('first-title').replaceChildren(document.createTextNode('The timpani.'), create('br'), document.createTextNode(`Lifted ${liftText} dB.`));
+      $('first-intro').textContent = 'Start with the boosted C3 quartet in each room. The membrane voicing and decay stay the same. Compare the previous and boosted mixes at C3 and C4 below.';
+      $('comparison-intro').textContent = 'Accepted model 2 and boosted model 3 quartets, followed by their dry timpani sources. Each room and note shares one gain from the boosted quartet.';
+    }
+    if (manifest.auditionRevision === 'finite') {
+      $('hero-eyebrow').textContent = 'THE FINITE INSTRUMENT';
+      $('hero-note').textContent = 'The accepted timpani balance, now across the two-room preset bank. Explore soft and hard strikes, controls together, and phrases played from the exported pads.';
+      $('first-intro').textContent = 'Start with HYBRID and AQUARIUM at C4. Then try the other room portraits and the pad phrases. Each finite strike keeps its own complete room tail.';
+      $('comparison-intro').textContent = 'Six preset portraits, native notes and velocity, controls on their own and together. The room comparisons and quiet diagnostic stems retain the full quartet’s reference gain.';
+      $('bench-title').replaceChildren(document.createTextNode('Finite strikes.'), create('br'), document.createTextNode('Playable rooms.'));
+    }
     const previous = manifest.previousAudition;
     const previousUrl = fileUrl(previous?.url);
     if (previousUrl) {
@@ -226,10 +246,11 @@
     if (checks && !Array.isArray(checks) && typeof checks === 'object') {
       const summary = [];
       if (checks.rendered !== undefined && checks.requested !== undefined) summary.push(checks.rendered + ' of ' + checks.requested + ' requested clips rendered.');
-      if (checks.passed === true) summary.push('All render checks passed: finite audio, bounded internal energy, and valid source timing.');
+      if (checks.passed === true) summary.push('All single-strike checks passed: finite audio, bounded internal energy, and valid source timing.');
       else if (checks.passed === false) summary.push('Some checks failed. Read the render report before judging those clips.');
       const defaults = checks.defaults || checks.defaultReplays;
       if (Array.isArray(defaults) && defaults.length && defaults.every((item) => item.deterministicRaw && item.recipeRoundTrip && item.productionRecipeSampleReplay)) summary.push('Both first-listen recipes regenerate sample for sample.');
+      if (Number(checks.samplerPerformances) > 0) summary.push(checks.samplerPerformances + ' sampler phrases replay exactly from the exported PCM samples and their saved scores.');
       renderList('checks-panel', 'Render checks', summary);
       const report = fileUrl(checks.report || manifest.downloads?.checks);
       if (report) { const link = create('a', 'text-link', 'Full render report ↗'); link.href = report; link.target = '_blank'; link.rel = 'noreferrer'; $('checks-panel').append(link); }
@@ -237,6 +258,8 @@
     renderList('limitations-panel', 'Prototype boundaries', manifest.limitations);
     const zip = fileUrl(manifest.downloads?.zip);
     if (zip) { $('zip-download').href = zip; $('zip-download').download = ''; $('zip-download').hidden = false; }
+    const kit = fileUrl(manifest.downloads?.mpcKit);
+    if (kit) { $('kit-download').href = kit; $('kit-download').download = ''; $('kit-download').hidden = false; }
     const manifestLink = fileUrl(manifest.downloads?.manifest || 'manifest.json');
     if (manifestLink) $('manifest-download').href = manifestLink;
   }
@@ -367,7 +390,8 @@
       const link = card.querySelector('[data-download=wav]');
       const clip = clips.find((c) => c.id === id); const url = clip ? soundPath(clip) : null;
       if (url) { link.href = url; link.hidden = false; }
-      link.setAttribute('aria-label', 'Download ' + mode + ' WAV');
+      link.textContent = clip ? downloadLabel(clip) : 'WAV ↓';
+      link.setAttribute('aria-label', 'Download ' + mode + (clip && downloadLabel(clip).includes('FLAC') ? ' FLAC' : ' WAV'));
     });
     $('transport').hidden = !currentClip; document.body.classList.toggle('has-transport', Boolean(currentClip));
     if (!currentClip) return;
@@ -413,12 +437,15 @@
   });
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape') stop(); });
   window.addEventListener('pagehide', stop);
-  loadNotes();
   fetch('manifest.json').then((response) => {
     if (!response.ok) throw new Error('The render manifest could not be loaded (' + response.status + ').');
     return response.json();
   }).then((data) => {
     manifest = data;
+    if (data.auditionRevision === 'finite') {
+      storageKey = 'snipsnap-chamber-listening-notes-v2:finite:' + data.model + ':' + data.sourceRevision;
+    }
+    loadNotes();
     if (!Array.isArray(data.clips)) throw new Error('The render manifest does not contain a clips list.');
     const ids = new Set();
     clips = data.clips.filter((clip) => clip && typeof clip.id === 'string' && !ids.has(clip.id) && ids.add(clip.id));

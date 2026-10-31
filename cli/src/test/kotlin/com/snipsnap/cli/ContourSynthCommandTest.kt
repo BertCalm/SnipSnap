@@ -1,7 +1,10 @@
 package com.snipsnap.cli
 
+import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
+import com.snipsnap.kit.InstrumentStore
+import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.synth.ContourEngine
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.ContourPresets
@@ -199,6 +202,83 @@ class ContourSynthCommandTest {
                 assertFalse("Exception" in errors.toString(), "$args: $errors")
             }
             assertFalse(dir.exists())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `a complete Contour recipe becomes a seventeen zone instrument with macro and energy edits`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-instrument").toFile()
+        try {
+            val source = ContourPresets.forVoice(ContourVoice.KEY).first().copy(
+                name = "MY CONTOUR",
+                macros = ContourEngine.defaults(ContourVoice.KEY) + mapOf("TUNE" to .75f, "HOLD" to 0f),
+                config = ContourPresets.forVoice(ContourVoice.KEY).first().config.copy(
+                    bodyTable = ContourTable.FORMANT, edgeTable = ContourTable.ODD_EVEN,
+                    edgeRatio = 1.5f, bodyLevel = .62f, edgeLevel = .48f, loopSeconds = 1f,
+                ),
+                velocity = .7f,
+            )
+            val recipe = File(root, "recipe.json").also { it.writeText(source.toJsonText()) }
+            val directory = File(root, "instrument")
+            val output = ByteArrayOutputStream()
+            assertEquals(0, SynthCommand.run(listOf("CONTOUR", "KEY", "--patch", recipe.path,
+                "--instrument", "--release", ".8", "--velocity", ".35",
+                "--macros", "BODY=.2,EDGE=.8,RATE=.65", "--out", directory.path), PrintStream(output)))
+            val (sidecar, instrument) = InstrumentStore.list(directory).single()
+            val midis = (36..84 step 3).toList()
+            assertEquals(midis, instrument.zones.map { it.rootNote }, "keyboard zones replace saved TUNE")
+            assertEquals(.8f, instrument.release)
+            assertEquals(36, instrument.zones.first().lowNote)
+            assertEquals(84, instrument.zones.last().highNote)
+            assertTrue(instrument.zones.all { it.loopStartFrame in 1 until it.frameCount })
+            assertEquals(17, instrument.sampleFiles.size)
+            assertEquals(1, requireNotNull(directory.listFiles { it.extension == "xty" }).size)
+            assertEquals(1, directory.walkTopDown().count { it.extension == "xpm" })
+            val expectedPatch = source.copy(macros = source.macros +
+                mapOf("BODY" to .2f, "EDGE" to .8f, "RATE" to .65f), velocity = .35f)
+            val spec = ContourPadMaker.Spec(expectedPatch, .8f)
+            for (index in listOf(0, 8, 16)) {
+                val midi = midis[index]
+                val zone = instrument.zones[index]
+                val note = ContourPadMaker.renderZone(spec, midi)
+                val sheet = SmplChunk(midi, SmplChunk.Loop(note.loopStartFrame, note.snip.frameCount.toLong()))
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, note.snip, smpl = sheet) }
+                val wav = File(sidecar.parentFile, zone.sample)
+                assertContentEquals(expected.toByteArray(), wav.readBytes(), "MIDI $midi keeps saved tables and edited excitation")
+                assertEquals(1, WavReader.read(wav).channels)
+            }
+            assertTrue("17 zones, settled sustain (finite attack omitted)" in output.toString())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Contour instrument rejects ineffective edits and invalid release before output is created`() {
+        val root = kotlin.io.path.createTempDirectory("contour-cli-instrument-refusals").toFile()
+        val directory = File(root, "not-created")
+        try {
+            val cases = listOf(
+                "--attack" to listOf("--attack", ".2"),
+                "--midi" to listOf("--midi", "60"),
+                "--macros" to listOf("--macros", "TUNE=.75"),
+                "--macros" to listOf("--macros", "HOLD=1"),
+                "--all" to listOf("--all"),
+                "--velocity" to listOf("--velocity", "NaN"),
+                "--velocity" to listOf("--velocity", "1.01"),
+            ) + listOf("NaN", "Infinity", "0", "-.1", "1.51", "long", "").map {
+                "--release" to listOf("--release", it)
+            }
+            for ((flag, flags) in cases) {
+                val errors = ByteArrayOutputStream()
+                val args = listOf("synth", "CONTOUR", "KEY", "--instrument") + flags + listOf("--out", directory.path)
+                assertEquals(2, Cli.run(args.toTypedArray(), PrintStream(ByteArrayOutputStream()), PrintStream(errors)), "$flags: $errors")
+                assertTrue(flag in errors.toString(), "$flags: $errors")
+                assertFalse("Exception" in errors.toString(), "$flags: $errors")
+                assertFalse(directory.exists(), "$flags must fail before any output is created")
+            }
         } finally {
             root.deleteRecursively()
         }

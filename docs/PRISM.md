@@ -27,27 +27,27 @@ between cycles. Downloads retain the original engine WAVs.
 
 Generated WAVs, the manifest and the listening page live under
 `testkit/prism-audition/` and are ignored by Git. The source page and generator
-are tracked. The current matrix contains 176 cases with raw/matched partners;
-nine comparison-only clips bring the full pack to 185. The original 157 clips
-retain their IDs, audio and listening notes; the 28 additions are factory presets.
+are tracked. The current matrix contains 180 cases with raw/matched partners;
+nine comparison-only clips bring the full pack to 189. Existing clips retain
+their IDs and listening notes; four additions carry the body-opening recipes.
 Matched files use SnipSnap's shared audition target of .03 RMS over the loudest
 200 ms, distinct from the engine's melodic output target. The manifest records
 each recipe, PCM fingerprint, pitch, levels, render cost and relevant loop metrics.
 
 ## Factory bank
 
-The owner's positive review of the dry sound led to a complete 36-preset bank.
-The original eight recipes remain unchanged; 28 additions use the existing
-renderer and bounded template controls to provide different attacks, harmonic
-balances and group development. Every preset has a musical role on the audition
-page and is available through the shared factory preset registry, phone synth
-picker and CLI.
+The owner's positive review of the dry sound led to a 36-preset bank. A later
+listen preferred the source-derived body opening, now available in four more
+presets: Soft Arrival, Wire Bloom, Bowed Bloom and Hollow Rise. The preceding
+36 recipes and their selection order remain unchanged. Every preset has a
+musical role in the generated audition and is available through the shared
+factory preset registry, phone synth picker and CLI.
 
 | Family | Presets | Voices |
 | --- | ---: | --- |
-| Keys and plucks | 10 | KEY 5, PLUCK 5 |
+| Keys and plucks | 13 | KEY 8, PLUCK 5 |
 | Organs | 6 | ORGAN |
-| Basses | 6 | BASS |
+| Basses | 7 | BASS |
 | Sustained textures | 8 | VEIL |
 | Glass and bells | 6 | GLASS |
 
@@ -55,6 +55,11 @@ Presets retain their finite or held behavior when rendered. Held material export
 only its seamless sustain region; use the finite voices and velocity probes to
 judge the strike and early harmonic development. The factory bank adds no FX,
 external samples or changes to the calibrated GLASS renderer.
+
+The four [body-opening presets](PRISM_OPENING.md) retain their audition's
+complete carrier template and saved A/B weights. Their upper colour emerges
+over 0.8 seconds. They are finite notes: the phone's HOLD slider stays below
+the loop threshold. Ordinary PRISM presets retain the full HOLD range.
 
 ## GLASS listening revision
 
@@ -116,8 +121,8 @@ notes carry TONAL metadata; held notes carry LOOP metadata.
 ./gradlew :cli:run --args="synth PRISM GLASS --all --midi 72 --out /tmp/prism-glass"
 ```
 
-`--all` renders every preset for the selected voice: five KEY or PLUCK presets,
-six ORGAN, BASS or GLASS presets, or eight VEIL presets. `--preset` selects a
+`--all` renders every preset for the selected voice: eight KEY, five PLUCK,
+six ORGAN, seven BASS, six GLASS or eight VEIL presets. `--preset` selects a
 one-based index within that voice; the original eight keep their existing
 positions. These commands export pad WAVs. The CLI's `--instrument` and `--drone`
 options currently apply to other engines.

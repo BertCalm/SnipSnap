@@ -1,0 +1,129 @@
+{
+  "schemaVersion": 1,
+  "originalCommit": "122c7c0c6486521951db33ffbf78aef32d7fb31f",
+  "capture": "Original compiled classes, Temurin17.0.21, before conversation renderer edits",
+  "sourceGitBlobs": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Obbligato.kt": "dd0f9fe0b858907f55de54c8512baa849928b3d4",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObbligatoInteraction.kt": "c95e874fac651b66a991f39efb951835c0e59615",
+    "synth/src/main/kotlin/com/snipsnap/synth/Bore.kt": "2e4b6ede528ff4a9d4a50ef43275ae1edd369dc8",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "9546c86fd17986b5c31957178ce440b096eb5c7b",
+    "synth/src/main/kotlin/com/snipsnap/synth/Strings.kt": "1338eaad15f3a3c57b03cd1cf2bdb73c12d56e7b",
+    "synth/src/main/kotlin/com/snipsnap/synth/Keys.kt": "d52db4fb90debb504caff06e496892f69c10edbb",
+    "synth/src/main/kotlin/com/snipsnap/synth/Tide.kt": "c8bc43339e0911c47b580114cd93422fb1acc8fe",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "036ab78a7213ac0c063090edc9b1171d0210fe2d",
+    "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt": "4c9b44768c33c0b359c1f6353cfd6b1e7ab83fa5",
+    "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt": "9fd614f2ec41fb6d5768bced9d6f2cfe3229ba06"
+  },
+  "cases": [
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Play gentler compatibility",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 7
+      },
+      "rawFloat32LittleEndianSha256": "59337081a55263351f14f549415513a37b041228082182ae7898d527a19804af",
+      "airFloat32LittleEndianSha256": "5848043a33756a14b4e78b8784281d9d9ca82771b09543b5131de3ee1428162d",
+      "reedFloat32LittleEndianSha256": "bf4bd0edfd66edac41badc37bb72af6bc3d6c9e31bf961cb7023d8f29b076a9e",
+      "finalPcm24WavSha256": "dcf07a3b51eee87aa9c74d20aea6c82c78698bd12401566ac7925919c27873f8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Fight gentler compatibility",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 7
+      },
+      "rawFloat32LittleEndianSha256": "b2a338a5df906df2a1bba280c4d52ebfb2394cd60827e171d45a2bdd59001d92",
+      "airFloat32LittleEndianSha256": "fb3240bf9f8043448092efdac8c7ed644ee2757088b0891a7d0b3e69c7104476",
+      "reedFloat32LittleEndianSha256": "013eca7824e1064acd59478f75c008ede09bc6096d6c82d2e6d2e9a57695c97b",
+      "finalPcm24WavSha256": "00a01f6646171930ff6bc5c6dbde66ed16df8d64739db41ec27dd7a00f70c8e8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Protect gentler compatibility",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.8571428656578064,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 7
+      },
+      "rawFloat32LittleEndianSha256": "2e8f20062b325ca7b827890eb836bbf37120029930f411df0923a93cceec795e",
+      "airFloat32LittleEndianSha256": "326b995d39f802ed06b5327534259887f06a8b30300d9dc321bbff4239b16779",
+      "reedFloat32LittleEndianSha256": "9d7e5508ab2ab3460255d69eea50bf3e76da871d5ea53590f551ff5cb46c5482",
+      "finalPcm24WavSha256": "ace1d3db7d1d7c76953c694c8095186899bec49399a6cc3bc833ab2529611743"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Fight high gentler compatibility",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.800000011920929,
+        "seed": 17,
+        "model": 7
+      },
+      "rawFloat32LittleEndianSha256": "069d587302c74868813fa344931cb8735d868a2e35c4bb0f01bc8ca72fbc26ba",
+      "airFloat32LittleEndianSha256": "d4b5b4b771043effb9082419aaa17da0fb273c25efd42a364be9731e8f81e3ea",
+      "reedFloat32LittleEndianSha256": "45ffda039d17694b10f7754229302d63e08d559c43392e13a3f962c0696feb38",
+      "finalPcm24WavSha256": "f9993d8662d87f837528e7284295591e22cf466b93bbd89fbc47dd0a5376dbf7"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Play middle gentler compatibility",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.44999998807907104,
+          "BOND": 0.1428571492433548,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.10000000149011612
+        },
+        "midi": 67,
+        "velocity": 0.800000011920929,
+        "seed": -23,
+        "model": 7
+      },
+      "rawFloat32LittleEndianSha256": "eb38c457b47c4eee998cc6eefa94f34eac86015b35204483ac8baa611c49cfee",
+      "airFloat32LittleEndianSha256": "d510e8453eeb310684d863acca5b09e9e4a3859e2408cba5c395f5937eb232d1",
+      "reedFloat32LittleEndianSha256": "37458296a5662e6806c06c5d0acfecaff78060f361ddb9c990acf423429a7645",
+      "finalPcm24WavSha256": "5349e3c2b502e7ca7d0d2bd58fd5e7affdb3ad6d91432afb6317108285bb2185"
+    }
+  ]
+}

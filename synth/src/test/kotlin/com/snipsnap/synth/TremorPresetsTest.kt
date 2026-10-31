@@ -12,8 +12,9 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * TREMOR's factory roster. Thirteen sounds, held to the same naming and spread rules as the other
- * rosters. They prove the roster is sound. They do not prove it is good: nothing in it was listened to.
+ * TREMOR's thirteen factory recipes keep their naming, saved identity and authored pad roles.
+ * Import classifications are measured separately; approved voice/touch buffers are pinned in
+ * TremorCharacterTest rather than inferred from the classifier's labels.
  */
 class TremorPresetsTest {
 
@@ -26,6 +27,46 @@ class TremorPresetsTest {
 
     private companion object {
         val readings: List<Reading> by lazy { TremorPresets.all().map { Reading(it) } }
+        val legacyReadings: List<Reading> by lazy {
+            TremorPresets.all().map { Reading(it.copy(model = Tremor.LEGACY_MODEL)) }
+        }
+
+        // Authored pad roles stay fixed when the approved character gains upper modes.
+        // This table is independent of drumClassFor, so a filing change cannot pass by
+        // changing both the factory's construction and the test's expected value together.
+        val authoredRoles = mapOf(
+            "BROAD DRUM" to DrumClass.TOM,
+            "SOFT STRIKE" to DrumClass.TOM,
+            "HELD DRUM" to DrumClass.LOOP,
+            "FOUR HANDS" to DrumClass.TOM,
+            "DEEP ASSEMBLY" to DrumClass.KICK,
+            "LIGHT BED" to DrumClass.TOM,
+            "SETTLING BED" to DrumClass.TOM,
+            "DRY CAGE" to DrumClass.TOM,
+            "LATE STRAND" to DrumClass.TOM,
+            "CHARGED TAIL" to DrumClass.PERC,
+            "HELD BLOOM" to DrumClass.LOOP,
+            "SOFT FAULT" to DrumClass.TOM,
+            "BROKEN RETURN" to DrumClass.TOM,
+        )
+
+        // Measured file-import classifications of the approved model-2 buffers. These
+        // describe the importer, not the role a saved factory pad must occupy in a kit.
+        val currentImportClasses = mapOf(
+            "BROAD DRUM" to DrumClass.TOM,
+            "SOFT STRIKE" to DrumClass.TOM,
+            "HELD DRUM" to DrumClass.LOOP,
+            "FOUR HANDS" to DrumClass.PERC,
+            "DEEP ASSEMBLY" to DrumClass.KICK,
+            "LIGHT BED" to DrumClass.CLAP,
+            "SETTLING BED" to DrumClass.CLAP,
+            "DRY CAGE" to DrumClass.PERC,
+            "LATE STRAND" to DrumClass.TOM,
+            "CHARGED TAIL" to DrumClass.PERC,
+            "HELD BLOOM" to DrumClass.LOOP,
+            "SOFT FAULT" to DrumClass.PERC,
+            "BROKEN RETURN" to DrumClass.PERC,
+        )
 
         val names = mapOf(
             TremorVoice.HIDE to listOf("BROAD DRUM", "SOFT STRIKE", "HELD DRUM"),
@@ -39,21 +80,37 @@ class TremorPresetsTest {
 
     @Test
     fun `every preset renders clean audio and keeps its filing contract`() {
-        for (r in readings) {
+        assertTrue(readings.all { it.preset.model == Tremor.MODEL }, "new factory recipes selected the legacy renderer")
+        for (r in readings + legacyReadings) {
             assertTrue(r.snip.frameCount > 0, "${r.label} rendered nothing")
             assertTrue(r.snip.samples.all { it.isFinite() && it in -1f..1f }, "${r.label} clipped or was not finite")
             val loud = Loudness.of(r.snip)
             assertTrue(loud >= Dsp.MELODIC_LOUDNESS_TARGET * 0.9f || r.snip.peak() >= 0.95f, "${r.label} is quiet")
             val dc = r.snip.samples.average()
             assertTrue(abs(dc) < 0.05, "${r.label} has DC $dc")
-            // Audible bead contacts make SETTLING BED classify PERC; removing the feedback
-            // squeal makes CHARGED TAIL classify TOM. Preserve those two factory pad roles
-            // without tuning either sound to the generic file-import centroid thresholds.
-            when (r.preset.name) {
-                "SETTLING BED" -> assertEquals(DrumClass.TOM, r.filed, r.label)
-                "CHARGED TAIL" -> assertEquals(DrumClass.PERC, r.filed, r.label)
-                else -> assertEquals(r.filed, r.heard, "${r.label}: filed ${r.filed}, heard ${r.heard}")
+            assertEquals(authoredRoles.getValue(r.preset.name), r.filed, "${r.label} model ${r.preset.model}")
+        }
+    }
+
+    @Test
+    fun `legacy presets retain generic alignment and their two disclosed overrides`() {
+        for (r in legacyReadings) {
+            val expected = when (r.preset.name) {
+                "SETTLING BED" -> DrumClass.PERC
+                "CHARGED TAIL" -> DrumClass.TOM
+                else -> authoredRoles.getValue(r.preset.name)
             }
+            assertEquals(expected, r.heard, "${r.label}: legacy import classification changed")
+        }
+    }
+
+    @Test
+    fun `current import classifications are recorded separately from authored roles`() {
+        assertEquals(authoredRoles.keys, currentImportClasses.keys)
+        for (r in readings) {
+            assertEquals(Tremor.MODEL, r.preset.model, r.label)
+            assertEquals(currentImportClasses.getValue(r.preset.name), r.heard,
+                "${r.label}: model-2 import classification changed; do not retune the approved audio to its pad role")
         }
     }
 

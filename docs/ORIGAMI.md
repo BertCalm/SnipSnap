@@ -79,7 +79,7 @@ establish the perceived pitch or musical quality of an inharmonic sound.
 | FOLD | Unchanged source to the geometrically transformed upper spectrum |
 | TURN | Upper-partial translation; .5 is neutral |
 | WARP | Upper-partial spacing; .5 is neutral |
-| MOTION | Smooth movement of the geometry during the note |
+| MOTION | Axis movement in STEADY; fast-to-slow gesture duration in BLOOM/UNFOLD |
 
 FOLD zero bypasses the geometry exactly, including TURN, WARP and MOTION.
 At intermediate FOLD values, the original upper spectrum and the transformed
@@ -99,7 +99,89 @@ their generated source without an external recording.
 
 New patches use model 4. Explicit models 1, 2 and 3 replay their frozen
 renderers; older patches without a model field select model 1. Saved sounds keep
-their original audio. CRANE delegates to the first renderer in every model.
+their original audio. In STEADY, CRANE delegates to the first renderer in every
+model; explicit model-4 gestures use the new renderer with the same source.
+
+## Fold gestures
+
+Model-4 patches offer STEADY, BLOOM and UNFOLD above the six controls.
+STEADY keeps the accepted sound and the original MOTION axis movement. BLOOM
+starts with the open source and folds into the selected color; UNFOLD starts
+folded and opens back into the source. FOLD sets the maximum reflected share.
+In the two new modes, MOTION sets gesture time from fast to slow, with the
+duration shown in seconds. The gesture plays once; it does not also run the
+axis LFO. Switching modes keeps all numeric controls.
+
+The change is a complementary amplitude contour between the source and its
+actual relocated partials, before audio filtering. Their frequencies stay fixed
+at the selected geometry, and the separate root keeps the played pitch. The
+accepted amplitude attack and finite note length remain independent of this
+color change. STILL starts its gesture later so its soft attack can expose it.
+
+The new gesture has its own version 1, stored only when BLOOM or UNFOLD is
+selected. An omitted gesture means STEADY, preserving existing JSON and audio.
+Models 1–3 keep their original motion and do not accept the new modes. Loading
+a current factory preset makes gestures available without changing an old saved
+recipe. All six factory presets remain STEADY until deliberately edited.
+
+FAN/STILL MAKE INSTRUMENT keeps the complete gesture before the sustain loop.
+The settled body then repeats without restarting the gesture. RELEASE still
+controls the fade after key-up. CRANE uses the new gestures in finite notes.
+
+```sh
+snipsnap synth ORIGAMI FAN --gesture BLOOM --macros FOLD=.75,MOTION=.65 --out /path/to/notes
+snipsnap synth ORIGAMI STILL --gesture UNFOLD --macros MOTION=.65 --instrument --release .6 --out /path/to/instruments
+./gradlew --no-daemon :shell:generateOrigamiGestureAudition
+```
+
+The audition writes a self-contained nine-clip `start-here.html` and a fuller
+listening pack under `testkit/origami-gestures`. New sound acceptance is a
+listening decision. The design and its verification ledger are in the
+[fold-gesture brief](superpowers/specs/2026-10-23-origami-fold-gestures.md).
+
+## Velocity expression
+
+Model-4 sounds offer **VELOCITY: LEVEL / FOLD** beside GESTURE. LEVEL keeps
+the accepted response. FOLD makes softer hits use less of the selected folded
+color, with the pitch, source and movement timing unchanged. Full velocity
+reaches the original FOLD value exactly; it never exceeds that value.
+
+The SOFT/MID/FULL preview hits audition relative strengths below the saved
+note's own velocity. They are temporary: they do not change the saved ceiling,
+presets, navigation recipe or SEND reference. In BLOOM the selected depth is
+the arrival color; in UNFOLD it is the starting color before returning open.
+STEADY retains its axis movement. No extra macro is added.
+
+For ordinary pads, SEND writes the reference note and complete recipe. Apply
+**SOFT HITS** to that pad for per-hit folded color. Its softer samples stay
+below the saved main velocity and are peak-matched before playback, so a quiet
+reference cannot accidentally acquire harder "soft" samples. Existing processed
+pad fallback behavior is unchanged.
+
+FAN/STILL MAKE INSTRUMENT writes three touch layers for each of the nine pitch
+zones when FOLD expression is selected. Soft/mid/full occupy MIDI velocities
+1–42, 43–84 and 85–127. Each layer keeps its own attack and loop; the player
+supplies velocity gain and key-up release. PREVIEW plays all three touches.
+LEVEL retains the original nine-sample instrument. FOLD writes 27 samples and
+therefore uses more preparation time, storage and sample memory.
+
+Expression is saved as an optional, independent version-1 object. Missing or
+null expression means LEVEL; models 1–3 retain their original sound and reject
+FOLD. The six factories remain LEVEL. The source geometry, gesture and held
+versions stay unchanged.
+
+```sh
+snipsnap synth ORIGAMI FAN --gesture BLOOM --expression FOLD --velocity .35 --out /path/to/notes
+snipsnap synth ORIGAMI STILL --gesture UNFOLD --expression FOLD --instrument --release .6 --out /path/to/instruments
+./gradlew --no-daemon :shell:generateOrigamiExpressionAudition
+```
+
+The audition writes nine embedded comparisons and the full study under
+`testkit/origami-expression`; complete exported instruments are kept in a
+sibling directory. The [expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records the curve, sampler contract and listening gate. A geometric fold can
+move partials downward, so expression is described as more folded color rather
+than a promise of greater brightness.
 
 ## Fourth listening round: folded color (model 4)
 
@@ -201,12 +283,48 @@ The ORIGAMI starter kit contains sixteen dry tonal one-shots: eight CRANE
 notes, the six factory presets and unfolded FAN/STILL references. The kit's
 notes use C minor pentatonic. It carries replayable recipes and source roots.
 
+## Held keys
+
+Model-4 FAN and STILL offer **MAKE INSTRUMENT ▸** in SYNTH. Set RELEASE
+between 0.1 and 1.5 seconds (default 0.6), then MAKE. Open the saved instrument
+in MAKE's INSTRUMENTS list and play KEYS: press to sustain, release to fade.
+PREVIEW plays middle C for three seconds followed by the chosen release.
+The six sound controls stay the same; the instrument sheet adds no attack
+control because the sample retains the voice's authored onset.
+
+Each instrument has nine sampled roots, three semitones apart, covering
+C3–C5 only. The played zone overrides the source recipe's TUNE and explicit
+MIDI; its seed, velocity and spectral settings remain intact. Keyboard velocity
+adds the normal player gain. The mono 44.1 kHz samples carry an attack followed
+by a periodic sustain region. Phone metadata, WAV sampler markers and both
+MPC keygroup formats share the same loop and note-off release.
+
+Held renderer model 1 is versioned separately from finite model 4. It fits
+oscillator cycles and geometry motion to one repeat period, integrating moving
+frequencies before closing phase. In STEADY, FAN's motion period is about 2.86 seconds;
+STILL uses about ten seconds, with its slower motion at roughly 0.10/0.20 Hz.
+These held motion rates are fitted rather than preserving finite STILL's
+0.10/0.17 Hz pair. The original finite attack leads into that periodic field;
+the loop has no end fade. Tests compare independently synthesized cycles,
+not a duplicated tail that can conceal a phase reset.
+
+Every export also writes `<name>.origami-keys.json`, containing the unchanged
+finite patch recipe, release and held model. It is separate from the phone's
+playback sidecar. On the desk:
+
+```sh
+snipsnap synth ORIGAMI FAN --instrument --release 0.6 --out /path/to/instruments
+snipsnap synth ORIGAMI STILL --patch /path/to/finite-patch.json --instrument --out /path/to/instruments
+```
+
+CRANE and models 1–3 keep their finite renderer. SEND TO PAD remains a finite
+sound for every voice; MAKE INSTRUMENT supplies held playing through KEYS.
+
 ## Current limits
 
-Rendering produces finite mono 44.1 kHz samples. STILL is a finite texture,
-not a certified sustain loop. HOLD, live spectral processing and keygroup
-instrument integration remain future work. A seeded render
-does not establish periodic phase/modulation state at a loop boundary.
+ORIGAMI renders samples offline. Live spectral processing and externally
+recorded sources remain future work. A deterministic finite recipe alone does
+not establish periodic phase/modulation state at a loop boundary.
 
 The first comparisons establish whether the direct-partial method is useful.
 STFT processing remains a possible later route for genuine broadband noise or

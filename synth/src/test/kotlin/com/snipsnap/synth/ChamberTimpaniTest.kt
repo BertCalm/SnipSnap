@@ -4,6 +4,8 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import java.io.ByteArrayOutputStream
 import java.security.MessageDigest
+import kotlin.math.abs
+import kotlin.math.log10
 import kotlin.math.sqrt
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
@@ -12,20 +14,21 @@ import kotlin.test.assertTrue
 
 class ChamberTimpaniTest {
     @Test
-    fun `published model one recipes retain their exact raw PCM`() {
-        // Captured from the two published 2026-10-18 first-listen WAVs. These
-        // fixtures predate model 2 and deliberately do not use current defaults.
-        val goldens = mapOf(
-            "hybrid-default" to "637eafc74386232080ca84e50484ae130fae9e897e05550f007b2a5deba99fef",
-            "aquarium-default" to "3da82fcf4a2c31369c367bcc63bc7b4f699c464ce309379c7611c2c6017720ae",
+    fun `published model one and two recipes retain their exact raw PCM`() {
+        // Captured published WAVs, independent of the current defaults.
+        val goldens = listOf(
+            Triple(1, "hybrid-default", "637eafc74386232080ca84e50484ae130fae9e897e05550f007b2a5deba99fef"),
+            Triple(1, "aquarium-default", "3da82fcf4a2c31369c367bcc63bc7b4f699c464ce309379c7611c2c6017720ae"),
+            Triple(2, "hybrid-timpani-r2-c3-full", "1115f933685f3bef8dec047b55a05284d8d612fbf5958e269d621c03f454a262"),
+            Triple(2, "aquarium-timpani-r2-c3-full", "2eac9d70ada930c97af4599bc26b3027012178bf73f15549048dd79fa1d48025"),
         )
-        for ((id, expected) in goldens) {
-            val text = javaClass.getResource("/chamber-model-1/$id.json")!!.readText()
+        for ((model, id, expected) in goldens) {
+            val text = javaClass.getResource("/chamber-model-$model/$id.json")!!.readText()
             val recipe = PadRecipe.fromJsonText(text)
             val p = recipe.patch as ChamberPatch
-            assertEquals(1, p.model)
+            assertEquals(model, p.model)
             assertEquals(p, PadRecipe.fromJsonText(recipe.toJsonText()).patch)
-            assertEquals(1, (p.withMacros(p.macros + ("STRIKE" to .6f)) as ChamberPatch).model)
+            assertEquals(model, (p.withMacros(p.macros + ("STRIKE" to .6f)) as ChamberPatch).model)
             val raw = Chamber.probe(p.voice, p.macros, p.midi, p.velocity, p.configuration, p.seed, p.model,
                 Chamber.ProbeOptions(recordStems = false, recordDiagnostics = false)).rawMix
             val bytes = ByteArrayOutputStream().also {
@@ -33,6 +36,33 @@ class ChamberTimpaniTest {
             }.toByteArray()
             val sha = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
             assertEquals(expected, sha, "$id changed the previously published performance")
+        }
+    }
+
+    @Test
+    fun `mix lift is three dB on membrane pickup with identical voicing and room state`() {
+        for (voice in ChamberVoice.entries) {
+            val options = Chamber.ProbeOptions(seconds = .6f)
+            val accepted = Chamber.probe(voice, model = 2, options = options)
+            val lifted = Chamber.probe(voice, model = 3, options = options)
+            val a = accepted.instrumentStems[0]
+            val b = lifted.instrumentStems[0]
+            val ratio = rms(b, .02, .55) / rms(a, .02, .55)
+            assertTrue(abs(20 * log10(ratio) - 3.0) < .001, "$voice lift was ${20 * log10(ratio)} dB")
+            var error = 0.0
+            var energy = 0.0
+            for (i in a.indices) {
+                error += (b[i] - a[i] * ratio).let { it * it }
+                energy += b[i].toDouble() * b[i]
+            }
+            assertTrue(sqrt(error / energy) < 1e-5, "$voice membrane shape changed")
+            for (i in 1..3) assertContentEquals(accepted.instrumentStems[i], lifted.instrumentStems[i])
+            assertContentEquals(accepted.surface, lifted.surface)
+            assertContentEquals(accepted.late, lifted.late)
+            assertEquals(accepted.diagnostics.energy, lifted.diagnostics.energy)
+            assertEquals(accepted.diagnostics.primaryWork, lifted.diagnostics.primaryWork)
+            assertEquals(accepted.geometry, lifted.geometry)
+            assertEquals(accepted.diagnostics.sharedStrikeTimes, lifted.diagnostics.sharedStrikeTimes)
         }
     }
 

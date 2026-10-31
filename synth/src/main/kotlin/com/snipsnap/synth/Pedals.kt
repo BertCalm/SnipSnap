@@ -22,8 +22,8 @@ enum class PedalSide(val id: String) {
  * PEDALS row, the CLI `treat --pedals` form, the replay and the tests all
  * read this list; adding a pedal is one [Entry] here plus its listening
  * gate. A pedal that has not passed its gate stays [Entry.gated] false: it
- * draws no chip and is reachable from the CLI and saved kits, the pedal
- * board spec's standing rule for a section that fails its gate.
+ * is not on the sheet's slate and is reachable from the CLI and saved kits,
+ * the pedal board spec's standing rule for a section that fails its gate.
  *
  * An entry's [Entry.chain] is the character in [Treatments.EXTRA] (or the
  * seeded bank) by reference, so `treat <character>` and a pick of the same
@@ -31,10 +31,16 @@ enum class PedalSide(val id: String) {
  * several sections: RIG) owns its own chain and its own key, and that key is
  * not a [Treatments] name.
  *
- * Nothing here is heard: the day-one entries are the two chips the owner
- * picked at the pedal board's round two (DRIVE, COMP), the WAH section
- * awaiting its gate, and RIG as the first board, authored as a hypothesis
- * for its own gate.
+ * The entries: the two chips the owner picked at the pedal board's round
+ * two (DRIVE, and COMP, now SUSTAIN over its own section, gated on
+ * 2026-10-24); the WAH section's three moves (WAH, TOUCH, ROCK), which
+ * passed the owner's gate on 2026-10-23 with a chip each; and RIG as the
+ * first board, authored as a hypothesis for its own gate; FORGE, the
+ * hydroforming section, gated on 2026-10-26; DELAY, added after its own
+ * spec and gated on 2026-10-28. Seven pedals do not fit row seven's six
+ * chips, so the sheet draws a slate: five of the gated pedals on the row,
+ * the user's choice and the same everywhere, and every gated pedal behind
+ * MORE (`PedalSlate`, docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
  */
 object Pedals {
 
@@ -50,7 +56,7 @@ object Pedals {
         val side: PedalSide,
         /** Whether the user may flip it between PRE and POST. Never for the amp or a board. */
         val movable: Boolean,
-        /** Passed its owner listen: draws a chip. */
+        /** Passed its owner listen: on the sheet, a line in MORE and, for a pedal (not a board), a chip row seven can draw. */
         val gated: Boolean,
     ) {
         /** The sections the chain sets, in rack order. */
@@ -107,21 +113,33 @@ object Pedals {
     val entries: List<Entry> = listOf(
         // A drive pedal: VALVE at the top of its gain law. The amp: it cannot move. The owner's pick, round two.
         Entry("DRIVE", "driven", character("driven"), PedalSide.AMP, movable = false, gated = true),
-        // A compressor pedal for now (SQUASH at its strongest): in front of the amp by convention, movable.
-        Entry("COMP", "compressed", character("compressed"), PedalSide.PRE, movable = true, gated = true),
-        // The WAH section's AUTO move: the first pedal on a board, movable (the owner heard both ways). Gate pending.
-        Entry("WAH", "wahed", character("wahed"), PedalSide.PRE, movable = true, gated = false),
+        // The sustain pedal (the COMPRESSOR section): in front of the amp by convention, movable. The chip reads
+        // SUSTAIN, the owner's word at its gate (2026-10-24); the saved key stays `compressed`.
+        Entry("SUSTAIN", "compressed", character("compressed"), PedalSide.PRE, movable = true, gated = true),
+        // The WAH section's three moves, each its own chip: AUTO (WAH), the envelope follower (TOUCH) and the
+        // one rock (ROCK). Movable: the owner heard both ways and found them both good, in front of the amp a
+        // little better. Gate passed, 2026-10-23.
+        Entry("WAH", "wahed", character("wahed"), PedalSide.PRE, movable = true, gated = true),
+        Entry("TOUCH", "touchwahed", character("touchwahed"), PedalSide.PRE, movable = true, gated = true),
+        Entry("ROCK", "rockwahed", character("rockwahed"), PedalSide.PRE, movable = true, gated = true),
+        // FORGE in front of the amp, where the rack puts it, and not movable: the owner heard it before and after
+        // VALVE and chose before, "more powerful without distorting" (gate, 2026-10-26).
+        Entry("FORGE", "forged", character("forged"), PedalSide.PRE, movable = false, gated = true),
         // The first board: a compressor into the drive pedal into one slapback. A hypothesis for its own gate:
         // the brainstorm's RIG, values as the characters it is made of. It contains the amp, so it sits at AMP.
         Entry(
             "RIG", "rig",
             FxChain(
-                squash = character("compressed").squash,
+                compressor = character("compressed").compressor,
                 valve = character("driven").valve,
                 echo = character("slapback").echo,
             ),
             PedalSide.AMP, movable = false, gated = false,
         ),
+        // A delay pedal: the `delayed` character, ECHO's long, dark repeats. After the amp, where a rig puts a delay;
+        // not movable. Its sound passed its gate on 2026-10-28 (docs/superpowers/specs/2026-10-22-delay-head-design.md),
+        // and it is on the slate's default row (docs/superpowers/specs/2026-10-28-pedal-slate-design.md).
+        Entry("DELAY", "delayed", character("delayed"), PedalSide.POST, movable = false, gated = true),
     )
 
     init {

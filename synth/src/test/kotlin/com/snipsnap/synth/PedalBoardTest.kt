@@ -55,7 +55,7 @@ class PedalBoardTest {
         val board = PedalBoard(listOf(pick("wahed", 0.7f, PedalSide.PRE), pick("compressed", 1f, PedalSide.PRE)))
         val folded = board.chainFor(PedalSide.PRE)!!
         assertEquals(Treatments.chain("wahed", 0.7f).wah, folded.wah)
-        assertEquals(Treatments.chain("compressed", 1f).squash, folded.squash)
+        assertEquals(Treatments.chain("compressed", 1f).compressor, folded.compressor)
         assertContentEquals(folded.process(snare).samples, board.process(snare).samples, "one side is one pass")
 
         // DRIVE then RIG both set valve: RIG, picked later, owns it.
@@ -92,6 +92,23 @@ class PedalBoardTest {
         val rig = PedalBoard(listOf(pick("rig", 1f))).process(snare)
         assertTrue(rig.frameCount <= snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt(), "RIG's slapback ran past the budget")
         // The cap is the chain's own: a pass that stays within it is untouched (the equivalence tests above prove it).
+    }
+
+    @Test
+    fun `RIG and DELAY on one board run two echoes, one per pass, inside the board's one tail budget`() {
+        val board = PedalBoard(listOf(pick("rig", 1f), pick("delayed", 1f)))
+        assertEquals("rig", board.owner(PedalSide.AMP, "echo")!!.key, "RIG's slapback is the AMP pass's echo")
+        assertEquals("delayed", board.owner(PedalSide.POST, "echo")!!.key, "DELAY is the POST pass's echo")
+        val out = board.process(snare)
+        val budget = snare.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        assertTrue(out.frameCount <= budget, "two tail-making picks ran past the board's budget")
+        // DELAY really ran, on RIG's output: RIG alone ends inside the budget, the pair reaches it, and the pair is DELAY's
+        // chain on RIG's render cut by the board's budget, sample for sample, the fade included: the board cuts with the
+        // rack's own capTail.
+        val rigOnly = PedalBoard(listOf(pick("rig", 1f))).process(snare)
+        assertTrue(rigOnly.frameCount < budget, "RIG alone already fills the budget, so this test proves nothing")
+        assertEquals(budget, out.frameCount, "the board's cap did not engage: DELAY did not run on RIG's output")
+        assertContentEquals(FxChain.capTail(snare, Treatments.chain("delayed").process(rigOnly)).samples, out.samples)
     }
 
     @Test
@@ -160,5 +177,49 @@ class PedalBoardTest {
             val direct = Treatments.chain(name, 1f).process(snare)
             assertContentEquals(direct.samples, applied.samples, "$name is faded now and was not before")
         }
+    }
+
+    // ---------- around a synth pad's own landing chain (Stage 3) ----------
+
+    @Test
+    fun `around no landing chain is the board itself, and a bypassed board is the landing chain alone`() {
+        val board = PedalBoard(listOf(pick("wahed", 0.7f), pick("delayed", 0.7f)))
+        assertContentEquals(board.process(snare).samples, board.processAround(snare, null).samples)
+        val landing = Magnet.landingChain(MagnetVoice.JANGLE)
+        val off = PedalBoard(listOf(pick("wahed", 0f)))
+        assertContentEquals(landing.process(snare).samples, off.processAround(snare, landing).samples)
+    }
+
+    @Test
+    fun `around a landing chain that pitches or swells the note, the board's budget runs from the note it leaves`() {
+        // A pad's own chain that pitches it down an octave, or swells in front of the hit, makes the note longer, and
+        // that length is the note, not tail: the rack measures its budget from it, and so must the board, or its cut (a
+        // 300 ms fade since 2026-10-28) lands on the note. A long ECHO in the landing reaches the budget either way.
+        val echo = mapOf("TIME" to 1f, "REPEAT" to 1f, "TONE" to 0.5f, "MIX" to 1f)
+        val budget = (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        val wah = PedalBoard(listOf(pick("wahed", 0.7f)))
+        for ((what, landing) in listOf(
+            "an octave down" to FxChain(speed = mapOf("SEMITONES" to 0f), echo = echo),
+            "swelled in front of the hit" to FxChain(swell = mapOf("RISE" to 0.6f), echo = echo),
+        )) {
+            val note = landing.head(Treatments.chain("wahed", 0.7f).process(snare)).frameCount
+            assertTrue(note > snare.frameCount + snare.sampleRate / 4, "$what: the landing no longer lengthens the note, so this test proves nothing")
+            val out = wah.processAround(snare, landing)
+            assertEquals(note + budget, out.frameCount, "$what: the board's budget did not run from the note the landing leaves")
+        }
+    }
+
+    @Test
+    fun `around a landing amp the PRE pick reaches the amp and the POST pick follows it`() {
+        val dry = Magnet.render(MagnetVoice.JANGLE)
+        val landing = Magnet.landingChain(MagnetVoice.JANGLE)
+        // PRE alone: the pedal's chain, then the landing amp, two renders in a row.
+        val wah = PedalBoard(listOf(pick("wahed", 0.7f)))
+        val rig = landing.process(Treatments.chain("wahed", 0.7f).process(dry))
+        assertContentEquals(rig.samples, wah.processAround(dry, landing).samples, "WAH is not in front of the amp")
+        assertFalse(wah.process(landing.process(dry)).samples.contentEquals(rig.samples), "in front and after are the same sound")
+        // POST alone: after the landing chain, which is today's board on the baked pad.
+        val delay = PedalBoard(listOf(pick("delayed", 0.7f)))
+        assertContentEquals(delay.process(landing.process(dry)).samples, delay.processAround(dry, landing).samples, "DELAY left the back of the amp")
     }
 }

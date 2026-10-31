@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101419">
+  <meta name="description" content="Listen to three dry Libration voices for SnipSnap. Compare moving clouds, departing voices and sympathetic memory.">
+  <title>Libration — SnipSnap listening study</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+<header class="site-header wrap">
+  <a class="brand" href="#top" aria-label="Libration home"><span class="brand-mark" aria-hidden="true">s/s</span> SNIPSNAP <span class="brand-divider">/</span> LISTENING ROOM</a>
+  <a class="quiet-link" href="libration-listening-pack.zip" download>Download the study <span aria-hidden="true">→</span></a>
+</header>
+<main id="top">
+  <section class="hero wrap" aria-labelledby="title">
+    <div class="eyebrow"><span class="status-dot"></span> ENGINE STUDY 01 <span class="tag">CONTROL REVISION · 02</span></div>
+    <div class="hero-heading"><h1 id="title">Libration<span>.</span></h1><p>A steady centre.<br> A moving constellation.</p></div>
+    <p class="intro">A pitched instrument with two clouds of sympathetic voices. Some wander and return. Others peel away, leaving a ringing trace.</p>
+    <p class="revision-link"><a href="#controls-title">Revised NUDGE & RESONANCE · compare the five steps ↓</a></p>
+    <div class="hero-bottom"><span>COHERE <i>→</i> WANDER <i>→</i> DEPART</span><span>Three voices · Dry audio · C4 reference</span></div>
+  </section>
+
+  <section class="listening wrap" aria-label="Listen to Libration">
+    <div class="voice-list" id="voices">
+      <button class="voice active" data-voice="GATHER" aria-pressed="true"><span class="voice-number">01</span><span><strong>Gather</strong><small>Rounded, woody excursions</small></span><span class="voice-arrow" aria-hidden="true">→</span></button>
+      <button class="voice" data-voice="TWINS" aria-pressed="false"><span class="voice-number">02</span><span><strong>Twins</strong><small>Fine glass, warm counterpart</small></span><span class="voice-arrow" aria-hidden="true">→</span></button>
+      <button class="voice" data-voice="DEPARTURE" aria-pressed="false"><span class="voice-number">03</span><span><strong>Departure</strong><small>Peeling voices, lingering traces</small></span><span class="voice-arrow" aria-hidden="true">→</span></button>
+      <div class="listening-note"><span class="small-label">START HERE</span><p>Play a voice, then switch a comparison while it plays. Listen for movement inside the tone and what remains after a voice leaves.</p></div>
+    </div>
+    <div class="orbit-panel">
+      <div class="plot-top"><span id="plot-label">GATHER / CLOUD MOTION</span><span class="live-label"><span></span> ACTUAL TRAJECTORIES</span></div>
+      <canvas id="orbit" aria-label="Integrated particle displacement from each particle's equilibrium"></canvas>
+      <div class="plot-bottom"><span><i class="legend-dot wood"></i> Rounded <i class="legend-dot glass"></i> Glassy</span><span id="plot-note">Displacement from each equilibrium</span></div>
+    </div>
+    <div class="transport">
+      <button id="play" class="play-button" disabled aria-label="Play selected audio"><svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg></button>
+      <div class="now-playing"><span class="small-label" id="now-label">SELECTED VOICE</span><strong id="now-title">Gather</strong><span id="now-description">Loading the listening study…</span></div>
+      <div class="progress"><div class="time-row"><span id="elapsed">0:00</span><span id="duration">0:00</span></div><input id="seek" type="range" min="0" max="1000" value="0" aria-label="Audio position"></div>
+      <label class="level-select"><span class="small-label">PLAYBACK LEVEL</span><select id="level"><option value="matched">Matched listening level</option><option value="raw">Native gain</option></select></label>
+    </div>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </section>
+
+  <section class="controls wrap" aria-labelledby="controls-title">
+    <div class="section-heading"><div><span class="eyebrow">REVISED / NUDGE & RESONANCE</span><h2 id="controls-title">A clearer push.<br>A longer trace.</h2></div><p>Start with 0% and 100%, then try the steps between. NUDGE changes when the moving cloud leaves; the steady root stays. RESONANCE changes what keeps ringing after the two-second source ends.</p></div>
+    <div id="control-options" class="control-grid"></div>
+    <p class="fine-print">Macro examples match the body’s listening level separately, so extra loudness does not hide the comparison. Each row changes only its named control. The NUDGE row holds RESONANCE at 25%; the RESONANCE row holds NUDGE at zero.</p>
+    <div class="roots"><div><strong>Across the keyboard</strong><span>The same Twins motion at three roots.</span></div><div id="root-options" role="group" aria-label="Root pitch examples"></div></div>
+  </section>
+
+  <section class="comparison wrap" aria-labelledby="compare-title">
+    <div class="section-heading"><div><span class="eyebrow">01 / LISTEN CLOSER</span><h2 id="compare-title">What makes it move?</h2></div><p>Each comparison changes one part of the selected voice. Switching preserves your listening position.</p></div>
+    <div class="comparison-voice" role="group" aria-label="Voice to compare"><button data-compare-voice="GATHER" class="selected" aria-pressed="true">Gather</button><button data-compare-voice="TWINS" aria-pressed="false">Twins</button><button data-compare-voice="DEPARTURE" aria-pressed="false">Departure</button></div>
+    <div id="comparisons" class="comparison-options" role="group" aria-label="Controlled comparisons">
+      <button data-ablation="FULL" class="selected" aria-pressed="true"><span class="option-mark">●</span><strong>Full motion</strong><small>The complete voice</small></button>
+      <button data-ablation="FROZEN" aria-pressed="false"><span class="option-mark">II</span><strong>Motion frozen</strong><small>Initial descriptors held</small></button>
+      <button data-ablation="PITCH_ONLY" aria-pressed="false"><span class="option-mark">∿</span><strong>Pitch movement only</strong><small>Other motion held still</small></button>
+      <button data-ablation="NO_PITCH" aria-pressed="false"><span class="option-mark">─</span><strong>Pitch movement off</strong><small>Hear the timbre move</small></button>
+      <button data-ablation="NO_MEMORY" aria-pressed="false"><span class="option-mark">◌</span><strong>Memory off</strong><small>The direct signal alone</small></button>
+    </div>
+    <p class="fine-print">Every comparison shares its voice’s single reference gain. Changes in excitation and ringing remain audible.</p>
+  </section>
+
+  <section class="regions wrap" aria-labelledby="region-title">
+    <div class="section-heading"><div><span class="eyebrow">02 / FIVE NEIGHBOURHOODS</span><h2 id="region-title">From gathering to departure.</h2></div><p>REGION blends the sound of separately initialized families. The points between anchors let you hear the transitions.</p></div>
+    <div id="region-options" class="region-options" role="group" aria-label="Region examples"></div>
+    <div class="region-caption"><span><i class="legend-dot wood"></i> Rounded gathering</span><span>Poised → separating → broad</span><span>Glassy gathering <i class="legend-dot glass"></i></span></div>
+  </section>
+
+  <section class="notes wrap" aria-labelledby="notes-title">
+    <div><span class="eyebrow">YOUR LISTENING NOTES</span><h2 id="notes-title">What stayed with you?</h2><p>Does the root stay clear? Can you hear two populations? Does departure leave a useful trace?</p></div>
+    <div><label for="notes">Notes for this study</label><textarea id="notes" rows="4" placeholder="A voice, a comparison, a moment worth revisiting…"></textarea><div class="notes-bottom"><span id="notes-status">Saved in this browser only.</span><button id="export-notes" class="text-button">Export notes →</button></div></div>
+  </section>
+
+  <section class="evidence wrap" aria-labelledby="evidence-title">
+    <details><summary id="evidence-title"><span>Behind the listening study</span><span class="details-hint">Measured results, recipes & source <i>+</i></span></summary>
+      <div class="evidence-body"><div id="evidence-stats" class="evidence-stats"></div><div class="evidence-copy"><p>All audio is rendered by the Kotlin prototype through SnipSnap’s 4× internal DSP path and exported as 44.1 kHz mono WAVs. Sympathetic resonance is part of the source. No reverb is used.</p><p>The rotating-frame three-body model supplies trajectories. Musical time, cloud materials, and the mapping to sound are design choices. Plots show measured displacement from each family’s equilibrium.</p><p>This is a finite first-listen prototype. Sustained HOLD, the full six-design preset bank, phone controls, and hardware acceptance remain future work. Your listening verdict is still the musical gate.</p><p>A general audio classifier may call these long notes LOOP because they exceed its duration threshold. The exported examples play once.</p></div><div class="evidence-links"><a href="manifest.json" download>Measurement manifest →</a><a id="recipe-link" href="recipes/gather.json" download>Selected recipe →</a><a id="wav-link" href="audio/matched/gather.wav" download>Selected WAV →</a><a href="libration-listening-pack.zip" download>Complete listening pack →</a></div></div>
+      <p class="fine-print"><a href="libration-round-1.zip" download>Preserved first listening round →</a> · Saved model 1 recipes still reproduce their original sound.</p>
+      <p id="plot-links" class="fine-print" hidden><a href="controls.png" target="_blank" rel="noopener">NUDGE & RESONANCE measurements →</a> · <a href="diagnostics.png" target="_blank" rel="noopener">Trajectory, spectrum and decay plots →</a> · <a href="verification.json" download>Verification data →</a></p>
+    </details>
+  </section>
+</main>
+<footer class="wrap"><span>SNIPSNAP <i>/</i> LIBRATION</span><span>Model 2 · A listening study, awaiting your ears.</span><a href="#top">Back to the centre ↑</a></footer>
+</body>
+</html>

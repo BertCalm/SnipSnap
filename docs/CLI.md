@@ -177,13 +177,15 @@ instrument (`.xty` plus the `.xpm` twin). REGISTERS and OPENSKY keep their
 speaking attack, so they take `--release` and refuse `--attack`. `--drone`
 is RESIN only: one loop-grid drone. SIREN and GLINT hold on the phone's
 MAKE INSTRUMENT; this command refuses them. An engine with a roster and
-no picker entry (BORE, ARCO, MERCURY, TREMOR, AEROSTAT) still renders here.
+no picker entry (BORE, ARCO) still renders here, as do
+MERCURY's EDDY, VESSEL and SHARD voices, which the picker leaves out until
+their listen.
 VENT's clean PULSE, COIL and PLUME voices render four model-2 factory recipes
 each: bass, short note, percussive hit and long texture. These are the same
 patches as the twelve-pad VENT starter. ROUND, WIRE and TEAR retain one
 CLI-only model-1 comparison each from `VentPresets`. The voice selects its
 saved model; see [VENT](VENT.md).
-WICK follows the same provisional path with four PLUCK, four WOOD and five BUBBLE recipes,
+WICK follows the same provisional path with four PLUCK, four WOOD, four BREATH, four FLICKER, four RATTLE and five BUBBLE recipes,
 including held material; see [WICK](WICK.md).
 
 `--midi N` and `--velocity 0..1` set a pad audition's note and strike
@@ -217,6 +219,7 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 | SKITTER | 24–84 |
 | TANGLE | 24–84 |
 | CREASE | 24–84 |
+| LATTICE | 36–84 |
 | SHOAL | 24–84 |
 | RELAY | BASS 24–48; KEY, PLUCK, ORGAN, CHIME, FLOW 48–72 |
 | EMBOUCHURE | BASS 36–60; WHISTLE 60–84; REED, BRASS, BOW, SOFT 48–72 |
@@ -230,8 +233,9 @@ before any output is written. HARMONIC supports the captured HOLD loop.
 
 TRIO provides TRES, BERIMBAU, CHARANGO and ENSEMBLE voices. `--tempo 60..200`
 and `--beats 1..4` edit the finite performance while preserving its saved seed,
-articulation and model. The selected beats must fit within two seconds;
-the output remains a 3.5-second one-shot with room for the replies to decay.
+articulation and model. The selected beat grid must fit within two seconds;
+answers and course staggering can continue past it. The output remains a
+3.5-second one-shot with its existing final fade.
 
 ALLOY, OVEN, PITCHWHEEL and LACQUER take the note as the stored root and keep
 the preset's saved TUNE offset (±12 semitones). EMBOUCHURE, BELLOWS and ORPHICA
@@ -248,6 +252,30 @@ Other engines refuse these options. CREASE stores the selected model, MIDI
 note and velocity in its native Patch JSON; `--patch recipe.json` replays
 a saved patch, with explicit note, velocity or model flags overriding only
 those fields. See [CREASE](CREASE.md) for examples.
+
+LATTICE renders WARM, PLUCK and HOLLOW with saved MIDI, velocity and model 2.
+An explicit `--midi` replaces the saved root and resets TUNE to 0.5 (neutral),
+so that note is the one rendered. `--patch recipe.json` replays a native patch;
+note, velocity and macro overrides preserve the other saved fields. HOLD's top
+step returns periodic sustain for looping playback. See [LATTICE](LATTICE.md).
+
+CREASE model 3 also accepts `--instrument [--touch] [--release S]` for an onset followed by
+a continuously evolved, measured sustain loop. Release is 0.1–1.5 seconds,
+default 0.6, and belongs to the sampler volume envelope after key-up. The saved
+patch supplies the voice, macros, root and excitation velocity; `--midi`,
+`--velocity` and `--model` explicitly override their respective fields.
+Instrument mode samples minor-third roots around the saved note within MIDI
+24–84, accepts `--patch`, and refuses `--all` and `--attack`. Older models remain
+replayable as finite/HOLD sounds and are refused by this builder without an
+explicit model-3 override.
+
+`--touch` adds three independently rendered pressure/timbre layers, selected at
+MIDI velocities 1–42, 43–84 and 85–127. Firm touch retains the saved excitation
+anchor; soft and medium use 0.35/0.65 times it. Sustain level is matched before
+live key gain, and each layer retains its own onset and loop. Generation and
+audio storage are approximately three times the default one-layer instrument.
+The flag is valid only for CREASE `--instrument`; key-up still uses the program
+volume fade.
 
 ORPHICA renders NYLON, STEEL and CRYSTAL microsound-harp materials. `--seed N`
 accepts the full signed 64-bit range. `--instrument [--release S]` packages
@@ -507,15 +535,21 @@ DRIVE into the tube, SAG the supply giving way, TONE after it, CAB the
 cabinet — run four times over inside so a hot tube folds back far less),
 `driven` (a drive pedal: the tube at the top of its gain law with the
 speaker barely in, the last stretch of the pad faded ahead of the amp so
-a quiet tail is not lifted into a click), `compressed` (a compressor
-pedal, for now: SQUASH at its strongest, the body leaned on so the tail
-stands up; `punched` is the same section plus CRUNCH, this has no
-crunch), `wahed` (a wah: a resonant band-pass swept between a heel and a
+a quiet tail is not lifted into a click), `compressed` (the sustain
+pedal: the COMPRESSOR section at full AMOUNT, the body pressed down and the
+peak brought back so the decay comes up; a snare rings about three times as
+long at AMT 70; `punched` is SQUASH plus CRUNCH, the punch rather than the
+sustain), `wahed` (a wah: a resonant band-pass swept between a heel and a
 toe a decade above it by a sine with a flat top, which never parks at the heel but rests
 at the toe for 39 percent of each cycle at AMT 100 and 14 percent at AMT 70),
 `touchwahed` (the same wah driven by the pad's own envelope: it opens on
-the hit and closes as the note dies) and `rockwahed` (one heel-to-toe-to-heel
-gesture, then the wah waits at the heel).
+the hit and closes as the note dies), `rockwahed` (one heel-to-toe-to-heel
+gesture, then the wah waits at the heel), `delayed` (a delay pedal: ECHO's
+long, dark repeats 350 ms apart (206 ms at AMT 70), each a pass darker, the
+whole note feeding them, HEAD off) and `forged` (a hit formed against a die:
+FORGE's low shock and all-pass sweep, the fast part folded, then the die shut
+with a flash of grit at impact; peak-matched, so it reads louder at the same
+peak).
 `--amount 0..1` scales the character's macros; the
 fx-only recipe (name + amount) rides the pad so the sound stays
 regenerable; `--undo` restores the previous audio byte-identical.
@@ -524,16 +558,21 @@ same pad instead of one character: every pick with its own AMT and its side
 of the amp (`pre`, `amp`, `post`; left out, the pedal's own), rendered as
 passes around the amp from the audio on disk, every velocity layer included
 (the sheet's whole-pad door, not `treat`'s single-sample one), the `pedals`
-recipe riding the pad. The library today: `driven` (the amp), `compressed`,
-`wahed`, and `rig` (a board: compressor, drive, slapback) — e.g.
+recipe riding the pad. On a synth pad that still carries its patch (and its
+file is still that patch's render, with no velocity layers) the pad is
+re-rendered from the patch instead, the `pre` and `amp` picks in front of its
+own landing amp and the `post` picks after it, and the recipe keeps the patch;
+`--undo` then gives the pad its patch recipe back. The library today: `driven` (the amp), `compressed` (the
+sustain pedal), `wahed`, `touchwahed`, `rockwahed`, `forged` (in front of the amp,
+fixed there), `delayed` (after the amp), and
+`rig` (a board: compressor, drive, slapback); every one but `rig` is on the
+PAD SHEET's slate (below), and `rig` waits for its gate — e.g.
 `--pedals compressed@0.7:pre,driven` or `--pedals wahed@0.7:post,rig`. At most
 six picks; an unknown pedal, a side it cannot sit on, or a seventh pick is
 refused by name. `--undo` restores as for a character.
  On the
 phone the same characters, less `crushed` (CRUSH already draws that era),
-`amped` (its chip is a later layout decision) and the three wah
-characters (the WAH chip is not on the pad sheet yet; `touchwahed` and
-`rockwahed` are CLI and saved kits only), sit on the PAD SHEET's
+and `amped` (its chip is a later layout decision), sit on the PAD SHEET's
 TREATMENT card, seven
 rows, six of them grouped by what an effect *does* rather than which family
 implements it: row one the eras plus SMEAR (CRUSH · TAPE · DIRT · SMEAR), row two
@@ -544,9 +583,14 @@ GATE · ENSEMBLE · SECTION), row five
 the machine's own transport (FLIP · STOP · START · PITCH), row six
 the keyed family that reads the kit itself (TUNE · BODY · WOBBLE ·
 ETERNAL — `retune`, `body`, `wobble` and `eternal`, below), and row seven
-the pedals (DRIVE · COMP — `driven` and `compressed`),
-grouped by what an effect *is*, because a guitarist looks for a pedal by
-its name; tapping any
+the pedals, grouped by what an effect *is*, because a guitarist looks for a
+pedal by its name: the slate (DRIVE · SUSTAIN · WAH · TOUCH · ROCK · FORGE ·
+DELAY — `driven`, `compressed`, `wahed`, `touchwahed`, `rockwahed`, `forged`
+and `delayed`), of which the row draws five, the user's choice and the same
+in every kit (DRIVE · SUSTAIN · WAH · FORGE · DELAY until changed), then MORE,
+which holds them all; a pad carries up to six at once
+([`docs/superpowers/specs/2026-10-28-pedal-slate-design.md`](superpowers/specs/2026-10-28-pedal-slate-design.md);
+the phone draws today's six, DRIVE to FORGE, until its screens are built). Tapping any
 of them changes every file the pad references, velocity layers included.
 
 ### `recipe <kit-dir> <pad> --from <kit-dir>:<pad>` — do it again
@@ -1109,8 +1153,9 @@ Deterministic: same kit, same parameters, same bytes.
 Four styles: `waveform` (all the pads end to end, each in its class
 colour), `grid` (the 4×4 bank-A grid, lit by class), `slices` (one bar
 per pad), `rings` (seeded arcs — `--seed N` reshuffles). `--scheme`
-picks any of the eight TapeOS schemes (`metal`…`vapor`; the words come
-from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
+picks one of the eight TapeOS schemes (`vent`, the default, `dusk`,
+`phosphor`, `opensky`, `tide`, `memo`, `riso` or `sage`; the
+words come from `SchemeId`, and `art` with no `--style` lists them), `--size PX`
 sets the square edge (default 600), `--out DIR` says where the PNGs
 land. **No `--style` renders every style side by side** — the
 prototyping loop is one command per look. The winning direction becomes

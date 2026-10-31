@@ -11,7 +11,7 @@ import kotlin.math.roundToInt
  * listens that cost no new section, proposed in
  * docs/superpowers/specs/2026-10-19-pedal-board-brainstorm.md and run beside the WAH gate.
  *
- * Four sheets. (1) WAH on the short pads a kit is mostly made of (a closed hat, a rim, a snare
+ * Six sheets. (1) WAH on the short pads a kit is mostly made of (a closed hat, a rim, a snare
  * trimmed to [TRIM_SEC]; no click, because no engine renders one, so the rim stands in) and on the
  * full snare, each with the shipped AUTO move and with a
  * one-cycle floor on its rate ([Wah.fitted]: the sweep completes at least [MIN_CYCLES] before the
@@ -22,7 +22,20 @@ import kotlin.math.roundToInt
  * second recipe with closer repeats that fall faster ([DELAYED_SHORT]), on the snare, the choir and
  * JANGLE. The rack's one-second tail cap runs from the pad's own end, so on these sources it lands on
  * repeats already 48 to 80 dB under the hit (measured 2026-10-20); the page asks whether that cut is
- * heard at all, rather than telling the owner it is.
+ * heard at all, rather than telling the owner it is. (5) The DELAY gate, after the owner's long-note
+ * verdict (2026-10-22) and answers (2026-10-23), on the snare, the choir, JANGLE and CHUG: `delayed` as
+ * built (ECHO with HEAD, docs/superpowers/specs/2026-10-22-delay-head-design.md) at 70 and at 100, the
+ * same values with HEAD 0 at the same level, the plain DELAY from the first listen at 70, and, on the
+ * snare and JANGLE only, MIX 1.0 and 0.5 beside the owner's 0.75 at 70; then the spec's known edge, the
+ * bank-B reversed snare through DELAY at 70 with HEAD on and off, because the head is the pad's start and
+ * every other gate source starts on its hit. Each clip that reaches the rack's tail cap prints where the
+ * cut lands. (6) DELAY as the owner answered it at the gate (2026-10-24: HEAD off, MIX 1.0, TIME 1.0), a
+ * recipe nobody had heard as one, at 70 and 100 on the same four sources, and at 100 on the three held
+ * notes, where the rack's cap lands on TIME 1.0's trail 21 to 38 dB under the peak, the same render with
+ * its last [CUT_FADE_SEC] faded out: a prototype of a gentler cut, not a shipped change. Here too the page
+ * asks whether the cut is heard. Sheet (5) replaces the long-note sheet (ROLL and three attack-fed echo
+ * prototypes), retired with its test-source DSP once HEAD was built; that sheet's ten clips stay on the
+ * published page only.
  *
  * JANGLE is heard as the kit has it (the dry string through its landing amp). A pedal that belongs
  * in front of the amp (SWELL) is put there, in the rig order, with the amp's own values; a pedal that
@@ -30,8 +43,10 @@ import kotlin.math.roundToInt
  * pad sheet does it. Every clip shares one loudness ([AuditionLevel]). Writes manifest.json and
  * index.html (the page at src/test/resources/audition/pedal-listens.html with the clip table
  * written in). Run via `./gradlew :synth:generatePedalListens`. The page is published as a listening
- * artifact with root testkit/pedal-listens, the 48 clips as its files and the answer store (the db
- * capability), as the WAH listen is; the owner's answers are its verdicts/ documents.
+ * artifact with root testkit/pedal-listens and the answer store (the db capability), as the WAH listen
+ * is. Its files are the clips of sheets (1) to (4), the gate's 30, the confirm's 11, and the ten retired long-note clips,
+ * which stay on the published artifact only: a published clip is never re-uploaded, because the owner's
+ * answers (its verdicts/ documents) point at the bytes they heard.
  */
 object PedalListensGenerator {
 
@@ -44,7 +59,7 @@ object PedalListensGenerator {
     /** The floor: one whole sweep per pad. */
     const val MIN_CYCLES = 1f
 
-    /** The DELAY recipe the brainstorm named: repeats 225 ms apart at feedback 0.66 (the fifth about 14 dB under the first), darkening; at 70, 152 ms apart at 0.51. */
+    /** The DELAY recipe the brainstorm named: repeats 225 ms apart at feedback 0.66 (the fifth about 14 dB under the first), darkening; at 70, 151 ms apart at 0.51. */
     internal val DELAYED = FxChain(echo = mapOf("TIME" to 0.75f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 0.5f))
 
     /**
@@ -65,6 +80,21 @@ object PedalListensGenerator {
     internal fun tapeWobble(depth: Float) = FxChain(tape = mapOf("WOBBLE" to depth, "DRIVE" to 0f, "AGE" to 0f))
 
     private fun pct(amount: Float) = (amount * 100).roundToInt()
+
+    /** The confirm sheet's gentler cut: a little under one repeat's spacing at TIME 1.0 (350 ms), faded instead of the rack's 10 ms. */
+    const val CUT_FADE_SEC = 0.3f
+
+    /** [s] with its last [seconds] faded out on a raised cosine: a listening prototype of a longer fade at the rack's cut. */
+    internal fun fadedEnd(s: Snip, seconds: Float): Snip {
+        val out = s.samples.copyOf()
+        val n = minOf(s.frameCount, (seconds * s.sampleRate).toInt())
+        val start = s.frameCount - n
+        for (f in start until s.frameCount) {
+            val g = (0.5 + 0.5 * kotlin.math.cos(Math.PI * (f - start) / n)).toFloat()
+            for (ch in 0 until s.channels) out[f * s.channels + ch] *= g
+        }
+        return Snip(out, s.channels, s.sampleRate)
+    }
 
     /** [s] cut to its first [seconds], the last 3 ms faded so the cut itself does not click. */
     internal fun trimmed(s: Snip, seconds: Float): Snip {
@@ -150,7 +180,54 @@ object PedalListensGenerator {
             write(name, "delay_short_100", "$name DELAY, THE CLOSER RECIPE, AT 100", DELAYED_SHORT.process(dry))
         }
 
-        check(entries.size == 48) { "expected 48 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12), wrote ${entries.size}" }
+        // (5) The DELAY gate: `delayed` as built (ECHO with HEAD), HEAD off at the same level (the recipe with HEAD 0, so
+        // HEAD alone is heard), the plain DELAY from the owner's first listen, and the owner's MIX 0.75 between its two neighbours.
+        val chug = Magnet.landingChain(MagnetVoice.CHUG).process(Magnet.render(MagnetVoice.CHUG))
+        val built = Treatments.chain("delayed").echo!!
+        fun variant(change: Pair<String, Float>) = FxChain(echo = built + change)
+        val capFrames = (FxChain.MAX_CHAIN_TAIL_SECONDS * snare.sampleRate).toInt()
+        fun gate(source: String, dry: Snip, id: String, label: String, out: Snip) {
+            write(source, id, label, out)
+            // The spec's tail-cap hazard, re-measured on the clips the owner hears: how loud the trail is where the rack's
+            // cut begins, if it does. The window ends where the cut's fade starts (CAP_FADE_SECONDS from the end, 10 ms
+            // before 2026-10-28), so it reads the trail the fade meets, not the fade itself.
+            if (out.frameCount >= dry.frameCount + capFrames) {
+                val r = out.sampleRate
+                val end = out.frameCount - (FxChain.CAP_FADE_SECONDS * r).toInt()
+                var cut = 0f
+                for (i in (end - (0.02f * r).toInt()) * out.channels until end * out.channels) cut = maxOf(cut, kotlin.math.abs(out.samples[i]))
+                println("gate cap: $source/$id cut begins ${"%.1f".format(Locale.ROOT, 20 * kotlin.math.log10(out.peak() / maxOf(cut, 1e-12f)))} dB under the peak")
+            } else println("gate cap: $source/$id ends before the cap")
+        }
+        for ((name, dry) in linkedMapOf("SNARE" to snare, "CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
+            gate(name, dry, "gate_pad", "$name AS THE KIT HAS IT", dry)
+            for (amount in AMOUNTS) gate(name, dry, "gate_delay_${pct(amount)}", "$name DELAY AT ${pct(amount)}, AS BUILT", Treatments.apply("delayed", dry, amount).snip)
+            for (amount in AMOUNTS) gate(name, dry, "gate_head0_${pct(amount)}", "$name DELAY AT ${pct(amount)} WITH HEAD OFF, THE SAME LEVEL", Treatments.fade(variant("HEAD" to 0f), amount).process(dry))
+            gate(name, dry, "gate_plain_70", "$name THE PLAIN DELAY FROM YOUR FIRST LISTEN (MIX 50, HEAD OFF), AT 70", Treatments.fade(DELAYED, 0.7f).process(dry))
+            if (name == "SNARE" || name == "JANGLE") for (mix in listOf(1f, 0.5f)) {
+                gate(name, dry, "gate_mix${pct(mix)}_70", "$name DELAY AT 70 WITH MIX ${pct(mix)}", Treatments.fade(variant("MIX" to mix), 0.7f).process(dry))
+            }
+        }
+        // The spec's known edge, played so the gate can hear it: the head is the pad's start, so on a pad that does not start
+        // on its hit (the bank-B reversed twin) HEAD feeds the repeats the pad's quiet start. HEAD off beside it, at the same level.
+        val reversed = Treatments.apply("reversed", snare, 1f).snip
+        gate("SNARE", reversed, "gate_rev_delay_70", "SNARE REVERSED (THE BANK-B TWIN), THEN DELAY AT 70", Treatments.apply("delayed", reversed, 0.7f).snip)
+        gate("SNARE", reversed, "gate_rev_head0_70", "SNARE REVERSED, THEN DELAY AT 70 WITH HEAD OFF", Treatments.fade(variant("HEAD" to 0f), 0.7f).process(reversed))
+
+        // (6) DELAY as the gate's answers put it (2026-10-24): HEAD off (HEAD on lost to it at the same level on every held note),
+        // MIX 1.0 and TIME 1.0 ("further apart"), three changes nobody had heard as one recipe. At 100 the rack's one-second cap
+        // lands on the trail while it may still be heard on the held notes (35.6, 38.0 and 20.7 dB under the peak on the choir,
+        // JANGLE and CHUG; the snare's is 75.5). TIME 0.9 was tried and does not help (choir 29.4, CHUG 21.9), so those three
+        // also get the render with its end faded out.
+        val answered = FxChain(echo = mapOf("TIME" to 1f, "REPEAT" to 0.85f, "TONE" to 0.35f, "MIX" to 1f))
+        for ((name, dry) in linkedMapOf("SNARE" to snare, "CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
+            for (amount in AMOUNTS) gate(name, dry, "confirm_${pct(amount)}", "$name DELAY AS ANSWERED (TIME 100, MIX 100, HEAD OFF) AT ${pct(amount)}", Treatments.fade(answered, amount).process(dry))
+        }
+        for ((name, dry) in linkedMapOf("CHOIR" to choir, "JANGLE" to jangle, "CHUG" to chug)) {
+            gate(name, dry, "confirm_fade_100", "$name DELAY AS ANSWERED AT 100, ITS LAST ${(CUT_FADE_SEC * 1000).roundToInt()} MS FADED OUT (A PROTOTYPE)", fadedEnd(answered.process(dry), CUT_FADE_SEC))
+        }
+
+        check(entries.size == 89) { "expected 89 clips (four short pads x 5, FADE IN 10, VIBRATO 6, DELAY 12, the DELAY gate 30, the confirm 11), wrote ${entries.size}" }
         File(root, "manifest.json").writeText("{\"clips\":[\n" + entries.joinToString(",\n") + "\n]}\n")
         val template = PedalListensGenerator::class.java.getResourceAsStream("/audition/pedal-listens.html")
             ?.bufferedReader()?.use { it.readText() }

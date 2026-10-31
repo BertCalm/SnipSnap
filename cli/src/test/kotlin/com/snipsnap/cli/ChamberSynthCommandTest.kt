@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 
 class ChamberSynthCommandTest {
     @Test
-    fun `first listen CLI finds provisional recipes and applies native performance overrides`() {
+    fun `CLI finds factory recipes and applies native performance overrides`() {
         val directory = createTempDirectory("chamber-cli").toFile()
         try {
             val output = ByteArrayOutputStream()
@@ -33,7 +33,7 @@ class ChamberSynthCommandTest {
             val expected = presets.first().copy(midi = 63, velocity = .35f, seed = Long.MIN_VALUE)
             val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
             assertContentEquals(encoded, wavs.first().readBytes())
-            assertTrue(Presets.forVoice(ChamberPatch.ENGINE, "HYBRID").isEmpty())
+            assertEquals(presets, Presets.forVoice(ChamberPatch.ENGINE, "HYBRID"))
             assertTrue("${presets.size} rendered into" in output.toString())
             assertFalse("lands with" in output.toString())
         } finally {

@@ -10,6 +10,7 @@
 
 #include "PrintBuffer.h"
 #include "SpscRing.h"
+#include "aquarium/PerformanceBus.h"
 
 namespace snipsnap {
 
@@ -115,9 +116,33 @@ public:
     void stop();
     int32_t sampleRate() const { return sampleRate_; }
     bool needsRestart() const { return restartNeeded_.load(std::memory_order_acquire); }
+    /**
+     * Frames onAudioReady has written since construction: monotonic, never
+     * reset by start() or stop(). Safe from any thread.
+     */
+    int64_t framesRendered() const { return framesRendered_.load(std::memory_order_acquire); }
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
+    /**
+     * The hardware's own playback position: the frame count the device says it
+     * has played and the CLOCK_MONOTONIC nanoseconds it says that was true at.
+     * UI thread only, never from the audio callback (Oboe documents
+     * getTimestamp as unsafe in a data callback before Android R; minSdk is
+     * 29). stream_ is only set and reset on the UI thread, so no lock is
+     * needed. Returns false, leaving both outputs untouched, with no stream or
+     * on any Oboe error (a fresh stream has no timestamp for a moment).
+     */
+    bool hardwarePosition(int64_t* framePosition, int64_t* timeNanos);
+    /** Frames per hardware burst, or 0 with no stream. UI thread only. */
+    int32_t framesPerBurst() const;
+    /** oboe::AudioApi as an int (0 unspecified, 1 OpenSL ES, 2 AAudio), or -1 with no stream. UI thread only. */
+    int32_t audioApi() const;
+
+    /** Serialized control thread; false means no settings were queued. */
+    bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
+    bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
+    uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
 
     // The bank, UI thread: begin, add each sample (index returned), commit.
     void beginBank();
@@ -220,6 +245,10 @@ private:
     int32_t sampleRate_ = 48000;
     std::atomic<bool> restartNeeded_{false};
     std::atomic<bool> sharedMode_{false};
+    // The engine's only clock, the one the loudspeaker is on. The fit from
+    // nanoseconds to these frames waits for bench S1; it will read this.
+    std::atomic<int64_t> framesRendered_{0};
+    static_assert(std::atomic<int64_t>::is_always_lock_free, "the frame counter must be lock-free on every ABI the app builds for");
 
     std::unique_ptr<Bank> building_;  // UI thread only
     std::atomic<uint32_t> uiGeneration_{0};  // the last committed bank's generation
@@ -244,6 +273,7 @@ private:
     PadCommand held_[kHeldMax];
     int32_t heldCount_ = 0;
 
+    aquarium::PerformanceBus aquarium_;
     PrintBuffer print_;
 };
 

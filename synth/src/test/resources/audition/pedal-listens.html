@@ -93,7 +93,7 @@ textarea { width: 100%; min-height: 64px; resize: vertical; font: 400 1rem/1.4 v
   </div>
   <div class="lede">
     <p>Four short listens that cost no new rack section, from the pedal board brainstorm. They sit beside the WAH gate, not in place of it. First, WAH on the short pads a kit is mostly made of: a closed hat, a rim and a snare cut to 60 ms, each as WAH ships today and with a floor that makes the sweep complete one whole wah before the pad ends. Then three questions the brainstorm could not answer without your ears: whether a SWELL already does what a FADE IN pedal would, whether TAPE's wobble already reads as a VIBRATO, and whether a long ECHO recipe is the DELAY pedal, and whether the rack's one-second tail cap is ever heard on it.</p>
-    <p>Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
+    <p>The DELAY on long notes sheet you heard has made way for the DELAY gate: ECHO with the HEAD knob, as built. After it, DELAY as you answered the gate, for one last listen before it goes on the pedal row, or not. Tap a clip to play it, tap another to switch. The small number on each clip is its length in seconds. Answers save as you tap. You can skip anything.</p>
   </div>
   <div id="sheet"></div>
   <div class="foot">
@@ -118,6 +118,15 @@ const WHICH4 = [['long', 'The long recipe'], ['closer', 'The closer recipe'], ['
 const SLATE4 = [['row', 'Up to five on the row, swapped in from a larger slate'], ['pad', 'Up to five on one pad at once, swappable'], ['both', 'Both'], ['other', 'Something else: see the note']];
 const YES4 = [['yes', 'Yes'], ['nearly', 'Nearly'], ['no', 'No'], ['no_use', 'Not usable']];
 const FLOOR3 = [['yes', 'Yes'], ['no', 'No'], ['later', 'Decide after the WAH gate']];
+const HEAD3 = [['head', 'Head on is better'], ['same', 'About the same'], ['off', 'Head off is better']];
+const LOUD3 = [['loud', 'Too loud'], ['right', 'Right'], ['quiet', 'Too quiet']];
+const MIX3 = [['100', 'MIX 100'], ['75', 'MIX 75, as built'], ['50', 'MIX 50']];
+const SPACE3 = [['closer', 'Closer together'], ['right', 'Right'], ['apart', 'Further apart']];
+const JOIN3 = [['yes', 'Yes'], ['not_yet', 'Not yet'], ['no', 'No']];
+const REV3 = [['fix', 'Yes, fix it'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
+const TAIL3 = [['miss', 'Yes, I miss the echo after the note'], ['fine', 'No, it is fine'], ['unsure', 'Not sure']];
+const CUT3 = [['fine', 'No, Delay 100 is fine'], ['faded', 'Yes: Faded 100 is better'], ['both', 'Yes, and Faded 100 still sounds cut off'], ['cant', 'Cannot tell']];
+const SHIP3 = [['yes', 'Yes, as it is'], ['faded', 'Yes, once the cut is gentler'], ['not_yet', 'Not yet']];
 const QIDS = [];
 const state = {};
 const els = {};
@@ -388,6 +397,60 @@ function delaySheet() {
   ], ...one('SNARE', 'snare', 'the snare', 'dry', 'Dry'), ...one('CHOIR', 'choir', 'the choir', 'dry', 'Dry'), ...one('JANGLE', 'jangle', 'the jangle', 'pad', 'Pad'));
 }
 
+function delayGateSheet() {
+  const one = (src, id, name, held, mix) => {
+    const row = [
+      [src + '/gate_pad', 'Pad', name + ', as the kit has it'],
+      [src + '/gate_delay_70', 'Delay 70', name + ', DELAY at 70, as built'],
+      [src + '/gate_delay_100', 'Delay 100', name + ', DELAY at 100, as built'],
+      [src + '/gate_head0_70', 'Head off 70', name + ', DELAY at 70 with HEAD off, at the same level'],
+      [src + '/gate_head0_100', 'Head off 100', name + ', DELAY at 100 with HEAD off, at the same level'],
+      [src + '/gate_plain_70', 'Plain 70', name + ', the plain DELAY from your first listen (MIX 50, HEAD off), at 70'],
+    ];
+    if (mix) row.push([src + '/gate_mix100_70', 'Mix 100', name + ', DELAY at 70 with MIX 100'], [src + '/gate_mix50_70', 'Mix 50', name + ', DELAY at 70 with MIX 50']);
+    const parts = [setRow(name, row), chipGroup('dly_' + id + '_delay', 'Is it a delay, on ' + name + '?', YES4, name + ' delay')];
+    if (held) parts.push(chipGroup('dly_' + id + '_head', 'With HEAD off beside it at the same level, which is the better delay, on ' + name + '?', HEAD3, name + ' head'));
+    if (id === 'snare') parts.push(
+      chipGroup('dly_snare_loud70', 'On the snare at 70, are the repeats too loud?', LOUD3, 'snare loud 70'),
+      chipGroup('dly_snare_loud100', 'On the snare at 100, are the repeats too loud?', LOUD3, 'snare loud 100'));
+    if (mix) parts.push(chipGroup('dly_' + id + '_mix', 'Which MIX sounds right for DELAY, on ' + name + '?', MIX3, name + ' mix'));
+    return parts;
+  };
+  return setSheet('The DELAY gate', [
+    'ECHO now has the HEAD knob you asked for. DELAY is the long, dark ECHO with HEAD on: its repeats are fed only the first 120 ms of the note, so a held note\'s attack comes back as a repeat instead of the whole note smearing into itself. It plays at your MIX 75.',
+    'Head off is the same recipe with HEAD off at the same level, so you hear what HEAD alone does. The head clip you liked before was also 8 to 10 dB louder than the plain one, so this is the fair test. Plain 70 is the plain DELAY from the DELAY sheet of your first listen (MIX 50, HEAD off): you passed it on the snare; on the choir and the jangle it did not repeat the attack; the chug was not on that sheet. On the snare and the jangle, MIX 100 and MIX 50 sit beside your 75. At 70 the repeats are 151 ms apart; at 100, 225 ms.',
+    'Two things HEAD trades away, to judge by ear. On a held note, HEAD on leaves almost no echo after the note ends, because the repeats only ever carried its start; Head off keeps that echo. And HEAD repeats the first 120 ms of a pad, so a pad that starts quiet, like a reversed snare, gets faint repeats: the last row plays one with HEAD on and off.',
+  ], ...one('SNARE', 'snare', 'the snare', false, true), ...one('CHOIR', 'choir', 'the choir', true, false),
+     ...one('JANGLE', 'jangle', 'the jangle', true, true), ...one('CHUG', 'chug', 'the chug', true, false),
+     setRow('the snare, reversed', [
+       ['SNARE/gate_rev_delay_70', 'Reversed, delay 70', 'the reversed snare, then DELAY at 70'],
+       ['SNARE/gate_rev_head0_70', 'Reversed, head off 70', 'the reversed snare, then DELAY at 70 with HEAD off'],
+     ]),
+     chipGroup('dly_reversed', 'HEAD repeats the first 120 ms of a pad. A reversed snare starts quiet, so with HEAD on its repeats are faint. Is that a problem?', REV3, 'reversed'),
+     chipGroup('dly_tail', 'On the choir and the guitars, HEAD on leaves almost no echo after the note ends; HEAD off keeps one. Does that matter?', TAIL3, 'tail'),
+     chipGroup('dly_spacing', 'At 70 the repeats are 151 ms apart, and at 100 they are 225 ms apart. Is that spacing right?', SPACE3, 'spacing'),
+     chipGroup('dly_join', 'Should DELAY join the pedals?', JOIN3, 'join'));
+}
+
+function delayConfirmSheet() {
+  const one = (src, id, name, faded) => {
+    const row = [
+      [src + '/gate_pad', 'Pad', name + ', as the kit has it'],
+      [src + '/confirm_70', 'Delay 70', name + ', DELAY as you answered it, at 70'],
+      [src + '/confirm_100', 'Delay 100', name + ', DELAY as you answered it, at 100'],
+    ];
+    if (faded) row.push([src + '/confirm_fade_100', 'Faded 100', name + ', the same at 100 with its last 300 ms faded out']);
+    return [setRow(name, row), chipGroup('dlc_' + id + '_delay', 'Is this the DELAY, on ' + name + '?', YES4, name + ' confirm')];
+  };
+  return setSheet('DELAY, as you answered it', [
+    'Your gate answers: HEAD off (it beat HEAD on at the same level on every held note), MIX 100, and the repeats further apart. Together that is a recipe nobody has heard as one, so here it is. At 70 the repeats are 206 ms apart; at 100, 350 ms.',
+    'One thing to listen for. The app lets no pad grow by more than one second after it ends. At 100, with the repeats 350 ms apart, only about three fit in that second, so on the held notes the cut comes while the echo is still sounding, though quietly: about 21 dB under the loudest moment on the chug, 36 on the choir and 38 on the jangle (at 70 the cut is far quieter). Whether you hear it is the question. Faded 100, on those three, is a prototype of a gentler cut, not in the app: the same clip with its last 300 ms faded out, so the echo fades away instead of stopping. Bringing the repeats a little closer (293 ms at 100) was tried and did not help.',
+  ], ...one('SNARE', 'snare', 'the snare', false), ...one('CHOIR', 'choir', 'the choir', true),
+     ...one('JANGLE', 'jangle', 'the jangle', true), ...one('CHUG', 'chug', 'the chug', true),
+     chipGroup('dlc_cut', 'At 100, on the choir, the jangle and the chug, does the echo stop too abruptly?', CUT3, 'cut'),
+     chipGroup('dlc_ship', 'Put DELAY on the pedal row?', SHIP3, 'ship'));
+}
+
 function verdictSheet() {
   return setSheet('Your verdict', 'After all of that.',
     chipGroup('s1b_slate', 'You said a slate of pedals to choose from, five allowed at once, swappable. Which did you mean?', SLATE4, 'slate'),
@@ -395,7 +458,7 @@ function verdictSheet() {
 }
 
 const sheet = document.getElementById('sheet');
-sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), verdictSheet());
+sheet.append(wahSheet(), fadeInSheet(), vibratoSheet(), delaySheet(), delayGateSheet(), delayConfirmSheet(), verdictSheet());
 wireNote(document.getElementById('s1b_note'), 's1b_note');
 loadLocal();
 paint();

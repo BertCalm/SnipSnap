@@ -148,9 +148,9 @@ class ContourIntegrationTest {
     }
 
     @Test
-    fun `first listen presets expose all six voices and distinct saved spectral structures`() {
+    fun `expanded presets expose all six voices and distinct saved spectral structures`() {
         val presets = ContourPresets.all()
-        assertEquals(9, presets.size, "first-listen roster precedes the proposed 36-preset expansion")
+        assertEquals(36, presets.size, "the approved first-listen roster expands to the planned 36 presets")
         assertEquals(ContourVoice.entries.toSet(), presets.map { it.voice }.toSet())
         assertEquals(presets.size, presets.map { it.name }.toSet().size)
         assertTrue(presets.map { it.config }.toSet().size >= 6, "different table pairs and envelopes must establish the voices")

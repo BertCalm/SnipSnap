@@ -10,6 +10,7 @@ import java.nio.ByteOrder
 import java.security.MessageDigest
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.roundToInt
@@ -112,31 +113,81 @@ class ScannedChainShape(
                     ?.takeIf { it.confidence >= .7f }
                     ?: throw IllegalArgumentException("No confident source pitch; choose a timbral window or another position")
             } else null
-            val frames = if (pitch != null) (snip.sampleRate / pitch.hz).roundToInt().coerceAtLeast(2)
+            val period = pitch?.let { snip.sampleRate.toDouble() / it.hz }
+            // A fractional cycle needs the following sample for interpolation. Keep that
+            // complete source span in the provenance, rather than rounding the period.
+            val frames = if (period != null) ceil(period).toInt() + 1
                 else (snip.sampleRate * .02f).roundToInt().coerceAtLeast(2)
             require(frames <= mono.frameCount - startFrame) { "the selected source window runs beyond the sample" }
             val window = mono.samples.copyOfRange(startFrame, startFrame + frames)
             require(window.all { it.isFinite() }) { "the source window contains non-finite samples" }
-            val mean = window.average()
-            val values = FloatArray(128) { mass ->
-                val value = if (frames >= 128) {
-                    val from = mass * frames / 128
-                    val to = (mass + 1) * frames / 128
-                    var sum = 0.0
-                    for (i in from until to) sum += window[i] - mean
-                    sum / (to - from)
-                } else {
-                    val position = mass.toDouble() * frames / 128
-                    val index = floor(position).toInt()
-                    val fraction = position - index
-                    (window[index] - mean) * (1 - fraction) + (window[(index + 1) % frames] - mean) * fraction
+            val values = if (period != null) {
+                // These are equally spaced phases of one periodic cycle, without a
+                // duplicated endpoint. A Hann taper would introduce new harmonics and
+                // force the endpoints toward zero; it belongs only to the unpitched window.
+                tonalCycle(window, period)
+            } else {
+                // Preserve the original 20 ms timbral-window mapping exactly.
+                val mean = window.average()
+                FloatArray(128) { mass ->
+                    val value = if (frames >= 128) {
+                        val from = mass * frames / 128
+                        val to = (mass + 1) * frames / 128
+                        var sum = 0.0
+                        for (i in from until to) sum += window[i] - mean
+                        sum / (to - from)
+                    } else {
+                        val position = mass.toDouble() * frames / 128
+                        val index = floor(position).toInt()
+                        val fraction = position - index
+                        (window[index] - mean) * (1 - fraction) + (window[(index + 1) % frames] - mean) * fraction
+                    }
+                    (value * (.5 - .5 * cos(2 * PI * mass / 127))).toFloat()
                 }
-                (value * (.5 - .5 * cos(2 * PI * mass / 127))).toFloat()
             }
             require(values.maxOf { abs(it) } > 1e-7f) { "the selected source window has no usable shape" }
             ScannedChain.checkCancellation()
             return ScannedChainShape(condition(values, scaleUp = true), ScannedChainShapeSource.SAMPLE, label,
                 ScannedChainSampleInfo(mode, snip.sampleRate, snip.channels, startFrame, frames, hash(window), pitch?.hz, pitch?.confidence))
+        }
+
+        private fun tonalCycle(window: FloatArray, period: Double): FloatArray {
+            fun at(position: Double): Double {
+                val index = floor(position).toInt()
+                val fraction = position - index
+                return window[index] * (1 - fraction) + window[index + 1] * fraction
+            }
+            if (period <= 128) return FloatArray(128) { at(it.toDouble() * period / 128).toFloat() }
+
+            // Preserve a whole fractional cycle at source resolution before reducing it
+            // to 128 phases. Sampling directly at the target resolution would fold an
+            // audible high source harmonic (e.g. 96) into a false lower mode (32).
+            val size = ceil(period).toInt()
+            val source = DoubleArray(size) { at(it.toDouble() * period / size) }
+            val output = DoubleArray(128)
+            for (harmonic in 1..63) {
+                val sourceStep = 2 * PI * harmonic / size
+                val dc = cos(sourceStep)
+                val ds = sin(sourceStep)
+                var c = 1.0
+                var s = 0.0
+                var cosine = 0.0
+                var sine = 0.0
+                for (value in source) {
+                    cosine += value * c
+                    sine += value * s
+                    val next = c * dc - s * ds
+                    s = s * dc + c * ds
+                    c = next
+                }
+                cosine *= 2.0 / size
+                sine *= 2.0 / size
+                for (i in output.indices) {
+                    val phase = 2 * PI * harmonic * i / output.size
+                    output[i] += cosine * cos(phase) + sine * sin(phase)
+                }
+            }
+            return FloatArray(128) { output[it].toFloat() }
         }
 
         internal fun fromJsonValue(value: JsonValue): ScannedChainShape {

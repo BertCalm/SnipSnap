@@ -77,7 +77,8 @@ object Treatments {
         // in order, so the two pedal recipes below follow it.
         "sectioned" to FxChain(ensemble = mapOf("DEPTH" to 0.5f, "WIDTH" to 1f, "SECTION" to 1f)),
         // A drive pedal: VALVE at the top of its gain law (DRIVE 1.0 is gain 1000; at the pad sheet's
-        // AMT 0.7 the recipe's DRIVE fades to 0.7, which is VALVE's own default gain 11.3) with little
+        // AMT 0.7 DRIVE's LOG fade law walks the gain 70 percent of the way there in dB, to gain 51 at
+        // DRIVE 0.80, where the old linear walk of the knob left it at 0.7, VALVE's own gain 11.3) with little
         // sag and the speaker barely in. TONE is left out (its centre is its neutral); CAB takes a small
         // non-neutral value so AMT can move it (a missing macro would be VALVE's default 0.6). The
         // owner's pick, heard against a hot crunch and a lead tone at the pedal board's round two
@@ -85,11 +86,12 @@ object Treatments {
         // amp this is a second amp, not a pedal in front of one. apply() fades the pad's last
         // milliseconds before it, see PRE_AMP_FADE.
         "driven" to FxChain(valve = mapOf("DRIVE" to 1.0f, "SAG" to 0.15f, "CAB" to 0.08f)),
-        // A compressor pedal for now: the strongest SQUASH there is (AMOUNT at its top, the fastest
-        // ATTACK that is not its neutral), the owner's pick at round two. The sustain compressor the
-        // owner asked for is its own section (spec, Stage 2); this recipe moves to it then. The bank's
-        // "punched" is SQUASH plus CRUNCH; this has no crunch.
-        "compressed" to FxChain(squash = mapOf("AMOUNT" to 1.0f, "ATTACK" to 0.05f)),
+        // The sustain pedal (the SUSTAIN chip): the COMPRESSOR section at full AMOUNT, ATTACK and RECOVER left
+        // at their defaults (each is its own neutral, so the AMT fade walks AMOUNT alone). It replaced SQUASH at
+        // its strongest after the owner heard that as too little twice; passed its gate on 2026-10-24
+        // (docs/superpowers/specs/2026-10-23-compressor-section-design.md). The bank's "punched" is SQUASH
+        // plus CRUNCH, the punch rather than the sustain.
+        "compressed" to FxChain(compressor = mapOf("AMOUNT" to 1.0f)),
         // A wah: a resonant band-pass swept by a free-running, flat-topped sine. AUTO is the owner's pick of the
         // three moves at the pedal board's round-two listen; SPEED and Q are left out (each is its own
         // neutral, so AMT could never move it). The WAH chip is this character once its gate passes.
@@ -99,6 +101,19 @@ object Treatments {
         "touchwahed" to FxChain(wah = mapOf("TOUCH" to 1.0f)),
         // One heel-to-toe-to-heel gesture, then it waits. CLI and saved kits only.
         "rockwahed" to FxChain(wah = mapOf("ROCK" to 1.0f)),
+        // A delay pedal, DELAY in the pedal library (on the slate's default row): ECHO's long, dark repeats, 350 ms apart at full and 206 at AMT 70 (feedback 0.66),
+        // each repeat a pass darker, the whole note feeding them (HEAD off). Every number is the owner's: HEAD off, MIX 100
+        // and the repeats further apart at the gate (2026-10-24), the DELAY on the snare, the choir and the jangle at the
+        // confirm (2026-10-26), then TONE 0.45 and MIX 0.9 over the chug's low-mid wash, heard as good or better on the
+        // other three (2026-10-28). docs/superpowers/specs/2026-10-22-delay-head-design.md.
+        "delayed" to FxChain(echo = mapOf("TIME" to 1.0f, "REPEAT" to 0.85f, "TONE" to 0.45f, "MIX" to 0.9f)),
+        // A hit formed against a die (the FORGE chip): every macro at FORGE's own default with the die shut, ARREST 1,
+        // the clip the owner heard as "loud and solid" at the gate (2026-10-26), the heat at impact heard as heat,
+        // not a click; the defaults heard as fine on a hat. Its medium is TIGHT since the CHARGE gate (2026-10-27),
+        // the chip the owner picked on the kick and the snare there. AMT walks all four
+        // toward their neutrals, YIELD's being 1 (nothing flows), so a lower AMT is a softer die over less shock
+        // and less fold. docs/superpowers/specs/2026-10-25-forge-section-design-brief.md, "Heard".
+        "forged" to FxChain(forge = mapOf("CHARGE" to 0.5f, "STANDOFF" to 0.5f, "YIELD" to 0.5f, "ARREST" to 1.0f)),
     )
 
     private val ALL: List<Pair<String, FxChain>> get() = Shuffle.TREATMENTS + EXTRA
@@ -125,20 +140,60 @@ object Treatments {
      * centered one (EQ's flat, PITCH's native) fades to its centre instead of
      * being dragged off it.
      */
-    fun fade(chain: FxChain, amount: Float): FxChain {
+    fun fade(chain: FxChain, amount: Float): FxChain = fade(chain, amount, laws = true)
+
+    /**
+     * [fade] with every macro walked linearly, the law before [FadeLaw] existed: what a [FadeLaw.LOG]
+     * macro would have faded to. For the tests that pin "byte-identical except where a LOG macro is
+     * faded" and the fade-law listen; nothing in the product calls it.
+     */
+    internal fun linearFade(chain: FxChain, amount: Float): FxChain = fade(chain, amount, laws = false)
+
+    private fun fade(chain: FxChain, amount: Float, laws: Boolean): FxChain {
         var out = chain
         for (name in FxChain.SECTION_NAMES) {
             val macros = chain.section(name) ?: continue
-            val neutrals = FxChain.macrosOf(name).associate { it.name to it.neutral }
+            val specs = FxChain.macrosOf(name).associateBy { it.name }
             out = out.withSection(
                 name,
                 macros.mapValues { (macro, v) ->
-                    val neutral = neutrals[macro] ?: 0f
-                    (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                    val spec = specs[macro]
+                    val neutral = spec?.neutral ?: 0f
+                    if (laws && spec?.law == FadeLaw.LOG) {
+                        val gain = FxChain.gainOf(name, macro)
+                            ?: error("$name $macro fades by LOG but its section declares no gain law")
+                        logFade(gain, neutral, v, amount)
+                    } else {
+                        (neutral + (v - neutral) * amount).coerceIn(0f, 1f)
+                    }
                 },
             )
         }
         return out
+    }
+
+    /**
+     * The knob between [neutral] and [value] whose [gain] is [amount] of the way from the neutral's
+     * gain to the value's in decibels (log gain): exactly [neutral] at 0, exactly [value] at 1. The
+     * law is VALVE's own ([Valve.gainFor]), searched by bisection rather than inverted by hand, so the
+     * gain law lives in one place. It must be positive and monotonic between the two ends; VALVE's is
+     * strictly increasing (V1's exponential up to its pivot, log-linear above it).
+     */
+    private fun logFade(gain: (Float) -> Float, neutral: Float, value: Float, amount: Float): Float {
+        if (amount <= 0f) return neutral
+        if (amount >= 1f || value == neutral) return value
+        val gn = gain(neutral).toDouble()
+        val gv = gain(value).toDouble()
+        require(gn > 0.0 && gv > 0.0) { "a LOG macro's gain must be positive at both ends: $gn and $gv" }
+        val target = ln(gn) + (ln(gv) - ln(gn)) * amount
+        var lo = minOf(neutral, value).toDouble()
+        var hi = maxOf(neutral, value).toDouble()
+        val rising = gain(hi.toFloat()) >= gain(lo.toFloat())
+        repeat(60) {
+            val mid = 0.5 * (lo + hi)
+            if ((ln(gain(mid.toFloat()).toDouble()) < target) == rising) lo = mid else hi = mid
+        }
+        return (0.5 * (lo + hi)).toFloat().coerceIn(0f, 1f)
     }
 
     data class Treated(val snip: Snip, val recipe: JsonValue.Obj)
@@ -147,8 +202,9 @@ object Treatments {
      * The fade that goes ahead of a hot amp ([needsPreAmpFade] says which chains run one). VALVE lifts a quiet tail by
      * its own gain (1000 at the top of DRIVE), so a cut nobody hears dry ends in a click through it,
      * and a fade ahead of the amp survives the amp (MAGNET's lesson). The fade is the tail's alone:
-     * its length follows the amp's lift (see [endFaded]: about a third of the full length at the pad
-     * sheet's AMT 0.7, none where the amp does not lift), and it never reaches the first half of a
+     * its length follows the amp's lift (see [endFaded]: 57 percent of the full length at the pad
+     * sheet's AMT 0.7 under DRIVE's LOG fade law, a third under the old linear one; none where the amp
+     * does not lift, which is AMT under about 0.30), and it never reaches the first half of a
      * pad. The full length and shape are chosen against the spec's bars and no others, from a declared grid:
      * the fade must leave a snare and a choir ending at least 53 dB under their peaks (the spec's 50 dB
      * plus 3 dB of margin) with a DC mean under 1e-4, at AMT 0.7, 0.8, 0.9 and 1, and the grid is 30 to
