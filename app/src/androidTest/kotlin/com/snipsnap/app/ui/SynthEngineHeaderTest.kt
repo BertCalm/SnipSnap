@@ -1,7 +1,7 @@
 package com.snipsnap.app.ui
 
 import android.content.Context
-import android.view.KeyEvent
+import androidx.activity.findViewTreeOnBackPressedDispatcherOwner
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.ViewRootForTest
@@ -30,6 +30,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -96,10 +97,28 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     private fun listIsOpen() = compose.onAllNodesWithText("CHOOSE AN ENGINE", useUnmergedTree = true)
         .fetchSemanticsNodes().isNotEmpty()
 
-    /** The list is its own dialog window; this asks whether that window holds input focus yet. */
-    private fun listHasFocus(): Boolean {
+    /**
+     * Back, sent to the list the way the system delivers it to a dialog: through the
+     * [androidx.activity.OnBackPressedDispatcher] of the list's own window. A Compose `Dialog` is a
+     * `ComponentDialog` with a dispatcher of its own, which the activity's is not, and `BottomSheet`'s
+     * `dismissOnBackPress` is a callback registered on it that calls the sheet's `onDismiss`.
+     *
+     * It does not send a Back key. A key goes to whichever window the window manager has given
+     * input focus, and that is not always the list: a CI emulator can have a "System UI isn't
+     * responding" dialog, a toast or the keyguard in front of it, and the key then never reaches the
+     * list however long the test waits. Window focus belongs to the window manager, not to this app;
+     * what the app owns is that Back, delivered to the list's window, reaches the sheet's dismiss,
+     * and that is what this exercises.
+     */
+    private fun pressBackOnTheList() {
         val title = compose.onAllNodesWithText("CHOOSE AN ENGINE", useUnmergedTree = true).fetchSemanticsNodes().firstOrNull()
-        return (title?.root as? ViewRootForTest)?.view?.hasWindowFocus() == true
+        assertNotNull("the list is not open: no CHOOSE AN ENGINE title to find its window by", title)
+        val listView = (title!!.root as? ViewRootForTest)?.view
+        assertNotNull("the list's title is not in a ViewRootForTest, so there is no view to find its window by: ${title.root}", listView)
+        val owner = listView!!.findViewTreeOnBackPressedDispatcherOwner()
+        assertNotNull("the list's window has no OnBackPressedDispatcherOwner, so Back has nowhere to be sent", owner)
+        compose.runOnUiThread { owner!!.onBackPressedDispatcher.onBackPressed() }
+        pump()
     }
 
     private fun type(text: String) {
@@ -204,15 +223,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
     fun backClosesTheListAndLeavesTheEngineAlone() {
         show()
         openList()
-        // The window manager hands the new dialog window focus asynchronously, and a key sent before
-        // it arrives goes to the window behind. This test sent it at once, and has failed on every CI
-        // run since NACRE joined the engines, while the list's other tests, which click through
-        // semantics rather than the window, pass; what made the focus later is not pinned down.
-        waitFor("the list's window to take focus", timeoutMillis = 10_000) { listHasFocus() }
-        // The system's own Back key, to the window that has focus: the list's dialog. Not
-        // Espresso's pressBack, which waits for an idle this suite's frozen clock never gives.
-        InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
-        pump()
+        pressBackOnTheList()
         assertTrue(!listIsOpen())
         isOn("THUMP")
     }
