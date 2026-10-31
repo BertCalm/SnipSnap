@@ -505,8 +505,9 @@ testkit/overlap-held-keygroup/
 # Same-parent temporary staging is also generated output, including custom destinations.
 .overlap-held-keygroups-*/
 
-# SCOUR R1 listening gate; regenerate with ./gradlew :synth:generateScourAudition.
+# SCOUR's listening page and kit; regenerate with ./gradlew :synth:generateScourAudition and :synth:generateScourKit.
 testkit/scour-audition/
+testkit/SnipSnap Scour Kit/
 
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/

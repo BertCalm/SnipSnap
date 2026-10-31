@@ -1,10 +1,15 @@
 # SCOUR Engine: Engineering Specification
-Version 1.3 · 2026-10-29 (adapts the 2026-10-25 draft, version 1.0, to the repository;
-1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1)
-Status: R1 and R1.1 built in Kotlin (see "As built: R1" and "As built: R1.1" at the end). Phase 0 was
-measured in the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one
-pair of harness renders (section 20.1) and the R1 Kotlin audition (As built: R1.1, "Heard"); the R1.1
-audition is published and not yet heard. R2 (HOLD) to R4 remain.
+Version 1.6 · 2026-10-31 (adapts the 2026-10-25 draft, version 1.0, to the repository;
+1.2 records the first listen and sources the plate table; 1.3 records the first Kotlin listen and R1.1;
+1.4 records the second Kotlin listen and R2, which turned SCOUR into an impact; 1.5 records the third
+listen and R3, the presets and the kit; 1.6 records the fourth listen and R4, the SHEET voice and the
+kit's bank B)
+Status: R1 to R4 built in Kotlin (see the "As built" sections at the end). Phase 0 was measured in
+the Python harness and in two Kotlin scratch probes (section 20). The owner has heard one pair of harness
+renders (section 20.1) and the R1, R1.1, R2 and R3 auditions; the R4 page is published and not yet heard.
+The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
+voices as built are in the As built sections. BEAM is next, after the R4 listen. The phone's synth picker
+and a docs page remain.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -292,12 +297,14 @@ limiter on the excitation.
 | Control | Default | Changes which model quantity | Required interactions | Test |
 |---|---:|---|---|---|
 | TUNE | .50 | the root: midi = 48 + round(TUNE·24), C3..C5 (the THAW habit) | | `Pitch.detect` within 50 cents and confidence ≥ 0.3 at the house window across the cube; the tail window reported, and asserted once R1 voicing passes it |
-| RPM | .30 | roller start speed `v0 = lin(RPM, .15, 1)`; stop time `v0/a` | RPM × HOLD: a held loop runs the roller at `v0` | trace: stop time equals `v0/a` to the tick; audio: roller-phase energy and bandwidth rise with RPM. Harness activity 6.04 dB lo↔hi |
-| SHOT | .50 | shot rate `λ = expMap(SHOT, 3, 300)`; per-shot amplitude law (section 7) | SHOT × HARDEN: no shots, no hardening | trace: shot count rises and `S` at close rises monotonically (measured .021 / .293 / .835); realised shot power within ±1 dB when `λW ≥ 20`. Harness activity 3.67 dB |
+| RPM | .30 (R2: .50) | roller start speed `v0 = lin(RPM, .15, 1)`; stop time `v0/a` (R2: the speed it spins up to by the slam) | RPM × HOLD: a held loop runs the roller at `v0` | trace: stop time equals `v0/a` to the tick; audio: roller-phase energy and bandwidth rise with RPM. Harness activity 6.04 dB lo↔hi |
+| SHOT | .50 (R2: .70) | shot rate `λ = expMap(SHOT, 3, 300)` (R2: the rate the build ends at); per-shot amplitude law (section 7) | SHOT × HARDEN: no shots, no hardening | trace: shot count rises and `S` at close rises monotonically (measured .021 / .293 / .835); realised shot power within ±1 dB when `λW ≥ 20`. Harness activity 3.67 dB |
 | HARDEN | .60 | how far coverage moves the modes and shortens the ring (section 6.4) | needs SHOT > 0 | trace: upper-mode frequencies at close rise with HARDEN at fixed SHOT, root unchanged to the cent; audio: a tracked upper partial rises (measured 4.110 → 4.372 at HARDEN .6, SHOT .7). Harness activity 1.69 dB, the second weakest |
 | TRAVERSE (R1 only) | .20 | where the blast lands: strike participation at `x = lin(TRAVERSE, .05, .95)` | TRAVERSE × SHOT: aim matters only while shots land | modal spectrum changes; root probe at both ends. Harness activity 0.87 dB, the weakest; TRAVERSE 0 read f0/3 at the house window. Heard: "Traverse makes no difference"; replaced by RING in R1.1 |
-| RING (R1.1) | .75 | which way and how far hardening moves every mode's t60: `× (1 + damp·HARDEN·S)^(2(2·RING − 1))`; .25 is R1's law, .5 none, .75 the owner's "longer" | RING × HARDEN × SHOT: nothing hardened, nothing to move | render length rises with RING at fixed blast; RING .5 equals HARDEN 0's length; with HARDEN 0, RING 0 and 1 are the same render to the bit (see "As built: R1.1") |
-| HOLD | 0 | below the top step: the blast stays open longer, `W·(1 + 2·HOLD)` (shape); top step: the loop (section 11) | HOLD × SHOT: longer blast, more coverage | render length grows with HOLD below the top; the top step's seam passes; `drumClassFor` agrees with the length |
+| RING (R1.1 only) | .75 | which way and how far hardening moves every mode's t60: `× (1 + damp·HARDEN·S)^(2(2·RING − 1))`; .25 is R1's law, .5 none, .75 the owner's "longer" | RING × HARDEN × SHOT: nothing hardened, nothing to move | render length rises with RING at fixed blast; RING .5 equals HARDEN 0's length; with HARDEN 0, RING 0 and 1 are the same render to the bit (see "As built: R1.1") |
+| HOLD (to R1.1) | 0 | below the top step: the blast stays open longer, `W·(1 + 2·HOLD)` (shape); top step: the loop (section 11) | HOLD × SHOT: longer blast, more coverage | render length grows with HOLD below the top; the top step's seam passes; `drumClassFor` agrees with the length |
+| BUILD (R2) | .60 | how long the build runs before the slam, `expMap(BUILD, .25 s, 8 s)`; .6 is 2 s | BUILD × SHOT: a longer build lands more shots and more coverage | the slam lands at the end of the build to the frame; `buildFor` inverts it; the build rises by quarters and the slam stands over it (see "As built: R2") |
+| HOLD (R2) | 0 | below the top step: the ring after the slam, `t60 · (1 + 2·HOLD)`; the top step is reserved | none: HOLD never moves the build | render length grows with HOLD; the build's shots do not move |
 
 Velocity (the `Velocity.kt` arms): shot speed, so per-shot amplitude and coverage per shot
 (`vel^0.8`) both rise. Test: at fixed macros, higher velocity gives higher `S` at close, not
@@ -579,7 +586,12 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | the Kotlin R1 renders sound like the prototype | heard (owner did not say otherwise) | the R1 audition |
 | PANE's springback reads as glass giving way | not met in R1 ("sounds the same as plate"); heard? for R1.1 | R1.1 gives PANE the square pane's own body |
 | the square plate values (PANE) | verified (solve) | the companion script against Leissa Table 4.65 and the ν = 0.225 bounds (As built: R1.1) |
-| SCOUR earns a place in a phrase | heard? | the R1.1 audition's phrases |
+| SCOUR earns a place in a phrase | heard: riff no, bed no, impact maybe | the R1.1 audition (As built: R2) |
+| SCOUR earns a place as an impact into a drop | heard: yes, and short hits yes | the R2 audition (As built: R3) |
+| the kit's presets and build lengths are the right ones | heard: the kit yes, the lengths yes | the R3 kit page (As built: R4) |
+| the free 3:1 rectangle values (SHEET) | verified (solve) | the same solve reproduces the square at 1:1 and approaches the free-free beam at 8:1 (As built: R4) |
+| SHEET's note reads down to C2 | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a low-register grid (As built: R4) |
+| SHEET sounds like a thunder sheet and earns bank B | heard? | the R4 page |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
 ## Why it is built this way
@@ -794,3 +806,240 @@ The R1 gate passes for both voices. The open ring question (section 21) is answe
 5. **The risky decision is still the plate's pitch.** Both voices are in tune where the tests look; at
    a full blast (PLATE) and a slow roller at C3 (PANE) the note can still wander. The phrases on the
    audition are where that either matters or does not.
+
+## As built: R2, the impact (2026-10-30)
+
+The owner's second listen (the R1.1 page, 2026-10-30) turned SCOUR's next round from the HOLD loop the
+plan had (section 16) to the one use the phrases found: an impact. R2 changes `Scour.kt`, `ScourTest.kt`,
+`ScourAuditionGenerator.kt`, `scour-audition.html` and the Gradle task's description. The registry rows
+are unchanged, and no saved SCOUR sound can exist, so the macro change needs no migration.
+
+### Heard (the owner, R1.1 audition, 2026-10-30)
+
+| Question | Answer | Note |
+|---|---|---|
+| Would you play SCOUR as a riff like this? | no | "It sound like a gong with static sounds on top" |
+| ...as an impact over a beat? | maybe | |
+| ...as a bed? | no | |
+| Do PLATE and PANE now sound like different instruments? | a little | "The underlying sound is a bit more glass like on the pane sound" |
+| PLATE: which RING would you start from? | .5 (hardening leaves the ring alone) | |
+| PANE: which RING would you start from? | .5 | |
+
+Asked which way to take it (impacts and risers, clean pitched metal, or park it), the owner chose
+impacts and risers.
+
+### What changed
+
+- **The gesture is a build and a hit.** The gesture line is now: the roller spins up, the shot rain
+  accelerates, the plate stiffens and its ring climbs, the slam lands, and the hardened plate rings.
+  - **Shot rain.** Its rate rises twentyfold, exponentially, over the build and ends at SHOT's rate.
+    Each unit-rate arrival `u` lands where the build's expected count reaches it,
+    `λ/20 · B/ln 20 · (20^(t/B) − 1) = u`. So turning SHOT or BUILD stretches one schedule and shot `i`
+    keeps its draws.
+  - **Loudness.** Each shot's force keeps the house energy law at every instant (`√(λ_ref/λ(t))`), and a
+    swell from .25 to 1 as `(t/B)²` is the only loudness ramp.
+  - **Roller.** It spins up as `(t/B)²` and the slam stops it in 60 ms.
+  - **Slam.** A 0.6 ms half-sine at force 30, struck where the shots land, which dents the plate once.
+    Shorter mallets (0.2 and 0.35 ms) were measured. They did not raise the bodies' partials against
+    the root, and cut the hit's lead over the build from 7.8 to 3.6 and 5.3 dB (PLATE).
+- **BUILD replaces RING; HOLD sets the ring.**
+  - BUILD is `expMap(.25 s, 8 s)`. The default .6 is 2 s, one bar at 120 BPM, and `Scour.buildFor`
+    inverts it so a phrase can land the slam on a beat.
+  - RING is retired at the owner's .5: hardening no longer moves the ring. HOLD below its reserved top
+    step lengthens the ring up to threefold, `t60 · (1 + 2·HOLD)`.
+  - The render length is now `BUILD + ring` (floor 1.6 s), with no velocity term, so `drumClassFor`
+    reads one length and velocity moves only the hit.
+- **Defaults** moved for the impact: RPM .3 → .5, SHOT .5 → .7. TUNE, HARDEN and the bodies are R1.1's.
+- **Where the note is tested.** The root probe reads the hit's ring from 0.2 s after the slam and the
+  tail from 0.6 s. In the first 0.15 s the fully hardened PLATE at its extreme corner (C3, BUILD 1, RPM 1,
+  SHOT 1, HARDEN 1) reads like a struck gong: −69 cents at +0.03 s, −64 at +0.1, −48 at +0.15, −17 at
+  +0.2 and −2 at +0.3. At +0.05 that is PLATE's one miss of 37 corners; PANE reads all 37 there.
+- **Where each body is tested.** The two-bodies probe now listens to the last 0.74 s of the build, where
+  the shot rain keeps each body sounding. After the slam the ring is mostly the root: each body's
+  partials sit 39 to 69 dB under it 50 ms after the hit, against 7 to 35 dB at the build's end.
+- **The audition leads with the use.**
+  - Drops: SCOUR into a drop with the slam on the downbeat where the full beat enters. One bar of build at
+    120 BPM, two bars at 90, and short hits (BUILD 0) on the bar at 120, both voices.
+  - Then each build alone at HARDEN 0 and 1, PLATE beside PANE, the sweeps and the edges.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| Defaults, PLATE / PANE | 42 / 54 shots over 2.00 s; coverage at the slam .378 / .573; top mode +7.7 / +8.1 %; render length 4.20 / 3.40 s |
+| The build, raw level by quarter (defaults) | PLATE −35.1, −35.3, −30.0, −24.5 dB; PANE −38.9, −35.0, −30.0, −26.1 dB |
+| The slam's first 200 ms over the build's loudest 200 ms | PLATE 7.8 dB, PANE 8.5 dB (`ScourTest` asserts more than 6) |
+| The one-bar build at C3, top mode at the slam, HARDEN 1 | PLATE +12.8 %, PANE +13.5 % |
+| Root, the 37 asserted corners ({0, 1} over TUNE, BUILD, RPM, SHOT, HARDEN; TUNE in quarters) | hit's ring (+0.2 s) and tail (+0.6 s): 37 and 37 for both voices; at +0.05 s, PLATE 36 and PANE 37 |
+| Each body at the build's end (C4, C5) | PLATE's own partials −10 to −30 dB under the root, PANE's −25 to −35; the other voice's ratios −40 to −61 (the noise floor) |
+| Raw peak after the output stage | 0.725 at the loudest corner (PLATE, C3, BUILD 0, RPM 1, SHOT 0, HARDEN 0); defaults 0.526 (PLATE), 0.426 (PANE). The fixed trim of 36 stands |
+| Render time, warm | PLATE defaults 99 ms (4.20 s of audio), longest (BUILD 1, SHOT 1, HOLD .98) 270 ms for 14.5 s; PANE 49 ms and 184 ms (12.1 s) |
+| Slam on the beat, in the phrases | the mix steps up 11 to 26 dB across each downbeat it is placed on |
+| Audition | 6 phrases and 54 gestures, 114 24-bit WAVs; the published page carries 60 16-bit clips at one shared gain of 11.5 dB |
+
+### Disclosed, not fixed
+
+- PLATE's gong-like first 0.15 s at its fully hardened extreme corner (above).
+- The voices differ mostly in the build; after the hit both ring mostly as their root.
+- BUILD is in seconds, not beats: the engine has no tempo, as the house rule says. `Scour.buildFor`
+  turns a bar length into a setting, and the audition uses it.
+- The longest render (an 8 s build and the longest ring) is 14.5 s and 270 ms here.
+- HOLD's top step stays reserved; whether a held loop is still wanted is open now that a bed was a no.
+- The kit, presets, docs and the app picker are still to come.
+
+### Why R2 is built this way
+
+1. **The "static" became the build.** What sounded like noise sitting on top of a note in a riff is the
+   classic material of a riser when it grows: faster, louder and brighter, then stops at a hit.
+2. **The rain speeds up on a log scale.** Twentyfold over the build sounds like steady acceleration rather
+   than a sudden rush at the end, and keeping each shot's own random draw means BUILD and SHOT reshape one
+   rain instead of rolling new dice.
+3. **The loudness ramp is a separate, named curve.** The energy law keeps "more shots" from simply meaning
+   "louder", so the swell decides how the build grows and the slam still stands about 8 dB over it.
+4. **RING went because the answer was "leave it alone".** HOLD now does the one useful thing a ring knob
+   can do for an impact: decide how long it rings.
+5. **The risky decision is still the plate's pitch.** The hit's ring plays the note at every asserted
+   corner from 0.2 s on; the first instant of a fully hardened plate does not, as a real gong's does not.
+
+## As built: R3, the kit (2026-10-30)
+
+R3 makes SCOUR a rostered engine with a kit. It adds `ScourPresetsTest.kt` and `ScourKitGenerator.kt`
+(task `generateScourKit`, writing the gitignored `testkit/SnipSnap Scour Kit/`), and changes:
+
+- `ScourPresets.kt`, `Presets.kt`, `SynthKits.kt` and `Scour.kt`;
+- `PatchTypes`, `PresetsTest`, `PatchesTest` and `ScourTest`;
+- the audition generator and page;
+- `StarterKits.kt` and its test;
+- the two READMEs.
+
+### Heard (the owner, R2 audition, 2026-10-30)
+
+| Question | Answer |
+|---|---|
+| Would you use SCOUR as the build and hit into a drop like this? | yes |
+| Would you use the short hits (BUILD 0) on their own? | yes |
+| Does the build sound like it rises toward the hit? | yes, clearly |
+| Which voice would you reach for? | either |
+
+Asked what tempo the kit's builds should be cut for, the owner chose two tempos. Asked whether HOLD's top
+step should stay reserved for a held loop, the owner chose to drop the loop.
+
+### What changed
+
+- **HOLD never loops.** HOLD sets the ring after the slam across its whole range, `t60 · (1 + 2·HOLD)`,
+  top step included. `isLoop` is always false, and `scramble` now draws every control.
+- **Eight presets, four per voice.** All are on C minor pentatonic, dry, and name all six controls.
+  - PLATE: IRON SLAM (a bare hit), FORGE RISE (a one-bar-ish rise), GRINDER RUN (a long grinding run) and
+    PEENED BELL (a short build into a long hardened ring at C4).
+  - PANE: GLASS SNAP, FROST RISE, SHATTER RUN and PANE TOLL.
+  - `ScourPresetsTest` holds them to the house contracts (names, round trips, routing, an effects recipe,
+    velocity), keeps them on the scale, and keeps any two in a voice at least 0.2 apart (RMS over the
+    controls). The first GRINDER RUN sat 0.201 from FORGE RISE and was moved to 0.30.
+- **The kit, `SynthKits.scour()`.**
+  - A01-A04 are PLATE builds cut for 120 BPM and A05-A08 PANE builds cut for 90 BPM, each one beat, two
+    beats, one bar and two bars long, all at C3 with the other controls at their defaults.
+  - The test asserts each slam lands within a frame of its bar length, so a pad hit that long before a
+    downbeat lands on it.
+  - A09-A16 are the presets in roster order. Every pad is dry, one-shot, named for its sound, filed by
+    `drumClassFor` (all LOOP-class, every render passing 1.5 s), and regenerates exactly.
+  - The convention for a melodic engine's A01-A08 (a pentatonic walk over TUNE) gives way to the two-tempo
+    builds the owner asked for. An impact's useful axis is its length, not its pitch.
+- **On the roster, off the picker.** SCOUR leaves `PatchTypes.PROTOTYPES`, its presets join `Presets`, and
+  its kit joins FRESH TAPE as the SCOUR starter, so the app loads it like the other synth kits and
+  `snipsnap synth` renders it. It is not on the phone's synth picker yet; the README names it beside
+  BORE and ARCO as rostered but not shown. The app already leaves "reopen in the synth" off a pad whose
+  engine the picker does not list.
+
+## As built: R4, the thunder sheet (2026-10-31)
+
+R4 adds a third voice, SHEET, and fills the kit's bank B with it. It changes `Scour.kt`, `ScourPresets.kt`
+and `SynthKits.kt`; `ScourTest`, `ScourPresetsTest` and `StarterKitsTest`; the SCOUR starter's blurb; and
+the audition and kit generators and the page.
+
+### Heard (the owner, R3 kit page, 2026-10-31)
+
+| Question | Answer |
+|---|---|
+| Would you load this kit as it is? | yes |
+| Are these the build lengths you would reach for? | yes |
+
+Asked whether other voices should be built, the owner chose both proposals, SHEET first and BEAM after
+its listen.
+
+### What changed
+
+- **SHEET's body.** A completely free steel rectangle three times as long as it is wide (a theatre
+  thunder sheet, 0.6 by 1.8 m), ν = 0.3, from the Rayleigh-Ritz solve that gave PANE its square
+  (Legendre products, the first twenty modes converged to 5e-8 between 30×14 and 34×16 terms).
+  - The solve reproduces the square's values at 1:1, and at 8:1 its bending modes approach the free-free
+    beam's `(βL)²·√(1 − ν²)` (Leissa Table 4.72's beam row).
+  - The first sixteen modes run from ratio 1 to 18.95. Bending and twisting modes interleave (1, 1.837,
+    2.778, 3.881, 5.468 ...), and above nine times the root they crowd together, which is the rumble.
+- **SHEET is heard on a nodal line.** The listening point is .8036 of the way from the centre along the
+  half-length and .40 across the half-width, on the nodal line of the third bending mode, 5.468. The
+  fourteen of the first sixteen modes that move at least a tenth as much as the root there are kept
+  (5.468 is still; 18.952 moves .090).
+- **SHEET's voicing.**
+  - The pair (1.837 and 2.778) sits at .5 of the gain law and .7 of its ring, as PANE's does, under a
+    gain law of .75 and an upper decay of .88.
+  - The root rings 4 s. Steel keeps its hardening (κ .02, ρ .1/s), the stretch is .3, and the roller is
+    louder than PLATE's (.1).
+  - SHEET takes .55 of the output trim, so its unlevelled audio stays inside PCM range (below). Every
+    render is levelled, so the trim changes no levelled sound.
+- **SHEET plays from C2**, an octave under PLATE and PANE: `Scour.rootMidi(voice)`, with
+  `SHEET_ROOT_MIDI` 36. C2 is 65.4 Hz, above the house `Pitch.detect`'s 40 Hz floor.
+- **Four SHEET presets**, on C minor pentatonic from C2:
+  - STEEL BOOM, a bare hit;
+  - SHEET RISE, a rise;
+  - THUNDER RUN, a long run at full roller;
+  - DISTANT STORM, a soft build into the longest ring at G2.
+- **Bank B.** `SynthKits.scour()` now returns thirty-two pads; bank A is unchanged.
+  - B01-B04 are SHEET builds cut for 120 BPM and B05-B08 for 90 BPM, the same lengths as bank A's, at C2.
+    They are named `SHEET 120 1 BEAT` and so on, so they do not share bank A's names.
+  - B09-B12 are SHEET's presets.
+  - B13-B16 are SHEET's shortest build (0.25 s) with HOLD .3 on C2, E♭2, F2 and G2, for a low line.
+  - The SCOUR starter fills both banks, and `StarterKitsTest` expects thirty-two slots for it. The starter's
+    blurb now names the thunder sheet.
+
+### Measured (Kotlin, this container's JVM; a phone has not been measured)
+
+| Probe | Result |
+|---|---|
+| First voicing (heard at .91 and .27, the pair at full level, gain law .88, upper decay .92) | root read 21 of 37 asserted corners at both windows; every miss at C2, about 60 to 130 cents off either way |
+| Why C2 misread | the 5.468 mode, near 11/2, is at the bottom of its swing when the root is at the top of its own, so it splits the autocorrelation peak at the root's period. A partial at ratio r flattens that peak by about its power times r², so 5.468 must stay under 1/30 of the root's power (−15 dB). At the first listening point even a .65 gain law left one corner failing (C2, BUILD 1, RPM 1, SHOT 0, HARDEN 0): the ring the roller had built partly cancelled the root at the slam. That left 5.468 13 dB under the root, and the peak split into lags 653 and 702 around the true 674. At C2 a semitone is under two bins of the detector's 0.25 s spectral refine, so the refine cannot correct it; from about E♭2 up it can |
+| On the nodal line, pair at full level | 15 of 17 C2 corners at both windows at a .75 gain law, fewer at gentler ones (flat: 1.837 and 2.778 sit under 2 and 3) |
+| On the nodal line, pair at .5 and .7 | all 17 C2 corners for gain laws .75 to .85; on 243 corners at C2, E♭2 and F2 (every other control at 0, .5 and 1), .75 reads 243 and 243, .80 241 and 243, .85 231 and 241 |
+| As built, `ScourTest`'s 37 corners | 37 of 37 at both windows, SHEET included |
+| Raw peak before SHEET's trim | 1.26 at C2 after the longest build at full roller and blast, 0.46 at the default; 0.69 and 0.25 after it |
+| Hit over build (default) | the slam's first 0.2 s stands 11.0 dB over the loudest 0.2 s of the build |
+| Render cost | the default (6.0 s) in about 95 ms, the longest render (20 s) in about 320 ms |
+| Three bodies apart | each voice's own partials stand at least 15.6 dB over the others' ratios (the narrowest is SHEET at C3 against PLATE's: its louder roller raises the floor) |
+| Tests | `ScourTest` 13, `ScourPresetsTest` 6, the SCOUR determinism canary, `PresetsTest` 8, `PadRecipeTest` 20, `PatchesTest` 3, `StarterKitsTest` 7 and `ConventionTest` 54, all passing |
+| Audition | 9 phrases and 53 gestures, 115 24-bit WAVs in 12.5 s; the published page carries 62 16-bit clips at one shared gain of 11 dB |
+
+### Disclosed, not fixed
+
+- The rumble is quieter than the first sketch. The gain law that lets C2 read leaves the modes above 4.5
+  times the root under 1 % of the hit's energy at C3. At the first listening point, a .78 gain law gave
+  4 %. If SHEET reads as a low gong, the gain law is the lever, and C2's pitch read is what it costs.
+- Bank B's "short hits" are short to the slam (0.25 s); each still rings 6.4 s.
+- SHEET's root, 65 to 262 Hz over TUNE, has not been heard on a phone speaker or through an MPC, where
+  the lowest octave may thin out.
+- The R4 page compares the voices at the same TUNE, which puts SHEET an octave under the other two; it does
+  not set SHEET against PLATE and PANE at the same pitch (SHEET at TUNE .5 against them at TUNE 0).
+- `MODEL_VERSION` stays 1. SHEET is new, and PLATE's and PANE's renders are unchanged to the bit (their trim
+  share is exactly 1).
+- BEAM, the phone's synth picker and a docs page are still to come.
+
+### Why R4 is built this way
+
+1. **A thunder sheet is a plate, so it gets a plate solve.** The same Ritz solve that checks against Leissa
+   gives the long sheet its own overtones, rather than a borrowed table.
+2. **The note is fixed where it is heard, not with a filter.** Moving the listening point onto a mode's
+   nodal line is what PANE did in R1.1. It removes the one partial that fought the root, and it leaves
+   every other partial's level physical.
+3. **An octave down is the reason for the voice.** PLATE and PANE already cover C3 to C5. SHEET's job is
+   weight under a drop, so its lowest note is C2, and the voicing was measured at C2, where reading the
+   pitch is hardest.
+4. **Bank B, not a reshuffle.** The owner said yes to bank A as it is, so SHEET's pads go beside it in
+   the same order: builds at two tempos, then presets, plus a low line of hits.
