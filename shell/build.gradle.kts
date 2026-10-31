@@ -152,6 +152,17 @@ tasks.register<JavaExec>("generateCreaseKeysAudition") {
     args(providers.gradleProperty("creaseKeysOutput").orNull ?: "${rootDir}/testkit/crease-keys-audition")
 }
 
+/** BALLAST held: four keygroup instruments through the production exporter, with held and walking previews. */
+tasks.register<JavaExec>("generateBallastKeys") {
+    group = "distribution"
+    description = "Export four BALLAST sounds as thirteen-zone held keygroups, with previews, under testkit/ballast-keys/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BallastKeysGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/ballast-keys")
+}
+
 /** Package Contour's accepted nine recipes as held instruments with verified native and compatibility programs. */
 tasks.register<JavaExec>("generateContourStarter") {
     group = "distribution"
