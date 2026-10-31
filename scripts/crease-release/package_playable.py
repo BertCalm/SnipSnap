@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import wave
 import zipfile
+from datetime import datetime, timezone
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
@@ -43,7 +44,10 @@ axes[1].set_ylabel('Cache − exact');axes[1].set_xlabel('Milliseconds after key
 axes[1].legend(frameon=False,loc='upper right',fontsize=8)
 for ax in axes: ax.grid(alpha=.15);ax.set_xlim(0,30)
 fig.suptitle('Reed Mark C4: a 137 ms tap, delivered PCM16\nA small early waveform mismatch remains')
-for suffix in ['png','pdf']: fig.savefig(out/f'137ms-transition.{suffix}',dpi=160)
+for suffix in ['png','pdf']:
+    metadata={'CreationDate':datetime(2026,10,31,tzinfo=timezone.utc),
+              'ModDate':datetime(2026,10,31,tzinfo=timezone.utc)} if suffix=='pdf' else None
+    fig.savefig(out/f'137ms-transition.{suffix}',dpi=160,metadata=metadata)
 plt.close(fig)
 
 for name in ['manifest.json','report.json','README.txt','reader-verification.json','137ms-transition.png','137ms-transition.pdf']:
@@ -62,4 +66,10 @@ delivery={'result':'passed','renderSource':m['renderSource'],'files':15,
           'archive':zip_path.name,'bytes':zip_path.stat().st_size,'sha256':b.sha(zip_path.read_bytes()),
           'scope':'Fixed mono 44.1 kHz PCM16 performances, not a release-aware instrument bank'}
 b.write(out/'delivery.json',delivery)
+player=Path(__file__).with_name('player')
+engine=(player/'pcm-engine.mjs').read_text()
+worklet=(player/'release-worklet.mjs').read_text()
+import_line="import { ReleaseReader } from './pcm-engine.mjs';\n"
+b.p.require(worklet.startswith(import_line),'worklet import boundary changed')
+(out/'release-worklet-bundle.mjs').write_text('// Generated from the canonical PCM reader and worklet; no separate DSP implementation.\n'+engine+'\n'+worklet[len(import_line):])
 print(json.dumps(delivery))

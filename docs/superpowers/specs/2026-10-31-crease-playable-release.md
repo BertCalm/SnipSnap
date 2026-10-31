@@ -157,7 +157,11 @@ runtime hashes; it is not a new sound render. `--skip-build` is only for an
 explicitly already-built unchanged synth JAR, and is recorded as such.
 
 The browser modules live in `scripts/crease-release/player/`; the Site uses
-byte-identical copies. Cache generation is an explicit offline action, never a
+byte-identical copies. Packaging also builds a self-contained worklet from
+those same canonical files. The page fetches it through its authenticated
+request path and loads a temporary module URL, because the worklet's separate
+HTTP fetch did not inherit the private-Site verification authorization.
+No credential is included in the source or cache. Cache generation is an explicit offline action, never a
 per-knob or audio-callback task. Extending pitch, touch or macro coverage needs
 a new cost/accuracy measurement, not multiplication of this one-note claim.
 

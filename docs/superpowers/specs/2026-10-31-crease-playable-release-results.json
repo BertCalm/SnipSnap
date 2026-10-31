@@ -352,8 +352,8 @@
     "silentEndings": true,
     "zipEntriesExact": true,
     "archive": "crease-playable-reference-wavs.zip",
-    "bytes": 2348052,
-    "sha256": "3718203ea5ff1be6a4ea5e7a0f47836f7d39d08fe815a55ea7d269eb3db08611",
+    "bytes": 2348059,
+    "sha256": "7a87eb848efa363d63a42179f39d6efe6fea512b920b744937f0626ce179fd9f",
     "scope": "Fixed mono 44.1 kHz PCM16 performances, not a release-aware instrument bank"
   },
   "completeReportSha256": "063073a1e7dcb8b9c190280fe75c60224a11e629d72874e1bb73c4c733a9c108",
