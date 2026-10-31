@@ -72,7 +72,13 @@ jobs:
       # Everything except :app, by exclusion rather than by list — a module added
       # later must not be silently untested because nobody updated this line.
       - name: Run JVM test suites
-        run: ./gradlew --no-daemon test -x :app:test
+        # The compiler needs 4 GiB for the complete synth tests. Release it
+        # between long test tasks so its heap does not remain beside the two
+        # 2 GiB test workers on an 8 GiB runner. Busy compilation stays alive.
+        run: >-
+          ./gradlew --no-daemon
+          -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
+          test -x :app:test
       # A worker/framework failure can leave only a skipped method and a
       # generic Gradle error in the console. Retain the actual failure.
       - name: Keep JVM failure reports
