@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateTrefoilPlayableBank") {
+    group = "distribution"
+    description = "Render twelve Trefoil presets, three native velocity layers, sixteen MPC pads and two musical performances."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilPlayableBankGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("trefoilBankOutput").orNull ?: "${rootDir}/testkit/trefoil-playable-bank")
+}
+
 /** Port the approved passive handoff and compare actual Kotlin exports with its retained references. */
 tasks.register<JavaExec>("generateFerryAudition") {
     group = "distribution"
@@ -782,6 +792,9 @@ repositories {
 }
 
 dependencies {
+    // Versioned eighth-order 8(5,3) integrator and dense output for TREFOIL's
+    // offline Newtonian trajectory. Apache-2.0; never runs on the audio clock.
+    implementation("org.apache.commons:commons-math3:3.6.1")
     implementation(project(":audio"))
     implementation(project(":json"))
     // The factory kit builders hand ArrangedPads (audio + class + recipe)
@@ -792,6 +805,22 @@ dependencies {
     testImplementation(project(":xpm"))
     // The MPC 3 generators write native tracks with embedded groove clips.
     testImplementation(project(":mpc3"))
+}
+
+tasks.register<JavaExec>("generateTrefoilAudition") {
+    group = "distribution"
+    description = "Render finite TREFOIL studies, causal comparisons, trajectories and replayable recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("trefoilReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("trefoilReplayWav").get(),
+            providers.gradleProperty("trefoilReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("trefoilOutput").orNull ?: "${rootDir}/testkit/trefoil-model-two-audition")
+    }
 }
 
 // The native processor and the JVM recipe reader share one canonical registry.
@@ -2184,6 +2213,17 @@ tasks.register<JavaExec>("generateCausticInstrumentAudition") {
     workingDir = projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
+}
+
+/** Four permanent native voices, kept separate from the preserved listening studies. */
+tasks.register<JavaExec>("generateCausticCharactersAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's four native voices, focused control comparisons and portable patch/WAV packs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticCharactersAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticCharactersOutput").orNull ?: "${rootDir}/testkit/caustic-native-voices-audition")
 }
 
 tasks.register<JavaExec>("generateCausticKit") {

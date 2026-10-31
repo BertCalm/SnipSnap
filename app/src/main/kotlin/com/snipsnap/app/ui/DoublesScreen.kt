@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -45,8 +46,8 @@ private const val TAG = "DoublesScreen"
 /**
  * DOUBLES: pads across the shelf's kits inside a "same sound" distance,
  * the number on every row — read-only, X-RAY's posture turned on the
- * user's own library. Reached from the shelf's DOUBLES ▸ row, a
- * shelf-level overlay in the same shape as X-RAY and DELETED KITS.
+ * user's own library. Reached from the shelf's DOUBLES ▸ row, a bench over
+ * the shelf (`Bench.DOUBLES`) whose back chip reads [backLabel].
  *
  * The screen measures once ([Crate.index] over the shelf root — cached
  * by path, mtime and size, so an unchanged shelf costs nothing), then
@@ -59,6 +60,8 @@ private const val TAG = "DoublesScreen"
 @Composable
 fun DoublesScreen(
     shelf: KitShelf,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     /** GO ▸: open this shelf entry with this slot's PAD SHEET up. */
@@ -115,7 +118,7 @@ fun DoublesScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ SHELF", scheme, Modifier.width(72.dp), onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 72.dp), onClick = onBack)
             Column(Modifier.weight(1f).padding(start = 8.dp)) {
                 TapeText("DOUBLES", TapeType.lcdHeader, scheme.lcdInk.tape)
                 TapeText(

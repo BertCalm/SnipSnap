@@ -55,6 +55,12 @@ import com.snipsnap.shell.Places
  * shipped yet; every one of them had shipped long before the stub was
  * finally deleted, which is exactly the failure mode the missing
  * catch-all now prevents from recurring.)
+ *
+ * A bench that opens over wherever the user is has no entry here: ORBIT,
+ * SURFACE, SYNTH and SNAP were entries that landed on a fixed place (BEAT, a
+ * bare MAKE) and were deleted once nothing landed on them, so a hand-off that
+ * went back to `landOn(AppScreen.ORBIT)` would not compile. They are opened
+ * with `nav.open(Bench.X)`.
  */
 enum class AppScreen(val label: String) {
     /**
@@ -80,13 +86,6 @@ enum class AppScreen(val label: String) {
     TAPE("TAPE"),
     CHOP("CHOP"),
     GROOVE("GROOVE"),
-    /** The circular sequencer: the kit on rings of different lengths. Its own menu entry, since a sequencer is a peer of GROOVE, not a corner of it. */
-    ORBIT("ORBIT"),
-    SYNTH("SYNTH"),
-    /** The tactile pad: macros under a finger, PRINT to resample the gesture onto TAPE. */
-    SURFACE("SURFACE"),
-    /** A photo becomes a pad: the camera's line read as a wavetable, its colours as the knobs. */
-    SNAP("SNAP"),
     EXPORT("EXPORT"),
     PROPERTIES("SETUP"),
     HELP("HELP"),

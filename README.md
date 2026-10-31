@@ -390,7 +390,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 54 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 55 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -449,15 +449,20 @@ and capture/control diagnostics. The
 awaits the owner's listening verdict; [implementation notes](docs/TANGLE.md)
 describe the six controls, saved format and held-loop constraints.
 
-CAUSTIC's first native ALLOY voice develops the heard Fuller body direction
-through SOURCE, FOCUS, BODY and LENGTH, with explicit ROOT and VELOCITY. A
-bounded static-geometry cache and exact linear modal response support editable
-finite notes. Native patches retain model, note and velocity through presets,
-pads and CLI edits. Eight presets and a dry sixteen-pad kit accompany
-the instrument; six positions are new listening candidates. HOLD is reserved.
-Run `./gradlew :synth:generateCausticInstrumentAudition :synth:generateCausticKit`
-for the control study and dual-generation MPC starter. The archived listening
-studies remain unchanged. [Implementation notes](docs/CAUSTIC.md) distinguish
+CAUSTIC has four finite voices: ALLOY, HOLLOW_MALLET, RUBBED_RING and
+TRAVELLING_CATCHES. A metallic bloom, soft hollow knock, rough pressure swell
+and four spatial catches share SOURCE/FOCUS geometry, voice-specific BODY and
+.5–8-second LENGTH, with saved ROOT and VELOCITY. The owner chose all three
+character-study gestures for native development. Integration passes the
+7,001-test JVM gate; the production ports and new control positions still need
+listening. Native model-1 ALLOY patches and
+archived study models 1–4 retain their interpretation. Eleven starting patches
+and a dry sixteen-pad kit include the four voices. HOLD is reserved.
+Run `./gradlew :synth:generateCausticCharactersAudition :synth:generateCausticKit`
+for the four-voice control study and dual-generation MPC starter. The archived listening
+studies remain unchanged. The [native voice audition](https://caustic-snipsnap-voices.bertcalm.chatgpt.site/)
+provides 42 recordings and six downloads, including all four voice families
+and the MPC starter. [Implementation notes](docs/CAUSTIC.md) distinguish
 finite duration classification from sustained-loop support.
 
 CREASE's ROUND, PINCH and RUBBER voices bend and recover through positive
@@ -965,8 +970,8 @@ kits the classifier audits so a roll can't break them, plus a remix bank
 that doubles any kit onto pads 17–32 through seeded FX.
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
-64 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and GRAINS round out the lineup —
+65 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1175,7 +1180,7 @@ TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTA
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
-OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
+OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO
 and SCOUR have preset rosters, so `snipsnap synth` renders them.

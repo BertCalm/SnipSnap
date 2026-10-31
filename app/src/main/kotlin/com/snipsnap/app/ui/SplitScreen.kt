@@ -105,12 +105,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SplitScreen(
     entry: KitShelf.Entry?,
+    /** The back button's words: `Navigation.backChip`, so they name where [onExit] lands. */
+    backLabel: String,
     onToast: (String) -> Unit,
     /** The print landed on TAPE; the deck should re-read its shelf. */
     onPrinted: () -> Unit,
     /** The print landed on a pad: the kit changed on disk. */
     onKitUpdated: (Kit) -> Unit,
-    /** ◄ KIT — SPLIT is reached from the kit's action row and leaves the same way. */
+    /** SPLIT is reached from the kit's action row and leaves the same way. */
     onExit: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -144,7 +146,7 @@ fun SplitScreen(
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
 
-    // Mirrors the ◄ KIT chip below (`enabled = !working`) exactly: always
+    // Mirrors the back button below (`enabled = !working`) exactly: always
     // registered so Back can't fall through to a broader "go to shelf"
     // policy — or, worse, to Activity.finish() — mid-operation, but a no-op
     // while `working`, the same as the disabled chip.
@@ -460,7 +462,7 @@ fun SplitScreen(
 
         // ---- the source, and the split itself ----
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ KIT", scheme, enabled = !working, modifier = Modifier.weight(1f)) { onExit() }
+            ActionButton(backLabel, scheme, enabled = !working, accessibilityLabel = spokenBack(backLabel), modifier = Modifier.weight(1f)) { onExit() }
             ActionButton("PAD ◄", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
             ActionButton("PAD ►", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
         }
