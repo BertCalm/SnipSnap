@@ -1,9 +1,9 @@
 # PRISM opening and repeating sustain
 
 Repository baseline: `fde661771fcbb6345a76f76e65537bfd9bb7c7ce`.
-Status: implemented for coordinated verification. Measurements and build results
-will be recorded before publication. The new performance has not received a
-listening approval.
+Status: implemented, with focused JVM checks and Android compilation verified.
+The accompanying pull request records the full release checks. The new
+performance has not received a listening approval.
 
 The characteristic gesture is **body attack → opening colour → repeating colour
 and body → release when the key is lifted**.
@@ -23,6 +23,8 @@ The instrument keeps the complete current patch: source coefficients and ID,
 carrier template, velocity, group lag, starting blend, amount and time. Release
 is a separate instrument setting, defaulting to 0.6 seconds. The saved note
 can be previewed even when its pitch is between the nine export roots.
+Sample transposition between those roots changes playback speed and colour-cycle
+rate, as with the existing sampled keygroups.
 
 The existing pad and main-audition routes retain their settled-sustain contract.
 The new instrument follows the established separation used by other held
@@ -129,6 +131,39 @@ metadata and numerical evidence.
 ./gradlew --no-daemon :shell:test --tests 'com.snipsnap.shell.Prism*'
 ./gradlew --no-daemon :shell:generatePrismOpeningSustainAudition
 ```
+
+## Measured and verified
+
+At implementation commit `bae77f76e`, the new DSP test class passed its five
+gesture, seam, register/lag, replay/velocity and cancellation tests on JDK 17.
+After correcting public API use in the audition generator, commit `6437b3e4a`
+passed all 134 selected PRISM, instrument-workflow and source-convention checks,
+with zero failures or skips. Debug and Strike FX APK assembly and compilation
+of all four new Android UI tests passed for the same production sources.
+
+The clean 16-case audition at `6437b3e4a` replayed every complete recipe and
+sampler marker exactly. All eight new instrument cases matched their independently
+synthesized preceding sustain regions sample-for-sample; measured seam error
+was zero. The four accepted finite recipes and captured sample hashes matched.
+
+The default Soft Arrival performance contains 281,625 output frames. Its one-way
+opening occupies 35,281 frames, its first phase-introduction cycle 35,192 frames,
+and its marked sustain starts at frame 211,241. The final 70,384 frames form the
+loop, containing two 0.79800-second colour cycles. The earlier sustain cycles in
+the prefix continue audibly before the sampler reaches that marker.
+
+Warmed public renders for the eight instrument cases took 124–310 ms on this
+JVM, with a median of 189 ms. These are single-run container measurements,
+excluding recipe replay, probes and file writes, and are not phone timing claims.
+
+| Claim | Status | Evidence |
+| --- | --- | --- |
+| Opening, bridge and sustain close without a disguised seam | Measured | New DSP tests and eight independent preceding-cycle audition comparisons. |
+| Delivery recipe and sampler marker replay exactly | Verified | Production Spec round trips, workflow tests and generated WAV readback. |
+| Phone player keeps the prefix once and loops only the sustain | Verified in JVM playback model | InstrumentEngine workflow test; device execution remains separate. |
+| Both APK variants and new UI tests compile | Verified | Android build exit 0 at the implementation commit. |
+| New performance has the preferred musical character | Awaiting listening | The owner's earlier approval covers the body-opening direction, not this new held delivery. |
+| Physical MPC behavior and phone response | Unverified on hardware | Actual-device checks remain outstanding. |
 
 ## Why it is built this way
 
