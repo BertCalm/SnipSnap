@@ -2630,3 +2630,19 @@ the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
 gate on release; both drum exporters write the corresponding slice-loop and
 sustain settings. Finite notes retain complete one-shot tails. Dedicated
 keyboard multisampling and physical phone/MPC acceptance remain separate.
+
+## ORIGAMI velocity expression
+
+Model-4 ORIGAMI now has an opt-in LEVEL/FOLD velocity selector. Hit strength
+scales the authored fold depth while preserving source spectra, pitch and
+gesture timing. Existing recipes and factory sounds stay LEVEL; full velocity
+retains the accepted folded reference exactly. BLOOM and UNFOLD continue to
+play once and settle before their held loop.
+
+Native held instruments use three touch layers per pitch zone in FOLD mode;
+finite pads reach the same native expression through SOFT HITS after SEND.
+Preview hit selection is temporary and keeps the authored recipe intact.
+The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records implementation, cost, verification and the new listening gate. Owner
+acceptance of the expression curve and physical MPC playback remain listening
+and hardware checks.

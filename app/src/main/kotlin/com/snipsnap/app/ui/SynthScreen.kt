@@ -339,6 +339,8 @@ import com.snipsnap.synth.Registers
 import com.snipsnap.synth.RegistersPatch
 import com.snipsnap.synth.RegistersVoice
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiExpression
+import com.snipsnap.synth.OrigamiExpressions
 import com.snipsnap.synth.OrigamiGesture
 import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
@@ -1000,6 +1002,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.ORIGAMI) {
+            // Expression, gesture and pitch events can share a frame. Preserve
+            // the newest complete recipe instead of the last composed snapshot.
+            val current = loadedPatchesByVoice[engine to voice] as? OrigamiPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OrigamiPatch(name, voice as OrigamiVoice, controls)
+        }
         if (engine == Engine.TREFOIL) {
             // SAVE or SEND can arrive in the same frame as a root/touch/contact edit.
             // Read the current recipe map rather than the previous composition's snapshot.
@@ -1216,7 +1226,7 @@ fun SynthScreen(
         ensureNativeDraft()
         // An absolute ORIGAMI MIDI note overrides TUNE. A deliberate pitch edit
         // must move that override too; timbral edits retain the whole saved recipe.
-        val origami = loadedPatch as? OrigamiPatch
+        val origami = loadedPatchesByVoice[engine to voice] as? OrigamiPatch
         if (name == "TUNE" && origami?.midi != null) {
             loadedPatchesByVoice[engine to voice] = origami.copy(midi = Origami.midiFor(origami.voice, bounded))
         }
@@ -1243,6 +1253,27 @@ fun SynthScreen(
         // A gesture tap can be followed immediately by navigation, before the
         // state effect runs. Keep the complete recipe with the edit itself.
         settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] = next.toJsonText()
+    }
+    fun updateOrigamiExpression(expression: OrigamiExpression) {
+        if (engine != Engine.ORIGAMI) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
+        if (patch.model != Origami.MODEL_VERSION || patch.expression == expression) return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val next = patch.copy(expression = expression)
+        loadedPatchesByVoice[engine to voice] = next
+        // Store the complete authored ceiling and source before navigation can
+        // dispose the screen; preview hits never write into this recipe.
+        settings["$SETTINGS_ORIGAMI_PATCH_PREFIX${voice.name}"] = next.toJsonText()
+    }
+    val origamiPreview = remember { OrigamiPreviewState() }
+    fun previewOrigamiHit(hit: OrigamiPreviewHit) {
+        if (engine != Engine.ORIGAMI) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch
+        if (patch.model != Origami.MODEL_VERSION) return
+        touched = true
+        origamiPreview.strike(voice as OrigamiVoice, hit)
     }
     fun updateStoopRoot(midi: Int) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
@@ -1553,6 +1584,8 @@ fun SynthScreen(
     }
 
     val filamentPreviews = rememberFilamentPreviews()
+    val origamiPreviewHit = if (engine == Engine.ORIGAMI)
+        origamiPreview.hit(voice as OrigamiVoice) else OrigamiPreviewHit.FULL
 
     // The debounced re-render + retrigger loop: LaunchedEffect's own key
     // change cancels whatever render was in flight and restarts the delay,
@@ -1560,7 +1593,7 @@ fun SynthScreen(
     // with clearTimeout/setTimeout in the prototype. Keyed on `engine` too
     // now — switching engines must cancel an in-flight render exactly like
     // switching voices always has.
-    LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe, embouchureRestore.pending.containsKey(engine to voice), prismMotionStudio.ownsPreview) {
+    LaunchedEffect(engine, voice, macros, loadedPatch, activeRecipe, embouchureRestore.pending.containsKey(engine to voice), prismMotionStudio.ownsPreview, origamiPreviewHit, origamiPreview.trigger) {
         if (engine == Engine.PRISM && prismMotionStudio.ownsPreview) {
             rendering = false
             return@LaunchedEffect
@@ -1585,8 +1618,13 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
+                // The bench's hit strength is audition-only. Saving, SEND and
+                // the instrument maker all keep the patch's authored velocity.
+                val patch = if (sourcePatch is OrigamiPatch && sourcePatch.model == Origami.MODEL_VERSION)
+                    sourcePatch.copy(velocity = OrigamiExpressions.relativeVelocity(sourcePatch, origamiPreviewHit.strength))
+                else sourcePatch
                 val dry = when {
                     patch is ChamberPatch -> seed.chamberRenderer.render(patch) {
                         previewJob?.isActive == false || Thread.currentThread().isInterrupted
@@ -3179,42 +3217,14 @@ fun SynthScreen(
                 val origamiPatch = if (engine == Engine.ORIGAMI)
                     buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch else null
                 if (origamiPatch != null) {
-                    if (origamiPatch.model == Origami.MODEL_VERSION) {
-                        TapeText("GESTURE", TapeType.pixelSmall, scheme.ink2.tape)
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            for (gesture in OrigamiGesture.entries) {
-                                ActionButton(
-                                    gesture.name,
-                                    scheme,
-                                    enabled = true,
-                                    lit = origamiPatch.gesture == gesture,
-                                    modifier = Modifier.weight(1f).semantics { selected = origamiPatch.gesture == gesture },
-                                    accessibilityLabel = "ORIGAMI ${gesture.name}",
-                                ) {
-                                    updateOrigamiGesture(gesture)
-                                }
-                            }
-                        }
-                        TapeText(
-                            when (origamiPatch.gesture) {
-                                OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
-                                OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
-                                OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
-                            },
-                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
-                        )
-                        if (origamiPatch.gesture != OrigamiGesture.STEADY) {
-                            TapeText(
-                                "MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE",
-                                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
-                            )
-                        }
-                    } else {
-                        TapeText(
-                            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES.",
-                            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
-                        )
-                    }
+                    OrigamiPerformanceControls(
+                        patch = origamiPatch,
+                        previewHit = origamiPreviewHit,
+                        scheme = scheme,
+                        onGesture = ::updateOrigamiGesture,
+                        onExpression = ::updateOrigamiExpression,
+                        onPreviewHit = ::previewOrigamiHit,
+                    )
                 }
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
@@ -3678,6 +3688,109 @@ private fun ApsisPlayingControls(
         else "HOLD: NOTE LENGTH · TOP STEP: LOOP.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )
+}
+
+private enum class OrigamiPreviewHit(val strength: Float) {
+    SOFT(.3f), MID(.6f), FULL(1f),
+}
+
+/** Hit strength belongs to this bench visit, never to the saved source recipe. */
+private class OrigamiPreviewState {
+    private val hits = mutableStateMapOf<OrigamiVoice, OrigamiPreviewHit>()
+    var trigger by mutableStateOf(0)
+        private set
+
+    fun hit(voice: OrigamiVoice) = hits[voice] ?: OrigamiPreviewHit.FULL
+
+    fun strike(voice: OrigamiVoice, hit: OrigamiPreviewHit) {
+        hits[voice] = hit
+        // Repeating the same hit is still an explicit request to hear it again.
+        trigger++
+    }
+}
+
+/** Independent playing choices sit beside ORIGAMI's unchanged six geometry controls. */
+@Composable
+private fun OrigamiPerformanceControls(
+    patch: OrigamiPatch,
+    previewHit: OrigamiPreviewHit,
+    scheme: Scheme,
+    onGesture: (OrigamiGesture) -> Unit,
+    onExpression: (OrigamiExpression) -> Unit,
+    onPreviewHit: (OrigamiPreviewHit) -> Unit,
+) {
+    if (patch.model != Origami.MODEL_VERSION) {
+        TapeText(
+            "THIS SAVED RECIPE KEEPS ITS ORIGINAL SOUND. LOAD A FACTORY PRESET FOR GESTURES AND VELOCITY COLOR.",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+        )
+        return
+    }
+    TapeText("GESTURE", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (gesture in OrigamiGesture.entries) {
+            ActionButton(
+                gesture.name,
+                scheme,
+                enabled = true,
+                lit = patch.gesture == gesture,
+                modifier = Modifier.weight(1f).semantics { selected = patch.gesture == gesture },
+                accessibilityLabel = "ORIGAMI ${gesture.name}",
+            ) { onGesture(gesture) }
+        }
+    }
+    TapeText(
+        when (patch.gesture) {
+            OrigamiGesture.STEADY -> "MOTION MOVES THE FOLD AXIS."
+            OrigamiGesture.BLOOM -> "START OPEN, THEN FOLD."
+            OrigamiGesture.UNFOLD -> "START FOLDED, THEN OPEN."
+        },
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+    )
+    if (patch.gesture != OrigamiGesture.STEADY) {
+        TapeText(
+            "MOTION SETS GESTURE TIME · FAST → SLOW · PLAYS ONCE",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+        )
+    }
+    TapeText("VELOCITY", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (expression in OrigamiExpression.entries) {
+            ActionButton(
+                expression.name,
+                scheme,
+                enabled = true,
+                lit = patch.expression == expression,
+                modifier = Modifier.weight(1f).semantics { selected = patch.expression == expression },
+                accessibilityLabel = "ORIGAMI VELOCITY ${expression.name}",
+            ) { onExpression(expression) }
+        }
+    }
+    TapeText(
+        if (patch.expression == OrigamiExpression.FOLD)
+            "SOFT HITS HAVE LESS FOLDED COLOR. HARD HITS HAVE MORE."
+        else "HIT STRENGTH CHANGES VOLUME.",
+        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+    )
+    TapeText("PREVIEW HIT", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (hit in OrigamiPreviewHit.entries) {
+            ActionButton(
+                hit.name,
+                scheme,
+                enabled = true,
+                lit = previewHit == hit,
+                modifier = Modifier.weight(1f).semantics { selected = previewHit == hit },
+                accessibilityLabel = "ORIGAMI PREVIEW ${hit.name}",
+            ) { onPreviewHit(hit) }
+        }
+    }
+    if (patch.expression == OrigamiExpression.FOLD) {
+        TapeText(
+            "PADS: USE SOFT HITS FOR VELOCITY COLOR",
+            TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+        )
+    }
 }
 
 /**
@@ -4413,12 +4526,15 @@ private sealed interface HeldSpec {
     class Origami(private val spec: OrigamiPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = OrigamiPadMaker.zoneMidis(spec)
         override val hasAttack get() = false
+        override val progressPerZone get() = spec.layerCount
         override val knobLabel get() = "RELEASE %.2f s".format(Locale.ROOT, spec.releaseSeconds)
-        override val instrumentNote get() = "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
-        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OrigamiPadMaker.renderZone(spec, midi, cancelled))
+        override val instrumentNote get() = if (spec.layerCount > 1)
+            "C3–C5 · SOFT, MID AND HARD TOUCH CHANGE FOLDED COLOR. HOLD TO SUSTAIN; LET GO TO FADE."
+        else "C3–C5 · HOLD A KEY TO SUSTAIN. LET GO TO FADE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = OrigamiPadMaker.renderVelocityZone(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = OrigamiPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
-            OrigamiPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+            OrigamiPadMaker.exportLayers(name, spec, notes, destRoot)
     }
 
     class Filament(private val spec: FilamentPadMaker.Spec) : HeldSpec {
