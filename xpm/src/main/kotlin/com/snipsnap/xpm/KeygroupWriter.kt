@@ -46,6 +46,7 @@ data class KeygroupProgram(
      * preserves existing package bytes; native MPC 3 already declares NoteOn.
      */
     val explicitNoteOn: Boolean = false,
+    val voiceMode: VoiceMode = VoiceMode.POLY,
 ) {
     init {
         require(name.isNotBlank()) { "program name must not be blank" }
@@ -53,6 +54,23 @@ data class KeygroupProgram(
             "1..128 keygroups, got ${keygroups.size}"
         }
         require(pitchBendRange in 0f..24f) { "pitchBendRange out of range: $pitchBendRange" }
+    }
+
+    /**
+     * A copy whose lowest zone(s) reach down to note 0 and highest zone(s) up to
+     * 127, so every key plays. Zones tied for an edge all stretch; order is kept.
+     */
+    fun fullKeyboard(): KeygroupProgram {
+        val low = keygroups.minOf { it.lowNote }
+        val high = keygroups.maxOf { it.highNote }
+        return copy(
+            keygroups = keygroups.map {
+                it.copy(
+                    lowNote = if (it.lowNote == low) 0 else it.lowNote,
+                    highNote = if (it.highNote == high) 127 else it.highNote,
+                )
+            },
+        )
     }
 }
 
