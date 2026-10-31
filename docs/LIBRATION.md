@@ -298,22 +298,33 @@ departing tails and a full-bank level pass. Confirm root pitches and one-shot en
 before changing pad tuning or levels. Record the hardware model/OS and any problem
 pad, velocity and action. Program read-back checks do not replace this pass.
 
-## App build verification (2026-10-26)
+## App build verification (2026-10-31)
+
+The integration merges application base
+`fde661771fcbb6345a76f76e65537bfd9bb7c7ce`. It uses the current shared preview
+cancellation and engine catalogue, with 66 picker entries and 55 FRESH TAPE
+starters. Picker boundary tests include LIBRATION before the return to LATTICE.
+The approved engine, trajectories, patches, presets, kit and render-session
+sources remain byte-identical to the accepted integration snapshot.
 
 `:app:assembleDebug` and `:app:assembleDebugAndroidTest` completed successfully
-on the cloud host with JDK 21, Kotlin 2.0.21, compile SDK 35 and the repository's
-pinned NDK. The debug APK's v2 signature verifies; it targets Android 10 (API 29)
-or newer. The build used `-Pkotlin.daemon.jvmargs=-Xmx4g` for the large SYNTH screen.
-The three new performance controls live in a separate composable.
+in 6m 34s on the cloud host with JDK 21, Kotlin 2.0.21, compile SDK 35 and the
+repository's pinned NDK. The debug APK's v2 signature verifies; it targets
+Android 10 (API 29) or newer. The build used
+`-Pkotlin.daemon.jvmargs=-Xmx4g` for the large SYNTH screen. The three new
+performance controls live in a separate composable.
 
 The app and device-test APKs came from an isolated checkout with byte-identical
-changed Kotlin/build sources. The full nine-module JVM invocation completed with
-5,791 tests, zero failures, errors or skips. Its final pass reused eight validated
-modules and freshly ran all 1,215 shell tests after registration expectations were
-updated. The 2,986 synth tests include the model-2/3 reference hashes and the new
-cache, invalidation and cancellation checks. Phone UI
-tests and the benchmark compiled; neither was executed without a connected device.
-The approved `Libration.kt` renderer remains SHA-256
+changed Kotlin/build sources. The full nine-module JVM invocation completed
+successfully in 1h 21m 4s: 7,288 tests, zero failures, errors or skips. All 42
+tasks executed. The 3,938 synth tests include the preserved reference waveforms
+and the cache, invalidation and cancellation checks; all 1,658 shell tests
+passed, including native velocity layers, saved performance fields, export
+read-back and the current picker/catalogue conventions.
+
+Phone UI tests and the opt-in benchmark compiled; neither was executed locally
+without a connected device. Physical phone timing and MPC hardware acceptance
+remain unverified. The approved `Libration.kt` renderer remains SHA-256
 `033ba2696d06cc6ff81c1f9ed9c3665a662ac56b4b1b581c2d0f62529ac4239c`.
 
 ## Remaining scope
