@@ -57,7 +57,7 @@ class SurfaceAquariumTest {
                 abs(wet.samples[it] - wet.samples[it + 1]) > 1e-4f
             })
             WavWriter.write(file, wet)
-            val saved = WavReader.read(file).snip
+            val saved = WavReader.read(file)
             assertEquals(2, saved.channels)
             assertTrue("saving must retain effect width", saved.samples.indices.step(2).any {
                 abs(saved.samples[it] - saved.samples[it + 1]) > 1e-4f
