@@ -56,4 +56,23 @@ class StrikeFxBankTest {
         val a = StrikeFxBank.render(src, 0.42f, 0.9f); val b = StrikeFxBank.render(src, 0.42f, 0.9f)
         a.zip(b).forEach { (x, y) -> assertContentEquals(x.samples, y.samples) }
     }
+
+    @Test fun `the knobs change the audio and the wet layers carry a tail`() {
+        val src = Snip(FloatArray(4410) { if (it == 0) 0.6f else 0f }, 1, 44100)
+        val out = StrikeFxBank.render(src, 0.42f, 0.9f)
+        assertFalse(out[1].samples.contentEquals(out[0].samples))
+        assertFalse(out[2].samples.contentEquals(out[0].samples))
+        assertTrue(out[1].frameCount > src.frameCount && out[2].frameCount > src.frameCount)
+        assertFalse(StrikeFxBank.render(src, 0.42f, 0.2f)[2].samples.contentEquals(out[2].samples))
+        assertFalse(StrikeFxBank.render(src, 0.1f, 0.9f)[1].samples.contentEquals(StrikeFxBank.render(src, 0.9f, 0.9f)[1].samples))
+    }
+
+    @Test fun `the worst-case knobs still bound the tails to one second`() {
+        val src = Snip(FloatArray(4410) { if (it == 0) 0.6f else 0f }, 1, 44100)
+        val out = StrikeFxBank.render(src, 1f, 1f)
+        out.drop(1).forEach {
+            assertTrue(it.frameCount <= src.frameCount + src.sampleRate)
+            assertTrue(it.samples.all { s -> s.isFinite() && abs(s) <= 1f })
+        }
+    }
 }
