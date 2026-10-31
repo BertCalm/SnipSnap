@@ -229,6 +229,8 @@ object SurfaceStore {
         val gesture: Gesture? = null,
         /** ECHO's time as an index into [EchoTime.DIVISIONS]; FREE - the engine's own fixed time - until the ECHO button is tapped. */
         val echoTime: Int = EchoTime.FREE_INDEX,
+        /** Explicitly route SURFACE through the kit's saved Aquarium bus; old files default off. */
+        val aquariumFromKit: Boolean = false,
     ) {
         init {
             require(corners.size == 4) { "four corners, got ${corners.size}" }
@@ -279,6 +281,7 @@ object SurfaceStore {
     private fun toJson(s: Settings): JsonValue = JsonValue.Obj(
         linkedMapOf(
             "version" to JsonValue.Num(VERSION.toDouble()),
+            "aquariumFromKit" to JsonValue.Bool(s.aquariumFromKit),
             "pad" to (s.padSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "secondPad" to (s.secondPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
             "thirdPad" to (s.thirdPadSlot?.let { JsonValue.Num(it.toDouble()) } ?: JsonValue.Null),
@@ -422,6 +425,7 @@ object SurfaceStore {
             val ys = o["y"]?.arr()?.map { it.num().toFloat() }?.toFloatArray() ?: throw JsonException("gesture has no y")
             Gesture(bars, xs, ys)
         }
-        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture, echoTime = echoTime)
+        return Settings(pad, corners, secondPad, thirdPad, fourthPad, grain, mods, keySnap = keySnap, swarm = swarm, gesture = gesture, echoTime = echoTime,
+            aquariumFromKit = obj["aquariumFromKit"]?.bool() ?: false)
     }
 }

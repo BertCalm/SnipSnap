@@ -6,7 +6,7 @@ import kotlin.random.Random
 
 enum class ScannedChainVoice { PLUCK, METAL, BLOOM }
 
-/** Saved non-macro settings. Numerical resolution is part of model 1, not a patch control. */
+/** Saved non-macro settings. Numerical resolution belongs to the saved render model. */
 data class ScannedChainConfig(
     val mechanicalHz: Float = 1.15f,
     val restFraction: Float = .16f,
@@ -28,7 +28,7 @@ data class ScannedChainConfig(
     internal fun validateForVoice(voice: ScannedChainVoice) {
         val fixed = forVoice(voice)
         require(mechanicalHz == fixed.mechanicalHz && driveHz == fixed.driveHz) {
-            "SCANNED CHAIN model 1 keeps mechanicalHz and driveHz fixed for ${voice.name}"
+            "SCANNED CHAIN keeps mechanicalHz and driveHz fixed for ${voice.name}"
         }
     }
 
@@ -45,7 +45,8 @@ data class ScannedChainConfig(
 
 /** A finite scanned waveform whose timbre evolves under a slow mass/spring simulation. */
 object ScannedChain {
-    const val MODEL_VERSION = 1
+    const val MODEL_VERSION = 2
+    const val LEGACY_MODEL = 1
     const val MIDI_MIN = 36
     const val MIDI_MAX = 96
     const val MIN_MIDI = MIDI_MIN
@@ -53,6 +54,8 @@ object ScannedChain {
     const val SHAPE_SIZE = 128
     const val DAMP_MAX = 6f
     const val BEND_MAX = 8f
+
+    fun supportsModel(model: Int): Boolean = model in LEGACY_MODEL..MODEL_VERSION
 
     fun macrosFor(voice: ScannedChainVoice): List<MacroSpec> {
         val damping = when (voice) {
@@ -83,32 +86,74 @@ object ScannedChain {
     fun render(
         voice: ScannedChainVoice, macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = .8f,
         shape: ScannedChainShape = ScannedChainShape.factory(voice), config: ScannedChainConfig = ScannedChainConfig.forVoice(voice),
+        model: Int = MODEL_VERSION,
     ): Snip {
-        val result = probe(voice, macros, midi, velocity, shape, config)
-        val samples = result.raw.samples
-        // One constant finishing gain. Velocity retains level as well as physical excitation.
-        Dsp.levelTo(samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity, ceiling = .9f * velocity)
-        checkCancellation()
-        return Snip(samples, 1, Dsp.RATE)
+        val resolved = settled(voice, macros)
+        val physical = configuration(voice, resolved, midi, velocity, config, model)
+        return ScannedChainRenderCache.render(model, voice, resolved, midi, velocity, shape, config) {
+            val samples = renderModel(physical, shape.points, model).raw.samples
+            // One constant finishing gain preserves the gesture inside each finite sound.
+            Dsp.levelTo(samples, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET * velocity, ceiling = .9f * velocity)
+            checkCancellation()
+            Snip(samples, 1, Dsp.RATE)
+        }
     }
 
     internal fun probe(
         voice: ScannedChainVoice, macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = .8f,
         shape: ScannedChainShape = ScannedChainShape.factory(voice), config: ScannedChainConfig = ScannedChainConfig.forVoice(voice),
+        model: Int = MODEL_VERSION,
     ): ScannedChainModelV1.Result {
+        val physical = configuration(voice, settled(voice, macros), midi, velocity, config, model)
+        return renderModel(physical, shape.points, model)
+    }
+
+    /** Model-two diagnostics bypass the completed-audio cache. */
+    internal fun probeV2(
+        voice: ScannedChainVoice, macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = .8f,
+        shape: ScannedChainShape = ScannedChainShape.factory(voice), config: ScannedChainConfig = ScannedChainConfig.forVoice(voice),
+    ): ScannedChainModelV2.Result = ScannedChainModelV2.render(
+        configuration(voice, settled(voice, macros), midi, velocity, config, MODEL_VERSION), shape.points,
+    )
+
+    private fun configuration(
+        voice: ScannedChainVoice, m: Map<String, Float>, midi: Int, velocity: Float,
+        config: ScannedChainConfig, model: Int,
+    ): ScannedChainModelV1.Config {
         checkCancellation()
+        require(supportsModel(model)) { "unsupported scanned-chain model $model" }
         require(midi in MIDI_MIN..MIDI_MAX) { "SCANNED CHAIN MIDI must be $MIDI_MIN..$MIDI_MAX" }
         require(velocity.isFinite() && velocity in 0f..1f) { "SCANNED CHAIN velocity must be 0..1" }
         config.validateForVoice(voice)
-        val m = settled(voice, macros)
-        return ScannedChainModelV1.render(ScannedChainModelV1.Config(
+        return ScannedChainModelV1.Config(
             name = "SCANNED CHAIN ${voice.name}", voice = ScannedChainModelV1.Voice.valueOf(voice.name),
             midi = midi, velocity = velocity, seconds = config.seconds, motion = m.getValue("MOTION"),
             mechanicalHz = config.mechanicalHz, dampingPerSecond = m.getValue("DAMP") * DAMP_MAX,
             nonlinear = m.getValue("BEND") * BEND_MAX, restFraction = config.restFraction,
             drive = m.getValue("BLOOM"), driveHz = config.driveHz, seed = config.seed,
             attackSeconds = config.attackSeconds, releaseSeconds = config.releaseSeconds,
-        ), shape.points)
+        )
+    }
+
+    private fun renderModel(
+        config: ScannedChainModelV1.Config, points: FloatArray, model: Int,
+    ): ScannedChainModelV1.Result {
+        if (model == MODEL_VERSION) return ScannedChainModelV2.render(config, points).compatibility
+        try {
+            return ScannedChainModelV1.render(config, points)
+        } catch (failure: IllegalStateException) {
+            // Successful legacy renders never take this path and retain their exact PCM.
+            // A previously refused source can use conservative initial excitation headroom;
+            // the physical state is never clipped and unrelated failures still propagate.
+            val message = failure.message.orEmpty()
+            val headroomFailure = message.startsWith("scanned-chain displacement exceeded finite experiment bound") ||
+                message.startsWith("scanned-chain conservative Verlet stability bound failed") ||
+                message.startsWith("snapshot rate has insufficient headroom for the chain") ||
+                message.startsWith("scanned-chain output exceeded finite audition bound")
+            if (!headroomFailure) throw failure
+            checkCancellation()
+            return ScannedChainModelV2.renderLegacyFallback(config, points)
+        }
     }
 
     private fun settled(voice: ScannedChainVoice, macros: Map<String, Float>): Map<String, Float> {

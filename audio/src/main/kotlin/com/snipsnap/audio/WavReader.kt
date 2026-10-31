@@ -372,7 +372,19 @@ object WavReader {
      * Throws only [IllegalArgumentException] — never any other exception —
      * for any malformed, truncated, or unsupported input.
      */
-    fun read(bytes: ByteArray): Snip {
+    fun read(bytes: ByteArray): Snip = read(bytes, maxFrames = Int.MAX_VALUE)
+
+    /**
+     * [read], refusing a file whose header declares more than [maxFrames]
+     * frames — judged after the header is parsed but **before** the float
+     * buffer is allocated. The byte length of a WAV says little about its
+     * decoded weight (96 MB of 8-bit mono is ~96M frames, ~384 MB as
+     * floats), so a caller working from a byte budget alone — the share
+     * sheet's WAV path is the one — needs the frame count itself capped,
+     * the same ceiling [DecodeLimits] puts on the compressed path.
+     */
+    fun read(bytes: ByteArray, maxFrames: Int): Snip {
+        require(maxFrames >= 0) { "maxFrames must not be negative: $maxFrames" }
         require(bytes.size >= 12) { "not a WAV: only ${bytes.size} bytes" }
         require(tag(bytes, 0) == "RIFF") { "not a WAV: missing RIFF header" }
         require(tag(bytes, 8) == "WAVE") { "not a WAV: missing WAVE tag" }
@@ -455,6 +467,9 @@ object WavReader {
         val bytesPerSample = bits / 8
         val stride = bytesPerSample * channels
         val frames = dataLen / stride
+        require(frames <= maxFrames) {
+            "that WAV runs $frames frames - over the $maxFrames-frame cap for this door"
+        }
         val out = FloatArray(frames * channels)
         for (i in out.indices) {
             val at = dataAt + i * bytesPerSample
@@ -491,34 +506,69 @@ object WavReader {
      */
     fun readSmpl(file: File): SmplChunk? = readSmpl(file.readBytes())
 
-    fun readSmpl(bytes: ByteArray): SmplChunk? {
-        if (bytes.size < 12 || tag(bytes, 0) != "RIFF" || tag(bytes, 8) != "WAVE") return null
+    fun readSmpl(bytes: ByteArray): SmplChunk? = parseSmpl(bytes, strict = false)
+
+    /**
+     * Editing door for sampler metadata. A valid WAV without `smpl` returns null;
+     * malformed/truncated metadata and unsupported loop layouts throw rather than
+     * being mistaken for a finite, unlooped source. The tolerant [readSmpl] reader
+     * retains its existing recovery behavior. Both readers use the same parser.
+     */
+    fun readSmplStrict(file: File): SmplChunk? = readSmplStrict(file.readBytes())
+
+    fun readSmplStrict(bytes: ByteArray): SmplChunk? = parseSmpl(bytes, strict = true)
+
+    private fun parseSmpl(bytes: ByteArray, strict: Boolean): SmplChunk? {
+        fun malformed(reason: String): SmplChunk? {
+            require(!strict) { "Malformed WAV sampler metadata: $reason" }
+            return null
+        }
+        if (bytes.size < 12 || tag(bytes, 0) != "RIFF" || tag(bytes, 8) != "WAVE")
+            return malformed("missing RIFF/WAVE header")
+        if (strict && (leInt(bytes, 4).toLong() and 0xFFFFFFFFL) + 8L != bytes.size.toLong())
+            return malformed("RIFF size does not match the complete file")
         var sheet: SmplChunk? = null
         var blockAlign = -1
         var dataLen = -1L
+        var seenFormat = false
         var p = 12
-        while (p + 8 <= bytes.size) {
+        while (p.toLong() + 8 <= bytes.size.toLong()) {
             val id = tag(bytes, p)
             val size = leInt(bytes, p + 4)
             val body = p + 8
-            if (size < 0) return null
+            if (size < 0) return malformed("invalid $id chunk length")
+            if (strict && body.toLong() + size > bytes.size.toLong())
+                return malformed("truncated $id chunk")
             if (id == "data") {
+                if (strict && dataLen >= 0) return malformed("duplicate data chunk")
                 // A truncated tail (a capture killed mid-write) still holds
                 // the frames that are present; the loop is checked against
-                // those, not the declared size.
+                // those, not the declared size, for the tolerant reader only.
                 dataLen = minOf(size.toLong(), (bytes.size - body).toLong())
             } else if (body.toLong() + size > bytes.size) {
-                return null
-            } else if (id == "fmt " && size >= 16) {
-                blockAlign = leShort(bytes, body + 12)
+                return malformed("truncated $id chunk")
+            } else if (id == "fmt ") {
+                if (strict && (seenFormat || size < 16)) return malformed("invalid or duplicate audio format chunk")
+                seenFormat = true
+                if (size >= 16) blockAlign = leShort(bytes, body + 12)
             } else if (id == SmplChunk.TAG) {
-                if (size < SmplChunk.HEADER_BYTES) return null
+                if (strict && sheet != null) return malformed("duplicate smpl chunk")
+                if (size < SmplChunk.HEADER_BYTES) return malformed("truncated smpl header")
                 val root = leInt(bytes, body + 12)
-                if (root !in 0..127) return null
+                if (root !in 0..127) return malformed("invalid sampler root note")
                 val loops = leInt(bytes, body + 28)
+                if (strict) {
+                    val count = loops.toLong() and 0xFFFFFFFFL
+                    if (count > 1) return malformed("multiple or unsupported sampler loops")
+                    val samplerBytes = leInt(bytes, body + 32).toLong() and 0xFFFFFFFFL
+                    val expected = SmplChunk.HEADER_BYTES + count * SmplChunk.LOOP_BYTES + samplerBytes
+                    if (expected != size.toLong()) return malformed("smpl loop bodies or sampler data do not match their declarations")
+                }
                 val loop = if (loops >= 1 && size >= SmplChunk.HEADER_BYTES + SmplChunk.LOOP_BYTES) {
+                    if (strict && leInt(bytes, body + 40) != 0) return malformed("only forward sampler loops are supported")
                     val start = leInt(bytes, body + 44).toLong() and 0xFFFFFFFFL
                     val endInclusive = leInt(bytes, body + 48).toLong() and 0xFFFFFFFFL
+                    if (strict && endInclusive < start) return malformed("sampler loop ends before it starts")
                     if (endInclusive >= start) SmplChunk.Loop(start, endInclusive + 1) else null
                 } else {
                     null
@@ -526,13 +576,19 @@ object WavReader {
                 sheet = SmplChunk(root, loop)
             }
             if (id == "data" && body.toLong() + size > bytes.size) break
-            p = body + size + (size and 1)
+            val next = body.toLong() + size + (size and 1)
+            if (strict && next > bytes.size.toLong()) return malformed("missing $id chunk padding")
+            if (next > Int.MAX_VALUE) break
+            p = next.toInt()
         }
+        if (strict && p != bytes.size) return malformed("truncated chunk header")
+        if (strict && (blockAlign <= 0 || dataLen < 0 || dataLen % blockAlign != 0L))
+            return malformed("missing audio format/data or incomplete audio frames")
         val found = sheet ?: return null
         val loop = found.loop ?: return found
-        if (blockAlign <= 0 || dataLen < 0) return null
+        if (blockAlign <= 0 || dataLen < 0) return malformed("sampler loop has no audio format/data")
         val frames = dataLen / blockAlign
-        return if (loop.endFrameExclusive <= frames) found else null
+        return if (loop.endFrameExclusive <= frames) found else malformed("sampler loop runs past the audio")
     }
 
     private fun tag(b: ByteArray, at: Int): String = String(b, at, 4, Charsets.US_ASCII)

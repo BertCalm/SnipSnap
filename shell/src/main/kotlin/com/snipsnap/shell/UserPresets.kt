@@ -4,15 +4,25 @@ import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
+import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.ContourConfig
 import com.snipsnap.synth.ContourPatch
 import com.snipsnap.synth.CreasePatch
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.FilamentPatch
 import com.snipsnap.synth.FlotillaPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.FlockHeld
+import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.LacquerPatch
+import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.MurmurConfig
 import com.snipsnap.synth.MurmurPatch
 import com.snipsnap.synth.OnsetPatch
@@ -21,12 +31,14 @@ import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OspreyPatch
+import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
 import com.snipsnap.synth.EmbouchurePatch
+import com.snipsnap.synth.Embouchure
 import com.snipsnap.synth.BellowsPatch
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.RegistersPatch
@@ -40,6 +52,7 @@ import com.snipsnap.synth.Presets
 import com.snipsnap.synth.RelayPatch
 import com.snipsnap.synth.RevelPatch
 import com.snipsnap.synth.ScannedChainPatch
+import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.TrioPatch
 import com.snipsnap.synth.VentPatch
 import com.snipsnap.synth.Vent
@@ -172,7 +185,8 @@ object UserPresets {
      * voice name leaves room for.
      */
     fun suggest(engine: String, voice: String, saved: List<Saved>): String {
-        val base = voice.replace('_', ' ')
+        val label = if (engine == BallastPatch.ENGINE) BallastVoice.fromName(voice)?.displayName ?: voice else voice
+        val base = label.replace('_', ' ')
         var n = 1
         while (true) {
             val candidate = "$base $n"
@@ -381,10 +395,11 @@ object UserPresets {
      * takes named macro arguments and a description alongside the recipe,
      * so the promoted preset renders the
      * bytes the phone heard. CISTERN, FLOTILLA, PITCHWHEEL, STOOP, SKITTER, TANGLE,
-     * WICK, SHOAL and CREASE also copy the saved
+     * WICK, SHOAL, CREASE and LATTICE also copy the saved
      * note and strike velocity, which live outside the macro map.
-     * PITCHWHEEL, SHOAL and CREASE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
-     * retain their MIDI base, velocity, model and selected player gesture; REVEL retains its
+     * PITCHWHEEL, SHOAL, CREASE and LATTICE keep their render-model version as well and SKITTER its seed. EMBOUCHURE and BELLOWS
+     * retain their MIDI base, velocity, model and selected player gesture; OHM also
+     * retains its exact excitation seed. REVEL retains its
      * microphones, phrase configuration, seed and saved velocity. PRISM retains its
      * additive template, group profiles, model and strike velocity. ALLOY retains its
      * generated materials, operator routing and held recipe alongside note and
@@ -408,14 +423,35 @@ object UserPresets {
      * note and velocity through the complete JSON constructor in its factory
      * promotion table. OBBLIGATO retains its note, strike, seed and renderer model
      * through the complete JSON constructor. TRIO retains its note, velocity and complete
-     * seeded performance, including the synthesis model. Names and embedded JSON are escaped
+     * seeded performance, including the synthesis model. FILAMENT retains its root,
+     * velocity, geometry seed, profile, retention setting and saved model through
+     * the complete JSON constructor. Names and embedded JSON are escaped
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is ApsisPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ApsisPatch.fromJsonText($recipe),"
+        }
+        if (patch is FilamentPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "FilamentPatch.fromJsonText($recipe),"
+        }
+        if (patch is EmbouchurePatch && patch.model == Embouchure.BRASS_GROW_MODEL) {
+            // The original roster's p helper constructs model 2 before .copy runs;
+            // it cannot accept a GROW macro. Construct the saved model directly.
+            val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
+            return "EmbouchurePatch.fromJsonText(\"$recipe\"),"
+        }
         if (patch is OrigamiPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
             return "OrigamiPatch.fromJsonText(\"$recipe\"),"
+        }
+        if (patch is TidalPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "TidalPatch.fromJsonText($recipe),"
         }
         if (patch is ChamberPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -452,10 +488,10 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "OrphicaPatch.fromJsonText($recipe),"
         }
-        if (patch is LacquerPatch || patch is TrioPatch) {
+        if (patch is LacquerPatch || patch is TrioPatch || patch is TrefoilPatch) {
             val recipe = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
                 .replace("$", "\\$").replace("\n", "\\n").replace("\r", "\\r").replace("\t", "\\t")
-            val constructor = if (patch is TrioPatch) "TrioPatch" else "LacquerPatch"
+            val constructor = when (patch) { is TrioPatch -> "TrioPatch"; is TrefoilPatch -> "TrefoilPatch"; else -> "LacquerPatch" }
             return "$constructor.fromJsonText(\"$recipe\"),"
         }
         val name = patch.name.replace("\\", "\\\\").replace("\"", "\\\"").replace("$", "\\$")
@@ -479,6 +515,10 @@ object UserPresets {
             return "p(StoopVoice.${patch.voiceName}, \"$name\", ${arguments.joinToString(", ")}),"
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
+        if (patch is LibrationPatch) {
+            return "LibrationPatch(\"$name\", LibrationVoice.${patch.voice}, mapOf($macros), " +
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}),"
+        }
         if (patch is OnsetPatch) {
             return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"
         }
@@ -487,8 +527,13 @@ object UserPresets {
         }
         if (patch is FlockPatch) {
             val seed = if (patch.seed == Long.MIN_VALUE) "Long.MIN_VALUE" else "${patch.seed}L"
+            val held = if (patch.playback != FlockPlayback.FINITE ||
+                patch.releaseSeconds != FlockHeld.DEFAULT_RELEASE_SECONDS) {
+                ".copy(playback = FlockPlayback.${patch.playback.name}, releaseSeconds = ${patch.releaseSeconds}f, " +
+                    "heldVersion = ${patch.heldVersion})"
+            } else ""
             return "p(FlockVoice.${patch.voiceName}, \"$name\", $seed, $macros)" +
-                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}),"
+                ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})$held,"
         }
         if (patch is ShoalPatch) {
             // Construct the complete recipe at once: a harmonic held recipe cannot
@@ -508,6 +553,13 @@ object UserPresets {
             val machine = "SpoolMachine(roster = listOf($roster), gateSeconds = ${m.gateSeconds}f, sourceSeconds = ${m.sourceSeconds}f, motorTorque = ${m.motorTorque}f, returnSeconds = ${m.returnSeconds}f, headOffsets = listOf($heads), spliceSchedule = listOf($splices), routes = listOf($routes), holdMode = SpoolHoldMode.${m.holdMode}, seed = ${m.seed}, writeDelaySamples = ${m.writeDelaySamples}, reengage = ${m.reengage})"
             return "SpoolPatch(\"$name\", SpoolVoice.${patch.voice}, mapOf($macros), machine = $machine, velocity = ${patch.velocity}f, model = ${patch.model}),"
         }
+        if (patch is OhmPatch && patch.model >= 3) {
+            // The legacy factory helper constructs model 2 before a following copy/let.
+            // Decode the complete expanded recipe directly so HOLD and embedded capture
+            // never pass through that helper or lose source/release fields.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OhmPatch.fromJsonText($recipe),"
+        }
         val state = when (patch) {
             is CisternPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is FlotillaPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
@@ -515,6 +567,8 @@ object UserPresets {
             is RegistersPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is TanglePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is CreasePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is LatticePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
+            is CausticPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model})"
             is WickPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f)"
             is RelayPatch -> {
                 val json = patch.toJsonText().replace("\\", "\\\\").replace("\"", "\\\"")
@@ -523,6 +577,7 @@ object UserPresets {
             }
             is EmbouchurePatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = EmbouchureGesture.${patch.gesture.name})"
             is BellowsPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, gesture = BellowsGesture.${patch.gesture.name})"
+            is OhmPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, gesture = OhmGesture.${patch.gesture.name}, model = ${patch.model})"
             is MurmurPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, config = ${murmurConfigLiteral(patch.config)})"
             is OspreyPatch -> ".copy(midi = ${patch.midi}, velocity = ${patch.velocity}f, seed = ${patch.seed}, durationSeconds = ${patch.durationSeconds}f, modelVersion = ${patch.modelVersion})"
             is RevelPatch -> {
@@ -538,6 +593,15 @@ object UserPresets {
                     "speedRatios = ${values(c.speedRatios) { "${it}f" }}, seed = $seed), velocity = ${patch.velocity}f)"
             }
             is PrismPatch -> {
+                if (patch.motion != null) {
+                    // Keep the table's p(...) entry shape while restoring the whole saved
+                    // instrument. Both authored spectra and the travel law belong to it;
+                    // reconstructing only the template would silently remove the opening.
+                    val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+                    val savedName = Json.write(JsonValue.Str(patch.name)).replace("$", "\\$")
+                    return "p(PrismVoice.${patch.voiceName}, $savedName, $macros)" +
+                        ".let { PrismPatch.fromJsonText($recipe) },"
+                }
                 val t = patch.template
                 fun floats(values: List<Float>) = values.joinToString(", ", "listOf(", ")") { "${it}f" }
                 val groups = t.groupProfiles.joinToString(", ", "listOf(", ")") { group ->
@@ -576,6 +640,7 @@ object UserPresets {
         "filterAttack = ${c.filterAttack}f", "filterDecay = ${c.filterDecay}f", "filterAmount = ${c.filterAmount}f",
         "motionShape = ContourMotionShape.${c.motionShape.name}", "motionSeconds = ${c.motionSeconds}f",
         "filterType = ContourFilterType.${c.filterType.name}", "loopSeconds = ${c.loopSeconds}f",
+        "edgeResponse = ContourEdgeResponse.${c.edgeResponse.name}",
     ).joinToString(", ") + ")"
 
     private fun murmurConfigLiteral(config: MurmurConfig): String {

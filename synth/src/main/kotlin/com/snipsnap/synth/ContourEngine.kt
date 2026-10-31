@@ -18,6 +18,7 @@ enum class ContourVoice { BASS, KEY, PLUCK, LEAD, HOLLOW, SWELL }
 enum class ContourRelation { LAG, OPPOSED, CURVE }
 enum class ContourMotionShape { FALL, RISE, CYCLE }
 enum class ContourFilterType { LOW_PASS, BAND_PASS }
+enum class ContourEdgeResponse { LEGACY, FOREGROUND, CONTRAST }
 enum class ContourDiagnostic { BODY_ONLY, EDGE_ONLY, COMBINED, FROZEN, OPEN, CLEAN }
 
 /**
@@ -58,6 +59,8 @@ data class ContourConfig(
     val motionSeconds: Float = 1.2f,
     val filterType: ContourFilterType = ContourFilterType.LOW_PASS,
     val loopSeconds: Float = 2f,
+    /** Saved response keeps earlier recipes on their original projection and mix laws. */
+    val edgeResponse: ContourEdgeResponse = ContourEdgeResponse.LEGACY,
 ) {
     init {
         fun bounded(name: String, x: Float, lo: Float, hi: Float) =
@@ -125,7 +128,7 @@ data class ContourConfig(
                 filterDecay = 1.4f, filterAmount = .5f, loopSeconds = 3f)
         }
 
-        /** Fresh recipes retain a solid root while exposing the moving partials. */
+        /** Widen the affected voices; PLUCK retains its prior projection and detected-root behavior. */
         fun forVoice(voice: ContourVoice): ContourConfig = legacyForVoice(voice).let { c ->
             when (voice) {
                 ContourVoice.BASS -> c.copy(bodyHarmonics = 1.85f, edgeRootLevel = .45f,
@@ -141,7 +144,8 @@ data class ContourConfig(
                     edgeAttack = .02f, edgeDecay = .85f, edgeSustain = .78f)
                 ContourVoice.SWELL -> c.copy(bodyHarmonics = 1.9f, edgeRootLevel = .4f,
                     edgeAttack = .4f, edgeDecay = 1.5f, edgeSustain = .88f)
-            }
+            }.copy(edgeResponse = if (voice == ContourVoice.PLUCK) ContourEdgeResponse.FOREGROUND
+                else ContourEdgeResponse.CONTRAST)
         }
     }
 }
@@ -314,11 +318,15 @@ object ContourEngine {
         }
     }
 
-    /** A bounded edge flare; neutral patches bypass its arithmetic exactly. */
-    private fun edgeProjection(t: Double, c: ContourConfig, held: Boolean): Double {
+    /** Keep the saved flare, then let the new response expose its resting layer across EDGE. */
+    private fun edgeProjection(t: Double, c: ContourConfig, held: Boolean, edge: Double): Double {
         if (c.edgeSustain == 1f) return 1.0
-        if (held) return c.edgeSustain.toDouble()
-        return c.edgeSustain + (1 - c.edgeSustain) * (1 - exp(-t / c.edgeAttack)) * exp(-t / c.edgeDecay)
+        val original = if (held) c.edgeSustain.toDouble() else
+            c.edgeSustain + (1 - c.edgeSustain) * (1 - exp(-t / c.edgeAttack)) * exp(-t / c.edgeDecay)
+        if (c.edgeResponse == ContourEdgeResponse.LEGACY || edge == 0.0) return original
+        // A level control cannot reveal a layer whose resting envelope is almost zero.
+        // This bounded blend raises presence without adding distortion or bypassing the filter.
+        return original + (1 - original) * edge
     }
 
     private data class LoopPlan(val frames: Int, val rootCycles: Int, val noteHz: Double,
@@ -359,7 +367,20 @@ object ContourEngine {
             edgeMacro < .5 -> c.edgeLevel * (2 * edgeMacro)
             else -> c.edgeLevel + (.8 - c.edgeLevel) * (2 * edgeMacro - 1)
         }
-        private val mixScale = if (edgeMacro == .5)
+        // Shape laws for the wider response: trade body overtones for edge detail,
+        // retaining 35% of the body's overtones and at most 4x edge partial amplitude.
+        // The source fundamentals stay separate; octave edges do not replace the note.
+        private val contrast = c.edgeResponse == ContourEdgeResponse.CONTRAST
+        private val edgePartials = if (contrast) 1 + 3.0 * edgeMacro else 1.0
+        private val bodyPartials = if (contrast) 1 - .65 * edgeMacro else 1.0
+        private val bodyRootWeight = if (bodyMacro < .5) 1.5 - bodyMacro else 1 - 1.5 * (bodyMacro - .5)
+        // BODY can already reduce its root to one quarter. Give that corner extra
+        // support so stronger even partials do not turn the requested note into an octave.
+        private val rootLift = if (contrast) edgeMacro * (.5 + .4 * max(0.0, 1 - bodyRootWeight)) else 0.0
+        // Budget the added root and boosted edge before DRIVE, rather than feeding
+        // the old headroom law with a larger excitation. Prior responses keep their arithmetic.
+        private val mixScale = if (contrast && edgeMacro > 0.0)
+            .64 / max(1.0, c.bodyLevel * (1 + rootLift / bodyRootWeight) + edgeLevel * edgePartials + c.subLevel) else if (edgeMacro == .5)
             .64 / max(1.0, c.bodyLevel + c.edgeLevel + c.subLevel.toDouble()) else
             .64 / max(1.0, c.bodyLevel + edgeLevel + c.subLevel)
         private val minCutoff = (hz * 1.75).coerceIn(50.0, 1800.0)
@@ -404,7 +425,7 @@ object ContourEngine {
             val emphasis = (velocity - .5) * .13
             return doubleArrayOf(scans.first + emphasis * 1.4 * scans.first * (1 - scans.first),
                 scans.second + emphasis * 4 * scans.second * (1 - scans.second),
-                amplitude(t, c, hold, held), cut, edgeProjection(t, c, held))
+                amplitude(t, c, hold, held), cut, edgeProjection(t, c, held, edgeMacro))
         }
 
         fun tick(): Float {
@@ -421,7 +442,7 @@ object ContourEngine {
             }
             val body = if (diagnostic == ContourDiagnostic.EDGE_ONLY) 0.0 else {
                 val wave = bodyLookup.sample(bodyPhase, bodyScan)
-                (if (bodyMacro != .5) {
+                val colored = if (bodyMacro != .5) {
                     val root = bodyLookup.root(bodyPhase)
                     val partials = (wave - root) * c.bodyHarmonics
                     val rootWeight = if (bodyMacro < .5) 1.5 - bodyMacro else 1 - 1.5 * (bodyMacro - .5)
@@ -430,10 +451,17 @@ object ContourEngine {
                 } else if (c.bodyHarmonics == 1f) wave else {
                     val root = bodyLookup.root(bodyPhase)
                     root + (wave - root) * c.bodyHarmonics
-                }) * c.bodyLevel
+                }
+                (if (contrast && edgeMacro > 0.0) {
+                    val root = bodyLookup.root(bodyPhase)
+                    val retainedRoot = root * bodyRootWeight
+                    retainedRoot + root * rootLift + (colored - retainedRoot) * bodyPartials
+                } else colored) * c.bodyLevel
             }
             val edge = if (diagnostic == ContourDiagnostic.BODY_ONLY) 0.0 else {
-                val wave = edgeLookup.sample(edgePhase, edgeScan)
+                val original = edgeLookup.sample(edgePhase, edgeScan)
+                // Raise only non-root detail. The saved edge root/interval stays unboosted.
+                val wave = if (contrast && edgeMacro > 0.0) edgeLookup.root(edgePhase).let { it + (original - it) * edgePartials } else original
                 val colored = if (c.edgeRootLevel == 1f) wave else
                     wave - (1 - c.edgeRootLevel) * edgeLookup.root(edgePhase)
                 val projected = if (c.edgeSustain == 1f) colored else colored * edgeGain

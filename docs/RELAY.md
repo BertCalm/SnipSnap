@@ -10,14 +10,15 @@ The performance bank has 36 authored dry recipes: eight KEY, six BASS, six
 PLUCK, six ORGAN, four CHIME and six FLOW presets. The six earlier seeds remain
 unchanged and first in their voice lists. New recipes use their own source
 balances, sparse accent figures and phrase clocks; each voice includes one held
-recipe. This is a listening and playability candidate, not a claim of device
-listening approval.
+recipe. The owner approved this bank's sound on 2026-10-21. Physical-device
+playability still needs hands-on verification.
 
 The second audition gave the source roles different harmonic profiles and
 articulation, and each voice its own handoff and accent score. The third audition
 responds to feedback that those handoffs sounded like separate gestures. It
 refines source continuity, transition overlap and internal emphasis toward a
-single evolving voice. Listening remains the approval gate.
+single evolving voice. The later performance audition received the owner's
+positive listening verdict; new sound-changing candidates need their own listen.
 
 ## Controls
 
@@ -51,6 +52,14 @@ smooth, dwell-relative overlap. PULSE adds gentle internal emphasis at low
 settings and reveals stronger rhythmic figures near its high end. HOLD uses
 periodic source histories; low PULSE does not introduce an extra gate at every
 slot boundary.
+
+Model 1 deliberately sustains the ORGAN source. Its source contour rises from
+0.86 to 1 over a fixed 35 ms and retains a body throughout the note; the finite
+note's shared attack and release still shape it. The common source record retains
+and serializes `decaySeconds`, but ORGAN does not use that field. It controls PLUCK and BELL
+damping and SOFT's swell time. Making ORGAN decay active later would change
+saved and approved sounds, so it requires an explicit model compatibility
+decision rather than a silent reinterpretation of existing recipes.
 
 Finite notes admit accent events only before the selected gate. Their envelopes
 finish naturally during release; no fresh accent begins in the terminal tail.
@@ -89,19 +98,55 @@ the earlier duplicate of Handoff 6 / FIRST HANDOFF. Explicit selections keep the
 kit at sixteen pads as the library grows. MPC export uses the
 existing kit pipeline and its one-shot drum-program convention.
 
+## Render performance
+
+Repeated previews reuse a bounded bank of 256 waveform tables (about 4 MiB),
+keyed by source role, effective spectral color, exact fitted frequency and seed.
+Only complete tables are shared; schedule and contour buffers belong to each
+render, and returned sample buffers remain independent. Invariant calculations
+move out of the sample loop while the shared output filtering stays unchanged.
+
+On 2026-10-23, a desktop JVM comparison using before/after/after/before runs and fourteen measured
+renders per case reduced the median per-case cost by about 20% across the six
+voices' finite and held defaults. Finite medians changed from 50–97 ms to 36–78 ms;
+held medians changed from 95–205 ms to 80–159 ms. A supported eight-beat custom
+loop with eight preroll cycles changed from 855 ms to 736 ms. These are warmed
+desktop measurements, not phone timing guarantees. All 578 raw/normalized float
+fingerprints in the compatibility probe remain identical, covering factory
+recipes, macro sweeps, velocity, source edits and the long custom loop.
+
 ## Audition and checks
 
 The [published Relay audition](https://snipsnap-relay-audition.bertcalm.chatgpt.site)
 is private to the owner's account and includes raw and matched WAV downloads.
 
 Run `./gradlew --no-daemon :synth:generateRelayPerformanceAudition` to regenerate
-`testkit/relay-performance-audition/`. It includes the full bank, six short musical
-performances, three native velocities for every voice and all sixteen actual starter
-pads. Notes retain the chosen preset's full phrase; musical mixes include every
+`testkit/relay-performance-audition/`. Revision 6 contains 88 clips: the original
+76 bank, musical, velocity and starter-pad cases, plus 12 PULSE endpoint probes.
+The original cases include the full bank, six short musical performances, three
+native velocities for every voice and all sixteen actual starter pads.
+Notes retain the chosen preset's full phrase; musical mixes include every
 tail and record their fixed headroom gain. HOLD clips contain three exact repeats.
 The manifest carries full patches, note events, levels and WAV hashes. Listening
 notes stay in the browser. Physical-device timing, touch and listening still need
 hands-on verification.
+
+The page opens on six PULSE 0-versus-1 pairs, one for each voice. They use the
+same six finite recipes as the previous comparison. Each pair fixes its note,
+velocity, source definitions, phrase clock and every other macro, changing only
+PULSE from 0 to 1 through the existing renderer. The manifest records the source,
+reference and exact rendered recipes alongside the endpoint and pair ID. Raw
+playback retains native level changes; matched playback supports comparison of
+articulation and color after level matching. The diagnostic tests the existing
+control's full range before deciding whether its mapping or accent behavior needs
+improvement. It makes no new sonic approval claim, and the production PULSE
+response, factory macros and saved patch model remain unchanged.
+
+Revision 5's earlier experiment compared an eased `nominal^0.75` mapping at
+nominal positions 0.25 and 0.5. On 2026-10-26 the owner reported that the eased
+candidate sounded the same. That mapping was not adopted. The endpoint diagnostic
+replaces those 24 subtle comparison clips while retaining the original approved
+76 cases.
 
 The earlier engineering matrix remains reproducible. Run
 `./gradlew --no-daemon :synth:generateRelayAudition` to regenerate

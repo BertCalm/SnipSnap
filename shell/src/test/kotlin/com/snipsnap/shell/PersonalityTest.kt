@@ -210,8 +210,8 @@ class PersonalityTest {
         assertTrue(busy.startsWith("TREATMENT"), "it replaces the card's own header: $busy")
         // Distinguishable from the idle header, which is the whole point.
         assertTrue(busy != "TREATMENT", busy)
-        // Every segment's label has to fit, not just this one.
-        for (seg in PadSheet.ROWS.flatten()) {
+        // Every segment's label has to fit, not just this one: a slate pedal behind MORE as well.
+        for (seg in PadSheet.ALL_SEGMENTS) {
             val line = Copy.treatmentBusy(PadSheet.displayLabel(seg))
             assertTrue(line.length <= 40, "one line on the card: $line (${line.length})")
         }
@@ -536,6 +536,10 @@ class PersonalityTest {
      * exempt anything the old hand list used to check.
      */
     private val notASentence = setOf(
+        // The pedal slate's PUT ON ROW button: a label, not a landing.
+        "PUT_ON_ROW",
+        // The PEDALS card's strip with no pedals on the pad: a strip, like UNTOUCHED, not a landing.
+        "PEDALS_NONE",
         "TILE_LABEL_IDLE", "TILE_LABEL_ARMED", "TILE_SUBTITLE_IDLE", "TILE_SUBTITLE_ARMED",
         "COMMIT_NEEDS_SELECTION", "CAPTURE_BLOCKED_BUTTON",
         "IMPORT_BUSY", "PACKING_BUSY", "LANDING_BUSY", "READ_GROOVE_BUSY", "DIG_BUSY", "FEEL_BUSY", "CHART_BUSY", "BEAT_SHARE_BUSY", "BREEDING_BUSY",
@@ -545,6 +549,15 @@ class PersonalityTest {
         "SHARE_BUSY",
         "ARRANGE_MIXING", "XRAY_BUSY", "DOUBLES_BUSY",
         "CHOP_ALL_BUSY",
+        // SETUP's MIDI OUT heading and the two words beside a device's port
+        // (OUT / BUSY): labels, not landings.
+        "SETUP_MIDI_OUT_HEADING", "SETUP_MIDI_OUT_PORT_OK", "SETUP_MIDI_OUT_PORT_BUSY",
+        // The MIDI screen's CLOCK CHECK button and its label while it runs:
+        // button labels, not landings. The other three MIDI_CLOCK_* lines are
+        // sentences and keep their full stops.
+        "MIDI_CLOCK_CHECK", "MIDI_CLOCK_RUNNING",
+        // The two published MIDI port names SETUP and the LCD list: device names, not toasts.
+        "MIDI_PORT_OUT_NAME", "MIDI_PORT_IN_NAME",
         // DUST ALL's busy overlay line, like every other *_BUSY above.
         "DUSTING_BUSY", "CHOP_BENCH_BUSY",
         // LOOP's bounce, while the render runs — same shape as every other
@@ -645,6 +658,39 @@ class PersonalityTest {
         // EVIL TWINS' and INSTANT KIT's own busy overlays - the same
         // `…`-suffixed shape as every other *_BUSY constant above.
         "EVIL_TWINS_BUSY", "INSTANT_KIT_BUSY",
+        // The dock's progress line when a job has a name to give, or only a
+        // generic one (LOADING_BUSY, WORKING_BUSY), and the KITS screen's
+        // placeholder while the library is read - the same `…`-suffixed
+        // shape as every other *_BUSY constant above. The named and counted
+        // forms are `loadingBusy` and `busyCount`, functions, which this
+        // reflective sweep never sees; BusyTest holds those.
+        "LOADING_BUSY", "WORKING_BUSY", "LIBRARY_LOADING",
+        // RECORD's and CHOP's placeholder and dock line while a recording is
+        // decoded: the same `…`-suffixed shape as LIBRARY_LOADING.
+        "READING_RECORDING",
+        // The dock's CANCEL control: a button label, not a landing.
+        "CANCEL_JOB",
+        // The dock's progress lines for the pad editor's named jobs (MUTATE
+        // and DRIFT, DE-SAMPLE, MAKE PAD, MAKE INSTRUMENT, SPREAD) and for
+        // SPLIT - the same `…`-suffixed shape as every other *_BUSY constant
+        // above: a line the dock says while the job runs, not a landing.
+        // Each job's own landing toast is a separate line.
+        "MUTATE_BUSY", "DESAMPLE_BUSY", "MAKE_PAD_BUSY", "MAKE_INSTRUMENT_BUSY", "SPREAD_BUSY", "SPLIT_BUSY",
+        // The pad editor's plain save and its close-time flush: the same
+        // `…`-suffixed dock line as the named jobs above, for a write no
+        // control of its own started.
+        "SAVING_PAD_BUSY",
+        // App's own silent operations: setting the kit's key, IN KEY's retune
+        // of every tonal pad, NEW PROJECT's make-the-project, and the three
+        // kit moves (open a kit row, add a kit from the shelf, switch the
+        // open project's kit) - the same `…`-suffixed dock line as every
+        // other *_BUSY constant above.
+        "KEY_BUSY", "IN_KEY_BUSY", "NEW_PROJECT_BUSY",
+        "OPENING_KIT_BUSY", "ADDING_KIT_BUSY", "SWITCHING_KIT_BUSY",
+        // The dock's line while KIT's bank, KEYS' instrument and a SURFACE pad
+        // are read off disk: the same `…`-suffixed dock line as every other
+        // *_BUSY constant above, for a load no control started.
+        "KIT_LOADING_BUSY", "KEYS_LOADING_BUSY", "SURFACE_LOADING_BUSY",
     )
 
     /**

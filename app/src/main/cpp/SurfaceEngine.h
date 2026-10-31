@@ -12,6 +12,7 @@
 #include "ParameterSmoother.h"
 #include "PrintBuffer.h"
 #include "SpscRing.h"
+#include "aquarium/PerformanceBus.h"
 
 namespace snipsnap {
 
@@ -58,8 +59,8 @@ struct GrainSettings {
  * "detuned swarm". `voices` copies of every slot's loop (1..kMaxSwarm)
  * read at once, spread evenly across ±`detune` × kMaxDetuneCents and
  * summed at 1/sqrt(voices). One voice at any detune is the plain loop,
- * sample for sample. Mono, like the loop: a print is the mono bus, so a
- * stereo spread would be lost where it mattered most.
+ * sample for sample. The loop and swarm remain mono; downstream Aquarium can create stereo
+ * width, which the print now preserves.
  */
 struct SwarmSettings {
     int32_t voices = 1;
@@ -128,6 +129,13 @@ public:
     bool isShared() const { return sharedMode_.load(std::memory_order_acquire); }
     /** Round-trip latency in ms, or -1 when unknown. UI thread only (see OboeOutput.h). */
     double latencyMillis() const;
+
+    /** Serialized control thread. False leaves the last accepted native configuration intact. */
+    bool configureAquarium(const aquarium::PerformanceSettings& settings, bool reset = false);
+    bool aquariumFaulted() const { return aquarium_.faulted() || (stream_ && !aquarium_.isPrepared()); }
+    uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
+    /** Priority release. Discards queued touches; a fresh control frame can play again. */
+    void requestPanic() { panicRequested_.store(true, std::memory_order_release); }
 
     /** How many source slots exist - all four are mixed (see `ControlFrame::sampleA/B/C/D`). */
     static constexpr int32_t kMaxSources = 4;
@@ -212,10 +220,11 @@ public:
     static constexpr int32_t kMaxGrains = 16;
 
     // The resample tap (see PrintBuffer for the ownership rules).
-    bool armPrint(size_t maxFrames) { return print_.arm(maxFrames); }
+    bool armPrint(size_t maxFrames) { return print_.arm(maxFrames, 2); }
     void requestStopPrint() { print_.requestStop(); }
     PrintBuffer::State printState() const { return print_.state(); }
     size_t printFrames() const { return print_.framesWritten(); }
+    size_t printSamples() const { return print_.samplesWritten(); }
     const float* printData() const { return print_.data(); }
     bool clearPrint() { return print_.clear(); }
 
@@ -283,7 +292,8 @@ private:
     float swarmGain_ = 1.0f;
 
     // Controls.
-    SpscRing<ControlFrame, 64> controls_;
+    static constexpr int kControlCapacity = 64;
+    SpscRing<ControlFrame, kControlCapacity> controls_;
     ControlFrame latest_;
     // The gate as of the last control frame applied, so a touch-down (the
     // false -> true edge) is told apart from a touch merely held - see
@@ -439,6 +449,8 @@ private:
     static constexpr size_t kScratchFrames = 4096;
     std::vector<float> scratch_;
 
+    aquarium::PerformanceBus aquarium_;
+    std::atomic<bool> panicRequested_{false};
     PrintBuffer print_;
 };
 

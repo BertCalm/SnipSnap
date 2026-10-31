@@ -1,0 +1,1652 @@
+Supermodal supplied manual, version 1.0.0
+Text extraction; diagrams and page layout require the original PDF.
+
+
+===== PDF PAGE 1 =====
+
+      USER MANUAL
+              V1.0.0
+
+https://polyversemusic.com/support
+   support@polyversemusic.com
+
+
+
+               By
+
+===== PDF PAGE 2 =====
+
+                                    Table of Contents
+
+                                                      Damping                         21
+                                                      Partials High                   21
+About Supermodal                         4
+                                                      Partials Low                    21
+                                                      Dry/Wet Mix                     21
+Getting Started                          5
+    Installation                          5
+                                               Modulation                             22
+    With or Without MIDI?                6
+                                                      Open/Close MODS                 22
+    Ableton Live                          7
+                                                      Selecting a Modulation Source   22
+    Logic X                              8
+                                                      Assigning a Destination         23
+    Pro Tools                            9
+                                                      Modulation Pop-up Sliders       23
+    Cubase                              10
+                                                      Stereo Modulation               23
+    FL Studio                            11
+                                                      Cross-Modulation                24
+    Sonar                               12
+                                                      Modulation Slots                25
+                                                      On/Off                          25
+Introduction                            13
+                                               Modulation Sources                     26
+Structure of Supermodal                 14
+                                                  Meta Knob                           26
+Main Controls                           15           Polarity                         26
+                                                     Name                             26
+    Control Tips                        15
+                                                     Value Monitor                    26
+       Shift-Drag To Fine Tune          15
+                                                  ADSR                                27
+       Double-Click for Default         15
+                                                     Attack                           27
+       Direct Entry                     15
+                                                     Decay                            27
+       Padlock Icons                    16
+                                                     Sustain                          27
+    Main Controls List                  16
+                                                     Release                          27
+       In                               16
+                                                     Velocity Sensitivity             27
+       Out                              16
+                                                  MIDI / CV                           28
+       Freq                             16
+                                                     MIDI                             28
+       Type                             17
+                                                     CV                               28
+       Res                              17
+                                                     Gatekeeper with Supermodal       29
+       Blend                            17
+                                                     Smooth                           29
+       Drive                            17
+                                                  Envelope Follower                   30
+       Decay                            18
+                                                     Inputs                           30
+       Model                            18
+                                                     Threshold                        30
+       Xform                            18
+                                                     Attack                           31
+       Sphere Control                   18
+                                                     Release                          31
+       Models and Transformations       19
+                                                  Sequencer                           32
+
+
+
+
+                                                                                      1
+
+===== PDF PAGE 3 =====
+
+     Pattern             32        Click and Drag   41
+     Shape               32        Overwrite        41
+     Unipolar            33        Delete           42
+     Tempo Sync          33        Sticky           42
+     Rate                33        Close            42
+     Retrigger           33
+     Sequence Editor     34
+                              MIDI Learn            43
+  Random Generator       35   Settings              44
+     Retrigger           35     General Settings    44
+     Unipolar            36        GUI Scale        44
+     Smooth              36        CPU/Quality      45
+     Range               36        Knob Mode        45
+     Rhythm              36     Tuning Settings     45
+     Division            37        Root Note        45
+     Scale               37        Root Frequency   46
+     List of Scales      38        Scala            46
+Presets                  39     MIDI                47
+                                   Voicing          47
+  MIDI Program change    39
+                                   Pitch Wheel      47
+  Banks                  40
+     New Bank            40
+     Import and Export   40
+     Bank Info Button    40
+  The Preset List        41
+     Save                41
+
+
+
+
+                                                     2
+
+===== PDF PAGE 4 =====
+
+The information in this document is subject to change without notice and
+does not represent a commitment on the part of Polyverse Music. The
+software described by this document is subject to a License Agreement and
+may not be copied to other media. No part of this publication may be copied,
+reproduced or otherwise transmitted or recorded, for any purpose, without
+prior written permission by Polyverse Music.
+
+Polyverse Music and associated logos are registered trademarks of Polyverse
+Music Inc.
+
+Mac, Mac OS, GarageBand, LogicPro, iTunes, and iPod are registered
+trademarks of Apple Inc., registered in the U.S. and other countries. Windows
+is a registered trademark of Microsoft Corporation in the United States and/or
+other countries.
+
+All other trademarks are the property of their respective owners and use of
+them does not imply any affiliation with or endorsement by them.
+
+Factory Presets by:
+Assaf Dar Sagol, Scott Kane, Arctic Fox, Jason Derric (Jazen Sounds), and
+Ian Ross (Inflight Muzik).
+
+Special thanks to our Beta Test Team, who were invaluable not just in tracking
+down bugs, but in making this a better product.
+
+
+
+
+                                                                                 3
+
+===== PDF PAGE 5 =====
+
+About Supermodal
+Polyverse Supermodal uses 200 surgically precise bandpass filters to emulate
+the behavior of various resonating bodies. Together with an expansive
+modulation system, this extracts an extraordinary level of detail of sonic
+variation from a single audio signal. A relatively static track can become a
+shimmering cinematic soundscape, pulsating rhythm, pad with internal
+harmonic motion, and much more. Other than resonances, it does not add
+content to your track that wasn’t there to begin with — it simply uses
+sophisticated filtering to squeeze the most musical diversity out of what’s
+already there.
+
+
+
+
+                                                                               4
+
+===== PDF PAGE 6 =====
+
+Getting Started
+
+Installation
+
+
+
+
+To install Supermodal, simply run the installer and follow the instructions on
+your screen. For free tutorials and videos about setting up and using
+Supermodal with your favorite DAW (Digital Audio Workstation), please visit
+our website at http://polyversemusic.com/support
+
+When using Supermodal for the first time, a registration dialog will appear. To
+register and authenticate the plugin, first download, then drag and drop the
+key file you have received in your purchase confirmation email onto the dialog
+box.
+
+If you’ve lost your confirmation email, you can re-request one to be sent
+automatically from our support page at http://polyversemusic.com/support
+
+Compatibility:
+Windows: 64-bit VST, VST3, AAX
+OSX: 10.12+ 64-bit VST, VST3, AAX, AU
+
+
+
+
+                                                                                  5
+
+===== PDF PAGE 7 =====
+
+With or Without MIDI?
+Supermodal can be inserted into audio or instrument tracks just like any audio effect.
+However, some of its features involve responding to MIDI notes and MIDI CC
+messages.
+
+If you would like to use Supermodal as a regular effect, just load it in one of the
+insert slots on your DAW, and you’re done!
+
+If you want to use MIDI to separately trigger the envelopes manually, please refer to
+the following pages for instructions on routing MIDI within your specific DAW.
+
+
+
+
+                                                                                        6
+
+===== PDF PAGE 8 =====
+
+Ableton Live
+  ●   Click the "I-O" button to show the input and outputs.
+  ●   Create an audio track, and add some audio onto it.
+  ●   Add Supermodal onto the audio track.
+  ●   Create a blank MIDI track.
+  ●   Set the MIDI track’s output to the audio track with Supermodal .
+  ●   While audio is flowing through Supermodal , play some MIDI notes on your
+      virtual or external keyboard controller.
+
+
+
+
+                                                                                 7
+
+===== PDF PAGE 9 =====
+
+Logic X
+  ●   Open a software instrument track.
+  ●   Click on the instrument slot to select Supermodal.
+  ●   Open a new audio track and place your audio file inside it.
+  ●   Open the Supermodal plugin interface. In the top right, select your sidechain
+      input to be the same as the audio track.
+  ●   Mute the audio track, as its signal is now being routed through Supermodal.
+  ●   Select/Enable the plugin’s instrument track.
+  ●   Play some MIDI notes as the audio streams through the plug-in.
+
+
+
+
+                                                                                      8
+
+===== PDF PAGE 10 =====
+
+Pro Tools
+  ●   Create a new audio track
+  ●   Add Supermodal as an insert effect
+  ●   Place an audio file in the track
+  ●   Create a new MIDI track
+  ●   Route the MIDI track’s output to the plug-in
+  ●   Arm the MIDI track
+  ●   Play some MIDI notes as the audio streams through the plug-in.
+
+
+
+
+                                                                       9
+
+===== PDF PAGE 11 =====
+
+Cubase
+  ●   Add an audio track
+  ●   Add Supermodal as an insert effect
+  ●   Place an audio file in the track
+  ●   Add a MIDI track
+  ●   Set the MIDI track’s output to the Supermodal plugin.
+  ●   Play some MIDI notes as the audio streams through the plug-in.
+
+
+
+
+                                                                       10
+
+===== PDF PAGE 12 =====
+
+FL Studio
+  ●   Drag an audio file to your playlist and route it to “Track 1” on the mixer.
+  ●   Load Supermodal as an insert on “Track 1” on your mixer.
+  ●   Open a “MIDI Out” plug-in and set the Port to 1.
+  ●   Set the Supermodal MIDI input port to 1 as well
+  ●   Select the “MIDI Out” channel,
+  ●   Play some MIDI notes as the audio streams through the plug-in.
+
+
+
+
+                                                                                    11
+
+===== PDF PAGE 13 =====
+
+Sonar
+  ●   Configure Supermodal as a synth in “Utilities/Cakewalk Plug-in Manager”
+  ●   Import an audio file to an audio track ,
+  ●   Inset Supermodal as a “soft synth” on that track.
+  ●   Create a new MIDI track,
+  ●   Set the MIDI track’s output to Supermodal .
+  ●   Play some MIDI notes as the audio streams through the plug-in.
+
+
+
+
+                                                                                12
+
+===== PDF PAGE 14 =====
+
+Introduction
+Supermodal is a “Meta-Filter” made up of hundreds of resonant bandpass
+filters. It contains 27 different filter models ranging from acoustic to
+synth-style to mathematical to special effects, all of which can be used to
+create a wide range of filtering effects
+
+Supermodal is comprised of two filter sections working in parallel.
+First is our classic state-variable filter. That means it can smoothly morph
+between lowpass, bandpass, and highpass modes. It’s very fat-sounding due to
+its internal saturation algorithm, and has a slope of 24dB per octave like the
+filters on many classic analog synthesizers.
+
+Second is our Modal Filter, which is capable of modeling resonating bodies by
+the use of 100 bandpass filters per side. Don’t worry — you don’t have to
+adjust each of these individually! The Modal Filter has nine models, each of
+which has three variations. (For example, the vocal formant model features
+“Ah,” “Ih,” and “Oh” variants.) Not only that, but you can morph between both
+the main models and their variants using an X/Y “sphere” controller.
+
+Both filters are stereo. Virtually all parameters can be modulation destinations,
+resulting in some awesome stereo effects.
+
+As for modulation sources, Supermodal comes with a cool combination
+sequencer/LFO, random generator, an ADSR envelope, an envelope follower,
+MIDI/CV input (which means Supermodal parameters can be modulated by our
+Gatekeeper plug-in) and our Meta Knobs, which can control multiple
+parameters with a single control gesture. You can mix and match these
+modulation sources in up to four modulation slots.
+
+
+
+
+                                                                               13
+
+===== PDF PAGE 15 =====
+
+Structure of Supermodal
+This basic structure of Supermodal consists of two filters that are routed in
+parallel and so can be blended — you can have more filtering from one and
+less from the other, or balance them evenly.
+
+   1. The Classic Filter is a classic 24dB-per-octave (four-pole) filter that can
+      smoothly crossfade between lowpass, bandpass, and highpass modes. It
+      has internal saturation, and a highly controllable resonance section.
+   2. The Modal Filter is a modeling filter, meaning it duplicates the
+      characteristics of various resonating bodies and other things that affect
+      the harmonic content of sounds occurring inside or around them.
+
+Thus, where the Classic Filter gives you a relatively simple, synth-like slope,
+the Modal Filter is capable of emphasizing various harmonics (partials) in the
+source sound in a non-linear manner. The two are interrelated because they
+both affect the frequency spectrum of the source audio at the same time.
+
+
+
+
+                                                                                  14
+
+===== PDF PAGE 16 =====
+
+Main Controls
+
+
+
+
+The main panel of Supermodal is where you adjust all the controls that have
+the most impact on its sound.
+
+
+Control Tips
+The controls in Supermodal have a few common behaviors meant to make
+working with the plug-in quicker and easier. Generally, you can do the
+following:
+
+
+Shift-Drag To Fine Tune
+Hold the shift key while dragging on a control to move it more slowly and thus
+make fine adjustments.
+
+
+Double-Click for Default
+Double-click on any graphical control to return it to its default value. Another
+double click will return it to the previous value.
+
+
+Direct Entry
+While you can drag up or down on any numerical or field, double-click on the
+field to enter a specific value right from your computer keyboard.
+
+
+
+
+                                                                               15
+
+===== PDF PAGE 17 =====
+
+Padlock Icons
+Certain settings — namely the In, Out, Drive, and Dry/Wet controls — can have
+a huge impact on the signal level in your track. These all have clickable
+padlock icons beneath them. When locked, the settings remain at their
+currently set values even when you change Presets. This lets you experiment
+with different effects without causing a large and unexpected change in gain.
+
+
+Main Controls List
+
+In
+Adjusts the input volume of the filter and offers up to a 12dB boost
+of the input signal. Supermodal’s filters have internal saturation, and
+boosting the input signal takes advantage of this feature.
+
+
+Out
+Adjusts the output volume of the processed signal. This can be very
+useful for taming the resulting gain in your track without having to
+reach for the fader in your DAW’s mix window.
+
+
+Freq
+Adjusts the frequency of both the classic and
+the Modal Filters.
+
+The filter curve corresponds to pitch. The zero
+in the 12 o’clock position above the knob is
+tuned to C5 by default, although this can be
+changed (see the Tuning section in Settings).
+Clicking on the numbers around the knob will
+result in jumps in octaves. This lets you tune
+the filter’s behavior to the musical key of your
+source material.
+
+You can click on the frequency (Hertz) field in the center of the knob as well.
+
+
+
+
+                                                                                  16
+
+===== PDF PAGE 18 =====
+
+Entering note value (for example: “C#4” or “Eb2”) in the frequency text field
+will tune it to the corresponding frequency — as interpreted by our scale
+tuning system.
+Dragging on the Semi or Cent text sliders is another way of moving the
+frequency knob, which always references an increase or decrease in pitch from
+the zero position. Notice that the Hertz and Semi/Cent fields always track
+each other — you never again have to wonder what frequency corresponds to
+a certain pitch or vice-versa!
+
+
+Type
+This slider crossfades between the Classic Filter’s three filter types:
+lowpass, bandpass, and highpass. Click on the LP, BP, or HP icons if
+you want purely that type of filter.
+
+
+Res
+Resonance is a peak of frequencies around the cutoff frequency
+(lowpass and highpass) or center frequency (bandpass) of a filter,
+and is responsible for the “whistling” or “rubbery” character of
+many classic analog synth patches. This control applies resonance
+to the Classic Filter only. The Classic Filter is capable of
+self-oscillating and can go beyond that point. It has enough
+headroom for its resonance to be displaced by audio — if pushed
+with enough gain. Be careful with this!
+
+
+Blend
+Crossfades between the Classic Filter and the Modal Filter to
+achieve the perfect balance between the two
+
+
+Drive
+This will drive the input by up to 24dB into both filters, but not into
+the dry signal.
+
+
+
+
+                                                                           17
+
+===== PDF PAGE 19 =====
+
+Decay
+This is essentially the resonance of the Modal Filter, which unlike
+the Classic Filter cannot reach self-oscillation. Instead we have
+provided a curve tailored to treat it as a decay, meaning how long
+the resonance rings out.
+
+
+Model
+In the Modal Filter, you can morph between
+different models and their variants, which we
+call transformations (Xforms). A Model is a
+configuration of the 200 filters (100 per stereo
+side) frequencies and amplitudes. Move the
+Model slider to select between the different
+models.
+
+
+Xform
+There are three transformations for each mode,
+providing further sonic variation on the main
+resonant space or body behind the model. Move the Xform slider to morph
+between the transformations.
+
+
+Sphere Control
+The central display in the Modal Filter actually moves like a trackball. Main
+models are along the X-axis and their transformations are on the Y-axis. This
+lets you dial in any combination. Don’t worry if you get lost. You can always
+click the triangular icons along the Model and Xform sliders to get back to a
+specific model and transformation.
+
+
+
+
+                                                                                18
+
+===== PDF PAGE 20 =====
+
+Models and Transformations
+
+Noise
+                                  Noise Slim       Noise Exp        Noise Lin
+
+This model is all about randomness. Noise One starts with a very narrow
+randomized array of filters. Noise Two uses an exponential curve to spread
+the filters evenly across a range of pitches. Noise Three uses a linear curve
+to spread those frequencies out even more widely. Since the three models
+were created using random numbers, this filter is very good for synthesizing
+cymbals, and as a subtle stereo phaser.
+
+
+Vowels
+                                      “Ah”             “Ih”            “Oh”
+
+This is our version of the classic vocal formant filter. Its transformations
+represent the three different vowel sounds. Tune the frequency knob of the
+Classic Filter to adjust the formant (-12 usually does the trick for the most
+vocal-like sounds).
+
+
+Detune
+                                  Detune 0C       Detune 50C      Detune Fifths
+
+Detune consists of three resonating strings that can be detuned relative to
+each other. The first Xform has no detune, while the second has a wide
+amount of detune. The third Xform is detuned by a perfect fifth. Therefore,
+many interesting chords lurk between the second and third Xforms.
+
+
+Struck
+                                     Piano         Vibraphone          Bell
+
+This model was created by analyzing recordings of a piano, a vibraphone, and
+a Bell and extracting the frequency content. Your source audio will sound
+like it is vibrating the inside of a piano, the bars of a vibraphone, or a bell.
+
+
+
+
+                                                                                19
+
+===== PDF PAGE 21 =====
+
+Waveform
+                                    Saw            Square       Hypersquare
+
+This is a mathematical model, the frequencies are whole number
+multiplications of the fundamental frequency and the amplitude is a division
+of that number. Basically, it pushes the harmonic content of your source
+audio more towards that of the selected Xform. The saw wave contains odd
+and even harmonics. The square wave only contains odd harmonics and
+sounds more nasal. The hypersquare (batman) shape is made by skipping
+two harmonics, playing the third harmonic thereafter, and repeating the
+process.
+
+
+Materials
+                                    Metal          Glass           Wood
+
+In this model, your audio excites these three materials. They all have a
+center pitch, but the harmonics are placed in different positions and can
+vary greatly depending upon the selected Xform.
+
+
+Chord
+                                 Chord Low         Chord         Chord High
+
+This model allows the tuning of custom chords with three resonating strings.
+All three Xforms play a perfect fifth using the first two strings. Changing
+Xforms tunes the third string an octave up or down.
+
+
+Interval
+                                 Augmented       Diminished      Shepard’s
+
+Another chord model features augmented and diminished intervals that are
+great for phaser-like effects. The Shepard’s Xform has the filters tuned in
+minor thirds throughout the entire series, approximating the “Shepard’s
+tone” audio illusion where a pitch seems to be eternally rising or falling.
+
+
+
+
+                                                                              20
+
+===== PDF PAGE 22 =====
+
+ Special FX
+                                       Spring            Lazer            Cluster
+
+ This model is simply wild, featuring harmonics that become more and more
+ condensed. Cluster places 100 cents (one semitone) between each filter.
+ Spring is a band-limited delay model, and Lazer is a very narrow
+ arrangement of the filters that can impart a laser-sweep effect to the sound.
+
+
+Damping
+This algorithm decreases the volume of the higher partials
+emphasized by the Modal Filter, resulting in a gradual dampening of
+the treble frequencies. The result is much like using a comb filter or a
+dampened reverb.
+
+
+Partials High
+This will cut partials in octaves relative to the fundamental frequency
+of the filter. The right-hand side of the slider cut will cut high
+frequencies, acting somewhat like an additional lowpass filter.
+
+
+Partials Low
+This also cuts partials in octaves relative to the fundamental
+frequency of the filter. The left-hand side of the slider will cut low
+frequencies, acting somewhat like an additional highpass filter.
+
+
+Dry/Wet Mix
+Dry/Wet crossfades between the unprocessed and processed
+signals. At the top (wet), what you hear is fully affected by the
+filters. At the bottom (dry), you are not hearing any filtering at all.
+
+
+
+
+                                                                                    21
+
+===== PDF PAGE 23 =====
+
+Modulation
+Supermodal’s main parameters can all be modulated by a number of external
+and internal sources. You can use the various modulation sources to tune
+several parameters with a single knob, make the filtering responsive to MIDI or
+CV messages (or to the volume of the source audio using the envelope
+follower), modulate parameters with an LFO-like waveform or step-sequenced
+pattern, and more.
+
+
+Open/Close MODS
+
+
+Click the MAXIMIZE text at the lower right corner of the plug-in window to
+show the modulation section and MINIMIZE to hide it.
+
+
+Selecting a Modulation Source
+To modulate a parameter, first load a
+modulation source into one of the slots by
+clicking on its title and selecting from the
+choice of available modulators.
+
+The four slots are color-coded from left to
+right: amber, purple, green, and red.
+
+Once a slot is on, Modulation Pop-up Buttons will appear underneath any
+main control that’s eligible to be a modulation source. These appear as small
+vertical lines that match the color of the modulation sources. Note that you
+will see only as many vertical lines as you have modulation sources active —
+any number from zero to four.
+
+         modulation button with                modulation button with
+         no modulation                         active modulators
+
+
+
+
+                                                                                22
+
+===== PDF PAGE 24 =====
+
+Assigning a Destination
+Now, click the Modulation Pop-up Button for the parameter you want to
+modulate, to open the Modulation Pop-up Sliders. This button also has a
+monitor allowing you to see the amount of modulation on the parameter at a
+quick glance.
+
+
+
+Modulation Pop-up Sliders
+The modulation Pop-up contains modulation
+amount sliders. Again, modulation controls
+have the same color as the Modulation Source
+Slot they represent and will appear only if the
+slot is enabled.
+
+The controls are bipolar, so sliding them up to
+the maximum will result in positive modulation,
+while sliding them down to the minimum will
+result in negative modulation. Double Click to
+set to 0 - and turn the modulation off.
+
+Most modulation amount sliders have a curve - which
+enables more resolution in values that are closer to zero
+until the 25% mark, and then linear action afterwards.
+
+
+Stereo Modulation
+Notice that Mod slot 2 looks different in the image of the sliders above. Click
+the circle icon below any modulation slider to toggle modulation from that
+source between mono and stereo. In stereo mode, you can set different
+modulation depths — even one positive and the other negative — for the left
+and right sides of a stereo signal. This can result in some truly wild
+modulation effects. Want the filter cutoff to sweep up for the left side as it
+goes down for the right? You can do that!
+
+
+
+
+                                                                                  23
+
+===== PDF PAGE 25 =====
+
+Cross-Modulation
+Can you modulate the depth (amplitude) of one
+modulation source with another? Of course you can!
+Modulation sources have their own pop-up buttons as
+well.
+
+Click this button to bring up a pop-up of sliders
+similar to those in the main controls section. You’ll
+see a maximum of three sliders, as a given modulation
+source cannot modulate itself.
+
+When a slot is modulated, its level will change
+according to the behavior of the source(s) modulating
+it. For example, when an envelope is being modulated
+by MIDI velocity, it will act like a classic velocity
+sensitivity slider, where more modulation means more
+velocity range.
+
+Here are several useful examples:
+
+   ● Classic mod-wheel action: Control the depth of vibrato sourced from
+     the LFO/sequencer using the modulation wheel (which is located in the
+     MIDI/CV source).
+   ● Fade in an LFO/sequencer by modulating it with an envelope.
+   ● Control several Meta Knobs with one Meta Knob — a Meta-Meta Knob!
+   ● A more elaborate example would be to modulate the Classic Filter’s
+     frequency parameter with an LFO and the Modal Filter’s partials with an
+     ADSR, while a single Meta Knob controls the amount of both
+     modulations at the same time. The level of the Meta Knob can in turn be
+     modulated by MIDI, aftertouch, or another performance control.
+
+
+
+
+                                                                          24
+
+===== PDF PAGE 26 =====
+
+Modulation Slots
+
+
+
+
+Four slots are available, each of which can hold one of the six modulation
+sources: Meta Knob, MIDI/CV, Sequencer/LFO, Random Generator, Envelope
+Follower, and ADSR Envelope.
+
+The Modulation Source Slots are color coded to match their relevant
+Modulation Amount controls, as we have already seen when discussing the
+pop-up buttons and modulation depth sliders.
+
+You can mix and match sources in the slots any way you like, including having
+multiple slots with the same type of source. Each slot is independent, of
+course, so you might have a "green sequencer”, a “red sequencer”, etc., each
+with its own settings.
+
+
+On/Off
+Use this switch to enable or disable a slot. If you disable a slot, all of its
+settings will remain intact for the next time you enable it. A disabled slot
+appears to be empty and will have no effect on the sound. Once a slot is
+turned on, its matching Modulation Amount controls will appear in the
+plug-in’s interface, and the modulation fun begins!
+
+
+
+
+                                                                                 25
+
+===== PDF PAGE 27 =====
+
+Modulation Sources
+
+
+
+
+Now, let's have a look at each type of modulation source in detail.
+
+
+
+Meta Knob
+This is a “macro” that allows you to modulate
+several parameters with a single knob.
+
+
+Polarity
+The buttons across the bottom select the knob’s
+type. Knobs can be positive-unipolar (ranging
+from zero to 100% and marked “+”),
+negative-unipolar (ranging -100% to zero and marked “-”), or bipolar (ranging
+-100% to 100% and marked “B”).
+
+
+Name
+Meta Knobs can be given meaningful names to clarify their action
+in a preset. To rename a knob simply double-click on its title
+(which is right below the actual knob) and type in a new name.
+
+
+Value Monitor
+The current output of a knob is displayed as a percentage value at the center
+of the knob. Changing the knob’s output is as easy as double-clicking the
+number and entering a new value.
+
+
+
+
+                                                                                26
+
+===== PDF PAGE 28 =====
+
+ADSR
+The ADSR is a classic four-stage envelope
+generator, triggered by incoming MIDI notes.
+
+
+Attack
+Sets the amount of time it will take for the
+envelope signal to climb from zero to 100% once
+a MIDI note is received.
+
+
+Decay
+Adjusts the amount of time it takes for the envelope signal to drop from 100%
+to the sustain level. The Decay stage is initiated immediately after the Attack
+stage is completed.
+
+
+Sustain
+Sets the level at which the envelope signal will be held after the decay stage
+is completed, for as long as the incoming MIDI note is held.
+
+
+Release
+Determines the amount of time for the envelope amplitude to drop back to
+zero after the MIDI note is released.
+
+
+Velocity Sensitivity
+Controls how much the MIDI note-velocity affects the volume of the envelope.
+High values will be more dynamic, while 0 will always play the envelope at full
+scale.
+
+
+
+
+                                                                                 27
+
+===== PDF PAGE 29 =====
+
+MIDI / CV
+This very useful modulation source converts
+MIDI or CV (Control Voltage) messages into a
+modulation signal.
+Simply highlight the type of modulation to
+use:
+
+
+MIDI
+     ● Note: A bipolar value based on the
+       pitch of incoming MIDI notes, C3 being the center pitch (modulation
+       amount = zero). Notes above C3 result in positive modulation amounts;
+       notes below C3 send negative amounts.
+     ● Velocity: A unipolar value mapping modulation depth to playing velocity
+       (0-127) on a keyboard or pad controller.
+     ● Pitch Wheel: A bipolar function that sends positive modulation amounts
+       based on upward bends and negative amounts based on downward
+       ones.
+     ● Modulation wheel: Unipolar and positive; maps the modulation amount
+       to the mod wheel position or value of MIDI CC 1.
+     ● After Touch: Unipolar and positive; maps the modulation amount
+
+
+CV
+     ● Sidechain L/R: This treats a signal routed into the plug-in’s sidechain
+       input as if it were control voltage, with greater amplitude amounting to
+       greater modulation depth. CV can be bipolar or unipolar. (Note:
+       Sidechain routing varies greatly between DAWs, check your DAW’s
+       documentation for details.)
+
+
+               Word to the Wiz:
+               Different DAWs have different ways of routing MIDI notes and
+               control messages to an effect plug-in residing on an audio
+               track. Consult the section “With or Without MIDI” at the
+               beginning of this manual for details on how to do this..
+
+
+
+
+                                                                                  28
+
+===== PDF PAGE 30 =====
+
+DAW Limitations on Sidechain for CV:
+  ● Apple Logic Pro requires you to route through a bus channel for stereo
+     CV applications.
+  ● Avid Pro Tools does not support stereo sidechaining. Right and Stereo
+     options will default back to the Left channel as the sidechain source.
+
+
+
+We highly recommend using
+our Gatekeeper plug-in to
+generate CV signals for
+Supermodal.
+
+
+Gatekeeper with Supermodal
+
+   ● Load Gatekeeper on a
+     new audio track and
+     Mute the track*
+   ● Right-click inside
+     Gatekeeper’s Editor and
+     select - CV Output - Unipolar or Bipolar
+   ● Route Gatekeeper into the side chain input of Supermodal (Please refer
+     to your DAW’s manual for details)
+   ● Add the MIDI/CV to one of Supermodal’s Modulation slots
+   ● Under CV - Select “Sidechain” (Left or right) as the input source.
+   ● Apply CV Modulation to any control in Supermodel
+   ● Use the smooth knob to slow transitions between new CV values.
+   ● For regular Audio, we recommend using the Follower Modulator.
+
+* IMPORTANT: CV signals may damage your speakers if played too loudly,
+please mute your CV tracks ahead of time.
+
+
+Smooth
+The amount of smoothing applied to the modulation signal. Higher values will
+result in slower transition times when a value changes.
+
+
+
+
+                                                                              29
+
+===== PDF PAGE 31 =====
+
+Envelope Follower
+An envelope follower listens to the amplitude of
+an incoming audio signal and converts it into a
+modulation signal — often a filter cutoff in the
+case of envelope following effects pedals. In
+Supermodal, it can modulate any source you
+want.
+
+Our envelope follower has a split personality. It
+can either function as a full-time follower or an
+attack-release envelope triggered by the audio reaching a certain threshold.
+
+
+Inputs
+Selects the input of the envelope follower.
+
+In L: Left side of audio track’s signal.
+In R: Right side of audio track’s signal.
+(Click + icon to use both.)
+SC L: Left side of sidechain input.
+SC R: Right side of sidechain input.
+(Click + icon to use both.)
+
+A sidechain is a signal other than the current track’s audio that is somehow
+being used to control an effect applied to the current track’s audio. In a DAW,
+this could be another track, a bus, etc. Again, consult your DAW’s instructions
+for how to route a sidechain input into a plug-in.
+
+
+Threshold
+When Threshold is set to minimum, the modulation source functions as a
+full-time envelope follower. Set to any other value, it determines the threshold
+that the incoming signal has to pass in order to trigger the attack-release
+Envelope.
+
+
+
+
+                                                                               30
+
+===== PDF PAGE 32 =====
+
+Attack
+When the Threshold is set to minimum, Attack sets the amount of time it will
+take for the envelope signal to climb from zero to the input signal level. When
+the Threshold is set higher, it sets the amount of time it will take for the
+envelope signal to climb from zero to 100% once the Threshold is reached.
+
+
+Release
+When the Threshold is set to minimum, Release sets the amount of time it
+will take for the envelope signal to drop to a lower level of the input signal.
+When the Threshold is set higher, it sets the amount of time it will take for
+the envelope signal to drop to zero once the incoming signal drops back below
+the Threshold.
+
+
+
+
+                                                                              31
+
+===== PDF PAGE 33 =====
+
+Sequencer
+We call it a sequencer, but this source can also
+work like an LFO, and either free-run or be
+triggered by incoming MIDI notes.
+
+
+Pattern
+Loads one of 100 preset patterns (numbered
+from 0 to 99) into the Sequencer.
+
+Once a pattern has been loaded, you can leave its shape as-is or edit its 16
+steps manually and thereby change its shape in the Sequence Editor (see
+below).
+
+Switching to another pattern will discard any edits. Notice that some of the
+patterns correspond to simple waveforms, like a sine in the case of pattern 0.
+Using these patterns and turning Retrigger off (see below) makes the
+sequencer equivalent to an LFO.
+
+Random Pattern: Tuning the Pattern selector to the maximum (until it reads
+“Rndm”) will create a new, random pattern every time.
+
+
+Shape
+The Shape parameter varies the shapes of the transitions between individual
+steps of the sequencer, so a wide variety of sub-patterns can be created given
+a single setting of the Pattern parameter. Use this knob to gradually morph
+between five shaping methods:
+
+        A. Rounded transitions (great for creating curvy LFOs)
+        B. Linear interpolation between the steps
+        C. Sample and hold / Steps
+        D. Per-step drops (signal will decay back to zero after each step; good
+        for grooves)
+        D 100. Curved per-step drops (same as previous method but more
+        punchy).
+
+
+
+
+                                                                                  32
+
+===== PDF PAGE 34 =====
+
+There are 100 degrees of variation within each method (labeled A-D), so the
+variation you can create here is really quite precise.
+
+
+Unipolar
+When The unipolar button is on, the sequencer will be scaled to operate on
+the positive polarity only (0 to 1). When it is off, it will be bipolar - taking both
+the negative and the positive polarities of the signal (-1 to 1).
+
+
+Tempo Sync
+Click the metronome icon to quantize the LFO rate to the tempo of your
+project. This affects the Rate control.
+
+
+Rate
+Drag on this field to set the rate of the Sequencer. When Tempo Sync is
+enabled, Rate will be set in multiples or divisions of the beat, including dotted
+and triplet feels (suffixed with d or t). When Tempo Sync is disabled, Rate will
+be set in Hertz.
+
+
+Retrigger
+This decides whether the sequencer free-runs or if it resets to the beginning
+of the waveform/pattern every time a MIDI note is received. If Retrigger is off
+while Tempo Sync is enabled, the LFO will be synchronized to the song
+position. If Retrig is active while Tempo Sync is enabled, the LFO will sync to
+the beginning of each incoming MIDI note.
+
+
+
+
+                                                                                    33
+
+===== PDF PAGE 35 =====
+
+Sequence Editor
+Supermodal lets you either free-draw or carefully design
+your own sequences and LFOs. Hover with the mouse
+over the pattern/waveform display to show the editor. To
+edit the steps, use these techniques:
+
+   ● Click-drag in the editor to draw a new freehand
+     pattern.
+   ● Right-click individual steps to have fine control
+     over their value.
+   ● Shift-drag to quantize the values of steps to
+     quarters.
+   ● Alt-drag to quantize the values of steps to 12ths.
+     This editing mode can be used to facilitate a
+     melodic sequence of notes.
+   ● Double click a step to zero it out.
+   ● Command-drag (Mac) or Control-drag (PC) to zero several steps at once.
+   ● Left or Right keys to shift the phase of the steps
+   ● Up or Down keys to invert the polarity of the steps
+   ● ‘A,B,C,D,E’ keys to set the shape
+
+
+
+
+                                                                         34
+
+===== PDF PAGE 36 =====
+
+Random Generator
+As its name implies, the Random pattern
+generator is capable of randomizing tempo
+divisions and note quantization, then
+converting the resulting output to a modulation
+source.
+
+
+Tempo
+Click the Metronome icon to quantize the
+Random Generator’s Rate to the tempo of your project.
+
+
+Rate
+Drag on this field to set the rate of the Random generator. When Tempo Sync
+is enabled, Rate will be set in multiples or divisions of the beat, including
+dotted and triplet feels (suffixed with d or t). When Tempo Sync is disabled,
+Rate will be set in Hertz.
+
+
+Retrigger
+When active, this generates a new random value every time a MIDI note is
+received and resets the Random Generator’s clock. If Retrigger is off while
+Tempo Sync is enabled, the Generator’s LFO will be synced to the song
+position. If Retrigger is active, the LFO will sync to each incoming MIDI note.
+
+
+              Word to the Wiz:
+              Dragging the graph left and right will adjust rate while dragging
+              it up and down will adjust the smooth value
+
+
+
+
+                                                                                  35
+
+===== PDF PAGE 37 =====
+
+Unipolar
+When The unipolar button is on, the Random Generator will be scaled to
+operate on the positive polarity only (0 to 1). When it is off, it will be bipolar -
+taking both the negative and the positive polarities of the signal (-1 to 1).
+
+
+Smooth
+This determines the amount of smoothing applied to the modulation signal.
+Higher values result in slower transition times when a value in the random
+pattern changes.
+
+
+Range
+The range in octaves of the random signal. This control only has a significant
+effect when a modulation amount slider for a destination parameter is set at
+100%.
+
+
+Rhythm
+This parameter sets the probability that a beat will be divided and the
+resolution at which that will happen. The higher the parameter’s value, the
+more frequent and finer-grained the divisions will become.
+
+
+
+
+                                                                                   36
+
+===== PDF PAGE 38 =====
+
+Division
+This selects a set of tempo divisions according to which the Random
+Generator performs its work.
+
+
+ Value        Result                                   Divisions
+
+ Sub          Divisions of 2                           1, 2, 4, 8, 16, 32, 64, 128
+
+ Tuplet       Divisions of 3                           1, 3, 6, 9, 12, 18, 24, 36
+
+ Sub+Tuplet Divisions of 2 and 3                       1, 2, 3, 4, 6, 8, 12, 16
+
+ Complex      Complex divisions of 5 and 7             1, 2, 3, 4, 5, 6, 7, 8
+
+ Prime        Divisions corresponding to prime         1, 2, 3, 5, 7, 11, 13, 17
+              numbers
+
+
+Scale
+This parameter will quantize the random modulation signal to musical notes.
+Turning this knob will select different scales for quantization. This is meant to
+be used with the Random Generator applied to the Classic Filter’s frequency
+knob, with the knob’s modulation depth slider set at 100%. (It won’t work
+correctly and really doesn't make sense with other destinations.)
+
+
+
+
+                                                                                     37
+
+===== PDF PAGE 39 =====
+
+List of Scales
+ Value           Description                               Notes (assuming C root)
+Off              No quantization applied                   None
+
+Chromatic        12-tone chromatic scale                   C, C#, D, D#, E, F, F#, G, G#, A, A#, B
+
+Octatonic a      8-tone symmetric scale starting with a    C, C#, D#, E, F#, G, A, A#
+                 minor second
+Octatonic b      An 8-tone symmetric scale starting with   C, D, D#, F, F#, G#, A, B
+                 a major second
+Major            Major diatonic scale                      C, D, E, F, G, A, B
+
+Minor            Minor diatonic scale                      C, D, Eb, F, G, Ab, Bb
+
+Melodic          A melodic minor scale                     C, D, Eb, F, G, A, B
+
+Maj pent         Major pentatonic                          C, D, E, G, A
+
+Raag pent        Raag Vrindavani Sarang                    C, D, F, G, B
+
+Sus pent         Suspended pentatonic                      C, D, F, G, Bb
+
+Man pent         Blues minor based on Chinese scale        C, Eb, F, Ab, Bb
+
+Yo pent          Yo Japanese scale                         C, D, F, G, A
+
+Min pent         Minor pentatonic                          C, Eb, F, G, Bb
+
+In pent          In Japanese scale                         C, Db, F, G, Ab
+
+Kokin pent       kokin-Joshi Japanese scale                C, Db, F, G, Bb
+
+Han pent         Han - kumoi Japanese scale                C, D, F, G, Ab
+
+Whole tone       Each interval is a whole-step only        C, D, E, F#, G#, A#
+
+Diminished       Notes of diminished triad                 C, Eb, Gb, A
+
+Augmented        Notes of augmented triad                  C, E, G#
+
+Maj triad        Notes of major triad                      C, E, G
+
+Min triad        Notes of minor triad                      C, Eb, G
+
+Sus2             Notes of suspended-2 triad                C, D, G
+
+Sus4             Notes of suspended-4 triad                C, F, G
+
+fifths           Perfect fifth interval                    C, G
+
+Octaves          Octave intervals only                     C3, C4, etc.
+
+
+
+
+                                                                                                38
+
+===== PDF PAGE 40 =====
+
+Presets
+
+
+
+To browse Presets, click the Left/Right arrows located on either side of the
+Presets Bar. Clicking directly on the Presets Bar will open a pop-up menu
+which allows you to browse through the folders of factory presets, save an
+original preset, or load a new preset bank.
+Once the button is clicked, it is possible to browse the presets using the
+arrow keys on the keyboard.
+To save a preset without opening the preset browser, simply right click the
+presets button, Write your preset’s name and press enter.
+
+
+             Word to the Wiz:
+             Saved presets can be found in the following locations:
+             MAC: <user>/Library/PolyVerse/Supermodal/Supermodal-Presets.ppb
+             PC:
+             \Users\<user>\AppData\Roaming\PolyVerse\Supermodal\Supermodal-
+             Presets.ppb
+
+
+
+MIDI Program change
+You may send program changes on MIDI CC #119. The control value will
+correspond to the preset order in the selected bank (the first 128).
+
+To select a bank use MIDI CC #118. The bank count starts at the first user bank
+which is also the default selected bank if CC #118 is not set.
+
+
+
+
+                                                                               39
+
+===== PDF PAGE 41 =====
+
+Banks
+Factory banks appear in white text and
+user banks in light blue. Select any bank
+to display its presets in the area to the
+right.
+
+
+New Bank
+Click the New Bank button to bring up the
+dialogue box where you can name your bank as
+well as add the author name and a brief
+description. Then, click “Add new bank” to add
+it to the list.
+
+
+Import and Export
+The Import and Export buttons both bring up OS-level dialogue boxes. Import
+prompts you to navigate to and select a bank file on your computer, then adds
+it to the bank list. Export saves the currently selected bank file to your
+computer. Bank files from Supermodal have the extension . ppb.
+
+
+Bank Info Button
+Hover over a bank to display its Info
+button on the right. Click the Info
+button to display a dialogue where
+you can edit the name, author, and
+description of the bank. Click
+“Delete Bank” to remove the bank.
+
+Factory banks and the “myPresets” user bank cannot be deleted or have their
+info edited. Any other user bank you’ve created using the New Bank operation
+can.
+
+
+
+
+                                                                           40
+
+===== PDF PAGE 42 =====
+
+The Preset List
+The Preset list displays all the Presets in
+the currently selected bank. Clicking one
+will select it, exit the Preset Browser, and
+return you to the main controls view. This
+area has a few other tricks up its sleeve as
+well.
+
+
+Save
+You cannot overwrite a factory Preset using the Save icon. To create a user
+preset, type a new name into the name field just above the list, and the Save
+icon will become available. Clicking it will then save the Preset under the new
+name into the “myPresets” user bank, along with any edits you’ve made in the
+Main Controls or Modulation sections.
+
+
+Click and Drag
+You can also create a
+user-editable copy of a Preset by
+dragging it onto any light blue user
+bank. You cannot click-drag
+Presets into factory banks.
+
+A note on the “myPresets” bank:
+Since a Save operation saves your Preset into “myPresets,” the idea is that
+“myPresets” functions as a repository of all Presets you have edited from the
+factory versions or created from scratch. You can then select this bank and
+drag Presets from it into other banks you’ve created for different purposes
+such as set lists for different gigs, for example.
+
+
+Overwrite
+This simply updates the saved state of the current Preset with any control
+changes you’ve made since. It only functions on user Presets that are in banks
+you’ve created — not the “myPresets” bank.
+
+
+
+
+                                                                                41
+
+===== PDF PAGE 43 =====
+
+Delete
+As you can imagine, this deletes the current Preset, subject to the same
+restrictions as Overwrite. The operation is immediate, with no “Are you sure?”
+confirmation box, however, you may undo this action if you have deleted this
+preset by mistake.
+
+
+Sticky
+When active, this allows the loading of different presets without closing the
+Preset Browser. So, if you’re auditioning different Presets but don’t want to
+pop back out to the main controls every time you choose one, Sticky is your
+friend!
+
+
+Close
+Click the X to the right of the Sticky icon to close the Preset Browser and
+return to the Main Controls view.
+
+
+
+
+                                                                                42
+
+===== PDF PAGE 44 =====
+
+MIDI Learn
+In addition to using the modulation sources that occupy the four slots, you
+can map Supermodal parameters directly to physical controls on a MIDI
+controller. This includes the main controls as well as parameters within the
+modulation sources themselves.
+
+
+
+
+   1.                        2.                          3.
+
+
+   1. Right click on any parameter to display it’s MIDI learn pop-up.
+   2. Now, click the Learn button to switch the display to activate recording
+      mode.
+   3. Move the control you want to use on your MIDI device, and the display
+      should change to reflect the newly learned assignment, e.g. CC 1 for the
+      modulation wheel:
+
+
+
+
+             Word to the Wiz:
+             DAWs (e.g. Apple Logic Pro) may have their own native means
+             of mapping physical MIDI controls to parameters in third-party
+             plug-ins, which may conflict with or override Supermodal’s
+             procedure. When in doubt, always consult your DAW’s
+             documentation!
+
+
+
+
+                                                                               43
+
+===== PDF PAGE 45 =====
+
+Settings
+
+
+
+
+Click the gear-shaped icon to open the Settings panel,
+where three useful categories of settings reside:
+General, Tuning and MIDI.
+
+These are global settings, meaning they affect all Presets equally and do not
+change at the Preset level.
+
+
+General Settings
+These govern the size of the Supermodal
+plug-in window and the behavior of its
+controls.
+
+
+GUI Scale
+You can resize the Supermodal window
+from 50% to 200% in five steps. Smaller sizes are good for situations where
+you may want to cram a lot of plug-ins onscreen. Larger ones are ideal for
+multi-display setups or working with Supermodal as a sound design tool all by
+itself.
+
+You may also change the scale using the following key combinations:
+   ● increase size: “ctrl =” on PC or “command =” on MacOS
+   ● reduce size: “ctrl -” on PC or “command -” on MacOS
+
+
+
+                                                                                44
+
+===== PDF PAGE 46 =====
+
+CPU/Quality
+This controls the CPU intensity of the plugin and determines how many filters
+compose the modal filter. ‘Low’ will only use 32 filters, ‘Med’ will use 64 filters
+and ‘High’ will use 100 filters per side.
+The less filters used the less detailed the modal filter will sound.
+
+
+Knob Mode
+This governs the response of the Classic Filter’s main Frequency knob as well
+as any other knob-shaped control in Supermodal’s interface (such as those in
+the modulation sources.
+
+Round: Change the frequency by dragging around the circumference of the
+knob, almost like you were turning a physical knob.
+
+Linear: Change the frequency by dragging up and down on the knob.
+
+
+Tuning Settings
+As we have seen, Supermodal is a very
+musical filter plug-in that “thinks” in
+terms of musical notes. Here, you can
+adjust the basis of that thinking, so to
+speak.
+
+
+Root Note
+In terms of pitch, this changes the musical
+note that corresponds to the zero (12
+o’clock) position of the Classic Filter’s
+main Frequency knob, as well as the root note for the Scale parameter of the
+Random Generator, which is in turn meant to affect the Frequency.
+
+
+
+
+                                                                                 45
+
+===== PDF PAGE 47 =====
+
+Root Frequency
+You can also adjust the root pitch in terms of frequency in Hertz.
+
+Root note and frequency are two values that tie between pitch and frequency.
+Western music uses a chromatic scale (12 semitones 100 cents apart) with A4
+corresponding to 440Hz as a standard. This however can change according to
+different musical styles and cultures. Authentic baroque musicians often tune
+their instruments to A4=415Hz. Some people believe in the healing powers of
+A4=432Hz. Scientific pitch is set by C4=256Hz, and ethnic music often is
+measured by the root note of flutes and hard-to-tune instruments.
+
+The center of the frequency knob is always set to C5. The frequency of that
+note is determined by the root note, the root frequency, and the scale of the
+tuning system.
+
+
+Scala
+Supermodal supports Scala tuning files. These are files that determine the
+scale based on the selected root note, and have the extension .scl. Loading a
+Scala file that matches your source material can extend the sound-sculpting
+power of Supermodal, which uses the western equal-tempered chromatic
+scale by default.
+
+Click “Browse” to open an OS-level dialogue and navigate to any Scala files on
+your computer. Or, simply drag and drop one from your desktop to the
+designated area in the Tuning settings.
+
+
+                 Word to the Wiz:
+                 To read more about scala:
+                 https://www.huygens-fokker.org/scala
+                 Download over 4000 different scales:
+                 https://www.huygens-fokker.org/docs/scales.zip
+
+
+
+
+                                                                                46
+
+===== PDF PAGE 48 =====
+
+MIDI
+
+Voicing
+Mono will cause Supermodal’s envelopes to
+retrigger on every new note, and glide will be
+activated between all notes.
+Legato will not retrigger envelopes and glide will
+only be activated when overlapping notes.
+
+
+Pitch Wheel
+Tune the range of the pitch wheel (when using MIDI notes as a modulator) in
+cents. You can set upward and downward wheel movement separately.
+
+
+
+
+                          Thank you for using Supermodal!
+
+
+
+
+                                     Have fun!
+
+
+
+
+                                                                              47

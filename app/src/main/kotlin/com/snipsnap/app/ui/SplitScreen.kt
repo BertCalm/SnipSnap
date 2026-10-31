@@ -57,6 +57,7 @@ import com.snipsnap.audio.Separate
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.Layers
@@ -104,12 +105,14 @@ import kotlinx.coroutines.withContext
 @Composable
 fun SplitScreen(
     entry: KitShelf.Entry?,
+    /** The back button's words: `Navigation.backChip`, so they name where [onExit] lands. */
+    backLabel: String,
     onToast: (String) -> Unit,
     /** The print landed on TAPE; the deck should re-read its shelf. */
     onPrinted: () -> Unit,
     /** The print landed on a pad: the kit changed on disk. */
     onKitUpdated: (Kit) -> Unit,
-    /** ◄ KIT — SPLIT is reached from the kit's action row and leaves the same way. */
+    /** SPLIT is reached from the kit's action row and leaves the same way. */
     onExit: () -> Unit,
 ) {
     val scheme = LocalScheme.current
@@ -131,12 +134,19 @@ fun SplitScreen(
 
     var desk by remember(entry?.dir) { mutableStateOf(Layers.Desk()) }
     var working by remember { mutableStateOf(false) }
+    // What the job in flight is called in the dock; null for one with no word
+    // of its own (PRINT), which the dock says as WORKING….
+    var job by remember { mutableStateOf<String?>(null) }
+    // The screen's one report to the dock (the sink is a single slot). `working`
+    // is the effect's key, so the value is remembered: a fresh one each
+    // recomposition would withdraw the report and make it again.
+    ReportBusy(remember(working, job) { if (working) Busy(job ?: Copy.WORKING_BUSY) else null })
     var playing by remember { mutableStateOf(false) }
     var printToPad by remember { mutableStateOf(false) }
     var pendingPrint by remember { mutableStateOf<Snip?>(null) }
     var landing by remember { mutableStateOf(false) }
 
-    // Mirrors the ◄ KIT chip below (`enabled = !working`) exactly: always
+    // Mirrors the back button below (`enabled = !working`) exactly: always
     // registered so Back can't fall through to a broader "go to shelf"
     // policy — or, worse, to Activity.finish() — mid-operation, but a no-op
     // while `working`, the same as the disabled chip.
@@ -253,56 +263,57 @@ fun SplitScreen(
         }
     }
 
+    /**
+     * SPLIT, from reading the pad to banking its three parts. It does not
+     * touch [working]: the tap that starts it raises that guard before it
+     * launches this (a flag raised in here would not be up yet for a fast
+     * second tap), and clears it when this returns, by whatever road.
+     */
     suspend fun loadSource(dir: File, slot: Int, name: String) {
-        working = true
-        try {
-            val pad = entry?.kit?.pad(slot)
-            val file = pad?.sampleFile
-            if (file == null) {
-                onToast(Copy.SPLIT_PAD_EMPTY)
-                return
-            }
-            // `runCatching` would take a CancellationException along with the
-            // real failures, and this screen can be left mid-split: the work
-            // would be cancelled and the code would carry on toasting and
-            // banking anyway. Cancellation travels; only failures become words.
-            val source = try {
-                // `file` is a kit pad sample, produced only by KitBuilderModel.assign
-                // from an already-bounded Snip — readCapped's 600s ceiling is defense
-                // in depth, not expected to ever bind.
-                withContext(Dispatchers.IO) { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                null
-            }
-            if (source == null) {
-                onToast(Copy.sourceUnreadable(name))
-                return
-            }
-            // The expensive part: a spectrogram and two median filters.
-            val parts = try {
-                withContext(Dispatchers.Default) { Separate.stn(source) }
-            } catch (e: CancellationException) {
-                throw e
-            } catch (e: Exception) {
-                Log.e("SplitScreen", "loadSource: split refused", e)
-                onToast(Copy.SPLIT_REFUSED)
-                return
-            }
-            val indices = withContext(Dispatchers.Default) {
-                engine.loadSnips(listOf(parts.sines, parts.transients, parts.noise))
-            }
-            split = parts
-            banked = indices
-            splitFrames = parts.sines.frameCount
-            splitSeconds = parts.sines.durationSeconds
-            desk = Layers.Desk()
-            sourceSlot = slot
-            sourceName = name
-        } finally {
-            working = false
+        val pad = entry?.kit?.pad(slot)
+        val file = pad?.sampleFile
+        if (file == null) {
+            onToast(Copy.SPLIT_PAD_EMPTY)
+            return
         }
+        // `runCatching` would take a CancellationException along with the
+        // real failures, and this screen can be left mid-split: the work
+        // would be cancelled and the code would carry on toasting and
+        // banking anyway. Cancellation travels; only failures become words.
+        val source = try {
+            // `file` is a kit pad sample, produced only by KitBuilderModel.assign
+            // from an already-bounded Snip — readCapped's 600s ceiling is defense
+            // in depth, not expected to ever bind.
+            withContext(Dispatchers.IO) { WavReader.readCapped(File(dir, file), TAPE_LOAD_MAX_SEC).snip }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+        if (source == null) {
+            onToast(Copy.sourceUnreadable(name))
+            return
+        }
+        // The expensive part: a spectrogram and two median filters.
+        val parts = try {
+            withContext(Dispatchers.Default) { Separate.stn(source) }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.e("SplitScreen", "loadSource: split refused", e)
+            onToast(Copy.SPLIT_REFUSED)
+            return
+        }
+        val indices = withContext(Dispatchers.Default) {
+            engine.loadSnips(listOf(parts.sines, parts.transients, parts.noise))
+        }
+        split = parts
+        banked = indices
+        splitFrames = parts.sines.frameCount
+        splitSeconds = parts.sines.durationSeconds
+        desk = Layers.Desk()
+        sourceSlot = slot
+        sourceName = name
     }
 
     // The source pad, and PAD ◄ ►: the next pad by slot, wrapping.
@@ -451,7 +462,7 @@ fun SplitScreen(
 
         // ---- the source, and the split itself ----
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            ActionButton("◄ KIT", scheme, enabled = !working, modifier = Modifier.weight(1f)) { onExit() }
+            ActionButton(backLabel, scheme, enabled = !working, accessibilityLabel = spokenBack(backLabel), modifier = Modifier.weight(1f)) { onExit() }
             ActionButton("PAD ◄", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(-1) }
             ActionButton("PAD ►", scheme, enabled = !working && entry != null, modifier = Modifier.weight(1f)) { stepPad(1) }
         }
@@ -460,17 +471,29 @@ fun SplitScreen(
             // it doesn't navigate or open a panel. "·" is the house
             // separator for a label-plus-detail pair (`PROG A · THE BREAK`,
             // GrooveScreen.kt) that replaces it here.
-            if (working) "WORKING…" else if (split == null) "SPLIT · TAKE THIS PAD APART" else "SPLIT AGAIN",
+            if (split == null) "SPLIT · TAKE THIS PAD APART" else "SPLIT AGAIN",
             scheme,
             enabled = !working && entry != null && sourceSlot != null,
             lit = split == null,
+            working = working && job == Copy.SPLIT_BUSY,
             modifier = Modifier.fillMaxWidth(),
         ) {
-            if (working) return@ActionButton  // the flag is set inside the coroutine; a fast second tap beats it
+            if (working) return@ActionButton
             val dir = entry?.dir ?: return@ActionButton
             val slot = sourceSlot ?: return@ActionButton
             stopAll()
-            scope.launch { loadSource(dir, slot, sourceName ?: "PAD") }
+            // Raised here, before the launch, so a second tap in the gap before
+            // the coroutine starts finds it; cleared in the launch's `finally`.
+            working = true
+            job = Copy.SPLIT_BUSY
+            scope.launch {
+                try {
+                    loadSource(dir, slot, sourceName ?: "PAD")
+                } finally {
+                    working = false
+                    job = null
+                }
+            }
         }
 
         // ---- the desk ----

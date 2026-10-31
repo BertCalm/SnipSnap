@@ -11,6 +11,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.VoiceAllocator
+import com.snipsnap.shell.AquariumPerformance
+import com.snipsnap.synth.AquariumPerformanceSettings
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,9 +41,9 @@ import kotlinx.coroutines.withContext
  * where `ConventionTest`'s voice-allocation law reads them.
  *
  * Main thread, except what [PadEngine] documents as safe elsewhere. The
- * state a screen draws from ([up], [bankReady], [voiceCount], [latency]) is
- * Compose state, written only from [open], [pump] and the load [request]
- * starts.
+ * state a screen draws from ([up], [bankReady], [loading], [voiceCount],
+ * [latency]) is Compose state, written only from [open], [pump] and the load
+ * [request] starts.
  */
 class PadHost(preferredSampleRate: Int) {
 
@@ -72,11 +74,45 @@ class PadHost(preferredSampleRate: Int) {
     var latency by mutableStateOf(StreamFacts.latency(null))
         private set
 
+    /**
+     * A bank is being read off disk: true while an [engine] load is on its
+     * IO thread, and not during the debounce wait before one. KIT reports it
+     * to the dock. It counts loads, not asks: a cancelled ask's load runs to
+     * its end (see [request]) while the next ask's can already be running, so
+     * the first to finish must not put this down under the second.
+     */
+    val loading: Boolean get() = loadsRunning > 0
+
+    private var loadsRunning by mutableIntStateOf(0)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var wanted: KitShelf.Entry? = null
-    private var loading: Job? = null
+    private var loadJob: Job? = null
     private var lastLatencyAt = 0L
     private var closed = false
+
+    var performance by mutableStateOf(AquariumPerformanceSettings())
+        private set
+    var savedPerformance by mutableStateOf(AquariumPerformanceSettings())
+        private set
+    var performanceWarning by mutableStateOf<String?>(null)
+        private set
+    var performanceFaulted by mutableStateOf(false)
+        private set
+    var performancePending by mutableStateOf(false)
+        private set
+    var performanceLimitedFrames by mutableStateOf(0L)
+        private set
+    private var performanceLoaded = false
+
+    /** Live audition; false from the engine is retried by its ordinary drain. */
+    fun auditionPerformance(settings: AquariumPerformanceSettings, reset: Boolean = false) {
+        if (closed) return
+        performance = settings
+        engine.configureAquarium(settings, reset)
+        performancePending = engine.hasPendingAquariumControls()
+    }
+
+    fun revertPerformance() = auditionPerformance(savedPerformance)
 
     /** Start the stream. The result is [up]; a host that never got one still holds and plays nothing. */
     fun open() {
@@ -93,22 +129,38 @@ class PadHost(preferredSampleRate: Int) {
      *
      * Asking again with the kit it already has is nothing: a screen, the
      * beat and the App can all ask for the same entry and it loads once. A
-     * kit's identity changes on every real edit, which is why identity and
-     * not equality is the test.
+     * kit's identity changes on every real edit. Metadata-only copies still
+     * update live controls, but equal pad lists do not rebuild the bank.
      */
     fun request(entry: KitShelf.Entry) {
         if (closed) return
+        engine.setAquariumTempo(entry.kit.tempoBpm?.toDouble() ?: 0.0)
         val prior = wanted
+        if (!performanceLoaded || prior?.kit?.aquariumPerformance != entry.kit.aquariumPerformance) {
+            val loaded = AquariumPerformance.read(entry.kit)
+            savedPerformance = loaded.settings
+            performanceWarning = loaded.warning
+            performanceLoaded = true
+            auditionPerformance(loaded.settings)
+        }
         if (prior != null && prior.kit === entry.kit && prior.dir == entry.dir) return
         wanted = entry
-        loading?.cancel()
+        // Metadata/live controls cannot replace the bank: that would end
+        // every sounding voice and clear the very tails being adjusted.
+        if (prior != null && prior.dir == entry.dir && prior.kit.pads == entry.kit.pads) return
+        loadJob?.cancel()
         val wait = if (prior == null) 0L else RELOAD_DEBOUNCE_MS
-        loading = scope.launch {
+        loadJob = scope.launch {
             if (wait > 0L) delay(wait)
             // The load is blocking disk IO, so it runs to its end even if a
             // newer ask cancels this job; the cancel is seen on the way
             // back, and the newer ask's load commits after it.
-            withContext(Dispatchers.IO) { engine.load(entry) }
+            loadsRunning++
+            try {
+                withContext(Dispatchers.IO) { engine.load(entry) }
+            } finally {
+                loadsRunning--
+            }
             bankReady = true
         }
     }
@@ -129,6 +181,9 @@ class PadHost(preferredSampleRate: Int) {
         if (nowNanos - lastLatencyAt >= StreamFacts.POLL_NANOS) {
             lastLatencyAt = nowNanos
             latency = StreamFacts.latency(engine.latencyMillis(), engine.isShared())
+            performanceFaulted = engine.aquariumFaulted()
+            performancePending = engine.hasPendingAquariumControls()
+            performanceLimitedFrames = engine.aquariumLimitedFrames()
         }
     }
 

@@ -55,7 +55,10 @@ object Valve {
         // 0.7 is gain 11.3 on the V1.1 law. The owner chose 0.7 twice: first heard on V1's law at
         // the round-two listen (gain 4.9), then heard on this one at the confirmation listen
         // (gain 11.3) against 0.65 (gain 5.4), which had kept the first sound.
-        MacroSpec("DRIVE", 0.7f),
+        // LOG: the pad sheet's AMT walks DRIVE's gain ([gainFor], 0.05 to 1000) in decibels, not the
+        // knob, so a drive character at AMT 0.7 is 70 percent of the way to its own gain in dB
+        // (docs/superpowers/specs/2026-10-21-pedal-board-benchmark.md, finding F2).
+        MacroSpec("DRIVE", 0.7f, law = FadeLaw.LOG),
         MacroSpec("SAG", 0.35f),
         // 0.5 is flat, so the pad sheet's AMT fade lands on a flat tone.
         MacroSpec("TONE", 0.5f, neutral = 0.5f),

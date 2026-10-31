@@ -14,9 +14,12 @@ data class KitLayer(
     val sampleFile: String,
     val velStart: Int,
     val velEnd: Int,
+    /** Optional listening label, stored in SnipSnap's sidecar, not an MPC parameter. */
+    val displayName: String? = null,
 ) {
     init {
         require(sampleFile.isNotBlank()) { "layer sampleFile must not be blank" }
+        require(displayName == null || displayName.isNotBlank()) { "layer displayName must not be blank" }
         require('/' !in sampleFile && '\\' !in sampleFile) { "layer sampleFile must be a bare filename" }
         require(velStart in 0..127 && velEnd in 0..127 && velStart <= velEnd) {
             "bad velocity window $velStart..$velEnd"
@@ -81,6 +84,8 @@ data class KitPad(
     val humanize: Float? = null,
     /** Chain playback (see [ChainInfo]); null = the ordinary pad. */
     val chain: ChainInfo? = null,
+    /** Repeat the complete sample on an ordinary gated pad; one-shot and chain playback disable it. */
+    val loop: Boolean = false,
 ) {
     init {
         require(slot in 1..128) { "slot out of range: $slot" }
@@ -280,10 +285,21 @@ data class Kit(
      * before the ledger existed.
      */
     val wear: WearLedger? = null,
+    /** SnipSnap's optional live-bus settings. Kept opaque here to avoid a kit → synth dependency.
+     * Unknown or damaged settings survive ordinary kit edits; the playback host validates them.
+     * MPC programs do not interpret this metadata or bake it into individual samples.
+     */
+    val aquariumPerformance: JsonValue? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }
-        require(name.isNotBlank()) { "kit name must not be blank" }
+        // The name is a folder name everywhere it lands — the shelf folder,
+        // the export folder, the `.xpn`/`.xpj` stem — yet unlike [Project]
+        // (which already holds its name to this), a kit loaded from a
+        // stranger's kit.json could carry "../" and walk an export out of
+        // its destination. One segment, no separators: same rule as pads'
+        // sample files below.
+        require(SafePath.isSafe(name)) { "kit name cannot be a folder name: '$name'" }
         require(pads.map { it.slot }.toSet().size == pads.size) {
             "duplicate pad slots: ${pads.groupBy { it.slot }.filterValues { it.size > 1 }.keys}"
         }
@@ -310,6 +326,7 @@ data class Kit(
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                loop = p.loop,
                 attack = p.attack,
                 decay = p.decay,
                 cutoff = p.cutoff,

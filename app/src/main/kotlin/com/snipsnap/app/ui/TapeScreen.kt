@@ -269,7 +269,6 @@ fun TapeScreen(
      */
     onCatchInFlight: (Boolean) -> Unit = {},
 ) {
-    val scheme = LocalScheme.current
     val context = LocalContext.current
 
     // entry is nullable on purpose: ARM/SNIP live on the shelf (KitsScreen),
@@ -333,9 +332,9 @@ fun TapeScreen(
             // open TAPE flow, the in-flight load effect is still running
             // (failed=false) when this replay lands; gating on `loaded ==
             // null` would bump reloadToken right then and cancel/restart
-            // that in-flight load for no reason (a double decode + a
-            // second blank-LCD flash). Waiting for `failed` means this only
-            // nudges a reload once the deck has genuinely settled on
+            // that in-flight load for no reason (a double decode for
+            // nothing). Waiting for `failed` means this only nudges a
+            // reload once the deck has genuinely settled on
             // nothing — at which point the in-flight load has already
             // picked up the replayed snip on its own, or a later, truly
             // new snip arrives. Once a tape is loaded, TapeDeckContent's
@@ -346,17 +345,21 @@ fun TapeScreen(
         }
     }
 
+    // The decode in flight: the dock is told, and the deck's place is held (quiet,
+    // then the reading words) - see holdWhileReading for the 200/500 rule. "No tape
+    // yet" said over a decode that is about to finish would be a lie, so the empty
+    // face waits behind it.
+    val decoding = loaded == null && !failed
+    if (holdWhileReading(decoding)) return
+
     val tapeData = loaded
     if (tapeData == null || tapeData.samples.isEmpty()) {
-        // Either still decoding, or nothing resolved — no snip, no
-        // last-commit source, and nothing on the (possibly empty) kit was
-        // a readable WAV — or a file that decoded to no audio at all. The
-        // last two have no deck worth drawing: no needle to scrub, nothing
-        // to mark IN or OUT on, so the transport and edit groups give way
-        // to one panel (S4a). A blank LCD for the moment it takes to read a
-        // file is still the honest state to show in between: "no tape yet"
-        // said over a decode that is about to finish would be a lie.
-        if (failed || tapeData != null) EmptyDeck(onNavigateSnips) else Box(Modifier.fillMaxSize().lcdPanel(scheme))
+        // Nothing resolved — no snip, no last-commit source, and nothing on
+        // the (possibly empty) kit was a readable WAV — or a file that
+        // decoded to no audio at all. Neither has a deck worth drawing: no
+        // needle to scrub, nothing to mark IN or OUT on, so the transport
+        // and edit groups give way to one panel (S4a).
+        EmptyDeck(onNavigateSnips)
         return
     }
 

@@ -1,8 +1,9 @@
 # Aerostat — engine engineering specification
 
-The specification below is the engineering proposal this round implemented.
-The decisions that diverged from it, and the constants that are still
-listening guesses, are in **R1, as built** at the end. Roadmap row S24.
+The numbered specification below is the original engineering proposal.
+**R1, historical implementation** records the first build; **Current as built,
+23 October 2026** records the approved voicing and later integration. The current
+section supersedes R1's whistle, phone-picker and listening status. Roadmap row S24.
 The audition page a person opens is `docs/aerostat-audition/index.html`.
 Double-click it. The clip list is in the file, and the wavs sit beside it,
 because a page opened from disk cannot fetch its neighbour and the testkit
@@ -211,18 +212,62 @@ Before implementation, confirm the host’s HOLD and velocity contracts, support
 
 The finished engine should feel like one instrument whose struck air opens a second voice and whose own breath moves its body.
 
-## R1, as built
+## R1, historical implementation
+
+This section records the first implementation. The whistle and integration changed
+after listening; see the dated current record below.
 
 `Aerostat.kt` is the player. One voice, `FLOAT`. Both banks always play. There is no bank selector. The identifiers are `AEROSTAT` and `AerostatPatch`.
 
 **TUNE is a seventh macro.** A patch has no separate MIDI field, and a kit pad needs a note. TUNE snaps C3–C5, 24 semitones, default 0.5 (C4). The six controls in the table above still round-trip through JSON at the proposed defaults.
 
-**Velocity is a render argument**, wired through `Velocity.touchedVelocity` the way Mercury's rubbed voices take it. It is event energy. It does not scale STRIKE. Diagnostic taps, a forced reservoir pressure, and `AerostatCarry` are render arguments too, not macros. `Aerostat.phrase` keeps pressure and altitude across strikes. It is a harness. `AerostatPatch.render` starts fresh.
+**Velocity is a render argument**, wired through `Velocity.touchedRender` the way Mercury's rubbed voices take it. It is event energy. It does not scale STRIKE. Diagnostic taps, a forced reservoir pressure, and `AerostatCarry` are render arguments too, not macros. `Aerostat.phrase` keeps pressure and altitude across strikes. It is a harness. `AerostatPatch.render` starts fresh.
 
 **HOLD at 0.99 and above returns the settled loop only.** A `Snip` has no loop-start field, so the opening strike is not in that buffer. Below that step, HOLD is a powered latch after the catch and does not restrike. Heavy's one-shot whistle is 5 cents sharp (`HEAVY_DETUNE_CENTS`). That detune is not a whole number of the loop period — the nearest odd harmonic is the fundamental — so the held Heavy whistle sits on the same cycle as Quick. The loop is whole output frames, so four-times oversampling decimates onto the same cycle. Half a frame of pitch is the cost. The seam is `Keys.seamError`, and a render that does not close under 1e-3 throws.
 
-**The whistle is a delay of one period and a memoryless jet**, on the 4× internal rate, then `Dsp.decimate`. Darkening is feed-forward, so it cannot walk the pitch. A reflection coefficient of 0.99 at 176400 Hz is a few milliseconds, so the ring is an exponential of the sample rate. The tube is scaled under the whistle in the full mix (`tubeScale`) so the knock does not file the note as a tom. Control steps are 1050 Hz, because 1000 Hz does not divide 176400. A 2100 Hz step is the convergence check.
+**The original whistle used a one-period delay and a memoryless jet.** That feedback model was replaced during the listening revisions described below. Control steps remain 1050 Hz, because 1000 Hz does not divide 176400; a 2100 Hz step is the convergence check.
 
-**The kit is dry.** `SynthKits.aerostat()` is sixteen pads: a pentatonic from C3, the five presets, two more notes, and the held loop. The phone picker is not in this round. There is no Android SDK here, and a missed `when` in `SynthScreen` would fail a build this checkout cannot run.
+**The kit is dry.** `SynthKits.aerostat()` is sixteen pads: a pentatonic from C3, the five presets, two more notes, and the held loop. Phone integration was deferred in R1 and completed later.
 
-**Listening guesses, not measurements.** Torque scale, catch speeds, the thermal map (`HEAT`, `THERMAL_TAU`, `BUOY`, `RESTORE`), the jet gain, the tube scale, and the ring times are calibration for the audition. The page is where a person says which of them is wrong, and whether the integration is the instrument. Nothing in this round has been heard.
+**R1 listening status.** Torque scale, catch speeds, the thermal map (`HEAT`, `THERMAL_TAU`, `BUOY`, `RESTORE`), the jet gain, the tube scale, and the ring times were initial audition calibration. R1 had not been heard when this record was written; later owner feedback is recorded below.
+
+## Current as built, 23 October 2026
+
+Verified against `b17c3bd2010c04e1ce08909a9c647bde1ca66907`. The engine and factory
+recipes retain the approved Aerostat revision `052bf946a63732c643a40ed5a17afbc98c7ec3a3`.
+This is a record of that voice, not a new voicing pass.
+
+**The airflow voice is feed-forward.** `Whistle.sample` synthesizes a fundamental
+with restrained second and third harmonics, plus filtered seeded air. Valve flow
+sets its amplitude and harmonic balance. It has no tuned delay or nonlinear jet
+feedback. The shared reservoir still determines both banks' flow before audio is
+mixed, and exhaust still drives the thermal and height states. Replacing the
+unstable whistle therefore retains the strike, catch and pressure-demand gesture
+without retaining its unwanted feedback tone.
+
+**The paddle makes finite contact.** A short impulse excites each tube's six-mode
+harmonic ladder, ratios 1 through 6. A separate filtered paddle-seat texture lasts
+6 to 16 ms according to STRIKE. It follows strike energy and ends when the paddle
+lifts. These are synthesized sources; the owner's PVC performance reference was
+not sampled into the engine. PRESSURE also changes turbulence, and LIFT changes
+radiation and breath along with its bounded pitch movement.
+
+**The held buffer is a settled whistle.** At HOLD 0.99 and above,
+`renderLoopMeasured` reads TUNE, PRESSURE and LIFT, along with render velocity.
+STRIKE, INERTIA and RELEASE do not change this equilibrium buffer. There is no
+opening contact or rotor catch in it. Heavy's one-shot five-cent offset is removed
+for the shared held period. The seam compares independently rendered consecutive
+periods before selecting the exported one; it is not measured against two copies
+of the exported buffer.
+
+**The phone path is wired.** `SynthScreen.Engine` exposes AEROSTAT, its voice,
+macros, defaults, scramble, render, filing and patch construction. `StarterKits`
+contains the dry AEROSTAT kit. This verifies source integration; it does not claim
+a phone listening session.
+
+**Heard and unmeasured.** The owner preferred the revised PVC-contact candidate and
+then selected the revised five factory recipes at their factory notes and at a
+common C3. Those choices approve the revised contact, air balance and preset
+roles. The assistant did not listen. Torque, thermal constants, modal gains and
+contact shaping remain musical calibration, not measured properties of real
+tubes or balloon machinery.

@@ -2,7 +2,8 @@
 (() => {
   const $ = id => document.getElementById(id);
   const REVIEW_KEY = 'snipsnap.alloy.contrast-r2.reviews.v1';
-  const state = { manifest: null, voice: 'BASS', section: 'voices', variant: 'new', midi: 48, role: null,
+  const SELECTED_VERSIONS = Object.freeze({ BASS: 'old', KEY: 'new', PLUCK: 'new', BRASS: 'new', STRING: 'new', SOFT: 'old' });
+  const state = { manifest: null, voice: 'BASS', section: 'voices', variant: SELECTED_VERSIONS.BASS, midi: 48, role: null,
     selected: null, playing: false, loading: false, offset: 0, started: 0, repeat: false, request: 0 };
   let context, active, ticker;
   const cache = new Map(), pending = new Map(), queue = [];
@@ -150,6 +151,8 @@
     select(clip || options[0]);
   }
   function study() {
+    $('selected-version').textContent = SELECTED_VERSIONS[state.voice] === 'old' ? 'Original' : 'Revised';
+    $('selection-detail').textContent = `${state.voice} voice · ${state.section === 'roles' ? 'two-role presets remain candidates' : 'compare either version below'}`;
     document.querySelectorAll('[data-section]').forEach(button => { const selected = button.dataset.section === state.section; button.setAttribute('aria-selected', String(selected)); button.tabIndex = selected ? 0 : -1; });
     $('study-panel').setAttribute('aria-labelledby', `tab-${state.section}`);
     $('comparison').hidden = state.section === 'roles'; $('roles').hidden = state.section !== 'roles';
@@ -219,8 +222,8 @@
   window.addEventListener('pagehide', () => { stop(); cancelAnimationFrame(ticker); });
   fetch('manifest.json').then(response => { if (!response.ok) throw new Error(`Manifest download failed (${response.status}).`); return response.json(); }).then(manifest => {
     if (manifest.clips?.length !== 60) throw new Error('The contrast pack is incomplete.');
-    state.manifest = manifest; state.voice = manifest.voices[0];
-    $('voices').replaceChildren(...manifest.voices.map(voice => { const button = document.createElement('button'); button.type = 'button'; button.textContent = voice; button.setAttribute('aria-pressed', String(voice === state.voice)); button.addEventListener('click', () => { state.voice = voice; $('voices').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.textContent === voice))); study(); }); return button; }));
+    state.manifest = manifest; state.voice = manifest.voices[0]; state.variant = SELECTED_VERSIONS[state.voice];
+    $('voices').replaceChildren(...manifest.voices.map(voice => { const button = document.createElement('button'); button.type = 'button'; button.textContent = voice; button.setAttribute('aria-pressed', String(voice === state.voice)); button.addEventListener('click', () => { state.voice = voice; state.variant = SELECTED_VERSIONS[voice]; $('voices').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.textContent === voice))); study(); }); return button; }));
     $('downloads').replaceChildren(...manifest.downloads.map(item => { const link = document.createElement('a'); link.href = item.file; link.download = ''; link.textContent = item.title; return link; }));
     $('load-status').hidden = true; $('workspace').hidden = false; study(); ticker = requestAnimationFrame(tick);
   }).catch(error => { $('load-status').textContent = `${error.message} Reload this page to try again.`; });

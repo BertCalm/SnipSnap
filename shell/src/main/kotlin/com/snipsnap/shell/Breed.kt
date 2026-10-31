@@ -14,6 +14,7 @@ import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Patches
+import com.snipsnap.synth.TidalPatch
 import com.snipsnap.synth.SnapPatch
 import com.snipsnap.synth.crossTable
 import java.io.File
@@ -58,6 +59,12 @@ object Breed {
         val b = KitStore.load(bDir)
         require(a.pads.isNotEmpty()) { "'${a.name}' has no pads to breed from" }
         require(b.pads.isNotEmpty()) { "'${b.name}' has no pads to breed with" }
+
+        // Source-backed A pads are always kept rather than crossed. Validate
+        // their transferable baselines before create() makes a visible child
+        // kit. B's printed pads are never copied by this path: they only make
+        // their A partner stay as A, so do not preflight unused B sources.
+        a.pads.filter { PrintedPads.has(it.recipe) }.forEach { PrintedPads.requireImportable(aDir, it) }
 
         val rng = Random(seed.toLong())
         val model = KitBuilderModel.create(name, destDir)
@@ -104,7 +111,7 @@ object Breed {
     fun partnerOf(pad: KitPad, b: Kit): KitPad? =
         b.pad(pad.slot) ?: b.pads.sortedBy { it.slot }.firstOrNull { it.drumClass == pad.drumClass }
 
-    private fun hasPrintedBoard(pad: KitPad): Boolean = "boardPad" in (pad.recipe?.entries ?: emptyMap())
+    private fun hasPrintedBoard(pad: KitPad): Boolean = PrintedPads.has(pad.recipe)
 
     /**
      * Whether the coin has anything to throw for: A's own patch or rack,
@@ -256,7 +263,10 @@ object Breed {
             val bp = b?.patch
             if (bp != null && bp.engine == ap.engine && bp.voiceName == ap.voiceName) {
                 val names = (ap.macros.keys + bp.macros.keys).toList().sorted()
-                val macros = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
+                val crossed = names.associateWith { n -> pick(ap.macros[n], bp.macros[n], rng)!!.coerceIn(0f, 1f) }
+                // TIDAL's playback switch is discrete, like its saved source model,
+                // note and seed: keep A's performance shape while crossing its timbre.
+                val macros = if (ap is TidalPatch) crossed + ("HOLD" to (ap.macros["HOLD"] ?: 0f)) else crossed
                 // SNAP is the one engine whose "settings" are a drawn line,
                 // not knobs alone — two photos, one child means the line
                 // itself crosses too, not just the macros the photo set.
@@ -310,7 +320,8 @@ object Breed {
         val names = mutableMapOf(pad.sampleFile to assigned.sampleFile)
         val layers = pad.velocityLayers.mapIndexed { index, layer ->
             val name = names.getOrPut(layer.sampleFile) {
-                val stem = assigned.sampleFile.substringBeforeLast('.') + "_wide_layer_${index + 1}"
+                val board = PrintedPads.label(pad.recipe).lowercase(java.util.Locale.ROOT)
+                val stem = assigned.sampleFile.substringBeforeLast('.') + "_${board}_layer_${index + 1}"
                 var candidate = "$stem.wav"
                 var suffix = 2
                 while (File(model.kitDir, candidate).exists()) candidate = "${stem}_${suffix++}.wav"
@@ -320,7 +331,7 @@ object Breed {
             layer.copy(sampleFile = name)
         }
         val copied = pad.copy(sampleFile = assigned.sampleFile, velocityLayers = layers, source = pad.source + stamp)
-        val imported = BoardSheet.importPad(sourceDir, model.kitDir, pad, copied)
+        val imported = PrintedPads.importPad(sourceDir, model.kitDir, pad, copied)
         model.update(pad.slot) { imported }
     }
 
@@ -335,6 +346,7 @@ object Breed {
                 tuneFine = pad.tuneFine,
                 muteGroup = pad.muteGroup,
                 oneShot = pad.oneShot,
+                loop = pad.loop,
                 recipe = recipe,
                 source = pad.source + stamp,
             )

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111e2b">
+  <title>CAUSTIC / ALLOY · Native instrument</title>
+  <script>if(location.protocol!=='file:'&&!location.pathname.endsWith('/')&&!/\.[a-z0-9]+$/i.test(location.pathname)){const b=document.createElement('base');b.href=location.pathname+'/';document.head.append(b);}</script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <p class="study-update"><a href="https://caustic-snipsnap-audition.bertcalm.chatgpt.site/contrast/">New character study: four different playing gestures →</a></p>
+  <header class="topbar wrap"><a class="wordmark" href="./" aria-label="Caustic instrument home">SNIP<span>SNAP</span> <i>/</i> CAUSTIC</a><a class="history-link" href="../">Earlier listening study <span>→</span></a></header>
+  <main>
+    <section class="hero wrap">
+      <div class="hero-copy"><p class="eyebrow">NATIVE INSTRUMENT · ONE VOICE</p><h1>A shape<br>that sings<span>.</span></h1><p class="intro">Bright metal. A fuller body. A source and pickup that change which parts of the vessel sing.</p><p class="hero-detail">CAUSTIC / ALLOY is now a finite, editable SnipSnap instrument. These recordings come from its native renderer.</p><div class="hero-actions"><button class="primary" id="start-listening" disabled>Listen to the default <span class="play-triangle" aria-hidden="true"></span></button><a id="kit-download" class="secondary" hidden>Get the 16-pad kit <span>↓</span></a></div></div>
+      <div class="vessel-art" aria-hidden="true"><div class="vessel outer"></div><div class="vessel inner"></div><div class="vessel core"></div><span class="art-source">SOURCE</span><span class="art-focus">FOCUS</span><span class="art-caption">ONE VESSEL / MANY POSITIONS</span></div>
+    </section>
+    <section class="player-section wrap" aria-labelledby="player-heading">
+      <div class="player-top"><div><p class="eyebrow">THE LISTENING BENCH</p><h2 id="player-heading">Start with Fuller Body.</h2><p id="playing-description">Then compare BODY 0 with the same note, or explore a fixed control position.</p></div><div class="level-toggle" role="group" aria-label="Playback level"><button id="matched-mode" aria-pressed="true">Level matched</button><button id="native-mode" aria-pressed="false">Native output</button></div></div>
+      <audio id="audio" controls preload="none" aria-label="Selected CAUSTIC recording"></audio>
+      <div class="player-bottom"><span id="playing-meta">Loading the recordings…</span><div><a id="playing-patch" hidden>Download patch ↓</a><a id="playing-wav" hidden>WAV ↓</a></div></div>
+      <p class="level-explanation" id="level-explanation">Level matched reduces loudness differences so you can compare tone. Native output is the instrument's finished render, without extra audition leveling.</p>
+      <p class="playback-error" id="playback-error" role="alert" hidden></p>
+    </section>
+    <section class="controls-intro wrap" aria-labelledby="controls-heading"><div><p class="eyebrow">FOUR MUSICAL CONTROLS</p><h2 id="controls-heading">Find a position.<br>Give it a body.</h2></div><div class="control-notes"><p><strong>SOURCE</strong> moves illumination from parallel to the rim.</p><p><strong>FOCUS</strong> moves the finite pickup through the vessel.</p><p><strong>BODY</strong> moves from Preferred Alloy to Fuller Body.</p><p><strong>LENGTH</strong> changes the finite decay and release.</p></div></section>
+    <div class="wrap study-toolbar"><p id="clip-count">Fixed recordings, each with an editable patch.</p><div class="filters" role="group" aria-label="Recordings"><button data-filter="all" aria-pressed="true">All recordings</button><button data-filter="anchors" aria-pressed="false">Start here</button><button data-filter="controls" aria-pressed="false">Controls</button><button data-filter="presets" aria-pressed="false">Starting patches</button></div></div>
+    <p class="wrap playback-guide">Choose <strong>Play this sound</strong> on a card to hear it. <strong>Compare</strong> plays the named reference. <strong>Download patch</strong> saves its settings.</p>
+    <div class="wrap" id="recordings" aria-live="polite"><p class="loading">Loading the instrument manifest…</p></div>
+    <section class="finite-note wrap"><span class="finite-mark">∞</span><div><h2>Every note ends.</h2><p>HOLD stays at zero. This instrument renders finite notes; seamless sustain is deferred. The browser plays the saved recordings and does not synthesize in real time.</p></div></section>
+    <section class="downloads wrap"><div><p class="eyebrow">TAKE IT TO THE SAMPLER</p><h2>Notes you can<br>keep working on.</h2><p>The kit saves all 16 native recipes beside the WAVs, an MPC 3 track and an MPC 2 compatibility program. The compact comparison contains eight anchor and control recordings.</p></div><div class="download-links"><a id="comparison-download" hidden><strong>Eight-clip comparison</strong><span>Native + matched WAVs, editable patches & page ↓</span></a><a id="kit-download-bottom" hidden><strong>16-pad CAUSTIC kit</strong><span>MPC 3 + MPC 2 twin, editable kit.json ↓</span></a><p>Each archive stays below 25 MiB. New preset positions and intermediate controls await listening; the heard BODY endpoints remain the timbral references.</p></div></section>
+    <details class="evidence wrap"><summary>Files, measurements & provenance</summary><div id="evidence-content"></div></details>
+  </main>
+  <footer class="wrap"><span>SNIPSNAP / CAUSTIC</span><span>ALLOY · Native model 1 · Finite notes</span><a class="history-link" href="../">Revisit the earlier studies →</a></footer>
+  <script src="manifest.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

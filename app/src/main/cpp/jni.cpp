@@ -8,6 +8,7 @@
 
 #include <chrono>
 #include <exception>
+#include <limits>
 #include <thread>
 #include <vector>
 
@@ -47,6 +48,27 @@ bool stopPrinting(Engine* e) {
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
     return e->printState() == PrintBuffer::State::Done;
+}
+bool decodeAquarium(JNIEnv* env, jfloatArray values, jlong seed, jint model,
+                    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset,
+                    snipsnap::aquarium::PerformanceSettings& settings) {
+    using namespace snipsnap::aquarium;
+    if (!values || seed < 0 ||
+        seed > static_cast<jlong>(std::numeric_limits<std::uint32_t>::max()) ||
+        model != static_cast<jint>(kRenderModelVersion) ||
+        (enabled != JNI_FALSE && enabled != JNI_TRUE) ||
+        (reset != JNI_FALSE && reset != JNI_TRUE)) return false;
+    if (env->ExceptionCheck()) return false;
+    const jsize count = env->GetArrayLength(values);
+    if (env->ExceptionCheck() || count != static_cast<jsize>(kParameterCount)) return false;
+    env->GetFloatArrayRegion(values, 0, count, settings.parameters.values.data());
+    if (env->ExceptionCheck()) return false;
+    settings.seed = static_cast<std::uint32_t>(seed);
+    settings.model = static_cast<std::uint32_t>(model);
+    settings.bpm = bpm;
+    settings.outputGain = gain;
+    settings.enabled = enabled == JNI_TRUE;
+    return snipsnap::aquarium::validPerformanceSettings(settings);
 }
 }  // namespace
 
@@ -90,6 +112,30 @@ Java_com_snipsnap_app_NativeSurface_isShared(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT jdouble JNICALL
 Java_com_snipsnap_app_NativeSurface_latencyMillis(JNIEnv*, jobject, jlong handle) {
     return engine(handle)->latencyMillis();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeSurface_configureAquarium(
+    JNIEnv* env, jobject, jlong handle, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset) {
+    snipsnap::aquarium::PerformanceSettings settings;
+    if (!handle || !decodeAquarium(env, values, seed, model, bpm, gain, enabled, reset, settings)) return JNI_FALSE;
+    return engine(handle)->configureAquarium(settings, reset == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeSurface_aquariumFaulted(JNIEnv*, jobject, jlong handle) {
+    return handle && engine(handle)->aquariumFaulted() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativeSurface_aquariumLimitedFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(engine(handle)->aquariumLimitedFrames()) : 0;
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeSurface_panic(JNIEnv*, jobject, jlong handle) {
+    if (handle) engine(handle)->requestPanic();
 }
 
 JNIEXPORT void JNICALL
@@ -220,7 +266,7 @@ Java_com_snipsnap_app_NativeSurface_requestStopPrint(JNIEnv*, jobject, jlong han
 }
 
 /**
- * Stop the print and hand back the mono bus that was captured, or null
+ * Stop the print and hand back the interleaved stereo bus that was captured, or null
  * when nothing was. See `stopPrinting` for what the wait is for.
  */
 JNIEXPORT jfloatArray JNICALL
@@ -233,9 +279,9 @@ Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle
     // up, or once destroy() tears the stream down for good) reaches Done
     // and frees it then.
     if (!stopPrinting(e)) return nullptr;
-    const size_t frames = e->printFrames();
+    const size_t samples = e->printSamples();
     jfloatArray out = nullptr;
-    if (frames > 0) {
+    if (samples > 0) {
         // A print is seconds of audio, so this is the allocation here most
         // likely to fail. Null means the JVM refused it and has an
         // OutOfMemoryError pending, and returning with one pending makes
@@ -245,9 +291,9 @@ Java_com_snipsnap_app_NativeSurface_stopPrint(JNIEnv* env, jobject, jlong handle
         // is a crash where an OutOfMemoryError is a thing STOP PRINT can
         // report. The exception is deliberately left pending: the phone
         // really is out of room, and swallowing that would hide it.
-        out = env->NewFloatArray(static_cast<jsize>(frames));
+        out = env->NewFloatArray(static_cast<jsize>(samples));
         if (out != nullptr) {
-            env->SetFloatArrayRegion(out, 0, static_cast<jsize>(frames), e->printData());
+            env->SetFloatArrayRegion(out, 0, static_cast<jsize>(samples), e->printData());
         }
     }
     e->clearPrint();
@@ -287,6 +333,30 @@ Java_com_snipsnap_app_NativePads_start(JNIEnv*, jobject, jlong handle) {
 JNIEXPORT void JNICALL
 Java_com_snipsnap_app_NativePads_stop(JNIEnv*, jobject, jlong handle) {
     pads(handle)->stop();
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_configureAquarium(
+    JNIEnv* env, jobject, jlong handle, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset) {
+    snipsnap::aquarium::PerformanceSettings settings;
+    if (!handle || !decodeAquarium(env, values, seed, model, bpm, gain, enabled, reset, settings)) return JNI_FALSE;
+    return pads(handle)->configureAquarium(settings, reset == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlong handle) {
+    return handle && pads(handle)->aquariumFaulted() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(pads(handle)->aquariumLimitedFrames()) : 0;
+}
+
+JNIEXPORT jfloat JNICALL
+Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject) {
+    return snipsnap::aquarium::PerformanceBus::kOutputCeiling;
 }
 
 JNIEXPORT jint JNICALL
@@ -420,21 +490,49 @@ Java_com_snipsnap_app_NativePads_setVoiceGain(
     pads(handle)->pushCommand(c);
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the stop was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::Stop;
     c.voiceId = voiceId;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
 }
 
-JNIEXPORT void JNICALL
+/** False when the command ring was full and the all-off was dropped; the caller keeps it and retries. */
+JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_allOff(JNIEnv*, jobject, jlong handle, jfloat fadeMs) {
     PadCommand c;
     c.type = PadCommand::Type::AllOff;
     c.fadeMs = fadeMs;
-    pads(handle)->pushCommand(c);
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativePads_framesRendered(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jlong>(pads(handle)->framesRendered());
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_hardwarePosition(JNIEnv* env, jobject, jlong handle, jlongArray out) {
+    if (out == nullptr || env->GetArrayLength(out) < 2) return JNI_FALSE;
+    int64_t frame = 0;
+    int64_t nanos = 0;
+    if (!pads(handle)->hardwarePosition(&frame, &nanos)) return JNI_FALSE;
+    const jlong values[2] = {static_cast<jlong>(frame), static_cast<jlong>(nanos)};
+    env->SetLongArrayRegion(out, 0, 2, values);
+    return JNI_TRUE;
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_framesPerBurst(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->framesPerBurst());
+}
+
+JNIEXPORT jint JNICALL
+Java_com_snipsnap_app_NativePads_audioApi(JNIEnv*, jobject, jlong handle) {
+    return static_cast<jint>(pads(handle)->audioApi());
 }
 
 JNIEXPORT jintArray JNICALL
@@ -481,7 +579,7 @@ Java_com_snipsnap_app_NativePads_requestStopPrint(JNIEnv*, jobject, jlong handle
 
 /**
  * Stop the print and hand back what was captured as interleaved stereo,
- * or null when nothing was. The surface's twin returns mono, because
+ * or null when nothing was. The surface's twin also returns stereo, because
  * that is the bus it has; this one returns two channels for the same
  * reason, and the array is twice as long per frame. See `stopPrinting`
  * for the wait, and `drainEnded` for why a null return is the JVM's

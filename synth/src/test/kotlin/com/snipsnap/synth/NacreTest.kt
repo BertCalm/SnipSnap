@@ -4,6 +4,10 @@ import com.snipsnap.audio.Classifier
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Pitch
 import com.snipsnap.audio.Snip
+import com.snipsnap.json.Json
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import kotlin.math.abs
 import kotlin.math.ln
 import kotlin.math.sqrt
@@ -13,129 +17,135 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
-/** Behavioral checks for the finite listening model, before factory/preset acceptance. */
+/** The playable instrument keeps the heard source; controls change the return, not its exciter. */
 class NacreTest {
-    private val base = Nacre.defaults(NacreVoice.PEARL)
-
-    private fun rms(x: FloatArray, from: Int = 0, to: Int = x.size): Double =
-        sqrt((from until to).sumOf { x[it].toDouble() * x[it] } / (to - from).coerceAtLeast(1))
-
-    private fun distance(a: FloatArray, b: FloatArray): Double =
-        sqrt(a.indices.sumOf { (a[it].toDouble() - b[it]).let { d -> d * d } } / a.size) /
-            rms(a).coerceAtLeast(1e-12)
+    private val base = Nacre.defaults()
+    private fun energy(x: FloatArray, from: Int = 0): Double = (from until x.size).sumOf { x[it].toDouble() * x[it] }
+    private fun rms(x: FloatArray): Double = sqrt(energy(x) / x.size)
+    private fun distance(a: FloatArray, b: FloatArray): Double = sqrt(a.indices.sumOf {
+        (a[it].toDouble() - b[it]).let { d -> d * d }
+    } / a.size) / rms(a).coerceAtLeast(1e-20)
 
     @Test
-    fun `root seed and macro map ordering reproduce every event and sample`() {
-        val a = Nacre.inspect(macros = base, seed = Long.MIN_VALUE)
-        val b = Nacre.inspect(macros = base.entries.reversed().associate { it.key to it.value }, seed = Long.MIN_VALUE)
-        assertContentEquals(a.raw, b.raw)
-        assertContentEquals(a.snip.samples, b.snip.samples)
-        assertEquals(a.events, b.events)
-        for (stem in a.stems.keys) assertContentEquals(a.stems.getValue(stem), b.stems.getValue(stem))
-        assertTrue(distance(a.raw, Nacre.inspect(seed = Long.MAX_VALUE).raw) > .01, "seed has no effect")
-    }
-
-    @Test
-    fun `each complete gesture has four strings per performer with corresponding octave roots`() {
-        for (duet in listOf(0f, .5f, 1f)) {
-            val events = Nacre.inspect(macros = base + ("DUET" to duet)).events
-            assertEquals(8, events.size)
-            assertEquals(events.sortedBy { it.timeSeconds }, events)
-            assertTrue(events.all { it.timeSeconds >= 0 && it.timeSeconds < 1.0 && it.strength > 0 })
-            val bass = events.filter { it.performer == "bass" }.associateBy { it.stringId }
-            val upper = events.filter { it.performer == "upper" }.associateBy { it.stringId }
-            assertEquals(setOf(0, 1, 2, 3), bass.keys)
-            assertEquals(bass.keys, upper.keys)
-            for (id in bass.keys) assertEquals(2.0, upper.getValue(id).frequencyHz / bass.getValue(id).frequencyHz, 1e-5)
-            if (duet == 1f) assertTrue(events.filter { it.performer == "bass" }.map { it.stringId } !=
-                events.filter { it.performer == "upper" }.map { it.stringId }, "crossing directions are identical")
+    fun `heard endpoint samples and returns survive the production port`() {
+        val reference = Json.parse(checkNotNull(javaClass.getResourceAsStream("/nacre-presence-reference.json"))
+            .bufferedReader().use { it.readText() }).obj()
+        for (value in reference.getValue("endpoints").arr()) {
+            val endpoint = value.obj()
+            val macros = endpoint.getValue("macros").obj().mapValues { it.value.num().toFloat() }
+            val played = Nacre.inspect(macros = macros)
+            assertEquals(endpoint.getValue("prelevelSamplesSha256").str(), hash(played.raw), "${endpoint.getValue("id").str()} changed")
+            assertEquals(endpoint.getValue("returnSamplesSha256").str(), hash(played.stems.getValue("venue")))
+            assertEquals(1.0, played.diagnostics.getValue("peakSafetyGain"))
+            assertEquals(Nacre.REFERENCE_OUTPUT_GAIN, played.diagnostics.getValue("effectiveOutputGain"))
         }
     }
 
     @Test
-    fun `lossy finite networks remain finite and decay at register and macro corners`() {
-        val cases = listOf(28 to base, 48 to base.mapValues { if (it.key == "HOLD") 0f else 1f },
-            72 to (base + mapOf("TOUCH" to 1f, "CURRENT" to 1f, "VENUE" to 1f, "BLOOM" to 1f)))
-        for ((midi, macros) in cases) {
-            val probe = Nacre.inspect(macros = macros, midi = midi)
-            assertEquals(44_100, probe.snip.sampleRate)
-            assertEquals(1, probe.snip.channels)
-            assertTrue(probe.raw.size in 2 * 44_100..8 * 44_100)
-            assertTrue(probe.raw.all { it.isFinite() })
-            assertTrue(probe.snip.samples.all { it.isFinite() && abs(it) <= 1.00001f })
-            assertTrue(probe.raw.maxOf { abs(it) } < 4f, "uncontrolled raw peak at MIDI $midi")
-            assertTrue(abs(probe.raw.sumOf { it.toDouble() } / probe.raw.size) < .005, "DC buildup")
-            for ((name, stem) in probe.stems) {
-                assertTrue(stem.all { it.isFinite() }, "$name states diverged")
-                assertTrue(rms(stem, stem.size - 44_100) < rms(stem, 0, 44_100) * .2 + 1e-9,
-                    "$name did not decay at MIDI $midi")
-            }
+    fun `acoustic controls preserve the preferred direct instrument and event schedule`() {
+        val legacy = NacreModel1.inspect()
+        for (macro in listOf("VENUE", "CURRENT", "BLOOM")) for (value in listOf(0f, .5f, 1f)) {
+            val p = Nacre.inspect(macros = base + (macro to value))
+            assertContentEquals(legacy.stems.getValue("bass"), p.stems.getValue("bass"))
+            assertContentEquals(legacy.stems.getValue("upper"), p.stems.getValue("upper"))
+            assertEquals(legacy.events.map { it.timeSeconds }, p.events.map { it.timeSeconds })
+            assertEquals(legacy.events.map { it.frequencyHz }, p.events.map { it.frequencyHz })
+            if (macro != "BLOOM") assertContentEquals(legacy.stems.getValue("sympathetic"), p.stems.getValue("sympathetic"))
         }
     }
 
     @Test
-    fun `each timbral control changes low and middle settings after leveling`() {
-        for (macro in listOf("TOUCH", "DUET", "CURRENT", "VENUE", "BLOOM")) {
-            val low = Nacre.render(macros = base + (macro to 0f)).samples
-            val quarter = Nacre.render(macros = base + (macro to .25f)).samples
-            val middle = Nacre.render(macros = base + (macro to .5f)).samples
-            assertTrue(distance(low, quarter) > .002, "$macro has no low-range authority")
-            assertTrue(distance(quarter, middle) > .002, "$macro has no middle-range authority")
+    fun `venue morph is bounded and seaweed reveals a later response`() {
+        val coral = Nacre.inspect(macros = base + ("VENUE" to 0f))
+        val weed = Nacre.inspect(macros = base + ("VENUE" to 1f))
+        val middle = Nacre.inspect(macros = base + ("VENUE" to .5f))
+        val a = coral.stems.getValue("venue"); val b = weed.stems.getValue("venue"); val m = middle.stems.getValue("venue")
+        val maximumError = m.indices.maxOf { abs(m[it].toDouble() - .5 * a[it] - .5 * b[it]) }
+        assertTrue(maximumError < 3e-8, "morph doubled or changed the paths: $maximumError")
+        assertTrue(rms(m) <= maxOf(rms(a), rms(b)) + 1e-8)
+        val lateCoral = energy(a, (.8 * 44_100).toInt()) / energy(a)
+        val lateWeed = energy(b, (.8 * 44_100).toInt()) / energy(b)
+        assertTrue(lateWeed > lateCoral * 3.0 && lateWeed > .08, "late response is masked again: $lateCoral/$lateWeed")
+        assertTrue(coral.diagnostics.getValue("energy99Seconds") < 1.6)
+        assertTrue(weed.diagnostics.getValue("energy99Seconds") < 1.6)
+    }
+
+    @Test
+    fun `still return is continuous and current changes transmission rather than the source`() {
+        val still = Nacre.inspect(macros = base + mapOf("VENUE" to 1f, "CURRENT" to 0f))
+        val tiny = Nacre.inspect(macros = base + mapOf("VENUE" to 1f, "CURRENT" to .000001f))
+        val moving = Nacre.inspect(macros = base + mapOf("VENUE" to 1f, "CURRENT" to .7f))
+        assertEquals(0.0, still.diagnostics.getValue("currentDepth"))
+        assertEquals(0.0, still.diagnostics.getValue("currentRateHz"))
+        assertEquals(.20f.toDouble(), still.diagnostics.getValue("coreCurrentMacro"))
+        assertContentEquals(still.stems.getValue("bass"), moving.stems.getValue("bass"))
+        assertContentEquals(still.stems.getValue("upper"), moving.stems.getValue("upper"))
+        assertTrue(distance(still.stems.getValue("venue"), tiny.stems.getValue("venue")) < .0001,
+            "zero CURRENT has an aperture discontinuity")
+        val a = still.stems.getValue("venue"); val b = moving.stems.getValue("venue")
+        val similarity = a.indices.sumOf { a[it].toDouble() * b[it] } / sqrt(energy(a) * energy(b))
+        assertTrue(similarity < .98, "CURRENT only changes gain: normalized similarity=$similarity")
+    }
+
+    @Test
+    fun `bloom scales sympathetic excitation and returns without changing their decay`() {
+        val low = Nacre.inspect(macros = base + ("BLOOM" to 0f))
+        val anchor = Nacre.inspect()
+        val high = Nacre.inspect(macros = base + ("BLOOM" to 1f))
+        for (stem in listOf("bass", "upper")) {
+            assertContentEquals(low.stems.getValue(stem), anchor.stems.getValue(stem))
+            assertContentEquals(low.stems.getValue(stem), high.stems.getValue(stem))
         }
+        for (stem in listOf("sympathetic", "venue")) {
+            val lo = rms(low.stems.getValue(stem)); val mid = rms(anchor.stems.getValue(stem)); val hi = rms(high.stems.getValue(stem))
+            assertTrue(lo < mid && mid < hi, "$stem lost BLOOM authority: $lo/$mid/$hi")
+        }
+        assertEquals(Nacre.REFERENCE_RETURN_GAIN, anchor.diagnostics.getValue("returnGain"))
+        assertEquals(1.0, anchor.diagnostics.getValue("sympatheticGain"))
+        assertTrue(high.diagnostics.getValue("energy99Seconds") < 1.6, "BLOOM rebuilt the sustained bed")
     }
 
     @Test
-    fun `cross harp excitation reaches unplucked resonators without changing direct strings`() {
-        val macros = base + ("BLOOM" to .85f)
-        val on = Nacre.inspect(macros = macros, options = Nacre.Options(muteUpperPlucks = true))
-        val off = Nacre.inspect(macros = macros, options = Nacre.Options(muteUpperPlucks = true, disableCrossHarp = true))
-        assertContentEquals(on.stems.getValue("bass"), off.stems.getValue("bass"))
-        assertContentEquals(on.stems.getValue("upper"), off.stems.getValue("upper"))
-        assertTrue(distance(on.stems.getValue("sympathetic"), off.stems.getValue("sympathetic")) > .01)
-        assertTrue(rms(on.stems.getValue("sympathetic")) > 1e-7)
-    }
-
-    @Test
-    fun `current changes active string states even with venue bypassed`() {
-        val moving = base + ("CURRENT" to .7f)
-        val internal = Nacre.inspect(macros = moving, options = Nacre.Options(bypassVenue = true))
-        val post = Nacre.inspect(macros = moving, options = Nacre.Options(bypassVenue = true, postCurrentOnly = true))
-        assertTrue(distance(internal.stems.getValue("bass"), post.stems.getValue("bass")) > .005,
-            "current only changes final pickup")
-    }
-
-    @Test
-    fun `moderate gestures retain the requested fundamental and avoid drum families`() {
-        val forbidden = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED,
-            DrumClass.HAT_OPEN, DrumClass.TOM)
-        for (midi in listOf(36, 48, 60, 72)) {
-            val snip = Nacre.render(midi = midi)
-            val pitch = requireNotNull(Pitch.detect(snip, fromSec = .45f, windowSec = .4f)) { "no pitch at MIDI $midi" }
+    fun `register velocity and acoustic extremes stay finite pitched and naturally dynamic`() {
+        val forbidden = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED, DrumClass.HAT_OPEN, DrumClass.TOM)
+        for (midi in listOf(28, 36, 48, 60, 72)) for (velocity in listOf(.3f, 1f)) {
+            val p = Nacre.inspect(midi = midi, velocity = velocity, macros = base + ("VENUE" to 1f))
+            assertTrue(p.raw.all { it.isFinite() })
+            assertTrue(p.snip.samples.all { it.isFinite() && abs(it) <= .950001f })
+            assertTrue(abs(p.raw.sumOf { it.toDouble() } / p.raw.size) < .005)
+            assertTrue(p.diagnostics.values.all { it.isFinite() })
+            val pitch = requireNotNull(Pitch.detect(p.snip, fromSec = .45f, windowSec = .4f)) { "no pitch at MIDI $midi velocity $velocity" }
             val cents = 1200.0 * ln(pitch.hz / Keys.midiHz(midi).toDouble()) / ln(2.0)
-            assertTrue(abs(cents) < 15.0, "MIDI $midi: $cents cents (including octave ambiguity)")
-            assertTrue(Classifier.classify(snip).drumClass !in forbidden, "MIDI $midi classified as a drum")
+            assertTrue(abs(cents) < 15.0 && pitch.confidence >= .3f, "MIDI $midi velocity $velocity: $cents cents confidence=${pitch.confidence}")
+            val onset = Snip(p.snip.samples.copyOfRange(0, (44_100 * .75).toInt()), 1, 44_100)
+            assertTrue(Classifier.classify(onset).drumClass !in forbidden, "MIDI $midi velocity $velocity sounds percussive to the onset classifier")
+        }
+        val soft = Nacre.render(velocity = .3f)
+        val hard = Nacre.render(velocity = 1f)
+        assertTrue(rms(soft.samples) < rms(hard.samples) * .65, "per-patch leveling erased velocity")
+        for (venue in listOf(0f, 1f)) {
+            val extreme = Nacre.inspect(macros = base + mapOf("TOUCH" to 1f, "DUET" to 1f, "CURRENT" to 1f, "BLOOM" to 1f, "VENUE" to venue))
+            assertTrue(extreme.raw.all { it.isFinite() })
+            assertTrue(extreme.snip.samples.maxOf { abs(it) } <= .950001f)
         }
     }
 
     @Test
-    fun `separated crossing gestures begin as pitched plucks without a noisy drum attack`() {
-        val forbidden = setOf(DrumClass.KICK, DrumClass.SNARE, DrumClass.CLAP, DrumClass.HAT_CLOSED,
-            DrumClass.HAT_OPEN, DrumClass.TOM)
-        for (duet in listOf(.85f, 1f)) for (touch in listOf(.3f, .7f)) {
-            val snip = Nacre.render(macros = base + mapOf("DUET" to duet, "TOUCH" to touch))
-            val onset = Snip(snip.samples.copyOfRange(0, (44_100 * .75).toInt()), 1, 44_100)
-            val classified = Classifier.classify(onset)
-            assertTrue(classified.drumClass !in forbidden,
-                "DUET $duet TOUCH $touch onset: ${classified.drumClass}, flatness ${classified.features.flatness}")
+    fun `zero velocity and unsupported hold and timing lock are explicit`() {
+        val zero = Nacre.inspect(velocity = 0f)
+        assertTrue(zero.raw.all { it == 0f })
+        assertTrue(zero.snip.samples.all { it == 0f })
+        val hold = assertFailsWith<IllegalArgumentException> { Nacre.render(macros = base + ("HOLD" to .1f)) }
+        assertTrue(hold.message.orEmpty().contains("finite"))
+        val lock = assertFailsWith<IllegalArgumentException> {
+            Nacre.inspect(macros = base + ("TOUCH" to .7f), options = Nacre.Options(lockStrumTiming = true))
         }
+        assertTrue(lock.message.orEmpty().contains("TOUCH .30"))
     }
 
-    @Test
-    fun `zero velocity injects no energy and unsupported HOLD is refused`() {
-        val silent = Nacre.inspect(velocity = 0f)
-        assertTrue(silent.raw.all { it == 0f })
-        assertTrue(silent.snip.samples.all { it == 0f })
-        assertTrue(silent.stems.values.all { x -> x.all { it == 0f } })
-        assertFailsWith<IllegalArgumentException> { Nacre.render(macros = base + ("HOLD" to 1f)) }
+    private fun hash(samples: FloatArray): String {
+        val bytes = ByteBuffer.allocate(samples.size * 4).order(ByteOrder.LITTLE_ENDIAN)
+        for (sample in samples) bytes.putInt(sample.toRawBits())
+        return MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it.toInt() and 255) }
     }
 }

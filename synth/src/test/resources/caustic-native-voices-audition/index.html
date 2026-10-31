@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111e2b">
+  <title>CAUSTIC · Four native voices</title>
+  <script>if(location.protocol!=='file:'&&!location.pathname.endsWith('/')&&!/\.[a-z0-9]+$/i.test(location.pathname)){const b=document.createElement('base');b.href=location.pathname+'/';document.head.append(b);}</script>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <a class="skip-link" href="#voices">Skip to the voices</a>
+  <header class="wrap masthead"><a class="wordmark" href="./">SNIP<span>SNAP</span><i>/</i>CAUSTIC</a><a class="history-link back-link" data-history="prototype" href="../contrast/">Earlier character study →</a></header>
+  <main class="wrap">
+    <section class="intro" aria-labelledby="page-heading">
+      <div><p class="eyebrow">FOUR NATIVE VOICES / CAUSTIC</p><h1 id="page-heading">Four ways<br>to set it singing<span>.</span></h1></div>
+      <div class="intro-copy"><p>Strike, knock, rub or catch the ringing body.</p><p class="muted">The chosen character-study directions now have native voices. These recordings use the same editable patches as SnipSnap.</p></div>
+    </section>
+    <section class="listening-bench" aria-labelledby="player-name">
+      <div class="bench-top"><div class="current-recording" aria-live="polite" aria-atomic="true"><p class="eyebrow" id="player-status">READY TO PLAY</p><h2 id="player-name">Alloy / C4</h2><p id="player-detail">Choose Play this sound on a card below.</p></div><div class="level-switch" role="group" aria-label="Playback level"><button type="button" id="matched-mode" aria-pressed="true">Level matched</button><button type="button" id="native-mode" aria-pressed="false">Renderer level</button></div></div>
+      <audio id="audio" controls preload="none" aria-label="Selected native Caustic recording"></audio>
+      <div class="bench-bottom"><span id="player-macros" class="muted"></span><div class="recording-links"><a id="current-recipe" hidden download>Download native patch</a><a id="current-wav" hidden download>WAV</a></div></div>
+      <p class="level-note" id="level-note">Level matched balances loudness so you can compare tone and timing. Renderer level preserves the instrument's original finished loudness.</p>
+      <p id="playback-error" class="error" role="alert" hidden></p>
+    </section>
+    <section id="voices" class="directions" aria-labelledby="voices-heading">
+      <div class="direction-toolbar"><div><h2 id="voices-heading">Same note. Four native families.</h2><p>Choose a register, then Play this sound. Each card plays its named recording.</p></div><div id="register-switch" class="register-switch" role="group" aria-label="Voice default register"><button type="button" data-midi="36" aria-pressed="false">C2 <span>Low</span></button><button type="button" data-midi="60" aria-pressed="true">C4 <span>Middle</span></button><button type="button" data-midi="84" aria-pressed="false">C6 <span>High</span></button></div></div>
+      <div id="sound-cards" class="sound-grid"><p class="loading">Loading native recordings…</p></div>
+    </section>
+    <section class="control-study" aria-labelledby="control-heading">
+      <div class="direction-toolbar"><div><p class="eyebrow">FOUR MUSICAL CONTROLS</p><h2 id="control-heading">Move one control. Then a pair.</h2><p>SOURCE and FOCUS move the paths and pickup. BODY changes the voice's excitation or contact. LENGTH sets the finite gesture and release.</p></div></div>
+      <div class="study-toolbar"><label>Voice <select id="voice-filter"></select></label><div class="section-switch" role="group" aria-label="Recording section"><button type="button" data-section="all" aria-pressed="false">All</button><button type="button" data-section="controls" aria-pressed="true">Controls</button><button type="button" data-section="pairs" aria-pressed="false">Pairs</button><button type="button" data-section="voices" aria-pressed="false">Registers</button></div><span id="recording-count" class="muted"></span></div>
+      <p class="action-guide">Play this sound selects that recording. Compare plays its named reference. Download native patch saves editable settings. The filters organize the list.</p>
+      <div id="control-cards" class="sound-grid"></div>
+    </section>
+    <section class="study-notes" aria-label="About these recordings"><p><strong>Native SnipSnap voices.</strong> Every WAV was rendered from its saved patch. The earlier listening prototypes remain a separate historical comparison. The new control positions are here for listening.</p><p><strong>Finite notes.</strong> HOLD stays at zero. The page plays fixed recordings. Each patch keeps its note and velocity.</p><div id="downloads" class="download-list"></div></section>
+    <details class="provenance"><summary>Files, measurements and provenance</summary><div id="provenance-content"></div><p><a href="manifest.json" download>Manifest and hashes</a> · <a href="diagnostics.json" download>Diagnostics</a></p></details>
+  </main>
+  <footer class="wrap"><span>SNIPSNAP / CAUSTIC · FOUR NATIVE VOICES</span><nav aria-label="Related studies"><a class="history-link" data-history="prototype" href="../contrast/">Earlier character study</a><a class="history-link" data-history="alloy" href="../instrument/">Original Alloy instrument</a></nav></footer>
+  <script src="manifest.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

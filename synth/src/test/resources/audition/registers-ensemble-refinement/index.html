@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#201c1b">
+  <link rel="icon" href="data:,">
+  <title>A calmer ensemble · SnipSnap Registers</title>
+  <meta name="description" content="Compare Rich Ensemble with less vibrato and a calmer ensemble at matched listening levels.">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="../">SNIP<span>/</span>SNAP</a><a href="../?study=sustain&amp;voice=TRANSISTOR#listen">Full listening bench ↗</a></header>
+  <main>
+    <p class="eyebrow">REGISTERS / TRANSISTOR / ENSEMBLE REFINEMENT</p>
+    <h1>Let it settle<span>.</span></h1>
+    <p class="intro">Keep the ensemble direction, then find how much movement belongs in it. Compare Rich Ensemble with less pitch vibrato, then with a calmer setting that also reduces the beating between banks.</p>
+    <section class="bench" aria-labelledby="listen-title">
+      <div class="bench-top"><h2 id="listen-title">The same tone. Less motion.</h2><label for="note">Pitch <select id="note"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select></label></div>
+      <div class="choices" role="group" aria-label="Play a direction">
+        <button type="button" data-direction="ensemble" aria-pressed="false" disabled><span class="number">01 / REFERENCE</span><strong>Current</strong><span>Rich Ensemble · full motion</span><span class="play-mark" aria-hidden="true">▶</span></button>
+        <button type="button" data-direction="steady" aria-pressed="false" disabled><span class="number">02 / LESS WOBBLE</span><strong>Less vibrato</strong><span>Same bank spread · gentler pitch sway</span><span class="play-mark" aria-hidden="true">▶</span></button>
+        <button type="button" data-direction="calm" aria-pressed="true" disabled><span class="number">03 / LESS MOVEMENT</span><strong>Calmer ensemble</strong><span>Gentler vibrato · closer banks</span><span class="play-mark" aria-hidden="true">▶</span></button>
+      </div>
+      <div class="player">
+        <div><p class="eyebrow">MATCHED LISTENING LEVEL</p><h3 id="selected-title">Calmer ensemble · C4</h3></div>
+        <audio id="audio" controls preload="metadata" aria-label="Selected direction audio"></audio>
+        <p class="hint">Compare Current → Less vibrato → Calmer ensemble. Let each note hold for a few seconds before switching.</p>
+        <p id="status" role="status" aria-live="polite">Opening the comparison…</p>
+        <div class="downloads"><a id="wav" download hidden>Download this WAV ↓</a><a id="recipe" download hidden>Download this setting ↓</a></div>
+      </div>
+    </section>
+    <section class="explanation" aria-labelledby="changes-title"><h2 id="changes-title">What changes</h2><div class="notes"><p><strong>Less vibrato</strong> reduces the common pitch wobble while retaining Rich Ensemble’s bank separation. This helps distinguish pitch sway from the slower beating.</p><p><strong>Calmer ensemble</strong> keeps that reduced vibrato and brings the banks closer together. Compare the sustained body and how insistently the movement repeats.</p></div><p class="footnote">The tone, drive and keying stay the same. All clips include the keyboard attack and repeated sustain at matched listening levels. The two new settings are listening candidates.</p></section>
+    <p class="footer"><a href="../directions/">Earlier ensemble study and MPC instrument ↗</a><span>SNIP/SNAP · LISTENING BENCH</span></p>
+  </main>
+</body>
+</html>

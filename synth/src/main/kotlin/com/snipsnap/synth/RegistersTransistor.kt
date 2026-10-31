@@ -14,17 +14,25 @@ import kotlin.math.sqrt
 import kotlin.math.tanh
 
 /**
- * Model 4's dry electronic organ: keyed, PolyBLEP-corrected square divider ranks, rather than
+ * A dry electronic organ: keyed, PolyBLEP-corrected square divider ranks, rather than
  * the harmonic pipe/reed bank. COLOR introduces 4'/2' ranks and opens their tone filter;
  * AIR is a brief electronic key-click, never simulated wind. EDGE drives the transistor-like
  * saturator, SPREAD detunes two quiet rank banks and MOTION adds bounded pitch vibrato.
  * This is an original Farfisa-inspired sound, not a circuit or historical-instrument model.
+ * Model 5 adds a round same-pitch 8' foundation, a gentler upper-rank balance and quiet
+ * detuned foundation banks. Model 6 keeps small held SPREAD settings as periodic ensemble
+ * motion instead of rounding them to unison, with a short, measured filter preroll.
+ * Models 4 and 5 retain their original arithmetic for saved recipes.
  */
 internal object RegistersTransistor {
     private const val TWO_PI = 2.0 * PI
     private const val RATE = Dsp.RATE * Dsp.OVERSAMPLE
     private const val ATTACK_SECONDS = .0015
     private const val CLICK_SECONDS = .012
+    // At the minimum 500 Hz voice cutoff, 23 ms exceeds 70 pole time constants.
+    // Two further independently rendered cycles still prove recurrence after conditioning.
+    private const val CURRENT_PREROLL_FRAMES = 1024
+    private const val ENSEMBLE_JOIN_SECONDS = .400
 
     private data class Loop(val frames: Int, val hz: Double) {
         val seconds get() = frames.toDouble() / Dsp.RATE
@@ -66,7 +74,8 @@ internal object RegistersTransistor {
 
     /** Produce a continuous preroll and two further cycles, not copies of an output buffer. */
     private fun synthesize(m: Map<String, Float>, midi: Int, velocity: Double, hz: Double,
-        spread: Double, motionHz: Double, frames: Int, loop: Loop?, cancelled: () -> Boolean): FloatArray {
+        spread: Double, motionHz: Double, frames: Int, loop: Loop?, model: Int,
+        cancelled: () -> Boolean): FloatArray {
         val out = FloatArray(frames * Dsp.OVERSAMPLE)
         if (velocity == 0.0) return out
         val color = m.getValue("COLOR").toDouble()
@@ -78,10 +87,19 @@ internal object RegistersTransistor {
         val releaseAt = duration - releaseSeconds
         val vibratoRatio = 2.0.pow(22.0 * motion / 1200.0) - 1.0
         val phaseDepth = vibratoRatio / (TWO_PI * motionHz)
+        val deeper = model >= 5
+        val current = model >= 6
+        val preroll = if (current && loop != null) CURRENT_PREROLL_FRAMES * Dsp.OVERSAMPLE else 0
+        val ensembleRate = if (current && loop != null) TWO_PI / loop.seconds else 0.0
         val ranks = doubleArrayOf(1.0, .75 * color, .30 * color * color)
         val rankSum = ranks.sum()
+        val fullRanks = doubleArrayOf(1.0, .68 * color, .24 * color * color)
+        val fullRankSum = fullRanks.sum()
         val ensemble = .22 * m.getValue("SPREAD")
         val bankGains = doubleArrayOf(ensemble, 1.0 - 2.0 * ensemble, ensemble)
+        val foundationEnsemble = .06 + .20 * m.getValue("SPREAD")
+        val foundationGains = doubleArrayOf(foundationEnsemble, 1.0 - 2.0 * foundationEnsemble, foundationEnsemble)
+        val foundationMix = .36 - .10 * color - .04 * edge
         val cutoff = ((hz * (7.0 + 24.0 * color)).coerceIn(1_400.0, 14_000.0) *
             (.40 + .60 * velocity)).coerceAtLeast(500.0)
         val coefficient = 1.0 - exp(-TWO_PI * cutoff / RATE)
@@ -93,32 +111,85 @@ internal object RegistersTransistor {
         var clickLow = 0.0
         var toneOne = 0.0
         var toneTwo = 0.0
+        var fullToneOne = 0.0
+        var fullToneTwo = 0.0
         for (i in out.indices) {
             if (i % 4096 == 0) checkCancelled(cancelled)
-            val t = i.toDouble() / RATE
+            val t = if (preroll == 0) i.toDouble() / RATE else (i - preroll).toDouble() / RATE
             val angle = TWO_PI * motionHz * t
             val modulation = phaseDepth * sin(angle)
             val speed = 1.0 + vibratoRatio * cos(angle)
+            val clock = t + modulation
+            // A short exact loop cannot hold a constant 0.075 Hz side-bank offset.
+            // Periodic phase movement retains that small setting without a 13-second loop.
+            // Match the finite bank's phase and derivative at the handoff's 400 ms center.
+            val ensembleAngle = ensembleRate * (clock - ENSEMBLE_JOIN_SECONDS)
+            val offset = if (ensembleRate > 0.0) spread * ENSEMBLE_JOIN_SECONDS +
+                spread / ensembleRate * sin(ensembleAngle) else 0.0
+            val offsetSpeed = if (ensembleRate > 0.0) spread * cos(ensembleAngle) else 0.0
+            val originalNeeded = !current || (loop == null && t < .080)
             var body = 0.0
+            var fullBody = 0.0
+            var foundation = 0.0
             for (bank in 0..2) {
-                if (bankGains[bank] == 0.0) continue
+                if (bankGains[bank] == 0.0 && (!deeper || foundationGains[bank] == 0.0)) continue
                 val bankHz = hz + (bank - 1) * spread
-                val cycles = bankHz * (t + modulation)
+                val cycles = if (ensembleRate > 0.0) hz * clock + (bank - 1) * offset else bankHz * clock
                 var sum = 0.0
+                var fullSum = 0.0
                 for (rank in ranks.indices) {
                     if (ranks[rank] == 0.0) continue
                     val ratio = (1 shl rank).toDouble()
-                    val step = bankHz * ratio * speed / RATE
-                    sum += ranks[rank] * square(fraction(cycles * ratio + .25), step)
+                    val instantaneousHz = if (ensembleRate > 0.0) hz + (bank - 1) * offsetSpeed else bankHz
+                    val step = instantaneousHz * ratio * speed / RATE
+                    val divider = square(fraction(cycles * ratio + .25), step)
+                    if (originalNeeded) sum += ranks[rank] * divider
+                    if (deeper) fullSum += fullRanks[rank] * divider
                 }
                 body += bankGains[bank] * sum / rankSum
+                if (deeper) {
+                    fullBody += bankGains[bank] * fullSum / fullRankSum
+                    // A rounded triangle at the existing 8' pitch supplies body without
+                    // adding a lower note. Its phase, detune and vibrato share the divider
+                    // clock, so independently generated held cycles still recur.
+                    val phase = TWO_PI * cycles
+                    val roundRank = if (current) {
+                        // Chebyshev identities retain the same three odd partials with one
+                        // cosine per bank instead of three. Legacy recipes keep their math.
+                        val c = cos(phase)
+                        val c2 = c * c
+                        (c + c * (4.0 * c2 - 3.0) / 9.0 +
+                            c * (16.0 * c2 * c2 - 20.0 * c2 + 5.0) / 25.0) /
+                            (1.0 + 1.0 / 9.0 + 1.0 / 25.0)
+                    } else (cos(phase) + cos(3.0 * phase) / 9.0 + cos(5.0 * phase) / 25.0) /
+                        (1.0 + 1.0 / 9.0 + 1.0 / 25.0)
+                    foundation += foundationGains[bank] * roundRank
+                }
             }
             // A fixed two-pole voice filter precedes the nonlinear stage. The 4x PolyBLEP
             // source and shared eighth-order output filter keep generated upper harmonics
             // from folding through the final 44.1 kHz conversion.
-            toneOne += coefficient * (body - toneOne)
-            toneTwo += coefficient * (toneOne - toneTwo)
-            val tone = tanh(toneTwo * drive) / driveNorm
+            if (originalNeeded) {
+                toneOne += coefficient * (body - toneOne)
+                toneTwo += coefficient * (toneOne - toneTwo)
+            }
+            val tone = if (originalNeeded) tanh(toneTwo * drive) / driveNorm else 0.0
+            // The round rank stays outside the clipping stage. EDGE still drives the
+            // electronic ranks, while the low-partial foundation keeps weight at matched
+            // listening level. Both sources retain the same crisp electronic keyer.
+            val depthEnvelope = if (deeper) {
+                if (loop != null) 1.0 else smooth((t - .020) / .060)
+            } else 0.0
+            val voicedTone = if (deeper) {
+                fullToneOne += coefficient * (fullBody - fullToneOne)
+                fullToneTwo += coefficient * (fullToneOne - fullToneTwo)
+                val fullTone = tanh(fullToneTwo * drive) / driveNorm
+                val settledTone = (1.0 - foundationMix) * fullTone + foundationMix * foundation
+                // Leave the complete click and initial speech unchanged, then bring the
+                // fuller registration in over 20..80 ms rather than softening the keyer.
+                if (depthEnvelope == 0.0) tone else if (current && depthEnvelope == 1.0) settledTone
+                else tone + depthEnvelope * (settledTone - tone)
+            } else tone
             val envelope = if (loop != null) 1.0 else
                 smooth(t / ATTACK_SECONDS) * (1.0 - smooth((t - releaseAt) / releaseSeconds))
             var click = 0.0
@@ -128,7 +199,7 @@ internal object RegistersTransistor {
                 val contour = smooth(t / .0006) * (1.0 - smooth((t - .006) / .006)) * exp(-t / .0035)
                 click = .14 * air * (n - clickLow) * contour
             }
-            out[i] = (velocityGain * (.56 * tone * envelope + click)).toFloat()
+            out[i] = (velocityGain * (.56 * voicedTone * envelope + click)).toFloat()
         }
         return out
     }
@@ -146,17 +217,20 @@ internal object RegistersTransistor {
         return if (energy <= 1e-30) 0.0 else difference / energy
     }
 
-    fun probe(m: Map<String, Float>, midi: Int, velocity: Double, cancelled: () -> Boolean): RegistersProbe {
+    fun probe(m: Map<String, Float>, midi: Int, velocity: Double, model: Int,
+        cancelled: () -> Boolean): RegistersProbe {
         checkCancelled(cancelled)
         val requestedHz = Keys.midiHz(midi).toDouble()
         val loop = if (Registers.isLoop(m.getValue("HOLD"))) loopFor(requestedHz) else null
         val hz = loop?.hz ?: requestedHz
         val desiredSpread = m.getValue("SPREAD").toDouble().pow(1.3) * minOf(2.5, hz * .009)
-        val spread = loop?.fit(desiredSpread) ?: desiredSpread
+        val spread = if (model >= 6) desiredSpread else loop?.fit(desiredSpread) ?: desiredSpread
         val desiredMotion = 5.5
         val motion = loop?.fit(desiredMotion) ?: desiredMotion
-        val frames = loop?.let { 3 * it.frames + 512 } ?: (finiteSeconds(m) * Dsp.RATE).roundToInt()
-        val raw = synthesize(m, midi, velocity, hz, spread, motion, frames, loop, cancelled)
+        val shortPreroll = model >= 6 && loop != null
+        val frames = loop?.let { if (shortPreroll) CURRENT_PREROLL_FRAMES + 2 * it.frames + 512
+            else 3 * it.frames + 512 } ?: (finiteSeconds(m) * Dsp.RATE).roundToInt()
+        val raw = synthesize(m, midi, velocity, hz, spread, motion, frames, loop, model, cancelled)
         val peak = raw.maxOfOrNull { abs(it.toDouble()) } ?: 0.0
         check(raw.all { it.isFinite() } && peak <= Registers.RAW_PEAK_CEILING) {
             "REGISTERS TRANSISTOR raw signal exceeded bound: $peak"
@@ -165,8 +239,9 @@ internal object RegistersTransistor {
         Tide.bandLimit(raw, RATE)
         checkCancelled(cancelled)
         val down = Dsp.decimate(raw, Dsp.RATE)
-        val previous = loop?.let { down.copyOfRange(it.frames, 2 * it.frames) }
-        val samples = loop?.let { down.copyOfRange(2 * it.frames, 3 * it.frames) } ?: down
+        val cycleStart = if (shortPreroll) CURRENT_PREROLL_FRAMES else loop?.frames ?: 0
+        val previous = loop?.let { down.copyOfRange(cycleStart, cycleStart + it.frames) }
+        val samples = loop?.let { down.copyOfRange(cycleStart + it.frames, cycleStart + 2 * it.frames) } ?: down
         if (loop == null) Dsp.fadeTail(samples)
         val cycleError = previous?.let { error(it, samples) }
         val seamError = previous?.let { error(it, samples, (it.size - 256).coerceAtLeast(0)) }
@@ -180,6 +255,7 @@ internal object RegistersTransistor {
         checkCancelled(cancelled)
         return RegistersProbe(samples, midi, requestedHz, hz, loop != null, loop?.frames,
             peak, cycleError, seamError, spread, motion, previous, bodyRms = rms,
-            airflowAnalysisStartFrame = from, airflowAnalysisEndFrame = until)
+            airflowAnalysisStartFrame = from, airflowAnalysisEndFrame = until,
+            spreadModulationHz = if (model >= 6 && loop != null) 1.0 / loop.seconds else 0.0)
     }
 }

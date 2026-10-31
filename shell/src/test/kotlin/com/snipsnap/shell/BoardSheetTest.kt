@@ -138,6 +138,112 @@ class BoardSheetTest {
         assertFalse(BoardSheet.canUndo(m, 1), "undo is deliberately one step")
     }
 
+    /**
+     * The board's own store keeps the era'd source; the kit bin has to keep what that source's NONE
+     * reads, under every file the source plays: its velocity layers as well as its main file.
+     */
+    @Test fun `a board over a treated pad keeps the source's original in the kit bin, and after REMOVE, NONE gives it back`() {
+        for (layered in listOf(false, true)) {
+            val m = model("BinKept-$layered", layered = layered)
+            val files = if (layered) listOf("main.wav", "soft.wav") else listOf("main.wav")
+            val originals = files.map { bytes(m, it) }
+            m.eraPad(1, "tape", 1f)
+            BoardSheet.apply(m, 1, .7f)
+            m.save()
+
+            val swept = KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+            assertEquals(0, swept, "layered=$layered: the sweep took an original the board's era'd source needs")
+            assertEquals(files.sorted(), m.binHolds().map { it.entry.originalName }.sorted(), "layered=$layered: one entry per file the source plays")
+            assertTrue(m.binHolds().all { it.keptFor == 1 }, "layered=$layered: every one kept for the printed pad's slot")
+            val removed = BoardSheet.remove(m, 1)
+            assertEquals("main.wav", removed.sampleFile)
+            assertTrue(PadSheet.read(removed.recipe) != null, "test setup: REMOVE brought the era back")
+            m.unEraPad(1)
+            for ((f, b) in files.zip(originals)) assertTrue(b.contentEquals(bytes(m, f)), "layered=$layered: NONE after REMOVE gives $f back")
+        }
+    }
+
+    /**
+     * An ejected board's tombstone holds the printed pad, and BACK brings it back; REMOVE then brings
+     * the era'd source back, and its NONE reads the original under the source's own file. So that
+     * original lives as long as the tombstone, past its own 30 days. And a tombstone whose saved
+     * source will not read stops the sweep, as a live board's does.
+     */
+    @Test fun `an ejected board over a treated pad keeps the source's original while its tombstone stays`() {
+        val dayMs = 24L * 60 * 60 * 1000
+        val m = model("BinEjectedBoard")
+        val original = bytes(m)
+        m.eraPad(1, "tape", 1f)
+        BoardSheet.apply(m, 1, .7f)
+        m.clear(1) // EJECT: the board's own file goes in with a tombstone holding the printed pad
+        m.save()
+        val now = System.currentTimeMillis()
+        val era = m.binContents().single { it.originalName == "main.wav" }
+        assertTrue(era.file.renameTo(File(era.file.parentFile, "${now - 31 * dayMs}_main.wav")), "test setup: the era went in 31 days ago")
+        val eject = m.binContents().single { it.padSnapshot != null }
+
+        assertEquals(0, KitBuilderModel.open(m.kitDir).purgeBin(nowMillis = now), "the source's original outlives its 30 days while BACK can bring the board back")
+        val kept = m.binHolds().single { it.entry.originalName == "main.wav" }
+        assertEquals(eject.binnedAtMillis + 30 * dayMs, kept.purgeAtMillis, "it leaves with the board's tombstone")
+        m.restoreFromBin(eject) // BACK
+        assertTrue(PrintedPads.has(m.pad(1)!!.recipe), "test setup: BACK brought the board back")
+        assertTrue(PadSheet.read(BoardSheet.remove(m, 1).recipe) != null, "test setup: REMOVE brought the era back")
+        m.unEraPad(1)
+        assertTrue(original.contentEquals(bytes(m)), "NONE after BACK and REMOVE gives the original back")
+
+        val damaged = model("BinEjectedBoardDamaged")
+        damaged.eraPad(1, "tape", 1f)
+        val source = (BoardSheet.apply(damaged, 1, .7f).recipe!!.entries.getValue("source") as JsonValue.Str).value
+        damaged.clear(1)
+        damaged.save()
+        File(damaged.kitDir, ".boards/states/$source.json").appendText(" ")
+        val binDir = File(damaged.kitDir, KitBuilderModel.BIN_DIR)
+        val before = allFiles(binDir)
+        val later = System.currentTimeMillis() + 1000
+        assertFailsWith<IllegalArgumentException> { KitBuilderModel.open(damaged.kitDir).purgeBin(nowMillis = later) }
+        assertEquals(before, allFiles(binDir), "nothing in the kit's bin was deleted while BACK can bring the board back")
+        assertEquals(
+            2,
+            KitBuilderModel.open(damaged.kitDir).purgeBin(nowMillis = later + 31 * dayMs),
+            "once the tombstone's days are up, the sweep takes it, the board's file and the era's original, damaged source and all",
+        )
+        assertTrue(allFiles(binDir).isEmpty(), "the tombstone left with its file")
+    }
+
+    /**
+     * Fail closed: a sweep that cannot read a printed pad's saved source cannot know what that source
+     * needs, so it deletes nothing in the kit and throws (the launch moves on to the next kit). Only
+     * the snapshot is checked, by its own hash; damaged saved audio does not stop the sweep, because
+     * the sweep needs the file names the source played, not its sound.
+     */
+    @Test fun `a board whose saved source will not read stops the kit bin's sweep before it deletes anything`() {
+        for (damage in listOf("damaged snapshot", "missing snapshot", "damaged audio")) {
+            val m = model("BinFailClosed-${damage.replace(' ', '-')}")
+            m.eraPad(1, "tape", 1f)
+            BoardSheet.apply(m, 1, .7f)
+            m.assign(2, hit(), com.snipsnap.audio.DrumClass.SNARE)
+            m.clear(2) // an eject record nothing keeps, which the sweep takes whenever it can
+            m.save()
+            val source = (m.pad(1)!!.recipe!!.entries.getValue("source") as JsonValue.Str).value
+            val snapshot = File(m.kitDir, ".boards/states/$source.json")
+            when (damage) {
+                "damaged snapshot" -> snapshot.appendText(" ")
+                "missing snapshot" -> snapshot.delete()
+                else -> File(m.kitDir, ".boards/audio").listFiles()!!.forEach { it.writeText("not audio") }
+            }
+            val binDir = File(m.kitDir, KitBuilderModel.BIN_DIR)
+            val before = allFiles(binDir)
+            val sweep = { KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000) }
+            if (damage == "damaged audio") {
+                assertEquals(1, sweep(), "the snapshot still reads, so the sweep runs and the original stays")
+                assertEquals(listOf<Int?>(1), m.binHolds().map { it.keptFor })
+            } else {
+                assertFailsWith<IllegalArgumentException>(damage) { sweep() }
+                assertEquals(before, allFiles(binDir), "$damage: nothing in the kit's bin was deleted")
+            }
+        }
+    }
+
     @Test fun `opaque synth recipe returns exactly after keep reload and amount zero`() {
         val recipe = originalRecipe()
         val m = model(recipe = recipe)

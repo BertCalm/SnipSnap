@@ -29,6 +29,10 @@ internal object PresetTestSupport {
             """|roland|akai|yamaha|korg|native\s*instruments|elektron""" +
             """|linn(drum)?|oberheim|simmons|emu|e-mu|fairlight""" +
             """|tr-?\d{3}|cr-?78|sp-?1200|sp-?12|dmx|acid""" +
+            // SPARK's research references. A leading letter boundary keeps
+            // ER1 out of ordinary words such as OTHER123; suffixes remain
+            // unbounded so ER1CORE and RY30ISH are still caught.
+            """|electribe|(?<![a-z])ry[-\s]*30|(?<![a-z])er[-\s]*1""" +
             // TIDE's style has makers too (docs/SYNTH_ROADMAP.md, S9).
             """|buchla|serge|make\s*noise""" +
             // SIREN's inspiration is a maker too (docs/superpowers/specs/2026-09-27-siren-dub-engine-design.md).

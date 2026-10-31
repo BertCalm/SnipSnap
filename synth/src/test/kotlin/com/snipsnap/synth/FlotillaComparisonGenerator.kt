@@ -22,6 +22,13 @@ object FlotillaComparisonGenerator {
                 Clip("ripple_${macro.lowercase()}_$end", "RIPPLE · $macro $end", FlotillaVoice.RIPPLE,
                     Flotilla.defaults(FlotillaVoice.RIPPLE) + (macro to value), "Compare this control's two ends after comparing previous/refined at the same setting.")
             }
+        } + listOf(
+            Triple("49", 0.49f, "49%"), Triple("50", 0.50f, "50%"), Triple("51", 0.51f, "51%"),
+            Triple("4999", 0.4999f, "49.99%"), Triple("5001", 0.5001f, "50.01%"),
+        ).map { (id, value, label) ->
+            Clip("ripple_flotilla_local_$id", "RIPPLE · FLOTILLA $label", FlotillaVoice.RIPPLE,
+                Flotilla.defaults(FlotillaVoice.RIPPLE) + ("FLOTILLA" to value),
+                "Compare nearby population settings in the same version. The 49%, 50% and 51% sequence should keep the same scene; 49.99%, 50% and 50.01% cross the entry of one vessel.")
         } + listOf(FlotillaVoice.DRIFT to "Held Sparse", FlotillaVoice.GATHER to "Held Dense").map { (voice, name) ->
             Clip(voice.name.lowercase() + "_held", name, voice,
                 FlotillaPresets.forVoice(voice).first { it.name == name }.macros,
@@ -48,7 +55,12 @@ object FlotillaComparisonGenerator {
         File(root, "recipes.json").writeText(Json.write(JsonValue.Arr(rows.map { row ->
             JsonValue.Obj(row.entries + mapOf(
                 "title" to row.entries.getValue("name"),
-                "group" to JsonValue.Str(if (row.entries.getValue("loop").bool()) "Held textures" else if (row.entries.getValue("id").str().endsWith("_default")) "Six voices" else "RIPPLE controls"),
+                "group" to JsonValue.Str(when {
+                    row.entries.getValue("id").str().contains("_local_") -> "Nearby population settings"
+                    row.entries.getValue("loop").bool() -> "Held textures"
+                    row.entries.getValue("id").str().endsWith("_default") -> "Six voices"
+                    else -> "RIPPLE controls"
+                }),
                 "role" to row.entries.getValue("purpose"),
             ))
         })))

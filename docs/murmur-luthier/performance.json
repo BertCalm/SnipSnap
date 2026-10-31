@@ -1,0 +1,303 @@
+{
+  "baseline_revision": "84471534a",
+  "optimized_source_sha256": "7da9f39cd32f6a98dc615f410acc854d8391354c7aa219c733ea46a941ee5205",
+  "verification": {
+    "pcm_comparisons": 216,
+    "all_float32_pcm_hashes_identical": true,
+    "baseline_hash_matrix_sha256": "61df7b51c265cf027e10c487c7e9f7a14d603102f963e9228fdd05807e2d942e",
+    "matrix": "6 voices \u00d7 models 1/2 \u00d7 MIDI 36/60/96 \u00d7 MOTION 0/.25/1 \u00d7 finite/held; velocity .83, remaining voice defaults"
+  },
+  "timing_method": "Kotlin production classes in Java21 JVM, C4 velocity .83 model2, warm5 KEYfinite/CHOIRheld pairs then7timedrenders percell; two sequential JVMs baseline thenoptimized during quietCPUwindow; desktop/cloud not Android; threadCPU captured separately",
+  "timings": [
+    {
+      "voice": "BASS",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 59.863822,
+      "optimized_median_ms": 56.899873,
+      "baseline_thread_cpu_ms": 59.868594,
+      "optimized_thread_cpu_ms": 56.905267,
+      "wall_percent_faster": 4.951152300299166,
+      "thread_cpu_percent_faster": 4.949718712285112
+    },
+    {
+      "voice": "BASS",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 59.961781,
+      "optimized_median_ms": 58.099357,
+      "baseline_thread_cpu_ms": 59.951642,
+      "optimized_thread_cpu_ms": 58.09134,
+      "wall_percent_faster": 3.1060184820060677,
+      "thread_cpu_percent_faster": 3.1030042513264244
+    },
+    {
+      "voice": "BASS",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 297.912653,
+      "optimized_median_ms": 276.631264,
+      "baseline_thread_cpu_ms": 297.916621,
+      "optimized_thread_cpu_ms": 276.618056,
+      "wall_percent_faster": 7.143499541122211,
+      "thread_cpu_percent_faster": 7.149169767201402
+    },
+    {
+      "voice": "BASS",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 310.183742,
+      "optimized_median_ms": 292.887488,
+      "baseline_thread_cpu_ms": 310.200017,
+      "optimized_thread_cpu_ms": 288.068007,
+      "wall_percent_faster": 5.576131710990828,
+      "thread_cpu_percent_faster": 7.134754605767791
+    },
+    {
+      "voice": "KEY",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 100.658443,
+      "optimized_median_ms": 101.259422,
+      "baseline_thread_cpu_ms": 100.63893,
+      "optimized_thread_cpu_ms": 101.261045,
+      "wall_percent_faster": -0.5970477806814367,
+      "thread_cpu_percent_faster": -0.6181653560903166
+    },
+    {
+      "voice": "KEY",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 100.298803,
+      "optimized_median_ms": 103.062737,
+      "baseline_thread_cpu_ms": 99.609486,
+      "optimized_thread_cpu_ms": 102.111565,
+      "wall_percent_faster": -2.7556998860694293,
+      "thread_cpu_percent_faster": -2.5118882753797145
+    },
+    {
+      "voice": "KEY",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 300.705689,
+      "optimized_median_ms": 293.928034,
+      "baseline_thread_cpu_ms": 299.82147,
+      "optimized_thread_cpu_ms": 293.756859,
+      "wall_percent_faster": 2.2539164531735767,
+      "thread_cpu_percent_faster": 2.0227407330101976
+    },
+    {
+      "voice": "KEY",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 299.368683,
+      "optimized_median_ms": 302.907159,
+      "baseline_thread_cpu_ms": 299.337563,
+      "optimized_thread_cpu_ms": 302.914841,
+      "wall_percent_faster": -1.1819793455149163,
+      "thread_cpu_percent_faster": -1.1950648505814288
+    },
+    {
+      "voice": "PLUCK",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 43.91351,
+      "optimized_median_ms": 44.3285,
+      "baseline_thread_cpu_ms": 43.919535,
+      "optimized_thread_cpu_ms": 44.328621,
+      "wall_percent_faster": -0.9450166930404791,
+      "thread_cpu_percent_faster": -0.9314442878322726
+    },
+    {
+      "voice": "PLUCK",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 44.516938,
+      "optimized_median_ms": 43.52638,
+      "baseline_thread_cpu_ms": 44.521901,
+      "optimized_thread_cpu_ms": 43.567014,
+      "wall_percent_faster": 2.225126085715956,
+      "thread_cpu_percent_faster": 2.144757924869378
+    },
+    {
+      "voice": "PLUCK",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 304.361444,
+      "optimized_median_ms": 277.418448,
+      "baseline_thread_cpu_ms": 304.362261,
+      "optimized_thread_cpu_ms": 277.238086,
+      "wall_percent_faster": 8.85230259322859,
+      "thread_cpu_percent_faster": 8.911806250512766
+    },
+    {
+      "voice": "PLUCK",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 307.128717,
+      "optimized_median_ms": 282.088774,
+      "baseline_thread_cpu_ms": 307.035986,
+      "optimized_thread_cpu_ms": 282.087879,
+      "wall_percent_faster": 8.152914922638121,
+      "thread_cpu_percent_faster": 8.125466765319167
+    },
+    {
+      "voice": "LEAD",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 178.368786,
+      "optimized_median_ms": 140.495923,
+      "baseline_thread_cpu_ms": 173.226208,
+      "optimized_thread_cpu_ms": 139.936404,
+      "wall_percent_faster": 21.232898339062533,
+      "thread_cpu_percent_faster": 19.217533180660517
+    },
+    {
+      "voice": "LEAD",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 161.409108,
+      "optimized_median_ms": 145.64097,
+      "baseline_thread_cpu_ms": 160.710413,
+      "optimized_thread_cpu_ms": 145.653626,
+      "wall_percent_faster": 9.769050950953773,
+      "thread_cpu_percent_faster": 9.368893227845787
+    },
+    {
+      "voice": "LEAD",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 359.188455,
+      "optimized_median_ms": 333.154311,
+      "baseline_thread_cpu_ms": 359.062635,
+      "optimized_thread_cpu_ms": 333.119206,
+      "wall_percent_faster": 7.2480458760847295,
+      "thread_cpu_percent_faster": 7.225321286911401
+    },
+    {
+      "voice": "LEAD",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 359.081739,
+      "optimized_median_ms": 340.618994,
+      "baseline_thread_cpu_ms": 358.806954,
+      "optimized_thread_cpu_ms": 340.626613,
+      "wall_percent_faster": 5.141655226304909,
+      "thread_cpu_percent_faster": 5.06688646842669
+    },
+    {
+      "voice": "CHOIR",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 150.535495,
+      "optimized_median_ms": 140.608587,
+      "baseline_thread_cpu_ms": 150.530025,
+      "optimized_thread_cpu_ms": 140.618785,
+      "wall_percent_faster": 6.594396889584075,
+      "thread_cpu_percent_faster": 6.584227963823164
+    },
+    {
+      "voice": "CHOIR",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 148.26238,
+      "optimized_median_ms": 142.462757,
+      "baseline_thread_cpu_ms": 147.905905,
+      "optimized_thread_cpu_ms": 141.730612,
+      "wall_percent_faster": 3.91172932742615,
+      "thread_cpu_percent_faster": 4.175149734555883
+    },
+    {
+      "voice": "CHOIR",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 323.761036,
+      "optimized_median_ms": 269.609157,
+      "baseline_thread_cpu_ms": 323.736575,
+      "optimized_thread_cpu_ms": 268.419253,
+      "wall_percent_faster": 16.72587895969051,
+      "thread_cpu_percent_faster": 17.087140061329176
+    },
+    {
+      "voice": "CHOIR",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 293.014723,
+      "optimized_median_ms": 272.522531,
+      "baseline_thread_cpu_ms": 291.612919,
+      "optimized_thread_cpu_ms": 272.458912,
+      "wall_percent_faster": 6.993570763336687,
+      "thread_cpu_percent_faster": 6.568298505321013
+    },
+    {
+      "voice": "METAL",
+      "held": false,
+      "motion": 0.0,
+      "baseline_median_ms": 107.577458,
+      "optimized_median_ms": 105.457927,
+      "baseline_thread_cpu_ms": 107.58307,
+      "optimized_thread_cpu_ms": 105.464466,
+      "wall_percent_faster": 1.9702371104548644,
+      "thread_cpu_percent_faster": 1.9692726745946243
+    },
+    {
+      "voice": "METAL",
+      "held": false,
+      "motion": 0.5,
+      "baseline_median_ms": 106.796709,
+      "optimized_median_ms": 108.358364,
+      "baseline_thread_cpu_ms": 106.391048,
+      "optimized_thread_cpu_ms": 107.607753,
+      "wall_percent_faster": -1.4622688420108387,
+      "thread_cpu_percent_faster": -1.1436159553574576
+    },
+    {
+      "voice": "METAL",
+      "held": true,
+      "motion": 0.0,
+      "baseline_median_ms": 342.617656,
+      "optimized_median_ms": 332.772014,
+      "baseline_thread_cpu_ms": 342.613395,
+      "optimized_thread_cpu_ms": 332.666744,
+      "wall_percent_faster": 2.873652839420515,
+      "thread_cpu_percent_faster": 2.90317049629657
+    },
+    {
+      "voice": "METAL",
+      "held": true,
+      "motion": 0.5,
+      "baseline_median_ms": 342.777182,
+      "optimized_median_ms": 342.388885,
+      "baseline_thread_cpu_ms": 342.741635,
+      "optimized_thread_cpu_ms": 341.495953,
+      "wall_percent_faster": 0.11327971066638076,
+      "thread_cpu_percent_faster": 0.36344636098849525
+    }
+  ],
+  "aggregate": {
+    "held_all": {
+      "baseline_sum_medians_ms": 3840.101719,
+      "optimized_sum_medians_ms": 3616.927059,
+      "percent_faster": 5.811686156535368,
+      "median_cell_percent_faster": 6.284851237163758
+    },
+    "held_stationary": {
+      "baseline_sum_medians_ms": 1928.546933,
+      "optimized_sum_medians_ms": 1783.513228,
+      "percent_faster": 7.520361704363044,
+      "median_cell_percent_faster": 7.195772708603471
+    },
+    "held_moving": {
+      "baseline_sum_medians_ms": 1911.554786,
+      "optimized_sum_medians_ms": 1833.413831,
+      "percent_faster": 4.087821890970367,
+      "median_cell_percent_faster": 5.358893468647869
+    },
+    "finite_all": {
+      "baseline_sum_medians_ms": 1262.163233,
+      "optimized_sum_medians_ms": 1190.200797,
+      "percent_faster": 5.701515788013767,
+      "median_cell_percent_faster": 2.665572283861012
+    }
+  }
+}

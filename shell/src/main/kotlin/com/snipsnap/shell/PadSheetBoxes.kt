@@ -14,7 +14,7 @@ import kotlin.math.roundToInt
  * kit, not per pad, so the next pad opens on the same bench.
  *
  * The summaries come from what the recipes already say ([PadSheet.read],
- * [MutateSheet.read], [OutsideSheet.read], the pad's shape fields), and
+ * [PadSheet.readPedals], [MutateSheet.read], [OutsideSheet.read], the pad's shape fields), and
  * [UNTOUCHED] when nothing does. A summary must never wrap: it is one
  * line of the 8 px pixel face across the sheet (about 6.4 px a glyph,
  * so [SUMMARY_CHARS] of them cross a 390 sheet beside the chevron), and
@@ -48,6 +48,20 @@ object PadSheetBoxes {
     fun treatment(applied: PadSheet.Applied?): String = applied?.let {
         "${(it.segment ?: it.treatment.name).uppercase(Locale.ROOT)} · ${(it.amount * 100).roundToInt()}%"
     } ?: UNTOUCHED
+
+    /**
+     * The pedals a pad plays ([PedalSlate.audible]: a pick at AMT 0, or one a later pick silences, is
+     * not named), in the order they went on: one reads as a chip does ("DELAY · 70%"), several as
+     * "WAH 70% · DRIVE 100%", or the words alone when the AMTs would not fit the strip, or the count
+     * when even the words would not.
+     */
+    fun pedals(picks: List<com.snipsnap.synth.PedalBoard.Pick>): String {
+        picks.singleOrNull()?.let { return "${it.entry.word} · ${(it.amount * 100).roundToInt()}%" }
+        val full = picks.joinToString(" · ") { "${it.entry.word} ${(it.amount * 100).roundToInt()}%" }
+        if (full.length <= SUMMARY_CHARS) return full
+        val words = picks.joinToString(" · ") { it.entry.word }
+        return if (words.length <= SUMMARY_CHARS) words else "${picks.size} PEDALS"
+    }
 
     /** "ATK 12 MS · CUT 1.2K" - only the fields the pad sets; the rest are the format's defaults and say nothing. */
     fun shape(pad: KitPad): String {
@@ -117,7 +131,10 @@ object PadSheetBoxes {
 
     /** Every strip at once, in [ORDER]. */
     fun summaries(pad: KitPad, outsideStage: String?): Map<Box, String> = linkedMapOf(
-        Box.TREATMENT to (BoardSheet.read(pad.recipe)?.let { "WIDE · ${(it.amount * 100).roundToInt()}%" }
+        Box.TREATMENT to (AquariumPadSheet.read(pad.recipe)?.let { "AQUARIUM" }
+            ?: BoardSheet.read(pad.recipe)?.let { "${it.type.name} · ${(it.amount * 100).roundToInt()}%" }
+            ?: pad.recipe?.takeIf(PrintedPads::has)?.let { "${PrintedPads.label(it)} · CHECK RECIPE" }
+            ?: PadSheet.readPedals(pad.recipe)?.let { PedalSlate.audible(it.picks) }?.takeIf { it.isNotEmpty() }?.let(::pedals)
             ?: treatment(PadSheet.read(pad.recipe))),
         Box.SHAPE to shape(pad),
         Box.MUTATE to mutate(MutateSheet.read(pad.recipe)),

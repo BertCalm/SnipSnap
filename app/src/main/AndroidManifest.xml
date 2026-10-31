@@ -19,10 +19,15 @@
          never required, the notification's own SNIP action is the whole
          story when this isn't granted. -->
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
-    <!-- LIVE (PHOTO_SPECS.md §8): CameraX's continuous preview, unlike TAKE
-         PHOTO's TakePicturePreview, needs this app's own CAMERA grant - not
-         required, so a phone with no camera (or a user who says no) still
-         opens SNAP; LIVE ▸ just says so and stays closed. -->
+    <!-- LIVE (PHOTO_SPECS.md §8) and TAKE PHOTO both need this grant, and
+         both ask for it at the tap. LIVE because CameraX opens the camera
+         itself. TAKE PHOTO because Android refuses ACTION_IMAGE_CAPTURE
+         (TakePicturePreview) to any app that declares CAMERA and has not
+         been granted it: the launch throws a SecurityException, even though
+         the camera app is the one that takes the picture. Declaring CAMERA
+         for LIVE is what puts TAKE PHOTO under this rule. Not required, so a
+         phone with no camera (or a user who says no) still opens SNAP; each
+         door just says so and stays closed. -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
     <!-- A MIDI keyboard on KEYS and PLAY (MidiInput): the system's own
@@ -34,6 +39,8 @@
         android:name=".SnipSnapApplication"
         android:label="SnipSnap"
         android:allowBackup="true"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:theme="@android:style/Theme.Material.NoActionBar">
 
         <!-- singleTask: a share while the app is open lands in the running
@@ -119,6 +126,23 @@
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
+        </service>
+
+        <!-- SnipSnap as a MIDI device other apps can open: a SnipSnap In
+             port (they play it) and a SnipSnap Out port (it plays them).
+             The system binds it on first open and unbinds after last
+             close; the manufacturer and product in the XML must match
+             MidiOut.kt so the app never listens to itself. -->
+        <service
+            android:name=".SnipSnapMidiService"
+            android:exported="true"
+            android:permission="android.permission.BIND_MIDI_DEVICE_SERVICE">
+            <intent-filter>
+                <action android:name="android.media.midi.MidiDeviceService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.media.midi.MidiDeviceService"
+                android:resource="@xml/midi_device_info" />
         </service>
     </application>
 

@@ -179,6 +179,7 @@ object KitExporter {
                 tuneFine = p.tuneFine,
                 muteGroup = p.muteGroup,
                 oneShot = p.oneShot,
+                loop = p.loop,
                 velocityLayers = layersBySlot[p.slot],
                 color = p.packedColor(),
                 attack = p.attack,
@@ -226,9 +227,17 @@ object KitExporter {
                 .joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
             pad.copy(
                 sampleFile = sampleFile,
-                velocityLayers = slot.velocityLayers.orEmpty().map { layer ->
-                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd)
+                velocityLayers = slot.velocityLayers.orEmpty().mapIndexed { index, layer ->
+                    KitLayer("${layer.sampleName}.wav", layer.velStart, layer.velEnd,
+                        displayName = pad.velocityLayers.getOrNull(index)?.displayName)
                 },
+                // Printed boards and Aquarium pads depend on immutable source
+                // snapshots outside the live WAV set. Flat MPC exports carry
+                // their baked audio, so a later import must not advertise an
+                // editing wrapper whose source files did not travel with it.
+                // Ordinary opaque recipes and self-contained typed boards
+                // retain their existing sidecar behavior.
+                recipe = pad.recipe?.takeUnless { "boardPad" in it.entries || "aquariumPad" in it.entries },
                 source = pad.source + ("rawSha256" to digest),
             )
         })

@@ -415,3 +415,87 @@ read back as twelve pads.
 SHA-256 hashes, source-file hashes, Git HEAD and a dirty-tree flag accompany the
 pack. These checks establish repeatability and export coherence, not hardware
 listening approval or musical quality.
+
+## Pulse Knuckle envelope experiment
+
+The Luthier review identified Pulse Knuckle's energy shape as a useful listening
+question: its middle body is about 1.7 dB stronger than its early body. This is
+an optional comparison, not a replacement factory preset or another VENT model.
+Both variants start from the exact saved `pulse-hit` patch and one model-2
+render, including the same conditioned raw readout and trajectory evidence.
+
+```text
+./gradlew :synth:generateVentKnuckleAudition
+```
+
+Use `-PventKnuckleOutput=/absolute/path` to choose a separate output directory.
+The generator writes `testkit/vent-knuckle-audition/` by default. The Original
+variant is bit-identical to the normal factory render. Tight decay multiplies
+the conditioned, decimated raw readout before the shared melodic level stage:
+
+```text
+gain(t) = 1                                          when t <= .006 seconds
+          exp(-ln(1000) * (t - .006) / .18)            otherwise
+```
+
+The first 6 ms keep their existing attack; the added envelope then falls 60 dB
+in 180 ms. Both hits retain the same 200 ms duration, level convention and tail
+fade. The experiment adds no force, projection, filtering, saturation or effects.
+Its two-bar rhythm plays eight copies of the chosen hit at 92 BPM with identical
+event times and gains. Event velocity is still sampler gain, not a new synthesis
+touch on each strike.
+
+Each hit and rhythm has native and Matched PCM24 WAVs. Matched independently
+adjusts each variant to the same measured loudness target of .03, subject to a
+.99 sample-peak guard, so the comparison can focus on the envelope. This differs
+from the existing kit page's shared gain within Dry/Effects pairs. Native keeps
+the engine or rhythm render level. Neither mode changes individual hit timing.
+
+`knuckle.zip` includes the WAVs, measurements and explicit experiment recipes.
+These recipes contain the complete source patch, the envelope stage and
+constants, the shared output stage, the rhythm events, and hashes of the source
+raw audio and trajectory. They are deliberately labeled experimental processing
+recipes, not ordinary loadable `PadRecipe` files. The generator replays both
+recipes through the Kotlin helper and checks exact sample equality.
+
+### Why it is built this way
+
+- One source trajectory makes the envelope the only sound-design variable.
+- Applying the envelope before the shared level stage retains the normal house
+  output behavior while allowing a different energy shape.
+- Independent matched gains help compare the shapes; native files preserve the
+  level difference for a second listening judgment.
+- Keeping the experiment outside saved models preserves existing recipes and
+  the twelve-pad kit while this proposed decay is evaluated.
+
+## Model-2 render cost without changing the sound
+
+Model 2 reuses the clamped cosine's exact endpoint values, the identical RK4
+half-step LEASH value, COIL's stationary final projection, and the velocity
+power that stays constant throughout a render. Interior cosine evaluation,
+integration arithmetic and signal stages retain their existing expressions.
+There is no approximation or shared mutable trajectory cache. Additional
+storage is a few scalar values and one projection per render, rather than an eight-second
+full-rate XYZ cache of roughly 34 MB.
+
+A standalone Kotlin/JVM harness compared the unmodified renderer at
+`91384fa189a68c4993c8e359af6b748412bf95c3` against the optimized code using the
+same current helper classes. All 99 cases retained identical raw samples,
+final samples, trajectory coordinates and diagnostics, including all twelve
+factory pads, short control corners, long high notes, silence and zero force.
+Permanent regression fingerprints cover the twelve pads and three long free
+orbits; a saved-JSON determinism canary covers all three clean voices.
+
+Five warm-up rounds and seven alternating-order timing trials measured the
+following host JVM medians for eight-second C6 renders at otherwise default controls:
+
+| Voice | Before | After | Time saved |
+| --- | ---: | ---: | ---: |
+| PULSE | 1262 ms | 1097 ms | 13% |
+| COIL | 1510 ms | 1112 ms | 26% |
+| PLUME | 1835 ms | 1552 ms | 15% |
+
+These paired measurements establish a host-specific improvement, not Android
+device latency or a universal speed multiplier. Absolute times from the earlier
+Luthier review used a different host run and are not directly comparable.
+The calibrated preroll and the audio-rate ODE still run for each request.

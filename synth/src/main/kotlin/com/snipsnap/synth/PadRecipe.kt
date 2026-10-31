@@ -62,25 +62,41 @@ data class PadRecipe(
      * Null preserves existing recipes and their exact audio. Duration is milliseconds.
      */
     val terminalFadeMs: Float? = null,
+    /**
+     * The pedals on this pad, each with its own AMT and a side of the amp
+     * ([PedalBoard]): the pad sheet's library board. Saved under `pedals`,
+     * never `board` (WIDE's). Enough to re-render on its own, so unlike
+     * [treatment] and [amount] nothing is stored twice. Runs after [fx] and
+     * before [board]. Null preserves existing recipes and their exact audio.
+     */
+    val pedals: PedalBoard? = null,
 ) {
     init {
-        require(patch != null || fx != null || board != null) { "an empty recipe records nothing" }
+        require(patch != null || fx != null || board != null || pedals != null) { "an empty recipe records nothing" }
         terminalFadeMs?.let {
             require(it.isFinite() && it in 1f..100f) { "terminal fade must be finite and within 1..100 ms" }
         }
     }
 
-    /** Regenerate a synth pad's audio from scratch. */
+    /**
+     * Regenerate a synth pad's audio from scratch. With [pedals], the board is rendered around the pad's own
+     * landing chain ([PedalBoard.processAround]): the pedals in front of the amp, the POST picks after it. A
+     * recipe holds a patch and pedals together only since the pedal door kept the patch (2026-10-27), so no
+     * recipe saved before renders differently.
+     */
     fun render(): Snip {
         val p = requireNotNull(patch) { "recipe has no patch to render; use process() on the captured audio" }
         val dry = p.render()
-        return process(dry)
+        val board = pedals ?: return process(dry)
+        val pedalled = board.processAround(dry, fx)
+        return terminalFade(this.board?.process(pedalled) ?: pedalled)
     }
 
     /** Re-treat captured audio with the stored chain. */
     fun process(snip: Snip): Snip {
         val finished = fx?.process(snip) ?: snip
-        return terminalFade(board?.process(finished) ?: finished)
+        val pedalled = pedals?.process(finished) ?: finished
+        return terminalFade(board?.process(pedalled) ?: pedalled)
     }
 
     private fun terminalFade(snip: Snip): Snip {
@@ -100,6 +116,7 @@ data class PadRecipe(
         obj["alias"] = JsonValue.Bool(alias)
         board?.let { obj["board"] = it.toJsonValue() }
         terminalFadeMs?.let { obj["terminalFadeMs"] = JsonValue.Num(it.toDouble()) }
+        pedals?.let { obj["pedals"] = it.toJsonValue() }
         return JsonValue.Obj(obj)
     }
 
@@ -140,6 +157,7 @@ data class PadRecipe(
                 alias = obj["alias"]?.bool() ?: impliesAlias(patch, fx),
                 board = obj["board"]?.let { BoardRecipe.fromJsonValue(it) },
                 terminalFadeMs = obj["terminalFadeMs"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
+                pedals = obj["pedals"]?.let { PedalBoard.fromJsonValue(it) },
             )
         }
 
