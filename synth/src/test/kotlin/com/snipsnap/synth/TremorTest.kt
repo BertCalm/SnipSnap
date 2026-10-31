@@ -62,12 +62,14 @@ class TremorTest {
 
     @Test
     fun `a powered note does work and then settles`() {
-        val r = Tremor.play(TremorVoice.CHARGE)
-        assertTrue(r.circuitWork > 0.0 && r.circuitWork.isFinite(), "work ${r.circuitWork}")
-        assertTrue(r.actuatorPeak > 0.0 && r.actuatorPeak.isFinite())
-        assertTrue(r.endModalEnergy < r.maxModalEnergy * 1e-2)
-        assertEquals(0, r.railHits)
-        assertClean(r, "CHARGE")
+        for (model in listOf(Tremor.LEGACY_MODEL, Tremor.MODEL)) {
+            val r = Tremor.play(TremorVoice.CHARGE, model = model)
+            assertTrue(r.circuitWork > 0.0 && r.circuitWork.isFinite(), "CHARGE model $model work ${r.circuitWork}")
+            assertTrue(r.actuatorPeak > 0.0 && r.actuatorPeak.isFinite())
+            assertTrue(r.endModalEnergy < r.maxModalEnergy * 1e-2)
+            assertEquals(0, r.railHits)
+            assertClean(r, "CHARGE model $model")
+        }
     }
 
     @Test
@@ -115,11 +117,24 @@ class TremorTest {
         val soft = Tremor.play(TremorVoice.ROLL, mapOf("STRIKE" to 0f, "BEADS" to 1f))
         val hard = Tremor.play(TremorVoice.ROLL, mapOf("STRIKE" to 1f, "BEADS" to 1f))
         assertTrue(hard.strikes.first().impulse > soft.strikes.first().impulse)
-        for (cage in listOf(0f, 0.5f, 1f)) {
-            val dead = Tremor.play(TremorVoice.WIRE, mapOf("CAGE" to cage, "CURRENT" to 0f))
-            val live = Tremor.play(TremorVoice.WIRE, mapOf("CAGE" to cage, "CURRENT" to 1f, "FAULT" to 0f))
+        for (model in listOf(Tremor.LEGACY_MODEL, Tremor.MODEL)) for (cage in listOf(0f, 0.5f, 1f)) {
+            val dead = Tremor.play(TremorVoice.WIRE, mapOf("CAGE" to cage, "CURRENT" to 0f), model = model)
+            val live = Tremor.play(TremorVoice.WIRE, mapOf("CAGE" to cage, "CURRENT" to 1f, "FAULT" to 0f), model = model)
             assertEquals(0.0, dead.circuitWork)
-            assertTrue(live.circuitWork > 0.0)
+            assertEquals(0.0, dead.actuatorPeak)
+            assertTrue(live.circuitWork.isFinite(), "WIRE model $model CAGE $cage work ${live.circuitWork}")
+            assertTrue(live.actuatorPeak.isFinite() && live.actuatorPeak > 0.0,
+                "WIRE model $model CAGE $cage has no active return")
+            if (model == Tremor.LEGACY_MODEL) {
+                assertTrue(live.circuitWork > 0.0, "legacy WIRE CAGE $cage lost positive work")
+            } else {
+                // Work is signed actuator * string velocity, not supply consumption. The
+                // approved contact changes its phase and the active return can extract net
+                // energy. Nonzero work plus an active actuator proves this is not a dead path.
+                assertTrue(abs(live.circuitWork) > 1e-10,
+                    "model-2 WIRE CAGE $cage has no measurable signed return work")
+            }
+            assertClean(live, "WIRE model $model CAGE $cage")
         }
         val calm = Tremor.play(TremorVoice.FRACTURE, mapOf("CURRENT" to 0.5f, "FAULT" to 0f))
         val broken = Tremor.play(TremorVoice.FRACTURE, mapOf("CURRENT" to 0f, "FAULT" to 1f))
@@ -134,20 +149,27 @@ class TremorTest {
     }
 
     @Test
-    fun `tune moves the anchor and the filed class matches the classifier`() {
+    fun `tune retains authored filing in both models and the legacy centroid contract`() {
         val tunes = listOf(0f to DrumClass.KICK, 0.5f to DrumClass.TOM, 1f to DrumClass.PERC)
-        var previous = 0f
-        for ((tune, filed) in tunes) {
-            val r = Tremor.play(TremorVoice.HIDE, mapOf("TUNE" to tune))
-            val f = FeatureExtractor.extract(r.snip)
-            val hz = Tremor.frequencyFor(TremorVoice.HIDE, tune)
-            assertEquals(filed, Tremor.drumClassFor(TremorVoice.HIDE, mapOf("TUNE" to tune)))
-            assertEquals(filed, Classifier.classify(f).drumClass, "TUNE $tune heard ${Classifier.classify(f).drumClass}")
-            assertTrue(f.centroidHz > previous, "centroid did not rise at TUNE $tune (${f.centroidHz} after $previous)")
-            val ratio = f.centroidHz / hz
-            assertTrue(ratio in 0.8f..1.2f, "centroid ${f.centroidHz} is far from the anchor $hz")
-            previous = f.centroidHz
-            assertEquals(36 + (tune * 24).toInt(), Tremor.midiFor(TremorVoice.HIDE, tune))
+        for (model in listOf(Tremor.LEGACY_MODEL, Tremor.MODEL)) {
+            var previous = 0f
+            for ((tune, filed) in tunes) {
+                val r = Tremor.play(TremorVoice.HIDE, mapOf("TUNE" to tune), model = model)
+                val f = FeatureExtractor.extract(r.snip)
+                val hz = Tremor.frequencyFor(TremorVoice.HIDE, tune)
+                assertEquals(filed, Tremor.drumClassFor(TremorVoice.HIDE, mapOf("TUNE" to tune)))
+                assertEquals(filed, Classifier.classify(f).drumClass, "model $model TUNE $tune heard ${Classifier.classify(f).drumClass}")
+                assertTrue(f.centroidHz > previous, "model $model centroid did not rise at TUNE $tune (${f.centroidHz} after $previous)")
+                if (model == Tremor.LEGACY_MODEL) {
+                    val ratio = f.centroidHz / hz
+                    assertTrue(ratio in 0.8f..1.2f, "legacy centroid ${f.centroidHz} is far from the anchor $hz")
+                }
+                // Model 2 deliberately has more upper-mode power, so centroid is no
+                // longer its pitch. TremorCharacterTest checks its unrestricted spectral
+                // anchor across all six voices, three notes and three touch strengths.
+                previous = f.centroidHz
+                assertEquals(36 + (tune * 24).toInt(), Tremor.midiFor(TremorVoice.HIDE, tune))
+            }
         }
     }
 
@@ -298,24 +320,42 @@ class TremorTest {
     }
 
     @Test
-    fun `the kit is sixteen dry pads and the classifier agrees`() {
+    fun `the kit keeps sixteen authored roles with both import classifications`() {
         val kit = SynthKits.tremor()
         assertEquals(16, kit.size)
         val walk = listOf(0, 3, 5, 7, 10, 12, 15, 17)
+        val authored = listOf(
+            DrumClass.KICK, DrumClass.KICK, DrumClass.KICK, DrumClass.KICK,
+            DrumClass.KICK, DrumClass.TOM, DrumClass.TOM, DrumClass.TOM,
+            DrumClass.TOM, DrumClass.TOM, DrumClass.TOM, DrumClass.PERC,
+            DrumClass.TOM, DrumClass.TOM, DrumClass.LOOP, DrumClass.LOOP,
+        )
+        // Import labels are measured independently of the stable factory pad roles.
+        val currentImport = listOf(
+            DrumClass.KICK, DrumClass.KICK, DrumClass.KICK, DrumClass.TOM,
+            DrumClass.TOM, DrumClass.TOM, DrumClass.PERC, DrumClass.PERC,
+            DrumClass.PERC, DrumClass.CLAP, DrumClass.PERC, DrumClass.PERC,
+            DrumClass.TOM, DrumClass.PERC, DrumClass.LOOP, DrumClass.LOOP,
+        )
         for ((i, pad) in kit.withIndex()) {
             val arranged = requireNotNull(pad)
             assertTrue(arranged.oneShot)
             val recipe = PadRecipe.fromJsonValue(requireNotNull(arranged.recipe))
             assertEquals(null, recipe.fx, "pad ${i + 1} is not dry")
             val patch = recipe.patch as TremorPatch
+            assertEquals(Tremor.MODEL, patch.model, "pad ${i + 1} selected legacy acoustics")
+            assertEquals(authored[i], arranged.drumClass, "pad ${i + 1} changed its authored role")
             assertEquals(arranged.drumClass, Tremor.drumClassFor(patch.voice, patch.macros))
-            // These two recipe roles stay fixed while their deliberately corrected timbres
-            // cross the generic import classifier's centroid/bass thresholds.
-            when (patch.name) {
-                "SETTLING BED" -> assertEquals(DrumClass.TOM, arranged.drumClass)
-                "CHARGED TAIL" -> assertEquals(DrumClass.PERC, arranged.drumClass)
-                else -> assertEquals(arranged.drumClass, Classifier.classify(arranged.snip).drumClass, "pad ${i + 1} ${patch.name}")
+            assertEquals(currentImport[i], Classifier.classify(arranged.snip).drumClass,
+                "pad ${i + 1} ${patch.name}: current import classification changed")
+            val legacy = patch.copy(model = Tremor.LEGACY_MODEL).render()
+            val legacyImport = when (patch.name) {
+                "SETTLING BED" -> DrumClass.PERC
+                "CHARGED TAIL" -> DrumClass.TOM
+                else -> authored[i]
             }
+            assertEquals(legacyImport, Classifier.classify(legacy).drumClass,
+                "pad ${i + 1} ${patch.name}: legacy import classification changed")
             assertEquals(0, AutoPlace.muteGroupFor(arranged.drumClass), "pad ${i + 1} would choke")
             assertContentEquals(arranged.snip.samples, patch.render().samples)
             if (i < 8) {

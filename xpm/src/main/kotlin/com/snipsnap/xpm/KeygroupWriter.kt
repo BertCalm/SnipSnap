@@ -41,6 +41,11 @@ data class KeygroupProgram(
     val pitchBendRange: Float = 0f,
     /** Seconds-ish release so held notes don't clip off. */
     val volumeRelease: Float = 0.5f,
+    /**
+     * Opt into an explicit NoteOn declaration in legacy XPM. The default
+     * preserves existing package bytes; native MPC 3 already declares NoteOn.
+     */
+    val explicitNoteOn: Boolean = false,
 ) {
     init {
         require(name.isNotBlank()) { "program name must not be blank" }
@@ -84,7 +89,7 @@ class KeygroupWriter {
         sb.append("    <ProgramName>").append(program.name.esc()).append("</ProgramName>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
-            appendInstrument(sb, index, kg, program.volumeRelease)
+            appendInstrument(sb, index, kg, program.volumeRelease, program.explicitNoteOn)
         }
         sb.append("    </Instruments>\n")
         appendPadNoteMap(sb)
@@ -105,7 +110,7 @@ class KeygroupWriter {
         return file
     }
 
-    private fun appendInstrument(sb: StringBuilder, index: Int, kg: Keygroup, release: Float) {
+    private fun appendInstrument(sb: StringBuilder, index: Int, kg: Keygroup, release: Float, explicitNoteOn: Boolean) {
         sb.append("      <Instrument number=\"").append(index).append("\">\n")
         // Element order follows the harvested programs: mixer, filter,
         // envelope, tune, note range. No Active/RootNote/KeyTrack/OneShot at
@@ -121,6 +126,11 @@ class KeygroupWriter {
         sb.append("        <VolumeDecay>").append(0f.f()).append("</VolumeDecay>\n")
         sb.append("        <VolumeSustain>").append(1f.f()).append("</VolumeSustain>\n")
         sb.append("        <VolumeRelease>").append(release.f()).append("</VolumeRelease>\n")
+        if (explicitNoteOn) {
+            // The held trial declares the corpus/native writer's NoteOn value.
+            // Other packages keep their established legacy serialization.
+            sb.append("        <TriggerMode>2</TriggerMode>\n")
+        }
         sb.append("        <TuneCoarse>0</TuneCoarse>\n")
         sb.append("        <TuneFine>0</TuneFine>\n")
         sb.append("        <LowNote>").append(kg.lowNote).append("</LowNote>\n")

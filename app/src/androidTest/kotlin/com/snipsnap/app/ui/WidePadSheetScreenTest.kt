@@ -29,6 +29,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.BoardSheet
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PedalSlate
 import com.snipsnap.synth.BoardType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -104,6 +105,7 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
+                backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
                 onBack = {},
                 onToast = {},
@@ -117,6 +119,8 @@ class WidePadSheetScreenTest : ComposeScreenTest() {
                 workshopOpen = false,
                 openBox = openBoxState,
                 onOpenBox = { openBoxState = it },
+                pedalRow = PedalSlate.DEFAULT,
+                onPedalRowChange = {},
             )
         }
         waitForText("PAD ${PadBanks.tag(currentSlot)}")

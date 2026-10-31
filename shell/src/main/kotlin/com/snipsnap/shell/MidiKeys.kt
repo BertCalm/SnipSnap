@@ -54,8 +54,14 @@ class MidiKeys(private val voice: Voice) {
                 MidiWire.CC_SUSTAIN -> pedal(event.value >= MidiWire.CC_SWITCH_ON)
                 MidiWire.CC_ALL_NOTES_OFF, MidiWire.CC_ALL_SOUND_OFF -> allOff()
             }
+            // Bend, pressure and program change are read off the wire but not
+            // played here yet: MIDI learn and a KEYS bend range are their users.
+            is MidiWire.Event.PitchBend, is MidiWire.Event.ChannelPressure,
+            is MidiWire.Event.PolyPressure, is MidiWire.Event.ProgramChange -> {}
             // The transport's clock is not a key; nothing here plays it yet.
             is MidiWire.Event.RealTime -> {}
+            // Bend and pressure: nothing here plays them until the controller plan gives them a voice.
+            is MidiWire.Event.Expression -> {}
         }
     }
 

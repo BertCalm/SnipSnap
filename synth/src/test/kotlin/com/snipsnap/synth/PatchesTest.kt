@@ -48,10 +48,12 @@ class PatchesTest {
         MagnetPatch("Door", MagnetVoice.JANGLE, emptyMap()),
         VentPresets.all().first(),
         OverlapPresets.all().first(),
+        CairnPatch("Door", CairnVoice.ANSWER, emptyMap()),
         WickPresets.all().first(),
         NacrePresets.all().first(),
-        ChamberPresets.all().first(),
-        TidalPresets.all().first(),
+        FerryPresets.all().first(),
+        ScourPresets.all().first(),
+        LibrationPresets.references().first(),
         // KEEL is rostered (its factory presets all sit on the default root at full velocity); this one carries a saved note and velocity.
         KeelPatch("Octave Test", KeelVoice.UPRIGHT, mapOf("WEIGHT" to .7f, "SETTLE" to .3f), midi = 42, velocity = .6f),
     )

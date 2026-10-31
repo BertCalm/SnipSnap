@@ -135,6 +135,20 @@ internal class PrintedPadStore(private val format: Format) {
         result
     }
 
+    /**
+     * The pad [remove] would bring back, for the kit bin's sweep ([KitBuilderModel.binHolds]): [pad]
+     * with its saved source's main file, velocity layers and recipe. It reads the source snapshot
+     * alone, checked against its own hash, and does not re-hash or decode the saved audio as
+     * [loadSnapshot] does: the sweep needs the file names the source played, not its sound, and it
+     * runs over every kit at launch. Throws when [pad] carries no valid recipe of this format or its
+     * snapshot will not read.
+     */
+    fun sourcePad(root: File, pad: KitPad): KitPad {
+        val applied = wrapper(pad.recipe) ?: throw IllegalArgumentException("Not a $noun pad")
+        val source = readSnapshot(root, applied.source)
+        return pad.copy(sampleFile = source.inventory.main, velocityLayers = source.inventory.layers, recipe = source.recipe)
+    }
+
     fun canUndo(model: KitBuilderModel, slot: Int): Boolean = synchronized(model) {
         try {
             val old = pad(model, slot)
@@ -249,6 +263,17 @@ internal class PrintedPadStore(private val format: Format) {
 
     private fun loadSnapshot(model: KitBuilderModel, id: String): Snapshot = loadSnapshot(model.kitDir, id)
     private fun loadSnapshot(root: File, id: String): Snapshot {
+        val snapshot = readSnapshot(root, id)
+        for (entry in snapshot.inventory.files) {
+            val backup = backupFile(root, entry.hash)
+            require(backup.isFile && sha(backup.readBytes()) == entry.hash) { "The $noun's saved audio is missing or damaged; restore the full kit folder from backup" }
+            checkedAudio(backup)
+        }
+        return snapshot
+    }
+
+    /** A source snapshot's own record, checked against its hash; [loadSnapshot] also checks the saved audio it names. */
+    private fun readSnapshot(root: File, id: String): Snapshot {
         require(digestPattern.matches(id)) { "Invalid $noun source reference" }
         val file = stateFile(root, id)
         require(file.isFile) { "The $noun's saved source is missing; restore the full kit folder from backup" }
@@ -263,11 +288,6 @@ internal class PrintedPadStore(private val format: Format) {
             JsonValue.Null -> null
             is JsonValue.Obj -> r
             else -> throw IllegalArgumentException("Invalid saved pad recipe")
-        }
-        for (entry in inventory.files) {
-            val backup = backupFile(root, entry.hash)
-            require(backup.isFile && sha(backup.readBytes()) == entry.hash) { "The $noun's saved audio is missing or damaged; restore the full kit folder from backup" }
-            checkedAudio(backup)
         }
         return Snapshot(id, inventory, recipe)
     }

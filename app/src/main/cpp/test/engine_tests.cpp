@@ -1,6 +1,7 @@
 // The native engines, driven by hand. See CMakeLists.txt.
 #include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <limits>
 #include <thread>
 #include <vector>
@@ -228,7 +229,7 @@ TEST(print_buffer_stereo_counts_frames_and_cuts_on_a_frame_boundary) {
     CHECK_NEAR(p.data()[4], 1.0f, 1e-6);
     CHECK_NEAR(p.data()[5], -1.0f, 1e-6);
     p.clear();
-    // Back to one channel by default, so the surface's print is untouched.
+    // Generic callers can still arm a mono buffer.
     CHECK(p.arm(4));
     CHECK_EQ(p.channels(), 1);
     p.requestStop();
@@ -278,6 +279,17 @@ TEST(pad_engine_frames_rendered_never_goes_backwards_across_stop_and_start) {
     e.start();
     callback(e, 32);
     CHECK_EQ(e.framesRendered(), before + 32);
+}
+
+TEST(pad_engine_without_a_stream_has_no_hardware_position) {
+    PadEngine e(kRate);
+    int64_t frame = 7;
+    int64_t nanos = 9;
+    CHECK(!e.hardwarePosition(&frame, &nanos));
+    CHECK_EQ(frame, int64_t{7});
+    CHECK_EQ(nanos, int64_t{9});
+    CHECK_EQ(e.framesPerBurst(), int32_t{0});
+    CHECK_EQ(e.audioApi(), int32_t{-1});
 }
 
 TEST(pad_engine_plays_the_window_with_its_gains_and_reports_the_end) {
@@ -860,7 +872,7 @@ TEST(surface_engine_is_silent_until_gated_and_loops_its_sample) {
     CHECK(peak(out) < 1e-3f);  // and closed again
 }
 
-TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
+TEST(surface_engine_prints_the_stereo_bus_and_finishes_on_the_callback) {
     SurfaceEngine e(kRate);
     std::vector<float> tone(100, 0.5f);
     e.loadSample(tone.data(), tone.size(), kRate);
@@ -877,7 +889,9 @@ TEST(surface_engine_prints_the_mono_bus_and_finishes_on_the_callback) {
     callback(e, 64);
     CHECK(e.printState() == PrintBuffer::State::Done);
     CHECK_EQ(static_cast<int>(e.printFrames()), 128);
-    // The print is the bus: a mono copy of what went to the left channel.
+    // Default dry output is duplicated mono, captured as complete stereo frames.
+    CHECK_EQ(e.printSamples(), 256u);
+    for (size_t i = 0; i < e.printFrames(); ++i) CHECK_EQ(e.printData()[2 * i], e.printData()[2 * i + 1]);
     auto out = callback(e, 1);
     CHECK(std::fabs(e.printData()[127]) > 0.01f);
     CHECK_NEAR(e.printData()[127], e.printData()[126], 0.05f);
@@ -2872,6 +2886,109 @@ TEST(live_snap_engine_bright_opens_the_filter) {
     const double dark = run(0.0f);
     const double lit = run(1.0f);
     CHECK(dark < lit);
+}
+
+static std::vector<float> aquariumIdle(const aquarium::PerformanceSettings& settings, int frames) {
+    aquarium::PerformanceBus reference;
+    CHECK(reference.publish(settings));
+    CHECK(reference.prepare(kRate));
+    std::vector<float> idle(static_cast<size_t>(frames) * 2, 0);
+    reference.beginCallback();
+    reference.process(idle.data(), frames);
+    return idle;
+}
+
+TEST(pads_aquarium_processes_the_stereo_bus_once_and_prints_exactly_that_output) {
+    PadEngine e(kRate);
+    aquarium::PerformanceSettings s;
+    CHECK(aquarium::setParameter(s.parameters, "aqua_tide_mix", 1));
+    CHECK(aquarium::setParameter(s.parameters, "aqua_tide_depth", 0));
+    s.enabled = true;
+    s.outputGain = 0.25f;
+    CHECK(e.configureAquarium(s));
+    e.beginBank();
+    CHECK_EQ(e.addSample(std::vector<float>(20000, 0.4f), 1, kRate), 0);
+    e.commitBank();
+    PadCommand c;
+    c.sample = 0; c.voiceId = 1; c.end = 20000; c.gainL = 1; c.gainR = 0.5f;
+    CHECK(e.pushCommand(c));
+    callback(e, 4096);
+    CHECK(e.armPrint(1024));
+    const auto out = callback(e, 1024);
+    CHECK_NEAR(out[0], 0.1f, 0.000001f);
+    CHECK_NEAR(out[1], 0.05f, 0.000001f);
+    CHECK_EQ(e.printFrames(), 1024u);
+    CHECK_EQ(e.printSamples(), out.size());
+    CHECK(std::memcmp(out.data(), e.printData(), out.size() * sizeof(float)) == 0);
+    CHECK(e.printState() == PrintBuffer::State::Done);
+    CHECK(!e.aquariumFaulted());
+}
+
+TEST(pads_aquarium_shared_nonlinear_processing_matches_one_premixed_voice) {
+    PadEngine separate(kRate), summed(kRate);
+    aquarium::PerformanceSettings s;
+    s.parameters = aquarium::parametersForPreset(aquarium::Preset::Fathom);
+    s.enabled = true;
+    s.outputGain = 0.25f;
+    CHECK(separate.configureAquarium(s));
+    CHECK(summed.configureAquarium(s));
+    separate.beginBank(); summed.beginBank();
+    separate.addSample(std::vector<float>(16000, 0.25f), 1, kRate);
+    summed.addSample(std::vector<float>(16000, 0.5f), 1, kRate);
+    separate.commitBank(); summed.commitBank();
+    PadCommand c;
+    c.sample = 0; c.voiceId = 1; c.end = 16000; c.gainL = 1; c.gainR = 0.5f;
+    CHECK(separate.pushCommand(c)); CHECK(summed.pushCommand(c));
+    c.voiceId = 2;
+    CHECK(separate.pushCommand(c));
+    const auto a = callback(separate, 12000);
+    const auto b = callback(summed, 12000);
+    CHECK(std::memcmp(a.data(), b.data(), a.size() * sizeof(float)) == 0);
+    CHECK(peak(a) > 0.01f);
+}
+
+TEST(pads_aquarium_panic_clears_effect_tails_and_a_new_note_resumes_fresh_history) {
+    PadEngine e(kRate);
+    aquarium::PerformanceSettings s;
+    s.parameters = aquarium::parametersForPreset(aquarium::Preset::Reef);
+    s.enabled = true;
+    CHECK(e.configureAquarium(s));
+    e.beginBank();
+    e.addSample(std::vector<float>(kRate, 0.4f), 1, kRate);
+    e.addSample(std::vector<float>(kRate, 0.0f), 1, kRate);
+    e.commitBank();
+    PadCommand c;
+    c.sample = 0; c.voiceId = 1; c.end = kRate; c.gainL = c.gainR = 1;
+    CHECK(e.pushCommand(c));
+    callback(e, 16000);
+    PadCommand off;
+    off.type = PadCommand::Type::AllOff; off.fadeMs = 20; off.frameOffset = 64;
+    CHECK(e.pushCommand(off));
+    const auto quiet = callback(e, 5000);
+    CHECK(peak(std::vector<float>(quiet.begin() + 2 * 1100, quiet.end())) == 0);
+    c.sample = 1; c.voiceId = 2;
+    CHECK(e.pushCommand(c));
+    const auto fresh = aquariumIdle(s, 5000);
+    const auto resumed = callback(e, 5000);
+    CHECK(std::memcmp(resumed.data(), fresh.data(), resumed.size() * sizeof(float)) == 0);
+}
+
+TEST(pads_aquarium_bank_swap_never_carries_the_previous_banks_room_into_new_notes) {
+    PadEngine e(kRate);
+    aquarium::PerformanceSettings s;
+    s.parameters = aquarium::parametersForPreset(aquarium::Preset::Reef);
+    s.enabled = true;
+    CHECK(e.configureAquarium(s));
+    e.beginBank(); e.addSample(std::vector<float>(kRate, 0.4f), 1, kRate); e.commitBank();
+    PadCommand c;
+    c.sample = 0; c.voiceId = 1; c.end = kRate; c.gainL = c.gainR = 1;
+    CHECK(e.pushCommand(c));
+    callback(e, 16000);
+    e.beginBank(); e.addSample(std::vector<float>(kRate, 0.0f), 1, kRate); e.commitBank();
+    c.voiceId = 2;
+    CHECK(e.pushCommand(c));
+    const auto replacement = callback(e, 5000);
+    CHECK(peak(std::vector<float>(replacement.begin() + 2 * 2000, replacement.end())) <= peak(aquariumIdle(s, 5000)) + 1e-30f);
 }
 
 int main() { return check::runAll(); }

@@ -10,6 +10,7 @@ import com.snipsnap.synth.ConfluenceVoiceBank
 import com.snipsnap.synth.SkinKits
 import com.snipsnap.synth.SynthKits
 import com.snipsnap.synth.ThumpKits
+import com.snipsnap.synth.UprightKits
 import com.snipsnap.synth.Velocity
 import java.io.File
 
@@ -85,6 +86,11 @@ object StarterKits {
             seeded = false,
         ) { ThumpKits.classic() },
         Starter(
+            "strike-fx", "STRIKE FX",
+            "Four short hits: DRY, REVERB, ECHO. Turn STRIKE ON, use STAY and VOL OFF, then tap while moving the strip.",
+            seeded = false,
+        ) { com.snipsnap.synth.StrikeDemoKit.build() },
+        Starter(
             "lucky-dip", "LUCKY DIP",
             "Dice-rolled drums. The dice are audited - they can't roll a bad kit.",
             seeded = true,
@@ -115,6 +121,18 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "libration", "LIBRATION",
+            "Wood, glass and departing orbits. Sixteen finite notes with soft and hard touch.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.libration() },
+        Starter(
+            "tidal", "TIDAL",
+            "String and metal populations in C minor pentatonic. Gather, pass, and unravel into ringing strands.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.tidal() },
+        Starter(
             "ohm", "OHM",
             "A warm string in C minor pentatonic, with independent companions and shared gatherings.",
             seeded = false,
@@ -143,6 +161,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
+        Starter(
+            "scour", "SCOUR",
+            "Metal, glass and thunder-sheet impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.scour() },
         Starter(
             "nimbus", "NIMBUS",
             "Six metal plates spread and gather in C minor pentatonic. Rings, shimmer and held suspension.",
@@ -197,6 +221,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.filament() },
+        Starter(
+            "chamber", "CHAMBER",
+            "Four struck instruments share wood, glass and aquarium rooms in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.chamber() },
         Starter(
             "alloy", "ALLOY",
             "Generated wood, tine and breath attacks fuse into pitched bodies in C minor pentatonic.",
@@ -300,6 +330,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scannedChain() },
         Starter(
+            "trefoil", "TREFOIL",
+            "Three-body plucks, keys, moving wires and long memory, with three touch layers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.trefoil() },
+        Starter(
             "trio", "TRIO",
             "Plucked performers and single-strike replies in C minor pentatonic. Low, middle and high drama.",
             seeded = false,
@@ -339,6 +375,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.cistern() },
+        Starter(
+            "upright", "UPRIGHT BASS",
+            "Round and muted finger plucks on the same E minor pentatonic notes.",
+            seeded = false,
+            key = KeySpec.parse("Eminpent"),
+        ) { UprightKits.classic() },
         Starter(
             "aerostat", "AEROSTAT",
             "Paddle-struck PVC, catching pipes and drifting steam. Five distinct factory gestures.",

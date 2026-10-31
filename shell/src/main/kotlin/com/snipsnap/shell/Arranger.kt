@@ -1,6 +1,7 @@
 package com.snipsnap.shell
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SongBus
 import com.snipsnap.kit.AnswerStore
 import com.snipsnap.kit.BeatTape
 import com.snipsnap.kit.GrooveEdit
@@ -261,15 +262,7 @@ object Arranger {
         segments.forEachIndexed { i, seg ->
             seg.samples.copyInto(out, starts[i] * 2)
         }
-        var peak = 0f
-        for (v in out) {
-            val a = if (v < 0) -v else v
-            if (a > peak) peak = a
-        }
-        if (peak > 0.95f) {
-            val k = 0.95f / peak
-            for (i in out.indices) out[i] *= k
-        }
+        SongBus.ceiling(out)
         return Mix(Snip(out, 2, KitPreview.RATE), starts)
     }
 

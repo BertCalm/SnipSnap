@@ -96,8 +96,8 @@ class ContrastTest {
         // The pad-slot-tag fix (KitScreen/PlayScreen) dropped the old
         // 0.6/0.7 alpha reduction in favour of full-opacity ink2 — this is
         // the guardrail that makes that safe. Also directly covers finding
-        // 6 (secondary chrome text: METAL/OILSLICK/PETROL/INFRARED were
-        // 3.47-4.14:1 before their ink2 was raised).
+        // 6 (secondary chrome text: four of the schemes then shipping were
+        // 3.47-4.14:1 before their ink2 was raised; all four are retired).
         for (scheme in Schemes.ALL) {
             val ratio = Scheme.contrastRatio(scheme.ink2, scheme.gray)
             assertTrue(
@@ -113,13 +113,11 @@ class ContrastTest {
         // any class-colour wash on top of it — see the next test for that
         // composited case, which the app now sidesteps with an opaque
         // backing chip rather than relying on this alone). The base fill
-        // is the look's: darken(gray, 0.30) under the classic drawing, the
-        // `raised` card under the modern one (`docs/MODERN_LOOK.md` §3,
-        // §4.2) — darkening paper gives a mid-tone nothing reads on, which
-        // is why the modern pad is a card and not a darkened chrome.
+        // is the `raised` card (`docs/MODERN_LOOK.md` §3, §4.2) —
+        // darkening paper gives a mid-tone nothing reads on, which is why
+        // the pad is a card and not a darkened chrome.
         for (scheme in Schemes.ALL) {
-            val bg = if (scheme.look == Look.MODERN) scheme.raised else Schemes.darken(scheme.gray, 0.30f)
-            val ratio = Scheme.contrastRatio(scheme.ink2, bg)
+            val ratio = Scheme.contrastRatio(scheme.ink2, scheme.raised)
             assertTrue(
                 ratio >= AA_TEXT,
                 "${scheme.id}: ink2 vs the filled-pad base = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
@@ -135,9 +133,9 @@ class ContrastTest {
      * enough to fail AA, even though ink2 itself and the clean chrome
      * background both pass. Composites the brightest class colours
      * (HAT_OPEN, SNARE) at the wash strengths the two screens actually use
-     * (30% for KitScreen's PadWaveform, 12% for PlayScreen's resting wash)
-     * over darken(gray, 0.30), matching the numbers in KitScreen.kt/
-     * PlayScreen.kt's own comments on their tag backing chips.
+     * (30% for KitScreen's PadWaveform, 12% as a stand-in for a faint
+     * flash) over the `raised` card the pad is drawn on. On VENT the 30%
+     * washes land at about 3.5:1.
      */
     @Test
     fun `worst-case class-colour wash under the pad tag would fail without its backing chip`() {
@@ -145,7 +143,7 @@ class ContrastTest {
         val snare = 0xFFC41F
         var sawAFailure = false
         for (scheme in Schemes.ALL) {
-            val base = Schemes.darken(scheme.gray, 0.30f)
+            val base = scheme.raised
             for (washColor in listOf(hatOpen, snare)) {
                 for (alpha in listOf(0.30, 0.12)) {
                     val composited = blend(washColor, base, alpha)
@@ -196,37 +194,59 @@ class ContrastTest {
         }
     }
 
-    // ==================== OILSLICK's ink3: a documented, measured gap ====================
+    /**
+     * `warn` is text on the LCD as well as a needle: a binned row's days
+     * left turn `warn` at two days or fewer, on the row's `lcd` fill
+     * (`DeletedKitsSection`, `TakesBinScreen` and the rest). A paper
+     * scheme's `warn` is tuned for the dock, not the chrome, so the dock is
+     * where it must read.
+     */
+    @Test
+    fun `warn reads as text on the lcd in every scheme`() {
+        for (scheme in Schemes.ALL) {
+            val ratio = Scheme.contrastRatio(scheme.warn, scheme.lcd)
+            assertTrue(
+                ratio >= AA_TEXT,
+                "${scheme.id}: warn vs lcd = %.2f:1, below AA text (%.1f:1)".format(ratio, AA_TEXT),
+            )
+        }
+    }
+
+    // ==================== OPENSKY's ink3: a documented, measured gap ====================
 
     @Test
-    fun `OILSLICK ink3 is a known, measured AA gap - not a silent one`() {
-        // Left un-fixed deliberately (see Schemes.kt's comment on this
-        // field): the minimum lightening that clears 4.5:1 here lands
-        // within a few percent of the now-brighter ink2, erasing the
-        // two-tier hierarchy ink3 exists to draw. This test pins the
-        // measured ratio so a future change to either token is a
-        // deliberate decision, not an accidental drift.
-        val ratio = Scheme.contrastRatio(Schemes.OILSLICK.ink3, Schemes.OILSLICK.gray)
+    fun `OPENSKY ink3 is a known, measured AA gap - not a silent one`() {
+        // The third tier exists to be dimmer than the second, and on paper
+        // that is 3.9:1 (`docs/MODERN_LOOK.md` §4, which carried the same
+        // gap for the scheme this test used to pin). Lightening ink3 until
+        // it clears 4.5:1 would land it on ink2 and erase the two-tier
+        // hierarchy it exists to draw. This test pins the measured ratio
+        // so a future change to either token is a deliberate decision, not
+        // an accidental drift. The gap must also not widen past the 3:1 UI
+        // threshold.
+        val ratio = Scheme.contrastRatio(Schemes.OPENSKY.ink3, Schemes.OPENSKY.gray)
         assertTrue(
-            ratio in 2.0..2.3,
-            "OILSLICK ink3 vs gray = %.2f:1 — expected ~2.14:1 (the measured, accepted gap); ".format(ratio) +
-                "if this moved, update this test and Schemes.kt's comment together, whichever direction it moved",
+            ratio in 3.7..4.0,
+            "OPENSKY ink3 vs gray = %.2f:1 — expected ~3.85:1 (the measured, accepted gap); ".format(ratio) +
+                "if this moved, update this test and the OPENSKY row's comment together, whichever direction it moved",
         )
         assertTrue(ratio < AA_TEXT, "if ink3 now clears AA on its own, drop this test's framing — it's no longer a gap")
+        assertTrue(ratio >= AA_UI, "ink3 fell under the 3:1 UI threshold: the gap is wider than the one accepted")
     }
 
     // ==================== Finding 7: selection state ====================
 
     @Test
     fun `pressedBevel's accent border clears the 3-to-1 graphical-object threshold in every scheme`() {
-        // The non-colour-alone fix for finding 7 (1.02-1.07:1 fill
-        // contrast, effectively invisible) is a thicker, accent-tinted
-        // border rather than a fill change — this checks the border is
-        // actually visible against the pressed fill it sits on, in every
-        // scheme, at the UI-component threshold (not the text one: a
-        // border is a graphical object, not text).
+        // The non-colour-alone fix for finding 7 (a pressed fill that is
+        // effectively invisible against a raised one) is a thicker,
+        // accent-tinted border rather than a fill change — this checks the
+        // border is actually visible against the pressed fill it sits on
+        // (`field`, per `pressedBevel` in Bevel.kt), in every scheme, at
+        // the UI-component threshold (not the text one: a border is a
+        // graphical object, not text).
         for (scheme in Schemes.ALL) {
-            val pressedFill = Schemes.darken(scheme.gray, 0.10f)
+            val pressedFill = scheme.field
             val ratio = Scheme.contrastRatio(scheme.accent, pressedFill)
             assertTrue(
                 ratio >= AA_UI,

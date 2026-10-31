@@ -1,11 +1,34 @@
-# Strike strip: Android first pass
+# Strike strip and FX listening demo
 
 STRIKE lets one thumb choose soft-to-hard hits while the other hand plays
 the pads. It uses the kit's existing SOFT HITS layers and velocity-zoned
-sample chains. This pass establishes the native performance control;
-new brightness, reverb and delay layer generators come later.
+sample chains. The STRIKE FX starter makes the difference easier to hear:
+the same short hit dry, with a short reverb, or with clearly spaced echoes.
 
-## Try it
+## Try the FX demo
+
+The optional **SnipSnap STRIKE FX** build installs alongside existing
+SnipSnap apps with its own empty shelf. It uses the same application code.
+CI keeps its APK in the `snipsnap-strike-fx-<commit>` artifact. Download
+through the GitHub Actions artifact page while signed in; that route creates
+fresh download authorization when clicked.
+
+1. Create a **STRIKE FX** starter (near FACTORY in the starter list).
+2. Turn **STRIKE ON**, select **STAY**, and leave **VOL OFF**.
+3. Tap **A01 RIM** with the strip at the bottom, middle, and top. Those
+   positions select **DRY**, **REVERB**, and **ECHO**. Leave about two seconds
+   between comparison hits so the previous tail finishes.
+4. The **LAST A01** row highlights the layer actually triggered. Sliding
+   without tapping leaves that highlight unchanged. RETURN resets the
+   next strike to the bottom; it does not relabel a ringing echo as dry.
+5. Try A02 CLAP, A03 SNARE and A04 BLOCK, then **FULL** to play with both hands.
+
+These are three discrete choices. No change is expected while moving
+within one band. VOL OFF keeps the playback multiplier fixed; equal peaks
+do not guarantee equal perceived loudness for a dry hit and its longer tail.
+The remaining twelve pads are available for captures.
+
+## Use your own sounds
 
 1. Open a kit with SOFT HITS on at least one pad; the VELOCITY starter is
    a ready-made example. To add them, open that pad's PAD SHEET and use
@@ -34,7 +57,7 @@ adjustments and arrow keys also change its value.
   existing 0.20–1.00 gain range so a soft hit is audible. Keeping that gain
   floor out of layer selection prevents a tiny, hard-to-reach soft zone.
 - Layer and chain-zone selection use strike velocity. Playback gain can
-  use that velocity or a fixed 1.00 multiplier, preserving pad level and
+  use the separate 0.20–1.00 curve or a fixed 1.00 multiplier, preserving pad level and
   pan. Fixed gain does not normalize the WAVs.
 - The value is sampled on a hit. Audio continues through the existing
   cached-sample PadEngine; no synthesis or effect rendering runs on touch.
@@ -43,10 +66,40 @@ adjustments and arrow keys also change its value.
   export. MIDI input, beat playback and other playing screens retain
   their existing velocity behavior.
 
-This is discrete layer selection, not continuous modulation of reverb,
-delay feedback or a ringing note. A later FX pass can render alternate
-layers before playing and use the same hit-selection path. Live tail
-modulation would need a separate audio design.
+The listening demo uses existing THUMP and TINES sources, SPRING for the
+middle zone and ECHO for the top. Both effects process the same dry source
+independently. Repeats are approximately 293 ms apart; the reverb's decay
+setting is about 0.52 seconds. These are audition choices, not listening
+claims. Each rack can add at most one second to the source. A 4 ms terminal
+fade keeps the delivered tail from ending abruptly.
+
+The starter renders its twelve WAVs once during creation and the pad
+engine caches them when the kit opens. No DSP runs on thumb movement.
+The target is under one second for this small starter on a phone; desktop
+test timing is reported separately and does not establish phone performance.
+
+Layer names are optional `name` fields in `kit.json`'s existing layer
+objects. Older kits show LAYER 1, LAYER 2, etc.; unlayered pads show SINGLE.
+Playback and the indicator share one zone selector, including its existing
+fallback for a velocity outside all stored windows. Failed playback requests
+do not update the indicator. Normal and fullscreen grids share the last-hit
+snapshot, which clears when the kit changes. MIDI still uses its own velocity.
+
+Names survive saving and supported standalone MPC exports with their
+SnipSnap sidecars; the names are not new MPC parameters. The generated main
+recipe reproduces the ECHO sample. Rebuilding that recipe alone does not
+recreate all three layers; recreate the starter for the full demo.
+
+General FX-layer authoring for arbitrary pads and continuous modulation of
+a ringing note remain separate work.
+
+## Why it is built this way
+
+- Short attacks leave space to hear a room tail and separate repeats.
+- Every version starts with the same source, so the effects supply the contrast.
+- Pre-rendered WAVs use the existing performance and export paths.
+- The last-hit highlight confirms the selected sound even when RETURN moves
+  the thumb control back. Perceived contrast still needs a phone audition.
 
 ## Checks
 
@@ -55,6 +108,7 @@ With an Android SDK and JDK 17:
 ```sh
 ./gradlew --no-daemon test -x :app:test
 ./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin
+./gradlew --no-daemon :app:assembleStrikeFx
 ./gradlew --no-daemon :app:connectedDebugAndroidTest \
   -Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.StrikeStripTest
 ```
@@ -80,3 +134,17 @@ Before treating the control as phone-tested, audition it on real hardware:
   confirm its existing layers still play as before.
 
 Emulated touch tests cannot establish hardware latency or playing feel.
+
+## Implementation evidence
+
+Built against `e982cc63432022e92327d465dc64d75459c7d153`. The focused Kotlin
+checks measured the RIM layer's reverb energy from 120–240 ms at 0.0364
+times the dry attack energy. ECHO is silent in that interval; its first
+and second repeats carry 0.7583 and 0.1639 times the attack energy. These
+are energy ratios, not perceived loudness ratings. Starter creation,
+including twelve WAV writes, took 288 ms in the first desktop test run.
+
+Verified: deterministic finite renders, bounded tails, shared dry attack,
+all three zones reachable, saved layer names, and complete tails selected
+by the pad resolver. Proposed: these settings make the contrast clearer
+on the phone. Heard: pending the owner's audition.

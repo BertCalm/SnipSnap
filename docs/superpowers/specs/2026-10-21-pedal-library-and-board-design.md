@@ -67,7 +67,8 @@ The entry's `chain` reuses the characters in `Treatments.EXTRA` by reference, so
  pass POST: FxChain folded from every POST pick, rack order
    |
    v
- cap      : total tail at most FxChain.MAX_CHAIN_TAIL_SECONDS over the original, then Dsp.fadeTail 10 ms
+ cap      : total tail at most FxChain.MAX_CHAIN_TAIL_SECONDS over the original, its last 300 ms on a raised cosine
+            (FxChain.capTail, the rack's own cut; a 10 ms line until 2026-10-28)
    |         (each FxChain pass caps its own tail; three passes could add three seconds; the board owns one budget, as WIDE does)
    v
  peak-matched to the original's peak (the rack contract, so a board changes shape, never loudness)
@@ -151,7 +152,7 @@ Reordering within a side (saved, not honoured); drag gestures; a user-saved boar
 | Claim | Status | Evidence |
 |---|---|---|
 | Any subset of sections may be set on one `FxChain`; `withSection`, `section`, `SECTION_NAMES`, `macrosOf`, `MAX_CHAIN_TAIL_SECONDS` exist | verified | `FxChain.kt:49-71, 150-230` |
-| `FxChain.process` runs TRANSPORT and ARRIVAL, then the rack, then caps the tail at 1.0 s with a 10 ms fade | verified | `FxChain.kt:88-122` |
+| `FxChain.process` runs TRANSPORT and ARRIVAL, then the rack, then caps the tail at 1.0 s with a 10 ms fade (since 2026-10-28 a 300 ms raised cosine, `FxChain.capTail`, shared with the board) | verified | `FxChain.kt:88-122` at the time; now `FxChain.process`, `head`, `finish` and the companion's `capTail` |
 | `Treatments.EXTRA`, `chain`, `fade`, `apply`, `endFaded`, `PRE_AMP_FADE` keyed on `"driven"` | verified | `Treatments.kt` |
 | `PadRecipe(patch, fx, treatment, amount, alias, board, terminalFadeMs)`, `VERSION = 2`, reads named keys only | verified | `PadRecipe.kt:21-60, 110-146` |
 | `board` is WIDE's (`BoardRecipe`, `BoardType.WIDE`), the sheet wraps it as `boardPad`, a WIDE pad refuses chips | verified | `BoardRecipe.kt`, `BoardSheet.kt:153`, `PadSheetScreen.kt:902`, `docs/WIDE.md` |
@@ -181,7 +182,7 @@ Reordering within a side (saved, not honoured); drag gestures; a user-saved boar
 Against the design above, read at the branch's actual base (the default branch after PRs #613, #616), with these differences:
 
 - **The registry** is `Pedals` in `synth` (`Pedals.kt`): `Entry(word, key, chain, side, movable, gated)` with `sections`, `isBoard`, `fade` (derived, not stored: true where the chain's VALVE DRIVE sits above VALVE's own default), `sides` (the amp only at AMP; a movable pedal PRE or POST; a board its own side) and `chainAt(amount)`, which is `Treatments.chain`'s law (full at 0.999 and above, faded between, nothing at 0), so a one-pick board is exactly a chip. `PedalSide` is `PRE`, `AMP`, `POST`. Day one: DRIVE (`driven`, AMP, gated), COMP (`compressed`, PRE, movable, gated), WAH (`wahed`, PRE, movable, gate pending so not gated), RIG (`rig`, a board of `compressed`'s squash, `driven`'s valve and `slapback`'s echo, AMP, not gated: authored as a hypothesis for its own gate, as section 4 says). **A board's side rule changed:** a board that contains the amp sits at AMP (section 4 said "the side of its earliest section", which would have put RIG's compressor side first and its amp nowhere); a board without the amp takes its earliest section's side. The registry's `init` refuses duplicate words or keys, a pedal whose key is not a character, and a board whose key is one.
-- **The board** is `PedalBoard(picks)` with `Pick(key, amount, side)` (`PedalBoard.kt`): `chainFor(side)` folds a side's live picks in pick order with `withSection` (later wins; `reverse` ORs), `owner(side, section)` names the winner, `process` runs PRE, then the pre-amp end fade and AMP, then POST, then the board's own cap at `FxChain.MAX_CHAIN_TAIL_SECONDS` over the original with the chain's 10 ms fade. **No board-level peak match was added:** every pass already peak-matches section by section, and a second match would have broken the equivalence with the chip by a float factor. Six picks at most (`MAX_PICKS`), no pedal twice, a side the entry does not allow refused in words; AMT 0 everywhere is a bypass. `fromCharacter(name, amount)` reads an old single-chip recipe as a one-pick board on the pedal's default side. JSON is `{"pedals":1,"picks":[{"key","amount","side"}]}`, read strictly (exact keys, version, a known pedal, a legal side, a finite amount in 0..1), as WIDE's `BoardRecipe` is.
+- **The board** is `PedalBoard(picks)` with `Pick(key, amount, side)` (`PedalBoard.kt`): `chainFor(side)` folds a side's live picks in pick order with `withSection` (later wins; `reverse` ORs), `owner(side, section)` names the winner, `process` runs PRE, then the pre-amp end fade and AMP, then POST, then the board's own cap at `FxChain.MAX_CHAIN_TAIL_SECONDS` over the original with the chain's 10 ms fade (since 2026-10-28 the board calls the rack's own `FxChain.capTail`, a 300 ms raised cosine). **No board-level peak match was added:** every pass already peak-matches section by section, and a second match would have broken the equivalence with the chip by a float factor. Six picks at most (`MAX_PICKS`), no pedal twice, a side the entry does not allow refused in words; AMT 0 everywhere is a bypass. `fromCharacter(name, amount)` reads an old single-chip recipe as a one-pick board on the pedal's default side. JSON is `{"pedals":1,"picks":[{"key","amount","side"}]}`, read strictly (exact keys, version, a known pedal, a legal side, a finite amount in 0..1), as WIDE's `BoardRecipe` is.
 - **The pre-amp end fade is keyed on the chain, not on a character's name** (`Treatments.needsPreAmpFade(chain)`, `Treatments.endFaded(snip, faded, full)`): `driven` fades exactly as before (its full chain is the same chain), `amped` still does not (DRIVE 0.6 is under VALVE's default 0.7), and the board's AMP pass fades against the winning pick's full chain. The by-name overload stays for `Treatments.apply`. The test "the end fade is driven's alone" still passes unchanged; `PedalBoardTest` repeats it as the chain rule's own check.
 - **`PadRecipe.pedals`** is the last constructor field, optional, runs after `fx` and before `board` (WIDE), counts as content for the "empty recipe" rule, is written as `pedals` and read back; `VERSION` stays 2. A recipe without it writes no key and renders byte-identically.
 - **The door** is `KitBuilderModel.pedalPad(slot, board)`: a WIDE (or RUSH) pad refuses first, AMT 0 everywhere is a no-op touching neither file nor bin, otherwise `rewriteEveryFile` renders every referenced file through the board and writes the `pedals` recipe. Restore-before-apply stays the caller's job, as for a chip; undo is `unEraPad`. **Deviation from section 7:** `PadSheet.read` does not return a board (an `Applied` names one treatment, and lighting one chip for several picks would be the lie the September UAT found); the board's reader is `PadSheet.readPedals`, and `unTreatState` consults it, so NONE is live over a board. `KitDiff.recipeName` names every pick ("COMP 70% PRE · DRIVE 100% AMP"), so the copy clip and the diff say what the sheet will light.
@@ -199,3 +200,31 @@ Against the design above, read at the branch's actual base (the default branch a
 
 WAH passed the owner's gate, and the owner asked for TOUCH and ROCK chips as well. The registry gains two entries after WAH (`touchwahed`, `rockwahed`, PRE, movable), and all three turn `gated`. Row seven derives from the registry, so it now reads DRIVE, COMP, WAH, TOUCH, ROCK, and the card draws 36 chips (the pinned inventory and count in `PadSheetTest`, and `PedalsTest`'s gated list, re-pinned). That is five of the row's six places: DELAY (above, gate pending), TREM and FLANGE (Stage 4) do not all fit, so before the second of them passes its gate either the picker (R2) holds the rest of the library or the row's layout is decided again.
 
+## SUSTAIN (2026-10-24)
+
+The COMPRESSOR section passed its gate and was built (`2026-10-23-compressor-section-design.md`). The COMP entry keeps its key `compressed`, side and movability and now reads SUSTAIN, the owner's word; its chain follows the character by reference, so it moved to the new section with no library edit beyond the word. RIG's compressor follows `compressed` too, so the board's sections are now `compressor`, `valve`, `echo`.
+
+## Stage 3 (2026-10-27)
+
+On a synth pad that still carries its patch, the board now renders around the pad's own landing chain (`PedalBoard.processAround`): PRE picks and the AMP pick in front of the amp, POST picks after it, so a pick's side means the side of the guitar's own amp. The recipe keeps the patch beside `pedals`, and undo writes the patch recipe back. Captured, layered and re-treated pads keep the board on the audio on disk (`2026-10-27-pedals-in-front-of-the-amp-design.md`).
+
+
+## The slate (2026-10-28)
+
+The owner set what row seven's window is (`2026-10-28-pedal-slate-design.md`), and it replaces this design's section 3 window and section 9 width law:
+
+- Row seven draws five pedals the user chooses, the same on every pad of every kit, then MORE. It no longer shows the pad's own pedals first and fills the rest.
+- MORE lists every gated pedal. Each has ON/OFF, and AMT and before/after-the-amp where the pedal is on the pad. PUT ON ROW swaps a pedal onto the row in place of the chip the user taps.
+- MORE lights with a count when the pad carries pedals the row does not show.
+- The width law is five pedals and MORE, which is six chips.
+
+The gestures are this design's (section 3): tap to add, tap a lit chip to remove, AMT on the marked pick. Four changes, all from one law, that a lit pedal is one you hear:
+
+- A new pedal goes on at 70, not at the sheet's AMT. The sheet's AMT is the marked pedal's, and copying it would move the old pedal under the "set AMT, then tap" habit.
+- AMT 0 takes the marked pick off.
+- Decision 4's "the later pick wins that section and the sheet names the owner" becomes: the later pick takes the earlier one's place, and the toast names it. WAH then TOUCH on one side would otherwise light two chips for one wah.
+- A pad whose own pedals the bin cannot restore refuses a change instead of stacking, because a board re-renders whole (that spec's D5).
+
+MORE lists boards once one is gated (decision 6), without PUT ON ROW.
+
+The logic is built in `shell` (`PedalSlate`, `PadSheet.rows`), DELAY turned `gated`, and R2 is now the screens' wiring, listed in that spec's section 6.

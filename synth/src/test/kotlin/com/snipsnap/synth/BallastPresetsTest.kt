@@ -51,7 +51,7 @@ class BallastPresetsTest {
             BallastVoice.GLINT to listOf("GLASS WAKE", "TILE SHIVER", "BRIGHT TAPS", "CLEAR TOPS", "SPARK ROW", "FROST LINE", "SMALL BELLS", "DENSE TILES"),
             BallastVoice.DEEP to listOf("LOWER REPLY", "SUB WEIGHT", "LOOSE MOUNT", "CAVE FLOOR", "FALLING AWAY", "HEAVY FRAME", "LOW WELL", "GREAT HALL"),
             BallastVoice.BLOOM to listOf("DELAYED OPEN", "SLOW CLIMB", "LATE ARRIVAL", "RISING HALO", "SOFT CLOUD", "OPEN FIELD", "WIDE DAWN", "WARM LIFT"),
-            BallastVoice.SWARM to listOf("DENSE RATTLE", "CROWD GLASS", "BUSY TILES", "TILE STORM", "LOUD ROOM", "LOOSE PILE", "NOISY FRAME", "SHAKEN BOX"),
+            BallastVoice.SWARM to listOf("DENSE RATTLE", "CROWD GLASS", "BUSY TILES", "TILE STORM", "LOUD HALL", "LOOSE PILE", "NOISY FRAME", "SHAKEN BOX"),
         )
 
         /** The note each preset's comment in [BallastPresets] names. */
@@ -67,7 +67,7 @@ class BallastPresetsTest {
             "DELAYED OPEN" to "C2", "SLOW CLIMB" to "G1", "LATE ARRIVAL" to "D2", "RISING HALO" to "G2",
             "SOFT CLOUD" to "D2", "OPEN FIELD" to "C2", "WIDE DAWN" to "F1", "WARM LIFT" to "C1",
             "DENSE RATTLE" to "C2", "CROWD GLASS" to "G2", "BUSY TILES" to "C2", "TILE STORM" to "G1",
-            "LOUD ROOM" to "C1", "LOOSE PILE" to "C2", "NOISY FRAME" to "F1", "SHAKEN BOX" to "C3",
+            "LOUD HALL" to "C1", "LOOSE PILE" to "C2", "NOISY FRAME" to "F1", "SHAKEN BOX" to "C3",
         )
     }
 

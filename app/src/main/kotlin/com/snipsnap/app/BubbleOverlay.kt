@@ -370,11 +370,13 @@ private class BubbleLifecycleOwner :
 
 /**
  * The bubble's visible content: a ring that fills as
- * `ring.filledFrames / capacity` fills, OILSLICK-scheme colors via the
- * same [Schemes] plumbing the rest of the app draws from — not the
+ * `ring.filledFrames / capacity` fills, in the default scheme's colors via
+ * the same [Schemes] plumbing the rest of the app draws from — not the
  * artboard's raw hex, per the standing "no hardcoded colors" rule.
- * [Schemes.OILSLICK.warn] is the fill arc: "always warm" per its own
- * KDoc, the same read the artboard's orange ring was going for.
+ * [Scheme.warn] is the fill arc: "always warm" per its own KDoc, the same
+ * read the artboard's orange ring was going for. The bubble is a separate
+ * window with no theme around it, so it draws [Schemes.DEFAULT] and not
+ * the scheme picked in SETUP.
  *
  * Tap and drag are two separate `pointerInput` blocks — one block
  * detecting both gestures has them fight each other for the same pointer
@@ -395,7 +397,7 @@ private fun BubbleContent(
     onDragEnd: () -> Unit,
     onDrag: (dx: Float, dy: Float) -> Unit,
 ) {
-    val scheme = Schemes.OILSLICK
+    val scheme = Schemes.DEFAULT
     var dragged by remember { mutableStateOf(false) }
     Box(
         Modifier

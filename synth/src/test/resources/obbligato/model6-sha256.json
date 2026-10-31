@@ -1,0 +1,86 @@
+{
+  "schemaVersion": 1,
+  "originalCommit": "42f12776ebeb45b26ce670aa129604e110001085",
+  "sourceGitBlobs": {
+    "synth/src/main/kotlin/com/snipsnap/synth/Obbligato.kt": "99bdf3d701fddbc494ae86f9a99a7b336b82fd64",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObbligatoPatch.kt": "fa3a01596f13f6fe2710a6db9bc55ccebec7aa3d",
+    "synth/src/main/kotlin/com/snipsnap/synth/ObbligatoInteraction.kt": "c95e874fac651b66a991f39efb951835c0e59615",
+    "synth/src/main/kotlin/com/snipsnap/synth/Bore.kt": "2e4b6ede528ff4a9d4a50ef43275ae1edd369dc8",
+    "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt": "9546c86fd17986b5c31957178ce440b096eb5c7b",
+    "synth/src/main/kotlin/com/snipsnap/synth/Strings.kt": "1338eaad15f3a3c57b03cd1cf2bdb73c12d56e7b",
+    "audio/src/main/kotlin/com/snipsnap/audio/Resampler.kt": "036ab78a7213ac0c063090edc9b1171d0210fe2d",
+    "audio/src/main/kotlin/com/snipsnap/audio/Loudness.kt": "4c9b44768c33c0b359c1f6353cfd6b1e7ab83fa5",
+    "audio/src/main/kotlin/com/snipsnap/audio/WavWriter.kt": "9fd614f2ec41fb6d5768bced9d6f2cfe3229ba06"
+  },
+  "captureDescription": "Captured from the unchanged compiled responsive renderer before the gentler voicing edit, using Temurin JDK 17.",
+  "floatFormat": "IEEE754 binary32 little endian, exact bits",
+  "exportFormat": "WavWriter PCM24 complete RIFF bytes, mono 44100Hz",
+  "cases": [
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Responsive6 compatibility 0",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.44999998807907104
+        },
+        "midi": 60,
+        "velocity": 0.800000011920929,
+        "seed": 0,
+        "model": 6
+      },
+      "rawFloat32LittleEndianSha256": "964040ca6cdae8fd1cf831afaf2308543222b6be2d54206f85deb9272a1749e1",
+      "airFloat32LittleEndianSha256": "bef1a7601b8795eb45dd3aefcdcd69b882895238447cb61295ef8b9f0689dfad",
+      "reedFloat32LittleEndianSha256": "3de478188d574132f1abe28c6ba713edb92b33090cf4450d04fbcdb3051adf98",
+      "finalPcm24WavSha256": "1a4948fa4c318f8a135d8033c4a55cff3648ea59071b358bac0efa2d1283edf8"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Responsive6 compatibility 1",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.4285714328289032,
+          "MISCHIEF": 1,
+          "HOLD": 1
+        },
+        "midi": 72,
+        "velocity": 0.800000011920929,
+        "seed": 17,
+        "model": 6
+      },
+      "rawFloat32LittleEndianSha256": "0ddcce371b80137aaca03e13be1b5902616d2317acd41dd09c21f5c373f2929c",
+      "airFloat32LittleEndianSha256": "7bb1130e7e94107dcdf5244f9efc4028e7e0d91eab7b897a6d4a8e29271c07cf",
+      "reedFloat32LittleEndianSha256": "0bd28438594e5beaa1c00ac62b859e3d0f5d1263e7f3558e4fcb2a7033373cc4",
+      "finalPcm24WavSha256": "90ae0f91f39d8a3d44987d219cb23afdb33db0abe0df145176cb7c50953157dd"
+    },
+    {
+      "recipe": {
+        "engine": "OBBLIGATO",
+        "version": 1,
+        "name": "Responsive6 compatibility 2",
+        "voice": "AIR_REED",
+        "macros": {
+          "BREATH": 0.6499999761581421,
+          "BOND": 0.5,
+          "MISCHIEF": 0.20000000298023224,
+          "HOLD": 0.10000000149011612
+        },
+        "midi": 67,
+        "velocity": 0.800000011920929,
+        "seed": -23,
+        "model": 6
+      },
+      "rawFloat32LittleEndianSha256": "cf8a41b3d109c5e412f146f38b4b31d074a28febfee415d0f324e097d25e8183",
+      "airFloat32LittleEndianSha256": "c2dc25d8a25f670f9ffe953a0051a6e77efca261e26546beaf07a1754c37e242",
+      "reedFloat32LittleEndianSha256": "0c7f6e626a359124f085a78130f949944887a2f4291e79b58f59bbbe0d86f071",
+      "finalPcm24WavSha256": "c6f91c4f4773a48a4dcccd351fae1d96a2986736bae85e1b6f40db323194b0b1"
+    }
+  ]
+}

@@ -70,7 +70,7 @@ class WickPatchTest {
     @Test
     fun `provisional library remains outside factory routing and every recipe is valid and recoverable`() {
         val recipes = WickPresets.all()
-        assertEquals(21, recipes.size)
+        assertEquals(25, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
         assertTrue(Presets.all().none { it.engine == WickPatch.ENGINE })
         for (voice in WickVoice.entries) {

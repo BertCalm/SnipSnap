@@ -228,3 +228,66 @@ C3–C5 with native C3/C4/C5 roots and one velocity layer; the host owns gain an
 note-off release. Physical phone/MPC acceptance, independent halo release,
 the remaining voices and the larger preset target remain later work. Current
 validation, render measurements and reproduction commands live in FILAMENT.md.
+
+
+## Held-family completion, 2026-10-26
+
+Model-3 PULSE and CURL now use the same onset-retaining keygroup path as THREAD.
+Their own periodic source, guided routing, activity memory and halo start from
+zero state and settle under the existing convergence rule. Only the capability
+boundary is expanded; the three synthesis models and twelve approved recipes
+keep their existing arithmetic and parameters. Native C3/C4/C5, one velocity
+layer and host-owned velocity gain/note-off release remain the package contract.
+
+The shared capability predicate drives both the phone sheet and renderer. The
+held-note tests compare actual preceding and following cycles after PCM16/24
+encoding, and the package tests exercise all three voices through native roots,
+WAV markers, both MPC containers, saved source settings and reference-player
+wrap/release. The family audition command writes the three programs, native
+WAVs and exported-file demos together with verified ZIP receipts. Physical
+phone/MPC acceptance and owner listening acceptance remain separate gates.
+
+Why it is built this way:
+
+- Keeping the original voice-specific drive retains PULSE's articulation and CURL's bloom.
+- One renderer and one support predicate keep the sheet and exported instrument aligned.
+- Three roots and one captured velocity keep this extension small enough to audition directly.
+- Existing program release makes note-off behavior editable without changing the saved source.
+
+## Three sampled touch strengths, 2026-10-31
+
+THREAD, PULSE and CURL can now build three source captures at each of their
+C3/C4/C5 roots. Strengths 0.35/0.65/1 multiply the saved velocity and INJECT;
+the other timbral controls, bend profile and seed stay authored. HOLD drives the
+existing held network, whose real onset and converged loop remain independent
+for each capture. The hard strength is the original single-layer instrument.
+No synthesis-model version, approved factory recipe or ordinary-render arithmetic
+is changed. These are version-1 instrument captures, separate from saved models.
+
+Native velocity alone made only a small normalized spectral change in the first
+THREAD probe. Coupling it to the existing INJECT parameter also changes source
+upper partials and launch allocation. The focused Kotlin matrix now records
+gain-independent power-spectrum distances of 0.0335–0.0970 across its three
+voices and adjacent touches. The exact fixtures and limits live in FILAMENT.md;
+the owner's listening judgment remains open.
+
+Layers occupy MIDI velocity windows 1–42, 43–84 and 85–127. Each removes only
+its known velocity^.72 output level before the existing host's note gain. There
+is no per-layer loudness matching, new normalization or external effect. The
+delivery recipe records all nine derived held-key patches, capture version,
+velocity windows and release beside the original unchanged source patch.
+
+The phone enables TOUCH LAYERS by default and retains an OFF option. MAKE and
+PREVIEW render off the playback thread, serially and with cancellation. A
+three-layer program costs about three times the time and storage. The family
+audition task can package all 27 source samples and exported-file performances
+without replacing the historical single-layer handoff. Wider zoning, new voices
+and independent halo release remain outside this round. Physical phone/MPC
+acceptance and listening approval remain open.
+
+Why it is built this way:
+
+- Softer excitation changes the existing instrument's gesture through its own controls.
+- The hard anchor and single-layer option preserve the accepted material.
+- Each strength keeps its own real onset and converged sustain rather than borrowing a hard loop.
+- Versioned delivery metadata explains the derived captures without changing saved patch JSON.

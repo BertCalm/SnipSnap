@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class AlloyCommandTest {
     @Test
-    fun `all six Alloy key presets audition the requested pitch and energy`() {
+    fun `all four Alloy key presets audition the requested pitch and energy`() {
         val dir = createTempDirectory("alloy-cli").toFile()
         try {
             val output = ByteArrayOutputStream()
@@ -22,7 +22,7 @@ class AlloyCommandTest {
                 PrintStream(output), PrintStream(ByteArrayOutputStream()),
             ))
             val wavs = dir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
-            assertEquals(6, wavs.size)
+            assertEquals(4, wavs.size)
             for ((i, source) in AlloyPresets.forVoice(AlloyVoice.KEY).withIndex()) {
                 val preset = source.copy(midi = 65, velocity = .4f)
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
@@ -32,7 +32,7 @@ class AlloyCommandTest {
                 assertEquals(44_100, audio.sampleRate)
                 assertTrue(audio.peak() > 0f)
             }
-            assertTrue("6 rendered into" in output.toString())
+            assertTrue("4 rendered into" in output.toString())
         } finally {
             dir.deleteRecursively()
         }
@@ -42,15 +42,40 @@ class AlloyCommandTest {
     fun `Alloy CLI held selection exports the settled recipe with note overrides`() {
         val dir = createTempDirectory("alloy-held-cli").toFile()
         try {
+            val source = AlloyPresets.heldReferences().single { it.voice == AlloyVoice.SOFT }
+            val patchFile = dir.resolve("held.patch").apply { writeText(source.toJsonText()) }
+            val out = dir.resolve("out")
             assertEquals(0, Cli.run(
-                arrayOf("synth", "AlLoY", "SoFt", "--preset", "2", "--midi", "72", "--velocity", ".35", "--out", dir.path),
+                arrayOf("synth", "AlLoY", "SoFt", "--patch", patchFile.path, "--midi", "72", "--velocity", ".35", "--out", out.path),
                 PrintStream(ByteArrayOutputStream()), PrintStream(ByteArrayOutputStream()),
             ))
-            val wav = dir.listFiles { f -> f.extension == "wav" }!!.single()
+            val wav = out.listFiles { f -> f.extension == "wav" }!!.single()
             assertEquals("ALLOY_SOFT_01_Endless_Ember.wav", wav.name)
-            val preset = AlloyPresets.forVoice(AlloyVoice.SOFT)[1].copy(midi = 72, velocity = .35f)
+            val preset = source.copy(midi = 72, velocity = .35f)
             val expected = ByteArrayOutputStream().also { WavWriter.write(it, preset.render()) }.toByteArray()
             assertTrue(expected.contentEquals(wav.readBytes()), "HOLD or its material excitation was lost")
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun `Alloy CLI saved authored role keeps its configuration through note and energy overrides`() {
+        val dir = createTempDirectory("alloy-authored-cli").toFile()
+        try {
+            val source = AlloyPresets.forVoice(AlloyVoice.KEY).single { it.name == "Long Prism" }
+                .copy(midi = 55, velocity = .65f)
+            val patchFile = dir.resolve("authored.patch").apply { writeText(source.toJsonText()) }
+            val out = dir.resolve("out")
+            assertEquals(0, Cli.run(
+                arrayOf("synth", "ALLOY", "KEY", "--patch", patchFile.path, "--midi", "72", "--velocity", ".3", "--out", out.path),
+                PrintStream(ByteArrayOutputStream()), PrintStream(ByteArrayOutputStream()),
+            ))
+            val wav = out.listFiles { f -> f.extension == "wav" }!!.single()
+            val expected = ByteArrayOutputStream().also {
+                WavWriter.write(it, source.copy(midi = 72, velocity = .3f).render())
+            }.toByteArray()
+            assertTrue(expected.contentEquals(wav.readBytes()), "saved operator routing and envelope must survive CLI overrides")
         } finally {
             dir.deleteRecursively()
         }
@@ -63,7 +88,7 @@ class AlloyCommandTest {
             for (flags in listOf(
                 arrayOf("--midi", "23"), arrayOf("--midi", "97"), arrayOf("--midi", "48.5"),
                 arrayOf("--velocity", "NaN"), arrayOf("--velocity", "Infinity"), arrayOf("--velocity", "1.1"),
-                arrayOf("--preset", "7"), arrayOf("--midi", "60", "--instrument"), arrayOf("--velocity", ".5", "--drone"),
+                arrayOf("--preset", "5"), arrayOf("--preset", "7"), arrayOf("--midi", "60", "--instrument"), arrayOf("--velocity", ".5", "--drone"),
             )) {
                 val errors = ByteArrayOutputStream()
                 assertTrue(Cli.run(

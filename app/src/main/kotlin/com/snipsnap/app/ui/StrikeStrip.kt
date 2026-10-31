@@ -41,13 +41,14 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.LocalScheme
 import com.snipsnap.app.theme.TapeType
-import com.snipsnap.app.theme.amberOnChrome
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.raisedBevel
 import com.snipsnap.app.theme.sunkenField
 import com.snipsnap.app.theme.tape
 import com.snipsnap.shell.Layout
 import com.snipsnap.shell.StrikeStrip
+import com.snipsnap.kit.KitPad
+import com.snipsnap.xpm.PadNoteMap
 import kotlin.math.roundToInt
 
 /** One live object belongs to KIT; its normal grid and fullscreen popup read the same gesture. */
@@ -64,6 +65,9 @@ internal class StrikeState(
     var returns by mutableStateOf(returns)
     var volume by mutableStateOf(volume)
     var strength by mutableFloatStateOf(strength)
+    var lastHit by mutableStateOf<StrikeStrip.LayerHit?>(null)
+
+    fun recordHit(pad: KitPad, velocity: Float) { lastHit = StrikeStrip.layerHit(pad, velocity) }
 
     fun hit(touchVelocity: Float): StrikeStrip.Hit = StrikeStrip.hit(touchVelocity, enabled, strength, volume)
     fun releaseTouch() { if (returns) strength = 0f }
@@ -73,6 +77,36 @@ internal class StrikeState(
             save = { listOf(it.enabled, it.right, it.returns, it.volume, it.strength) },
             restore = { StrikeState(it[0] as Boolean, it[1] as Boolean, it[2] as Boolean, it[3] as Boolean, it[4] as Float) },
         )
+    }
+}
+
+/** Kept across thumb moves and RETURN, so the highlight describes the WAV that was triggered. */
+@Composable
+internal fun StrikeLayerFeedback(state: StrikeState, modifier: Modifier = Modifier) {
+    if (!state.enabled) return
+    val scheme = LocalScheme.current
+    val hit = state.lastHit
+    Row(modifier.heightIn(min = 28.dp), horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (hit == null) {
+            TapeText("TAP A PAD TO SEE ITS LAYER", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 1)
+        } else {
+            TapeText("LAST ${PadNoteMap.labelForPad(hit.slot)}", TapeType.pixelSmall, scheme.ink2.tape)
+            hit.labels.forEachIndexed { index, label ->
+                val active = index == hit.selected
+                Box(
+                    Modifier.weight(1f).heightIn(min = 28.dp)
+                        .let { if (active) it.sunkenField(scheme) else it.raisedBevel(scheme) }
+                        .semantics {
+                            contentDescription = "STRIKE LAYER ${index + 1}: $label"
+                            selected = active
+                        }.padding(horizontal = 3.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    TapeText(label, TapeType.pixelSmall, if (active) scheme.accent.tape else scheme.ink2.tape, maxLines = 1)
+                }
+            }
+        }
     }
 }
 
@@ -126,7 +160,7 @@ internal fun StrikeFader(state: StrikeState, modifier: Modifier = Modifier) {
     val scheme = LocalScheme.current
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         TapeText("STRIKE", TapeType.pixelSmall, scheme.ink2.tape)
-        TapeText("${(state.strength * 100).roundToInt()}%", TapeType.lcdSmall, scheme.amberOnChrome)
+        TapeText("${(state.strength * 100).roundToInt()}%", TapeType.lcdSmall, scheme.accent.tape)
         Box(
             Modifier.weight(1f).fillMaxWidth().heightIn(min = Layout.MIN_HIT_TARGET.dp)
                 .lcdPanel(scheme)

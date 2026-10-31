@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#141f1a">
+  <meta name="description" content="A separate OVERLAP steady-body proof: four repeated loop previews and four held notes with drive withdrawal. Listen, download the evidence, and keep local notes.">
+  <title>OVERLAP / Steady held proof</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listening">Skip to the audio</a>
+  <header class="masthead wrap">
+    <a class="brand" href="../index.html">SnipSnap<span>SOUND EXPERIMENTS</span></a>
+    <span class="edition"><i aria-hidden="true"></i> OVERLAP / HELD PROOF</span>
+    <a class="back-link" href="../index.html">Back to the musical bank ↗</a>
+  </header>
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div>
+        <p class="eyebrow">ISOLATED STEADY-BODY EXPERIMENT / PROTOTYPE 1</p>
+        <h1 id="page-title">Let the body<br><em>keep going.</em></h1>
+        <p class="lede">Four connected bodies. Time to hear the repetition, then let the sound go.</p>
+        <p class="hero-detail">A separate held-note proof for OVERLAP. The model-two musical bank stays as it is. These recordings test a steady body and its release, with breathing movement and glow switched off.</p>
+        <div class="hero-actions"><a class="primary-link" href="#listening">Open the proof <span aria-hidden="true">↓</span></a><a class="trial-jump" href="#mpc-trial">Try the MPC keygroups <span aria-hidden="true">↓</span></a></div>
+      </div>
+      <aside class="condition-plate" aria-label="Proof conditions">
+        <div class="plate-head"><span>OVERLAP</span><span>STEADY / 01</span></div>
+        <p class="plate-title">HOLD → REPEAT → RELEASE</p>
+        <dl>
+          <div><dt>REFERENCE</dt><dd>C3 · MIDI 48</dd></div>
+          <div><dt>ROUTING</dt><dd>SELF / TREFOIL / MIRROR / TORUS</dd></div>
+          <div><dt>KNOT</dt><dd>Full depth · SELF at zero</dd></div>
+          <div><dt>PULSE / LOCK / GLOW</dt><dd>0 / 0 / 0</dd></div>
+          <div><dt>RING / HOLD</dt><dd>0.6 / 1</dd></div>
+        </dl>
+        <p class="plate-foot">OFFLINE WAVS · NO AUTOPLAY · NO ADDED FX</p>
+      </aside>
+    </section>
+
+    <section class="listen-guide wrap" aria-label="Listening questions">
+      <div><span class="eyebrow">01 / THE BODY</span><h2>Do they stay distinct?</h2><p>Compare the four routings in their settled sustain. Judge the sustained colour and weight.</p></div>
+      <div><span class="eyebrow">02 / THE RETURN</span><h2>Can you hear the repeat?</h2><p>Each loop preview plays its settled body eight times. Listen for a click, a pulse, or an obvious repeated shape.</p></div>
+      <div><span class="eyebrow">03 / THE RELEASE</span><h2>Does it let go?</h2><p>The examples hold for about 2.5 seconds, then withdraw drive over 0.25 seconds. Listen to how the network loses its energy.</p></div>
+    </section>
+
+    <section class="keygroup-trial wrap" id="mpc-trial" aria-labelledby="mpc-trial-title">
+      <div class="keygroup-copy">
+        <p class="eyebrow">NEXT / MPC HARDWARE TRIAL</p>
+        <h2 id="mpc-trial-title">Put the bodies under your fingers.</h2>
+        <p>Four keygroup programs bring SELF, TREFOIL, MIRROR and TORUS to the MPC, with MPC 3 tracks and matching XPM programs. Each uses three sampled references at MIDI 36, 48 and 60, with a playable range of MIDI 30 to 66. PULSE and GLOW are off.</p>
+        <ol class="trial-steps">
+          <li><strong>Unzip the entire folder.</strong> Keep the extracted program and sample folders in their original places.</li>
+          <li><strong>Load the MPC program.</strong> On MPC 3, load the <code>.xty</code> track. On an older MPC, load the matching <code>.xpm</code> inside its <code>_[TrackData]</code> folder. Choose the program, not an individual WAV.</li>
+          <li><strong>Try the held gesture.</strong> Sustain a note through repeated loop returns, then try short taps, notes between the sampled references, chords and note-off. Listen for clicks, abrupt changes or notes that keep going.</li>
+        </ol>
+        <p class="trial-release">The MPC releases these sampled bodies through its sampler envelope. That release differs from the physical network tail in the recordings below. The MIDI notes are geometry references; perceived pitch can follow another resonant family.</p>
+      </div>
+      <aside class="keygroup-download" aria-label="MPC keygroup trial downloads">
+        <p class="trial-status">HARDWARE TESTING PENDING</p>
+        <p class="trial-download-title">OVERLAP held keygroups</p>
+        <p class="trial-download-detail">MPC 3 tracks + XPM programs<br>Four bodies · MIDI 30 to 66</p>
+        <a class="keygroup-button" href="held-keygroup/overlap-held-keygroups.zip" download>Download the MPC trial <span aria-hidden="true">↓</span></a>
+        <a class="trial-readme" href="held-keygroup/README.txt">Setup + hardware checklist <span aria-hidden="true">↗</span></a>
+        <div class="trial-evidence-links"><a href="held-keygroup/manifest.json" download>Package manifest ↗</a><a href="held-keygroup/checksums.sha256" download>File checksums ↗</a></div>
+        <p class="trial-pending">Loading, sustain, loop returns and release still need checking on an MPC.</p>
+      </aside>
+    </section>
+
+    <section class="bench wrap" id="listening" aria-labelledby="bench-title">
+      <div class="bench-heading"><div><p class="eyebrow">THE LISTENING BENCH</p><h2 id="bench-title">Hold. Return. Release.</h2></div><div class="mode-panel"><span id="mode-label">PLAYBACK LEVEL</span><div class="segmented" role="group" aria-labelledby="mode-label"><button type="button" data-mode="matched" aria-pressed="true">MATCHED</button><button type="button" data-mode="native" aria-pressed="false">NATIVE</button></div></div></div>
+      <p class="mode-explanation" id="mode-explanation">MATCHED shares one gain per topology’s loop/release pair. The louder loudest-200-ms RMS targets 0.03, with a 0.90 peak ceiling. NATIVE shares one only-down safety gain across the whole proof.</p>
+      <nav class="section-nav" aria-label="Proof sections"><a href="#group-loops">01 Repeated bodies</a><a href="#group-release">02 Note-off examples</a><a href="#mpc-trial">MPC keygroups</a><a href="#evidence">Files & evidence</a></nav>
+      <p class="loading" id="loading" role="status">Loading the held proof…</p>
+      <div id="clips"></div>
+      <noscript><p class="notice">JavaScript loads the listening bench. <a href="assets/manifest.json">Download the manifest</a> for the WAV file paths.</p></noscript>
+    </section>
+
+    <section class="notes-section wrap" aria-labelledby="notes-title">
+      <div><p class="eyebrow">YOUR LISTENING NOTES</p><h2 id="notes-title">Which bodies are worth keeping?</h2><p>Use Keep, Revise or Pass under each clip, and describe what you hear. Notes stay in this browser, separate from the other auditions. Nothing is sent to a server.</p></div>
+      <div class="notes-export"><span id="notes-count">No notes yet.</span><button type="button" id="export-notes">Export notes ↓</button><span class="fine-print">JSON · saved on this device</span></div>
+    </section>
+
+    <section class="evidence wrap" id="evidence" aria-labelledby="evidence-title">
+      <div><p class="eyebrow">THE LIMIT</p><h2 id="evidence-title">A proof to judge by ear.</h2><p>These are experimental steady-loop and held-note renders. They are not a new engine model or a new preset bank. MIDI 48 requests a C3 geometry reference; the strongest perceived pitch can belong to another resonant family. Tuning across the full KNOT range is outside this proof. Prototype recipes cannot be imported as ordinary SnipSnap PadRecipes.</p></div>
+      <div><p class="eyebrow">THE EVIDENCE</p><h2>A real cycle around the seam.</h2><p>Seam checks use actual preceding, kept and following periods from the continuously running network. The downloadable diagnostics record the measured seam errors and convergence. The browser only plays the rendered WAVs.</p><div class="file-links"><a href="assets/manifest.json" download>Audio manifest ↗</a><a id="bundle-link" href="assets/overlap-held-proof.zip" download>Proof archive ↗</a><a href="assets/metrics.json" download>Metrics JSON ↗</a><a href="assets/metrics.csv" download>Metrics CSV ↗</a><a href="assets/SHA256SUMS.txt" download>SHA-256 checksums ↗</a><a href="../index.html">Original musical bank ↗</a></div><details class="manifest-details"><summary>Generation & level policy</summary><div id="manifest-evidence"><p>Loading evidence from the manifest…</p></div></details></div>
+    </section>
+  </main>
+  <footer class="footer wrap"><span>SnipSnap / OVERLAP held proof</span><a href="../index.html">Return to the musical bank ↗</a></footer>
+  <div class="transport"><div class="transport-inner wrap"><i id="transport-light" aria-hidden="true"></i><div class="transport-track"><span id="transport-state">STEADY HELD PROOF</span><span id="transport-title">Choose a sound to begin</span></div><span id="transport-mode">MATCHED</span><button type="button" id="stop-all"><span aria-hidden="true">■</span> Stop <kbd>ESC</kbd></button></div></div>
+  <p class="sr-only" id="announcement" role="status" aria-live="polite" aria-atomic="true"></p>
+</body>
+</html>

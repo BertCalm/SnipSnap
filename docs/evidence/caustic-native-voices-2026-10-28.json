@@ -1,0 +1,3226 @@
+{
+  "schema": 1,
+  "sourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+  "sourceDirty": false,
+  "sourceFingerprintSha256": "acbe71e01360e40d1abc313f771c4c903139a0001eaae7540a92e95b184682c1",
+  "runtime": "21.0.13+9-LTS amd64",
+  "generatedAt": "2026-10-28T02:13:56.934208972Z",
+  "publishedNativeAudition": "https://caustic-snipsnap-voices.bertcalm.chatgpt.site/",
+  "renderManifestSha256": "42d0014888642671a2173eb61f2c00d138557dacb0988f9af4140f779dfddfa7",
+  "hostedManifestSha256": "595230e37f92e923c669f80175d716cdbbbc803ccac9f9a9d61a55c954303b19",
+  "nativeSiteSource": "0cd2d651b065c8d6f1a336f2b70275217eef2a81",
+  "publication": {
+    "name": "caustic-native-publication-complete.json",
+    "sha256": "bbabf7f775e21f0ad8ff430fe754d3d29c6a98879fe5d5a39ed5a07d9a018f09",
+    "native": {
+      "project_id": "appgprj_6ae15fbf23bc8191a0a0dd1b63f5415a",
+      "site_source": "0cd2d651b065c8d6f1a336f2b70275217eef2a81",
+      "render_source": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "deployment_id": "appgdep_6ae16223d9088191b462ad25d59ddd4e",
+      "version_id": "appgprj_6ae15fbf23bc8191a0a0dd1b63f5415a~appgver_20ba3aeb50a08191b4489608c8222842",
+      "status": "succeeded",
+      "url": "https://caustic-snipsnap-voices.bertcalm.chatgpt.site"
+    },
+    "history": {
+      "project_id": "appgprj_6ad6986eb890819193e323b10c72c007",
+      "site_source": "28cc43b71346fe8b67fddb2208fdd4cdf306f522",
+      "deployment_id": "appgdep_6ae162bcf98c8191bc8eb651b6a4c6be",
+      "version_id": "appgprj_6ad6986eb890819193e323b10c72c007~appgver_9cf53d012444819187bece638d82434d",
+      "status": "succeeded",
+      "url": "https://caustic-snipsnap-audition.bertcalm.chatgpt.site"
+    }
+  },
+  "manifestSummary": {
+    "clipCount": 42,
+    "voiceCount": 4,
+    "defaultCount": 12,
+    "sampleRate": 44100,
+    "channels": 1,
+    "bitDepth": 24,
+    "oversampling": 4,
+    "nativeExportGain": 1,
+    "maximumNativePeak": 0.9900000095367432,
+    "worstSampleHeadroomDb": 0.0872960243771853,
+    "worstPitchCents": 13.699183119228849,
+    "maximumRenderMillis": 2626.024282,
+    "preservedEarlierFiles": {
+      "caustic-audition": 156,
+      "caustic-instrument-audition": 69,
+      "caustic-character-study": 53
+    },
+    "leveling": "Native is exact CausticPatch.render() output with its house finish. Matched copies use AuditionLevel once.",
+    "checks": [
+      "finite mono 44.1 kHz PCM, no clipping or silence",
+      "native LENGTH equals the saved patch duration",
+      "all C2/C4/C6 defaults have voiced-window pitch confidence at least .3 and error within 20 cents",
+      "native patch JSON round trips for every clip",
+      "each C4 default and BODY\u00d7LENGTH pair replays sample for sample",
+      "every named comparison changes native samples",
+      "four-voice kit passes its MPC export readers",
+      "source fingerprint stable during generation",
+      "all earlier audition files unchanged"
+    ],
+    "warnings": [
+      "hollow-mallet-c2: early classifier reads TOM"
+    ],
+    "limits": [
+      "Fixed Kotlin recordings; the browser does not synthesize",
+      "Finite notes only; HOLD is reserved at zero",
+      "Broad pitch/classifier measurements are reported independently of listening approval",
+      "The accepted prototype directions are now native voices; new macro positions remain listening comparisons"
+    ]
+  },
+  "clips": [
+    {
+      "id": "alloy-c4",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.49811601638793945,
+        "rawRms": 0.06325764471843862,
+        "dc": 2.8524266859367976e-09,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.68084716796875,
+        "pitchConfidence": 0.9861983060836792,
+        "pitchCents": 6.968987308627088,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 258.003513,
+        "finite": true,
+        "clippedSamples": 0
+      },
+      "rawSha256": "e88d6484147062dfa3adf3a467dbfc287841339ddf7b878e0620a7906a0f547b",
+      "matchedSha256": "08c4471e5fafe380ecf1db1bae44feedc85a09c2d18356fc54cbfbbd6deab89d",
+      "recipeSha256": "30121d901675e913b7e49aa3e1641b23571641cc7cfb40ef231d02a2c2699cc2"
+    },
+    {
+      "id": "alloy-c2",
+      "voice": "ALLOY",
+      "midi": 36,
+      "metrics": {
+        "rawPeak": 0.5311622023582458,
+        "rawRms": 0.08285073186838436,
+        "dc": 1.1888823983019592e-07,
+        "seconds": 8,
+        "requestedHz": 65.40639132514966,
+        "pitchHz": 65.56071472167969,
+        "pitchConfidence": 0.9550102949142456,
+        "pitchCents": 4.079956415898747,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 124.212271,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999961499566212,
+          "cosineSimilarity": -0.0027749003375832637,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "7b9452d13859dc4459664766dd62a5a7345304857e14bf8829170b5b8a8740e3",
+      "matchedSha256": "440d13276a36636d838410c8f965cbff7568f143c8e3b2a8d11d34dfc6e84f22",
+      "recipeSha256": "f27074d62f40a1011d808aa0ed8781ee1becffb9f32d6e64b165cea6bdf39a22"
+    },
+    {
+      "id": "alloy-c6",
+      "voice": "ALLOY",
+      "midi": 84,
+      "metrics": {
+        "rawPeak": 0.46088358759880066,
+        "rawRms": 0.07019585326710874,
+        "dc": 2.8288312579141733e-10,
+        "seconds": 8,
+        "requestedHz": 1046.5022612023945,
+        "pitchHz": 1050.4537353515625,
+        "pitchConfidence": 0.9964627027511597,
+        "pitchCents": 6.524633515894018,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 103.860543,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999981568864428,
+          "cosineSimilarity": 0.001919954082471965,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "9be133ca7b7cad5f76ac1316657dfe054947882b3beb7d530b03d41e165179b6",
+      "matchedSha256": "06ecee875edc60d9b559f70068e2aab00e47a6675d45875a17d81335d51af327",
+      "recipeSha256": "8fee25db4e16e3cb73e44277882c6f665fea345deee1c92630450e918ee8a608"
+    },
+    {
+      "id": "alloy-source-0",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.42638272047042847,
+        "rawRms": 0.055906545410074567,
+        "dc": -2.91131368760625e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.36083984375,
+        "pitchConfidence": 0.9871427416801453,
+        "pitchCents": 4.858649566144553,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 104.885493,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.8927708744742793,
+          "cosineSimilarity": 0.45051100507132585,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "70d14e63bafdc5e7bca61951d331c4463a0bae6910e8ed03d4642eb06b578419",
+      "matchedSha256": "8ce8b633f89001326f66887148efe3a538b58b0aeea33e7fda34bcb5fa12a54f",
+      "recipeSha256": "ee760e157b62d28f74def5c57e9a06876a7a10436c1bcf2f483d9b9c8eec2928"
+    },
+    {
+      "id": "alloy-source-1",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4477052688598633,
+        "rawRms": 0.06296427402282588,
+        "dc": 1.1766096640006254e-09,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.3326416015625,
+        "pitchConfidence": 0.9870824217796326,
+        "pitchCents": 4.672568515885231,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 117.775813,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.4900335953666216,
+          "cosineSimilarity": 0.8717035478945646,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "72289ecda83449807411ec21a7b9fbaafab56e9433ac2ee296f74eff7d6f2c01",
+      "matchedSha256": "f36001563061c21b6aee8630674aee0a8a34648cac3be3aff6d8701ad3810c30",
+      "recipeSha256": "c44576cfeec1aa9bcc0773de9ac3bf30c03f6c3492ac380dec2d0ce67c7fa74f"
+    },
+    {
+      "id": "alloy-focus-sparse",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4173295497894287,
+        "rawRms": 0.0666909014058232,
+        "dc": -3.909881102694623e-09,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.8712158203125,
+        "pitchConfidence": 0.9876850247383118,
+        "pitchCents": 8.223183535553375,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 108.391144,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.8854344710892724,
+          "cosineSimilarity": -0.46476423851968746,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "0725f79a9c044f86f6d37e978078244436359c984e8adf597a3d7f2ad78020e3",
+      "matchedSha256": "2752b1c280682c49fdf2b81de02575953438d3f2269eabd6d4071074a56b0bd0",
+      "recipeSha256": "b4ad91ee352a76549e1f3bc17d6cb9f13355af48de2a5ed1fc980abe05cf3659"
+    },
+    {
+      "id": "alloy-body-0",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.5642979741096497,
+        "rawRms": 0.037675760101222394,
+        "dc": -3.1728555369082906e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.6629638671875,
+        "pitchConfidence": 0.9797292947769165,
+        "pitchCents": 13.42969153830838,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 101.462156,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.6938817359847632,
+          "cosineSimilarity": 0.7200889781594323,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "dbb82514c416f411d3392e8c4932e65ec248118e69f370abc6a4e0251bf373c6",
+      "matchedSha256": "b16dd446281d2615efff7f156c38ae01fa863cb3dc838ca1c4b447917b8d990f",
+      "recipeSha256": "f38d7e3a594c2fadb0a0bd76a3a0ba021e9ccd1dc6977ea287a3293f477e2901"
+    },
+    {
+      "id": "alloy-length-short",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.6424025297164917,
+        "rawRms": 0.059620467737779306,
+        "dc": 4.443019086383127e-09,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.1556396484375,
+        "pitchConfidence": 0.9871241450309753,
+        "pitchCents": 3.504070264964893,
+        "pitchFromSeconds": 0.35625170068027207,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 39.254089,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.5988694164197613,
+          "cosineSimilarity": 0.8008466907448563,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "cae7750de2c173e3a0ec908a75db7574a6d3b66126f663f6f951e166f781cd2c",
+      "matchedSha256": "c04ab6255cdc0793401ec6c150e41b49840b50b8089eb10a010f9a9838b4b1ac",
+      "recipeSha256": "f5965bcd807c58c8088149bd5db16868f16c2b9ec51b8ac737a3bf451fcfad85"
+    },
+    {
+      "id": "alloy-rim-focus",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.508961021900177,
+        "rawRms": 0.06244075853725041,
+        "dc": 1.788690744010916e-09,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.6482849121094,
+        "pitchConfidence": 0.9864512085914612,
+        "pitchCents": 6.7543680054591615,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 114.383145,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.4322520601101017,
+          "cosineSimilarity": 0.9017528245203811,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "24f0f99c4926c68089802fa6aad4e463f58f9272c3881d25f9509740fde4fc52",
+      "matchedSha256": "832a5adde5c44b924519bba065e7a93e54b9c798960a8cc975a490658e84ec67",
+      "recipeSha256": "20bf563405903157ae600309907bd708bd2683542258c5a31a131ec13ca1c6cb"
+    },
+    {
+      "id": "alloy-short-body",
+      "voice": "ALLOY",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.7121442556381226,
+        "rawRms": 0.05155302135306653,
+        "dc": -4.674920900888515e-10,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.4870910644531,
+        "pitchConfidence": 0.9755508303642273,
+        "pitchCents": 12.274510037910185,
+        "pitchFromSeconds": 0.35625170068027207,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 32.867212,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.7125193188144482,
+          "cosineSimilarity": 0.7016524925603652,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "fa0685c932bc2ff3cf042b285a0eb580f14baa78f53edd74035abe50928c6a7c",
+      "matchedSha256": "d1a1aef16a7b2396c1ce8dc6bc16f41edb5e9b669bd0d2f5886900d682242429",
+      "recipeSha256": "7f3511c365cb2b6b75bd0cd5bf4597862eba659dd0f4801edf41f72bd0106126"
+    },
+    {
+      "id": "hollow-mallet-c4",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.6161776781082153,
+        "rawRms": 0.02758247173140018,
+        "dc": 3.492190430174974e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.1488952636719,
+        "pitchConfidence": 0.9393962621688843,
+        "pitchCents": 3.4595308502948643,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 523.355568,
+        "finite": true,
+        "clippedSamples": 0
+      },
+      "rawSha256": "6a2db4a0e91f923a0c1b0dc5361c37f7539bacd30f9aa2d39ea3766aa5292010",
+      "matchedSha256": "4f79e3570f30db02d5a1744f85c5be46e2f67bd66b48dc080483ff37e681829a",
+      "recipeSha256": "4c3162f2630f3d048a22c1283ce91abc81970165258bd2f52643892ec6097e36"
+    },
+    {
+      "id": "hollow-mallet-c2",
+      "voice": "HOLLOW_MALLET",
+      "midi": 36,
+      "metrics": {
+        "rawPeak": 0.839102566242218,
+        "rawRms": 0.038642482979760584,
+        "dc": 5.016227401893065e-09,
+        "seconds": 8,
+        "requestedHz": 65.40639132514966,
+        "pitchHz": 65.66083526611328,
+        "pitchConfidence": 0.8497717380523682,
+        "pitchCents": 6.721780555087217,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "TOM",
+        "renderMillis": 459.334526,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999968825920917,
+          "cosineSimilarity": 0.0024969593690033496,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "f46989361517b4e4c18c371c68bbc41984bb0d8d8338d1457ae299a86943da33",
+      "matchedSha256": "4b3e313ea1ea91a1e9220290d9435a24c0325cf692bd66ee51d44dcedd0d043c",
+      "recipeSha256": "4c811ae8a0cec565b3ca3e8881b4b45a5a7c1ed4a8317045741c2cc2a37fc787"
+    },
+    {
+      "id": "hollow-mallet-c6",
+      "voice": "HOLLOW_MALLET",
+      "midi": 84,
+      "metrics": {
+        "rawPeak": 0.6202592849731445,
+        "rawRms": 0.026141198159254034,
+        "dc": 5.05465680897118e-12,
+        "seconds": 8,
+        "requestedHz": 1046.5022612023945,
+        "pitchHz": 1048.0311279296875,
+        "pitchConfidence": 0.9842787981033325,
+        "pitchCents": 2.5273663514608424,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 399.653096,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999950886494755,
+          "cosineSimilarity": -0.0031341150151640664,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "571423ebbfc9ac6bb29961ee97592a7d87cc137ce3c0ddc8a0c81835b76d9728",
+      "matchedSha256": "01ec0fc2606636926781303285151eb95f1c037e173954d9a9683ecd91ee4b11",
+      "recipeSha256": "d68b837ed29005e672b9972da8e6d032969aabf3e62c6e45472d365da35290a0"
+    },
+    {
+      "id": "hollow-mallet-source-0",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.6579943895339966,
+        "rawRms": 0.02698765965216772,
+        "dc": -2.344600895301465e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.1983947753906,
+        "pitchConfidence": 0.9363197684288025,
+        "pitchCents": 3.7863952853065443,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 372.422277,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.2827556543106859,
+          "cosineSimilarity": 0.9591919724201743,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "bfa5486f015df6e2379392db805fc8575969d42071154ec2d054fd55ff6e8ac2",
+      "matchedSha256": "4d845901649b9330768d200bd230d8744790a6aad429a5a8d76739741cdb862a",
+      "recipeSha256": "17a9dba7ee92e2f9106fc42d6b5dd3c0c05e66d45deee68e185c43135e492d78"
+    },
+    {
+      "id": "hollow-mallet-source-1",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.5999022722244263,
+        "rawRms": 0.027984168260527614,
+        "dc": 2.484172169081645e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.253662109375,
+        "pitchConfidence": 0.941474974155426,
+        "pitchCents": 4.151273979147147,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 377.596587,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.3506699779715348,
+          "cosineSimilarity": 0.936499101200557,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "d81f28c1c65e65444c01e1536dc54425d7d38899dd63289c9e3c6dda633c3c32",
+      "matchedSha256": "8c5732f5d9b073a89140cdd924d1055b48b862c8df28f05b77c0cf1d9de5ce32",
+      "recipeSha256": "983051354484037edcfbf52a78ea2937b9bfa6fd61659eded972f55de671671d"
+    },
+    {
+      "id": "hollow-mallet-focus-sparse",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.6723195910453796,
+        "rawRms": 0.02726993993018286,
+        "dc": 6.0148287091597e-13,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.0376892089844,
+        "pitchConfidence": 0.9374549388885498,
+        "pitchCents": 2.724969085729797,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 390.959467,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9711277754800326,
+          "cosineSimilarity": -0.2385599373138653,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "fe1fd4db760864d6f58050d31a58ebacbec73883f2dabf6f2b920e5c7cab543e",
+      "matchedSha256": "3b311ec84360382c53010da8ebd8ce4db8b03242a66d1569525c4f4890b716f5",
+      "recipeSha256": "c49a70b1efd22f60c58ce3440daf4278cf3bb821c5c3c633fc0976b9087948a8"
+    },
+    {
+      "id": "hollow-mallet-body-0",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.5780755281448364,
+        "rawRms": 0.027897567173604445,
+        "dc": 2.180572541253095e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.10418701171875,
+        "pitchConfidence": 0.9404943585395813,
+        "pitchCents": 3.1642519063649828,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 354.911517,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.18816020180888013,
+          "cosineSimilarity": 0.9821383499564725,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "dbc528c5cf3481a3fbc1d4245297052aa6f3b7fba3bf0efd55b1706d5a516b9f",
+      "matchedSha256": "dd057e807507dc97b9f526f638bd67df9cf6a43da310fcac38227dd409783ca3",
+      "recipeSha256": "541d49d2391d58125a85fa8bf663f991ea8954234a38b53cbc14b21348071764"
+    },
+    {
+      "id": "hollow-mallet-body-1",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.647213339805603,
+        "rawRms": 0.027229821743508693,
+        "dc": -8.995876112429982e-12,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.14984130859375,
+        "pitchConfidence": 0.9478564858436584,
+        "pitchCents": 3.465778529590654,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 331.088111,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.22757884686646979,
+          "cosineSimilarity": 0.9737596564136588,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "74496681fdf488d8de1a1eee84ce1195405783a8c773222cd069dd6000166545",
+      "matchedSha256": "4b5c90e1d0721d88fceaa3b93faabd090d08a0ae60f3c1fe377195ea9ead4cd8",
+      "recipeSha256": "126d76f4a9c9fd778882aca581cc30d458978bcb1de27598ff3d23599f38e181"
+    },
+    {
+      "id": "hollow-mallet-length-short",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.9900000095367432,
+        "rawRms": 0.04404729851378462,
+        "dc": 2.0620756565852477e-08,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.4629211425781,
+        "pitchConfidence": 0.8732736110687256,
+        "pitchCents": 5.532119921986626,
+        "pitchFromSeconds": 0.007421910430839002,
+        "pitchWindowSeconds": 0.05195337301587301,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 110.360603,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.5963252855124153,
+          "cosineSimilarity": 0.8027428939944268,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "8ac40bfc80a643f9855b8e3832652d3942e6582ac7aa0374c07e20e9eb3ddc1f",
+      "matchedSha256": "fbef1c1358d5db4bdc19224ca3891245b01c221dc0442b1667382f0566a3513d",
+      "recipeSha256": "498575146746d83836ba7c5bd290db1180b61820c5ec65d27eeec43b03f12015"
+    },
+    {
+      "id": "hollow-mallet-rim-focus",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.615447998046875,
+        "rawRms": 0.027569974624312803,
+        "dc": -9.269101897235067e-12,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.22003173828125,
+        "pitchConfidence": 0.9394305944442749,
+        "pitchCents": 3.929253144611124,
+        "pitchFromSeconds": 0.025,
+        "pitchWindowSeconds": 0.175,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 356.619321,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.2315774207385468,
+          "cosineSimilarity": 0.9728164771445866,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "f7c3eb4865844b7b5621821c5ea976997d0e6789ef2fda043e896851e988a7fd",
+      "matchedSha256": "8ee7238e78869fbb68ada97112ee6f283b8c3434ccf26cab501f8c2c26a044d8",
+      "recipeSha256": "fb485a6d49b555daab80f0255187b896a2be2c82e59019d963b10aa454fc4c61"
+    },
+    {
+      "id": "hollow-mallet-short-body",
+      "voice": "HOLLOW_MALLET",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.9900000095367432,
+        "rawRms": 0.0488703164865954,
+        "dc": 1.0283010178460037e-09,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.4602966308594,
+        "pitchConfidence": 0.8797023296356201,
+        "pitchCents": 5.51480826993602,
+        "pitchFromSeconds": 0.007421910430839002,
+        "pitchWindowSeconds": 0.05195337301587301,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 135.62574,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.14020815683441099,
+          "cosineSimilarity": 0.9901220494247667,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "b5cd75780b6f0b4080d4e8ee8bb673f3618f5941722b3a414b61ebc50d7756e8",
+      "matchedSha256": "7f77c1a2bad5ff5155b597ff214a759ad6415df79ed6c15b24a1d6606fda0e48",
+      "recipeSha256": "eee1ee607519e1041b8016fce1324e14b40c970ca90978cb1a29e55605e4e6a2"
+    },
+    {
+      "id": "rubbed-ring-c4",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.26926761865615845,
+        "rawRms": 0.06052495232438845,
+        "dc": 1.3198200742006645e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.63238525390625,
+        "pitchConfidence": 0.9917428493499756,
+        "pitchCents": 0.04512854651281721,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 322.532046,
+        "finite": true,
+        "clippedSamples": 0
+      },
+      "rawSha256": "3a325dc82ba1b4de4880776968b3601910d45a8a09a3a06e5027ec2c59b9a9c1",
+      "matchedSha256": "0f21d3124b6b72b386183c25b790c4f27c63287221f3ecf142b173c3f13bc706",
+      "recipeSha256": "a6bc684943cee3fabc65995b5baefce8ecb4b97ebb50bd820ef4e321ea999335"
+    },
+    {
+      "id": "rubbed-ring-c2",
+      "voice": "RUBBED_RING",
+      "midi": 36,
+      "metrics": {
+        "rawPeak": 0.37272223830223083,
+        "rawRms": 0.08224247168077009,
+        "dc": 4.369816663126626e-09,
+        "seconds": 8,
+        "requestedHz": 65.40639132514966,
+        "pitchHz": 65.41534423828125,
+        "pitchConfidence": 0.9710842967033386,
+        "pitchCents": 0.23695738340738934,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 355.814937,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999999936069093,
+          "cosineSimilarity": 0.00011307584836968662,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "5d376efb19b5a9b441b279a921b58bfe924b22d4165d19db36e0ff6f57ed4143",
+      "matchedSha256": "1bc9fe7fa80b570a79468c99e57b42ae4e16d3091db7723301d31c1c7aca4f54",
+      "recipeSha256": "47dd6eb5508e5fb03558508d9713300069e54c9d16001c09fe714826991928cb"
+    },
+    {
+      "id": "rubbed-ring-c6",
+      "voice": "RUBBED_RING",
+      "midi": 84,
+      "metrics": {
+        "rawPeak": 0.2693409323692322,
+        "rawRms": 0.05863359293066294,
+        "dc": -7.926036950578425e-09,
+        "seconds": 8,
+        "requestedHz": 1046.5022612023945,
+        "pitchHz": 1046.5814208984375,
+        "pitchConfidence": 0.9965218901634216,
+        "pitchCents": 0.13094933789875188,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 306.515956,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999999750176631,
+          "cosineSimilarity": -0.00022352765179271822,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "f2b152ea561c1e8bec0bd83470a7d2fa796ada236c90fa563809563c5dd4707c",
+      "matchedSha256": "e63cc375d7e7a432b1f1f087e9db6bcb9cc06c9ae2d7dac56710e6cd2e7f0767",
+      "recipeSha256": "7db15f3aeab0f856d76bb45b084aff894d9f6108ae57adac634f39d423661fd4"
+    },
+    {
+      "id": "rubbed-ring-source-0",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.2905563414096832,
+        "rawRms": 0.05915929470206546,
+        "dc": 8.036833859011428e-09,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.62835693359375,
+        "pitchConfidence": 0.9914248585700989,
+        "pitchCents": 0.018472752475676518,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 331.431578,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.4463153267908835,
+          "cosineSimilarity": 0.8948757618080224,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "bcbfe3812ffd85a10709ce2e0bc57fda6cfc3e658da8b9786e7060714ca629c6",
+      "matchedSha256": "6e36d4eec4684b0158a32a8412ec736aead6cb128d21c4a341ebd1895e7e0684",
+      "recipeSha256": "e801a0b1f61d01768448ab3fc080f0bdb2d0b81a5ff14bd8c9f1a727f9881116"
+    },
+    {
+      "id": "rubbed-ring-source-1",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.26433393359184265,
+        "rawRms": 0.06117830871089073,
+        "dc": 1.584301302404917e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.6390686035156,
+        "pitchConfidence": 0.9919403791427612,
+        "pitchCents": 0.08935202677692952,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 1704.650217,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.4547315174770977,
+          "cosineSimilarity": 0.8906285684913225,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "b6cff434ec87e8b4e710691e67708a69f39d525673e0894f6c36a2171f8b9c8e",
+      "matchedSha256": "a9b19119e8955c7f60dc05f4bf5c7e12f6f28575fdf7471a9cadf89298b5fbf9",
+      "recipeSha256": "461c0d2dd0853d2fd3cb17cc3d262b6194920c18e678461172f5c83e40c3d99c"
+    },
+    {
+      "id": "rubbed-ring-focus-sparse",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.30904150009155273,
+        "rawRms": 0.060117257291149584,
+        "dc": 1.1264680794313371e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.6396789550781,
+        "pitchConfidence": 0.9910565614700317,
+        "pitchCents": 0.09339064448052674,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 1850.036583,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9942810617420844,
+          "cosineSimilarity": -0.1067949917410459,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "376027cf634a02b30f9b303afd2910e2be0af54c16346dcf2970a271bc947347",
+      "matchedSha256": "d3f0f89689184803ea8c06595dea66bf085a06050eabc84c0597208c5b0bcbd0",
+      "recipeSha256": "81f0681d56b9fe857a591648a2c5bd07fc148ac2fd5f2529eee6df3aad00bc8d"
+    },
+    {
+      "id": "rubbed-ring-body-0",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.2539331316947937,
+        "rawRms": 0.05788950469700024,
+        "dc": 1.4608687429821001e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.63458251953125,
+        "pitchConfidence": 0.9923983812332153,
+        "pitchCents": 0.05966789754809485,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 770.453128,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.1996169143282597,
+          "cosineSimilarity": 0.9798740161438994,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "f28a9bc1ff41f4efdccab93825961bd88ddf38192a1777e13fadc225e2ae532f",
+      "matchedSha256": "fc21bb1dfc72d752de1237c63f0945b622b0da4b98ed76e1ef102b7bb3b1780c",
+      "recipeSha256": "622a4c6c66270fb6106c44297c6bb7ac33dcd8ec13c3718b3766f03dae583ee2"
+    },
+    {
+      "id": "rubbed-ring-body-1",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.29800868034362793,
+        "rawRms": 0.06113796370387135,
+        "dc": 1.0714058121695913e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.6302490234375,
+        "pitchConfidence": 0.9913727641105652,
+        "pitchCents": 0.030992949273630433,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 2626.024282,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.18881806398243114,
+          "cosineSimilarity": 0.9820120868471192,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "72f9133e1ecf36929ad09362f250746e1170d183d03d0938f70453279444d358",
+      "matchedSha256": "d902104fc3a7fc14761df459bad4f427eaf96ba8cea46e833bb89d44c4931e8e",
+      "recipeSha256": "6ea4b156374f2c0318fad46aad78de4d80d48179f610cd150cb497436ea1054b"
+    },
+    {
+      "id": "rubbed-ring-length-short",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.28887996077537537,
+        "rawRms": 0.06229903438668406,
+        "dc": 2.3516230757182173e-07,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.6767883300781,
+        "pitchConfidence": 0.9709138870239258,
+        "pitchCents": 0.33892090260703045,
+        "pitchFromSeconds": 0.14843820861678003,
+        "pitchWindowSeconds": 0.14843820861678003,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 451.086162,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.958118618934855,
+          "cosineSimilarity": 0.28637163276131955,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "ab092fd736171ccdb6eee9e7571c472b76f221a5d7c94bbce930c59cd245e568",
+      "matchedSha256": "6228c5ae2e1b0d2f494c5c01cf26032fc024cbbee78ec169a49047efb46e7cb2",
+      "recipeSha256": "eda819c8567d3801e673e3f2a9c854a94a73bc51e00487f8049cbca8e8849a66"
+    },
+    {
+      "id": "rubbed-ring-rim-focus",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.2690867781639099,
+        "rawRms": 0.06045124493142459,
+        "dc": 1.308612176710036e-08,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.63519287109375,
+        "pitchConfidence": 0.9917606115341187,
+        "pitchCents": 0.06370658449925441,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.5,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 1863.007441,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.32962967106542224,
+          "cosineSimilarity": 0.9441103113265957,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "b8cd8b2b5690405f75590d65965445049028b51d0962a6323e6e510c34629fb6",
+      "matchedSha256": "6361a2cbf04a301dd1c0500fdf7e0e225b7cc7f6aaaa39d7a9f0114d37e5bd01",
+      "recipeSha256": "03314b17076381df80499d8fdd2af04849b63aba686e12a382aeb6d182fb7536"
+    },
+    {
+      "id": "rubbed-ring-short-body",
+      "voice": "RUBBED_RING",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.28937646746635437,
+        "rawRms": 0.05951470531490246,
+        "dc": 3.4157255430059697e-07,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.70159912109375,
+        "pitchConfidence": 0.9716418981552124,
+        "pitchCents": 0.5030594580100706,
+        "pitchFromSeconds": 0.14843820861678003,
+        "pitchWindowSeconds": 0.14843820861678003,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 292.30767,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.16230905228660553,
+          "cosineSimilarity": 0.9867399715962537,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "068ff842c35f10ae6d661c53f237d4c29d1ef9f92b1586d87771fe683d1b77c0",
+      "matchedSha256": "61f104e319741a9665c2d0db73f4437ebcba84070bdc6bb77170258f50b0e936",
+      "recipeSha256": "b03978a833f3798c102ad89187da92ab82b8f20b694c6e4f6fa2804ada5f1ad9"
+    },
+    {
+      "id": "travelling-catches-c4",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4499977231025696,
+        "rawRms": 0.04333699833987332,
+        "dc": -2.095691511897302e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.542724609375,
+        "pitchConfidence": 0.9806988835334778,
+        "pitchCents": 12.640009995340737,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 346.348212,
+        "finite": true,
+        "clippedSamples": 0
+      },
+      "rawSha256": "38d94e150538ea615f006328e8145ebaa0d7c7f698cdddd62f9d70224d6f0ba1",
+      "matchedSha256": "ddd0c551518a0566cc427079beb6c4bc0ec81f9b9d7cd3e183cfd8c958b8cae0",
+      "recipeSha256": "5c3903c526aeff9e0b35929a5692c39b40fa08cfcf035dc430a6f469b1ad355e"
+    },
+    {
+      "id": "travelling-catches-c2",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 36,
+      "metrics": {
+        "rawPeak": 0.5165412425994873,
+        "rawRms": 0.05758433957406778,
+        "dc": -1.207141473809787e-09,
+        "seconds": 8,
+        "requestedHz": 65.40639132514966,
+        "pitchHz": 65.72747039794922,
+        "pitchConfidence": 0.9503806829452515,
+        "pitchCents": 8.477812317673143,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 592.888849,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999099991896091,
+          "cosineSimilarity": -0.013416166389825554,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "14b6dcaa517fa3978a8e550a7bbce8298940bbb83994ac1072817a5a2e7c7d43",
+      "matchedSha256": "76fff688e0af7218e254a0d20e83fa968e6dee6a12525ff93903223b67876d1c",
+      "recipeSha256": "1c3e0801f3d04378760cf05cfe9d1c5bc145709ecc81b8506d9636c5aacca5f0"
+    },
+    {
+      "id": "travelling-catches-c6",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 84,
+      "metrics": {
+        "rawPeak": 0.504403829574585,
+        "rawRms": 0.040351600615992904,
+        "dc": 5.56974602618468e-12,
+        "seconds": 8,
+        "requestedHz": 1046.5022612023945,
+        "pitchHz": 1046.7493896484375,
+        "pitchConfidence": 0.9947986602783203,
+        "pitchCents": 0.40877758973345385,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 122.656316,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9999776955200305,
+          "cosineSimilarity": -0.0066789566839359415,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "e5675ef0a9e2f9634b4b6029adced975def8ae40853ee693a22e37895e02fb8e",
+      "matchedSha256": "1086399c08d0ce0428a7c921fcbcdc2ce38085b9477f89abaa845dc19b3375ed",
+      "recipeSha256": "d2ead131f45a7b88e452436ca124f03d649f689870969ccdd7495fb8c3d9b85a"
+    },
+    {
+      "id": "travelling-catches-source-0",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4954151213169098,
+        "rawRms": 0.04671952440901889,
+        "dc": -5.599530050908215e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.4376220703125,
+        "pitchConfidence": 0.9807685017585754,
+        "pitchCents": 11.949444975877052,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 116.116537,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.38956424003286455,
+          "cosineSimilarity": 0.9209992958127127,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "7c9098d4e72f72b42c8f727fd0146fb2ce524d3283f6f1d73a2764416e15138c",
+      "matchedSha256": "8a4cb23b71e06c1e2950178a6670f90935078ddfb719d7808c761126c981b3ee",
+      "recipeSha256": "92c63d7f8a1cf88d500a0557021f16b45f911f85865e44fa9b84f1016b49c8c2"
+    },
+    {
+      "id": "travelling-catches-source-1",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.5370008945465088,
+        "rawRms": 0.044421359949075825,
+        "dc": -7.947562177140786e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.7040100097656,
+        "pitchConfidence": 0.9795610904693604,
+        "pitchCents": 13.699183119228849,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 194.686676,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.6854543412005605,
+          "cosineSimilarity": 0.7281156131612997,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "b88454615be5b490d871e9d09dd77065ecd1f042de7e6b22c1584078cc04d78f",
+      "matchedSha256": "ea2ada4dca5dde2993af63c540c8600bce49d532c37a9e6a097316313f40e9d4",
+      "recipeSha256": "94edc39ddfc6d8056978c861b5cc5d14a19197b8e9e4dd212979f8abb534f44d"
+    },
+    {
+      "id": "travelling-catches-focus-sparse",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.40127718448638916,
+        "rawRms": 0.05572047452479532,
+        "dc": -3.1520361866505974e-10,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.15252685546875,
+        "pitchConfidence": 0.9864126443862915,
+        "pitchCents": 10.074869113058872,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 107.844529,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.9991230816026496,
+          "cosineSimilarity": -0.04186965259909427,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "765f67efa5e0b4234374e0bf93856fbb646ef544dfab772d659b4571aa694fad",
+      "matchedSha256": "aba4b6f0728320e289cb4cca48e07dade901a30046e0032102ad1b9ef920f01e",
+      "recipeSha256": "0e6f05bceb22798be5859311a2f71ee8048434d4bfd214bb58eb42138a47a0a4"
+    },
+    {
+      "id": "travelling-catches-body-1",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4095633029937744,
+        "rawRms": 0.059481330365908025,
+        "dc": 9.23482635967589e-10,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.30517578125,
+        "pitchConfidence": 0.9876095056533813,
+        "pitchCents": 4.491301509281836,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 121.293173,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.6407128089476798,
+          "cosineSimilarity": 0.7677806304214233,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "e3e6d19d0622336d9f847b05e065c8f0798c6ab08b4ea3296236ab00aa378272",
+      "matchedSha256": "8b16e4cc3aaab2a4f8c0ed534aa63f9fc28692b3ecf76af3da341a278bce4661",
+      "recipeSha256": "33a4b5911f5556132e7f02ff34cddee000732727e677e24c5f07caafe16a89eb"
+    },
+    {
+      "id": "travelling-catches-length-short",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.5704918503761292,
+        "rawRms": 0.05277000226977848,
+        "dc": -6.362852566806237e-10,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 262.9829406738281,
+        "pitchConfidence": 0.9796558618545532,
+        "pitchCents": 8.95883189377183,
+        "pitchFromSeconds": 0.35625170068027207,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 41.348929,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.6257156963268452,
+          "cosineSimilarity": 0.780051195352063,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "f6f22f52909c328c536d50fc83e4a1c93bfa2d934f27317c307dca21478a3196",
+      "matchedSha256": "12f13f3cd82cbfa03e499c73886763866a43b6eaf3c8083e38c011f180054369",
+      "recipeSha256": "d04af9363228c0a59c31c95a41c2d74e88cee0bc391b4bf1081f6a11cea17974"
+    },
+    {
+      "id": "travelling-catches-rim-focus",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.4634667932987213,
+        "rawRms": 0.04472655438479417,
+        "dc": -1.9991870134580167e-11,
+        "seconds": 8,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 263.45806884765625,
+        "pitchConfidence": 0.9812945127487183,
+        "pitchCents": 12.08380992802645,
+        "pitchFromSeconds": 0.5,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 114.298792,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.7993574113227038,
+          "cosineSimilarity": 0.600855830431395,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "35fc35ca3bcacecd1b73733de6101f37168ab3c621e8cade21c9e8e8e9afcca2",
+      "matchedSha256": "afd4e00ec6c5b0fad586b225ef03a9f31eaf4618fcca82b191bb7132b06b31b8",
+      "recipeSha256": "04a5a53b6b4bb794fa6f65e228435f4ba347c8c8d485e3fcc2d151873cb03494"
+    },
+    {
+      "id": "travelling-catches-short-body",
+      "voice": "TRAVELLING_CATCHES",
+      "midi": 60,
+      "metrics": {
+        "rawPeak": 0.49354854226112366,
+        "rawRms": 0.06916477530533688,
+        "dc": 7.132201611577445e-09,
+        "seconds": 2.3750113378684805,
+        "requestedHz": 261.6255653005986,
+        "pitchHz": 261.8207092285156,
+        "pitchConfidence": 0.9875639081001282,
+        "pitchCents": 1.2908290480580598,
+        "pitchFromSeconds": 0.35625170068027207,
+        "pitchWindowSeconds": 0.35,
+        "drumClass": "LOOP",
+        "shortWindowDrumClass": "PERC",
+        "renderMillis": 36.690104,
+        "finite": true,
+        "clippedSamples": 0,
+        "comparison": {
+          "fromSeconds": 0.15,
+          "toSeconds": 1.5,
+          "gainFitResidual": 0.6305371325800943,
+          "cosineSimilarity": 0.7761590844907952,
+          "note": "Native PCM shape comparison after a fitted scalar gain; not an audibility verdict"
+        }
+      },
+      "rawSha256": "3a8fb5a5a1b84cb4687a4d6d654eade0fdf4b9fac134d14c712735c4f22ba2bf",
+      "matchedSha256": "9f1ddbb8f82af2effc2ea1e98a7f783fe5ce00fcc65116151a0889d89c260c74",
+      "recipeSha256": "aea937119782faeba7a50a4d75551f8c37777246e786d6ed00011ed545d4bb43"
+    }
+  ],
+  "independentRawReference": {
+    "name": "independent-reference-comparison.json",
+    "sha256": "464eb292a8493a647271d956960892cc37ec767353bbedbb66fd669136df940d",
+    "data": {
+      "prototypeDspSha256": "e7c92b04ce18795069428aeab116345924df6b96d5ca16d7f81889438e9d4fb6",
+      "rows": [
+        {
+          "voice": "HOLLOW_MALLET",
+          "midi": 36,
+          "relativeRawRmsError": 5.4867201018907634e-08,
+          "gainFit": 0.9999999628668578,
+          "gainFitResidual": 4.0392321527765624e-08,
+          "maxAbsError": 1.3246482549744698e-08,
+          "referenceRawPeak": 0.17566529973938647,
+          "nativeRawPeak": 0.17566530406475067
+        },
+        {
+          "voice": "RUBBED_RING",
+          "midi": 36,
+          "relativeRawRmsError": 3.709169810247755e-08,
+          "gainFit": 0.9999999955742043,
+          "gainFitResidual": 3.682670777449091e-08,
+          "maxAbsError": 1.347419567587771e-08,
+          "referenceRawPeak": 0.15704941514553156,
+          "nativeRawPeak": 0.15704941749572754
+        },
+        {
+          "voice": "TRAVELLING_CATCHES",
+          "midi": 36,
+          "relativeRawRmsError": 3.285786990741422e-08,
+          "gainFit": 1.0000000000668547,
+          "gainFitResidual": 3.2857801892119004e-08,
+          "maxAbsError": 1.4901161193847656e-08,
+          "referenceRawPeak": 0.22617464698851109,
+          "nativeRawPeak": 0.22617465257644653
+        },
+        {
+          "voice": "HOLLOW_MALLET",
+          "midi": 60,
+          "relativeRawRmsError": 7.664117281961675e-08,
+          "gainFit": 0.9999999747732665,
+          "gainFitResidual": 7.237044644514686e-08,
+          "maxAbsError": 2.163654877485044e-08,
+          "referenceRawPeak": 0.19568471680826832,
+          "nativeRawPeak": 0.19568471610546112
+        },
+        {
+          "voice": "RUBBED_RING",
+          "midi": 60,
+          "relativeRawRmsError": 3.7989382162612485e-08,
+          "gainFit": 0.999999978046763,
+          "gainFitResidual": 3.100400945703163e-08,
+          "maxAbsError": 1.2922966863282426e-08,
+          "referenceRawPeak": 0.15876924932178788,
+          "nativeRawPeak": 0.15876924991607666
+        },
+        {
+          "voice": "TRAVELLING_CATCHES",
+          "midi": 60,
+          "relativeRawRmsError": 3.401601618058217e-08,
+          "gainFit": 1.000000000222667,
+          "gainFitResidual": 3.401528739815979e-08,
+          "maxAbsError": 1.210719347000122e-08,
+          "referenceRawPeak": 0.1561034160355727,
+          "nativeRawPeak": 0.15610341727733612
+        },
+        {
+          "voice": "HOLLOW_MALLET",
+          "midi": 84,
+          "relativeRawRmsError": 4.144463789298661e-08,
+          "gainFit": 0.9999999800727414,
+          "gainFitResidual": 3.633954337042691e-08,
+          "maxAbsError": 1.678129907256576e-08,
+          "referenceRawPeak": 0.20400096667372408,
+          "nativeRawPeak": 0.20400096476078033
+        },
+        {
+          "voice": "RUBBED_RING",
+          "midi": 84,
+          "relativeRawRmsError": 3.6624152065498675e-08,
+          "gainFit": 0.9999999849249943,
+          "gainFitResidual": 3.337772848492338e-08,
+          "maxAbsError": 1.3940053944505593e-08,
+          "referenceRawPeak": 0.1613158626566122,
+          "nativeRawPeak": 0.16131585836410522
+        },
+        {
+          "voice": "TRAVELLING_CATCHES",
+          "midi": 84,
+          "relativeRawRmsError": 3.6651424627088036e-08,
+          "gainFit": 1.0000000000059381,
+          "gainFitResidual": 3.6651424145701973e-08,
+          "maxAbsError": 7.450580596923828e-09,
+          "referenceRawPeak": 0.11227088421583176,
+          "nativeRawPeak": 0.11227088421583176
+        }
+      ]
+    }
+  },
+  "independentFinishedReference": {
+    "name": "independent-finished-reference-comparison.json",
+    "sha256": "edc5b455ddb66391e39799ce389d5ca807d2c3acb4e097bd7c24cbda8175db62",
+    "data": [
+      {
+        "voice": "HOLLOW_MALLET",
+        "midi": 36,
+        "relativeNativeRmsError": 4.3491855260066264e-07,
+        "gainFit": 1.000000095091933,
+        "nativeRms": 0.03864248297976289,
+        "referenceRms": 0.03864247930517132,
+        "nativePeak": 0.839102566242218,
+        "nativeDc": 5.016227401893063e-09
+      },
+      {
+        "voice": "HOLLOW_MALLET",
+        "midi": 60,
+        "relativeNativeRmsError": 5.403299294269648e-07,
+        "gainFit": 1.0000001088854418,
+        "nativeRms": 0.027582471731401714,
+        "referenceRms": 0.027582468728068556,
+        "nativePeak": 0.6161776781082153,
+        "nativeDc": 3.492190430212939e-11
+      },
+      {
+        "voice": "HOLLOW_MALLET",
+        "midi": 84,
+        "relativeNativeRmsError": 5.508036398343317e-07,
+        "gainFit": 1.0000001096310431,
+        "nativeRms": 0.026141198159254718,
+        "referenceRms": 0.0261411952933644,
+        "nativePeak": 0.6202592849731445,
+        "nativeDc": 5.054656808971174e-12
+      },
+      {
+        "voice": "RUBBED_RING",
+        "midi": 36,
+        "relativeNativeRmsError": 3.8160579186700664e-07,
+        "gainFit": 1.000000132037063,
+        "nativeRms": 0.08224247168077695,
+        "referenceRms": 0.082242460821719,
+        "nativePeak": 0.37272223830223083,
+        "nativeDc": 4.369816663137195e-09
+      },
+      {
+        "voice": "RUBBED_RING",
+        "midi": 60,
+        "relativeNativeRmsError": 4.7252905066006155e-07,
+        "gainFit": 1.0000001633108366,
+        "nativeRms": 0.06052495232439284,
+        "referenceRms": 0.060524942440007785,
+        "nativePeak": 0.26926761865615845,
+        "nativeDc": 1.3198200742006544e-08
+      },
+      {
+        "voice": "RUBBED_RING",
+        "midi": 84,
+        "relativeNativeRmsError": 4.6854095240496327e-07,
+        "gainFit": 1.0000001045840146,
+        "nativeRms": 0.05863359293066772,
+        "referenceRms": 0.05863358679852563,
+        "nativePeak": 0.2693409323692322,
+        "nativeDc": -7.926036950578425e-09
+      },
+      {
+        "voice": "TRAVELLING_CATCHES",
+        "midi": 36,
+        "relativeNativeRmsError": 6.505455866068498e-07,
+        "gainFit": 1.0000001125572318,
+        "nativeRms": 0.05758433957406697,
+        "referenceRms": 0.057584333092522,
+        "nativePeak": 0.5165412425994873,
+        "nativeDc": -1.207141473809787e-09
+      },
+      {
+        "voice": "TRAVELLING_CATCHES",
+        "midi": 60,
+        "relativeNativeRmsError": 8.330849696166528e-07,
+        "gainFit": 1.0000001168963943,
+        "nativeRms": 0.043336998339873624,
+        "referenceRms": 0.04333699327392068,
+        "nativePeak": 0.4499977231025696,
+        "nativeDc": -2.095691511897302e-11
+      },
+      {
+        "voice": "TRAVELLING_CATCHES",
+        "midi": 84,
+        "relativeNativeRmsError": 8.898679145056486e-07,
+        "gainFit": 1.0000001141658275,
+        "nativeRms": 0.04035160061599087,
+        "referenceRms": 0.04035159600920182,
+        "nativePeak": 0.504403829574585,
+        "nativeDc": 5.56974602618468e-12
+      }
+    ]
+  },
+  "floorDefaultPreservation": {
+    "name": "comparison.json",
+    "sha256": "c3bfadcf4309851feef98b0657f519bd1577241c4d1c3055468b023611a24bc6",
+    "data": [
+      {
+        "file": "HOLLOW_MALLET-m36.native.f32",
+        "unchanged": true,
+        "sha256": "fde08162ca007c7ddcdf7e8e7f2c9b9dfb323632a1bcc95be3df6917ef75802d"
+      },
+      {
+        "file": "HOLLOW_MALLET-m60.native.f32",
+        "unchanged": true,
+        "sha256": "02a95d42d999084859b818cb87a104a5e14034c6e4edf83a0a1e7df774434f9d"
+      },
+      {
+        "file": "HOLLOW_MALLET-m84.native.f32",
+        "unchanged": true,
+        "sha256": "c53d66472ee16367ced034bb7029184c42ddc8b638277aa7beadc043d133f713"
+      },
+      {
+        "file": "RUBBED_RING-m36.native.f32",
+        "unchanged": true,
+        "sha256": "16bd81fbca989cbf87683b2d160d8ca6bc81967a45dcfdc4999314a7b84152fa"
+      },
+      {
+        "file": "RUBBED_RING-m60.native.f32",
+        "unchanged": true,
+        "sha256": "643a6403aefec52c80480860fa057e9acb75a6ce140b2fec175d4476bce56ebc"
+      },
+      {
+        "file": "RUBBED_RING-m84.native.f32",
+        "unchanged": true,
+        "sha256": "8f5ebe29b492e9378247255a5a06c53a10d54e2013050779ecc576582b2a2a2b"
+      },
+      {
+        "file": "TRAVELLING_CATCHES-m36.native.f32",
+        "unchanged": true,
+        "sha256": "17316fa6878fd3f7ac2ba1fff43e613f0752d658610f7c4f352ac214b2ae0c14"
+      },
+      {
+        "file": "TRAVELLING_CATCHES-m60.native.f32",
+        "unchanged": true,
+        "sha256": "5ca5994d8c35011fa367b430cd50714d4853d0c907dec65f8cab0eb63f267ea8"
+      },
+      {
+        "file": "TRAVELLING_CATCHES-m84.native.f32",
+        "unchanged": true,
+        "sha256": "cca1be75784089a74246650682b0bdfdf3ba0b06e0710896fb59376ffe136a6b"
+      }
+    ]
+  },
+  "compiledCharacterTests": {
+    "name": "report.json",
+    "sha256": "26b5fa2e37ae5a070c623d523ffc9f42df20b4e3b06ffbec3c235b0dc419a730",
+    "data": {
+      "startedAtUtc": "2026-10-28T02:45:46.589865+00:00",
+      "sourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "sourceDirty": false,
+      "execution": "Current compiled JUnit5 @Test methods via reflection, fresh test-class instance per method; Java assertions enabled; no Gradle invocation or test-result writes",
+      "java": "openjdk version \"21.0.13\" 2026-10-20 LTS\nOpenJDK Runtime Environment Temurin-21.0.13+9 (build 21.0.13+9-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.13+9 (build 21.0.13+9-LTS, mixed mode, sharing)",
+      "exitCode": 0,
+      "compiledClassHashes": {
+        "synth/build/classes/kotlin/test/com/snipsnap/synth/CausticCharactersTest.class": "a05f7064845940e140f277237e27ba2db5b51846707ea7390c81e1ef6f456d96",
+        "synth/build/classes/kotlin/main/com/snipsnap/synth/CausticInstrument.class": "feddf7ef061e8c968d4737abd185bc4340e894d01781f97ad190cbcd21b22c40",
+        "synth/build/classes/kotlin/main/com/snipsnap/synth/CausticCharacters.class": "9cc21b477738a4632efd08ac7a698257ad03a0fd94b06be45de4bb7aee534353"
+      },
+      "compiledClassesUnchanged": true,
+      "summary": {
+        "tests": 16,
+        "passed": 16,
+        "assertionFailures": 0,
+        "errors": 0,
+        "seconds": 21.474354
+      },
+      "methods": [
+        {
+          "status": "PASS",
+          "method": "C4 raw checkpoints preserve the independent published Python study",
+          "seconds": 1.092548
+        },
+        {
+          "status": "PASS",
+          "method": "LENGTH changes the sounding body before a shared capture endpoint",
+          "seconds": 0.595946
+        },
+        {
+          "status": "PASS",
+          "method": "adopted defaults preserve main window character differences from Fuller Body",
+          "seconds": 0.838062
+        },
+        {
+          "status": "PASS",
+          "method": "duration class and independent raw release windows follow finite LENGTH",
+          "seconds": 1.399866
+        },
+        {
+          "status": "PASS",
+          "method": "each new voice renders deterministically through normal and diagnostic entry points",
+          "seconds": 0.304316
+        },
+        {
+          "status": "PASS",
+          "method": "high register oversampling reference preserves broad shape and rejects upper edge leakage",
+          "seconds": 1.260424
+        },
+        {
+          "status": "PASS",
+          "method": "new pitched bodies remain finite bounded and in key at C2 C4 and C6",
+          "seconds": 1.69028
+        },
+        {
+          "status": "PASS",
+          "method": "new voices honor cancellation before rendering",
+          "seconds": 0.038564
+        },
+        {
+          "status": "PASS",
+          "method": "new voices retain finite controls with explicit defaults and refuse positive HOLD",
+          "seconds": 0.003534
+        },
+        {
+          "status": "PASS",
+          "method": "nonfinite controls fall back and unknown keys leave actual audio unchanged",
+          "seconds": 0.458261
+        },
+        {
+          "status": "PASS",
+          "method": "old Alloy model one remains byte identical at representative pitches and corners",
+          "seconds": 0.675797
+        },
+        {
+          "status": "PASS",
+          "method": "short Hollow bass retains independently measured pitch across length body and effort",
+          "seconds": 1.590813
+        },
+        {
+          "status": "PASS",
+          "method": "short bass stays pitched and decays with authored tonal placement",
+          "seconds": 0.509947
+        },
+        {
+          "status": "PASS",
+          "method": "source focus body and length change normalized audible window shapes",
+          "seconds": 7.057682
+        },
+        {
+          "status": "PASS",
+          "method": "spatial and temporal macro pairs have measured interactions",
+          "seconds": 3.260887
+        },
+        {
+          "status": "PASS",
+          "method": "zero velocity is exact silence and greater effort survives house leveling",
+          "seconds": 0.676016
+        }
+      ]
+    }
+  },
+  "artifactAudit": {
+    "name": "artifact-results.json",
+    "sha256": "975e138da1cf8b97c8ee1aeafdc6519f1b5f4561cbbd9791733a7de6c5610c8d",
+    "data": {
+      "source": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "dirty": false,
+      "clips": 42,
+      "hashedFiles": 126,
+      "wavHeaders": 84,
+      "archives": [
+        {
+          "name": "caustic-alloy.zip",
+          "bytes": 14770655,
+          "clips": 10,
+          "entries": 37
+        },
+        {
+          "name": "caustic-hollow-mallet.zip",
+          "bytes": 1536872,
+          "clips": 11,
+          "entries": 40
+        },
+        {
+          "name": "caustic-native-voices-comparison.zip",
+          "bytes": 11706863,
+          "clips": 12,
+          "entries": 43
+        },
+        {
+          "name": "caustic-native-voices-kit.zip",
+          "bytes": 11817482,
+          "kitReadback": true,
+          "entries": 23
+        },
+        {
+          "name": "caustic-rubbed-ring.zip",
+          "bytes": 5840903,
+          "clips": 11,
+          "entries": 40
+        },
+        {
+          "name": "caustic-travelling-catches.zip",
+          "bytes": 12032620,
+          "clips": 10,
+          "entries": 37
+        }
+      ],
+      "allAssetsUnder25MiB": true,
+      "allPatchFieldsMatch": true
+    }
+  },
+  "kitAudit": {
+    "name": "kit-results.json",
+    "sha256": "4e451662b52ec651d2eaa570bf6c044d87a670e75bb5ef3bf2b31eb14e9e7de4",
+    "data": {
+      "crcs": [
+        {
+          "name": "caustic-alloy.zip",
+          "crc": "PASS"
+        },
+        {
+          "name": "caustic-hollow-mallet.zip",
+          "crc": "PASS"
+        },
+        {
+          "name": "caustic-native-voices-comparison.zip",
+          "crc": "PASS"
+        },
+        {
+          "name": "caustic-native-voices-kit.zip",
+          "crc": "PASS"
+        },
+        {
+          "name": "caustic-rubbed-ring.zip",
+          "crc": "PASS"
+        },
+        {
+          "name": "caustic-travelling-catches.zip",
+          "crc": "PASS"
+        }
+      ],
+      "kitPads16": [
+        {
+          "slot": 1,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A01_Loop_01.wav"
+        },
+        {
+          "slot": 2,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A02_Loop_02.wav"
+        },
+        {
+          "slot": 3,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A03_Loop_03.wav"
+        },
+        {
+          "slot": 4,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A04_Loop_04.wav"
+        },
+        {
+          "slot": 5,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A05_Loop_05.wav"
+        },
+        {
+          "slot": 6,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A06_Loop_06.wav"
+        },
+        {
+          "slot": 7,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A07_Loop_07.wav"
+        },
+        {
+          "slot": 8,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A08_Loop_08.wav"
+        },
+        {
+          "slot": 9,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A09_Loop_09.wav"
+        },
+        {
+          "slot": 10,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A10_Loop_10.wav"
+        },
+        {
+          "slot": 11,
+          "voice": "HOLLOW_MALLET",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A11_Loop_11.wav"
+        },
+        {
+          "slot": 12,
+          "voice": "RUBBED_RING",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A12_Loop_12.wav"
+        },
+        {
+          "slot": 13,
+          "voice": "TRAVELLING_CATCHES",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A13_Loop_13.wav"
+        },
+        {
+          "slot": 14,
+          "voice": "ALLOY",
+          "frames": 352800,
+          "seconds": 8.0,
+          "sample": "A14_Loop_14.wav"
+        },
+        {
+          "slot": 15,
+          "voice": "ALLOY",
+          "frames": 22050,
+          "seconds": 0.5,
+          "sample": "A15_Tonal_01.wav"
+        },
+        {
+          "slot": 16,
+          "voice": "ALLOY",
+          "frames": 203963,
+          "seconds": 4.6250113378684805,
+          "sample": "A16_Loop_15.wav"
+        }
+      ],
+      "voices": {
+        "ALLOY": 13,
+        "HOLLOW_MALLET": 1,
+        "RUBBED_RING": 1,
+        "TRAVELLING_CATCHES": 1
+      },
+      "Mpc3AndMpc2PadReadbacks": 32,
+      "recipeAndWavBytesPreservedAtSlots": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        14,
+        15,
+        16
+      ],
+      "readerLimitations": [
+        "pad colour, one-shot and humanize not named by X-Ray readback; finite oneShot flag separately verified in kit.json"
+      ]
+    }
+  },
+  "browserPayloadAudit": {
+    "name": "companion-results.json",
+    "sha256": "0706b6567caf964cb31feb94139d26914f06be52c412364b383e6b6d18820540",
+    "data": {
+      "source": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "sourceDirty": false,
+      "clips": 42,
+      "voices": 4,
+      "coverage": [
+        {
+          "id": "alloy-c4",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-c2",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-c6",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-source-0",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-source-1",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-focus-sparse",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-body-0",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-length-short",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-rim-focus",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-short-body",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-c4",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-c2",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-c6",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-source-0",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-source-1",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-focus-sparse",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-body-0",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-body-1",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-length-short",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-rim-focus",
+          "mode": "matched"
+        },
+        {
+          "id": "hollow-mallet-short-body",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-c4",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-c2",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-c6",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-source-0",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-source-1",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-focus-sparse",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-body-0",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-body-1",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-length-short",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-rim-focus",
+          "mode": "matched"
+        },
+        {
+          "id": "rubbed-ring-short-body",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-c4",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-c2",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-c6",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-source-0",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-source-1",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-focus-sparse",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-body-1",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-length-short",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-rim-focus",
+          "mode": "matched"
+        },
+        {
+          "id": "travelling-catches-short-body",
+          "mode": "matched"
+        },
+        {
+          "id": "alloy-c4",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-c2",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-c6",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-source-0",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-source-1",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-focus-sparse",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-body-0",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-length-short",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-c4",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-c2",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-c6",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-source-0",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-source-1",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-focus-sparse",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-body-0",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-body-1",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-length-short",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-c4",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-c2",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-c6",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-source-0",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-source-1",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-focus-sparse",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-body-0",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-body-1",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-length-short",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-c4",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-c2",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-c6",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-source-0",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-source-1",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-focus-sparse",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-body-1",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-length-short",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "alloy-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-rim-focus",
+          "mode": "native"
+        },
+        {
+          "id": "travelling-catches-short-body",
+          "mode": "native"
+        },
+        {
+          "id": "rubbed-ring-c4",
+          "mode": "native"
+        },
+        {
+          "id": "hollow-mallet-source-0",
+          "mode": "native"
+        }
+      ],
+      "refs": [
+        {
+          "from": "alloy-rim-focus",
+          "to": "alloy-source-1"
+        },
+        {
+          "from": "alloy-short-body",
+          "to": "alloy-length-short"
+        },
+        {
+          "from": "hollow-mallet-rim-focus",
+          "to": "hollow-mallet-source-1"
+        },
+        {
+          "from": "hollow-mallet-short-body",
+          "to": "hollow-mallet-length-short"
+        },
+        {
+          "from": "rubbed-ring-rim-focus",
+          "to": "rubbed-ring-source-1"
+        },
+        {
+          "from": "rubbed-ring-short-body",
+          "to": "rubbed-ring-length-short"
+        },
+        {
+          "from": "travelling-catches-rim-focus",
+          "to": "travelling-catches-source-1"
+        },
+        {
+          "from": "travelling-catches-short-body",
+          "to": "travelling-catches-length-short"
+        }
+      ],
+      "modeOffset": {
+        "before": 0.722903,
+        "after": 0.78022
+      },
+      "rapidModePlayback": true,
+      "pausedOffset": true,
+      "keyboard": true,
+      "finiteReplay": true,
+      "failureRetry": true,
+      "downloads": [
+        {
+          "name": "patch",
+          "filename": "hollow-mallet-source-0.json"
+        },
+        {
+          "name": "wav",
+          "filename": "hollow-mallet-source-0-native.wav"
+        },
+        {
+          "name": "comparison",
+          "filename": "caustic-native-voices-comparison.zip"
+        },
+        {
+          "name": "kit",
+          "filename": "caustic-native-voices-kit.zip"
+        },
+        {
+          "name": "family",
+          "filename": "caustic-alloy.zip"
+        }
+      ],
+      "sizes": [
+        {
+          "width": 320,
+          "scrollWidth": 320
+        },
+        {
+          "width": 375,
+          "scrollWidth": 375
+        },
+        {
+          "width": 390,
+          "scrollWidth": 390
+        },
+        {
+          "width": 768,
+          "scrollWidth": 768
+        },
+        {
+          "width": 1024,
+          "scrollWidth": 1024
+        },
+        {
+          "width": 1440,
+          "scrollWidth": 1440
+        }
+      ],
+      "errors": []
+    }
+  },
+  "hostedPayloadAudit": {
+    "name": "companion-artifact-results.json",
+    "sha256": "d5d4bba4ba497dc3e9dc1a6074863b9b5ec7bcad84f7cc47dc1f921593be6fcb",
+    "data": {
+      "nativeSource": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "newFiles": 139,
+      "nativeHashes": 126,
+      "zipCRCs": 6,
+      "onlyHostedMetadataAndAbsoluteHtmlHistoryChanged": [
+        "index.html",
+        "README.txt",
+        "manifest.json",
+        "manifest.js"
+      ],
+      "historicalFiles": 278,
+      "historicalUnchanged": 275,
+      "onlyHistoricalEdits": [
+        "dist/contrast/index.html",
+        "dist/index.html",
+        "dist/instrument/index.html"
+      ],
+      "oldNativeVoicesRouteOnlyRedirect": true,
+      "expandedBytes": {
+        "companion": 135212272,
+        "original": 246883900
+      },
+      "bothBelow256MiB": true
+    }
+  },
+  "fullJvmSuite": {
+    "status": "passed",
+    "sourceCommit": "d17359db1485b6eb1af089cd0265138639e05a1d",
+    "runtime": "Temurin 17.0.21+9",
+    "exitCode": 0,
+    "totals": {
+      "tests": 7001,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "classes": 858
+    },
+    "finalRun": {
+      "name": "caustic-java17-full-gate-final.json",
+      "sha256": "b15641135262782543fba7e245cb1b295d77249e6fae61a75a745ec61817e3ff",
+      "data": {
+        "command": [
+          "python3",
+          "/workspace/scratch/run-snipsnap-gradle17.py",
+          "test",
+          "--parallel",
+          "--max-workers=4",
+          "-Pkotlin.daemon.jvmargs=-Xmx4g"
+        ],
+        "sourceCommit": "d17359db1485b6eb1af089cd0265138639e05a1d",
+        "started": "2026-10-28T06:32:10.362944+00:00",
+        "ended": "2026-10-28T06:32:46.122701+00:00",
+        "seconds": 35.75713961400106,
+        "exitCode": 0,
+        "log": "/workspace/scratch/caustic-java17-full-gate-final.log",
+        "modules": {
+          "json": {
+            "tests": 16,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 2
+          },
+          "xpm": {
+            "tests": 39,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 5
+          },
+          "audio": {
+            "tests": 453,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 61
+          },
+          "kit": {
+            "tests": 429,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 65
+          },
+          "mpc3": {
+            "tests": 93,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 11
+          },
+          "synth": {
+            "tests": 3806,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 429
+          },
+          "loop": {
+            "tests": 421,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 34
+          },
+          "cli": {
+            "tests": 239,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 43
+          },
+          "shell": {
+            "tests": 1505,
+            "failures": 0,
+            "errors": 0,
+            "skipped": 0,
+            "classes": 208
+          }
+        }
+      }
+    },
+    "finalLog": {
+      "name": "caustic-java17-full-gate-final.log",
+      "sha256": "3ce1e70ec1810d80fc160618f1538c08bcdced3dee6b63d389f5f2b5bb8f90b5"
+    },
+    "taskExecution": {
+      "testTasks": {
+        "json": "UP-TO-DATE",
+        "xpm": "UP-TO-DATE",
+        "audio": "UP-TO-DATE",
+        "kit": "UP-TO-DATE",
+        "mpc3": "UP-TO-DATE",
+        "synth": "UP-TO-DATE",
+        "loop": "EXECUTED",
+        "cli": "UP-TO-DATE",
+        "shell": "UP-TO-DATE"
+      },
+      "executedTestsInFinalInvocation": 421,
+      "unchangedPassingResultsRetained": 6580,
+      "explanation": "All nine module test tasks requested. Loop reran after its test-only guard change; the eight unchanged modules were UP-TO-DATE using successful results from the completed first JDK17 invocation."
+    },
+    "previousJdk17Attempt": {
+      "report": {
+        "name": "caustic-java17-full-gate.json",
+        "sha256": "4028d944f71ad77ca058e200a882e88b598bf56e1f8aa7ff059c5cf813100902",
+        "data": {
+          "command": [
+            "python3",
+            "/workspace/scratch/run-snipsnap-gradle17.py",
+            "test",
+            "--parallel",
+            "--max-workers=4",
+            "-Pkotlin.daemon.jvmargs=-Xmx4g"
+          ],
+          "sourceCommit": "040710910796e0b3d23fe4efe5cc208235e8275f",
+          "started": "2026-10-28T04:31:12.560819+00:00",
+          "ended": "2026-10-28T06:29:51.113285+00:00",
+          "seconds": 7118.544874467001,
+          "exitCode": 1,
+          "log": "/workspace/scratch/caustic-java17-full-gate.log",
+          "modules": {
+            "json": {
+              "tests": 16,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 2
+            },
+            "xpm": {
+              "tests": 39,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 5
+            },
+            "audio": {
+              "tests": 453,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 61
+            },
+            "kit": {
+              "tests": 429,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 65
+            },
+            "mpc3": {
+              "tests": 93,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 11
+            },
+            "synth": {
+              "tests": 3806,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 429
+            },
+            "loop": {
+              "tests": 421,
+              "failures": 1,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 34
+            },
+            "cli": {
+              "tests": 239,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 43
+            },
+            "shell": {
+              "tests": 1505,
+              "failures": 0,
+              "errors": 0,
+              "skipped": 0,
+              "classes": 208
+            }
+          }
+        }
+      },
+      "log": {
+        "name": "caustic-java17-full-gate.log",
+        "sha256": "a17482145aed12facc2da3eba36151f119d4bedb3f8413cf9dd1982158d37809"
+      },
+      "totals": {
+        "tests": 7001,
+        "failures": 1,
+        "errors": 0,
+        "skipped": 0,
+        "classes": 858
+      },
+      "failure": "ResidencyTest wall-clock caller-work assertion: 79 ms observed against 50 ms; production source unchanged."
+    },
+    "previousAttempt": {
+      "status": "runtime_compiler_crash",
+      "renderSourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "observedAtUtc": "2026-10-28T03:09:26Z",
+      "runtime": "OpenJDK Temurin 21.0.13+9-LTS, Linux amd64",
+      "thread": "C2 CompilerThread1",
+      "currentCompileTask": "com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)",
+      "error": "Internal Error (type.cpp:1283), ShouldNotReachHere()",
+      "reportName": "caustic-first-gate-hs-err.log",
+      "reportSha256": "f9660b9760bb60cd22af8b787ea4b6b566a6bb9c5a08b56c663fe4a00592b71f",
+      "causalAttribution": "Not established"
+    },
+    "callerThreadGuardProof": {
+      "report": {
+        "name": "guard-proof.json",
+        "sha256": "cffaf1092d9684b42a8e2026d66eef217791b17f8c6ccba96599b5c484e52642",
+        "data": {
+          "recordedAtUtc": "2026-10-28T06:31:33.126638+00:00",
+          "sourceCommit": "040710910796e0b3d23fe4efe5cc208235e8275f",
+          "runtime": "openjdk version \"17.0.21\" 2026-10-20\nOpenJDK Runtime Environment Temurin-17.0.21+9 (build 17.0.21+9)\nOpenJDK 64-Bit Server VM Temurin-17.0.21+9 (build 17.0.21+9, mixed mode, sharing)",
+          "repositorySourceUnchangedDuringProof": true,
+          "appliedTestSha256": "8732fe6cff78f0bf42c7bff8c771cc27f1eba3a97b946750f28fdf8d551e8cde",
+          "productionResidencySha256": "da44d1ce02991fa80f071933fc066472c6d3ac3b6b6d1c93493fe6d5bb2eca40",
+          "mutantSourceSha256": "bfc80ff57b988d30ca7f7ccc371894ac711f0af49510126670320f3ad0251478",
+          "launcherSha256": "42da5ea9d12394232e27a0ee88dca04b76f25a7c7f9fbe941ea59f4e8dc33409",
+          "normalExitCode": 0,
+          "mutantExitCode": 1,
+          "namedGuard": "drone renderer ran on the buffersFor caller thread",
+          "mutation": "Only droneExecutor.execute is replaced by an inline Executor. Normal loop executor and production source remain unchanged.",
+          "steps": [
+            {
+              "step": "Compile applied test into scratch",
+              "exitCode": 0,
+              "seconds": 12.843847352000012,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "step": "Normal production method",
+              "exitCode": 0,
+              "seconds": 0.8761224720001337,
+              "stdout": "PASS elapsedMillis=101.624\n",
+              "stderr": ""
+            },
+            {
+              "step": "Compile inline drone executor mutant",
+              "exitCode": 0,
+              "seconds": 6.535885702000087,
+              "stdout": "",
+              "stderr": ""
+            },
+            {
+              "step": "Inline drone executor must fail",
+              "exitCode": 1,
+              "seconds": 1.0374160169994866,
+              "stdout": "FAIL elapsedMillis=68.468 cause=java.lang.AssertionError: drone renderer ran on the buffersFor caller thread\n",
+              "stderr": "java.lang.AssertionError: drone renderer ran on the buffersFor caller thread\n\tat com.snipsnap.loop.ResidencyTest$SlowDroneSource.drone(ResidencyTest.kt:475)\n\tat com.snipsnap.loop.BlockBaker.bakeDrone(BlockBaker.kt:71)\n\tat com.snipsnap.loop.BlockBaker.bake(BlockBaker.kt:55)\n\tat com.snipsnap.loop.Residency.bakeDroneLater$lambda$8(Residency.kt:145)\n\tat com.snipsnap.loop.Residency.bakeDroneLater$lambda$5(Residency.kt:141)\n\tat com.snipsnap.loop.Residency.bakeDroneLater(Residency.kt:141)\n\tat com.snipsnap.loop.Residency.bakeDroneLater$default(Residency.kt:135)\n\tat com.snipsnap.loop.Residency.buffersFor(Residency.kt:103)\n\tat com.snipsnap.loop.ResidencyTest.a drone that isn't ready is silence on its own track, never a bake on the caller(ResidencyTest.kt:500)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:569)\n\tat CallerThreadGuard.main(CallerThreadGuard.java:6)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)\n\tat java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)\n\tat java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)\n\tat java.base/java.lang.reflect.Method.invoke(Method.java:569)\n\tat jdk.compiler/com.sun.tools.javac.launcher.Main.execute(Main.java:419)\n\tat jdk.compiler/com.sun.tools.javac.launcher.Main.run(Main.java:192)\n\tat jdk.compiler/com.sun.tools.javac.launcher.Main.main(Main.java:132)\n"
+            }
+          ],
+          "noGradle": true,
+          "onlyScratchClassOutputs": true
+        }
+      },
+      "log": {
+        "name": "guard-proof.log",
+        "sha256": "bba0f6564a1d9f5a154258cf258f19eecf1bc47d58488bbe5ddfadbb3cb93084"
+      },
+      "validationCommit": "d17359db1485b6eb1af089cd0265138639e05a1d",
+      "scope": "Test-only caller/renderer-thread and latch guard; only droneExecutor is inline in the negative proof. Production code and APK unchanged."
+    },
+    "warmCacheFixture": {
+      "sourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+      "file": "loop/src/test/kotlin/com/snipsnap/loop/ResidencyTest.kt",
+      "scope": "Already-fitting audio isolates the wait contract from tempo analysis; a real two-thread queue, 40 ms delay, six completed bakes and no re-bake after applying the warmed interval remain asserted."
+    }
+  },
+  "sourceScope": "Published render and measurement reports use source commit 8f98846363375ff1eb44a68dc9733603e58381a4. currentMergedBuild/APK use 040710910796e0b3d23fe4efe5cc208235e8275f. Validation commit d17359db1485b6eb1af089cd0265138639e05a1d changes only a loop test guard; production DSP and merged APK provenance are unchanged. The complete JDK 17 gate passes with actual task execution and retained unchanged-module results recorded separately. The prior JDK 21 compiler failure remains unresolved.",
+  "runtimeComparison": {
+    "status": "focused_checks_and_full_ci_jdk17_suite_passed",
+    "gateTargetJdkMajor": 17,
+    "publishedRenderJdk": "OpenJDK Temurin 21.0.13+9-LTS",
+    "retainedProductionSourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+    "productionSourceFile": "synth/src/main/kotlin/com/snipsnap/synth/CausticInstrument.kt",
+    "productionSourceSha256": "68b32786edd579b68bb2bb99c5a0b87bcab49fd1f69758c89c6660e5c3b9c908",
+    "productionSourceMatchesPublishedCommit": true,
+    "configurationEvidence": [
+      {
+        "path": ".github/workflows/tests.yml",
+        "sha256": "3c5dee6c00bb5d2884480a7d37e29e62b535479a1488e5053f2518772b449d54",
+        "setting": "Temurin java-version 17 in both CI jobs"
+      },
+      {
+        "path": "synth/build.gradle.kts",
+        "sha256": "70dec11025eb7169a6f35c113c5edd6071281221e52f8ad93c96f6c83cdcd89e",
+        "setting": "JvmTarget.JVM_17"
+      }
+    ],
+    "runtime": "Temurin 17.0.21+9",
+    "jdkInstallation": {
+      "name": "verification.json",
+      "sha256": "ce1357035fb109430c5b9866e88e9b7eb67627b42c1a4eaeb5bb393e696fb3aa",
+      "data": {
+        "install": "/workspace/jdk17",
+        "releaseName": "jdk-17.0.21+9",
+        "sha256": "8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711",
+        "bytes": 193594705,
+        "source": "https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.21%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.21_9.tar.gz",
+        "javaVersion": "openjdk version \"17.0.21\" 2026-10-20\nOpenJDK Runtime Environment Temurin-17.0.21+9 (build 17.0.21+9)\nOpenJDK 64-Bit Server VM Temurin-17.0.21+9 (build 17.0.21+9, mixed mode, sharing)",
+        "javacVersion": "javac 17.0.21",
+        "existingCurrentJdk": "/workspace/jdk/jdk-21.0.13+9"
+      }
+    },
+    "focusedStress": {
+      "reportName": "caustic-c2-stress-evidence.json",
+      "reportSha256": "399aa1a4355327a88a94b8bf198c0e18256227440aa99d88962d0b628aed60b7",
+      "originalCompiledInstrumentSha256": "feddf7ef061e8c968d4737abd185bc4340e894d01781f97ad190cbcd21b22c40",
+      "runs": [
+        {
+          "profile": "mixed",
+          "calls": 720,
+          "exitCode": 0,
+          "runtime": "Temurin 17.0.21+9",
+          "actualTier4Compiles": [
+            "3934 1556    b  4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)",
+            "4041 1556       4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)   made not entrant",
+            "5714 1621    b  4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)"
+          ],
+          "pass": "CAUSTIC_STRESS PASS calls=720 voices=4 wallMillis=10836.82807 check=-0.6193927775098333",
+          "compilerExclusions": "none",
+          "logName": "caustic-c2-jdk17-mixed.log",
+          "logSha256": "06245047b8ed70f2ce4417889c312f44a6543332382cbf04eda194a7da15ba43"
+        },
+        {
+          "profile": "phased",
+          "calls": 2520,
+          "exitCode": 0,
+          "runtime": "Temurin 17.0.21+9",
+          "actualTier4Compiles": [
+            "9725  802    b  4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)",
+            "14284  802       4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)   made not entrant",
+            "14553 1340    b  4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)"
+          ],
+          "pass": "CAUSTIC_STRESS PASS calls=2520 voices=4 wallMillis=23116.224856 check=-12.75999728575697",
+          "compilerExclusions": "none",
+          "logName": "caustic-c2-jdk17-phased.log",
+          "logSha256": "99bf7dae1b3aefa82d0715b2bdebb218544afdfb7e7107ad2eb2cc5123eac6ca"
+        },
+        {
+          "profile": "ordinary",
+          "calls": 720,
+          "exitCode": 0,
+          "runtime": "Temurin 17.0.21+9",
+          "actualTier4Compiles": [
+            "1958  421       4       com.snipsnap.synth.CausticInstrument::synthesize (1046 bytes)"
+          ],
+          "pass": "CAUSTIC_STRESS PASS calls=720 voices=4 wallMillis=6293.870165 check=-0.6193927775098333",
+          "compilerExclusions": "none",
+          "logName": "caustic-c2-jdk17-ordinary.log",
+          "logSha256": "b40f11b843584cbb68ed78a31f84489ffe2e854121feaa9015d560d9436afc17"
+        }
+      ]
+    },
+    "crossRuntimeAudio": {
+      "name": "report.json",
+      "sha256": "8825475d616ecdf659d21566e59b6b1a87fafd548ba1ce690a9e1b85909b035c",
+      "data": {
+        "startedAtUtc": "2026-10-28T04:16:44.827862+00:00",
+        "sourceCommit": "040710910796e0b3d23fe4efe5cc208235e8275f",
+        "sourceDirty": true,
+        "runtimeSource": "Original8f compiled snapshot first in classpath on verified Temurin17.0.21+9",
+        "snapshot": "/workspace/scratch/caustic-c2-old-main",
+        "instrumentSourceSha256": "68b32786edd579b68bb2bb99c5a0b87bcab49fd1f69758c89c6660e5c3b9c908",
+        "instrumentSourceUnchangedDuringRun": true,
+        "compiledClassSha256": {
+          "/workspace/SnipSnap/synth/build/classes/kotlin/test/com/snipsnap/synth/CausticCharactersTest.class": "a05f7064845940e140f277237e27ba2db5b51846707ea7390c81e1ef6f456d96",
+          "/workspace/scratch/caustic-c2-old-main/com/snipsnap/synth/CausticInstrument.class": "feddf7ef061e8c968d4737abd185bc4340e894d01781f97ad190cbcd21b22c40",
+          "/workspace/scratch/caustic-c2-old-main/com/snipsnap/synth/CausticCharacters.class": "9cc21b477738a4632efd08ac7a698257ad03a0fd94b06be45de4bb7aee534353"
+        },
+        "compiledClassesUnchangedDuringRun": true,
+        "directCharacterTests": {
+          "tests": 16,
+          "passed": 16,
+          "assertionFailures": 0,
+          "errors": 0,
+          "seconds": 20.100986
+        },
+        "directTestExitCode": 0,
+        "directTestReport": "/workspace/scratch/caustic-jdk17-original-check/character-tests/report.json",
+        "alloy": {
+          "cases": 17,
+          "stageHashes": 51,
+          "mismatches": [],
+          "allUnchanged": true
+        },
+        "newDefaults": {
+          "cases": 9,
+          "stageHashes": 27,
+          "mismatches": [],
+          "allUnchanged": true,
+          "rows": [
+            {
+              "case": "HOLLOW_MALLET-m36",
+              "stage": "native",
+              "expected": "fde08162ca007c7ddcdf7e8e7f2c9b9dfb323632a1bcc95be3df6917ef75802d",
+              "actual": "fde08162ca007c7ddcdf7e8e7f2c9b9dfb323632a1bcc95be3df6917ef75802d",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m36",
+              "stage": "prelevel",
+              "expected": "557f60bc21ab90dde0196ec120072f2e226c8a7a2d640897186be9399360ef9e",
+              "actual": "557f60bc21ab90dde0196ec120072f2e226c8a7a2d640897186be9399360ef9e",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m36",
+              "stage": "internal",
+              "expected": "4476a891b3e2ef37d137dbce6c7bbc69e6c647e41733217dee3a1246fa4f1a90",
+              "actual": "4476a891b3e2ef37d137dbce6c7bbc69e6c647e41733217dee3a1246fa4f1a90",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m60",
+              "stage": "native",
+              "expected": "02a95d42d999084859b818cb87a104a5e14034c6e4edf83a0a1e7df774434f9d",
+              "actual": "02a95d42d999084859b818cb87a104a5e14034c6e4edf83a0a1e7df774434f9d",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m60",
+              "stage": "prelevel",
+              "expected": "7bd0179f5df260908a967a28d6290e412428ddb9fa9f63ca52bbad6a7664f20c",
+              "actual": "7bd0179f5df260908a967a28d6290e412428ddb9fa9f63ca52bbad6a7664f20c",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m60",
+              "stage": "internal",
+              "expected": "9936f1109a919a5007fd42680a8a7e1e4ce353bf0f386f7ee5334ca6df5fb0dd",
+              "actual": "9936f1109a919a5007fd42680a8a7e1e4ce353bf0f386f7ee5334ca6df5fb0dd",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m84",
+              "stage": "native",
+              "expected": "c53d66472ee16367ced034bb7029184c42ddc8b638277aa7beadc043d133f713",
+              "actual": "c53d66472ee16367ced034bb7029184c42ddc8b638277aa7beadc043d133f713",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m84",
+              "stage": "prelevel",
+              "expected": "d26088d8dc1044510a9430c86100f89d2479e280ead43bc6031ed295a829041d",
+              "actual": "d26088d8dc1044510a9430c86100f89d2479e280ead43bc6031ed295a829041d",
+              "unchanged": true
+            },
+            {
+              "case": "HOLLOW_MALLET-m84",
+              "stage": "internal",
+              "expected": "70059ab20f0a78d8cd217f00ed24a6ad111bcdde716bf142657179cadfcaf07c",
+              "actual": "70059ab20f0a78d8cd217f00ed24a6ad111bcdde716bf142657179cadfcaf07c",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m36",
+              "stage": "native",
+              "expected": "16bd81fbca989cbf87683b2d160d8ca6bc81967a45dcfdc4999314a7b84152fa",
+              "actual": "16bd81fbca989cbf87683b2d160d8ca6bc81967a45dcfdc4999314a7b84152fa",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m36",
+              "stage": "prelevel",
+              "expected": "8cd3661ce94f4620d23ba36656466ffaf8e2d5d9d737deba66f5b66cdf6dd86e",
+              "actual": "8cd3661ce94f4620d23ba36656466ffaf8e2d5d9d737deba66f5b66cdf6dd86e",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m36",
+              "stage": "internal",
+              "expected": "3d0027caab1373494bcb1e0946c7247f1bde673ee27a858a2d154dd50c464c9b",
+              "actual": "3d0027caab1373494bcb1e0946c7247f1bde673ee27a858a2d154dd50c464c9b",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m60",
+              "stage": "native",
+              "expected": "643a6403aefec52c80480860fa057e9acb75a6ce140b2fec175d4476bce56ebc",
+              "actual": "643a6403aefec52c80480860fa057e9acb75a6ce140b2fec175d4476bce56ebc",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m60",
+              "stage": "prelevel",
+              "expected": "b5749ce0de47596dbd9448a6f4d1526bc0c5caf6e10d48ac7f4fea83c048fb88",
+              "actual": "b5749ce0de47596dbd9448a6f4d1526bc0c5caf6e10d48ac7f4fea83c048fb88",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m60",
+              "stage": "internal",
+              "expected": "17b2623169632cb611e782f2e96ddc7eb59b934366325632e006b0ece8803fbb",
+              "actual": "17b2623169632cb611e782f2e96ddc7eb59b934366325632e006b0ece8803fbb",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m84",
+              "stage": "native",
+              "expected": "8f5ebe29b492e9378247255a5a06c53a10d54e2013050779ecc576582b2a2a2b",
+              "actual": "8f5ebe29b492e9378247255a5a06c53a10d54e2013050779ecc576582b2a2a2b",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m84",
+              "stage": "prelevel",
+              "expected": "9a00769fce1dca3f695f8f45accff70c86dfb007f8b7f21fc66c4566fa2f106e",
+              "actual": "9a00769fce1dca3f695f8f45accff70c86dfb007f8b7f21fc66c4566fa2f106e",
+              "unchanged": true
+            },
+            {
+              "case": "RUBBED_RING-m84",
+              "stage": "internal",
+              "expected": "c27902bc25a1e4e4338512d87c442c1e67ea7b4040fd8b1f946ce99143441b17",
+              "actual": "c27902bc25a1e4e4338512d87c442c1e67ea7b4040fd8b1f946ce99143441b17",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m36",
+              "stage": "native",
+              "expected": "17316fa6878fd3f7ac2ba1fff43e613f0752d658610f7c4f352ac214b2ae0c14",
+              "actual": "17316fa6878fd3f7ac2ba1fff43e613f0752d658610f7c4f352ac214b2ae0c14",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m36",
+              "stage": "prelevel",
+              "expected": "5d96c6617ac54ed4ce7b2686cd5109b55c62533d55fb3e98a4b7ccd33bf41f1f",
+              "actual": "5d96c6617ac54ed4ce7b2686cd5109b55c62533d55fb3e98a4b7ccd33bf41f1f",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m36",
+              "stage": "internal",
+              "expected": "696e7e9f7f9de4dc3f70131dc2a1f932a7da665eab5d2c78b3cb1376d520fd7e",
+              "actual": "696e7e9f7f9de4dc3f70131dc2a1f932a7da665eab5d2c78b3cb1376d520fd7e",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m60",
+              "stage": "native",
+              "expected": "5ca5994d8c35011fa367b430cd50714d4853d0c907dec65f8cab0eb63f267ea8",
+              "actual": "5ca5994d8c35011fa367b430cd50714d4853d0c907dec65f8cab0eb63f267ea8",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m60",
+              "stage": "prelevel",
+              "expected": "4d02090a1c783b8c245cc253cdd866549d6ae4d0014f244b776a7e5b36bebfe5",
+              "actual": "4d02090a1c783b8c245cc253cdd866549d6ae4d0014f244b776a7e5b36bebfe5",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m60",
+              "stage": "internal",
+              "expected": "f7aa9c8e5c6fe683287b996c81d8e57e29357afb950e3053f710bb97853cc739",
+              "actual": "f7aa9c8e5c6fe683287b996c81d8e57e29357afb950e3053f710bb97853cc739",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m84",
+              "stage": "native",
+              "expected": "cca1be75784089a74246650682b0bdfdf3ba0b06e0710896fb59376ffe136a6b",
+              "actual": "cca1be75784089a74246650682b0bdfdf3ba0b06e0710896fb59376ffe136a6b",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m84",
+              "stage": "prelevel",
+              "expected": "f4095d29522bb416c963a0870632fdeddb98ae2a760ea9bab85de00fd0805345",
+              "actual": "f4095d29522bb416c963a0870632fdeddb98ae2a760ea9bab85de00fd0805345",
+              "unchanged": true
+            },
+            {
+              "case": "TRAVELLING_CATCHES-m84",
+              "stage": "internal",
+              "expected": "5972e4c83286cd9d80255ba65f60efa7e26631dd6b5a25c5b3ee3cb93c989aea",
+              "actual": "5972e4c83286cd9d80255ba65f60efa7e26631dd6b5a25c5b3ee3cb93c989aea",
+              "unchanged": true
+            }
+          ]
+        },
+        "steps": [
+          {
+            "step": "direct-character-tests",
+            "exitCode": 0,
+            "seconds": 22.739873204000105,
+            "log": "/workspace/scratch/caustic-jdk17-original-check/direct-character-tests.log"
+          },
+          {
+            "step": "compile-hash-helpers",
+            "exitCode": 0,
+            "seconds": 1.83094984499985,
+            "log": "/workspace/scratch/caustic-jdk17-original-check/compile-hash-helpers.log"
+          },
+          {
+            "step": "alloy17",
+            "exitCode": 0,
+            "seconds": 3.6676193969997257,
+            "log": "/workspace/scratch/caustic-jdk17-original-check/alloy17.log"
+          },
+          {
+            "step": "defaults9",
+            "exitCode": 0,
+            "seconds": 7.126911748000566,
+            "log": "/workspace/scratch/caustic-jdk17-original-check/defaults9.log"
+          }
+        ],
+        "exitCode": 0
+      }
+    },
+    "jdk21CompilerFailureUnresolved": true
+  },
+  "currentMergedBuild": {
+    "status": "passed",
+    "sourceCommit": "040710910796e0b3d23fe4efe5cc208235e8275f",
+    "includesDefaultCommit": "76f46a9fd",
+    "renderAudioSourceCommit": "8f98846363375ff1eb44a68dc9733603e58381a4",
+    "causticProductionDspUnchanged": true,
+    "runtime": "Temurin 17.0.21+9",
+    "gradleCompilerArgument": "-Pkotlin.daemon.jvmargs=-Xmx4g",
+    "compilerArgumentScope": "Local invocation only; no repository memory property changed.",
+    "exitCode": 0,
+    "elapsed": "5m 28s",
+    "buildLogName": "caustic-merged-java17-build-4g.log",
+    "buildLogSha256": "8d7e5044924089e4f9dcd9180bd85e2f956043bd71cda3e447891f2583031c65",
+    "tasks": [
+      "all nine JVM modules testClasses",
+      ":app:assembleDebug",
+      ":app:assembleDebugAndroidTest"
+    ],
+    "apkAudit": {
+      "name": "SnipSnap-Caustic-Voices-04071091.json",
+      "sha256": "7e02df9a39b62ae64452b7e28e470e14ef3793706c96b07aec52d8a371d8f66c",
+      "data": {
+        "artifact": "/workspace/scratch/SnipSnap-Caustic-Voices-04071091.apk",
+        "sha256": "f3dc6732662cfd6902b9dfa17af2185a8aafe6788463a3c716216d925026959a",
+        "bytes": 52441963,
+        "source": {
+          "repository": "/workspace/SnipSnap",
+          "commit": "040710910796e0b3d23fe4efe5cc208235e8275f",
+          "workingTreeChanges": [
+            " M README.md",
+            " M docs/CAUSTIC.md",
+            " M docs/SYNTH_ROADMAP.md",
+            "?? docs/evidence/"
+          ],
+          "compiledSourceMatchesCommit": true,
+          "buildApk": "/workspace/SnipSnap/app/build/outputs/apk/debug/app-debug.apk",
+          "buildApkSha256": "f3dc6732662cfd6902b9dfa17af2185a8aafe6788463a3c716216d925026959a",
+          "buildApkModifiedUtc": "2026-10-28T04:30:14.597123+00:00"
+        },
+        "build": {
+          "exitCode": 0,
+          "exitCodeEvidence": "Reported by owning build session; completed log independently contains BUILD SUCCESSFUL.",
+          "log": "/workspace/scratch/caustic-merged-java17-build-4g.log",
+          "logSha256": "8d7e5044924089e4f9dcd9180bd85e2f956043bd71cda3e447891f2583031c65",
+          "runtimePath": "/workspace/jdk17/bin/java",
+          "runtimeVersion": "openjdk version \"17.0.21\" 2026-10-20\nOpenJDK Runtime Environment Temurin-17.0.21+9 (build 17.0.21+9)\nOpenJDK 64-Bit Server VM Temurin-17.0.21+9 (build 17.0.21+9, mixed mode, sharing)",
+          "tasks": [
+            "all nine JVM modules testClasses",
+            ":app:assembleDebug",
+            ":app:assembleDebugAndroidTest"
+          ]
+        },
+        "apk": {
+          "applicationId": "com.snipsnap.app.brassgrow",
+          "applicationLabel": "SnipSnap Development",
+          "variant": "debug",
+          "versionCode": 1,
+          "versionName": "0.1-development",
+          "minSdk": 29,
+          "targetSdk": 35,
+          "compileSdk": 35,
+          "zipEntries": 564,
+          "zipCrcValid": true,
+          "binaryAndroidManifestValid": true,
+          "dexFiles": 11,
+          "causticVoiceStringsPresent": {
+            "Lcom/snipsnap/synth/CausticVoice;": true,
+            "ALLOY": true,
+            "HOLLOW_MALLET": true,
+            "RUBBED_RING": true,
+            "TRAVELLING_CATCHES": true
+          },
+          "nativeAbis": {
+            "arm64-v8a": {
+              "library": "lib/arm64-v8a/libsnipsnap_surface.so",
+              "bytes": 152800,
+              "sha256": "54fe060ae5aa478a62763886343b83c242561498adb0d0952818010b9dd3e9d9",
+              "elfClass": 64,
+              "elfMachine": 183
+            },
+            "armeabi-v7a": {
+              "library": "lib/armeabi-v7a/libsnipsnap_surface.so",
+              "bytes": 101916,
+              "sha256": "5b5891628d4e59668d2d408b9f7ddc42cf8984d9a150cb239fcd250944fd984e",
+              "elfClass": 32,
+              "elfMachine": 40
+            },
+            "x86": {
+              "library": "lib/x86/libsnipsnap_surface.so",
+              "bytes": 167444,
+              "sha256": "495c5ae2082ecc63bf675ef11fbf89be1c8a51d4489892e4dc24037853b12f54",
+              "elfClass": 32,
+              "elfMachine": 3
+            },
+            "x86_64": {
+              "library": "lib/x86_64/libsnipsnap_surface.so",
+              "bytes": 161096,
+              "sha256": "0ad9b80ee6cb571e67e03afcffa716e9f0ef9a2a80aef35fd1473a1b69dc9fc0",
+              "elfClass": 64,
+              "elfMachine": 62
+            }
+          },
+          "signatureVerified": true,
+          "signatureScheme": "APK Signature Scheme v2",
+          "signerCertificateSha256": "9d5e43e49b8e22ffd027ece0b3465b815b0881a3c70a1b9f5f59a70ff30dbc93",
+          "signingReport": "/workspace/scratch/SnipSnap-Caustic-Voices-04071091-signing.txt"
+        },
+        "validationScope": "APK packaging/signature/basic contents checked. Full JVM test gate runs separately; device instrumentation was not run here.",
+        "recordedAtUtc": "2026-10-28T04:33:07.528835+00:00"
+      }
+    }
+  },
+  "validationSourceCommit": "d17359db1485b6eb1af089cd0265138639e05a1d"
+}

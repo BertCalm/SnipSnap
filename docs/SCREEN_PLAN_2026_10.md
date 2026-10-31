@@ -394,7 +394,7 @@ header today and keeps none.
 
 **SDK checklist.**
 - [ ] Build the MAKE list page; each row opens the lab as a bench with `◄ MAKE`.
-- [ ] Move the instrument rows here; KEYS's back chip reads `◄ MAKE`.
+- [ ] Move the instrument rows here; KEYS's back chip reads `◄ INSTRUMENTS`.
 - [ ] Every lab's slot chooser lands on `project.activeKit`.
 - [ ] Hold each lab's unkeyed state (engine, voice, macros; photo and line; mode and panel) in the navigation model's MAKE state so leaving to hear a pad and coming back does not reset the lab. This is the single largest state-loss fix in the plan: SYNTH, SNAP and SURFACE lose everything on a tab switch today.
 
@@ -440,12 +440,12 @@ Unchanged inside; only the way in and the back chip change.
 | SPLIT | PADS ▸ THIS KIT | `◄ PADS` | unchanged |
 | VERSIONS + BIN | PADS ▸ THIS KIT | `◄ PADS` | unchanged |
 | PAD CAPTURE | PADS strip CAPTURE ▸, or the hold on an empty pad | `◄ PADS` | unchanged |
-| SNIPS | SHELF | `◄ SHELF` | → PAD lands on the active kit's pick; → LOOP opens BEAT ▸ LOOP |
-| BIN | SHELF | `◄ SHELF` | DELETED KITS and DELETED SNIPS as two headed lists |
-| X-RAY, DOUBLES | SHELF ▸ TOOLS | `◄ SHELF` | unchanged |
+| SNIPS | SHELF | derived (`◄ SHELF` from the shelf) | → PAD lands on the active kit's pick; → LOOP opens BEAT ▸ LOOP |
+| BIN | SHELF | derived (`◄ SHELF` from the shelf) | DELETED KITS and DELETED SNIPS as two headed lists |
+| X-RAY, DOUBLES | SHELF ▸ TOOLS | derived (`◄ SHELF` from the shelf) | unchanged |
 | ORBIT, SONG, LOOP | BEAT | `◄ BEAT` | §3.4 |
 | LIVE SNAP, DRAW, FIELD | SNAP | `◄ SNAP` | unchanged |
-| KEYS | MAKE ▸ INSTRUMENTS | `◄ MAKE` | unchanged |
+| KEYS | MAKE ▸ INSTRUMENTS | `◄ INSTRUMENTS` | unchanged |
 
 ## 4. Journeys, counted off the structure
 

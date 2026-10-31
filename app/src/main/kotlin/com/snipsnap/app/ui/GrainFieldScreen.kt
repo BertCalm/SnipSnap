@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -68,7 +69,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // One rule, one home ([PadBanks]): this said "A%02d".format(slot) until
 // the September UAT's finding 11 made bank B reachable, at which point a
@@ -109,7 +109,7 @@ class PrebuiltField(
     val backdrop: Bitmap?,
     /** The header's title in place of PAD A01. */
     val title: String,
-    /** The back chip's label in place of ◄ KIT. */
+    /** The back chip's label, which the caller hands to [GrainFieldScreen] as its `backLabel`. */
     val backLabel: String,
 )
 
@@ -164,6 +164,12 @@ fun GrainFieldScreen(
     /** The kit and slot whose pad is analyzed into a field — or null when [prebuilt] brings one. */
     entry: KitShelf.Entry?,
     slot: Int?,
+    /**
+     * The back chip's words. Over the pad editor they are the model's
+     * (`Navigation.backChip`, "◄ PAD"); SNAP's PHOTO FIELD hands up its own
+     * ([PrebuiltField.backLabel]) until it is routed too.
+     */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onRequestArm: () -> Unit,
@@ -190,7 +196,7 @@ fun GrainFieldScreen(
         }
         val pad = entry.kit.pad(slot)
         val snip = pad?.let { p ->
-            withContext(Dispatchers.IO) {
+            offMain {
                 // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
                 // from an already-bounded Snip — readCapped's 600s ceiling is defense in
                 // depth, not expected to ever bind.
@@ -201,7 +207,7 @@ fun GrainFieldScreen(
             failed = true
             return@LaunchedEffect
         }
-        val map = withContext(Dispatchers.Default) { GrainField.analyze(snip) }
+        val map = offMain(Dispatchers.Default) { GrainField.analyze(snip) }
         if (map == null) failed = true else loaded = snip to map
     }
     // The picture under the dots, converted once per field.
@@ -239,7 +245,7 @@ fun GrainFieldScreen(
         onDispose { voice?.release() }
     }
 
-    // The header's own ◄ KIT path: release the voice, then leave — shared
+    // The header's own back-chip path: release the voice, then leave — shared
     // by the chip below and by system Back, so the two can't diverge on
     // whether the voice gets released before this screen unmounts.
     fun requestBack() {
@@ -273,7 +279,7 @@ fun GrainFieldScreen(
 
     fun printToTape(snip: Snip) {
         scope.launch {
-            val landed = withContext(Dispatchers.IO) {
+            val landed = offMain {
                 runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
             }
             landed.onSuccess {
@@ -294,7 +300,7 @@ fun GrainFieldScreen(
         printing = false
         scope.launch {
             try {
-                val samples = withContext(Dispatchers.Default) { v.stopPrint() }
+                val samples = offMain(Dispatchers.Default) { v.stopPrint() }
                 if (samples == null || samples.size < rate / 10) {
                     onToast(Copy.GRAIN_FIELD_NOTHING_PRINTED)
                     return@launch
@@ -382,7 +388,7 @@ fun GrainFieldScreen(
                             val raw = MicSessionService.snapshotTail(GrainField.GRAIN_FRAMES)
                             if (raw != null && raw.size >= GrainField.GRAIN_FRAMES) {
                                 val projected = runCatching {
-                                    withContext(Dispatchers.Default) {
+                                    offMain(Dispatchers.Default) {
                                         val snip = Snip(raw, channels = 1, sampleRate = MicSessionService.SAMPLE_RATE)
                                         p.project(Similar.vector(FeatureExtractor.extract(snip)))
                                     }
@@ -485,7 +491,7 @@ fun GrainFieldScreen(
                 .padding(horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip(prebuilt?.backLabel ?: "◄ KIT", scheme, Modifier.width(64.dp), onClick = ::requestBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), onClick = ::requestBack)
             Spacer(Modifier.weight(1f))
             TapeText(prebuilt?.title ?: "PAD ${padTag(slot ?: 0)}", TapeType.lcdHeader, scheme.lcdInk.tape)
             Spacer(Modifier.weight(1f))

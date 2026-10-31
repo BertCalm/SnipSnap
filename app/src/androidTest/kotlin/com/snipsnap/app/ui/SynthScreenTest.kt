@@ -28,6 +28,8 @@ import com.snipsnap.synth.Eq
 import com.snipsnap.synth.FxChain
 import com.snipsnap.synth.Ohm
 import com.snipsnap.synth.OhmGesture
+import com.snipsnap.synth.OhmExciter
+import com.snipsnap.synth.OhmOptions
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.Onset
 import com.snipsnap.synth.OnsetPatch
@@ -136,6 +138,53 @@ class SynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun expandedEncounterRetainsHoldSourcesAndReleaseThroughScrambleAndNavigation() {
+        assertExpandedEncounterSurvivesEditsAndNavigation(updateSources = false)
+    }
+
+    @Test
+    fun updatedEncounterRetainsHoldSourcesAndReleaseThroughScrambleAndNavigation() {
+        assertExpandedEncounterSurvivesEditsAndNavigation(updateSources = true)
+    }
+
+    private fun assertExpandedEncounterSurvivesEditsAndNavigation(updateSources: Boolean) {
+        val source = OhmPatch("HELD FAMILY", Ohm.defaults(3) + ("HOLD" to .6f), midi = 57,
+            velocity = .65f, seed = -905, gesture = OhmGesture.GATHER, model = 3,
+            options = OhmOptions(exciter = OhmExciter.BOW, elder = .25f, grains = .35f, freeze = .4f),
+            releaseSeconds = .8f)
+        settings["patch.OHM.STRING"] = source.toJsonText()
+        show()
+        if (updateSources) {
+            button("OHM UPDATE SOURCES").performSemanticsAction(SemanticsActions.OnClick) { it() }
+            pump()
+        }
+        adjust("ELDER", .7f)
+        adjust("COMMUNE", .73f)
+        button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
+        pump()
+        val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
+        compose.runOnIdle {
+            assertEquals(if (updateSources) 4 else source.model, expected.model)
+            assertEquals(source.midi, expected.midi)
+            assertEquals(source.velocity, expected.velocity)
+            assertEquals(source.seed, expected.seed)
+            assertEquals(source.gesture, expected.gesture)
+            assertEquals(source.releaseSeconds, expected.releaseSeconds)
+            assertEquals(source.options.copy(elder = .7f), expected.options)
+            assertEquals(.6f, expected.macros.getValue("HOLD"))
+            generation++
+        }
+        pump()
+        waitFor("the recreated expanded OHM editor", timeoutMillis = 10_000) {
+            compose.onAllNodesWithTag("ohm-synth-generation-$generation").fetchSemanticsNodes().size == 1
+        }
+        button("OHM EXCITER BOW").assertIsSelected()
+        compose.runOnIdle {
+            assertEquals(expected, OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING")))
+        }
+    }
+
+    @Test
     fun foreignRecipeInTheMakeBagFallsBackToANewModelTwoEncounter() {
         settings["patch.OHM.STRING"] = """{"engine":"THUMP","version":1,"name":"OTHER","voice":"KICK","macros":{}}"""
         show()
@@ -184,7 +233,7 @@ class SynthScreenTest : ComposeScreenTest() {
     private fun leaveAndReturn(entry: KitShelf.Entry? = currentEntry) {
         compose.runOnIdle { screenVisible = false }
         pump()
-        button("ENGINE ONSET · TAP FOR NEXT").assertDoesNotExist()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertDoesNotExist()
         compose.runOnIdle {
             currentEntry = entry
             screenVisible = true
@@ -225,12 +274,13 @@ class SynthScreenTest : ComposeScreenTest() {
     @Test
     fun onset_follows_skin_and_all_four_voices_expose_their_six_live_controls() {
         show(shelfRoot())
-        tap("ENGINE THUMP · TAP FOR NEXT")
-        button("ENGINE SCANNED CHAIN · TAP FOR NEXT").assertExists()
-        tap("ENGINE SCANNED CHAIN · TAP FOR NEXT")
-        button("ENGINE SKIN · TAP FOR NEXT").assertExists()
-        tap("ENGINE SKIN · TAP FOR NEXT")
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE THUMP. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE SCANNED CHAIN. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE SKIN. CHOOSE ENGINE").assertExists()
+        tap("NEXT ENGINE")
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
 
         val voices = listOf(
             "KICK" to OnsetVoice.KICK,
@@ -308,7 +358,7 @@ class SynthScreenTest : ComposeScreenTest() {
         // Start on THUMP and let the imported recipe select ONSET itself.
         activate("REOPEN PAD RECIPE")
         activate("REOPEN ${PadBanks.tag(pad.slot)} ${pad.displayName}")
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button("KICK").assertIsSelected()
         for ((macro, value) in patch.macros) {
             assertEquals("reopened $macro", value, macroValue(macro), 0f)
@@ -322,7 +372,7 @@ class SynthScreenTest : ComposeScreenTest() {
         // Leaving SYNTH must flush the complete working recipe, not just its
         // sliders. The UPDATE target and legacy rack survive a fresh mount.
         leaveAndReturn()
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button("KICK").assertIsSelected()
         button(updateLabel).assertExists()
         for ((macro, value) in expectedPatch.macros) {
@@ -361,7 +411,7 @@ class SynthScreenTest : ComposeScreenTest() {
         val otherKit = Kit("OTHER KIT", emptyList())
         KitStore.save(otherKit, otherDir)
         leaveAndReturn(KitShelf.Entry(otherDir, otherKit))
-        button("ENGINE ONSET · TAP FOR NEXT").assertExists()
+        button("ENGINE ONSET. CHOOSE ENGINE").assertExists()
         button(updateLabel).assertDoesNotExist()
         assertEquals(otherKit, KitStore.load(otherDir))
         assertEquals(saved, KitStore.load(dir))

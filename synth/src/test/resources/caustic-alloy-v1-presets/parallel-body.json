@@ -1,0 +1,16 @@
+{
+  "engine": "CAUSTIC",
+  "version": 1,
+  "name": "Parallel Body",
+  "voice": "ALLOY",
+  "macros": {
+    "SOURCE": 0,
+    "FOCUS": 0.11999999731779099,
+    "BODY": 1,
+    "LENGTH": 0.75,
+    "HOLD": 0
+  },
+  "model": 1,
+  "midi": 60,
+  "velocity": 0.75
+}

@@ -3,6 +3,7 @@ package com.snipsnap.kit
 import com.snipsnap.audio.AutoPlace
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SongBus
 import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.mpc3.Mpc3Clip
@@ -85,15 +86,7 @@ object KitPreview {
             out[at * 2] += rendered.samples[f * 2]
             out[at * 2 + 1] += rendered.samples[f * 2 + 1]
         }
-        var peak = 0f
-        for (s in out) {
-            val a = if (s < 0) -s else s
-            if (a > peak) peak = a
-        }
-        if (peak > 0.95f) {
-            val k = 0.95f / peak
-            for (i in out.indices) out[i] *= k
-        }
+        SongBus.ceiling(out)
         return Snip(out, 2, RATE)
     }
 
@@ -215,15 +208,7 @@ object KitPreview {
         }
 
         // Headroom, then a hard ceiling: a preview must never clip harshly.
-        var peak = 0f
-        for (s in out) {
-            val a = if (s < 0) -s else s
-            if (a > peak) peak = a
-        }
-        if (peak > 0.95f) {
-            val k = 0.95f / peak
-            for (i in out.indices) out[i] *= k
-        }
+        SongBus.ceiling(out)
         return Snip(out, 2, RATE)
     }
 

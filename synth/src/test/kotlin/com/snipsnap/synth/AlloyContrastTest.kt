@@ -25,7 +25,7 @@ class AlloyContrastTest {
         assertEquals(12, candidates.size)
         assertEquals(12, candidates.map { it.name }.toSet().size)
         assertEquals(12, candidates.map { it.config }.toSet().size)
-        assertEquals(36, AlloyPresets.all().size)
+        assertEquals(24, AlloyPresets.all().size)
         assertTrue(candidates.none { it in Presets.all() }, "a listening proposal entered the factory registry")
         for (voice in AlloyVoice.entries) {
             val roles = AlloyContrastPresets.forVoice(voice)

@@ -27,7 +27,7 @@ oscillator, envelope and filter state and produces mono 44.1 kHz audio.
 | DRIVE | Compensated pre-filter excitation and bounded saturation on the 4× path |
 | HOLD | Finite sustain length; the top step supplies settled loop-only material |
 | BODY | Root-to-overtone balance: rounded root emphasis through a fuller partial spectrum |
-| EDGE | Edge-layer level and, in fresh recipes, projection from its saved envelope toward a sustained layer |
+| EDGE | Edge-layer level and sustained projection; the contrast response also trades body overtones for edge detail with root support |
 | ATTACK | Amplitude, edge and filter attack times, approximately ⅛–8× the saved recipe |
 | DECAY | Amplitude decay/release and edge/filter decay times, approximately ¼–4× the saved recipe |
 | RATE | Independent scan clock, approximately ⅛–8×; MOTION still sets travel and must be nonzero |
@@ -62,22 +62,60 @@ cycles per loop. RESO varies SVF damping from 2.5 to .4 around the authored valu
 ENV adds up to two filter octaves beyond the authored amount, bounded by the
 18 kHz cutoff ceiling. Settled HOLD has no attack or filter-contour gesture.
 
-The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) found that a low edge sustain
-could hide the layer even at maximum EDGE. Fresh recipes now save
-`edgeResponse: FOREGROUND`: EDGE also blends the saved projection toward one
-across the knob range. Its midpoint intentionally differs from the legacy law.
-Missing/null response fields decode to `LEGACY`, so saved recipes keep their
-original audio, including when macros are edited. No filter bypass or new drive
-stage is added. Load a fresh preset in the updated app to select the new response.
+The [Luthier EDGE review](CONTOUR_EDGE_REVIEW.md) first addressed low edge sustain
+with the saved `FOREGROUND` response, which blends the envelope projection toward
+one across EDGE. The owner heard a useful range in Soft Digital and Bright Margin,
+but reported the other seven recipes still too subtle from zero to maximum.
+
+The corresponding fresh voices and those seven recipes now select `CONTRAST`.
+The fresh PLUCK voice keeps `FOREGROUND`. Alongside the
+foreground projection, EDGE reduces the body's non-root contribution toward
+35%, raises edge partial amplitude toward 4×, and adds bounded support to the
+body root. The edge's own fundamental is not boosted. The mix budgets the added
+contributions before DRIVE. Tables, tuning, motion and the shared filter retain
+their mechanisms. Soft Digital and Bright Margin keep their previous complete
+recipes. These shape laws broaden the control range; listening still decides
+whether the result is rounded enough.
+
+Missing/null response fields decode to `LEGACY`; explicit `FOREGROUND` recipes
+retain their previous arithmetic. Saved recipes keep that choice when macros are
+edited. Model 1 and its phase seed remain unchanged. Load a fresh preset in the
+updated app to use the revised response.
 
 `./gradlew :synth:generateContourEdgeAudition` writes a focused 180-clip comparison
 under `testkit/contour-edge-audition/`, with finite and held forms of all nine
-recipes at five EDGE settings, matched WAVs and complete replay JSON.
+recipes at five EDGE settings, matched WAVs and complete replay JSON. Its previous
+side loads nine pinned complete recipes from `47809ba2d`, the preceding audition.
+Each page card can play 0%, 50% and 100% in sequence; finite notes retain their
+whole attack and held steps repeat for two seconds each.
 
-Nine provisional dry recipes are Rounded Edge, Moving Corner, Dark Table,
+The nine original dry recipes are Rounded Edge, Moving Corner, Dark Table,
 Copper Scan, Soft Digital, Bright Margin, Twin Outline, Hollow Step and Long
-Contour. Their table pairs and contours differ; the proposed 36-preset expansion
-waits for the owner's sonic verdict.
+Contour. The owner accepted the wider EDGE revision and requested the preset
+expansion on 28 October. Those nine complete recipes and their numeric preset
+positions remain intact in the expanded bank.
+
+The factory bank now contains 36 dry recipes: ten BASS, four KEY, four PLUCK,
+eight LEAD, six SWELL and four HOLLOW. Added recipes change the saved table pair,
+layer relationship, movement and envelopes rather than duplicating a sound at
+different macro settings. The rounded root, modest drive and the approved EDGE
+response remain the starting point. New recipes are authored candidates for the
+owner's listening decision; the earlier acceptance applies to the original nine.
+
+`./gradlew :synth:generateContourPresetAudition` writes the full-bank audition
+under `testkit/contour-presets/`. It offers each recipe's finite articulation and
+settled sustain, plus held EDGE at zero, halfway and maximum. Native WAVs replay
+the complete downloadable patch; matched WAVs apply only a scalar listening gain.
+The older matrix and EDGE comparison deliberately retain their original nine
+reference recipes.
+
+The native expanded-bank tests cover all 36 finite and held center notes and
+real held continuations. A separate 64-case matrix checks the eight octave-edge,
+bell-body and band-pass additions at full EDGE, BODY extremes and two registers,
+finite and held: maximum detected error 1.20 cents, minimum confidence 0.935.
+The focused engine, preset-dispatch and starter-layout run passes all 92 tests.
+These measurements establish stable roots and reproducible content, not a
+listening verdict on the new presets.
 
 R03 reauthored those nine recipes around rounded bass entrances, mellow key blooms,
 a softer pluck, slower lead and hollow gestures, and an evolving held tone.
@@ -101,7 +139,8 @@ bank's heavy use of SOFT_SAW. Independent layer and articulation settings, octav
 edge intervals in selected recipes and a band-pass hollow recipe provide more
 distinct spectra and gestures while keeping modest drive. The audition isolates
 each added control at 0, .5 and 1 so its effect can be judged directly; these are
-rendered choices from the native engine. The nine recipes remain provisional.
+rendered choices from the native engine. The nine recipes were subsequently
+accepted after the wider EDGE revision.
 
 `SynthKits.contour()` supplies sixteen pads: seven C-minor-pentatonic KEY notes
 and the nine recipes. CONTOUR appears in the Android SYNTH picker and FRESH TAPE
@@ -160,14 +199,14 @@ share the exported PCM24 WAVs: a native `.xty` track sits beside its
 `.instrument.json` sidecar sits beside that folder. Keep each track and sidecar
 with their matching folder.
 
-The starter task packages the current nine recipes and 153 zones under
+The starter task packages the current 36 recipes and 612 zones under
 `testkit/contour-starter/`, with editable patch JSON, source fingerprints, file
 hashes and a ZIP. It reads back the native JSON, XPM XML, phone sidecars and WAV
 sampler sheets before packaging. Commit the source before running it so the bank
 identifies its exact implementation. The Android panel groups all fourteen
 controls into Tone, Envelope, Movement, Filter and Play.
 
-The bank task also writes `web/` with nine exact root-loop previews and recipe
+The bank task also writes `web/` with 36 exact root-loop previews and recipe
 downloads. Copy it into an existing audition's `instruments/` directory and
 refresh that audition's page to show its instrument link. The published page
 includes this companion listening view; its R05 matrix audio stays unchanged.

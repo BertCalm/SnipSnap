@@ -28,6 +28,7 @@ class _jarray : public _jobject {};
 class _jbooleanArray : public _jarray {};
 class _jintArray : public _jarray {};
 class _jfloatArray : public _jarray {};
+class _jlongArray : public _jarray {};
 
 typedef _jobject* jobject;
 typedef _jclass* jclass;
@@ -35,6 +36,7 @@ typedef _jarray* jarray;
 typedef _jbooleanArray* jbooleanArray;
 typedef _jintArray* jintArray;
 typedef _jfloatArray* jfloatArray;
+typedef _jlongArray* jlongArray;
 
 #define JNI_FALSE 0
 #define JNI_TRUE 1
@@ -58,6 +60,7 @@ struct JNINativeInterface_ {
     jint (*ThrowNew)(JNIEnv*, jclass, const char*) = nullptr;
     jboolean (*ExceptionCheck)(JNIEnv*) = nullptr;
     void (*DeleteLocalRef)(JNIEnv*, jobject) = nullptr;
+    void (*SetLongArrayRegion)(JNIEnv*, jlongArray, jsize, jsize, const jlong*) = nullptr;
 };
 
 // C++ callers reach the table through member functions, exactly as they do
@@ -77,4 +80,5 @@ struct JNIEnv_ {
     jint ThrowNew(jclass type, const char* message) { return functions->ThrowNew(this, type, message); }
     jboolean ExceptionCheck() { return functions->ExceptionCheck(this); }
     void DeleteLocalRef(jobject object) { functions->DeleteLocalRef(this, object); }
+    void SetLongArrayRegion(jlongArray a, jsize s, jsize n, const jlong* b) { functions->SetLongArrayRegion(this, a, s, n, b); }
 };

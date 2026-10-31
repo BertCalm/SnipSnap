@@ -14,11 +14,13 @@ import java.time.Instant
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.log10
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * WICK listening evidence: PLUCK, WOOD, BUBBLE, BREATH and FLICKER from the actual JVM engine.
+ * WICK listening evidence: PLUCK, WOOD, BUBBLE, BREATH, FLICKER and RATTLE from the actual JVM engine.
  * Native, prelevel raw and matched audio have separate files; diagnostic options
  * have explicit replay recipes rather than masquerading as ordinary patches.
  * A failed held convergence remains visible in the manifest and fails the task.
@@ -28,6 +30,7 @@ object WickAuditionGenerator {
     private const val MAX_EXPORTED_SEAM = 1e-3
     private const val MAX_WRAP_STEP_RATIO = 8.0
     private const val BUBBLE_REFERENCE_REVISION = "140d951a72aaca5f3a42af6b33c484bf4b645d16"
+    private const val RATTLE_REFERENCE_REVISION = "3b77d8bd34fdab803dee0504911ac95e32430896"
     private val timbral = listOf("SPARK", "FEED", "CASCADE", "TIMBRE", "RECOVERY")
     private val steps = listOf(0f, .25f, .5f, .75f, 1f)
 
@@ -94,12 +97,13 @@ object WickAuditionGenerator {
                 metrics["matchedPeak"] = matched.peak()
                 metrics["rawExportGain"] = RAW_EXPORT_GAIN
                 metrics["eventCount"] = probe.diagnostics.events.size
-                if (case.groupId in setOf("bubble-tone", "breath-sustain", "flicker-register")) {
+                if (case.groupId in setOf("bubble-tone", "breath-sustain", "flicker-register", "rattle-register", "rattle-reserve", "rattle-cohesion")) {
                     metrics["toneWindows"] = toneWindows(probe.raw, matched.samples, case.midi)
                     metrics["toneWindowMeasurement"] = "Fixed post-onset time windows: raw RMS, matched RMS, and coherent power at the requested root. The coherent share is a sinusoidal projection of the raw samples, with no pitch search; short-window energy and root share support comparison but do not establish pitch audibility."
                 }
                 val localFailures = mutableListOf<String>()
                 val held = Wick.isLoop(case.macros.getValue("HOLD"))
+                if (case.voice == WickVoice.RATTLE) metrics["bodyContinuity"] = bodyContinuity(probe.raw, held)
                 val loop = probe.diagnostics.loop
                 var seamContextFile: String? = null
                 if (held) {
@@ -198,7 +202,8 @@ object WickAuditionGenerator {
                 }
 
                 val patch = case.preset ?: WickPatch(case.title.take(14), case.voice, case.macros, case.midi, case.velocity)
-                val isDiagnostic = case.options.disableCascade || case.options.constantAvailability || case.options.gainOnly || case.options.legacyBubbleEnvelope
+                val isDiagnostic = case.options.disableCascade || case.options.constantAvailability || case.options.gainOnly ||
+                    case.options.legacyBubbleEnvelope || case.options.legacyRattleEnvelope
                 val patchFile = if (isDiagnostic) null else "patches/${case.id}.json"
                 val recipeFile = if (isDiagnostic) "recipes/${case.id}.json" else null
                 patchFile?.let { File(root, it).also { file -> file.parentFile.mkdirs() }.writeText(patch.toJsonText()) }
@@ -278,17 +283,20 @@ object WickAuditionGenerator {
             "rawExportNote" to "Raw PCM24 files preserve the prelevel waveform at one common 0.5 gain (-6.02 dB). Raw peak, RMS and DC metrics precede that gain. Native single-note PCM24 files are the engine's normal dry output. Native musical-pattern PCM24 files instead apply one fixed 0.25 assembly gain to the sum of unlevelled raw note renders, preserving the source velocity response without per-hit leveling. Matched PCM16 files use the shared 0.03 loudest-200-ms loudness target on the complete clip.",
             "holdNote" to "HOLD uses periodic source timing and periodic-state convergence. A causal-schedule-replay strategy is explicitly reported when used. The seam-context WAV holds an independently generated preceding period and current period, at the matched export gain; it is not a duplicated loop.",
             "pcmSeamNote" to "Exported PCM16 seam error is the squared difference between independently generated preceding/current final 256-frame windows, divided by preceding-window energy. If both windows are exactly zero, error is 0 and silentBoundary=true; a zero-energy reference with a nonzero difference fails. The actual loop join is screened separately: absolute wrap step divided by local derivative RMS plus one PCM16 unit must be at most 8. This numerical screening does not replace listening.",
-            "scope" to "Five-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
+            "scope" to "Six-voice listening prototype with short musical phrases. No rack effects. Names and musical acceptance remain provisional. Ordinary MPC drum pads play the exported held material once.",
             "patternNote" to "Musical phrases share an exact eight-note score at 100 BPM. Native pattern WAVs use one fixed 0.25 assembly gain applied to the sum of probe.raw note renders; they bypass the engine's per-note loudness scaling so its velocity response survives. Raw files apply the same common 0.5 export gain as other clips. Only completed phrases are loudness matched. Complete note tails ring out after the two-bar score. Each note resets the engine state, while its own FEED and cascade can add articulations between scored onsets.",
             "classifierNote" to "metrics.classifier and classifierConfidence describe the whole file; the house classifier labels files longer than 1.5 seconds LOOP before judging percussion. The separate onsetClassifier and onsetClassifierConfidence analyze only the first 1.2 seconds, exposing onset/percussion decisions independently of file duration. BREATH's late swell can place its first near-peak late in that window: when no 20 dB decay is observed, the classifier reports only the remaining window as decay time and may label a sustained low note KICK or TOM. BREATH also reports onsetEnvelopePeakSeconds, onset20dBCrossingObserved, onsetPostPeakMinimumRatio and onsetDecayCensored using the same 1024-frame peak windows and 256-frame hop. The original classifier result is retained. Neither classifier is a substitute for requested-root pitch measurements or listening.",
             "listeningQuestions" to listOf(
                 "Does the revised BUBBLE response make the underlying note clearer than the earlier pops at the same controls?",
                 "Does one spark audibly start a chain of gate openings?", "Does disconnecting the cascade remove later articulations?",
                 "Does rapid feeding reveal depletion and recovery memory?", "Does gain-only gating lose the changing brightness of the low-pass gates?",
-                "Do all five voices remain useful pitched samples?", "Does BREATH keep a clear note through its soft overlapping openings?",
+                "Do all six voices remain useful pitched samples?", "Does BREATH keep a clear note through its soft overlapping openings?",
                 "Does BREATH contrast usefully with the accepted PLUCK, WOOD and revised BUBBLE voices?",
                 "Does FLICKER reveal brief metallic openings while retaining a clear requested note?",
-                "Does FLICKER add a useful bright articulation beside the four accepted voices?",
+                "Does FLICKER add a useful bright articulation beside the preceding voices?",
+                "Does the revised RATTLE feel like one connected body with movement inside it, compared with the earlier repeated hits?",
+                "Does RATTLE retain a clear note through its internal weakening and recovery?",
+                "Does the RATTLE reserve comparison expose a useful difference from constant availability at the same controls?",
                 "Do the same musical notes and soft/strong velocities retain each voice's character?", "Do held patterns repeat without audible clicks or stutters?",
             ),
             "summary" to summary, "higherRateReferences" to higherRateReferences, "groups" to groups, "entries" to entries,
@@ -368,10 +376,11 @@ object WickAuditionGenerator {
                     WickVoice.BUBBLE -> "FEED 25% baseline with the revised gate response. Compare Earlier pops and Longer pitched tone at the same controls below. "
                     WickVoice.BREATH -> "Soft gate openings overlap around the requested note. Listen for a stable pitched body and a gradual release. "
                     WickVoice.FLICKER -> "Listen for brief bright metallic openings with a clear pitched body underneath. "
+                    WickVoice.RATTLE -> "Listen for one connected pitched body with internal rattle movement and recovery. Compare Earlier repeated hits and Connected body at the same controls below. "
                     else -> ""
                 }) +
                 "The same initial excitation and release network used by every normal patch.",
-            "defaults", voice, "defaults", "Start here · five dry voices",
+            "defaults", voice, "defaults", "Start here · six dry voices",
         ))
         val toneControls = linkedMapOf("SPARK" to .40f, "FEED" to .25f, "CASCADE" to .70f, "TIMBRE" to .45f, "RECOVERY" to .50f, "HOLD" to 0f)
         for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
@@ -383,6 +392,19 @@ object WickAuditionGenerator {
             "comparison", WickVoice.BUBBLE, "bubble-tone", "BUBBLE · earlier pops and longer pitched tone", toneControls, midi,
             options = Wick.Options(legacyBubbleEnvelope = reference), comparison = "bubble-tone-$midi",
             variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) BUBBLE_REFERENCE_REVISION else null,
+        ))
+        // Fixed controls keep this an articulation comparison, even if future defaults move.
+        val cohesionControls = linkedMapOf("SPARK" to .65f, "FEED" to .50f, "CASCADE" to .65f,
+            "TIMBRE" to .45f, "RECOVERY" to .65f, "HOLD" to 0f)
+        for (midi in listOf(48, 60, 72)) for (reference in listOf(true, false)) add(Case(
+            "rattle_cohesion_${midi}_${if (reference) "reference" else "candidate"}",
+            "${note(midi)} · ${if (reference) "Earlier repeated hits" else "Connected body"}",
+            "RATTLE at MIDI $midi, velocity 1: SPARK 65%, FEED 50%, CASCADE 65%, TIMBRE 45%, RECOVERY 65%, HOLD off. " +
+                (if (reference) "Earlier response from revision 3b77d8b, reproduced by the explicit legacy-envelope diagnostic option."
+                else "Connected-body candidate at identical controls. Listen for continuity through the internal movement; the owner's listening verdict is pending."),
+            "comparison", WickVoice.RATTLE, "rattle-cohesion", "RATTLE · repeated hits and connected body", cohesionControls, midi,
+            options = Wick.Options(legacyRattleEnvelope = reference), comparison = "rattle-cohesion-$midi",
+            variant = if (reference) "reference" else "candidate", referenceRevision = if (reference) RATTLE_REFERENCE_REVISION else null,
         ))
         val variations = WickPresets.all().filterNot {
             it.macros == Wick.defaults(it.voice) && it.midi == Wick.rootMidi(it.voice) && it.velocity == 1f
@@ -452,6 +474,47 @@ object WickAuditionGenerator {
             "FLICKER defaults at MIDI $midi, velocity 1. Compare the bright openings, underlying requested note and answering chain across C3, C4 and C5. No effects.",
             "register", WickVoice.FLICKER, "flicker-register", "FLICKER · bright openings across registers", midi = midi,
         ))
+        // RATTLE's connected body still uses WICK's actual releases and recoverable reserve.
+        // Keep these mechanism pairs at the controlled defaults used by the first clip.
+        for ((id, title, options) in comparisons) for (altered in listOf(false, true)) add(Case(
+            "mechanism_rattle_${id}_${if (altered) "off" else "on"}",
+            if (!altered) "RATTLE · full network" else when (id) {
+                "cascade" -> "RATTLE · cascade disconnected"
+                "depletion" -> "RATTLE · constant availability"
+                else -> "RATTLE · gain-only gates"
+            },
+            when (id) {
+                "cascade" -> "RATTLE defaults at C4. Disconnect release transmission to compare the answering motion with the primary pitched body."
+                "depletion" -> "RATTLE defaults at C4. Keep availability constant to compare how internal excitation weakens and recovers."
+                else -> "RATTLE defaults at C4. Remove the low-pass gate's opening-to-brightness coupling to compare the tone within the connected motion."
+            }, "comparison", WickVoice.RATTLE, "rattle-mechanism-$id", "RATTLE · $title",
+            options = if (altered) options else Wick.Options(), comparison = "rattle-$id",
+            variant = if (altered) "ablated" else "full",
+        ))
+        for (midi in listOf(48, 60, 72)) add(Case(
+            "rattle_register_$midi", "RATTLE · ${note(midi)} connected body",
+            "RATTLE defaults at MIDI $midi, velocity 1. Compare the connected pitched body and its internal weakening and recovery across C3, C4 and C5. No effects.",
+            "register", WickVoice.RATTLE, "rattle-register", "RATTLE · connected body across registers", midi = midi,
+        ))
+        // A busier supply makes reserve memory easier to compare without changing the first
+        // listening clip. Only the explicit diagnostic option differs within the first pair.
+        val rattleReserve = Wick.defaults(WickVoice.RATTLE) + ("FEED" to .80f)
+        for (constant in listOf(false, true)) add(Case(
+            "rattle_reserve_${if (constant) "constant" else "live"}",
+            if (constant) "RATTLE · constant availability" else "RATTLE · recovering reserve",
+            "RATTLE at C4, FEED 80%, with companion controls at voice defaults. " +
+                (if (constant) "Availability is held constant by an explicit diagnostic option; compare the later pulses with the recovering-reserve version."
+                else "The actual reserve depletes at each admission and recovers between pulses; compare the later pulses with constant availability."),
+            "comparison", WickVoice.RATTLE, "rattle-reserve", "RATTLE · reserve and recovery", rattleReserve,
+            options = Wick.Options(constantAvailability = constant), comparison = "rattle-reserve",
+            variant = if (constant) "constant" else "live",
+        ))
+        for ((id, recovery) in listOf("fast" to .20f, "slow" to .85f)) add(Case(
+            "rattle_recovery_$id", "RATTLE · $id recovery",
+            "RATTLE at C4, FEED 80% and RECOVERY ${(recovery * 100).toInt()}%; other controls retain voice defaults. RECOVERY changes reserve return, gate lifetime and release-to-answer delay. Compare the recurring shape and admitted strengths; it is not a gain-only control.",
+            "comparison", WickVoice.RATTLE, "rattle-reserve", "RATTLE · reserve and recovery",
+            rattleReserve + ("RECOVERY" to recovery), comparison = "rattle-recovery", variant = id,
+        ))
         for (voice in WickVoice.entries) for (macro in timbral) for (value in if (quick) listOf(0f, 1f) else steps) add(Case(
             "sweep_${voice.name.lowercase()}_${macro.lowercase()}_${tag(value)}", "$macro ${(value * 100).toInt()}%",
             "${voice.name}: only $macro changes. All companion controls retain this voice's defaults; finite sample, loudness matched.",
@@ -475,6 +538,12 @@ object WickAuditionGenerator {
             "FLICKER HOLD: one recurrent period. Only $macro changes; companion controls retain FLICKER defaults. Repeat compares the metallic openings after convergence.",
             "held-sweep", WickVoice.FLICKER, "held-sweep-flicker-${macro.lowercase()}", "FLICKER HOLD · $macro",
             Wick.defaults(WickVoice.FLICKER) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
+        ))
+        if (!quick) for (macro in listOf("FEED", "RECOVERY")) for (value in steps) add(Case(
+            "held_sweep_rattle_${macro.lowercase()}_${tag(value)}", "Held $macro ${(value * 100).toInt()}%",
+            "RATTLE HOLD: one recurrent period. Only $macro changes; companion controls retain RATTLE defaults. Repeat compares continuity and reserve-dependent movement after convergence.",
+            "held-sweep", WickVoice.RATTLE, "held-sweep-rattle-${macro.lowercase()}", "RATTLE HOLD · $macro",
+            Wick.defaults(WickVoice.RATTLE) + mapOf("HOLD" to 1f, macro to value), macro = macro, value = value,
         ))
         for (voice in WickVoice.entries) for ((id, title, controls) in listOf(
             Triple("default", "Default held pattern", emptyMap()),
@@ -505,16 +574,21 @@ object WickAuditionGenerator {
 
     private fun groupDescription(case: Case): String = if (case.groupId == "bubble-tone") {
         "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier pops uses revision 140d951's envelope through an explicit diagnostic option; Longer pitched tone is the provisional revised response. Compare the underlying note and the articulation. Short-window measurements support listening without establishing audibility."
+    } else if (case.groupId == "rattle-cohesion") {
+        "Three matched pairs at C3, C4 and C5, velocity 1 and identical six controls. Earlier repeated hits reproduces revision 3b77d8b through an explicit diagnostic option. Connected body is the proposed response to the owner's request for a more cohesive gesture. Compare the body between openings and the sharpness of repeated attacks; descriptive RMS measurements support listening without establishing it."
+    } else if (case.groupId == "rattle-reserve") {
+        "Four C4 comparisons at FEED 80%. The first pair changes only live versus constant excitation availability. The second pair keeps the live reserve and changes RECOVERY from 20% to 85%, including its gate-lifetime and delay effects. Listen for a clear note, weakening later pulses and their return; diagnostic admissions show what the reserve actually did."
     } else when (case.kind) {
-        "defaults" -> "Listen first to the five dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
-        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD, BREATH and revised BUBBLE recipes remain available alongside FLICKER. Every clip uses its saved pitch, velocity and six controls."
+        "defaults" -> "Listen first to the six dry prototypes. The initial spark drives a shared pitched source through three interacting low-pass gates."
+        "preset" -> "Provisional voice variations and held recipes. The accepted PLUCK, WOOD, BREATH, FLICKER and revised BUBBLE recipes remain available alongside RATTLE. Every clip uses its saved pitch, velocity and six controls."
         "comparison" -> case.description
         "sweep" -> "Five settings: 0, 25, 50, 75 and 100%. Companion controls stay at this voice's defaults."
         "held-sweep" -> "Five settings in a sustained periodic pattern. Each clip supplies cycle-state and exported PCM seam evidence."
         "hold" -> "Default, minimum feed, dense slow recovery and disconnected transmission. These files contain one held period; turn on repeat to audition the wrap."
         "range" -> "C1, C3 and C6, each at 25%, 65% and 100% velocity. Both native and matched playback are available."
         "sustain" -> "BREATH defaults at C3, C4 and C5. Listen for a soft rise, a clear note through successive openings, and a gradual finite release. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
-        "register" -> "FLICKER defaults at C3, C4 and C5. Listen for brief metallic openings and a clear underlying note. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
+        "register" -> if (case.voice == WickVoice.RATTLE) "RATTLE defaults at C3, C4 and C5. Listen for one connected pitched body with recovering movement inside it. Fixed-window energy, continuity and root projection are measurements, not a listening verdict."
+            else "FLICKER defaults at C3, C4 and C5. Listen for brief metallic openings and a clear underlying note. Fixed-window raw energy and requested-root projection are measurements, not a listening verdict."
         else -> "Four corners of the interaction, with companion controls at BUBBLE defaults."
     }
 
@@ -522,7 +596,46 @@ object WickAuditionGenerator {
         "disableCascade" to options.disableCascade, "constantAvailability" to options.constantAvailability,
         "gainOnly" to options.gainOnly, "oversample" to options.oversample,
         "legacyBubbleEnvelope" to options.legacyBubbleEnvelope,
+        "legacyRattleEnvelope" to options.legacyRattleEnvelope,
     )
+
+    /** Descriptive PCM evidence only; a higher floor or gentler rise does not prove musical cohesion. */
+    private fun bodyContinuity(samples: FloatArray, held: Boolean): Map<String, Any?> {
+        val window = (Dsp.RATE * .020).roundToInt()
+        val first = minOf((Dsp.RATE * (if (held) .20 else .35)).roundToInt(), samples.size)
+        val last = if (held) samples.size else minOf((Dsp.RATE * 2.30).roundToInt(), samples.size)
+        val count = ((last - first) / window).coerceAtLeast(0)
+        val envelope = DoubleArray(count) { index ->
+            var energy = 0.0
+            val from = first + index * window
+            for (frame in from until from + window) energy += samples[frame].toDouble() * samples[frame]
+            sqrt(energy / window)
+        }
+        fun quantile(values: DoubleArray, fraction: Double): Double {
+            if (values.isEmpty()) return 0.0
+            val sorted = values.sorted()
+            val position = fraction * (sorted.size - 1)
+            val lower = position.toInt()
+            val upper = minOf(lower + 1, sorted.lastIndex)
+            return sorted[lower] + (sorted[upper] - sorted[lower]) * (position - lower)
+        }
+        val p10 = quantile(envelope, .10)
+        val median = quantile(envelope, .50)
+        val p90 = quantile(envelope, .90)
+        val rises = DoubleArray((envelope.size - 1).coerceAtLeast(0)) { index ->
+            maxOf(0.0, envelope[index + 1] - envelope[index])
+        }
+        return linkedMapOf(
+            "measurement" to "Nonoverlapping 20 ms raw RMS bins. Finite clips use 0.35–2.30 s, excluding the initial strike and final tail; held clips use 0.20 s through the period end. Only complete bins are used. Percentiles use linear interpolation. Floor and positive-rise metrics divide by the median RMS, making them independent of overall level. These descriptors do not establish audible cohesion.",
+            "fromSeconds" to first.toDouble() / Dsp.RATE,
+            "toSeconds" to (first + count * window).toDouble() / Dsp.RATE,
+            "windowFrames" to window, "windowSeconds" to window.toDouble() / Dsp.RATE, "windowCount" to count,
+            "rms10thPercentile" to p10, "rmsMedian" to median, "rms90thPercentile" to p90,
+            "rms10thPercentileOverMedian" to p10 / median.coerceAtLeast(1e-30),
+            "rms90thTo10thContrastDb" to if (p10 > 0.0 && p90 > 0.0) 20.0 * log10(p90 / p10) else null,
+            "positiveRmsRise95thPercentileOverMedian" to quantile(rises, .95) / median.coerceAtLeast(1e-30),
+        )
+    }
 
     /**
      * Mirror FeatureExtractor's onset envelope without changing its reported class. A soft swell
