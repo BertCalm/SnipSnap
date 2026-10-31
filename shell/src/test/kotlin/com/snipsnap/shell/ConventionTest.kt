@@ -3380,50 +3380,766 @@ class ConventionTest {
      * §3.3): a permanent OPEN ▸ under the grid is a fourth door and needs
      * no nudge toward the hold. What stays is the discipline the hint
      * taught: `openPadSheet` is the one door, so whatever a door has to do
-     * next is done once. Opening is assigning a slot; closing is assigning
-     * null — so this refuses a non-null assignment made anywhere else.
+     * next is done once.
+     *
+     * The editor is a bench now (`Bench.PAD_SHEET`), and opening it is three
+     * things at once: the pad (`padSheetSlot`), the kit that pad is on
+     * (`padSheetKitDir`, which the arrival verdict compares with the open kit)
+     * and the bench. A door that does two of the three shows a pad over the
+     * wrong kit or opens nothing. So this holds three things. The bench is named
+     * in App only inside `openPadSheet` (and where it is drawn and judged); a
+     * non-null `padSheetSlot` is assigned only inside `openPadSheet` and
+     * `retargetPadSheet`; and `retargetPadSheet`, which the pad arrows and the
+     * gathering hop use to move the open editor to another pad, never opens a
+     * bench, because a second PAD_SHEET on the stack would need a Back per pad.
+     * Clearing the slot is the other law's (`padToolBackProblems`).
      */
+    private fun padSheetDoorProblems(app: String): List<String> {
+        val problems = mutableListOf<String>()
+        val opener = funBodyRange(app, "openPadSheet")
+        val retarget = funBodyRange(app, "retargetPadSheet")
+        if (opener == null) {
+            problems += "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
+                "function, or what a door does on the way in is done by some of them and not others — see J16."
+        }
+        if (retarget == null) {
+            problems += "App.kt no longer declares `retargetPadSheet`. The pad arrows move the open editor to another pad " +
+                "through it; without it they would have to open the editor again and stack a second one."
+        }
+        fun inside(range: IntRange?, at: Int) = range != null && at in range
+
+        // The bench is named in three places only: the door, the draw arm (`top == Bench.PAD_SHEET`) and the
+        // arrival verdict (`padBenchVerdict(Bench.PAD_SHEET)`). Any other mention is another way to open it.
+        for (m in Regex("""\bBench\.PAD_SHEET\b""").findAll(app)) {
+            val before = app.substring(maxOf(0, m.range.first - 40), m.range.first)
+            val allowed = inside(opener, m.range.first) ||
+                Regex("""\btop\s*==\s*\z""").containsMatchIn(before) ||
+                Regex("""\bpadBenchVerdict\(\s*\z""").containsMatchIn(before)
+            if (!allowed) {
+                problems += "App.kt names Bench.PAD_SHEET outside `openPadSheet`, near `${before.takeLast(30).trim()}${m.value}`. " +
+                    "That is how J16 happened — one door did the work and the other doors walked past it. Call openPadSheet(slot) instead."
+            }
+        }
+
+        if (opener != null) {
+            val body = app.substring(opener)
+            if (!Regex("""\bopen\(\s*Bench\.PAD_SHEET\s*\)""").containsMatchIn(body)) {
+                problems += "`openPadSheet` no longer calls `nav.open(Bench.PAD_SHEET)`: the one door opens nothing."
+            }
+            if (!Regex("""\bpadSheetSlot\s*=\s*slot\b""").containsMatchIn(body)) {
+                problems += "`openPadSheet` no longer sets `padSheetSlot` to the pad it was given."
+            }
+            if (!Regex("""\bpadSheetKitDir\s*=\s*open\?\.dir\b""").containsMatchIn(body)) {
+                problems += "`openPadSheet` no longer records `padSheetKitDir = open?.dir`: the arrival verdict has no kit to compare, " +
+                    "so the editor would close at once, or (if it were recorded elsewhere) be shown over the wrong kit."
+            }
+        }
+        if (retarget != null && Regex("""\bopen\(""").containsMatchIn(app.substring(retarget))) {
+            problems += "`retargetPadSheet` opens a bench. It only moves the open editor to another pad: opening PAD_SHEET again " +
+                "stacks a second one, and Back then needs a press for every pad stepped through."
+        }
+
+        // Assigning a slot is opening or moving. The assigned token is CAPTURED and compared, not asserted around
+        // with a lookahead: `padSheetSlot\s*=\s*(?!null)` reads as "an assignment of something other than null" and
+        // is not one. `\s*` backtracks to zero width, so the lookahead runs against the space before `null`, is
+        // satisfied that a space is not `null`, and the pattern matches every close in the file.
+        for (m in Regex("""\bpadSheetSlot\s*=\s*([A-Za-z0-9_.]+)""").findAll(app)) {
+            if (m.groupValues[1] == "null") continue
+            if (!inside(opener, m.range.first) && !inside(retarget, m.range.first)) {
+                problems += "App.kt assigns `padSheetSlot` outside `openPadSheet` and `retargetPadSheet`: `${m.value}`. " +
+                    "Open the editor with openPadSheet(slot); move it with retargetPadSheet(slot)."
+            }
+        }
+        return problems
+    }
+
+    /** The range of the text between the braces of the one `fun [name](` in [code] (comments already stripped), or null when it is not declared or its braces do not close. */
+    private fun funBodyRange(code: String, name: String): IntRange? {
+        val decl = Regex("""\bfun $name\(""").find(code) ?: return null
+        val open = code.indexOf('{', decl.range.last)
+        if (open < 0) return null
+        val close = matchingBrace(code, open + 1) ?: return null
+        return (open + 1) until close
+    }
+
     @Test
     fun `every pad sheet door is the one door`() {
         val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
         assertTrue(app.isFile, "expected to find ${app.absolutePath}")
-        val src = codeOnly(app.readText(Charsets.UTF_8))
+        val src = stripComments(app.readText(Charsets.UTF_8))
+        assertEquals(emptyList(), padSheetDoorProblems(src))
 
+        // The scan has to see what it polices, or a clean result means nothing: it finds the two functions, the
+        // door's three statements and the three places that may name the bench, in the real file.
+        assertTrue(funBodyRange(src, "openPadSheet") != null && funBodyRange(src, "retargetPadSheet") != null, "the scan did not find the two doors in App.kt")
         assertTrue(
-            "fun openPadSheet(" in src,
-            "App.kt no longer declares `openPadSheet`. Every door onto PAD SHEET has to go through one " +
-                "function, or what a door does on the way in is done by some of them and not others — see J16.",
+            Regex("""\btop\s*==\s*Bench\.PAD_SHEET\b""").containsMatchIn(src) &&
+                Regex("""\bpadBenchVerdict\(\s*Bench\.PAD_SHEET\s*\)""").containsMatchIn(src),
+            "the scan did not find the draw arm and the arrival verdict that may name Bench.PAD_SHEET; it is broken, not the tree",
         )
-        val opener = src.substringAfter("fun openPadSheet(")
+    }
 
-        // Assigning a slot is opening. Assigning null is closing, and a
-        // close has no hint to retire.
-        //
-        // The assigned token is CAPTURED and compared, not asserted around
-        // with a lookahead: `padSheetSlot\s*=\s*(?!null)` reads as "an
-        // assignment of something other than null" and is not one. `\s*`
-        // backtracks to zero width, so the lookahead runs against the
-        // space before `null`, is satisfied that a space is not `null`,
-        // and the pattern matches every close in the file. It flagged all
-        // ten of them on correct code.
-        val outside = src.substringBefore("fun openPadSheet(") + opener.substringAfter("}", "")
-        val assigned = Regex("""padSheetSlot\s*=\s*([A-Za-z0-9_.]+)""")
-            .findAll(outside)
-            .map { it.groupValues[1] }
-            .toList()
+    @Test
+    fun `law - the pad sheet door law fails on a second door, a stray slot assignment and a retarget that opens`() {
+        val good = """
+            var padSheetSlot by remember { mutableStateOf<Int?>(null) }
+            var padSheetKitDir by remember { mutableStateOf<File?>(null) }
+            fun openPadSheet(slot: Int) {
+                padSheetSlot = slot
+                padSheetKitDir = open?.dir
+                nav.open(Bench.PAD_SHEET)
+            }
+            fun retargetPadSheet(slot: Int) {
+                padSheetSlot = slot
+            }
+            fun padBenchVerdict(bench: Bench): KitBench.Verdict { return x }
+            val v = remember(location, openDir) { padBenchVerdict(Bench.PAD_SHEET) }
+            val arm = top == Bench.PAD_SHEET
+            fun clear() { padSheetSlot = null }
+        """.trimIndent()
+        assertEquals(emptyList(), padSheetDoorProblems(good), "the shape App has: the door, the retarget, the verdict, the arm")
+
+        fun problemsWith(extra: String) = padSheetDoorProblems(good + "\n" + extra)
+        assertTrue(problemsWith("fun other() { nav.open(Bench.PAD_SHEET) }").isNotEmpty(), "a second opener is another door")
         assertTrue(
-            assigned.isNotEmpty(),
-            "found no `padSheetSlot =` assignments at all outside openPadSheet — App.kt must still close " +
-                "the sheet somewhere, so this scan is broken rather than the code being clean.",
+            problemsWith("fun other() { nav.goTo(Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET))) }").isNotEmpty(),
+            "landing on the bench by a location is another door too",
         )
-        val bad = assigned.filterNot { it == "null" }
-        assertEquals(
-            emptyList(),
-            bad,
-            "App.kt opens PAD SHEET by assigning `padSheetSlot` directly, outside `openPadSheet`: $bad. " +
-                "That is how J16 happened — one door did the work and the other doors walked past it. " +
-                "Call openPadSheet(slot) instead.",
+        assertTrue(problemsWith("fun other() { padSheetSlot = 4 }").isNotEmpty(), "a bare slot assignment outside the two functions")
+        assertTrue(problemsWith("fun other(s: Int) { padSheetSlot = s }").isNotEmpty(), "a bare slot assignment of a variable")
+        assertEquals(emptyList(), problemsWith("fun other() { if (padSheetSlot == 4) return }"), "reading the slot, even comparing it, is no assignment")
+
+        val retargetOpens = good.replace(
+            "fun retargetPadSheet(slot: Int) {\n    padSheetSlot = slot\n}",
+            "fun retargetPadSheet(slot: Int) {\n    padSheetSlot = slot\n    nav.open(Bench.PAD_SHEET)\n}",
         )
+        assertTrue(retargetOpens != good && padSheetDoorProblems(retargetOpens).isNotEmpty(), "a retarget that opens stacks a second editor")
+
+        val noKitDir = good.replace("    padSheetKitDir = open?.dir\n", "")
+        assertTrue(noKitDir != good && padSheetDoorProblems(noKitDir).isNotEmpty(), "a door that records no kit leaves the verdict nothing to compare")
+        val noBench = good.replace("    nav.open(Bench.PAD_SHEET)\n", "")
+        assertTrue(noBench != good && padSheetDoorProblems(noBench).isNotEmpty(), "a door that opens no bench opens nothing")
+        assertTrue(padSheetDoorProblems("val x = 1").size >= 2, "a file without the two functions is reported, not passed")
+    }
+
+    // ==================== Law: Back from a pad tool returns to the pad editor ====================
+
+    /**
+     * The text between the braces that follow the one match of [open] in [code]
+     * (comments already stripped). When there is not exactly one match, or its
+     * braces do not close, a problem about [what] is added to [problems] and the
+     * result is null, so a law that reads a region of App cannot pass by not
+     * finding it.
+     */
+    private fun braceBodyAfter(code: String, open: Regex, what: String, problems: MutableList<String>): String? {
+        val found = open.findAll(code).toList()
+        if (found.size != 1) {
+            problems += "expected exactly one $what in App.kt, found ${found.size}"
+            return null
+        }
+        val close = matchingBrace(code, found[0].range.last + 1)
+        if (close == null) {
+            problems += "the braces of $what do not close"
+            return null
+        }
+        return code.substring(found[0].range.last + 1, close)
+    }
+
+    /**
+     * The spec's §7.3.1: "Grain, Splice, Stack and Audition stop clearing the
+     * pad editor on entry, so Back from them returns to the pad editor", and its
+     * law, "`UatSimTest` journeys show Back from Grain landing on the pad
+     * editor". The journey reports and never asserts (that class says so), and
+     * the model alone cannot see App's wiring, so this is the half that can
+     * fail a build.
+     *
+     * What makes Back land on the editor is what App does not do: the openers
+     * leave the editor open (`nav.open` over it), the tools close with
+     * `nav.closeBench()`, and nothing nulls `padSheetSlot`, which the editor
+     * comes back needing (the history keeps `PADS+[PAD_SHEET]`, and the arrival
+     * verdict closes it if the slot is null). So a null assignment anywhere in
+     * App is a way to lose the editor, and this refuses all of them, not just
+     * the openers'. AUDITION is the same: it arms and lands on GROOVE, and the
+     * Back that returns runs `clearTransientState`.
+     */
+    private fun padToolBackProblems(app: String): List<String> {
+        val problems = mutableListOf<String>()
+        for (m in Regex("""\bpadSheetSlot\s*=\s*null\b""").findAll(app)) {
+            problems += "App.kt clears the pad editor's slot: `${m.value}`. The history can bring the editor back (Back from a tool, " +
+                "from AUDITION's GROOVE, from RE-TRIM's TAPE) and it needs the slot then; a stale one is handled by the arrival verdict."
+        }
+
+        fun bodyAfter(open: Regex, what: String): String? = braceBodyAfter(app, open, what, problems)
+
+        for (tool in listOf("GRAIN_FIELD", "SPLICE", "STACK")) {
+            val arm = bodyAfter(Regex("""\btop\s*==\s*Bench\.$tool\s*->\s*\{"""), "`top == Bench.$tool ->` arm")
+            if (arm != null) {
+                if (!Regex("""\bonBack\s*=\s*\{\s*nav\.closeBench\(\)\s*\}""").containsMatchIn(arm)) {
+                    problems += "the $tool arm does not close with `onBack = { nav.closeBench() }`, so Back from it does not land on the pad editor under it."
+                }
+                if (!Regex("""\bpadSheetSlot\b""").containsMatchIn(arm)) {
+                    problems += "the $tool arm does not read `padSheetSlot`: a tool works on the editor's pad."
+                }
+            }
+            val callback = when (tool) {
+                "GRAIN_FIELD" -> "onGrainField"
+                "SPLICE" -> "onSplice"
+                else -> "onStack"
+            }
+            val opener = bodyAfter(Regex("""\b$callback\s*=\s*\{"""), "`$callback = {` opener")
+            if (opener != null) {
+                if (!Regex("""\bopen\(\s*Bench\.$tool\s*\)""").containsMatchIn(opener)) {
+                    problems += "`$callback` does not open Bench.$tool with nav.open."
+                }
+                if (Regex("""\bpadSheetSlot\b|\bcloseBench\(""").containsMatchIn(opener)) {
+                    problems += "`$callback` touches the pad editor on the way in (`padSheetSlot` or `closeBench`). The tool opens OVER the editor, " +
+                        "which is what makes Back land on it."
+                }
+            }
+        }
+        // Straight after the brace, not after the rest of its line: a `nav.closeBench()` written on the line of
+        // `onAudition = { slot ->` is the opener's body too.
+        val audition = bodyAfter(Regex("""\bonAudition\s*=\s*\{"""), "`onAudition = {` opener")
+        if (audition != null) {
+            if (!Regex("""\bauditionArmSlot\s*=\s*slot\b""").containsMatchIn(audition) || !audition.contains("landOn(AppScreen.GROOVE)")) {
+                problems += "`onAudition` no longer arms `auditionArmSlot` and lands on GROOVE."
+            }
+            if (Regex("""\bpadSheetSlot\b|\bcloseBench\(""").containsMatchIn(audition)) {
+                problems += "`onAudition` touches the pad editor on the way out. It must leave it in the history, so System Back from GROOVE returns to it."
+            }
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - Back from a pad tool returns to the pad editor`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        val src = stripComments(app.readText(Charsets.UTF_8))
+        assertEquals(emptyList(), padToolBackProblems(src))
+    }
+
+    /**
+     * A control fails for ITS OWN reason: exactly one problem per rule it breaks, and each one names that
+     * rule. "Something failed" would let a control pass on a neighbouring rule's catch, and the rule it was
+     * written for could be deleted with every control still green.
+     */
+    private fun assertProblems(why: String, problems: List<String>, vararg rules: String) {
+        assertEquals(rules.size, problems.size, "$why: expected exactly one problem for each of ${rules.toList()}, got $problems")
+        for (rule in rules) assertTrue(problems.any { rule in it }, "$why: no problem names `$rule`; got $problems")
+    }
+
+    @Test
+    fun `law - the pad tool Back law passes the shape App has, and fails each way of losing the editor`() {
+        val good = """
+            fun clearTransientState() {
+                auditionArmSlot = null
+            }
+            top == Bench.GRAIN_FIELD -> {
+                val toolSlot = padSheetSlot
+                GrainFieldScreen(backLabel = checkNotNull(nav.backChip) { "GRAIN FIELD is a bench" }, onBack = { nav.closeBench() })
+            }
+            top == Bench.SPLICE -> {
+                val toolSlot = padSheetSlot
+                TapeSpliceScreen(onBack = { nav.closeBench() })
+            }
+            top == Bench.STACK -> {
+                val toolSlot = padSheetSlot
+                StackTakesScreen(onBack = { nav.closeBench() })
+            }
+            top == Bench.PAD_SHEET -> {
+                PadSheetScreen(
+                    onGrainField = { nav.open(Bench.GRAIN_FIELD) },
+                    onSplice = { nav.open(Bench.SPLICE) },
+                    onStack = { nav.open(Bench.STACK) },
+                    onAudition = { slot ->
+                        auditionArmSlot = slot
+                        landOn(AppScreen.GROOVE)
+                    },
+                )
+            }
+        """.trimIndent()
+        assertEquals(emptyList(), padToolBackProblems(good), "the shape App has")
+
+        fun broken(from: String, to: String): List<String> {
+            assertTrue(from in good, "the control's own edit `$from` is not in its fixture")
+            return padToolBackProblems(good.replace(from, to))
+        }
+
+        // The slot is never nulled, anywhere (the first rule). Each way in is its own control.
+        assertProblems(
+            "a clear in clearTransientState, which runs on the Back that returns from GROOVE",
+            broken("auditionArmSlot = null\n", "padSheetSlot = null\n    auditionArmSlot = null\n"),
+            "clears the pad editor's slot",
+        )
+
+        // A tool closes onto the editor (the second rule) and works on the editor's pad (the third).
+        assertProblems(
+            "a tool that closes by nulling its own slot lands on the grid, not the editor",
+            broken("TapeSpliceScreen(onBack = { nav.closeBench() })", "TapeSpliceScreen(onBack = { spliceSlot = null })"),
+            "SPLICE arm does not close",
+        )
+        assertProblems(
+            "a tool that does not read the editor's slot works on some other pad",
+            broken("top == Bench.STACK -> {\n    val toolSlot = padSheetSlot", "top == Bench.STACK -> {\n    val toolSlot = 0"),
+            "STACK arm does not read",
+        )
+
+        // The opener rule has two halves, and a way in that breaks each alone. Opening the bench is the first.
+        assertProblems(
+            "an opener that does not open the bench",
+            broken("onSplice = { nav.open(Bench.SPLICE) }", "onSplice = { stackSlot = it }"),
+            "`onSplice` does not open Bench.SPLICE",
+        )
+        // The second half is that the opener leaves the editor alone: it neither moves the pad ...
+        assertProblems(
+            "an opener that moves the editor's pad (not to null, which the first rule also names) before it opens the tool",
+            broken("onGrainField = { nav.open(Bench.GRAIN_FIELD) }", "onGrainField = { padSheetSlot = 3; nav.open(Bench.GRAIN_FIELD) }"),
+            "`onGrainField` touches the pad editor on the way in",
+        )
+        // ... nor closes it.
+        assertProblems(
+            "an opener that closes the editor first",
+            broken("onStack = { nav.open(Bench.STACK) }", "onStack = { nav.closeBench(); nav.open(Bench.STACK) }"),
+            "`onStack` touches the pad editor on the way in",
+        )
+        // A slot nulled on the way in breaks both the first rule and that half, and says so twice.
+        assertProblems(
+            "an opener that nulls the editor's slot on the way in",
+            broken("onGrainField = { nav.open(Bench.GRAIN_FIELD) }", "onGrainField = { padSheetSlot = null; nav.open(Bench.GRAIN_FIELD) }"),
+            "clears the pad editor's slot",
+            "`onGrainField` touches the pad editor on the way in",
+        )
+
+        // AUDITION arms and lands on GROOVE (one rule) and leaves the editor in the history (the other).
+        assertProblems(
+            "AUDITION that no longer arms the comparison",
+            broken("auditionArmSlot = slot\n", ""),
+            "`onAudition` no longer arms",
+        )
+        assertProblems(
+            "AUDITION that lands somewhere else",
+            broken("landOn(AppScreen.GROOVE)", "landOn(AppScreen.KIT)"),
+            "`onAudition` no longer arms",
+        )
+        assertProblems(
+            "AUDITION that closes the editor first, on its own line",
+            broken("auditionArmSlot = slot\n", "nav.closeBench()\n        auditionArmSlot = slot\n"),
+            "`onAudition` touches the pad editor on the way out",
+        )
+        assertProblems(
+            "AUDITION that closes the editor on the line of its opening brace",
+            broken("onAudition = { slot ->", "onAudition = { slot -> nav.closeBench()"),
+            "`onAudition` touches the pad editor on the way out",
+        )
+        assertProblems(
+            "AUDITION that moves the editor's pad (not to null)",
+            broken("auditionArmSlot = slot\n", "padSheetSlot = 3\n        auditionArmSlot = slot\n"),
+            "`onAudition` touches the pad editor on the way out",
+        )
+        assertProblems(
+            "AUDITION that nulls the slot loses the editor it should come back to, and breaks two rules",
+            broken("auditionArmSlot = slot\n", "padSheetSlot = null\n        auditionArmSlot = slot\n"),
+            "clears the pad editor's slot",
+            "`onAudition` touches the pad editor on the way out",
+        )
+
+        assertTrue(padToolBackProblems("val x = 1").isNotEmpty(), "a file without the arms is reported, not passed")
+    }
+
+    // ==================== Law: the pad arrows retarget the open editor and never open it ====================
+
+    /**
+     * The pad editor's ◄ and ► arrows (and the gathering variation's hop to the
+     * pad it just made) move the editor that is already open to another pad.
+     * That is `retargetPadSheet`, which sets the slot and nothing else.
+     * `openPadSheet` opens a bench, and `Navigation.open` dedups only an equal
+     * `Location`, so an arrow wired to it pushes another PAD_SHEET on every tap:
+     * three taps leave four editors, the chip reads "◄ PAD" over the editor, and
+     * Back needs a press per pad stepped through.
+     *
+     * The door law holds that `retargetPadSheet`'s own body never opens, but a
+     * body that is right is no use if nothing calls it: a rebase that restores
+     * the arm's `onSlotChange = ::openPadSheet` (several nav branches are in
+     * flight) passes the door law, which never reads the arm's wiring. So this
+     * holds the other end. In the `top == Bench.PAD_SHEET ->` arm exactly one
+     * `onSlotChange` is wired, to `::retargetPadSheet`, and the arm never names
+     * `openPadSheet`; and `retargetPadSheet` never calls `open(`.
+     */
+    private fun padArrowProblems(app: String): List<String> {
+        val problems = mutableListOf<String>()
+        val arm = braceBodyAfter(app, Regex("""\btop\s*==\s*Bench\.PAD_SHEET\s*->\s*\{"""), "`top == Bench.PAD_SHEET ->` arm", problems)
+        if (arm != null) {
+            val wired = Regex("""\bonSlotChange\s*=\s*([^\n,]*)""").findAll(arm).map { it.groupValues[1].trim() }.toList()
+            if (wired != listOf("::retargetPadSheet")) {
+                problems += "the PAD_SHEET arm wires the pad arrows' `onSlotChange` to " +
+                    (if (wired.isEmpty()) "nothing" else wired.joinToString { "`$it`" }) +
+                    ", not to `::retargetPadSheet`. The arrows move the editor that is open to another pad; anything that opens " +
+                    "PAD_SHEET stacks a second editor on every tap, and Back then needs a press per pad."
+            }
+            if (Regex("""\bopenPadSheet\b""").containsMatchIn(arm)) {
+                problems += "the PAD_SHEET arm names `openPadSheet`. The editor is already open here: opening it again stacks a second one."
+            }
+        }
+        val retarget = funBodyRange(app, "retargetPadSheet")
+        if (retarget == null) {
+            problems += "App.kt no longer declares `retargetPadSheet`, which the pad arrows move the open editor with."
+        } else if (Regex("""\bopen\(""").containsMatchIn(app.substring(retarget))) {
+            problems += "`retargetPadSheet` opens a bench. It only moves the open editor to another pad."
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - the pad arrows retarget the open editor and never open it`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        assertEquals(emptyList(), padArrowProblems(stripComments(app.readText(Charsets.UTF_8))))
+    }
+
+    @Test
+    fun `law - the pad arrow law fails on an arrow that opens, and on a retarget that opens or is gone`() {
+        val good = """
+            fun retargetPadSheet(slot: Int) {
+                padSheetSlot = slot
+            }
+            top == Bench.PAD_SHEET -> {
+                PadSheetScreen(
+                    slot = sheetSlot,
+                    onSlotChange = ::retargetPadSheet,
+                    onBack = { nav.closeBench() },
+                )
+            }
+        """.trimIndent()
+        assertEquals(emptyList(), padArrowProblems(good), "the shape App has")
+
+        fun broken(from: String, to: String): List<String> {
+            assertTrue(from in good, "the control's own edit `$from` is not in its fixture")
+            return padArrowProblems(good.replace(from, to))
+        }
+        val wires = "wires the pad arrows' `onSlotChange`"
+        val names = "names `openPadSheet`"
+
+        // The old wiring, `onSlotChange = ::openPadSheet`, breaks two rules: it is not the retarget, and it opens.
+        assertProblems("the arrows wired to the door, as they were before this PR", broken("::retargetPadSheet", "::openPadSheet"), wires, names)
+        assertProblems("the arrows wired to a lambda that opens", broken("onSlotChange = ::retargetPadSheet", "onSlotChange = { openPadSheet(it) }"), wires, names)
+        assertProblems("the arrows wired to something that is neither", broken("::retargetPadSheet", "::someOtherHandler"), wires)
+        assertProblems("no wiring for the arrows at all", broken("    onSlotChange = ::retargetPadSheet,\n", ""), wires)
+        assertProblems(
+            "the arm opens the editor over itself from some other callback",
+            broken("onBack = { nav.closeBench() },", "onBack = { nav.closeBench() },\n    onRefresh = { openPadSheet(sheetSlot) },"),
+            names,
+        )
+        assertProblems(
+            "a retarget that opens a second editor",
+            broken("    padSheetSlot = slot\n", "    padSheetSlot = slot\n    nav.open(Bench.PAD_SHEET)\n"),
+            "`retargetPadSheet` opens a bench",
+        )
+        assertProblems(
+            "a file with no retarget function",
+            broken("fun retargetPadSheet(slot: Int) {\n    padSheetSlot = slot\n}\n", ""),
+            "no longer declares `retargetPadSheet`",
+        )
+        assertEquals(emptyList(), padArrowProblems(good.replace("padSheetSlot = slot", "padSheetSlot = slot\n    reopen(1)")), "`reopen(` is not `open(`")
+        assertTrue(padArrowProblems("val x = 1").size >= 2, "a file without the arm and the function is reported, not passed")
+    }
+
+    // ==================== Law: the pad benches' kit folders are set where they are opened, and cleared nowhere ====================
+
+    /** The folders a bench is opened for, which its arrival verdict compares with the open kit's (`KitBench.verdict`). */
+    private val KIT_FOLDER_VARS = listOf("padSheetKitDir", "versionsKitDir", "padCaptureKitDir", "arrangeKitDir")
+
+    /**
+     * Each of these is the kit a bench was opened for, and `KitBench.verdict`
+     * answers CLOSE when it is null. The history can restore the bench after
+     * it was left (Back from AUDITION's GROOVE, from RE-TRIM's TAPE, or across
+     * a place or stage row), and the bench needs the folder it was opened for
+     * then. So whoever clears one, say by tidying `clearTransientState`, closes
+     * the bench the moment it is restored, and lands the user on the grid:
+     * the bug the pad editor's change to a bench exists to fix. VERSIONS,
+     * PAD CAPTURE and SONG (whose AUDITION-shaped hazard is Back from its
+     * GROOVE) have the same shape. The slot has its own law above; this is the
+     * folder's. Three things hold:
+     *
+     * 1. None of the four is ever assigned `null`.
+     * 2. `padSheetKitDir` is assigned in two places only: `openPadSheet`, to
+     *    `open?.dir` (the kit the editor is opened on), and `renameKit`, to
+     *    `renamed.dir` (the same kit after its folder moved).
+     * 3. The other three are looser, because their doors are lambdas in the
+     *    draw `when`, not functions: they are assigned only `open?.dir`, at a
+     *    door, or `renamed.dir`, in `renameKit`.
+     *
+     * Each of the four must also be assigned somewhere, so a scan that stopped
+     * seeing them cannot report a clean file.
+     */
+    private fun kitFolderProblems(app: String): List<String> {
+        val problems = mutableListOf<String>()
+        val opener = funBodyRange(app, "openPadSheet")
+        val rename = funBodyRange(app, "renameKit")
+        if (opener == null) problems += "App.kt no longer declares `openPadSheet`, the one place the editor's kit folder is recorded."
+        if (rename == null) problems += "App.kt no longer declares `renameKit`, which repoints every bench's kit folder at the renamed folder."
+        fun inside(range: IntRange?, at: Int) = range != null && at in range
+
+        for (name in KIT_FOLDER_VARS) {
+            // `=(?!=)`: an assignment, not the `==` of `if (padSheetKitDir == entry.dir)`. The right-hand side runs
+            // to the end of the line, a `;` or a `}`, so `File("x")` and `(a)` are read, not skipped.
+            val assignments = Regex("""\b$name\s*=(?!=)([^\n;}]*)""").findAll(app).toList()
+            if (assignments.isEmpty()) {
+                problems += "App.kt assigns `$name` nowhere: the bench it belongs to is opened with no kit to compare, or this scan is broken."
+            }
+            for (m in assignments) {
+                val rhs = m.groupValues[1].trim()
+                val at = m.range.first
+                when {
+                    rhs == "null" -> problems += "App.kt clears `$name`: `${m.value.trim()}`. The bench can be restored from the history and " +
+                        "its arrival verdict closes it when this is null, so the user lands on the grid. Nothing clears it, however tidy it looks."
+                    inside(rename, at) -> if (rhs != "renamed.dir") {
+                        problems += "`renameKit` assigns `$name` to `$rhs`, not `renamed.dir`: a rename repoints the folder, it does not change which kit it is."
+                    }
+                    name == "padSheetKitDir" -> if (!inside(opener, at) || rhs != "open?.dir") {
+                        problems += "App.kt assigns `padSheetKitDir` anywhere but as `open?.dir` in `openPadSheet` and `renamed.dir` in " +
+                            "`renameKit`'s repoint: `${m.value.trim()}`. The editor's kit folder is recorded where the editor is opened, " +
+                            "and moves only when the kit's folder does."
+                    }
+                    else -> if (rhs != "open?.dir") {
+                        problems += "App.kt assigns `$name` to `$rhs`. A bench is opened for the kit that is open (`open?.dir`); " +
+                            "a rename repoints it in `renameKit`; nothing else assigns it."
+                    }
+                }
+            }
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - the pad benches' kit folders are set where they are opened, and cleared nowhere`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        assertEquals(emptyList(), kitFolderProblems(stripComments(app.readText(Charsets.UTF_8))))
+    }
+
+    @Test
+    fun `law - the kit folder law fails on a cleared folder, a stray assignment and a rename that changes the kit`() {
+        val good = """
+            var padSheetKitDir by remember { mutableStateOf<File?>(null) }
+            var versionsKitDir by remember { mutableStateOf<File?>(null) }
+            var padCaptureKitDir by remember { mutableStateOf<File?>(null) }
+            var arrangeKitDir by remember { mutableStateOf<File?>(null) }
+            fun openPadSheet(slot: Int) {
+                padSheetSlot = slot
+                padSheetKitDir = open?.dir
+                nav.open(Bench.PAD_SHEET)
+            }
+            fun clearTransientState() {
+                auditionArmSlot = null
+            }
+            fun renameKit(entry: Entry, newName: String) {
+                if (versionsKitDir == entry.dir) versionsKitDir = renamed.dir
+                if (padCaptureKitDir == entry.dir) padCaptureKitDir = renamed.dir
+                if (arrangeKitDir == entry.dir) arrangeKitDir = renamed.dir
+                if (padSheetKitDir == entry.dir) padSheetKitDir = renamed.dir
+            }
+            val a = {
+                versionsKitDir = open?.dir
+                nav.open(Bench.VERSIONS)
+            }
+            val b = {
+                padCaptureKitDir = open?.dir
+                nav.open(Bench.PAD_CAPTURE)
+            }
+            val c = {
+                arrangeKitDir = open?.dir
+                nav.open(Bench.SONG)
+            }
+            val d = KitBench.verdict(Bench.SONG, arrangeKitDir?.path, open?.dir?.path)
+        """.trimIndent()
+        assertEquals(emptyList(), kitFolderProblems(good), "the shape App has: set at the doors, repointed by the rename, compared with ==, read with ?.path")
+
+        fun broken(from: String, to: String): List<String> {
+            assertTrue(from in good, "the control's own edit `$from` is not in its fixture")
+            return kitFolderProblems(good.replace(from, to))
+        }
+        val clears = "clears"
+        val tidied = "fun clearTransientState() {\n    auditionArmSlot = null\n"
+
+        // The folder is never cleared. The editor's is the control the audit asked for; the others have the same shape.
+        assertProblems("the editor's folder cleared in clearTransientState", broken(tidied, "$tidied    padSheetKitDir = null\n"), "$clears `padSheetKitDir`")
+        assertProblems("VERSIONS' folder cleared", broken(tidied, "$tidied    versionsKitDir = null\n"), "$clears `versionsKitDir`")
+        assertProblems("PAD CAPTURE's folder cleared", broken(tidied, "$tidied    padCaptureKitDir = null\n"), "$clears `padCaptureKitDir`")
+        assertProblems("SONG's folder cleared, so Back from GROOVE closes it as AUDITION's would close the editor", broken(tidied, "$tidied    arrangeKitDir = null\n"), "$clears `arrangeKitDir`")
+        assertProblems("a clear written as `= null` with no spaces around the assignment", broken(tidied, "${tidied}    padSheetKitDir=null\n"), "$clears `padSheetKitDir`")
+
+        // The editor's folder is recorded where the editor is opened, and repointed where the kit moves.
+        assertProblems(
+            "the editor's folder recorded by something other than the door",
+            broken(tidied, "${tidied}    padSheetKitDir = open?.dir\n"),
+            "assigns `padSheetKitDir` anywhere but",
+        )
+        assertProblems(
+            "the editor's folder set to something other than the open kit's, inside the door",
+            broken("padSheetKitDir = open?.dir\n    nav.open(Bench.PAD_SHEET)", "padSheetKitDir = File(\"x\")\n    nav.open(Bench.PAD_SHEET)"),
+            "assigns `padSheetKitDir` anywhere but",
+        )
+        assertProblems(
+            "the editor's folder pointed at the renamed folder by something other than the rename",
+            broken(tidied, "${tidied}    padSheetKitDir = renamed.dir\n"),
+            "assigns `padSheetKitDir` anywhere but",
+        )
+        assertProblems(
+            "a rename that moves the editor's folder to the open kit's rather than the renamed one",
+            broken("if (padSheetKitDir == entry.dir) padSheetKitDir = renamed.dir", "if (padSheetKitDir == entry.dir) padSheetKitDir = open?.dir"),
+            "`renameKit` assigns `padSheetKitDir` to `open?.dir`",
+        )
+
+        // The other three: only the open kit's folder at a door.
+        assertProblems(
+            "VERSIONS' folder set to something that is not the open kit's",
+            broken("versionsKitDir = open?.dir\n    nav.open(Bench.VERSIONS)", "versionsKitDir = File(\"x\")\n    nav.open(Bench.VERSIONS)"),
+            "assigns `versionsKitDir` to `File(\"x\")`",
+        )
+        assertProblems(
+            "a rename that gives PAD CAPTURE the open kit's folder",
+            broken("if (padCaptureKitDir == entry.dir) padCaptureKitDir = renamed.dir", "if (padCaptureKitDir == entry.dir) padCaptureKitDir = open?.dir"),
+            "`renameKit` assigns `padCaptureKitDir` to `open?.dir`",
+        )
+
+        // The scan has to see what it polices.
+        val noVersions = good
+            .replace("    versionsKitDir = open?.dir\n    nav.open(Bench.VERSIONS)", "    nav.open(Bench.VERSIONS)")
+            .replace("if (versionsKitDir == entry.dir) versionsKitDir = renamed.dir\n    ", "")
+        assertTrue(noVersions != good, "the control's own edit is not in its fixture")
+        assertProblems("a folder nothing assigns", kitFolderProblems(noVersions), "assigns `versionsKitDir` nowhere")
+        assertProblems("a file with no door function", broken("fun openPadSheet(slot: Int) {", "fun openedSheet(slot: Int) {"), "no longer declares `openPadSheet`", "assigns `padSheetKitDir` anywhere but")
+        assertTrue(kitFolderProblems("val x = 1").size >= 6, "a file without the functions and the folders is reported, not passed")
+    }
+
+    // ==================== Law: Back on the TAPE deck waits for BACK ONTO's write ====================
+
+    /**
+     * RE-TRIM ▸ leaves the pad editor in the history (`landOn(TAPE)` pushes
+     * `PADS+[PAD_SHEET]`), so system Back from the deck while BACK ONTO is
+     * writing restores the editor early. The write then lands (`landOn(KIT)`,
+     * `openPadSheet`), the location is the one it already was, nothing keys the
+     * editor on it again, and the editor stays up showing, and able to export,
+     * the pad as it was before the cut. TAPE has no Back handler of its own:
+     * its Back is the root handler's pop, so that is where it waits, on a flag
+     * `backOnto` raises for the write and clears in its `finally` (so a failed
+     * or cancelled write cannot leave Back dead). Three things hold:
+     *
+     * 1. The root handler (the one gated on `nav.canGoBack`) returns early
+     *    while `backOntoWriting`, before it pops.
+     * 2. `backOnto` sets `backOntoWriting = true`.
+     * 3. `backOnto` clears it in a `finally`.
+     */
+    private fun backOntoBackProblems(app: String): List<String> {
+        val problems = mutableListOf<String>()
+        val roots = Regex("""\bBackHandler\(""").findAll(app).mapNotNull { m ->
+            val argsEnd = matchingParen(app, m.range.last + 1) ?: return@mapNotNull null
+            if ("nav.canGoBack" !in app.substring(m.range.last + 1, argsEnd)) return@mapNotNull null
+            var open = argsEnd + 1
+            while (open < app.length && app[open].isWhitespace()) open++
+            if (open >= app.length || app[open] != '{') return@mapNotNull null
+            val close = matchingBrace(app, open + 1) ?: return@mapNotNull null
+            app.substring(open + 1, close)
+        }.toList()
+        if (roots.size != 1) {
+            problems += "expected exactly one root BackHandler (the one gated on `nav.canGoBack`) in App.kt, found ${roots.size}"
+        } else {
+            val body = roots[0]
+            val swallow = Regex("""\bif\s*\([^\n]*\bbackOntoWriting\b[^\n]*\)\s*return@BackHandler\b""").find(body)
+            if (swallow == null) {
+                problems += "the root BackHandler does not return early while `backOntoWriting`: system Back on the TAPE deck during BACK ONTO " +
+                    "restores the pad editor from the history, and the write's own landing then leaves it showing the pad as it was before the cut."
+            } else if (body.indexOf("nav.back()") in 0 until swallow.range.first) {
+                problems += "the root BackHandler pops (`nav.back()`) before it checks `backOntoWriting`, so the check swallows nothing."
+            }
+        }
+        val backOnto = funBodyRange(app, "backOnto")
+        if (backOnto == null) {
+            problems += "App.kt no longer declares `backOnto`."
+        } else {
+            val body = app.substring(backOnto)
+            if (!Regex("""\bbackOntoWriting\s*=\s*true\b""").containsMatchIn(body)) {
+                problems += "`backOnto` never sets `backOntoWriting = true`, so the Back it is meant to hold back is never held."
+            }
+            if (!Regex("""\bfinally\s*\{[^}]*\bbackOntoWriting\s*=\s*false\b""").containsMatchIn(body)) {
+                problems += "`backOnto` does not clear `backOntoWriting` in a `finally`: a write that fails or is cancelled would leave Back dead on the deck."
+            }
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - Back on the TAPE deck waits for BACK ONTO's write`() {
+        val app = File("../app/src/main/kotlin/com/snipsnap/app/App.kt")
+        assertTrue(app.isFile, "expected to find ${app.absolutePath}")
+        assertEquals(emptyList(), backOntoBackProblems(stripComments(app.readText(Charsets.UTF_8))))
+    }
+
+    @Test
+    fun `law - the BACK ONTO Back law fails on a root handler that pops, a flag never raised and a flag never cleared`() {
+        val good = """
+            var backOntoWriting by remember { mutableStateOf(false) }
+            fun backOnto(request: RetrimRequest, range: IntRange) {
+                if (busy != null) return
+                busy = Busy(Copy.RETRIM_BUSY)
+                backOntoWriting = true
+                scope.launch {
+                    try {
+                        write(request, range)
+                    } catch (e: Exception) {
+                        dock.say(Copy.RETRIM_FAILED)
+                    } finally {
+                        backOntoWriting = false
+                        busy = null
+                    }
+                }
+            }
+            BackHandler(
+                enabled = !anyOverlayOpen && nav.canGoBack,
+            ) {
+                if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler
+                val from = nav.location
+                nav.back()
+            }
+            BackHandler(onBack = closeBenchNote)
+        """.trimIndent()
+        assertEquals(emptyList(), backOntoBackProblems(good), "the shape App has")
+
+        fun broken(from: String, to: String): List<String> {
+            assertTrue(from in good, "the control's own edit `$from` is not in its fixture")
+            return backOntoBackProblems(good.replace(from, to))
+        }
+        val root = "the root BackHandler does not return early"
+        assertProblems(
+            "a root handler that pops at once",
+            broken("    if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler\n", ""),
+            root,
+        )
+        assertProblems(
+            "a swallow that does not read the flag",
+            broken("if (backOntoWriting && nav.location.top == null", "if (nav.location.top == null"),
+            root,
+        )
+        assertProblems(
+            "a swallow that comes after the pop",
+            broken(
+                "    if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler\n    val from = nav.location\n    nav.back()\n",
+                "    val from = nav.location\n    nav.back()\n    if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler\n",
+            ),
+            "pops (`nav.back()`) before it checks",
+        )
+        assertProblems("a flag nothing raises", broken("    backOntoWriting = true\n", ""), "never sets `backOntoWriting = true`")
+        val clearedInTry = good
+            .replace("            backOntoWriting = false\n", "")
+            .replace("write(request, range)", "write(request, range)\n            backOntoWriting = false")
+        assertTrue(clearedInTry != good, "the control's own edit is not in its fixture")
+        assertProblems(
+            "a flag cleared only on the way that succeeds",
+            backOntoBackProblems(clearedInTry),
+            "does not clear `backOntoWriting` in a `finally`",
+        )
+        assertTrue(backOntoBackProblems("val x = 1").size >= 2, "a file without the handler and the function is reported, not passed")
     }
 
     // ---- Law: nothing the phone runs reaches java.awt ----
@@ -4267,16 +4983,30 @@ class ConventionTest {
 
     // ---- Law: every bench has an opener ----
 
+    /** Who gives a bench with no opener its opener. */
+    private enum class OpenerOwner(val why: String) {
+        PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
+        PR_4("routed in PR 4 with the inline panels the spec's section 7.3 turns into sections or screens (SPREAD)"),
+    }
+
     /**
      * Benches that nothing outside `Navigation.kt` opens yet. Each one's screen
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE, STACK and SPREAD, the pad
-     *   editor family.
-     * - **PR 3e**: LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
+     * - **PR 4** ([OpenerOwner.PR_4]): SPREAD. It is not a screen but a panel inside the pad
+     *   editor, drawn in place of the sheet from inside `PadSheetScreen`, and
+     *   it writes through the editor's own job. The spec's §7.3 turns inline
+     *   panels behind a `▸` into sections or screens, which is PR 4's work, so
+     *   it is routed with them. (PR 3d moved the rest of the pad editor family,
+     *   PAD_SHEET, GRAIN_FIELD, SPLICE and STACK, off this list.)
+     * - **PR 3e** ([OpenerOwner.PR_3E]): LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
      *   §7.3.1 lists these (with SPREAD) as loose state to route, so they are
      *   routed later, not waived as panels that stay in their screen.
+     *
+     * Each bench on the list has an owner, the PR that gives it an opener
+     * ([OpenerOwner]), in the shape of [BACK_LABEL_WAIVERS]: a PR 4 author finds
+     * what they own by the enum, not by a name in a comment.
      *
      * The list only shrinks, and the ceiling pins it exactly. The law fails
      * when a bench on it gains an opener (take it off), and when a bench off it
@@ -4287,11 +5017,13 @@ class ConventionTest {
      * sight. A ceiling with slack would let the list grow back after a shrink
      * with nothing failing.
      */
-    private val NOT_YET_OPENED: Set<Bench> = setOf(
-        Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.SPREAD,
-        Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD,
+    private val NOT_YET_OPENED: Map<Bench, OpenerOwner> = mapOf(
+        Bench.SPREAD to OpenerOwner.PR_4,
+        Bench.LIVE_SNAP to OpenerOwner.PR_3E,
+        Bench.DRAW to OpenerOwner.PR_3E,
+        Bench.FIELD to OpenerOwner.PR_3E,
     )
-    private val NOT_YET_OPENED_CEILING = 8
+    private val NOT_YET_OPENED_CEILING = 4
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -4342,15 +5074,17 @@ class ConventionTest {
     }
 
     /** Why the roster and the list disagree with what is opened, one line per fault; empty when they agree. */
-    private fun openerProblems(opened: Set<Bench>, notYetOpened: Set<Bench>): List<String> {
+    private fun openerProblems(opened: Set<Bench>, notYetOpened: Map<Bench, OpenerOwner>): List<String> {
         val problems = mutableListOf<String>()
         for (bench in Bench.entries) {
             if (bench !in opened && bench !in notYetOpened) {
                 problems += "$bench has no opener outside Navigation.kt, and is not on NOT_YET_OPENED. " +
                     "Open it with `nav.open(Bench.$bench)`; a bench nothing opens is a screen the roster promises and the app never shows."
             }
-            if (bench in opened && bench in notYetOpened) {
-                problems += "$bench is on NOT_YET_OPENED but something opens it now. Take it off the list: the list only shrinks."
+            val owner = notYetOpened[bench]
+            if (bench in opened && owner != null) {
+                problems += "$bench is on NOT_YET_OPENED (owner ${owner.name}: ${owner.why}) but something opens it now. " +
+                    "Take it off the list: the list only shrinks."
             }
         }
         return problems
@@ -4420,24 +5154,37 @@ class ConventionTest {
 
         val everyBench = Bench.entries.toSet()
         assertTrue(
-            openerProblems(setOf(Bench.SNIPS), emptySet()).size == everyBench.size - 1,
+            openerProblems(setOf(Bench.SNIPS), emptyMap()).size == everyBench.size - 1,
             "every bench but the one that is opened should be reported when the list is empty",
         )
         assertTrue(
-            openerProblems(everyBench - Bench.BIN, setOf(Bench.BIN)).isEmpty(),
+            openerProblems(everyBench - Bench.BIN, mapOf(Bench.BIN to OpenerOwner.PR_3E)).isEmpty(),
             "a listed bench with no opener is the allowed state",
         )
         assertTrue(
-            openerProblems(everyBench, setOf(Bench.VERSIONS)).any { "VERSIONS" in it && "only shrinks" in it },
+            openerProblems(everyBench, mapOf(Bench.VERSIONS to OpenerOwner.PR_3E)).any { "VERSIONS" in it && "only shrinks" in it },
             "a bench on NOT_YET_OPENED that something opens must be reported, or the list can only grow",
         )
         assertTrue(
-            openerProblems(everyBench, setOf(Bench.DRAW)).any { "DRAW" in it && "only shrinks" in it },
+            openerProblems(everyBench, mapOf(Bench.DRAW to OpenerOwner.PR_3E)).any { "DRAW" in it && "only shrinks" in it },
             "the benches that left the in-screen waiver for PR 3e are on the list like any other, and are reported when something opens them",
         )
         assertTrue(
-            openerProblems(everyBench - Bench.SONG, emptySet()).any { "SONG" in it && "nav.open" in it },
+            openerProblems(everyBench - Bench.SONG, emptyMap()).any { "SONG" in it && "nav.open" in it },
             "a bench with no opener and not on the list must be reported, naming the call that opens it",
+        )
+        assertTrue(
+            openerProblems(everyBench, mapOf(Bench.SPREAD to OpenerOwner.PR_4)).any { "SPREAD" in it && "PR_4" in it && "only shrinks" in it },
+            "a listed bench that something opens is reported with its owner, so the author who opened it knows whose list it left",
+        )
+        assertTrue(
+            openerProblems(everyBench, mapOf(Bench.FIELD to OpenerOwner.PR_3E)).any { "FIELD" in it && "PR_3E" in it && "only shrinks" in it },
+            "the same for an owner that is not PR 4",
+        )
+        assertEquals(
+            setOf(OpenerOwner.PR_3E, OpenerOwner.PR_4),
+            NOT_YET_OPENED.values.toSet(),
+            "the list has benches for both owners; an owner with no bench left is a stale enum entry to delete with the last bench",
         )
     }
 
@@ -4445,7 +5192,6 @@ class ConventionTest {
 
     /** Who gets a hand-drawn back label off a screen, and why it may stay until then. */
     private enum class WaiverOwner(val why: String) {
-        PR_3D("moves to a bench in PR 3d (the pad editor family)"),
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
         IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
         STEPPER("permanent: a stepper (previous pad, previous preset), not a back label"),
@@ -4467,11 +5213,11 @@ class ConventionTest {
      * raise it in plain sight. A ceiling with slack would let the map grow back
      * after a shrink with nothing failing.
      *
-     * - **PR 3d** moves the pad editor family: PadSheetScreen, StackTakesScreen,
-     *   TapeSpliceScreen's back chip, and GrainFieldScreen's default.
      * - **PR 3e** moves Snap's own screens: LiveSnapScreen (LIVE_SNAP) and the
-     *   "◄ SNAP" SnapScreen draws and passes to GrainFieldScreen as FIELD's
-     *   label.
+     *   "◄ SNAP" SnapScreen draws and passes to GrainFieldScreen as its
+     *   `backLabel` for FIELD. (PR 3d moved the pad editor family, PadSheetScreen,
+     *   StackTakesScreen, TapeSpliceScreen's back chip and GrainFieldScreen, onto
+     *   the model's words; none of them has a literal left.)
      * - **Permanent, an in-screen panel**: SynthScreen's deleted-presets panel,
      *   AquariumPanel, and TapeSpliceScreen's "CHOOSE DIFFERENT TAKES".
      * - **Permanent, a stepper**: SurfaceScreen's previous-pad and
@@ -4479,18 +5225,14 @@ class ConventionTest {
      *   they step through pads and presets and go nowhere.
      */
     private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
-        "ui/PadSheetScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT", "◄ KIT"),
-        "ui/StackTakesScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD"),
-        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD") +
-            waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
-        "ui/GrainFieldScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT"),
+        "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ CHOOSE DIFFERENT TAKES", "◄ CHOOSE DIFFERENT TAKES"),
         "ui/SnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/LiveSnapScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SNAP"),
         "ui/SynthScreen.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ SYNTH"),
         "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
         "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 16
+    private val BACK_LABEL_WAIVER_CEILING = 11
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -4569,12 +5311,12 @@ class ConventionTest {
         )
         assertEquals(
             emptyList(),
-            backLabelProblems(one, mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3D, "◄ SHELF"))),
+            backLabelProblems(one, mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SHELF"))),
             "a waived literal is the allowed state",
         )
         assertEquals(
             1,
-            backLabelProblems(mapOf("ui/XScreen.kt" to listOf("◄ KIT", "◄ KIT")), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT"))).size,
+            backLabelProblems(mapOf("ui/XScreen.kt" to listOf("◄ KIT", "◄ KIT")), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3E, "◄ KIT"))).size,
             "two literals against one waiver: the second has no owner",
         )
     }

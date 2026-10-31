@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -181,6 +182,12 @@ private fun boardRemoveFirst(recipe: JsonValue.Obj?): String =
 fun PadSheetScreen(
     entry: KitShelf.Entry,
     slot: Int,
+    /**
+     * The back chip's words, from the navigation model (`Navigation.backChip`, so
+     * "◄ PADS" over the grid): the loading shell's chip and the header's both read
+     * it. No default, so a caller cannot ship a chip that names the wrong place.
+     */
+    backLabel: String,
     onSlotChange: (Int) -> Unit,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
@@ -306,7 +313,7 @@ fun PadSheetScreen(
         // `requestBack()` below (which needs a live `model` to check).
         BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
-            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp)) { onBack() }
+            HeaderChip(backLabel, scheme, Modifier.align(Alignment.TopStart).widthIn(min = 64.dp)) { onBack() }
             if (loadFailed) {
                 TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
@@ -1681,8 +1688,8 @@ fun PadSheetScreen(
      * now runs on [appScope] (see its own KDoc), so this callback can fire
      * well after the tap that triggered it; a toast landing late is fine
      * (App's own callback, harmless whenever it arrives — the existing
-     * [appScope] KDoc already reasons about that), but [onBack] pops
-     * whatever pad-sheet session `padSheetSlot` currently names in `App` —
+     * [appScope] KDoc already reasons about that), but [onBack] closes
+     * whatever bench is on top in `App` (`nav.closeBench()`) —
      * which, by the time this fires, might not be this one any more. The
      * pad-nav ◄/► arrows (`onSlotChange`) are not gated on `busy`, so a tap
      * on either while this delete is still in flight leaves the sheet
@@ -1708,22 +1715,22 @@ fun PadSheetScreen(
      * targeted) forever after; it does NOT start reflecting some other,
      * newer screen's `slot`. So [liveSlot] == `targetSlot` would still
      * hold, and an unguarded `onBack()` would fire against the NEW
-     * screen's `App`-level `padSheetSlot`, closing a sheet the user just
+     * screen's bench, closing a sheet the user just
      * opened, for a delete that has nothing to do with it. `scope` (line
      * ~174, `rememberCoroutineScope()`) is cancelled the moment the OLD
      * composable is disposed, and this closure still holds a reference to
      * that same, now-cancelled `scope` — so `scope.isActive` is false
      * exactly when this hazard applies, independent of what [liveSlot]
      * says. (On a plain exit with no remount yet, a late `onBack()` would
-     * be a harmless second `padSheetSlot = null` regardless; the guard
-     * still skips it, which is fine — nothing depends on it firing.)
+     * close whichever bench is on top by then, or nothing if none is; the
+     * guard skips it either way, which is fine — nothing depends on it firing.)
      *
      * `onKitUpdated`/the toast are unconditional either way: `App`'s copy
      * of the kit is correct as soon as they run, regardless of whether
      * `onBack()` also fires. If the guard skips `onBack()` and this exact
      * slot is ever shown again, the pre-existing `pad == null` branch near
      * this file's top (already documented for "mid-EJECT this slot just
-     * emptied") renders a working ◄ KIT header — not a broken screen, the
+     * emptied") renders a working back-chip header — not a broken screen, the
      * same fallback this file already relies on elsewhere.
      */
     fun onEject() {
@@ -2815,7 +2822,7 @@ fun PadSheetScreen(
     }
 
     /**
-     * The header's own ◄ KIT path: flush a pending metadata save (if any)
+     * The header's own back-chip path: flush a pending metadata save (if any)
      * *before* calling the real [onBack], on this composable's own scope —
      * so the common exit gets immediate consistency (the save is done, not
      * just handed off, by the time KIT re-renders) rather than waiting on
@@ -2858,7 +2865,7 @@ fun PadSheetScreen(
         }.endBoardJobOnCompletion(boardJob)
     }
 
-    // System Back mirrors the header's own ◄ KIT chip exactly — same
+    // System Back mirrors the header's own back chip exactly — same
     // function, so a debounced metadata edit is flushed here too, not just
     // on the chip's own tap. `requestBack()` already self-guards on `busy`
     // (a second press while the save is in flight no-ops), so no extra
@@ -3144,6 +3151,7 @@ fun PadSheetScreen(
             classColor = classColor,
             scheme = scheme,
             busy = busy,
+            backLabel = backLabel,
             onBack = ::requestBack,
             onHit = { stopAquariumPreview(); snip?.let { audition(it, pad.level, pad) } },
             // Aquarium/boards compare their preserved input. Older treatments
@@ -4076,6 +4084,7 @@ private fun PadSheetHeader(
     classColor: Color,
     scheme: Scheme,
     busy: Boolean,
+    backLabel: String,
     onBack: () -> Unit,
     onHit: () -> Unit,
     onBefore: (() -> Unit)?,
@@ -4093,7 +4102,7 @@ private fun PadSheetHeader(
         // `onBack` (`requestBack`) silently no-ops while busy rather than
         // interrupting an in-flight save — dimmed + untappable here says
         // so instead of the tap doing nothing with no feedback at all.
-        HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onBack)
+        HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
         Spacer(Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             TapeText("PAD ${padTag(slot)}", TapeType.lcdHeader, scheme.lcdInk.tape)
@@ -4130,7 +4139,7 @@ private fun HeaderChip(
             .border(1.dp, scheme.lcdInk2, RoundedCornerShape(3.dp))
             // `enabled` goes through `tapeClick`, not around it: a dimmed
             // chip stays in the semantics tree, so TalkBack finds ◀ BEFORE
-            // (and ◄ KIT) during the same busy spell sighted users see it.
+            // (and the back chip) during the same busy spell sighted users see it.
             .tapeClick(label = label, enabled = enabled, spoken = spokenBack(label), onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
