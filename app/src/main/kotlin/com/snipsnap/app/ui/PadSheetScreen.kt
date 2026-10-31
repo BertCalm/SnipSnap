@@ -389,7 +389,13 @@ fun PadSheetScreen(
     // cleared with it.
     var padJob by remember(model) { mutableStateOf<String?>(null) }
     var snip by remember(model) { mutableStateOf<Snip?>(null) }
+    // The pad's newest bin entry, the one its undo restores (`refreshPadAudio`).
+    // `binDaysLeft` is non-null exactly when the bin holds one, which is all the
+    // six "is it in the bin?" checks below read. `binKept`: a pad still needs that
+    // entry, so no sweep takes it and the provenance line says so instead of a
+    // count; `binDaysLeft` is then 0 and never drawn.
     var binDaysLeft by remember(model) { mutableStateOf<Int?>(null) }
+    var binKept by remember(model) { mutableStateOf(false) }
 
     // AUDITION ▸'s own gate: the nearest MAKE PAD ▸ sibling, if this pad has
     // one - `minByOrNull { it.slot }` just picks a deterministic one when
@@ -477,10 +483,11 @@ fun PadSheetScreen(
         if (p == null) {
             snip = null
             binDaysLeft = null
+            binKept = false
             auditionOnRefresh = false
             return
         }
-        val (loadedSnip, daysLeft) = offMain {
+        val (loadedSnip, daysLeft, kept) = offMain {
             // p.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
             // from an already-bounded Snip — readCapped's 600s ceiling is defense in
             // depth, not expected to ever bind.
@@ -488,17 +495,16 @@ fun PadSheetScreen(
                 val decoded = WavReader.readCapped(File(entry.dir, p.sampleFile), TAPE_LOAD_MAX_SEC).snip
                 if (PrintedPads.has(p.recipe)) decoded else Cleanup.toMono(decoded)
             }.getOrNull()
-            val binned = m.binContents()
-                .filter { it.originalName == p.sampleFile }
-                .maxByOrNull { it.binnedAtMillis }
-            val days = binned?.let {
-                val daysSince = (System.currentTimeMillis() - it.binnedAtMillis) / 86_400_000.0
-                (KitBuilderModel.BIN_KEEP_DAYS - daysSince).let { left -> if (left <= 0) 0 else left.roundToInt() }
-            }
-            s to days
+            // Newest first, so the first under the pad's file is the entry
+            // `restoreFromBin(name)` restores. Its hold is the one the bin
+            // screen and the launch sweep read: kept for a pad, or the
+            // countdown both screens round the same way.
+            val hold = binHoldsOrClock(m).firstOrNull { it.entry.originalName == p.sampleFile }
+            Triple(s, hold?.let { it.daysLeft(System.currentTimeMillis()) ?: 0 }, hold?.keptFor != null)
         }
         snip = loadedSnip
         binDaysLeft = daysLeft
+        binKept = kept
         // A refresh that couldn't decode the file consumes the play
         // request too: otherwise it stays armed and the next unrelated
         // refresh that does decode (an undo, a pad swap) plays as if a
@@ -3164,7 +3170,7 @@ fun PadSheetScreen(
             WaveformLcd(snip, pad.drumClass, classColor, scheme, Modifier.padding(top = 4.dp))
 
             TapeText(
-                provenanceLine(pad, snip, binDaysLeft) + (unmappedLabel?.let { " · $it" } ?: ""),
+                provenanceLine(pad, snip, binDaysLeft, binKept) + (unmappedLabel?.let { " · $it" } ?: ""),
                 TapeType.pixelSmall,
                 scheme.ink2.tape,
                 maxLines = 2,
@@ -3996,7 +4002,7 @@ private fun reapplyPendingMetadataFields(fresh: KitBuilderModel, stalePads: Map<
  * `:app` has no unit test source set, so an order typed here could only
  * ever be checked by re-reading it. It is checked by `ProvenanceTest` now.
  */
-private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String {
+private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?, binKept: Boolean): String {
     val origin = Provenance.phrase(pad.source) ?: pad.sampleFile
     // The cut in the tape (`BASS 5.WAV @ 1.20–1.62s`, docs/RETRIM.md §5):
     // the one place the numbers show, and what says where RE-TRIM ▸ will
@@ -4009,9 +4015,30 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?): String 
     PadSheet.readDust(pad.recipe)?.let { parts += "dusted from ${it.tape}" }
     parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
-    binDaysLeft?.let { parts += "original in bin, ${it}d left" }
+    // A kept original has no count: no sweep takes it while the pad needs it.
+    binDaysLeft?.let { parts += if (binKept) "original in bin, kept" else "original in bin, ${it}d left" }
     return parts.joinToString(" · ")
 }
+
+/**
+ * [KitBuilderModel.binHolds] on [m], the kit this sheet shows, or every entry on its
+ * plain clock ([KitBuilderModel.BIN_KEEP_DAYS] from when it went in) when the kept
+ * set cannot be built: a printed pad whose saved source will not read throws, and
+ * the launch sweep then deletes nothing in this kit, so the files are still there
+ * and a countdown beats a crash. The clock saturates, as `binHolds`' own does, so a
+ * forged stamp near `Long.MAX_VALUE` reads as far off rather than wrapping.
+ * TakesBinScreen carries its own copy of the clock, as each screen keeps its
+ * `withFreshKit` to itself.
+ */
+private fun binHoldsOrClock(m: KitBuilderModel): List<KitBuilderModel.BinHold> =
+    runCatching { m.binHolds() }.getOrElse { e ->
+        Log.w("PadSheetScreen", "the bin's kept set would not build; plain countdowns instead", e)
+        val keepMs = (KitBuilderModel.BIN_KEEP_DAYS * 86_400_000).toLong()
+        m.binContents().map {
+            val purgeAt = if (it.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else it.binnedAtMillis + keepMs
+            KitBuilderModel.BinHold(it, keptFor = null, purgeAtMillis = purgeAt)
+        }
+    }
 
 /**
  * SMEAR's own recipe shape, `{"verb": "smear", "amount": x}` — the

@@ -44,10 +44,10 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.KitDiff
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
-import kotlin.math.ceil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -150,7 +150,7 @@ fun TakesBinScreen(
     ReportBusy(remember(busy, job) { if (busy) Busy(job ?: Copy.WORKING_BUSY) else null })
     var armed by remember(model) { mutableStateOf(false) }
     var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
-    var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
+    var binHolds by remember(model) { mutableStateOf<List<KitBuilderModel.BinHold>>(emptyList()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
     // SINCE T3: which take row is open, as (file, mtime) — the same identity
     // `doRestoreTake` checks, for the same reason (see its KDoc): rows are
@@ -186,6 +186,16 @@ fun TakesBinScreen(
      * different archive, or none, at the same `take_NNN.json`. Rare, and
      * the row still says so ("WON'T READ") rather than showing "NO
      * CHANGES" for a file this read never saw.
+     *
+     * THE BIN's rows are the one thing here that is not a pure directory
+     * scan. Which entries a pad keeps ([KitBuilderModel.binHolds]) depends
+     * on the kit as well as the bin, and [m]'s kit is the mount-time one, so
+     * they come from a model opened fresh under the writers' lock: the same
+     * answer the launch sweep would reach from disk now. When that answer
+     * cannot be built (a `kit.json` or a printed pad's saved source that
+     * will not read), every row falls back to its plain countdown from [m]'s
+     * bin listing rather than failing the screen; the sweep deletes nothing
+     * in such a kit, so those files are still there.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val live = kitOverride ?: kitSnapshot
@@ -197,10 +207,16 @@ fun TakesBinScreen(
                 val changes = runCatching { KitDiff.changes(KitStore.read(f), live) }.getOrNull()
                 TakeScan(f, mtime, changes)
             }
-            scans to m.binContents()
+            val holds = KitWrites.mutex.withLock {
+                runCatching { KitBuilderModel.open(m.kitDir).binHolds() }
+            }.getOrElse { e ->
+                Log.w("TakesBinScreen", "the bin's kept set would not build; plain countdowns instead", e)
+                onTheClock(m.binContents())
+            }
+            scans to holds
         }
         takeScans = t
-        binEntries = b
+        binHolds = b
         if (kitOverride != null) kitSnapshot = kitOverride
     }
 
@@ -231,7 +247,7 @@ fun TakesBinScreen(
      * [withFreshKit]'s KDoc), never the long-lived [model] — mirrors
      * PadSheetScreen's own Law 5 fix. Unlike PAD SHEET, [model] itself is
      * NOT swapped afterward: this screen keys `busy`/`armed`/`takeScans`/
-     * `binEntries`/`kitSnapshot` on [model]'s identity (`remember(model)`),
+     * `binHolds`/`kitSnapshot` on [model]'s identity (`remember(model)`),
      * and `restoreTake` fully replaces `kit` from the take file's own
      * content regardless of which model instance it runs against — so
      * [model]'s own in-memory `kit` was never load-bearing for this write
@@ -297,7 +313,8 @@ fun TakesBinScreen(
      * can bin several copies of the same `originalName` (each treat-then-
      * rewrite cycle bins the previous version under that same filename), and
      * this row's own [KitBuilderModel.BinEntry] is a specific one of those,
-     * distinguished on screen by its own countdown. The name-keyed overload
+     * distinguished on screen by its own countdown (or, for the newest while
+     * a pad still needs it, by that pad). The name-keyed overload
      * always resolves to the newest, which is not necessarily the row that
      * was tapped.
      */
@@ -412,27 +429,30 @@ fun TakesBinScreen(
         }
     }
 
-    val binRows = remember(binEntries, kitSnapshot) {
+    val binRows = remember(binHolds, kitSnapshot) {
         val now = System.currentTimeMillis()
-        binEntries.map { be ->
-            val daysSince = (now - be.binnedAtMillis) / 86_400_000.0
-            // Ceil, not round-to-nearest — "0D LEFT" must mean genuinely
-            // purge-eligible (matches purgeBin's own `< cutoff` check), not
-            // "rounded down from up to ~12h still standing."
-            val daysLeft = (KitBuilderModel.BIN_KEEP_DAYS - daysSince).let { left -> if (left <= 0) 0 else ceil(left).toInt() }
+        binHolds.map { hold ->
+            val be = hold.entry
+            // The count is `BinHold.daysLeft`, the one the pad sheet draws
+            // too: rounded up, so "0D LEFT" means the next sweep takes it.
+            // Null for an entry a pad still needs, whose row names that pad
+            // instead (`keptFor`), because no sweep takes it while it does.
+            val daysLeft = hold.daysLeft(now)
             // "Recoverable from the kit": a currently-assigned pad whose
             // sample (main or a GHOSTS layer) shares this bin entry's
-            // original name. In practice this rarely matches — a file only
-            // reaches the bin once nothing in the live kit still points at
-            // it (`deleteIfUnreferenced`) — so `null` (neutral ink3) is the
-            // common, honest case, not a bug.
+            // original name. Every treatment and rewrite bins the pad's
+            // earlier audio under the name the pad still plays (see
+            // `doRestoreFromBin`), so a treated pad's rows all wear its
+            // colour. `null` (neutral ink3) is audio no live pad plays any
+            // more: an ejected pad, or a file a pad stopped pointing at
+            // (`deleteIfUnreferenced`).
             val matchedPad = kitSnapshot.pads.firstOrNull { p ->
                 p.sampleFile == be.originalName || p.velocityLayers.any { it.sampleFile == be.originalName }
             }
             val classColor = matchedPad?.let { p ->
                 (p.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(p.drumClass)).tape
             }
-            BinRow(be, daysLeft, classColor)
+            BinRow(be, hold.keptFor, daysLeft, classColor)
         }
     }
 
@@ -519,8 +539,10 @@ fun TakesBinScreen(
             // followups) — the old title said only how long, never what,
             // leaving "the bin" to mean whatever a reader assumed (which,
             // sitting right under a TAKES card, was an easy misread as
-            // "your takes, kept 30 days").
-            PillCard("THE BIN — DELETED PAD AUDIO, KEPT 30 DAYS", scheme, BIN_RED_BORDER, BinRedGlow) {
+            // "your takes, kept 30 days"). How long is each row's to say
+            // since 2026-10-31: a countdown, or KEPT FOR the pad that still
+            // needs it, which no 30 days in the title would be true of.
+            PillCard("THE BIN — DELETED PAD AUDIO", scheme, BIN_RED_BORDER, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {
@@ -551,7 +573,28 @@ private data class TakeRow(
     val changes: List<KitDiff.Change>?,
 )
 
-private data class BinRow(val entry: KitBuilderModel.BinEntry, val daysLeft: Int, val classColor: Color?)
+/**
+ * One row of THE BIN. [keptFor] is the slot of a pad that still needs the entry
+ * ([KitBuilderModel.BinHold.keptFor]), and [daysLeft] is then null; otherwise
+ * [daysLeft] is the entry's countdown ([KitBuilderModel.BinHold.daysLeft]).
+ */
+private data class BinRow(val entry: KitBuilderModel.BinEntry, val keptFor: Int?, val daysLeft: Int?, val classColor: Color?)
+
+/**
+ * Every entry on its plain clock, [KitBuilderModel.BIN_KEEP_DAYS] from when it
+ * went in: what THE BIN shows when [KitBuilderModel.binHolds] cannot be built
+ * (`refreshLists`). Saturating, as `binHolds`' own clock is, so a forged stamp
+ * near `Long.MAX_VALUE` reads as far off rather than wrapping. PadSheetScreen
+ * carries its own copy, as this file's [withFreshKit] and [HeaderChip] are
+ * file-local copies too.
+ */
+private fun onTheClock(entries: List<KitBuilderModel.BinEntry>): List<KitBuilderModel.BinHold> {
+    val keepMs = (KitBuilderModel.BIN_KEEP_DAYS * 86_400_000).toLong()
+    return entries.map {
+        val purgeAt = if (it.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else it.binnedAtMillis + keepMs
+        KitBuilderModel.BinHold(it, keptFor = null, purgeAtMillis = purgeAt)
+    }
+}
 
 /**
  * The one correct shape for a kit mutation issued by a screen whose own
@@ -681,9 +724,8 @@ private fun TakeRowLine(
 
 @Composable
 private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (KitBuilderModel.BinEntry) -> Unit) {
-    // ≤2 days left renders in `scheme.warn` (the handoff's "≤2 days amber");
-    // everything else stays in the LCD's second colour, same as the artboard.
-    val dayColor = if (row.daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
+    val keptFor = row.keptFor
+    val daysLeft = row.daysLeft
     Row(
         Modifier
             .fillMaxWidth()
@@ -701,7 +743,15 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
                 .background(row.classColor ?: scheme.lcdInk2, RoundedCornerShape(2.dp)),
         )
         TapeText(row.entry.originalName, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
-        TapeText("${row.daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
+        when {
+            // Kept for a pad: amber, never the warn colour, because nothing
+            // here is about to leave.
+            keptFor != null -> TapeText(Copy.binKeptFor(PadBanks.tag(keptFor)), TapeType.lcdSmall, scheme.amber.tape)
+            // ≤2 days left renders in `scheme.warn` (the handoff's "≤2 days
+            // amber"); everything else stays in the LCD's second colour,
+            // same as the artboard.
+            daysLeft != null -> TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape)
+        }
         Box(
             Modifier
                 .heightIn(min = Layout.MIN_HIT_TARGET.dp)
