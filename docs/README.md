@@ -1,5 +1,22 @@
 # Which document to trust
 
+**Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
+
+**Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
+voice, its approved Python direction, native port and remaining listening
+checks. It distinguishes saved excitation strength from MPC playback gain.
+
+**Tidal.** [`TIDAL.md`](TIDAL.md) records the approved model-2 source direction,
+finite PAIR/STREAM editor, factory presets, dry starter and saved-recipe policies.
+[`TIDAL_PERFORMANCE.md`](TIDAL_PERFORMANCE.md) records render-only measurements,
+cache behavior and reference-audio preservation. Held source listening and device
+acceptance remain separate checks.
+
+**OHM.** [`OHM.md`](OHM.md) records the dry coupled-string listening
+instrument, versioned recipes and the control-authority revision. Its audition
+compares the original and revised renderers directly. The revised sound is the
+working baseline, with five auditioned recipes in the synth picker.
+
 The tree has moved faster than some of the notes. When two of them
 disagree, this is the order.
 
@@ -12,6 +29,21 @@ III can answer, and it says so when a row has been paused.
 to write each answer on. [`../DEVICE_TEST_GUIDE.md`](../DEVICE_TEST_GUIDE.md)
 is a shorter first session. [`../app/README.md`](../app/README.md) is the
 per-feature detail and the build steps.
+
+**MIDI and timing.** [`MIDI_SYNC.md`](MIDI_SYNC.md) is the design record for the
+clock; read its "How far to trust this document" section before relying on any
+line of it. [`MIDI_REVIEW_2026_10.md`](MIDI_REVIEW_2026_10.md) read the MIDI
+path at one commit and ordered the first steps; its status section says what has
+landed since. [`MIDI_BLE_SPEC_2026_10.md`](MIDI_BLE_SPEC_2026_10.md) specifies a
+Bluetooth keyboard that is not implemented. [`MIDI_OUT_SPEC_2026_10.md`](MIDI_OUT_SPEC_2026_10.md)
+is the spec for MIDI out and the published "SnipSnap In" and "SnipSnap Out" ports, with its
+"As built" in section 13. [`MIDI_GAPS_2026_10.md`](MIDI_GAPS_2026_10.md)
+is the current survey of the open work and holds the "As built" records of batches A, B and C,
+so trust it first for what the tree has now.
+[`MIDI_CONTROLLER_PLAN_2026_10.md`](MIDI_CONTROLLER_PLAN_2026_10.md) plans full
+support for one keyboard controller (the MiniLab 3) as the archetype for all of them.
+[`MIDI_CLOCK_PROBE_SPEC_2026_10.md`](MIDI_CLOCK_PROBE_SPEC_2026_10.md) specifies the CLOCK CHECK
+that answers bench S1, with its "As built" in section 6.
 
 **Formats.** [`MPC3_FORMAT.md`](MPC3_FORMAT.md) is the native container,
 and it keeps corpus facts separate from inferences. [`MPC_EXPORT.md`](MPC_EXPORT.md)
@@ -26,10 +58,26 @@ the original MVP cut. [`SYNTH_UPGRADE.md`](SYNTH_UPGRADE.md) measures a
 gap from before the preset library; its counts are that gap, not the
 current roster.
 
-**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BUBBLE listening prototype,
+**Caustic.** [`CAUSTIC.md`](CAUSTIC.md) records the first static circular
+reflection prototype, portable recipes and dry position/mechanism audition.
+Its singing-body identity awaits listening; moving geometry, HOLD and phone
+integration remain later work.
+
+**Wick.** [`WICK.md`](WICK.md) records the PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE listening prototype,
 recipe contracts, musical phrases, held-loop strategy and private audition. The supplied
 [`engineering specification`](WICK_SPEC.md) is preserved as the proposal;
-the remaining voices and full preset library await listening.
+RATTLE and the full preset library await listening.
+
+**Filament.** [`FILAMENT.md`](FILAMENT.md) records the THREAD/PULSE/CURL
+approved strand-routing instrument, factory and phone integration, saved
+recipes, branch allocation, dry listening comparisons and held-loop evidence.
+The supplied engineering specification is preserved as a proposal; its larger
+voice roster and attack-plus-loop keygroup adapter remain later work.
+
+**Brass GROW.** [`engineering/brass-grow-prototype.md`](engineering/brass-grow-prototype.md)
+records the experimental single-source EMBOUCHURE BRASS mode, its saved-model
+boundary, pad workflow and reproducible register/velocity checks. The published
+audition remains a sound reference; the in-app prototype still needs device playing.
 
 **Oven.** [`OVEN.md`](OVEN.md) records the approved ten-preset sonic baseline,
 the phone synth integration and finite per-note resonance. Keyboard velocity
@@ -48,7 +96,11 @@ The owner confirmed revised FLOW is audible; saved model-1 recipes remain
 replayable. Its
 [private audition](https://flock-snipsnap-audition.bertcalm.chatgpt.site) compares
 neighbor interaction with fixed detuning and independent motion. HOLD always
-sets a finite duration; sustained loops and phone/MPC hardware checks remain open.
+sets a finite duration. [The held RIBBON instrument](FLOCK_RIBBON_INSTRUMENT.md)
+adds explicit saved playback and release through the existing phone/MPC instrument
+path. [Optional RIBBON touch layers](FLOCK_RIBBON_TOUCH.md) add soft, medium and
+hard source disturbances to each root through the same instrument player. Phone/MPC
+hardware checks remain open.
 The separate RIBBON sustain study compares long continuous renders with captured
 roughly six-second loops at three FLOW settings, without changing the finite presets.
 
@@ -56,24 +108,51 @@ roughly six-second loops at three FLOW settings, without changing the finite pre
 recipe and audition contracts. HOLD extends the finite gesture; repeating
 sea cycles and the owner's sonic acceptance remain open.
 
+**Trefoil.** [`TREFOIL.md`](TREFOIL.md) records the finite three-body resonator
+prototype, passive exchange, reproducible reference and complete listening recipes.
+HOLD, phone integration and owner listening acceptance remain open.
+
 **Scanned Chain.** [`SCANNED_CHAIN.md`](SCANNED_CHAIN.md) describes the editable
 render-to-pad voice, three presets, factory/drawn/sample shapes and complete
 patch recall. The earlier [listening experiment](SCANNED_CHAIN_EXPERIMENT.md)
 and its published comparisons remain available separately.
 
 **Chamber.** [`CHAMBER.md`](CHAMBER.md) records the finite HYBRID/AQUARIUM
-first-listen prototype, complete room recipes, passive feedback model and
-playback limits. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-is published; the owner's listening verdict remains pending. The supplied [`engineering specification`](CHAMBER_SPEC.md)
+instrument, phone controls, complete room recipes, MPC starter and passive
+feedback model. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
+contains the current-model study and archived timpani comparisons. The owner
+accepted the revised membrane direction; wider listening and physical-device
+checks remain open. The supplied [`engineering specification`](CHAMBER_SPEC.md)
 remains the unchanged proposal; sustained HOLD and the wider library are later work.
 
 **Orphica.** [`ORPHICA.md`](ORPHICA.md) records the microsound harp, approved
 finite listening audition, phone controls and captured-sustain instrument
 export. Phone and MPC listening checks remain open.
 
-**Aquarium.** The accepted [six-effect audition](https://snipsnap-aquarium-pedals-audition.bertcalm.chatgpt.site)
-is preserved by the shared native processor and standalone settings contract.
-The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md)
-and [implementation plan](superpowers/plans/2026-10-18-aquarium-foundation.md)
-separate that foundation from the planned pad rendering, performance routing
-and controls. The foundation does not yet process app playback.
+**Aquarium.** [`AQUARIUM.md`](AQUARIUM.md) records the accepted six-effect core,
+the PAD → TREATMENT → AQUARIUM controls, finite native pad printing, saved sources,
+replay and export contracts. The [first performance backend](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md)
+connects PadEngine playback and stereo PRINT. The [KIT PERFORMANCE panel](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md)
+adds live controls and saved kit settings. Remaining routes and physical-device checks follow
+the [integration plan](superpowers/plans/2026-10-18-aquarium-foundation.md).
+
+**Code review, October 2026.** [`CODE_REVIEW_2026_10.md`](CODE_REVIEW_2026_10.md)
+records the whole-app review of 2026-10-17: the six guards that landed with
+it (kit-name containment, a frame-capped share-door WAV decode, an XPN entry
+ceiling, canonical SFZ containment with one copy budget, a NaN-safe DC mean,
+recordings kept out of cloud backup) and the findings recorded for a design
+or listening session. Its sound-quality findings are the review's claims,
+not heard, and nothing in that change alters a shipped sound.
+
+**Apsis.** [APSIS.md](APSIS.md) records the PASSAGE orbital listening prototype,
+explicit note/velocity recipes, internal resonant exchange, and the recurring
+HOLD roster. The six-voice production bank remains later work;
+mathematical and numerical checks do not establish the owner's listening verdict.
+Android SYNTH now exposes the six presets, ROOT, VELOCITY and movement controls,
+complete saved recipes, looping previews and gated full-cycle pad exports.
+The second listening round includes Luthier's masking review, model-1 replay,
+and the model-2 body-forward voicing with six same-pitch preset gestures.
+The musical-bank round adds model-3 playing response and bounded preparation
+reuse, seven exported-sample scores, three velocity-layer inspections, and a
+native sixteen-pad MPC 3/MPC 2 bank with forty PCM24 samples. The retained
+history and physical device checks remain separate.

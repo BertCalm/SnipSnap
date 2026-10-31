@@ -56,7 +56,6 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Source audio is only needed while choosing a window; the patch stores the resulting shape. */
 private data class ScannedSource(val snip: Snip, val label: String, val truncated: Boolean)
@@ -105,7 +104,7 @@ internal fun ScannedShapeControls(
         pickingSource = false
         sourceJob = scope.launch {
             try {
-                val loaded = withContext(Dispatchers.IO) {
+                val loaded = offMain {
                     val read = WavReader.readCapped(File(kitEntry.dir, pad.sampleFile), SCANNED_SOURCE_MAX_SECONDS)
                     ScannedSource(read.snip, (pad.displayName ?: PadBanks.tag(pad.slot)).take(256), read.truncated)
                 }
@@ -121,6 +120,16 @@ internal fun ScannedShapeControls(
     }
 
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (patch.model == ScannedChain.LEGACY_MODEL) {
+            TapeText("ORIGINAL CONTROL RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
+            LabButton("USE UPDATED CONTROLS", scheme, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                changePatch(currentPatch.copy(model = ScannedChain.MODEL_VERSION))
+            }
+            TapeText(
+                "Keeps this source and settings with a stronger BEND and source-aware BLOOM.",
+                TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
+            )
+        }
         TapeText("INITIAL SHAPE · ${patch.shape.source.name}", TapeType.pixel, scheme.amber.tape)
         TapeText(patch.shape.label, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
         patch.shape.sample?.let { sample ->
@@ -212,7 +221,7 @@ internal fun ScannedShapeControls(
                     busy = true
                     sourceJob = scope.launch {
                         try {
-                            val shape = withContext(Dispatchers.Default) {
+                            val shape = offMain(Dispatchers.Default) {
                                 ScannedChainShape.fromSample(loaded.snip, startFrame, mode, loaded.label)
                             }
                             changePatch(currentPatch.copy(shape = shape))

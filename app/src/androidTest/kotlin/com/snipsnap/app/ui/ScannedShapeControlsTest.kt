@@ -91,6 +91,19 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     }
 
     @Test
+    fun updated_controls_keep_the_complete_legacy_source_and_settings() {
+        val original = fixture(ScannedChainVoice.BLOOM).copy(model = ScannedChain.LEGACY_MODEL)
+        show(original)
+        assertReadsInFull("USE UPDATED CONTROLS")
+
+        tap("USE UPDATED CONTROLS")
+
+        assertEquals(original.copy(model = ScannedChain.MODEL_VERSION), currentPatch)
+        assertEquals(1, changeCount)
+        compose.onNodeWithText("USE UPDATED CONTROLS", useUnmergedTree = true).assertDoesNotExist()
+    }
+
+    @Test
     fun a_drawn_starting_shape_commits_without_resetting_the_current_recipe() {
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original)

@@ -73,6 +73,19 @@ jobs:
       # later must not be silently untested because nobody updated this line.
       - name: Run JVM test suites
         run: ./gradlew --no-daemon test -x :app:test
+      # A worker/framework failure can leave only a skipped method and a
+      # generic Gradle error in the console. Retain the actual failure.
+      - name: Keep JVM failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jvm-test-reports-${{ github.sha }}
+          path: |
+            **/build/test-results/test/**
+            **/build/reports/tests/test/**
+            **/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 3
 
   android-build:
     runs-on: ubuntu-latest
@@ -88,7 +101,7 @@ jobs:
         with:
           packages: ""
       - name: Assemble the app and compile device tests
-        run: ./gradlew --no-daemon :app:assembleDebug :app:compileDebugAndroidTestKotlin
+        run: ./gradlew --no-daemon :app:assembleDebug :app:assembleStrikeFx :app:compileDebugAndroidTestKotlin
       # The job already builds a working APK and then throws it away with
       # the runner. Keeping it is the difference between "the app compiles"
       # and "here is the app" — every green build on every branch becomes
@@ -107,6 +120,14 @@ jobs:
           # the default is 90 days - hundreds of APKs nobody will install
           # after the evening they were built. A week is longer than any of
           # these has ever stayed interesting.
+          retention-days: 7
+
+      - name: Keep the separately installable STRIKE FX demo
+        uses: actions/upload-artifact@v4
+        with:
+          name: snipsnap-strike-fx-${{ github.sha }}
+          path: app/build/outputs/apk/strikeFx/app-strikeFx.apk
+          if-no-files-found: error
           retention-days: 7
 
   native-tests:

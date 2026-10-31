@@ -209,18 +209,26 @@ class KitBuilderModel private constructor(
         return edited
     }
 
-    /** Adopt already-written board files while retaining every unrelated pad field. */
-    internal fun replaceBoardPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad {
-        require(kit.pad(slot) == expected) { "the pad changed while WIDE was rendering; try again" }
+    /** Adopt already-written printed files while retaining every unrelated pad field. */
+    internal fun replacePrintedPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad {
+        require(kit.pad(slot) == expected) { "the pad changed while the treatment was rendering; try again" }
         require(replacement.slot == slot && replacement.copy(
             sampleFile = expected.sampleFile,
             velocityLayers = expected.velocityLayers,
             recipe = expected.recipe,
-        ) == expected) { "a board can change only audio files, velocity layers and its recipe" }
-        kit = kit.copy(pads = kit.pads.map { if (it.slot == slot) replacement else it })
+        ) == expected) { "a printed treatment can change only audio files, velocity layers and its recipe" }
+        // This fingerprint names the previous current WAV, not its provenance.
+        // Even REMOVE and UNDO adopt different audio; exports fingerprint that
+        // result again. Keep the caller guard strict before clearing this key.
+        val adopted = replacement.copy(source = replacement.source - "rawSha256")
+        kit = kit.copy(pads = kit.pads.map { if (it.slot == slot) adopted else it })
         dirty = true
-        return replacement
+        return adopted
     }
+
+    /** Existing board callers retain the same guarded adoption door. */
+    internal fun replaceBoardPad(slot: Int, expected: KitPad, replacement: KitPad): KitPad =
+        replacePrintedPad(slot, expected, replacement)
 
     /**
      * Set or clear the kit's key. Choosing a key never retunes anything by
@@ -236,6 +244,14 @@ class KitBuilderModel private constructor(
     fun setTempo(bpm: Float?) {
         if (kit.tempoBpm == bpm) return
         kit = kit.copy(tempoBpm = bpm)
+        dirty = true
+    }
+
+    /** Store a complete live snapshot without rewriting or printing any sample. */
+    fun setAquariumPerformance(settings: com.snipsnap.synth.AquariumPerformanceSettings) {
+        val value = settings.toJsonValue()
+        if (kit.aquariumPerformance == value) return
+        kit = kit.copy(aquariumPerformance = value)
         dirty = true
     }
 
@@ -394,7 +410,7 @@ class KitBuilderModel private constructor(
     fun addGhostLayers(slot: Int, softZones: Int = 1): KitPad {
         require(softZones in 1..2) { "1 or 2 soft zones, got $softZones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SOFT_HITS }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered" }
         val main = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
         // Velocity.layerAt makes the same patch-vs-captured (and
@@ -459,7 +475,7 @@ class KitBuilderModel private constructor(
         require(softTakes.size in 1..StackTakes.MAX_SOFT) { "1..${StackTakes.MAX_SOFT} soft takes, got ${softTakes.size}" }
         require(softTakes.map { it.file }.toSet().size == softTakes.size) { "the same take can't fill two zones" }
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_STACK }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeStack(PrintedPads.label(pad.recipe)) }
         require(pad.velocityLayers.isEmpty()) { "pad $slot is already velocity-layered - `clearGhostLayers($slot)` before stacking" }
         requireNotChained(pad, "stacking")
         // The entries must be THIS kit's bin's: `originalName` alone is a
@@ -545,12 +561,12 @@ class KitBuilderModel private constructor(
         // The imported audition's fingerprint describes the previous WAV.
         // Keep its provenance, but never carry that current-file claim onto
         // regenerated or treated audio; exporters fingerprint the new file.
-        // An unlabelled audio replacement also cannot retain a WIDE inventory:
+        // An unlabelled audio replacement also cannot retain a printed inventory:
         // its hashes describe the old sound. Other legacy recipes keep the
         // existing preserve-on-null behavior; an explicit new recipe wins.
         return update(slot) {
             it.copy(
-                recipe = recipe ?: it.recipe?.takeUnless { old -> "boardPad" in old.entries },
+                recipe = recipe ?: it.recipe?.takeUnless(PrintedPads::has),
                 source = it.source - "rawSha256",
             )
         }
@@ -748,6 +764,74 @@ class KitBuilderModel private constructor(
         }
     }
 
+    /**
+     * The pedal library's board over every file the pad references
+     * (docs/superpowers/specs/2026-10-21-pedal-library-and-board-design.md):
+     * the picks rendered as passes around the amp from the audio on disk,
+     * originals binned, the `pedals` recipe riding the pad. The same door
+     * shape as [characterPad]; the caller restores first ([unEraPad]) when
+     * the bin can, so picks never stack, as the sheet does for a chip. A
+     * board at AMT 0 everywhere is a no-op that touches neither the file
+     * nor the bin. A WIDE (or any compound) board pad refuses, as it refuses
+     * a chip: the two boards do not share a key or a store. Undo is [unEraPad].
+     */
+    fun pedalPad(slot: Int, board: com.snipsnap.synth.PedalBoard): KitPad {
+        val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
+        BoardSheet.read(pad.recipe)?.let {
+            throw IllegalArgumentException("pad $slot carries a ${it.type.name} board - remove it before adding pedals")
+        }
+        if (board.isBypass) return pad
+        // A synth pad that still carries its patch is re-rendered from it with the pedals around its own
+        // landing chain, the pedals in front of the amp (docs/superpowers/specs/2026-10-27-pedals-in-front-
+        // of-the-amp-design.md), and keeps the patch so the next tap, undo and replay can do it again. A
+        // velocity-layered pad keeps the old way: its soft layers are softened copies of the main take, not
+        // renders of the patch, so they could not follow the main file in front of the amp.
+        synthRecipeForPedals(pad)?.let { recipe ->
+            val withPedals = recipe.copy(pedals = board)
+            return rewriteEveryFile(pad, "pedals") { _ -> withPedals.render() to withPedals.toJsonValue() }
+        }
+        return rewriteEveryFile(pad, "pedals") { original ->
+            board.process(original) to com.snipsnap.synth.PadRecipe(pedals = board).toJsonValue()
+        }
+    }
+
+    /**
+     * Whether pad [slot]'s pedals sit in front of its own amp: the PEDALS card draws the pad's amp
+     * between the AMP and POST passes only when this is true
+     * (docs/superpowers/specs/2026-10-30-pad-pedalboard-card-design.md). A pad that carries pedals
+     * answers from its recipe ([PedalSlate.aroundTheAmp]); one that carries none answers where
+     * [pedalPad] would put the next one, which reads its file. False for an empty slot.
+     */
+    fun pedalsAroundTheAmp(slot: Int): Boolean {
+        val pad = kit.pad(slot) ?: return false
+        PedalSlate.aroundTheAmp(pad.recipe)?.let { return it }
+        return synthRecipeForPedals(pad)?.fx?.isBypass == false
+    }
+
+    /**
+     * The pad's synth recipe with no pedals on it, when the pedals can go in front of its amp: a patch, no
+     * velocity layers, no named treatment, no compound board, and the recipe still renders the file on disk.
+     * That last check matters because an audio replacement with no recipe keeps the old one
+     * ([replaceAudio]'s preserve-on-null), so a patch can outlive the sound it made; re-rendering it then
+     * would throw the pad's real audio away. Null for every other pad, which keeps the after-the-amp way.
+     */
+    private fun synthRecipeForPedals(pad: KitPad): com.snipsnap.synth.PadRecipe? {
+        if (pad.velocityLayers.isNotEmpty()) return null
+        val recipe = Breed.recipeOf(pad) ?: return null
+        if (recipe.patch == null || recipe.treatment != null || recipe.board != null) return null
+        val plain = recipe.copy(pedals = null)
+        val onDisk = com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        return plain.takeIf { rendersTo(it.render(), onDisk) }
+    }
+
+    /** The same sound up to the WAV's own quantization: same shape, no sample further apart than [RENDER_MATCH]. */
+    private fun rendersTo(rendered: Snip, file: Snip): Boolean {
+        if (rendered.channels != file.channels || rendered.sampleRate != file.sampleRate) return false
+        if (rendered.frameCount != file.frameCount) return false
+        for (i in rendered.samples.indices) if (kotlin.math.abs(rendered.samples[i] - file.samples[i]) > RENDER_MATCH) return false
+        return true
+    }
+
     /** The keyed family's honest refusal: the pad is a drum or noise, not a note. */
     class Unpitched(message: String) : IllegalArgumentException(message)
 
@@ -848,8 +932,16 @@ class KitBuilderModel private constructor(
             if (restoreFromBin(f) != null) restoredAny = true
         }
         require(restoredAny) { "nothing to restore for pad $slot - the bin holds no earlier take of it" }
-        return update(slot) { it.copy(recipe = null) }
+        return update(slot) { it.copy(recipe = recipeAfterUndo(pad)) }
     }
+
+    /**
+     * What a pad's recipe is once its treatment is undone. Pedals on a synth pad kept its patch, so undo gives
+     * the pad back its patch recipe rather than nothing: the sheet's restore-then-apply, the next pedal tap and
+     * the CLI's `--undo` can still render in front of the amp. Every other undo clears the recipe, as before.
+     */
+    private fun recipeAfterUndo(pad: KitPad): com.snipsnap.json.JsonValue.Obj? =
+        Breed.recipeOf(pad)?.takeIf { it.patch != null && it.pedals != null }?.copy(pedals = null)?.toJsonValue()
 
     /** Undo the last treatment: the previous audio comes back out of the bin. */
     fun untreatPad(slot: Int): KitPad {
@@ -857,13 +949,13 @@ class KitBuilderModel private constructor(
         requireNotChained(pad, "un-treating")
         restoreFromBin(pad.sampleFile)
             ?: throw IllegalArgumentException("nothing to restore for pad $slot - the bin holds no earlier take of it")
-        return update(slot) { it.copy(recipe = null) }
+        return update(slot) { it.copy(recipe = recipeAfterUndo(pad)) }
     }
 
     /** Back to a single-sample pad; the soft renders are deleted. */
     fun clearGhostLayers(slot: Int): KitPad {
         val pad = kit.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
-        require(pad.recipe?.entries?.containsKey("boardPad") != true) { Copy.WIDE_REMOVE_BEFORE_SOFT_HITS }
+        require(!PrintedPads.has(pad.recipe)) { Copy.boardRemoveBeforeSoftHits(PrintedPads.label(pad.recipe)) }
         val softFiles = pad.velocityLayers.map { it.sampleFile }.filter { it != pad.sampleFile }
         val cleared = update(slot) { it.copy(velocityLayers = emptyList()) }
         softFiles.forEach { File(kitDir, it).delete() }
@@ -1326,6 +1418,12 @@ class KitBuilderModel private constructor(
     }
 
     companion object {
+
+        /**
+         * How far apart a re-render and the file on disk may be and still be the same sound: 1e-3, well over a
+         * 16-bit step (3.1e-5) and a 24-bit one, and far under any change a different sound would make.
+         */
+        const val RENDER_MATCH = 1e-3f
 
         /** Provenance stamps that describe the old file's processing, dropped by [backOnto]. */
         val LEFT_WITH_OLD_FILE: Set<String> = setOf("mutatedWith", "outside", "desampled")

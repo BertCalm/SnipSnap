@@ -109,7 +109,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.withContext
 
 /**
  * GROOVE: the needle-roll over a kit's captured break — five derived-or-
@@ -409,7 +408,7 @@ fun GrooveScreen(
     var loading by remember(kitDir) { mutableStateOf(true) }
     LaunchedEffect(kitDir, reloadRequest) {
         loading = true
-        val (b, all) = withContext(Dispatchers.IO) {
+        val (b, all) = offMain {
             // The captured base used to be taken as whatever was stored
             // first, on a convention several call sites shared. It is now
             // taken by the same predicate `GrooveEdit` and `Arranger` use,
@@ -494,7 +493,7 @@ fun GrooveScreen(
             onAuditionArmed()
             return@LaunchedEffect
         }
-        val built = withContext(Dispatchers.IO) {
+        val built = offMain {
             val a = runCatching { WavReader.readCapped(File(entry.dir, target.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
             val b = runCatching { WavReader.readCapped(File(entry.dir, sibling.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
             if (a == null || b == null) {
@@ -654,7 +653,7 @@ fun GrooveScreen(
     // `landingBounce` while the import was still running, opening the
     // button back up (and letting the screen be left) mid-write.
     suspend fun landBounce(snip: Snip) {
-        val landed = withContext(Dispatchers.IO) {
+        val landed = offMain {
             runCatching { SnipStore.import(snip, context.filesDir, System.currentTimeMillis()) }
         }
         landed.onSuccess {
@@ -679,7 +678,7 @@ fun GrooveScreen(
         val generation = bounceGeneration
         scope.launch {
             try {
-                val snip = withContext(Dispatchers.Default) { player.stopPrint() }
+                val snip = offMain(Dispatchers.Default) { player.stopPrint() }
                 // Superseded while stopPrint's bounded wait was running -
                 // discardBounce already bumped this past what was captured
                 // above, so nothing here is landed and nothing is toasted:
@@ -871,7 +870,7 @@ fun GrooveScreen(
         busy = true
         appScope.launch {
             try {
-                val winnerSnip = withContext(Dispatchers.IO) {
+                val winnerSnip = offMain {
                     runCatching { WavReader.readCapped(File(entry.dir, winner.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
                 }
                 if (winnerSnip == null) {
@@ -879,7 +878,7 @@ fun GrooveScreen(
                     return@launch
                 }
                 var applied = false
-                val fresh = withContext(Dispatchers.IO) {
+                val fresh = offMain {
                     KitWrites.mutex.withLock {
                         val f = KitBuilderModel.open(entry.dir)
                         if (f.kit.pad(slot)?.sampleFile == staleSampleFile) {
@@ -922,7 +921,7 @@ fun GrooveScreen(
         if (!editorDirty) return
         val c = eClip ?: return
         try {
-            withContext(Dispatchers.IO) { GrooveEdit.save(kitDir, c) }
+            offMain { GrooveEdit.save(kitDir, c) }
             editorDirty = false
             onBeatWritten()
         } catch (e: Exception) {
@@ -1032,13 +1031,13 @@ fun GrooveScreen(
     // converting elapsed wall time to elapsed steps (TAPE's own dt-clamp
     // lesson against a stale frame gap fast-forwarding the needle), reading
     // the program this screen last pushed. App drives the one it hands in,
-    // keyed on the transport, the kit's folder and the kit itself; a beat
-    // built here is driven from here with the same keys. An edit that
+    // keyed on the transport, folder, pads and tempo; a beat built here
+    // uses the same keys. Live-bus metadata leaves the clock running. An edit that
     // reaches the clock while the roll is running restarts it, and
     // restarting costs nothing — the beat reads its position back from
     // state, so the needle resumes where it was.
     if (ownsBeat) {
-        LaunchedEffect(beat.playing, kitDir, entry.kit) { beat.run() }
+        LaunchedEffect(beat.playing, kitDir, entry.kit.pads, entry.kit.tempoBpm) { beat.run() }
     }
 
     // What this screen hangs on the clock: BOUNCE's arming and its pattern-
@@ -1157,7 +1156,7 @@ fun GrooveScreen(
         busy = true
         scope.launch {
             try {
-                val (b, e) = withContext(Dispatchers.IO) { GrooveEdit.startEmpty(kitDir, kit.name) }
+                val (b, e) = offMain { GrooveEdit.startEmpty(kitDir, kit.name) }
                 base = b
                 setYours(e)
                 editorSourceLabel = PROG_SOURCES[0]
@@ -1189,7 +1188,7 @@ fun GrooveScreen(
         val sourceLetter = if (progIndex < YOURS_INDEX) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
-                val (hadE, forked) = withContext(Dispatchers.IO) {
+                val (hadE, forked) = offMain {
                     // `index = yoursIndex`, not the default: EDIT STEPS
                     // opens the program you are looking at. Left at 0 it
                     // re-entered the first one however far you had cycled.
@@ -1252,7 +1251,7 @@ fun GrooveScreen(
         val sourceLetter = if (progIndex < YOURS_INDEX) PROG_SOURCES[progIndex] else editorSourceLabel
         scope.launch {
             try {
-                val forked = withContext(Dispatchers.IO) {
+                val forked = offMain {
                     // Replacing the one on screen when there is nowhere to
                     // put a new one; otherwise the next free slot.
                     if (full) {
@@ -1355,7 +1354,7 @@ fun GrooveScreen(
                     GrooveProgram.compute(it, exportBase, swingPercent, feel, feelTemplate, eClip = null)
                 } + yoursAll
                 val bpm = kit.tempoBpm ?: KitPreview.DEFAULT_BPM
-                val written = withContext(Dispatchers.IO) {
+                val written = offMain {
                     val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     val midiDir = File(File(root, Names.sanitizeStem(kit.name)), "midi")
@@ -1403,7 +1402,7 @@ fun GrooveScreen(
                     program = program,
                 )
                 val relative = "exports/${Names.sanitizeStem(kit.name)}/chart/${Names.sanitizeStem(clip.name)}.txt"
-                val file = withContext(Dispatchers.IO) {
+                val file = offMain {
                     val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     val out = File(File(File(root, Names.sanitizeStem(kit.name)), "chart"), "${Names.sanitizeStem(clip.name)}.txt")
@@ -1447,7 +1446,7 @@ fun GrooveScreen(
         scope.launch {
             try {
                 val stem = Names.sanitizeStem(kit.name)
-                val file = withContext(Dispatchers.IO) {
+                val file = offMain {
                     val root = Exports.dir(context)
                         ?: throw IOException("external storage unavailable")
                     val rendered = KitPreview.renderLoop(kit, kitDir, clip, passes = 2)
@@ -1723,7 +1722,7 @@ fun GrooveScreen(
         scope.launch {
             try {
                 val clip = LiveRecord.toClip(t, name, existing = landBase)
-                withContext(Dispatchers.IO) { LiveRecord.land(kitDir, clip) }
+                offMain { LiveRecord.land(kitDir, clip) }
                 onBeatWritten()
                 base = clip
                 justLanded = true
@@ -1765,7 +1764,7 @@ fun GrooveScreen(
         busy = true
         scope.launch {
             try {
-                withContext(Dispatchers.IO) { LiveRecord.undo(kitDir, snapshot) }
+                offMain { LiveRecord.undo(kitDir, snapshot) }
                 onBeatWritten()
                 base = snapshot
                 progIndex = 0
@@ -2719,9 +2718,9 @@ private fun AuditionBar(
 /**
  * The main view: a fixed needle at [Layout.NEEDLE_Y], notes scrolling
  * under it at [Layout.STEP_W] px/step. The needle draws in [Scheme.warn]
- * — deliberately not [Scheme.amber] (OILSLICK spends that slot on cyan; a
- * needle drawn in it would vanish into the readouts it's meant to cross),
- * per `Scheme.warn`'s own KDoc. This is load-bearing design history, not a
+ * — deliberately not [Scheme.amber] (a scheme may spend that slot on a cool
+ * colour; a needle drawn in it would vanish into the readouts it's meant to
+ * cross), per `Scheme.warn`'s own KDoc. This is load-bearing design history, not a
  * styling choice to relitigate.
  */
 @Composable

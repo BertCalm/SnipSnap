@@ -22,14 +22,20 @@
   const nativeAudio = ui['native-audio'];
   const verdictButtons = [...document.querySelectorAll('[data-verdict]')];
   const sectionNames = {
+    'sustain-comparisons': 'Sustained ensemble · R5 / R6',
+    'depth-comparisons': 'More body · R4 / R5',
+    'depth-comparison-baselines': 'Original TRANSISTOR · R4',
     identities: 'First listen', velocity: 'Velocity', sweeps: 'Controls',
     loops: 'Held tones', presets: 'TRANSISTOR presets', references: 'Organ references', comparisons: 'Airflow · R2 / R3',
     'chiff-history': 'Chiff history · R1 / R2'
   };
   const sectionCopy = {
+    'sustain-comparisons': 'Seven keyboard comparisons: Compact Keys and Garage Buzz at C3, C4 and C5, plus Clean Combo with SPREAD 0. Play past the attack and 350–450 ms handoff, then follow three complete loop repeats. Baseline R5 and Revised sustain R6 share all preset settings.',
+    'depth-comparisons': 'Eleven TRANSISTOR pairs: six first listens, three presets and two held tones. Compare Original R4 with More body R5 at the same pitch and gesture. Matched playback keeps the listening level consistent.',
+    'depth-comparison-baselines': 'The original TRANSISTOR renders from R4, preserved with their listening notes. Use the More body study for paired comparisons with R5.',
     identities: 'PIPE, MUSETTE and TRANSISTOR at three pitches, with restrained and expressive gestures. Start here, then compare the same pitch across voices.',
     velocity: 'A fixed patch at different velocities. Listen for a change in speech and body as well as level.',
-    sweeps: 'One control moves at a time. Compare low, default, and high settings. On TRANSISTOR, AIR shapes the keyer transient, EDGE adds drive and MOTION adds vibrato.',
+    sweeps: 'One control moves at a time. Compare low, default, and high settings. On TRANSISTOR, AIR shapes the keyer transient on finite notes, EDGE adds drive and MOTION adds vibrato.',
     loops: 'Settled, onset-free tones. The main player repeats the exact held region; listen for the seam and the persistence of the voice.',
     presets: 'Three TRANSISTOR registrations: the core voice, a cleaner chord sound and a driven garage-organ sound. Compare their keying, rank color, vibrato and drive.',
     references: 'Existing SnipSnap organ voices at matching pitches. Compare what PIPE, MUSETTE and TRANSISTOR add to the kit.',
@@ -45,7 +51,9 @@
     selectionToken: 0, animation: 0, buffers: new Map(), comparison: null
   };
   const manifestUrl = new URL('manifest.json', document.baseURI);
-  const requestedVoice = (new URL(window.location.href).searchParams.get('voice') || '').trim().toUpperCase();
+  const requestedParams = new URL(window.location.href).searchParams;
+  const requestedVoice = (requestedParams.get('voice') || '').trim().toUpperCase();
+  const requestedStudy = (requestedParams.get('study') || '').trim().toLowerCase();
   const resolveAsset = (path) => {
     const url = new URL(path, manifestUrl);
     if (state.manifest?.audioHash) url.searchParams.set('audioHash', state.manifest.audioHash);
@@ -55,10 +63,24 @@
   const identityClip = (voice) => state.manifest?.clips.find((clip) => clip.section === 'identities'
     && clip.voice === voice && clip.note === 60 && clip.gesture === 'restrained')
     || state.manifest?.clips.find((clip) => clip.section === 'identities' && clip.voice === voice);
-  const allPairs = () => [...(state.manifest?.comparisonPairs || []), ...(state.manifest?.comparisonHistoryPairs || [])];
-  const sectionPairs = (section = state.section) => section === 'comparisons'
+  const allPairs = () => [...(state.manifest?.sustainComparisonPairs || []), ...(state.manifest?.depthComparisonPairs || []), ...(state.manifest?.comparisonPairs || []), ...(state.manifest?.comparisonHistoryPairs || [])];
+  const sectionPairs = (section = state.section) => section === 'sustain-comparisons'
+    ? state.manifest?.sustainComparisonPairs || []
+    : section === 'depth-comparisons'
+    ? state.manifest?.depthComparisonPairs || []
+    : section === 'comparisons'
     ? state.manifest?.comparisonPairs || []
     : section === 'chiff-history' ? state.manifest?.comparisonHistoryPairs || [] : [];
+  const pairKind = (pair) => pair?.group === 'sustain' || state.manifest?.sustainComparisonPairs?.some((entry) => entry.id === pair?.id)
+    ? 'sustain' : pair?.group === 'depth' || state.manifest?.depthComparisonPairs?.some((entry) => entry.id === pair?.id)
+    ? 'depth' : pair?.group === 'chiff' || state.manifest?.comparisonHistoryPairs?.some((entry) => entry.id === pair?.id) ? 'chiff' : 'airflow';
+  const pairVersions = (pair) => pairKind(pair) === 'sustain' ? ['R5', 'R6'] : pairKind(pair) === 'depth' ? ['R4', 'R5'] : pairKind(pair) === 'chiff' ? ['R1', 'R2'] : ['R2', 'R3'];
+  const pairCategory = (pair) => pairKind(pair) === 'sustain' ? 'TRANSISTOR SUSTAIN' : pairKind(pair) === 'depth' ? 'TRANSISTOR BODY' : pairKind(pair) === 'chiff' ? 'PIPE ATTACK' : 'PIPE AIRFLOW';
+  const firstSustainPair = () => state.manifest?.sustainComparisonPairs?.find((pair) => pair.id === 'sustain_compact_60')
+    || state.manifest?.sustainComparisonPairs?.[0];
+  const firstDepthPair = () => state.manifest?.depthComparisonPairs?.find((pair) => {
+    const clip = getClip(pair.revisedId); return clip?.note === 60 && clip?.gesture === 'restrained' && clip?.section === 'identities';
+  }) || state.manifest?.depthComparisonPairs?.[0];
   const pairForClip = (clip) => {
     if (!clip) return null;
     const candidates = allPairs().filter((pair) => pair.originalId === clip.id || pair.revisedId === clip.id);
@@ -66,8 +88,8 @@
       || candidates.find((pair) => sectionPairs().some((entry) => entry.id === pair.id)) || candidates[0] || null;
   };
   const pairLabels = (pair) => ({
-    original: pair?.originalLabel || (pair?.group === 'chiff' ? 'Original R1' : 'Current R2'),
-    revised: pair?.revisedLabel || (pair?.group === 'chiff' ? 'More chiff R2' : 'With airflow R3')
+    original: pair?.originalLabel || (pairKind(pair) === 'sustain' ? 'Baseline R5' : pairKind(pair) === 'depth' ? 'Original' : pairKind(pair) === 'chiff' ? 'Original R1' : 'Current R2'),
+    revised: pair?.revisedLabel || (pairKind(pair) === 'sustain' ? 'Revised sustain R6' : pairKind(pair) === 'depth' ? 'More body' : pairKind(pair) === 'chiff' ? 'More chiff R2' : 'With airflow R3')
   });
   const clipVersion = (clip) => {
     const pair = pairForClip(clip);
@@ -328,7 +350,8 @@
     if (clip.rawOrigin) add('Raw source', clip.rawOrigin);
     if (Number.isFinite(clip.rawExportGain)) add('Raw export gain', nice(clip.rawExportGain));
     if (clip.diagnostics) {
-      if (Number.isFinite(clip.diagnostics.effectiveSpreadHz)) add('Fitted spread', `${nice(clip.diagnostics.effectiveSpreadHz)} Hz`);
+      if (Number.isFinite(clip.diagnostics.effectiveSpreadHz)) add(clip.instrumentLoop && clip.diagnostics.model >= 6 ? 'Ensemble peak offset' : 'Fitted spread', `${nice(clip.diagnostics.effectiveSpreadHz)} Hz`);
+      if (clip.diagnostics.spreadModulationHz > 0) add('Ensemble rate', `${nice(clip.diagnostics.spreadModulationHz)} Hz`);
       if (Number.isFinite(clip.diagnostics.motionHz)) add('Motion rate', `${nice(clip.diagnostics.motionHz)} Hz`);
       if (Number.isFinite(clip.diagnostics.effectiveHz)) add('Rendered pitch', `${nice(clip.diagnostics.effectiveHz)} Hz`);
     }
@@ -345,7 +368,10 @@
       if (Number.isFinite(flow.flowToBodyDb)) add('Airflow / body', `${flow.flowToBodyDb.toFixed(1)} dB`);
     }
     if (pair?.first80msRawUnchanged) add('First 80 ms (raw)', 'Unchanged from R2');
-    ui['loop-detail'].textContent = isHeld(clip)
+    if (clip.renderOrigin) add('Render path', clip.renderOrigin);
+    ui['loop-detail'].textContent = clip.instrumentLoop
+      ? `Keyboard attack and 350–450 ms handoff, then ${clip.instrumentLoop.playbackRepetitions} complete repeats of the final ${nice(clip.instrumentLoop.regionSeconds)} s region. The complete WAV plays once; its last 4 ms have an audition-only fade. Independent engine recurrence: ${clip.instrumentLoop.seamPass ? 'passed' : 'see manifest'}.`
+      : isHeld(clip)
       ? `Onset-free held tone. The WAV contains ${clip.loop.playbackRepetitions || 3} copies; the main player repeats one ${nice(clip.loop.regionSeconds)} s region. Engine seam check: ${clip.loop.seamPass === false ? 'requires review' : clip.loop.seamPass === true ? 'passed' : 'see manifest'}.`
       : 'Finite note: its attack and release are part of the render.';
   }
@@ -422,8 +448,8 @@
     const original = verdictText(reviewFor(getClip(pair.originalId)));
     const revised = verdictText(reviewFor(getClip(pair.revisedId)));
     const labels = pairLabels(pair);
-    const originalVersion = labels.original.match(/R\d+/)?.[0] || 'A';
-    const revisedVersion = labels.revised.match(/R\d+/)?.[0] || 'B';
+    const originalVersion = labels.original.match(/R\d+/)?.[0] || pairVersions(pair)[0];
+    const revisedVersion = labels.revised.match(/R\d+/)?.[0] || pairVersions(pair)[1];
     return [original && `${originalVersion}: ${original}`, revised && `${revisedVersion}: ${revised}`].filter(Boolean).join(' · ');
   }
 
@@ -431,18 +457,24 @@
     const pair = allPairs().find((entry) => entry.id === state.pairId);
     if (!pair) return;
     ui['revision-pair'].value = pair.id;
-    const history = pair.group === 'chiff' || state.manifest.comparisonHistoryPairs?.some((entry) => entry.id === pair.id);
-    ui['revision-eyebrow'].textContent = history ? 'R1 → R2 / PIPE ATTACK' : 'R2 → R3 / SUSTAINED AIR';
-    ui['revision-title'].textContent = history ? 'More chiff. Same pipe.' : 'A little air in the pipe.';
-    ui['revision-description'].textContent = pair.description || (history
+    const kind = pairKind(pair);
+    ui['revision-eyebrow'].textContent = kind === 'sustain' ? 'R5 → R6 / TRANSISTOR SUSTAIN' : kind === 'depth' ? 'R4 → R5 / TRANSISTOR BODY' : kind === 'chiff' ? 'R1 → R2 / PIPE ATTACK' : 'R2 → R3 / SUSTAINED AIR';
+    ui['revision-title'].textContent = kind === 'sustain' ? 'Let the ensemble stay.' : kind === 'depth' ? 'More body. Same bite.' : kind === 'chiff' ? 'More chiff. Same pipe.' : 'A little air in the pipe.';
+    ui['revision-description'].textContent = pair.description || (kind === 'sustain'
+      ? 'Listen through the keyboard handoff and follow the gentle ensemble during sustain. All preset settings stay the same.'
+      : kind === 'depth'
+      ? 'Compare the fuller same-pitch foundation and the bright ranks. Matched playback keeps the listening level consistent.'
+      : kind === 'chiff'
       ? 'Compare the first speech at the same pitch and gesture. Matched playback keeps the listening level consistent.'
       : 'Compare the body and the held tone at the same pitch and gesture. Matched playback keeps the listening level consistent.');
+    ui['revision-original'].parentElement.setAttribute('aria-label', `Play earlier or revised ${getClip(pair.revisedId)?.voice || 'voice'}`);
     for (const [version, label] of Object.entries(pairLabels(pair))) {
       const button = ui[`revision-${version}`];
       const match = label.match(/^(.*?)\s+(R\d+)$/);
+      const revision = pairVersions(pair)[version === 'original' ? 0 : 1];
       button.querySelector('span').textContent = match ? match[1] : label;
-      button.querySelector('small').textContent = match ? match[2] : '';
-      button.setAttribute('aria-label', `Play ${label}`);
+      button.querySelector('small').textContent = match ? match[2] : revision;
+      button.setAttribute('aria-label', `Play ${label}${match ? '' : ` ${revision}`}`);
     }
     ui['revision-original'].setAttribute('aria-pressed', String(state.selected?.id === pair.originalId));
     ui['revision-revised'].setAttribute('aria-pressed', String(state.selected?.id === pair.revisedId));
@@ -473,7 +505,7 @@
     const versionLabel = clipVersion(clip);
     const inPairStudy = sectionPairs().some((entry) => entry.id === pair?.id);
     ui['player-category'].textContent = inPairStudy && versionLabel
-      ? `${pair?.group === 'airflow' ? 'PIPE AIRFLOW' : 'PIPE ATTACK'} / ${versionLabel.toUpperCase()}`
+      ? `${pairCategory(pair)} / ${versionLabel.toUpperCase()}`
       : `${(sectionNames[clip.section] || clip.section).toUpperCase()}${clip.auditionRevision && versionLabel ? ` / ${versionLabel.toUpperCase()}` : ''}`;
     ui['player-title'].textContent = versionLabel && clip.comparisonLabel && clip.label.startsWith(`${clip.comparisonLabel} · `)
       ? `${versionLabel} · ${clip.label.slice(clip.comparisonLabel.length + 3)}` : clip.label;
@@ -487,16 +519,22 @@
     if (clip.recipeUrl) { ui['recipe-link'].href = resolveAsset(clip.recipeUrl); ui['recipe-link'].download = `${clip.id}.json`; }
     nativeAudio.src = clipUrl(clip);
     nativeAudio.loop = isHeld(clip);
-    ui['native-help'].textContent = isHeld(clip)
+    ui['native-help'].textContent = clip.instrumentLoop
+      ? 'This finite file includes the instrument attack, handoff and repeated sustain. Both players play it in full without restarting the attack.'
+      : isHeld(clip)
       ? 'The main player repeats one exact settled region with entry and stop ramps. This fallback repeats the full held WAV, which contains three copies. Only one player runs at a time.'
       : 'Use your browser’s player if the main player cannot decode this WAV. Only one player runs at a time.';
-    ui['review-prompt'].textContent = inPairStudy && pair?.group === 'airflow'
+    ui['review-prompt'].textContent = inPairStudy && pairKind(pair) === 'sustain'
+      ? (clip.zeroSpreadControl ? 'SPREAD is zero here. Does the foundation and quick keying stay consistent between versions?' : 'Listen past the 350–450 ms handoff. Does gentle ensemble movement continue without a change of weight, pitch or an obvious wrap?')
+      : inPairStudy && pairKind(pair) === 'depth'
+      ? (isHeld(clip) ? 'Does the fuller body hold its weight while the ranks stay clear? Listen for stable pitch and a clean wrap.' : 'Does the added body give the note enough depth while keeping its quick attack and bright ranks?')
+      : inPairStudy && pairKind(pair) === 'airflow'
       ? (isHeld(clip) ? 'Listen for soft sustained air, stable pitch, and a clean wrap.' : 'Listen beyond the accepted chiff. Does the airflow give the steady body a useful life?')
       : isHeld(clip)
       ? 'Listen for a clean wrap, a stable pitch, and a body worth holding.'
       : clip.voice === 'MUSETTE' ? 'Listen for moving reeds, a useful bellows gesture, and a clear root.'
           : clip.voice === 'PIPE' ? 'Listen to the pipe’s first speech, its wind, and the body finding its tone.'
-          : clip.voice === 'TRANSISTOR' ? 'Listen for fast keying, distinct ranks, vibrato and drive. AIR shapes the keyer transient.'
+          : clip.voice === 'TRANSISTOR' ? 'Listen for body beneath the bright ranks, fast keying, vibrato and drive. AIR shapes the keyer transient on finite notes.'
           : 'Use this existing voice as a reference. What does the prototype add?';
     renderDetails(clip);
     restoreReview();
@@ -506,7 +544,7 @@
       card.querySelector('.clip-icon').textContent = selected ? '●' : '↗';
     });
     syncRevisionControls();
-    setStatus(isHeld(clip) ? 'Settled tone, without an attack. Play to repeat the held region.' : 'Ready. The main player preserves the finite note’s onset.');
+    setStatus(clip.instrumentLoop ? 'Ready. Play the complete keyboard attack, handoff and sustained repeats.' : isHeld(clip) ? 'Settled tone, without an attack. Play to repeat the held region.' : 'Ready. The main player preserves the finite note’s onset.');
     updateTransport();
     prepareWaveform();
   }
@@ -548,9 +586,9 @@
         card.type = 'button'; card.dataset.pairId = pair.id;
         card.setAttribute('aria-label', `Choose comparison ${pair.label}`);
         const top = node('span', 'clip-card-top');
-        top.append(node('span', '', `${String(index + 1).padStart(2, '0')} / ${pair.group === 'chiff' ? 'PIPE ATTACK' : isHeld(clip) ? 'HELD AIR' : 'PIPE AIRFLOW'}`), node('span', 'clip-icon', '↗'));
+        top.append(node('span', '', `${String(index + 1).padStart(2, '0')} / ${pairCategory(pair)}`), node('span', 'clip-icon', '↗'));
         const foot = node('span', 'clip-card-foot');
-        foot.append(node('span', '', `${clip?.noteName || ''} · ${pair.group === 'chiff' ? 'R1 / R2' : isHeld(clip) ? 'R2 / R3 · HELD' : 'R2 / R3'}`), node('span', 'clip-review', pairVerdict(pair)));
+        foot.append(node('span', '', `${clip?.noteName || ''} · ${pairVersions(pair).join(' / ')}${isHeld(clip) ? ' · HELD' : ''}`), node('span', 'clip-review', pairVerdict(pair)));
         const labels = pairLabels(pair);
         card.append(top, node('span', 'clip-card-title', pair.label), node('span', 'clip-card-description', pair.description || `${labels.original} and ${labels.revised}.`), foot);
         card.addEventListener('click', () => selectRevisionPair(pair));
@@ -606,7 +644,8 @@
   function buildLibrary() {
     const { clips, sections } = state.manifest;
     ui['section-tabs'].replaceChildren();
-    const orderedSections = [...sections].sort((a, b) => (a.id === 'identities' ? -1 : b.id === 'identities' ? 1 : 0));
+    const sectionOrder = (id) => id === 'sustain-comparisons' ? 0 : id === 'depth-comparisons' ? 1 : id === 'identities' ? 2 : 3;
+    const orderedSections = [...sections].sort((a, b) => sectionOrder(a.id) - sectionOrder(b.id));
     orderedSections.forEach((section) => {
       const button = node('button', ''); button.type = 'button'; button.dataset.section = section.id;
       const count = sectionPairs(section.id).length || clips.filter((clip) => clip.section === section.id).length;
@@ -616,7 +655,7 @@
         // Every study opens with all of its renders visible.
         ui['voice-filter'].value = ''; ui['note-filter'].value = ''; ui['macro-filter'].value = '';
         const pairs = sectionPairs();
-        if (pairs.length) selectRevisionPair(pairs.find((pair) => pair.id === state.pairId) || pairs[0]);
+        if (pairs.length) selectRevisionPair(pairs.find((pair) => pair.id === state.pairId) || (section.id === 'sustain-comparisons' ? firstSustainPair() : section.id === 'depth-comparisons' ? firstDepthPair() : pairs[0]));
         else if (section.id === 'identities') selectClip(identityClip(voices.includes(state.selected?.voice) ? state.selected.voice : 'TRANSISTOR'));
         renderLibrary();
       });
@@ -639,13 +678,21 @@
     const first = identityClip('TRANSISTOR') || identityClip('PIPE') || clips[0];
     const second = identityClip('PIPE') || clips[1] || first;
     ui['compare-a'].value = first.id; ui['compare-b'].value = second.id;
-    if (voices.includes(requestedVoice) && identityClip(requestedVoice)) openIdentityVoice(requestedVoice, false);
-    else selectClip(first);
+    if (requestedStudy === 'sustain' && firstSustainPair()) {
+      state.section = 'sustain-comparisons'; selectRevisionPair(firstSustainPair());
+    } else if (requestedStudy === 'depth' && firstDepthPair()) {
+      state.section = 'depth-comparisons'; selectRevisionPair(firstDepthPair());
+    } else if (voices.includes(requestedVoice) && identityClip(requestedVoice)) openIdentityVoice(requestedVoice, false);
+    else if (firstSustainPair()) {
+      state.section = 'sustain-comparisons'; selectRevisionPair(firstSustainPair());
+    } else if (firstDepthPair()) {
+      state.section = 'depth-comparisons'; selectRevisionPair(firstDepthPair());
+    } else selectClip(first);
     renderLibrary();
     reviewedCount();
     renderLegacyHistory();
-    if (voices.includes(requestedVoice) && window.location.hash === '#listen') {
-      requestAnimationFrame(() => $('listen').scrollIntoView({ block: 'start' }));
+    if ((voices.includes(requestedVoice) || ['sustain', 'depth'].includes(requestedStudy)) && window.location.hash === '#listen') {
+      requestAnimationFrame(() => $(sectionPairs().length ? 'revision-study' : 'listen').scrollIntoView({ block: 'start' }));
     }
   }
 
@@ -743,7 +790,7 @@
       loadLegacyNotes();
       ui['player-format'].textContent = `${manifest.channels === 1 ? 'MONO' : `${manifest.channels || 1} CH`} / ${nice((manifest.sampleRate || 44100) / 1000)} kHz`;
       const preserved = [...new Set(state.legacyAuditions.map((audition) => displayRevision(audition.revision)))].join(', ');
-      ui['manifest-revision'].textContent = `${displayRevision(manifest.revision || 1)} · ${manifest.clips.length} renders${preserved ? ` · ${preserved} preserved` : ''} · TRANSISTOR awaiting a listening verdict`;
+      ui['manifest-revision'].textContent = `${displayRevision(manifest.revision || 1)} · ${manifest.clips.length} renders${preserved ? ` · ${preserved} preserved` : ''} · TRANSISTOR sustain study`;
       ui['load-status'].hidden = true; ui['loaded-content'].hidden = false;
       buildLibrary();
     } catch (error) {

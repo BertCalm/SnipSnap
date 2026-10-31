@@ -22,6 +22,12 @@ on:
       - "app/**"
       - ".github/workflows/emulator-tests.yml"
   workflow_dispatch:
+    inputs:
+      filament_only:
+        description: Run only the Filament phone tests
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
@@ -66,7 +72,19 @@ jobs:
           # audio stream when the screen appears, and a device with no audio
           # would make every one of these a test of the fallback toast.
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -no-boot-anim -camera-back none
-          script: ./gradlew --no-daemon :app:connectedDebugAndroidTest
+          # Wake, unlock and go home before the suite, so the first test's
+          # activity takes input focus. Some boots leave focus with the
+          # launcher for the whole run: every keyboard request from the app
+          # then fails (ImeTracker PHASE_CLIENT_REQUEST_IME_SHOW), tests that
+          # click through semantics still pass, and the one that sends a real
+          # Back key (SynthEngineHeaderTest.backClosesTheList...) waits for a
+          # focus that never comes. PR #741's three red runs were this.
+          script: >-
+            adb shell input keyevent KEYCODE_WAKEUP &&
+            adb shell wm dismiss-keyguard &&
+            adb shell input keyevent KEYCODE_HOME &&
+            ./gradlew --no-daemon :app:connectedDebugAndroidTest
+            ${{ github.event_name == 'workflow_dispatch' && inputs.filament_only && '-Pandroid.testInstrumentationRunnerArguments.class=com.snipsnap.app.ui.FilamentScreenTest' || '' }}
       - name: Keep the reports
         if: failure()
         uses: actions/upload-artifact@v4

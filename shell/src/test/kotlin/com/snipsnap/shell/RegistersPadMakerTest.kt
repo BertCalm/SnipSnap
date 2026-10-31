@@ -42,7 +42,7 @@ class RegistersPadMakerTest {
         // measured independently of a deliberate rank detune or vibrato.
         val transistorPatch = RegistersPatch("COMPACT KEYS", RegistersVoice.TRANSISTOR,
             Registers.defaults(RegistersVoice.TRANSISTOR) + mapOf("SPREAD" to 0f, "MOTION" to 0f),
-            midi = 81, velocity = .7f, model = 4)
+            midi = 81, velocity = .7f, model = 6)
         val transistorSpec = RegistersPadMaker.Spec(transistorPatch, releaseSeconds = .4f)
         val transistorNotes: List<KeyNote> by lazy {
             val saved = PadRecipe.fromJsonText(PadRecipe(transistorPatch).toJsonText()).patch as RegistersPatch
@@ -57,7 +57,7 @@ class RegistersPadMakerTest {
     fun `speaking attack survives while independently rendered held flow closes`() {
         for (voice in RegistersVoice.entries) for (midi in listOf(48, 60, 72)) {
             val recipe = patch.copy(voice = voice, macros = Registers.defaults(voice), midi = 24,
-                model = if (voice == RegistersVoice.TRANSISTOR) 4 else 3)
+                model = if (voice == RegistersVoice.TRANSISTOR) 6 else 3)
             val note = if (voice == RegistersVoice.PIPE) notes[(midi - 48) / 3]
                 else RegistersPadMaker.renderZone(RegistersPadMaker.Spec(recipe), midi)
             val finite = recipe.copy(midi = midi).render().samples
@@ -160,6 +160,11 @@ class RegistersPadMakerTest {
         val note = Keys.registersPad(legacy, 60)
         val finite = legacy.copy(midi = 60).render().samples
         assertContentEquals(finite.copyOf(3528), note.snip.samples.copyOf(3528), "legacy finite onset remains legacy")
+        val legacyTransistor = transistorPatch.copy(model = 4)
+        val legacyKeys = Keys.registersPad(legacyTransistor, 60)
+        val legacyFinite = legacyTransistor.copy(midi = 60).render().samples
+        assertContentEquals(legacyFinite.copyOf(15435), legacyKeys.snip.samples.copyOf(15435),
+            "saved model-four transistor instruments retain their authored 350 ms onset")
         val silent = Keys.registersPad(patch.copy(velocity = 0f), 60)
         assertTrue(silent.snip.samples.all { it == 0f })
         assertTrue(silent.loopStartFrame > 0)

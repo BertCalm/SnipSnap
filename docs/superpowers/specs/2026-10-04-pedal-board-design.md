@@ -1,6 +1,6 @@
 # The pedal board: guitar-pedal effects for the FX rack
 
-**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built with its listening gate pending (`2026-10-17-wah-section-design.md`). A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
+**Status:** design, reviewed section by section with the owner on 2026-10-04 and revised on 2026-10-13 after two owner listens (the Stage 0 listen and a round-two listen); the revised Stage 0 is built and awaits the owner's phone listen, and the WAH section is built and passed its gate on 2026-10-23 with a chip for each of its three moves (`2026-10-17-wah-section-design.md`); COMP did not, and Stage 2 is next. A brainstorm of the pedals that could follow the staged ones, and of how the chain and the PEDALS row grow, is `2026-10-19-pedal-board-brainstorm.md` (2026-10-19, nothing in it decided).
 **Builds on:** VALVE (the rack's amp section, `2026-09-29-magnet-valve-design.md`) and the MAGNET guitar engine (merged, PR #438).
 **Roadmap row:** S30 in `docs/SYNTH_ROADMAP.md` (the table is numbered by arrival; SUTURE already claims S29).
 
@@ -86,7 +86,11 @@ A compressor built for sustain, **before the amp, after the wah** (the guitar co
 - **make-up gain of 12 to 23 dB**, best made on the body with a limiter at the peak; the cost is that it lifts the noise floor, and the amp after it, by the same amount.
 Macros, the section's name (a permanent saved key; `squash` is taken) and its neutrals are settled at its own brainstorm. The COMP chip's recipe moves from SQUASH to this section when it passes its gate.
 
+**Heard, 2026-10-23 (the WAH gate's page):** COMP at AMT 70 lifts the tail too little on the snare and the choir (measured 6.7 and 8.1 dB over the dry pad; 11.5 and 10.8 at 100), and on the guitars, where it lifts 1.1 to 1.9 dB (JANGLE) and 0.2 to 0.4 (CHUG) after the amp, the owner wants the fix now rather than at Stage 3. So this stage is next. COMP keeps its chip until then. **The design is `2026-10-23-compressor-section-design.md`** (prototyped in Python, gate passed and built on 2026-10-24: the COMP chip is now SUSTAIN over the `compressor` section): its prototype found that on a one-shot a short release, not a long one, is what sustains, so the release line above does not hold for ring time.
+
 ## Stage 3: the board in front of the amp, for guitar pads
+
+**Built 2026-10-27** (`2026-10-27-pedals-in-front-of-the-amp-design.md`): a pedal on a synth pad that still carries its patch re-renders the pad with the pedals in front of its own landing chain and keeps the patch; the owner said "yes, build it" after the Amp Front Gate. In front does not widen SUSTAIN's range on the guitars (measured; the amp squeezes the note itself).
 
 The design problem: a chip acts on the pad's baked audio, so on a guitar pad every pedal lands after the amp. The owner preferred the rig way (pedal, then amp) for the wah, and DRIVE, COMPRESSOR and any FUZZ want it too. The direction to brainstorm (not decided): a MAGNET pad's recipe holds its engine patch and its landing chain; a pedal chip on a guitar pad would compose the pedal's sections into that chain and re-render the pad from its patch, instead of rewriting the baked audio; NONE would remove the pedal and restore the landing chain. Open questions for that brainstorm: whether the re-render path exists for every synth pad or only MAGNET's; undo; what AMT means for a pedal inside a chain; which other engines want it; where DRIVE's pre-amp end fade lives (today only `Treatments.apply` runs it, and a re-render from the recipe would not pass through that door). It is its own spec and plan.
 

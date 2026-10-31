@@ -207,7 +207,7 @@ class UatSimTest {
         val t0 = System.currentTimeMillis()
         val kit = starter.render("FACTORY", dir, seed = 0)
         val renderMs = System.currentTimeMillis() - t0
-        note("DUBBING FACTORY… took ${renderMs} ms of real DSP on this machine")
+        note("LOADING FACTORY… took ${renderMs} ms of real DSP on this machine")
         note("landed ${kit.pads.size} pads; toast: \"${Copy.FRESH_TAPE}\"")
         note("the app then auto-navigates to KIT — user did not ask for that, but it is what they wanted")
 
@@ -430,7 +430,7 @@ class UatSimTest {
         // apply a treatment for real
         val slot = model.kit.pads.first().slot
         val before = model.pad(slot)!!
-        say("  applying every segment the card draws, the way the screen does (PadSheet.treatmentFor):")
+        say("  applying every segment the card can dispatch, the way the screen does (PadSheet.treatmentFor):")
         PadSheet.ALL_SEGMENTS.forEach { seg ->
             val t = runCatching { PadSheet.treatmentFor(seg) }.getOrNull()
             if (t == null) {
@@ -656,10 +656,10 @@ class UatSimTest {
         }
         note("the row is ${Layout.MENU_ROW_H}dp and each place fills it, against MIN_HIT_TARGET=${Layout.MIN_HIT_TARGET}dp (finding 9, kept)")
         note("stage rows under TAPE (${Places.TAPE_STAGES.joinToString(" · ")}) and PROJECT (${Places.PROJECT_STAGES.joinToString(" · ")}); SHELF and MAKE are lists")
-        note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸ and ${Places.GEAR_HELP} ▸ — tabs twelve and thirteen of the old row, one tap from anywhere now")
+        note("the gear at the title bar's right opens ${Places.GEAR_SETUP} ▸, ${Places.GEAR_HELP} ▸ and ${Places.GEAR_MIDI} ▸ — the first two were tabs twelve and thirteen of the old row, all one tap from anywhere now")
         note("the dock is ${Layout.DOCK_H}dp at the foot of every screen: the beat's transport, the capture light and counter, the line and its door")
         note("no status bar: where you are is the two rows, the shelf count is on the SHELF, the busy line is the dock's")
-        note("title bar reads: SNIPSNAP.EXE, then the open project's name — the stale M0 build tag went with finding 2")
+        note("title bar reads: SNIPSNAP, then the open project's name — the stale M0 build tag went with finding 2")
         // The PERSONALITY slider and its `Delight` gate (OFF/MILD/FULL,
         // toasts/quips/deckSounds) are gone — deleted rather than fixed,
         // since once every toast states fact there is nothing left for a
@@ -670,10 +670,7 @@ class UatSimTest {
         note("no toast: the dock's line says what happened and stays — nothing is timed, nothing is gated")
 
         say("")
-        val byLook = Schemes.byLook()
-        for ((look, schemes) in byLook) {
-            say("  LOOK ${look.displayName}: ${schemes.size} schemes · ${schemes.joinToString(", ") { it.id.displayName }}")
-        }
+        say("  LOOK: ${Schemes.ALL.size} schemes · ${Schemes.ALL.joinToString(", ") { it.id.displayName }}")
         say("")
         say("  HELP, by place, verbatim from Places.HELP:")
         for ((section, lines) in Places.HELP) {

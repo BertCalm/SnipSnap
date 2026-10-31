@@ -14,8 +14,9 @@ shapes and refines their pressure/recovery timing. Six listening presets explore
 fast, delayed and slowly unfolding gestures across ROUND, PINCH and RUBBER;
 the owner approved this listening direction. The three voices and six presets
 are now registered in the native patch/preset, kit, CLI and phone paths. The
-remaining voice expansion and dedicated multisampled instrument builder remain
-later work.
+remaining voice expansion is later work. Model-3 patches also have a dedicated
+held-keyboard builder, with Paper Keys and Ink Ribbon as the first listening
+instruments.
 
 ## Controls and performance
 
@@ -139,14 +140,86 @@ The sixteen-pad dry starter has eight C-minor-pentatonic Corner Bass notes, the
 six approved presets, and Paper Keys/Ink Ribbon HOLD loops. Its fourteen finite
 pads are TONAL regardless of duration; the two held pads are LOOP. The phone
 uses the saved MIDI root for SPREAD and offers ROOT/VELOCITY beside the six
-controls. A dedicated MAKE INSTRUMENT/`Keys.creasePad` builder is separate work;
-the generic sampled-instrument player is unchanged.
+controls. MAKE INSTRUMENT/`Keys.creasePad` renders model-3 patches as held keyboard
+instruments through the existing sampled-instrument player.
+
+## Held keyboard instruments
+
+`CreaseKeys` starts one model and one output-conditioning path from rest. A
+speaking pressure onset smoothly becomes the existing periodic pressure gesture;
+all actual settling audio is retained before the final loop. The loop is accepted
+only after successive full circuit states recur and an independently evolved
+audio period closes. There is no finite-note/held-note audio splice.
+
+`CreasePadMaker` samples minor-third roots over two octaves around the saved MIDI
+note, clipped to MIDI 24–84. Keygroup boundaries stop at the outer sampled roots.
+The full saved patch supplies the voice, model, macros and excitation velocity;
+making an instrument leaves that source patch unchanged. HOLD is forced internally
+for this transport: the key controls duration. Existing finite and HOLD exports
+retain their original model behavior.
+
+The waveform owns its attack. RELEASE is a separate 0.1–1.5 second phone/MPC
+volume-envelope control, defaulting to 0.6 seconds. Note-off fades the currently
+playing sample; it does not simulate a new deformation-release trajectory.
+RELAX still controls recovery inside the held pressure gesture. By default there
+is one authored velocity layer; live key velocity applies the existing player
+gain. Optional TOUCH LAYERS adds independently rendered soft, medium and firm
+pressure histories, with MIDI windows 1–42, 43–84 and 85–127. The saved velocity
+remains the firm excitation anchor; soft and medium use 0.35 and 0.65 times it.
+Each complete note is matched by its converged sustain, then all three receive
+one shared headroom attenuation. Live velocity still applies linear player gain.
+The three layers have separate onset/settling prefixes and loop markers. They
+increase generation and audio storage by approximately three times. They use
+discrete sample selection rather than a continuously morphing velocity model.
+
+The builder exports the native `.xty`, compatibility `.xpm`, WAV loop metadata
+and phone instrument sidecar through `OneNote`. The sidecar retains playback
+metadata, while the listening download supplies the editable native Patch JSON
+separately. Model-1/model-2 patches are rejected by instrument authoring rather
+than silently upgraded; their ordinary renders still replay normally.
+
+Generation is an explicit cancellable bulk operation. It retains at most 28
+settling periods and a 64-second sample; failure to reach a measured periodic
+orbit fails the render. Zones render serially in the phone authoring flow.
+Desktop generation timings are reported by the audition and do not establish
+phone latency. The design and its alternatives are recorded in
+[the held-keyboard design](superpowers/specs/2026-10-23-crease-held-keys-design.md).
 
 CLI example:
 
 ```sh
 ./gradlew :cli:run --args='synth crease round --preset 2 --midi 60 --velocity .8 --model 3 --out /tmp/crease-native'
+./gradlew :cli:run --args='synth crease round --preset 2 --instrument --release .6 --out /tmp/crease-keys'
+./gradlew :cli:run --args='synth crease rubber --preset 2 --instrument --release .6 --out /tmp/crease-keys'
+./gradlew :cli:run --args='synth crease round --preset 2 --instrument --touch --release .6 --out /tmp/crease-touch'
 ```
+
+Saved native recipes can replace `--preset` using `--patch recipe.json`.
+Instrument mode accepts explicit MIDI/velocity/model overrides, rejects `--all`
+and `--attack`, and validates the complete request before creating output.
+
+Reproduce the two-instrument audition and real sampler performances with:
+
+```sh
+./gradlew --no-daemon :shell:generateCreaseKeysAudition
+```
+
+The separate `testkit/crease-keys-audition/` output contains measured zone renders,
+dual-format instrument packages, native source recipes and actual
+`InstrumentEngine` hold/release, velocity-gain and phrase performances. It does
+not replace the original 87-clip model-3 listening set.
+
+Reproduce the separate touch-layer study with:
+
+```sh
+./gradlew --no-daemon :shell:generateCreaseTouchAudition
+```
+
+`testkit/crease-touch-audition/` contains three-layer Paper Keys and Ink Ribbon
+packages, native-level player performances, matched timbre comparisons and a
+root-only Reed Mark study. Each package includes its native source recipe and
+measured render evidence. The [touch design](superpowers/specs/2026-10-23-crease-touch-design.md)
+records the level policy, cost and discrete-layer limits.
 
 The audition offers six native patch JSON files and a shelf backup with a
 playable starter kit and editable saved presets. The official shelf import
@@ -157,3 +230,8 @@ SDK. CI builds Android separately; JVM checks cannot validate future phone UI
 wiring. Native integration is checked through engine replay, registry/serialization,
 velocity, CLI, shelf import and app build validation. Device interaction still
 requires a phone or emulator.
+
+
+## Release motion experiment
+
+An isolated [release experiment](superpowers/specs/2026-10-26-crease-release-experiment.md) compares continued held pressure with pressure withdrawal at key-up, using the actual circuit and the same volume fade. Its fixed recordings and numerical gates pass; no live release-aware player mode or new instrument export is enabled. The production renderer, presets and existing instruments are unchanged.

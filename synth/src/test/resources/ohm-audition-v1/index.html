@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e9">
+  <meta name="description" content="OHM for SnipSnap: a first listen to family strings. A dry pluck, two companion resonators, and a changing relationship.">
+  <title>OHM — Family strings / SnipSnap</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='16' fill='%2387ae73'/%3E%3Cpath d='M8 16h16M16 8v16' stroke='%23252e25' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#listen">Skip to listening room</a>
+  <header class="site-header wrap">
+    <a class="brand" href="https://github.com/BertCalm/SnipSnap"><svg viewBox="0 0 28 28" aria-hidden="true"><path d="M2 5h10v18H2zM16 5h10v18H16z"/><path class="cut" d="m2 15 10-5m4 10 10-5"/></svg><span>SnipSnap</span><span class="brand-divider">/</span><span class="brand-room">Listening room</span></a>
+    <span class="prototype-label"><i aria-hidden="true"></i> Listening prototype</span>
+  </header>
+
+  <main>
+    <section class="hero wrap" aria-labelledby="page-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="sage-square" aria-hidden="true"></span> FAMILY STRINGS <span class="rule" aria-hidden="true"></span> FIRST LISTEN</p>
+        <h1 id="page-title">OHM<span>.</span></h1>
+        <p class="hero-line">A little company changes everything.</p>
+        <p class="hero-description">One clear pluck. Two companions finding their voice. Let them interrupt, or bring them into the same resonant body.</p>
+        <a class="enter-link" href="#listen">Take a seat. Have a listen. <span aria-hidden="true">↓</span></a>
+      </div>
+      <div class="family-drawing" role="img" aria-label="One foreground string and two companion strings gradually finding a shared shape">
+        <div class="drawing-heading"><span>THREE VOICES. ONE RELATIONSHIP.</span><span class="drawing-number">01—03</span></div>
+        <svg class="family-svg" viewBox="0 0 480 280" aria-hidden="true">
+          <defs><linearGradient id="string-fade"><stop stop-color="#87ae73" stop-opacity=".2"/><stop offset=".5" stop-color="#567549"/><stop offset="1" stop-color="#87ae73" stop-opacity=".2"/></linearGradient></defs>
+          <path class="drawing-guide" d="M30 66h420M30 140h420M30 214h420M54 30v220M426 30v220"/>
+          <path class="string string-one" d="M30 140C85 140 98 55 147 55S193 225 240 225 288 55 333 55 389 140 450 140"/>
+          <path class="string string-two" d="M30 66C94 66 111 201 160 201S204 89 252 89 298 190 343 190 399 140 450 140"/>
+          <path class="string string-three" d="M30 214C83 214 105 112 152 112S202 178 249 178 299 106 344 106 397 140 450 140"/>
+          <circle cx="30" cy="140" r="5"/><circle cx="30" cy="66" r="3"/><circle cx="30" cy="214" r="3"/><circle cx="450" cy="140" r="6"/>
+        </svg>
+        <div class="drawing-caption"><span><b>01</b> THE PLUCK</span><span><b>02 + 03</b> THE COMPANY</span><span>TOGETHER <span aria-hidden="true">↗</span></span></div>
+      </div>
+      <div class="hero-foot"><span><b>Dry, by design.</b> Hear the string and its company.</span><span><b>Five controls.</b> One changing conversation.</span><span class="render-note">Rendered listening examples · no live synthesis</span></div>
+    </section>
+
+    <section class="listening-room wrap" id="listen" aria-labelledby="listen-title">
+      <div class="room-heading"><div><p class="eyebrow">THE FIRST LISTEN</p><h2 id="listen-title">From solo to shared.</h2></div><div class="level-control"><span id="level-label">Playback level</span><div class="segmented" role="group" aria-labelledby="level-label"><button type="button" data-level="matched" aria-pressed="true">Matched</button><button type="button" data-level="raw" aria-pressed="false">Raw</button></div></div></div>
+      <div id="library-status" class="library-status" role="status"><span class="status-spinner" aria-hidden="true"></span> Opening the listening room…</div>
+      <div id="library-error" class="library-error" role="alert" hidden><h3>The listening examples could not load.</h3><p id="library-error-text">Please try again.</p><button type="button" id="retry-button" class="paper-button">Try again <span aria-hidden="true">↻</span></button></div>
+
+      <div id="audition-content" hidden>
+        <div class="audition-layout">
+          <section class="player" id="player" aria-label="Selected listening example">
+            <div class="console-top"><span id="player-category">FIRST LISTEN / 01</span><span class="console-status"><i aria-hidden="true"></i><span id="playback-state">READY TO LISTEN</span></span></div>
+            <div class="player-heading"><h3 id="player-title">Solo</h3><span id="gesture-label" class="gesture-label" hidden>GATHER</span></div>
+            <p id="player-description" class="player-description"></p>
+            <div class="string-stage" aria-hidden="true"><svg viewBox="0 0 600 110" preserveAspectRatio="none"><path class="stage-guide" d="M0 55h600"/><path class="stage-string main-string" d="M0 55C32 55 38 12 70 12S105 98 140 98 175 12 210 12 245 98 280 98 315 12 350 12 385 98 420 98 455 12 490 12 535 55 600 55"/><path class="stage-string companion-string" d="M0 55C65 55 72 29 105 29S145 81 180 81 215 29 250 29 285 81 320 81 355 29 390 29 425 81 460 81 515 55 600 55"/><path class="stage-string third-string" d="M0 55C80 55 90 41 126 41S168 69 204 69 240 41 276 41 312 69 348 69 384 41 420 41 456 69 492 69 550 55 600 55"/></svg><span class="stage-caption">FOREGROUND <span>+ TWO COMPANIONS</span></span></div>
+            <div class="transport"><button type="button" id="play-button" class="play-button"><span id="play-icon" aria-hidden="true">▶</span><span id="play-text">Play</span></button><button type="button" id="replay-button" class="replay-button" aria-label="Replay selected example from the beginning"><span aria-hidden="true">↺</span> Replay</button><span id="player-context" class="player-context"></span></div>
+            <div class="progress-row"><span id="elapsed">0:00</span><label class="sr-only" for="progress">Playback position</label><input type="range" id="progress" min="0" max="1000" step="1" value="0" aria-valuetext="0 minutes, 0 seconds" disabled><span id="duration">0:00</span></div>
+            <div id="audio-status" class="audio-status" role="status" aria-live="polite">Choose an example, then press Play.</div>
+            <div id="macro-values" class="macro-values" aria-label="Selected control settings"></div>
+            <div class="console-bottom"><span id="level-description">MATCHED LEVEL · FOR COMPARISON</span><a id="audio-download" download>Audio <span aria-hidden="true">↓</span></a></div>
+            <audio id="audio" preload="metadata"></audio>
+          </section>
+
+          <section class="explore" aria-label="Choose listening examples">
+            <div class="tab-scroll"><div class="tabs" role="tablist" aria-label="Listening studies"><button type="button" id="tab-first" role="tab" aria-controls="panel-first" aria-selected="true" tabindex="0" data-tab="first">First listen</button><button type="button" id="tab-relationship" role="tab" aria-controls="panel-relationship" aria-selected="false" tabindex="-1" data-tab="relationship">Relationship</button><button type="button" id="tab-controls" role="tab" aria-controls="panel-controls" aria-selected="false" tabindex="-1" data-tab="controls">Controls</button><button type="button" id="tab-phrases" role="tab" aria-controls="panel-phrases" aria-selected="false" tabindex="-1" data-tab="phrases">Phrases</button><button type="button" id="tab-range" role="tab" aria-controls="panel-range" aria-selected="false" tabindex="-1" data-tab="range">Range</button></div></div>
+
+            <div id="panel-first" class="study-panel" role="tabpanel" aria-labelledby="tab-first"><div class="study-intro"><p class="eyebrow">START WITH THESE</p><h3>Same family. Different company.</h3><p>Choose an example, then press Play. Start with Solo; listen for what changes around the pluck.</p></div><div id="first-clips" class="identity-grid"></div><p class="study-footnote">Gather is a rendered gesture: the companions become more active, then settle into a shared resonance.</p></div>
+
+            <div id="panel-relationship" class="study-panel" role="tabpanel" aria-labelledby="tab-relationship" hidden><div class="study-intro"><p class="eyebrow">TWO WAYS TO COME TOGETHER</p><h3>Activity × belonging.</h3><p>MEDDLING brings the companions forward. COMMUNE draws their energy into a shared body. Each square selects a rendered example.</p></div><div class="matrix-shell"><div class="matrix-y-label">MEDDLING <span aria-hidden="true">↑</span></div><div class="matrix-main"><div id="relationship-matrix" class="relationship-matrix" role="group" aria-label="MEDDLING by COMMUNE listening examples"></div><div class="matrix-column-labels"><span>Independent</span><span>Meeting</span><span>Shared</span></div><div class="matrix-x-label">COMMUNE <span aria-hidden="true">→</span></div></div></div><p class="study-footnote">At zero MEDDLING, the companions are absent. The three Solo squares sound the same: COMMUNE has no company to bring together.</p><div id="quiet-clip"></div><p class="study-footnote">Listen for a changing body as well as a changing amount of sound. Matched playback makes the difference easier to compare.</p></div>
+
+            <div id="panel-controls" class="study-panel" role="tabpanel" aria-labelledby="tab-controls" hidden><div class="study-intro"><p class="eyebrow">ONE CHANGE AT A TIME</p><h3>Five small invitations.</h3><p>Compare three settings of one control, with the others held in place.</p></div><label class="field-label" for="control-select">Choose a control</label><select id="control-select"><option value="TOUCH">TOUCH</option><option value="BODY">BODY</option><option value="LENGTH">LENGTH</option><option value="MEDDLING">MEDDLING</option><option value="COMMUNE">COMMUNE</option></select><p id="control-description" class="control-description"></p><div id="control-clips" class="comparison-list"></div></div>
+
+            <div id="panel-phrases" class="study-panel" role="tabpanel" aria-labelledby="tab-phrases" hidden><div class="study-intro"><p class="eyebrow">PUT IT IN MOTION</p><h3>A little room to play.</h3><p>Hear the three relationships across a musical phrase. Follow the foreground as the companions answer.</p></div><div id="phrase-clips" class="comparison-list"></div><p class="study-footnote">These are finite phrases. Replay any example to hear it again.</p></div>
+
+            <div id="panel-range" class="study-panel" role="tabpanel" aria-labelledby="tab-range" hidden><div class="study-intro"><p class="eyebrow">THE QUIETER CHECKS</p><h3>Up the keys. Into the touch.</h3><p>Compare the same patch at three playing strengths, then change the register.</p></div><label class="field-label" for="register-select">Register</label><select id="register-select"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select><div id="range-clips" class="comparison-list"></div><p class="study-footnote">Raw playback keeps the original level differences between soft, medium, and firm notes.</p></div>
+          </section>
+        </div>
+
+        <div class="bench-footer"><span><i aria-hidden="true"></i> <span id="library-summary">A finite collection of real listening examples.</span></span><a id="bundle-download" class="download-link" download>Download the first-listen ZIP <span aria-hidden="true">↓</span></a><a id="patch-download" class="download-link" download>Selected patch <span aria-hidden="true">↓</span></a></div>
+
+        <section class="notes-section" aria-labelledby="notes-title"><div class="notes-copy"><p class="eyebrow">LEAVE A TRACE</p><h2 id="notes-title">What did you hear?</h2><p>Does the pluck keep its identity? Do the companions feel separate, or part of the same instrument?</p><span class="notes-local" id="notes-local">Notes stay in this browser.</span></div><div class="notes-field"><label for="listening-note">Your notes for <strong id="note-clip-title">Solo</strong></label><textarea id="listening-note" rows="4" placeholder="The attack, the companions, the moment they come together…"></textarea><div class="notes-bottom"><span id="notes-status" role="status">Nothing leaves this device.</span><div><button type="button" class="text-button" id="export-text">Export .txt <span aria-hidden="true">↗</span></button><button type="button" class="text-button" id="export-json">Export .json <span aria-hidden="true">↗</span></button></div></div></div></section>
+
+        <details class="provenance"><summary>About these listening examples <span aria-hidden="true">+</span></summary><div class="provenance-grid"><div><h3>What you are hearing</h3><p>OHM is a SnipSnap listening prototype: a plucked foreground string and two companion resonators. MEDDLING changes their activity; COMMUNE changes their participation in a shared resonance. These controls describe the selected render. The page does not synthesize audio live.</p><p>Every example has a defined ending. Gather changes the relationship within one rendered clip; it is not a live control.</p></div><div><h3>Level and source</h3><p>Matched playback adjusts the examples for level comparison. Raw playback preserves their relative output levels and playing dynamics. Switching examples or levels pauses playback so you choose when to listen.</p><ul id="technical-notes"></ul><a href="assets/manifest.json" class="inline-link">Open the render manifest <span aria-hidden="true">↗</span></a></div></div></details>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer wrap"><div><strong>OHM / SnipSnap</strong><p>Family strings. A first conversation.</p></div><a href="https://github.com/BertCalm/SnipSnap" target="_blank" rel="noopener">Source & engineering <span aria-hidden="true">↗</span></a></footer>
+  <noscript><p class="noscript">JavaScript is needed for this listening room. <a href="assets/manifest.json">Open the manifest</a> to find the rendered audio files.</p></noscript>
+</body>
+</html>

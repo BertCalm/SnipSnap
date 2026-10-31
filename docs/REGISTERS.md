@@ -4,8 +4,9 @@ REGISTERS adapts the organ/reed family idea in the
 [XOctave architecture](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/octave-engine-architecture.md)
 to SnipSnap's deterministic offline renderer. PIPE and MUSETTE form the working
 audition baseline. The owner selected model-3 PIPE after listening to the stronger
-chiff and sustained airflow. Model 4 adds a third voice, TRANSISTOR, for listening
-review; the existing PIPE/MUSETTE synthesis and six model-3 presets are preserved.
+chiff and sustained airflow. Model 4 introduced TRANSISTOR; model 5 adds a fuller same-pitch foundation after
+the first listening verdict asked for more depth. The existing PIPE/MUSETTE
+synthesis and six model-3 presets are preserved.
 
 PIPE uses twelve harmonic partials with registration-inspired dark/principal
 weighting, staggered speech, a brief chiff and a seeded wind field. MUSETTE
@@ -89,7 +90,9 @@ approximation, not a measured emulation of a particular instrument.
 | TUNE / HOLD | Shared pitch and finite-length/held-loop controls |
 
 Three new C4 starting points are Compact Keys, Clean Combo and Garage Buzz.
-TRANSISTOR recipes explicitly use renderer model 4 and reject models 1–3.
+Original TRANSISTOR recipes use renderer model 4 and reject models 1–3.
+The current three factory settings use model 6; saved model-4 and model-5 recipes
+retain their original sound.
 PIPE/MUSETTE still replay all earlier models; their six presets remain pinned
 to model 3. Missing model metadata continues to mean legacy model 1.
 
@@ -98,6 +101,145 @@ R3 pack with new TRANSISTOR identities, control sweeps, velocity examples,
 interaction studies, presets and held tones. The R4 pack preserves earlier WAVs,
 recipes, comparison pairs and review scopes. Old browser notes remain attached
 to the sound they describe; edits save under the new revision.
+
+## TRANSISTOR body — R5
+
+The next listening verdict asked for a little more depth. Model 5 adds a rounded
+8-foot foundation at the played pitch, gentler upper-rank weighting and quiet
+SPREAD-controlled detuned foundation ranks. The foundation stays outside the
+transistor saturation stage so EDGE retains its bite while the sustained note
+has more low-partial weight. The dry mono format and seven controls stay intact.
+
+The original electronic click and keying are retained. The fuller body blends in
+over 20–80 ms on finite notes and is fully present in a held loop. Both versions
+share pitch, duration, velocity and macro settings; this is a timbre comparison
+at the same listening level. Model 4 stays replayable exactly, including the
+published PCM fixtures. PIPE and MUSETTE are unchanged.
+
+Run `./gradlew :synth:generateRegistersTransistorDepthAudition` with
+`-PregistersR4Baseline=<published R4 archive>` to build the body comparison.
+R5 retains all 116 earlier recordings and recipes and adds 31 model-5 cases.
+Eleven Original R4 / More body R5 pairs cover six identities, three presets and
+two held tones. R1–R4 listening notes keep their original sound identities;
+changed model-5 recordings start with separate reviews. The owner accepted the
+fuller body in the browser audition. Physical phone/MPC listening remains open.
+
+## TRANSISTOR sustain and render cost — R6
+
+Luthier's follow-up found that the short held period rounded the factory SPREAD
+settings to unison. Compact Keys at .12 lost its bank detuning on all nine exported
+roots. Model 6 keeps the R5 foundation and finite-note registration, and replaces
+that rounding with smooth periodic phase movement in held side banks. The peak
+bank frequency swing before common vibrato follows the continuous SPREAD law. This is a looping ensemble
+adaptation, not constant free-running detuning: a constant .075 Hz offset would
+need a roughly 13-second cycle at C3. The existing roughly two-second loop stays.
+
+The side-bank phase and its derivative match the finite bank at clock time 400 ms,
+near the center of the instrument's 350–450 ms handoff. Both use the same
+vibrato-modulated clock. `effectiveSpreadHz` records the nominal peak swing for this mode, and
+`spreadModulationHz` identifies its loop-periodic rate. Legacy probes continue to
+report constant bank offsets with a zero modulation rate.
+
+Model 6 evaluates the foundation's third and fifth harmonics from one cosine per
+bank, using Chebyshev identities. The original bright registration is evaluated
+only while it contributes to the first 80 ms. Held synthesis warms the filters
+for 1024 output frames (23.2 ms), then synthesizes two complete independent cycles.
+At the minimum 500 Hz voice cutoff this exceeds 70 pole time constants. The same
+post-filter recurrence and seam guards still compare separate generated cycles;
+the exported buffer is never used as its own reference. Models 4 and 5 keep their
+original arithmetic and whole-cycle preroll.
+
+A warm Java 21 desktop benchmark with 12 balanced interleaved samples per model
+measured finite renders at 129.95 → 100.56 ms, held renders at 270.52 → 169.41 ms,
+and keyboard previews at 378.76 → 255.42 ms. These are within-run reductions of
+22.6%, 37.4% and 32.6%; the finite timings varied substantially. They do not predict
+phone performance. Twelve finite comparisons (C3/C4/C5/C7, SPREAD 0/.12/.5) retained
+identical conditioned Float samples. Small held SPREAD .05/.12/.18 changed the
+gain-normalized waveform at C3/C4/C5, with relative RMS differences .000919–.015936.
+
+Run `./gradlew :synth:generateRegistersTransistorSustainAudition` with
+`-PregistersR5Baseline=<published R5 archive>`. Seven comparisons exercise the
+actual `Keys.registersPad` attack and loop: Compact Keys and Garage Buzz at C3,
+C4 and C5, plus a zero-SPREAD Clean Combo control. Audition sequences retain the
+instrument head and play three complete wraps, with an audition-only 4 ms terminal
+fade. They do not repeat the attack as if it were a held loop. All 147 earlier
+recordings and their recipes remain unchanged, including R5 review identities.
+
+Why it is built this way:
+
+- Periodic phase movement keeps low SPREAD settings active within bounded memory
+  and render work; static detuning cannot recur exactly in such a short period.
+- Matching the handoff clock avoids resetting the ensemble when the attack ends.
+- The shorter warmup saves repeated synthesis work while retaining independent
+  evidence that the conditioned cycle really repeats.
+- Versioned arithmetic preserves accepted sounds. The owner reports that R6 sounds
+  very much the same; phone timing and hardware listening are unmeasured.
+
+## Depth direction study
+
+R6 fixed low-SPREAD continuity and reduced render work, but did not supply the
+stronger depth the owner wanted. The separate `directions/` audition compares
+current-model recipes before changing the engine or factory defaults. At C3, C4
+and C5, Current is Compact Keys; Warmer body changes COLOR to .08 and EDGE to .10;
+Richer ensemble changes SPREAD to .65 and MOTION to .32. Other controls, pitch and
+velocity stay the same. Warmer body reduces upper ranks and clipping; it does not
+add a 16-foot rank or a room effect.
+
+Run `./gradlew :synth:generateRegistersDepthDirectionsAudition` with the optional
+`-PregistersOutput=<directory>`. The nine finite audition sequences use actual
+`Keys.registersPad` attacks followed by three complete held-loop repeats and a
+4 ms final fade. The generator verifies recipe replay, independent recurrence,
+PCM24 readback and matched loudest-window RMS .03. The three Current clips are
+byte-identical to the corresponding published R6 clips in both raw and matched
+form. Publish this directory as the existing audition site's `directions/`
+subdirectory, preserving the main pack and its listening-note identities.
+
+Independent PCM checks measured gain-removed sustained RMS differences of
+12.8–17.1% for Warmer body and 21.7–29.2% for Richer ensemble versus Current.
+Those measurements establish stronger waveform contrast, not perceived depth or
+preference. The owner selected the richer ensemble direction. It is now the
+`Rich Ensemble` factory preset, using the exact SPREAD .65 / MOTION .32 setting
+heard in this study. It is appended after the original three TRANSISTOR presets;
+the other nine factory settings and the model-6 renderer stay the same.
+
+The direction page now opens on Rich Ensemble without autoplay and offers its
+nine-zone MPC instrument. Export it with
+`./gradlew :cli:run --args='synth REGISTERS TRANSISTOR --preset 4 --instrument --release .6 --out /path/to/output'`.
+The package preserves the keyed attack, uses the actual final held-loop region,
+and releases over .6 seconds when the key is lifted. The C3/C4/C5 instrument
+samples match the chosen audition before its repeated playback and terminal
+fade. Physical phone/MPC listening is still pending.
+
+Why it is built this way:
+
+- Two separate settings distinguish a warmer harmonic balance from ensemble
+  movement, so the next change can follow the owner's preferred direction.
+- Matched levels reduce loudness as a reason to choose one setting.
+- Existing renderers and the exact current reference keep this a small,
+  reproducible listening decision before another model revision.
+- A named preset carries the selected sound into normal rendering and instrument
+  export while saved patches continue to reproduce their own settings.
+
+## Calmer ensemble comparison
+
+Further listening found Rich Ensemble a bit annoying. The separate `ensemble/`
+study keeps its tone, drive and attack, and separates the two motion controls:
+Current is SPREAD .65 / MOTION .32; Less vibrato keeps SPREAD .65 and lowers
+MOTION to .08; Calmer ensemble uses SPREAD .40 / MOTION .08. These remain
+audition-only candidates, with the original preset and MPC download retained.
+
+Run `./gradlew :synth:generateRegistersEnsembleRefinementAudition` with optional
+`-PregistersOutput=<directory>`. It reuses the direction generator and actual
+keyboard playback path at C3/C4/C5. The current reference must remain identical
+to the published Rich Ensemble. The original direction-study task is preserved.
+
+Why it is built this way:
+
+- Reducing MOTION alone distinguishes common pitch vibrato from the slower
+  bank interference. Reducing SPREAD as a second step also reduces that pulse.
+- Matching tone controls and listening levels keeps this comparison about motion.
+- Separate candidates let the owner judge sustained comfort before changing the
+  named preset again. No new engine arithmetic is needed for this study.
 
 ## Playing and saving
 
@@ -110,7 +252,7 @@ note is supplied. An explicit MIDI note overrides TUNE.
 `RegistersPatch` implements the shared patch contract and also reads the original
 audition recipes. It stores the voice, complete macro values, note, velocity and
 renderer model. REGISTERS appears in the phone's SYNTH source picker with PIPE,
-MUSETTE and TRANSISTOR, nine presets, saved patches and the shared SEND TO PAD workflow.
+MUSETTE and TRANSISTOR, ten presets, saved patches and the shared SEND TO PAD workflow.
 TUNE edits change the explicit note; other edits preserve its note, velocity and
 model. Imported audition notes align the slider without changing the sound.
 
@@ -147,7 +289,9 @@ Finite renders retain their speech/bellows onset and release. HOLD at .975 or
 above exports a settled loop with no initial articulation. Carrier frequency is
 fitted to whole sample frames; reed offsets, motion and the seeded wind components
 are fitted to the same period. The manifest records the effective frequencies.
-Very small requested offsets may round to zero in the held period.
+Very small requested offsets may round to zero in the held period for PIPE,
+MUSETTE and TRANSISTOR models 4–5. TRANSISTOR model 6 uses the periodic ensemble
+adaptation described above instead.
 
 Loop evidence compares separately synthesized adjacent periods after conditioning
 and decimation. The renderer requires relative cycle difference below 1e-5 and

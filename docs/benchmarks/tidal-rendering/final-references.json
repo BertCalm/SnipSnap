@@ -1,0 +1,720 @@
+{
+  "schemaVersion": 1,
+  "engine": "TIDAL",
+  "label": "final-optimized-reference-check",
+  "generatedAt": "2026-10-24T19:10:49.942916133Z",
+  "checkoutRevision": "5e953da5493d08112f10fcd1bd2b000bd7946b92",
+  "clock": "System.nanoTime; render call only",
+  "jfrRecording": null,
+  "jfrNote": "Use a separate profiling run; primary before/after timing runs leave JFR disabled.",
+  "timedScope": "Excludes cache reset, explicit GC, validation, hashes, logging, JSON and file I/O.",
+  "states": {
+    "cold": "Clear geometry and finished audio before each call; JVM/classes/JIT are already warm.",
+    "warm": "Keep geometry but clear finished audio before each call; a fresh complete render is required.",
+    "repeat": "Repeat the same complete recipe with caches retained; old code has no finished-audio cache."
+  },
+  "memoryDefinitions": {
+    "allocatedBytesCurrentThread": "HotSpot ThreadMXBean allocation counter delta around the render call; null if unsupported.",
+    "heapUsedBeforeBytes": "MemoryMXBean heap used after explicit GC immediately before the timer.",
+    "heapUsedAfterBytes": "MemoryMXBean heap used immediately after the timer; includes garbage not yet collected.",
+    "sumOfHeapPoolPeakUsedBytes": "Sum of per-heap-pool peak used after reset immediately before render. Upper envelope, not simultaneous live heap or process RSS."
+  },
+  "floatHashEncoding": "Float.toRawBits, little-endian four bytes per sample",
+  "runtime": {
+    "javaVersion": "21.0.12.1",
+    "vm": "OpenJDK 64-Bit Server VM",
+    "os": "Linux",
+    "architecture": "amd64",
+    "processors": 4,
+    "cpuModel": "INTEL(R) XEON(R) PLATINUM 8573C",
+    "heapMaximumBytes": 805306368,
+    "vmArguments": [
+      "-Xms256m",
+      "-Xmx768m",
+      "-XX:ActiveProcessorCount=4"
+    ],
+    "loadedBenchmark": {
+      "path": "/workspace/scratch/tidal-performance/benchmark-classes",
+      "classSha256": "44a8532cf09be374dee8ff4b1cd6075e920971fd2dfc31fa7db8f662e99913eb",
+      "jarSha256": null
+    },
+    "loadedEngine": {
+      "path": "/workspace/SnipSnap-tidal-playability/synth/build/classes/kotlin/main",
+      "classSha256": "867f82ea0e1fd8efb5e771cb51659eec7df952c5293e766400fc7e93c1df2401",
+      "jarSha256": null
+    },
+    "loadedDynamics": {
+      "path": "/workspace/SnipSnap-tidal-playability/synth/build/classes/kotlin/main",
+      "classSha256": "d9c78c4626644ed87021be83af3e63e6987725ccb0b7ab13fc85b5264f591298",
+      "jarSha256": null
+    },
+    "loadedAudio": {
+      "path": "/workspace/SnipSnap-tidal-playability/audio/build/classes/kotlin/main",
+      "classSha256": "f4fa5da26e18cccb1bc4b6d7b93b5e374706212887f80eb0a91749c2aebf7719",
+      "jarSha256": null
+    }
+  },
+  "benchmarkWallMs": 38969.128293,
+  "cases": [
+    {
+      "id": "pair-model1-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model1-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.3499999940395355,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.6499999761581421,
+          "TAIL": 0.25,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1332.897129
+      ],
+      "minMs": 1332.897129,
+      "medianMs": 1332.897129,
+      "p90Ms": 1332.897129,
+      "maxMs": 1332.897129,
+      "allocatedBytesCurrentThread": [
+        56204952
+      ],
+      "heapUsedBeforeBytes": [
+        1688224
+      ],
+      "heapUsedAfterBytes": [
+        62505632
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        62505632
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "039f2c2bc01fce79f95a80cb6f1fa11d9c97cc854923cee8b1c81ca26d57b866",
+      "prelevelFloat32Sha256": "e1d06a18be54bed9b546d9cf6765f1f987cb7ad1e725d03cb84494e8c0766f63",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-model1-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model1-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 1,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1016.357557
+      ],
+      "minMs": 1016.357557,
+      "medianMs": 1016.357557,
+      "p90Ms": 1016.357557,
+      "maxMs": 1016.357557,
+      "allocatedBytesCurrentThread": [
+        41591840
+      ],
+      "heapUsedBeforeBytes": [
+        1972840
+      ],
+      "heapUsedAfterBytes": [
+        49158760
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        49158760
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "0bd6c3d8b8321db54b46795b420ec19c84713ebe01ace74cc2817d2e427c63f3",
+      "prelevelFloat32Sha256": "96c4fe54ed29e0453a09f0e9d5fe5acf0bdc304706a68173a8abeb980dc2d7a2",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "pair-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-model2-c3",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1298.485762
+      ],
+      "minMs": 1298.485762,
+      "medianMs": 1298.485762,
+      "p90Ms": 1298.485762,
+      "maxMs": 1298.485762,
+      "allocatedBytesCurrentThread": [
+        61462560
+      ],
+      "heapUsedBeforeBytes": [
+        1977968
+      ],
+      "heapUsedAfterBytes": [
+        69086832
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69086832
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "3ddafc853441469113534840b4e54213494a6147ed53ab603cb93e7125d69b85",
+      "prelevelFloat32Sha256": "44070a2a6f68142965e99b0492d276ccee6248256db72c1f5bd1fc6c48f95af2",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-model2-c3",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-model2-c3",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 48,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1290.951739
+      ],
+      "minMs": 1290.951739,
+      "medianMs": 1290.951739,
+      "p90Ms": 1290.951739,
+      "maxMs": 1290.951739,
+      "allocatedBytesCurrentThread": [
+        61470240
+      ],
+      "heapUsedBeforeBytes": [
+        1982168
+      ],
+      "heapUsedAfterBytes": [
+        69091032
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69091032
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "1b34cb45b29a180bf6b3914dac60702b1bca0ca946a22ab2f307c31fcafdcd69",
+      "prelevelFloat32Sha256": "8dc22bdcd9334b4075794a9e6a2ad036737a17760fbbbd4da4d21c6c458cc57a",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "pair-low-seed-min",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-low-seed-min",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 36,
+        "velocity": 0.3499999940395355,
+        "seed": "-9223372036854775808"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1180.245514
+      ],
+      "minMs": 1180.245514,
+      "medianMs": 1180.245514,
+      "p90Ms": 1180.245514,
+      "maxMs": 1180.245514,
+      "allocatedBytesCurrentThread": [
+        61470592
+      ],
+      "heapUsedBeforeBytes": [
+        1985824
+      ],
+      "heapUsedAfterBytes": [
+        69094688
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69094688
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "42866747ef6a360767f9caaf3842d46be2a9afdd093be55f31559df531bf9e33",
+      "prelevelFloat32Sha256": "d3890b0db1d75a5f75b047aa4a5f110475e28c8e82133e3acc700b4fd8cc64b1",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-high-seed-max",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-high-seed-max",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 84,
+        "velocity": 1,
+        "seed": "9223372036854775807"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1227.223851
+      ],
+      "minMs": 1227.223851,
+      "medianMs": 1227.223851,
+      "p90Ms": 1227.223851,
+      "maxMs": 1227.223851,
+      "allocatedBytesCurrentThread": [
+        61470272
+      ],
+      "heapUsedBeforeBytes": [
+        1989816
+      ],
+      "heapUsedAfterBytes": [
+        69098680
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69098680
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "d6ba28b89d12664c29012e1acca6180a7ab0002df7d9eadd611e57fa263ff190",
+      "prelevelFloat32Sha256": "c8228d8fe1e78f0cfe078e0042af3fcf292ff9309a3cd1284afbdbc14f9a3496",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "pair-zero-velocity",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-zero-velocity",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.7799999713897705,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.44999998807907104,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0,
+        "seed": "0"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        0.71955
+      ],
+      "minMs": 0.71955,
+      "medianMs": 0.71955,
+      "p90Ms": 0.71955,
+      "maxMs": 0.71955,
+      "allocatedBytesCurrentThread": [
+        3461312
+      ],
+      "heapUsedBeforeBytes": [
+        1993488
+      ],
+      "heapUsedAfterBytes": [
+        6187792
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        6187792
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "322e5ff5ac97fbece9c48bac1edf245f3eb19639ea92c665a8f374f1b9834043",
+      "prelevelFloat32Sha256": "322e5ff5ac97fbece9c48bac1edf245f3eb19639ea92c665a8f374f1b9834043",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-low-velocity",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-low-velocity",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.44999998807907104,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.20000000298023224,
+          "BIND": 0.30000001192092896,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.25,
+        "seed": "7"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1169.698405
+      ],
+      "minMs": 1169.698405,
+      "medianMs": 1169.698405,
+      "p90Ms": 1169.698405,
+      "maxMs": 1169.698405,
+      "allocatedBytesCurrentThread": [
+        61470200
+      ],
+      "heapUsedBeforeBytes": [
+        1997144
+      ],
+      "heapUsedAfterBytes": [
+        69106008
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69106008
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "97387088eacd6f7a4a37455c0ee940180d72fcf0354881f9e0e39eb12fb056c9",
+      "prelevelFloat32Sha256": "5a0d5569f3ca8944f57068a8eb65552cb4df0a8153f56914bb69bf4cb48c1985",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "pair-all-high",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-all-high",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 1,
+          "PASSAGE": 1,
+          "TILT": 1,
+          "BIND": 1,
+          "TAIL": 1,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 84,
+        "velocity": 1,
+        "seed": "-1"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1217.89228
+      ],
+      "minMs": 1217.89228,
+      "medianMs": 1217.89228,
+      "p90Ms": 1217.89228,
+      "maxMs": 1217.89228,
+      "allocatedBytesCurrentThread": [
+        61470200
+      ],
+      "heapUsedBeforeBytes": [
+        2000888
+      ],
+      "heapUsedAfterBytes": [
+        69109752
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69109752
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "0db433710457bb88ae0567cea1961b434c1f39039b8a2129dae833a94962c0e3",
+      "prelevelFloat32Sha256": "2c4150251a922b429af9cd7529ecbc35417868a1a404e1d0680ffa990346bf4e",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-all-low",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-all-low",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0,
+          "PASSAGE": 0,
+          "TILT": 0,
+          "BIND": 0,
+          "TAIL": 0,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 36,
+        "velocity": 0.75,
+        "seed": "1"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1039.219951
+      ],
+      "minMs": 1039.219951,
+      "medianMs": 1039.219951,
+      "p90Ms": 1039.219951,
+      "maxMs": 1039.219951,
+      "allocatedBytesCurrentThread": [
+        61470200
+      ],
+      "heapUsedBeforeBytes": [
+        2004544
+      ],
+      "heapUsedAfterBytes": [
+        69113408
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69113408
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "181baed1f5c84a7fd2c8c04eb49bc26067358b2b422becc74ff4f98c34617fe6",
+      "prelevelFloat32Sha256": "161ad9dd4361d168c124e320e5ca6c1d80939faf460aaf8d193998645897ea16",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "stream-close-diffuse",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "stream-close-diffuse",
+        "voice": "STREAM",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.8999999761581421,
+          "TILT": 0.15000000596046448,
+          "BIND": 0.10000000149011612,
+          "TAIL": 0.800000011920929,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "seed": "41"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1246.249495
+      ],
+      "minMs": 1246.249495,
+      "medianMs": 1246.249495,
+      "p90Ms": 1246.249495,
+      "maxMs": 1246.249495,
+      "allocatedBytesCurrentThread": [
+        61470200
+      ],
+      "heapUsedBeforeBytes": [
+        2008200
+      ],
+      "heapUsedAfterBytes": [
+        69117064
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69117064
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "147e5790dd3977b4e3c910554d697e0597f18a011536487cae3f82ac11901864",
+      "prelevelFloat32Sha256": "7c2381aee7a18778086c5419a71014bb31f5e77cb961f14f388a391d5bfbdb18",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    },
+    {
+      "id": "pair-inclined",
+      "patch": {
+        "engine": "TIDAL",
+        "version": 1,
+        "name": "pair-inclined",
+        "voice": "PAIR",
+        "macros": {
+          "APPROACH": 0.3499999940395355,
+          "PASSAGE": 0.699999988079071,
+          "TILT": 0.8500000238418579,
+          "BIND": 0.41999998688697815,
+          "TAIL": 0.8500000238418579,
+          "HOLD": 0
+        },
+        "model": 2,
+        "midi": 60,
+        "velocity": 0.75,
+        "seed": "-9223372036854775808"
+      },
+      "path": "production",
+      "state": "cold",
+      "cacheHooksPresent": true,
+      "warmupRenders": 1,
+      "timedRenders": 1,
+      "samplesMs": [
+        1080.518529
+      ],
+      "minMs": 1080.518529,
+      "medianMs": 1080.518529,
+      "p90Ms": 1080.518529,
+      "maxMs": 1080.518529,
+      "allocatedBytesCurrentThread": [
+        61470272
+      ],
+      "heapUsedBeforeBytes": [
+        2011880
+      ],
+      "heapUsedAfterBytes": [
+        69120744
+      ],
+      "sumOfHeapPoolPeakUsedBytes": [
+        69120744
+      ],
+      "frames": 432180,
+      "durationSeconds": 9.8,
+      "normalizedFloat32Sha256": "95f43862c08714e2e0896b103bc913be9f4cc13926a704b920ae4a98a2a43ff1",
+      "prelevelFloat32Sha256": "97b40acbb5038d002d03be61ba4c1c976905cee6265754e7f63f4af52d50ef67",
+      "cache": {
+        "bytes": 1728720,
+        "entries": 1,
+        "maxBytes": 8388608
+      },
+      "profileOutsideTimedSamples": null
+    }
+  ]
+}

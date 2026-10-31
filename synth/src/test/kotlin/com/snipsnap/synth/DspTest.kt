@@ -358,6 +358,31 @@ class DspTest {
     }
 
     @Test
+    fun `fadeTailCosine is a raised cosine over the frames it is asked for, one gain per stereo frame, at any rate`() {
+        for (rate in listOf(Dsp.RATE, 96000)) {
+            val frames = rate
+            val mono = FloatArray(frames) { 1f }
+            val stereo = FloatArray(frames * 2) { 1f }
+            Dsp.fadeTailCosine(mono, 0.3f, rate = rate, channels = 1)
+            Dsp.fadeTailCosine(stereo, 0.3f, rate = rate, channels = 2)
+            val n = (0.3f * rate).toInt()
+            val start = frames - n
+            // Its edges, not a count: a raised cosine's first frames round to exactly 1f.
+            assertTrue((0 until start).all { mono[it] == 1f }, "at $rate Hz the fade reached before its last $n frames")
+            assertTrue(mono[start + n / 100] < 1f, "at $rate Hz the fade has not begun 1% into its $n frames")
+            for (f in 0 until frames) {
+                assertEquals(mono[f], stereo[f * 2], "at $rate Hz frame $f: stereo left differs from mono")
+                assertEquals(stereo[f * 2], stereo[f * 2 + 1], "at $rate Hz frame $f: the two channels got different gains")
+            }
+            assertEquals(1f, mono[start], "the fade does not start at full gain")
+            assertEquals(0.5f, mono[start + n / 2], 1e-3f, "the fade is not a raised cosine at its middle")
+            assertEquals(0.8536f, mono[start + n / 4], 1e-3f, "the fade is not a raised cosine a quarter in")
+            assertTrue(mono.last() < 1e-6f, "the fade does not reach silence: ${mono.last()}")
+            for (f in start + 1 until frames) assertTrue(mono[f] <= mono[f - 1], "the fade rises at frame $f")
+        }
+    }
+
+    @Test
     fun `fadeTail honours a rate it is given instead of assuming 44100`() {
         // Pre-existing bug: fadeTail hardcoded RATE, so at 96 kHz it faded
         // less than half the asked duration. Users have 48 and 96 kHz interfaces.

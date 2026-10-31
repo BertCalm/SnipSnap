@@ -32,6 +32,7 @@ data class RegistersProbe(
     val rawPeak: Double,
     val cycleError: Double?,
     val seamError: Double?,
+    /** Constant bank detune, or nominal peak bank swing before vibrato when [spreadModulationHz] is nonzero. */
     val effectiveSpreadHz: Double,
     val motionHz: Double,
     val previousCycle: FloatArray? = null,
@@ -45,6 +46,8 @@ data class RegistersProbe(
     val airflowPreviousCycle: FloatArray? = null,
     val airflowCycleError: Double? = null,
     val airflowSeamError: Double? = null,
+    /** Model-6 TRANSISTOR held ensemble repeats at this rate; zero means constant detune. */
+    val spreadModulationHz: Double = 0.0,
 )
 
 /**
@@ -59,7 +62,7 @@ data class RegistersProbe(
  * the same loop, with the carrier adjusted by substantially less than a tenth of a cent.
  */
 object Registers {
-    const val MODEL_VERSION = 4
+    const val MODEL_VERSION = 6
     const val LEGACY_MODEL_VERSION = 1
     const val ROOT_MIDI = 48
     const val TUNE_SEMITONES = 24
@@ -423,7 +426,7 @@ object Registers {
         val m = settled(voice, macros)
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f).toDouble()
         // Keep the accepted PIPE/MUSETTE arithmetic and seed path completely unchanged.
-        if (voice == RegistersVoice.TRANSISTOR) return RegistersTransistor.probe(m, midi, v, cancelled)
+        if (voice == RegistersVoice.TRANSISTOR) return RegistersTransistor.probe(m, midi, v, model, cancelled)
         val requestedHz = Keys.midiHz(midi).toDouble()
         val loop = if (isLoop(m.getValue("HOLD"))) planLoop(requestedHz) else null
         val hz = loop?.hz ?: requestedHz

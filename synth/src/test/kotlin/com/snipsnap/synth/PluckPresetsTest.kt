@@ -5,8 +5,8 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * U1 of `docs/SYNTH_UPGRADE.md`, PLUCK's turn: twelve presets per voice
- * (forty-eight total). No classifier "identity" check — every PLUCK voice
+ * U1 of `docs/SYNTH_UPGRADE.md`, PLUCK's turn: twelve presets per original voice
+ * plus two owner-approved UPRIGHT starting articulations. No classifier "identity" check — every PLUCK voice
  * is statically TONAL, not judged from its render — so this covers the
  * rest of the playability contract: a real, clean sound; a faithful JSON
  * round-trip; and listbox-legal names. (No spread check: good presets
@@ -44,7 +44,8 @@ class PluckPresetsTest {
     fun `preset names are uppercase, short, and unique per voice`() {
         for (voice in PluckVoice.entries) {
             val names = PluckPresets.forVoice(voice).map { it.name }
-            assertEquals(12, names.size, "$voice should ship 12 presets, has ${names.size}")
+            val expected = if (voice == PluckVoice.UPRIGHT) 2 else 12
+            assertEquals(expected, names.size, "$voice should ship $expected presets, has ${names.size}")
             assertEquals(names.toSet().size, names.size, "$voice has duplicate preset names: $names")
             for (name in names) {
                 assertTrue(name.length <= 14, "$voice/$name is longer than 14 chars")

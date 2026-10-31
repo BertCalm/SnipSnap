@@ -83,7 +83,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
     private fun invokeClick(label: String) {
         val action = compose.onNode(hasContentDescription(label) and hasClickAction()).fetchSemanticsNode()
             .config.getOrNull(SemanticsActions.OnClick)?.action ?: error("no click for $label")
-        assertTrue(action.invoke())
+        compose.runOnIdle { assertTrue(action.invoke()) }
         pump()
     }
 
@@ -93,7 +93,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
     private fun dial(label: String, value: Float) {
         val action = slider(label).fetchSemanticsNode().config.getOrNull(SemanticsActions.SetProgress)?.action
             ?: error("no slider for $label")
-        assertTrue(action.invoke(value))
+        compose.runOnIdle { assertTrue(action.invoke(value)) }
         pump()
     }
 
@@ -102,7 +102,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
 
     @Test fun all_three_voices_expose_the_twelve_factory_recipes_and_finite_controls() {
         show()
-        compose.onNodeWithContentDescription("ENGINE LIBRATION · TAP FOR NEXT").assertExists()
+        compose.onNodeWithContentDescription("ENGINE LIBRATION. CHOOSE ENGINE").assertExists()
         for (voice in LibrationVoice.entries) {
             invokeClick(voice.name)
             for (macro in Libration.macrosFor(voice).filterNot { it.name == "HOLD" }) slider(macro.name).assertExists()

@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -75,9 +76,20 @@ class OrphicaScreenTest : ComposeScreenTest() {
         // Invoke semantics directly, as PadSheetScreenTest does for sliders:
         // controls below the fold need no animated scroll on the frozen clock.
         for (engine in listOf("THUMP", "SCANNED CHAIN", "SKIN", "ONSET", "TINES", "VELVET", "VOX", "PLUCK")) {
-            click(button("ENGINE $engine · TAP FOR NEXT"))
+            // A click schedules recomposition. Await that exact engine's
+            // header before advancing again; the fixed frame pump alone
+            // cannot establish that the previous transition has completed.
+            waitFor("SYNTH to display $engine before cycling") {
+                compose.onAllNodesWithContentDescription("ENGINE $engine. CHOOSE ENGINE")
+                    .fetchSemanticsNodes().size == 1
+            }
+            click(button("NEXT ENGINE"))
         }
-        button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
+        waitFor("SYNTH to display ORPHICA after PLUCK") {
+            compose.onAllNodesWithContentDescription("ENGINE ORPHICA. CHOOSE ENGINE")
+                .fetchSemanticsNodes().size == 1
+        }
+        button("ENGINE ORPHICA. CHOOSE ENGINE").assertExists()
     }
 
     private fun click(node: SemanticsNodeInteraction) {
@@ -186,7 +198,7 @@ class OrphicaScreenTest : ComposeScreenTest() {
         compose.runOnIdle { showingSynth = true }
         pump()
 
-        button("ENGINE ORPHICA · TAP FOR NEXT").assertExists()
+        button("ENGINE ORPHICA. CHOOSE ENGINE").assertExists()
         button("MODE REVERSE").assertIsSelected()
         assertEquals(.67f, value("FRACTURE"), 0f)
         assertEquals(1f, value("HOLD"), 0f)
@@ -214,6 +226,13 @@ class OrphicaScreenTest : ComposeScreenTest() {
         val first = KitStore.load(dir).pads.single { it.slot == 1 }
         assertEquals(firstPadTune, first.tuneCoarse)
         assertEquals(0, first.tuneFine)
+        // The WAV/kit write precedes the main-thread completion callback.
+        // Also verify that assignment closes its panel before tearing down.
+        waitFor("SPREAD to close after assigning the authored ORPHICA pads") {
+            compose.onAllNodesWithText("SPREAD — ONE SOUND, ONE SCALE", useUnmergedTree = true)
+                .fetchSemanticsNodes().isEmpty()
+        }
+        pump()
     }
 
     @Test

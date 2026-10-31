@@ -25,6 +25,7 @@ class RegistersCommandTest {
                     PrintStream(ByteArrayOutputStream()), PrintStream(ByteArrayOutputStream())))
                 val wav = dir.listFiles { f -> f.extension == "wav" && f.name.contains(voice.name) }!!.single()
                 val patch = RegistersPresets.forVoice(voice).first().copy(midi = 69, velocity = .4f)
+                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 6 else 3, patch.model)
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, patch.render()) }.toByteArray()
                 assertTrue(expected.contentEquals(wav.readBytes()), "explicit note, energy and model survive CLI dispatch")
                 assertEquals(44_100, WavReader.read(wav).sampleRate)
@@ -37,6 +38,8 @@ class RegistersCommandTest {
         val dir = createTempDirectory("registers-instrument-cli").toFile()
         try {
             for (voice in listOf(RegistersVoice.MUSETTE, RegistersVoice.TRANSISTOR)) {
+                assertEquals(if (voice == RegistersVoice.TRANSISTOR) 6 else 3,
+                    RegistersPresets.forVoice(voice).first().model)
                 val directory = File(dir, voice.name).apply { mkdirs() }
                 val output = ByteArrayOutputStream()
                 assertEquals(0, Cli.run(arrayOf("synth", "registers", voice.name.lowercase(), "--instrument", "--release", ".8", "--out", directory.path),

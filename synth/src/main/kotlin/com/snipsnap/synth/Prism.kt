@@ -353,8 +353,9 @@ object Prism {
         macros: Map<String, Float>,
         velocity: Float,
         motion: PrismMotion,
+        loop: LoopPlan? = null,
     ): MotionBank {
-        val b = bank(template.copy(amplitudeOverrides = motion.amplitudesB), hz, macros, velocity, null)
+        val b = bank(template.copy(amplitudeOverrides = motion.amplitudesB), hz, macros, velocity, loop)
         check(a.hz.contentEquals(b.hz) && a.groups.contentEquals(b.groups)) { "PRISM motion must share A's carrier map" }
         val weightsA = a.weights.copyOf()
         val weightsB = b.weights.copyOf()
@@ -495,7 +496,7 @@ object Prism {
         return onset * loss * gather * transient
     }
 
-    internal data class LoopPlan(val frames: Int, val periods: Int, val baseHz: Double)
+    internal data class LoopPlan(val frames: Int, val periods: Int, val baseHz: Double, val motionFrames: Int = frames)
 
     // SynthScreen previews run in runInterruptible and keygroup exports pass a cancel
     // callback; either stops a long render instead of letting it finish unwanted.
@@ -525,6 +526,58 @@ object Prism {
         return requireNotNull(best)
     }
 
+    /** Fit the nearest whole-carrier cycle to motion's requested duration, with <.1 cent
+     * root movement. Repeat-only control blocks split at the period boundary, so the frame
+     * count need not be rounded to an envelope block. This avoids needlessly stretching
+     * short gestures just to align the control grid. */
+    private fun planMotionLoop(hz: Double, seconds: Float, template: PrismTemplate): LoopPlan {
+        val ratios = List(PARTIALS) { i -> template.ratioOverrides.getOrNull(i)?.toDouble()
+            ?: if (template.spectralId == PrismSpectrum.BELL) BELL_RATIOS[i].toDouble() else i + 1.0 }
+        // Preserve exact dyadic spectra, including custom half/quarter/eighth/sixteenth maps.
+        // Arbitrary ratios keep the existing held-note policy of quantizing each carrier.
+        val step = listOf(1, 2, 4, 8, 16).firstOrNull { denominator ->
+            ratios.all { ratio -> ratio * denominator == (ratio * denominator).roundToInt().toDouble() }
+        } ?: 1
+        val center = (seconds * hz / step).roundToInt().coerceAtLeast(1)
+        // A >=.21-second fallback guarantees the frame rounding itself is below .1 cent.
+        val guaranteed = kotlin.math.ceil(hz * .21 / step).toInt().coerceAtLeast(1)
+        val candidates = ((center - 64).coerceAtLeast(1)..center + 64).toList() + guaranteed
+        var best: LoopPlan? = null
+        var closest = Double.POSITIVE_INFINITY
+        for (candidate in candidates) {
+            val periods = candidate * step
+            val frames = (periods * RATE / hz).roundToInt().coerceAtLeast(1)
+            val fitted = periods * RATE.toDouble() / frames
+            val cents = abs(1200.0 * ln(fitted / hz) / ln(2.0))
+            if (cents >= .1) continue
+            val distance = abs(frames.toDouble() / RATE - seconds)
+            if (distance < closest) {
+                closest = distance
+                best = LoopPlan(frames, periods, fitted)
+            }
+        }
+        val cycle = requireNotNull(best) { "PRISM could not fit a repeating motion period" }
+        // A short gesture still exports a sustained LOOP. These cycles are simulated in one
+        // continuous pass, not tiled PCM, so the conditioning and preceding-cycle proof remain real.
+        val repeats = kotlin.math.ceil(1.51 * RATE / cycle.frames).toInt().coerceAtLeast(1)
+        return LoopPlan(cycle.frames * repeats, cycle.periods * repeats, cycle.baseHz, cycle.frames)
+    }
+
+    /** Actual full-cycle duration for repeating HOLD, without rendering audio. Integer
+     * carrier periods can move the requested duration, especially on short low notes.
+     * Finite motion retains its requested one-way or repeating-cycle time. */
+    fun motionCycleSeconds(
+        voice: PrismVoice,
+        macros: Map<String, Float>,
+        motion: PrismMotion,
+        template: PrismTemplate = templateFor(voice),
+    ): Float {
+        val m = settled(voice, macros)
+        if (!motion.repeat || !isLoop(m.getValue("HOLD"))) return motion.seconds
+        val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
+        return (planMotionLoop(hz, motion.seconds, template).motionFrames.toDouble() / RATE).toFloat()
+    }
+
     private fun synthesize(
         voice: PrismVoice,
         m: Map<String, Float>,
@@ -549,22 +602,33 @@ object Prism {
         val increment = DoubleArray(GROUPS)
         val movingWeights = if (motion != null) DoubleArray(partials.weights.size) else null
         val weightIncrement = if (motion != null) DoubleArray(partials.weights.size) else null
+        val repeatingLoop = loop?.takeIf { motion?.repeat == true }
+        val periodFrames = repeatingLoop?.frames?.times(Dsp.OVERSAMPLE)
+        val motionFrames = repeatingLoop?.motionFrames?.times(Dsp.OVERSAMPLE)
+        val motionPeriod = repeatingLoop?.motionFrames?.toDouble()?.div(RATE)
         for (i in raw.indices) {
-            if (i % BLOCK == 0) {
+            // A repeat can end between ordinary control blocks. Anchor its final short block
+            // and the following cycle's first block at the actual loop boundary. Only this new
+            // path uses cycle-local phase; all legacy oscillator/control arithmetic stays intact.
+            val phaseFrame = periodFrames?.let { i % it } ?: i
+            val motionFrame = motionFrames?.let { phaseFrame % it } ?: phaseFrame
+            if (motionFrame % BLOCK == 0) {
                 stopIfUnwanted(cancelled)
-                val t = i.toDouble() / rate
+                val block = motionFrames?.let { minOf(BLOCK, it - motionFrame) } ?: BLOCK
+                val t = phaseFrame.toDouble() / rate
+                val nextTime = (phaseFrame + block).toDouble() / rate
                 for (g in 0 until GROUPS) {
                     current[g] = envelope(t, g, c, m, loop)
-                    increment[g] = (envelope((i + BLOCK).toDouble() / rate, g, c, m, loop) - current[g]) / BLOCK
+                    increment[g] = (envelope(nextTime, g, c, m, loop) - current[g]) / block
                 }
                 if (motion != null && movingWeights != null && weightIncrement != null && weightsB != null) {
                     for (p in partials.weights.indices) {
                         val a = partials.weights[p].toDouble()
                         val difference = weightsB[p] - a
                         val group = partials.groups[p]
-                        movingWeights[p] = a + difference * motion.positionAt(t, group)
-                        val next = a + difference * motion.positionAt((i + BLOCK).toDouble() / rate, group)
-                        weightIncrement[p] = (next - movingWeights[p]) / BLOCK
+                        movingWeights[p] = a + difference * motion.positionAt(t, group, motionPeriod)
+                        val next = a + difference * motion.positionAt(nextTime, group, motionPeriod)
+                        weightIncrement[p] = (next - movingWeights[p]) / block
                     }
                 }
                 // Exact rephasing bounds recursive oscillator roundoff without resetting any envelope.
@@ -605,6 +669,7 @@ object Prism {
         val loopFrames: Int = 0,
         val previousCycle: FloatArray? = null,
         val seamError: Double = 0.0,
+        val motionCycleFrames: Int = 0,
     )
 
     internal fun probe(
@@ -619,15 +684,17 @@ object Prism {
         motion: PrismMotion? = null,
     ): Probe {
         val m = settled(voice, macros)
-        require(motion == null || !isLoop(m.getValue("HOLD"))) { "PRISM spectral motion supports finite notes only; HOLD loops are not supported" }
+        require(motion == null || motion.repeat || !isLoop(m.getValue("HOLD"))) { "PRISM spectral motion supports finite notes only; HOLD loops are not supported" }
         val v = (velocity.takeIf { it.isFinite() } ?: 1f).coerceIn(0f, 1f)
         val hz = frequencyFor(voice, m.getValue("TUNE")).toDouble()
-        val loop = if (isLoop(m.getValue("HOLD"))) planLoop(hz, template) else null
+        val loop = if (isLoop(m.getValue("HOLD"))) {
+            if (motion?.repeat == true) planMotionLoop(hz, motion.seconds, template) else planLoop(hz, template)
+        } else null
         // An authored A changes only spectral weights. Keep the original template for
         // contours and phase seeding so opening comparisons share the same realization.
         val startingTemplate = motion?.amplitudesA?.let { template.copy(amplitudeOverrides = it) } ?: template
         val originalBank = bank(startingTemplate, loop?.baseHz ?: hz, m, v, loop)
-        val moving = motion?.let { motionBank(originalBank, template, hz, m, v, it) }
+        val moving = motion?.let { motionBank(originalBank, template, loop?.baseHz ?: hz, m, v, it, loop) }
         val bank = moving?.a ?: originalBank
         val contours = contours(template, m)
         val finiteSeconds = seconds?.takeIf { it.isFinite() && it > 0f }?.toDouble()?.coerceAtMost(contours.seconds) ?: contours.seconds
@@ -676,9 +743,11 @@ object Prism {
             }
         }
         val initialWeights = if (motion != null && moving != null) FloatArray(bank.weights.size) { p ->
-            mix(bank.weights[p].toDouble(), moving.weightsB[p].toDouble(), motion.positionAt(0.0, bank.groups[p])).toFloat()
+            mix(bank.weights[p].toDouble(), moving.weightsB[p].toDouble(),
+                motion.positionAt(0.0, bank.groups[p], loop?.motionFrames?.toDouble()?.div(RATE))).toFloat()
         } else bank.weights
-        return Probe(out, if (keepRaw) raw else FloatArray(0), bank.hz, initialWeights, bank.groups, loop?.baseHz ?: hz, loop?.frames ?: 0, previous, seam)
+        return Probe(out, if (keepRaw) raw else FloatArray(0), bank.hz, initialWeights, bank.groups, loop?.baseHz ?: hz,
+            loop?.frames ?: 0, previous, seam, loop?.takeIf { motion?.repeat == true }?.motionFrames ?: 0)
     }
 
     fun render(
@@ -710,7 +779,8 @@ object Prism {
         cancelled: () -> Boolean = { false },
     ): FloatArray = probe(voice, macros + ("HOLD" to 1f), velocity, template, normalize = true, cancelled = cancelled, keepRaw = false).samples
 
-    /** Explicit refusal keeps old positional and trailing-lambda loop callers source compatible. */
+    /** Repeating spectral motion closes on its fitted cycle; one-way motion still refuses HOLD.
+     * This overload keeps old positional and trailing-lambda loop callers source compatible. */
     fun renderLoop(
         voice: PrismVoice,
         macros: Map<String, Float> = emptyMap(),

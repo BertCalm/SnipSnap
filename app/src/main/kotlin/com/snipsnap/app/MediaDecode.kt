@@ -71,7 +71,11 @@ object MediaDecode {
             require(bytes.size <= MAX_WAV_BYTES) {
                 "that WAV is over ${MAX_WAV_BYTES / (1024 * 1024)} MB - the tape takes three minutes, trim it first"
             }
-            return WavReader.read(bytes)
+            // Frame-capped, not just byte-capped: 96 MB of 8-bit mono is
+            // ~96M frames (~384 MB as floats), so the byte gate above
+            // alone would still let a shared WAV allocate its way into
+            // an out-of-memory. Same ceiling the compressed path holds.
+            return WavReader.read(bytes, DecodeLimits.MAX_FRAMES)
         }
         return decodeCompressed(context, uri)
     }

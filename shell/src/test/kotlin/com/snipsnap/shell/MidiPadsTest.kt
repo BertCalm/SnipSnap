@@ -5,6 +5,7 @@ import com.snipsnap.kit.MidiWire.Event
 import com.snipsnap.xpm.PadNoteMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
 class MidiPadsTest {
@@ -63,5 +64,43 @@ class MidiPadsTest {
         route(Event.Control(0, MidiWire.CC_ALL_NOTES_OFF, 0))
         route(Event.Control(0, MidiWire.CC_ALL_SOUND_OFF, 0))
         assertEquals(listOf("hit 1 0.75", "release 1", "hit 2 1.00", "panic", "panic"), calls)
+    }
+
+    @Test
+    fun `clock and start fire no pad callback`() {
+        val calls = mutableListOf<String>()
+        for (event in listOf<Event>(Event.Clock(), Event.Start())) {
+            MidiPads.handle(
+                event, MidiPads.Map.IN_ORDER,
+                onHit = { slot, _ -> calls += "hit $slot" },
+                onRelease = { slot -> calls += "release $slot" },
+                onPanic = { calls += "panic" },
+            )
+        }
+        assertEquals(emptyList(), calls)
+    }
+
+    @Test
+    fun `noteForSlot is slotForNote backwards for every pad under both maps`() {
+        for (map in MidiPads.Map.entries) for (slot in 1..PadNoteMap.PAD_COUNT) {
+            val note = MidiPads.noteForSlot(slot, map)
+            if (map == MidiPads.Map.IN_ORDER && slot > 92) {
+                // IN_ORDER runs off the top of the keyboard (note 127 is slot 92): no note, not a wrapped one.
+                assertNull(note, "$map slot $slot is past note 127")
+                continue
+            }
+            assertNotNull(note, "$map slot $slot has a note")
+            assertEquals(slot, MidiPads.slotForNote(note, map), "$map slot $slot round-trips")
+        }
+    }
+
+    @Test
+    fun `the kick pad A02 goes out as note 36 under the MPC map`() =
+        assertEquals(36, MidiPads.noteForSlot(2, MidiPads.Map.MPC))
+
+    @Test
+    fun `a slot outside the pads has no note`() {
+        assertNull(MidiPads.noteForSlot(0, MidiPads.Map.MPC))
+        assertNull(MidiPads.noteForSlot(PadNoteMap.PAD_COUNT + 1, MidiPads.Map.IN_ORDER))
     }
 }

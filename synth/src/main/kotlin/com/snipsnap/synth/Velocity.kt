@@ -190,6 +190,8 @@ object Velocity {
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
         is LibrationPatch -> Libration.macrosFor(patch.voice)
+        is FerryPatch -> Ferry.macrosFor(patch.voice)
+        is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
         // intact and use the existing soften fallback.
@@ -228,6 +230,7 @@ object Velocity {
         is GyrePatch -> Gyre.macrosFor(patch.voice)
         is MagnetPatch -> Magnet.macrosFor(patch.voice)
         is AerostatPatch -> Aerostat.macrosFor(patch.voice)
+        is BallastPatch -> Ballast.macrosFor(patch.voice)
         is FlotillaPatch -> Flotilla.macrosFor(patch.voice)
         is CisternPatch -> Cistern.macrosFor(patch.voice)
         is TremorPatch -> Tremor.macrosFor(patch.voice)
@@ -235,6 +238,7 @@ object Velocity {
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is ScourPatch -> Scour.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
@@ -242,12 +246,13 @@ object Velocity {
         is SpoolPatch -> Spool.macrosFor(patch.voice)
         is TesseraPatch -> Tessera.macrosFor(patch.voice)
         is PitchwheelPatch -> Pitchwheel.macrosFor(patch.voice)
-        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice)
+        is EmbouchurePatch -> Embouchure.macrosFor(patch.voice, patch.model)
         is BellowsPatch -> Bellows.macrosFor(patch.voice)
         is MurmurPatch -> Murmur.macrosFor(patch.voice)
         is OspreyPatch -> Osprey.macrosFor(patch.voice)
         is OpenSkyPatch -> OpenSky.macrosFor(patch.voice)
         is PrismPatch -> Prism.macrosFor(patch.voice)
+        is LatticePatch -> Lattice.macrosFor(patch.voice)
         is AlloyPatch -> Alloy.macrosFor(patch.voice)
         is ContourPatch -> ContourEngine.macrosFor(patch.voice)
         is StoopPatch -> Stoop.macrosFor(patch.voice)
@@ -262,13 +267,19 @@ object Velocity {
         is OrphicaPatch -> Orphica.macrosFor(patch.config.material)
         is RegistersPatch -> Registers.macrosFor(patch.voice)
         is VentPatch -> Vent.macrosFor(patch.voice)
+        is CairnPatch -> Cairn.macrosFor(patch.voice)
         is WickPatch -> Wick.macrosFor(patch.voice)
+        is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
-        is NacrePatch -> Nacre.macrosFor(patch.voice)
+        is TrefoilPatch -> Trefoil.macrosFor(patch.voice)
+        is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
+        is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
         is CreasePatch -> Crease.macrosFor(patch.voice, patch.model)
         is TrioPatch -> Trio.macrosFor(patch.voice)
+        is OhmPatch -> Ohm.macrosFor(patch.model)
+        is CausticPatch -> CausticInstrument.macrosFor(patch.voice, patch.model)
     }
 
     /**
@@ -290,12 +301,12 @@ object Velocity {
      */
     private fun brightnessOverride(patch: Patch): String? = when {
         patch is ThumpPatch && patch.voice == ThumpVoice.SNARE -> "SNAP"
-        // PICK is proven monotonic for every PLUCK voice by PluckTest's
+        // PICK is proven monotonic for the original five PLUCK voices by PluckTest's
         // `PICK moves the centroid at every step of its travel`. SILK's own
         // PICK is the same exciter-brightness macro (Strings.pluckExciter's
         // pick low-pass), registered here rather than left to the generic
         // scan for the same reason PLUCK's is.
-        patch is PluckPatch -> "PICK"
+        patch is PluckPatch && patch.voice != PluckVoice.UPRIGHT -> "PICK"
         patch is SilkPatch -> "PICK"
         // STRIKE moves the hammer's cutoff, its own t60 and the tine's
         // swing together - none of BRIGHTNESS_MACROS' generic names, but
@@ -359,6 +370,7 @@ object Velocity {
      * WICK changes admitted gate charge and excitation effort, retaining the saved note and six controls.
      * OVEN changes hammer contact and partial excitation while retaining its saved root and body recipe.
      * FLOTILLA renders velocity itself, with its saved MIDI note.
+     * BALLAST changes its bass attack/filter and structural force without moving the saved macros.
      *
      * Returns null for a voice that takes velocity through [brightnessSpec] or
      * [soften] instead. Every engine is named in an arm and there is no `else`,
@@ -367,6 +379,10 @@ object Velocity {
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
         is LibrationPatch -> patch.copy(velocity = v).render()
+        is ApsisPatch -> patch.copy(velocity = v).render()
+        // UPRIGHT changes its released-string excitation. The existing five
+        // PLUCK voices retain their measured PICK/soften path below.
+        is PluckPatch -> if (patch.voice == PluckVoice.UPRIGHT) patch.copy(velocity = v).render() else null
         is FlotillaPatch -> Flotilla.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is MercuryPatch ->
             if (Mercury.velocityKind(patch.voice) == Mercury.VelocityKind.TOUCH) {
@@ -375,7 +391,8 @@ object Velocity {
                 null
             }
         is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
-        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+        is BallastPatch -> Ballast.render(patch.voice, patch.macros, velocity = v)
+        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v, model = patch.model)
         is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
         is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
@@ -384,6 +401,8 @@ object Velocity {
         is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
         is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
         is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+        // SCOUR's velocity is shot speed: each shot lands harder and leaves more coverage.
+        is ScourPatch -> Scour.render(patch.voice, patch.macros, velocity = v)
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
@@ -393,6 +412,8 @@ object Velocity {
         is OspreyPatch -> patch.copy(velocity = v).render()
         is OpenSkyPatch -> patch.copy(velocity = v).render()
         is PrismPatch -> patch.copy(velocity = v).render()
+        // Gate geometry and source identity stay fixed; the source supplies the softer excitation.
+        is LatticePatch -> patch.copy(velocity = v).render()
         is AlloyPatch -> patch.copy(velocity = v).render()
         is ContourPatch -> patch.copy(velocity = v).render()
         // Source registration, shadow gesture and chord voicing belong to this exact recipe.
@@ -408,19 +429,26 @@ object Velocity {
         is OrphicaPatch -> patch.copy(config = patch.config.copy(velocity = v)).render()
         is RegistersPatch -> patch.copy(velocity = v).render()
         is VentPatch -> patch.copy(velocity = v).render()
+        is CairnPatch -> patch.copy(velocity = v).render()
         is WickPatch -> patch.copy(velocity = v).render()
+        is FilamentPatch -> patch.copy(velocity = v).render()
         is ScannedChainPatch -> patch.copy(velocity = v).render()
         is ChamberPatch -> patch.copy(velocity = v).render()
+        is TrefoilPatch -> patch.copy(velocity = v).render()
+        is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
+        is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
+        is OhmPatch -> patch.copy(velocity = v).render()
+        is CausticPatch -> patch.copy(velocity = v).render()
         is UndertowPatch -> Undertow.render(patch.voice, patch.macros, velocity = v)
         is SuturePatch -> Suture.render(patch.voice, patch.macros, velocity = v)
         is SpoolPatch -> patch.copy(velocity = v).render()
         // Velocity moves a brightness macro (brightnessSpec) or softens the render.
         is ArcoPatch, is BorePatch, is FathomPatch, is ForkPatch, is GlintPatch, is GyrePatch,
-        is MagnetPatch, is PluckPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
+        is MagnetPatch, is ResinPatch, is SilkPatch, is SirenPatch, is SkinPatch,
         is SnapPatch, is TerraPatch, is ThumpPatch, is TidePatch, is TinesPatch, is TonewheelPatch,
         is VelvetPatch, is VoxPatch, is OnsetPatch,
         -> null

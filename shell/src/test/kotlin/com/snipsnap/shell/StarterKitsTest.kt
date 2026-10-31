@@ -1,5 +1,12 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Chamber
+import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.ChamberVoice
+import com.snipsnap.synth.CausticInstrument
+import com.snipsnap.synth.CausticPatch
+import com.snipsnap.synth.CausticVoice
+
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.Preflight
@@ -32,6 +39,7 @@ import com.snipsnap.synth.Nimbus
 import com.snipsnap.synth.NimbusPatch
 import com.snipsnap.synth.NimbusVoice
 import com.snipsnap.synth.Osprey
+import com.snipsnap.synth.OspreyCuratedPresets
 import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OspreyPresets
 import com.snipsnap.synth.OspreyVoice
@@ -99,9 +107,15 @@ class StarterKitsTest {
      * The single-engine starters with no block of their own below. Each SynthKits
      * builder lands sixteen pads through `pad(patch, drumClass)` with no chain, so
      * every pad is dry, carries its engine's patch, is filed by that engine's
-     * drumClassFor, and the sixteen reach every voice (measured for all twelve).
+     * drumClassFor, and the sixteen reach every voice.
      */
     private val oneEngineStarters: Map<String, OneEngine> = mapOf(
+        "chamber" to OneEngine(ChamberPatch::class.java, ChamberVoice.entries.map { it.name }.toSet()) {
+            (it as ChamberPatch).let { p -> Chamber.drumClassFor(p.voice, p.macros) }
+        },
+        "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {
+            (it as CausticPatch).let { p -> CausticInstrument.drumClassFor(p.voice, p.macros, p.model) }
+        },
         "circuit" to OneEngine(CircuitPatch::class.java, CircuitVoice.entries.map { it.name }.toSet()) {
             (it as CircuitPatch).let { p -> Circuit.drumClassFor(p.voice, p.macros) }
         },
@@ -138,6 +152,9 @@ class StarterKitsTest {
         "murmur" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
             (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
         },
+        "osprey-curated" to OneEngine(OspreyPatch::class.java, OspreyVoice.entries.map { it.name }.toSet()) {
+            (it as OspreyPatch).let { p -> Osprey.drumClassFor(p.voice, p.macros) }
+        },
     )
 
     @Test
@@ -165,6 +182,7 @@ class StarterKitsTest {
                     "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
                     "vent" -> 12
+                    "strike-fx" -> 4
                     else -> 16
                 }
                 assertEquals((1..slots).toList(), kit.pads.map { it.slot }, "${starter.id}: a full bank, no gaps")
@@ -197,6 +215,15 @@ class StarterKitsTest {
                     patch
                 }
                 assertEquals(engine.voices, patches.map { it.voiceName }.toSet(), "${starter.id}: every voice is reachable")
+                if (starter.id == "osprey-curated") {
+                    val curated = patches.map { assertIs<OspreyPatch>(it) }
+                    assertEquals(OspreyCuratedPresets.all(), curated, "the curated roster survives kit save/load unchanged")
+                    assertEquals(curated.map { it.name }, model.kit.pads.map { it.displayName }, "preset names stay visible on the pads")
+                    assertTrue(curated.all { it.modelVersion == 3 }, "the curated bank keeps the approved R3 renderer")
+                    assertTrue(curated.map { it.midi }.toSet().size > 1, "curated roles retain their different registers")
+                    assertTrue(curated.map { it.durationSeconds }.toSet().size > 1, "short gestures and long tails retain their durations")
+                    assertTrue(model.kit.pads.all { it.drumClass == DrumClass.TONAL }, "long finite tails stay TONAL rather than looping")
+                }
                 // The first pad (a finite note) and the last (held for most kits) each
                 // regenerate their saved WAV exactly from the recipe alone.
                 val first = model.kit.pads.first()
@@ -431,7 +458,7 @@ class StarterKitsTest {
                     patch
                 }
                 assertEquals(OspreyVoice.entries.toSet(), patches.map { it.voice }.toSet())
-                assertEquals(OspreyPresets.all(), patches.take(15), "the fifteen shore/sea presets, in roster order")
+                assertEquals(OspreyPresets.coastWeather(), patches.take(15), "the fifteen shore/sea presets, in roster order")
                 assertTrue(patches.all { it.midi == 60 && it.seed == 731 && it.modelVersion == Osprey.MODEL_VERSION }, "rooted at C4, one seed, the current model")
                 assertEquals(1f, patches.last().macros.getValue("HOLD"), "the sixteenth pad is the coast with extended excitation")
                 // The first pad and the extended last one each regenerate their saved WAV exactly.
@@ -471,9 +498,13 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "crease", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trio", "osprey", "opensky", "vent", "skin", "cistern", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "libration", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "velocity"),
             StarterKits.ALL.map { it.id },
         )
+        val chamber = StarterKits.byId("chamber")!!
+        assertEquals("CHAMBER", chamber.displayName)
+        assertFalse(chamber.seeded, "CHAMBER is a fixed authored kit")
+        assertEquals(KeySpec.parse("Cminpent"), chamber.key)
         val cistern = StarterKits.byId("cistern")!!
         assertEquals("CISTERN", cistern.displayName)
         assertFalse(cistern.seeded, "CISTERN is a fixed authored kit")
@@ -514,6 +545,10 @@ class StarterKitsTest {
         assertEquals("OSPREY", osprey.displayName)
         assertFalse(osprey.seeded, "OSPREY is a fixed dry audition kit")
         assertNull(osprey.key, "OSPREY's sea gestures all sit at C4 and name no key")
+        val ospreyCurated = StarterKits.byId("osprey-curated")!!
+        assertEquals("OSPREY CURATED", ospreyCurated.displayName)
+        assertFalse(ospreyCurated.seeded, "OSPREY CURATED repeats its authored finite gestures")
+        assertEquals(KeySpec.parse("Cminpent"), ospreyCurated.key)
         val revel = StarterKits.byId("revel")!!
         assertEquals("REVEL", revel.displayName)
         assertFalse(revel.seeded, "REVEL is a fixed dry ensemble kit")

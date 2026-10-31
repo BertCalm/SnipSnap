@@ -212,6 +212,15 @@ class ExportScreenTest : ComposeScreenTest() {
             compose.onAllNodesWithText(Copy.EXPORT_DONE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
         }
 
+    private fun waitForEnabled(label: String) = waitFor("$label to become enabled") {
+        try {
+            button(label).assertIsEnabled()
+            true
+        } catch (_: AssertionError) {
+            false
+        }
+    }
+
     /** Opens the format list from whatever format is actually current and picks [target] — never a fixed starting index; see this class's own KDoc. */
     private fun pickFormat(target: ExportFormat) {
         val current = session!!.model.format
@@ -226,7 +235,11 @@ class ExportScreenTest : ComposeScreenTest() {
         tap("WRITE KIT")
         waitForComplete()
         button("WRITE ANOTHER ✓").assertExists()
+        // COMPLETE is set on IO before the session's busy flag clears on Main.
+        // Its message can appear while WRITE ANOTHER is still disabled.
+        waitForEnabled("WRITE ANOTHER ✓")
         tap("WRITE ANOTHER ✓")
+        waitForEnabled("WRITE KIT")
         button("WRITE KIT").assertExists()
     }
 
@@ -318,6 +331,9 @@ class ExportScreenTest : ComposeScreenTest() {
         }
         button(Copy.EXPORT_SHARE_LABEL).assertIsEnabled()
 
+        // COMPLETE/SHARE precede the export's remaining async bookkeeping.
+        // Start the simulated card operation only after its busy latch clears.
+        waitFor("the phone export to finish") { session?.busy == false }
         val what = "AN OLDER EXPORT ALREADY ON THE CARD.MID"
         session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
         pump()

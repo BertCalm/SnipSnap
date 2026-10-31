@@ -69,22 +69,51 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (42 starters including CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY, VENT and LIBRATION,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (55 starters including STRIKE FX, CIRCUIT,
+THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER and LIBRATION,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 53 engines: THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET,
-VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA,
-CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI and LIBRATION.
+The SYNTH source picker has 66 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
+SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
+THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
+CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
+MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
+MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and LIBRATION.
+
+APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
+(C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
+retain the saved renderer and seed. HOLD's top step auditions a repeating settled
+cycle until STOP; on a pad it repeats while gated. Finite notes remain one-shots.
+The saved full-cycle loop flag travels through both MPC drum-program formats.
+Dedicated keyboard multisampling and physical phone/MPC acceptance remain later
+checks; [APSIS](../docs/APSIS.md) records the integration and device checklist.
+MERCURY brings PING, SING and BLADE, the three voices kept at R1's gate
+(2026-10-04); EDDY, VESSEL and SHARD stay in the roster and the CLI until
+round 7's listen. MERCURY has no FRESH TAPE starter and no MAKE INSTRUMENT
+path yet (R2b, round 6, awaits the listen).
+AEROSTAT exposes the approved PVC voice and five factory recipes. TREMOR exposes
+the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and glass
+model, with the glass voice displayed as TILES; GLINT remains its saved identity
+and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
+and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
-held LOOP variants; its sample-based keyboard path is shared with the other
-pitched pad makers. Dedicated MAKE INSTRUMENT multisampling remains separate.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY, VENT and LIBRATION also provide
+held LOOP variants. Model-3 MAKE INSTRUMENT samples minor-third zones around the
+saved root, preserving one continuous onset and settling history into the held
+loop. RELEASE controls the existing phone/MPC volume fade after key-up; older
+models keep their original finite/HOLD renders. Paper Keys and Ink Ribbon form
+the first held-keyboard listening pair. Generation is serial and cancellable;
+actual phone timing and MPC playback still require the device acceptance pass.
+The optional TOUCH LAYERS switch renders soft, medium and firm pressure/timbre
+responses with their own loops. It defaults off and uses roughly three times
+the generation work and audio storage. Live key velocity selects a layer and
+applies gain; key-up retains the selected RELEASE fade.
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY, VENT and LIBRATION also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
 six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
@@ -100,6 +129,15 @@ complete source timbre. Its preview preserves stereo; HALO MAKE INSTRUMENT
 renders nine native-note attack/sustain zones sequentially with an adjustable
 sample-player release. Physical phone listening and memory checks remain open.
 
+TIDAL exposes PAIR and STREAM with five encounter controls, ROOT, native
+VELOCITY, original/material source selection, exact Long VARIATION SEED and
+NOTE/HOLD playback. NOTE keeps the finite encounter; HOLD pads loop its
+reconstructed aftermath. MAKE INSTRUMENT retains the encounter before a verified
+sustain marker across seventeen C2–C6 zones, with note-off RELEASE. Complete
+recipes survive drafts, saved presets and pad reopening. The sixteen-pad starter
+stays finite. Hardware latency and listening remain acceptance checks.
+See [TIDAL](../docs/TIDAL.md) and [HOLD](../docs/TIDAL_HOLD.md).
+
 ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
 six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
 model, seed, note and velocity; authored root metadata keeps keyed placement
@@ -114,19 +152,38 @@ Quiet Room, change ROOT and VELOCITY, leave and reopen SYNTH, save/reload a
 preset, then SEND TO PAD and reopen its recipe; each step should retain the
 chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 
+FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
+VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
+THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
+one velocity layer, each voice's real onset before its settled loop and
+note-off release. Older saved models retain their existing pad workflow. Physical phone/MPC
+acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
+
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
 MAKE INSTRUMENT. PIPE/MUSETTE retain the working audition baseline; TRANSISTOR
 adds electronic keying, square-wave ranks, vibrato and drive and awaits listening
 review. AIR controls TRANSISTOR's brief key-click. Saved audition recipes retain
-note, velocity and model; existing presets stay on model 3 and TRANSISTOR uses
-model 4. Instrument samples preserve the finite attack before a verified held
+note, velocity and model. PIPE/MUSETTE presets stay on model 3; original
+TRANSISTOR patches retain model 4. Its current factory settings use model 5 with
+a rounder same-pitch foundation. Instrument samples preserve the finite attack
+before a verified held
 loop and export through the existing MPC 2/MPC 3 and phone keygroup package.
 
 FLOCK adds GATHER, RIBBON and SPLIT, six controls and nine factory recipes.
 ROOT spans C2–C6; VELOCITY sets the initial disturbance. HOLD selects a finite
 2–6 second gesture. The saved 64-bit seed and model 1/2 survive control edits,
 renaming, preset storage and SEND TO PAD; SPREAD uses the saved root even when
-SPLIT emphasizes the fifth or octave. Phone playback remains a hardware check.
+SPLIT emphasizes the fifth or octave. RIBBON adds explicit FINITE/HELD playback,
+saved RELEASE and a dry press/release audition. MAKE INSTRUMENT captures nine
+nearby roots for the phone and MPC; SEND TO PAD delivers a faded one-shot while
+retaining the editable held recipe. HOLD stays finite. See the
+[held instrument design](../docs/FLOCK_RIBBON_INSTRUMENT.md). FLOCK MAKE also offers
+TOUCH LAYERS, initially on: soft, medium and hard touches select three distinct
+source disturbances per root. Its preview plays all three through the reference
+player; the main hold audition retains the saved anchor. The exported instrument
+keyboard uses touch position to select a layer. See the
+[touch-layer design](../docs/FLOCK_RIBBON_TOUCH.md). Phone playback
+remains a hardware check.
 MURMUR exposes saved ROOT and VELOCITY beside its six macros. Its six dry voices
 have owner approval; the expanded 36-preset bank and dry starter remain available
 for listening and device review.
@@ -138,11 +195,24 @@ seeded recipe through edits, saving and pad placement; see [TRIO](../docs/TRIO.m
 
 OSPREY exposes saved ROOT, VELOCITY and SECONDS beside its six macros and keeps
 each recipe's seed and render model. R3 is the working audio baseline after the
-owner's positive feedback; final listening and phone/MPC handoff remain open for
-its fifteen presets and sixteen-pad starter.
-PRISM adds six additive voices, thirty-six factory presets and a dry pitched
-starter; [the audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site)
-includes the full bank and the original/revised GLASS comparisons.
+owner's positive feedback and confirmed in-app listening. The fifteen original
+coast/weather presets and sixteen-pad OSPREY starter remain unchanged. Sixteen
+named musical presets add a separate OSPREY CURATED starter in C minor pentatonic.
+The owner approved the published curated listening bank on 2026-10-19, saying,
+“Sounds great”. Curated in-app/device listening, save/reopen, recipe replay and
+MPC playback remain unconfirmed.
+OHM adds STRING with five auditioned model-2 family encounters: Solo, Argument,
+Communion, Quiet Company and Gather. NOTE, VELOCITY and STEADY/GATHER sit beside
+TOUCH, BODY, LENGTH, MEDDLING and COMMUNE. Its complete recipe survives navigation,
+editing, saving and pad placement, including legacy model-1 recipes. These are
+finite notes; SPREAD references the saved native note. The existing audition
+preserves the original renderer and the accepted control-range comparisons.
+PRISM adds six additive voices, forty factory presets including four finite
+body openings, and a dry pitched starter. The
+[audition](https://prism-snip-snap-audition.bertcalm.chatgpt.site) preserves the
+earlier bank, body-opening studies and original/revised GLASS comparisons.
+Its MOTION detail panel edits amount/time, chooses a source, and switches from
+the saved finite opening to repeating movement with genuine held loops.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.
@@ -168,9 +238,13 @@ RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
 seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds a 76-clip page covering the
-bank, musical performances, velocity response and starter pads. The expanded bank
-awaits listening review and hands-on device verification.
+pads. `:synth:generateRelayPerformanceAudition` builds an 88-clip page covering the
+bank, musical performances, velocity response, starter pads and six PULSE
+0-versus-1 pairs. The full-range diagnostic changes only PULSE in copies of the
+same six finite recipes; the production control and saved model stay unchanged.
+The earlier eased mapping was not adopted after the owner reported no audible
+difference on 2026-10-26. The owner approved the 36-preset bank's sound on
+2026-10-21; hands-on device verification remains open.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds
@@ -187,12 +261,11 @@ GRAINS, SNAP and DRAW work on source material beside the engine picker.
 | Piece | Source |
 |---|---|
 | Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
-| Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers; OILSLICK sweep |
-| Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
+| Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers |
+| Window | `ui/Chrome.kt` — SNIPSNAP titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | The menu's screens under `ui/` — SHELF, KIT (4×4, MPC geometry: A13 top-left, A01 bottom-left), TAPE, CHOP, PLAY, KEYS, SURFACE, GROOVE, SYNTH, SNAP, EXPORT, SETUP, HELP, and the rest |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
-| Fonts | `res/font/` — VT323, Silkscreen, Michroma, Permanent Marker, committed |
 
 ## Things to verify on first run (beyond "does it compile")
 
@@ -209,7 +282,8 @@ logcat tag to grab when something is wrong.
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
-  seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+  seconds on desktop JVM; the dock says LOADING and the kit's name, and
+  PADS shows sixteen placeholders, meanwhile).
 - **IMPORT (share sheet)**: share a WAV, an MP3 and a screen-recorded
   MP4 into SnipSnap from another app. Each should land on TAPE with a
   "TAPED FROM OUTSIDE" toast naming its length; a share while the app is
@@ -248,6 +322,12 @@ logcat tag to grab when something is wrong.
   swapping kits mid-roll should go silent rather than crash. "NO STREAM"
   in the header means the device refused every open; check logcat's
   `PadEngine` line.
+- **STRIKE thumb strip**: the [playing guide](../docs/STRIKE_STRIP.md)
+  covers SOFT HITS, two-finger playing, LEFT/RIGHT, STAY/RETURN and the
+  optional volume link in PADS and FULL. Check the interaction on a phone;
+  STRIKE FX is a four-pad listening demo with DRY, REVERB and ECHO layers.
+  The LAST row highlights the layer actually triggered; moving the strip
+  changes the next hit. Effects are rendered when the starter is created.
 - **KIT's grid (native, EEE4)**: open a kit and tap pads on the 4×4
   grid — same engine PLAY uses, so it should feel just as tight. A closed hat should still cut a
   ringing open one (the mute group chokes here too); tapping the same

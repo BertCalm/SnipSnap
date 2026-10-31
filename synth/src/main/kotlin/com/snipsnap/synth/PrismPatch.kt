@@ -22,7 +22,7 @@ data class PrismPatch(
         Patches.validateMacros(this, Prism.macrosFor(voice))
         require(velocity.isFinite() && velocity in 0f..1f) { "PRISM velocity out of 0..1: $velocity" }
         require(model == Prism.MODEL_VERSION) { "unsupported prism model $model" }
-        require(motion == null || !Prism.isLoop(Prism.settled(voice, macros).getValue("HOLD"))) {
+        require(motion == null || motion.repeat || !Prism.isLoop(Prism.settled(voice, macros).getValue("HOLD"))) {
             "PRISM spectral motion supports finite notes only; HOLD loops are not supported"
         }
     }

@@ -20,6 +20,15 @@ import kotlin.math.sqrt
  */
 object RelayPerformanceAuditionGenerator {
     private data class Note(val beat: Double, val offset: Int)
+    /** Paired endpoints of the existing production PULSE range; no response law changes. */
+    private data class PulseComparison(
+        val pairId: String,
+        val nominalControl: Float,
+        val effectivePulse: Float,
+        val variant: String,
+        val sourcePatch: RelayPatch,
+        val referencePatch: RelayPatch,
+    )
     private data class Case(
         val id: String,
         val group: String,
@@ -30,6 +39,7 @@ object RelayPerformanceAuditionGenerator {
         val sequenceTempoBpm: Double? = null,
         val padIndex: Int? = null,
         val actualPad: Snip? = null,
+        val pulseComparison: PulseComparison? = null,
     )
 
     private data class Performance(
@@ -52,6 +62,7 @@ object RelayPerformanceAuditionGenerator {
         group("presetbank", "The 36-preset bank", "Every curated factory recipe at its saved note, velocity and complete phrase. Held presets contain three exact repetitions of the actual engine loop region. Compare matched level for tone and raw level for native energy."),
         group("velocity", "Touch, from soft to firm", "The same finite recipe for each voice at excitation velocities 0.30, 0.65 and 1.00. Raw playback preserves the energy change; matched playback makes changes in attack and color easier to compare."),
         group("kit", "The sixteen starter pads", "The real sixteen-pad starter, in pad order. Raw playback uses the actual starter sample level, including its standard engine normalization. Each pad retains its complete editable recipe. Held pads repeat the same exported region three times here."),
+        group("pulsecompare", "PULSE 0 vs 1", "Six listening pairs test the complete existing PULSE range. Each voice uses the same recipe, note, velocity, sources and phrase at PULSE 0 and PULSE 1. Compare matched playback for changes in articulation, then raw playback for the native level change. The production response and approved bank are unchanged."),
     )
 
     @JvmStatic
@@ -72,7 +83,8 @@ object RelayPerformanceAuditionGenerator {
         val cases = cases(quick)
         check(cases.map { it.id }.distinct().size == cases.size) { "duplicate performance clip IDs" }
         val recipeHash = sha256(cases.joinToString("\n") { case ->
-            listOf(case.id, Json.write(case.patch.toJsonValue()), case.notes.toString(), case.sequenceTempoBpm).joinToString("|")
+            listOf(case.id, Json.write(case.patch.toJsonValue()), case.notes.toString(), case.sequenceTempoBpm,
+                case.pulseComparison?.let { "${it.pairId}|${it.nominalControl}|${it.effectivePulse}|${it.variant}" }).joinToString("|")
         }.toByteArray())
         val clips = ArrayList<Map<String, Any?>>(cases.size)
         val started = System.nanoTime()
@@ -130,6 +142,20 @@ object RelayPerformanceAuditionGenerator {
                 "padIndex" to case.padIndex,
                 "padLabel" to case.padIndex?.let { "A" + it.toString().padStart(2, '0') },
                 "padRole" to case.padIndex?.let { if (report.loop) "Held ${case.patch.voice.name.lowercase(Locale.ROOT)} texture" else "${case.patch.voice.name.lowercase(Locale.ROOT)} · ${noteName(midi)}" },
+                "pulseComparison" to case.pulseComparison?.let { comparison ->
+                    linkedMapOf(
+                        "pairId" to comparison.pairId,
+                        "variant" to comparison.variant,
+                        "nominalControl" to comparison.nominalControl,
+                        "effectivePulse" to comparison.effectivePulse,
+                        "mapping" to "p",
+                        "testKind" to "full-range",
+                        "productionEngineChanged" to false,
+                        "sourcePatchJson" to comparison.sourcePatch.toJsonValue(),
+                        "referencePatchJson" to comparison.referencePatch.toJsonValue(),
+                        "renderedPatchJson" to case.patch.toJsonValue(),
+                    )
+                },
             )
             println("Relay performance: ${index + 1}/${cases.size} · ${case.id}")
         }
@@ -139,15 +165,21 @@ object RelayPerformanceAuditionGenerator {
         val wavBytes = clips.sumOf { File(root, it.getValue("rawPath") as String).length() + File(root, it.getValue("matchedPath") as String).length() }
         check(wavBytes <= 120L * 1024 * 1024) { "performance WAV pack exceeds 120 MiB: $wavBytes bytes" }
         val manifest = Json.write(json(linkedMapOf(
-            "schemaVersion" to 1, "engine" to "RELAY", "auditionRevision" to 4,
-            "status" to "curated bank — awaiting owner playability review", "presetExpansion" to "36 curated recipes",
+            "schemaVersion" to 1, "engine" to "RELAY", "auditionRevision" to 6,
+            "status" to "owner-approved bank; full PULSE range awaits listening; device playability unverified", "presetExpansion" to "36 curated recipes",
+            "bankListeningApproval" to mapOf("date" to "2026-10-21", "scope" to "revision 4 bank and performance audition"),
+            "pulseExperiment" to mapOf("kind" to "full-range", "productionEngineChanged" to false,
+                "controls" to listOf(0.0, 1.0), "pairCount" to 6,
+                "purpose" to "Establish the complete existing PULSE range before changing the mapping or accent behavior",
+                "previousExperiment" to mapOf("candidateMapping" to "p^0.75", "adopted" to false,
+                    "ownerFeedbackDate" to "2026-10-26", "ownerFeedback" to "no audible difference reported")),
             "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
             "referenceNote" to "saved patch root", "quick" to quick, "clipCount" to clips.size,
             "listeningTarget" to .03, "listeningPeakCeiling" to .99, "loopThreshold" to Relay.LOOP_THRESHOLD,
             "sourceRevision" to revision, "workingTreeDirty" to dirty,
             "sourceSha256" to sourceHashes, "recipeSha256" to recipeHash,
             "compiledRelaySha256" to Relay::class.java.getResourceAsStream("/com/snipsnap/synth/Relay.class")?.use { sha256(it.readBytes()) },
-            "metricNotes" to "All WAVs are actual Relay offline renders, 44.1 kHz mono PCM24, with no rack effects. Preset, velocity and musical raw files preserve conditioned engine level before normalization. Kit raw files preserve the actual starter sample level after its standard engine normalization, checked sample-for-sample against SynthKits.relay. Any additional PCM export attenuation is rawExportGain. rawMetrics precedes that export gain. Matched playback uses the loudest 200 ms RMS target 0.03 and peak ceiling 0.99. Musical examples preserve complete note tails and saved phrase/velocity; MIDI replaces TUNE absolutely. A fixed mixGain bounds the sum using the maximum simultaneous sum of individual note peaks; sequence contains every event and its actual engine schedule. Musical weights and accents are intentionally empty at clip level. Musical internalRawPeak is the largest individual note's unconditioned 4× peak, not the mixed output. HOLD playback contains three exact copies of one real engine loop; seamError compares it with the preceding settled cycle and must be < 0.001. contour brightness is first-difference RMS divided by RMS, not spectral centroid.",
+            "metricNotes" to "All WAVs are actual Relay offline renders, 44.1 kHz mono PCM24, with no rack effects. Preset, velocity, PULSE-comparison and musical raw files preserve conditioned engine level before normalization. Kit raw files preserve the actual starter sample level after its standard engine normalization, checked sample-for-sample against SynthKits.relay. Any additional PCM export attenuation is rawExportGain. rawMetrics precedes that export gain. Matched playback uses the loudest 200 ms RMS target 0.03 and peak ceiling 0.99. Musical examples preserve complete note tails and saved phrase/velocity; MIDI replaces TUNE absolutely. A fixed mixGain bounds the sum using the maximum simultaneous sum of individual note peaks; sequence contains every event and its actual engine schedule. Musical weights and accents are intentionally empty at clip level. Musical internalRawPeak is the largest individual note's unconditioned 4× peak, not the mixed output. HOLD playback contains three exact copies of one real engine loop; seamError compares it with the preceding settled cycle and must be < 0.001. PULSE full-range comparison clips use the production renderer at PULSE 0 and PULSE 1, with only that macro changed inside each pair. The production law, bank and model remain unchanged; pulseComparison stores direct endpoint values and complete source/PULSE-0-reference/rendered recipes. Matched playback compares articulation after leveling; raw playback retains native energy changes. contour brightness is first-difference RMS divided by RMS, not spectral centroid.",
             "groups" to groups, "clips" to clips,
             "summary" to mapOf(
                 "wavCount" to clips.size * 2, "wavBytes" to wavBytes,
@@ -155,6 +187,8 @@ object RelayPerformanceAuditionGenerator {
                 "musicalExamples" to clips.count { it["group"] == "musical" },
                 "velocityExamples" to clips.count { it["group"] == "velocity" },
                 "kitPads" to clips.count { it["group"] == "kit" },
+                "pulseComparisonClips" to clips.count { it["group"] == "pulsecompare" },
+                "pulseComparisonPairs" to clips.mapNotNull { (it["pulseComparison"] as? Map<*, *>)?.get("pairId") }.distinct().size,
                 "maxInternalRawPeak" to clips.maxOf { (it.getValue("internalRawPeak") as Number).toDouble() },
                 "heldCases" to clips.count { it["loop"] != null },
                 "loopSeamsPassed" to clips.filter { it["loop"] != null }.all { (it["loop"] as Map<*, *>)["seamPass"] == true },
@@ -172,7 +206,8 @@ object RelayPerformanceAuditionGenerator {
 
             ${clips.size} listening cases: ${clips.count { it["group"] == "presetbank" }} factory presets,
             ${clips.count { it["group"] == "musical" }} musical examples, ${clips.count { it["group"] == "velocity" }} velocity probes
-            and ${clips.count { it["group"] == "kit" }} actual starter pads. Each has raw and matched 24-bit mono WAVs.
+            and ${clips.count { it["group"] == "kit" }} actual starter pads, plus ${clips.count { it["group"] == "pulsecompare" }}
+            PULSE control-response comparison clips. Each has raw and matched 24-bit mono WAVs.
             Open index.html locally or serve the directory. The manifest is embedded; no remote assets or browser synthesis are used.
 
             Musical examples trigger complete dry RelayPatch renders, preserve each selected phrase and native excitation velocity,
@@ -181,11 +216,20 @@ object RelayPerformanceAuditionGenerator {
             exact recipes, native velocities, note lengths, schedules, peak/RMS and tuning evidence are in manifest.json.
             Musical note timelines show actual triggers; they do not claim a single source-weight trajectory for a chord.
 
-            Preset, velocity and musical raw files precede engine loudness normalization. Kit raw files use the real starter
+            Preset, velocity, PULSE-comparison and musical raw files precede engine loudness normalization. Kit raw files use the real starter
             samples' normalized engine level, verified sample-for-sample against SynthKits.relay. rawExportGain records any
             further export attenuation. Matched files use AuditionLevel: loudest 200 ms RMS 0.03, peak guard 0.99.
             Every held clip repeats its actual engine loop region exactly three times, with the real seam metric recorded.
-            SHA-256 values identify every WAV; source and recipe fingerprints identify this round. Owner listening is still required.
+            SHA-256 values identify every WAV; source and recipe fingerprints identify this round. The owner approved the revision 4
+            bank and performance audition on 2026-10-21. Physical-device playability remains unverified.
+
+            The full PULSE range is a separate listening test: six pairs compare PULSE 0 and PULSE 1 through the existing engine.
+            Each pair retains the same recipe, note, velocity, sources, phrase and other macros, so only PULSE changes.
+            Matched playback compares articulation after leveling; raw playback preserves the native energy change.
+            The production response law, approved factory recipes and saved model are unchanged. Each comparison records
+            the source recipe, PULSE-0 reference, exact rendered patch, direct control value, mapping and pair ID.
+            The earlier p^0.75 mapping was not adopted after the owner reported no audible difference on 2026-10-26.
+            Endpoint measurements establish what changed numerically; the owner's listening decides its musical value.
 
             Regenerate: ./gradlew :synth:generateRelayPerformanceAudition${if (quick) " -PrelayPerformanceQuick" else ""}
         """.trimIndent() + "\n")
@@ -226,7 +270,21 @@ object RelayPerformanceAuditionGenerator {
                 "Actual starter pad ${index + 1}: ${patch.voice.name} at ${noteName(midi(patch))}. Raw playback preserves the starter sample level and the complete editable recipe.",
                 padIndex = index + 1, actualPad = pad.snip))
         }
-        check(size == if (quick) 22 else 76) { "unexpected Relay performance roster size $size" }
+        // Append the range test so all 76 approved clip IDs, file paths and recipes stay stable.
+        for (voice in RelayVoice.entries) {
+            val source = bank.single { it.voice == voice && it.name == musicalNames.getValue(voice) }
+            val pairId = "pulse_range_${voice.name.lowercase(Locale.ROOT)}"
+            val reference = source.copy(macros = source.macros + ("PULSE" to 0f))
+            for (pulse in listOf(0f, 1f)) {
+                val variant = if (pulse == 0f) "minimum" else "maximum"
+                val patch = reference.copy(macros = reference.macros + ("PULSE" to pulse))
+                add(Case("${pairId}_${pulse.toInt()}", "pulsecompare", patch,
+                    "${voice.name} · PULSE ${pulse.toInt()} · $variant",
+                    "${source.name} at ${noteName(midi(source))}. PULSE ${pulse.toInt()} is the $variant of the existing production range. Its paired clip keeps the same note, velocity, sources, phrase and every other macro. Compare matched playback for articulation and raw playback for native level. The engine and approved bank are unchanged.",
+                    pulseComparison = PulseComparison(pairId, pulse, pulse, variant, source, reference)))
+            }
+        }
+        check(size == if (quick) 34 else 88) { "unexpected Relay performance roster size $size" }
     }
 
     private fun single(case: Case): Performance {

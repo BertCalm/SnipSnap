@@ -39,6 +39,7 @@ import com.snipsnap.app.theme.lcdInk2
 import com.snipsnap.app.theme.lcdPanel
 import com.snipsnap.app.theme.tape
 import com.snipsnap.kit.KitStore
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.KitDiff
@@ -139,6 +140,14 @@ fun TakesBinScreen(
     }
 
     var busy by remember(model) { mutableStateOf(false) }
+    // What the job in flight is called in the dock: set beside `busy`, in the
+    // handler, and cleared with it. Null when none is running.
+    var job by remember(model) { mutableStateOf<String?>(null) }
+    // The screen's one report to the dock (the sink is a single slot). It sits
+    // above the "still opening" early return below, so it is composed on every
+    // pass, and the value is remembered under its two inputs so the sink sees
+    // a job start and end and not a new object on every recomposition.
+    ReportBusy(remember(busy, job) { if (busy) Busy(job ?: Copy.WORKING_BUSY) else null })
     var armed by remember(model) { mutableStateOf(false) }
     var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
     var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
@@ -248,8 +257,11 @@ fun TakesBinScreen(
         if (busy) return
         val m = model ?: return
         val kitDir = m.kitDir
+        // Raised here, before the launch, so a second tap in the gap before
+        // the coroutine starts finds it; cleared in the launch's `finally`.
+        busy = true
+        job = Copy.ROOM_RESTORE_BUSY
         scope.launch {
-            busy = true
             try {
                 var restoredKit: com.snipsnap.kit.Kit? = null
                 withFreshKit(kitDir) { fresh ->
@@ -275,6 +287,7 @@ fun TakesBinScreen(
                 failure("RESTORE", e)
             } finally {
                 busy = false
+                job = null
             }
         }
     }
@@ -291,8 +304,10 @@ fun TakesBinScreen(
     fun doRestoreFromBin(entry: KitBuilderModel.BinEntry) {
         if (busy) return
         val m = model ?: return
+        // Raised here, before the launch (see doRestoreTake).
+        busy = true
+        job = Copy.ROOM_RESTORE_BUSY
         scope.launch {
-            busy = true
             try {
                 val restoredFile = withContext(Dispatchers.IO) { m.restoreFromBin(entry) }
                 if (restoredFile != null) {
@@ -314,6 +329,7 @@ fun TakesBinScreen(
                 failure("RESTORE", e)
             } finally {
                 busy = false
+                job = null
             }
         }
     }
@@ -333,8 +349,10 @@ fun TakesBinScreen(
         }
         armed = false
         val m = model ?: return
+        // Raised here, before the launch (see doRestoreTake).
+        busy = true
+        job = Copy.ROOM_BIN_EMPTY_BUSY
         scope.launch {
-            busy = true
             try {
                 withContext(Dispatchers.IO) { m.emptyBin() }
                 refreshLists(m)
@@ -344,6 +362,7 @@ fun TakesBinScreen(
                 failure("EMPTY BIN", e)
             } finally {
                 busy = false
+                job = null
             }
         }
     }

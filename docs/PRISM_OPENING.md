@@ -43,4 +43,42 @@ and late destination comparisons accompany the files.
 The hosted page opens on the new body variant and gives the original source
 a separate reference button. Round 2 remains at `round-2/`, round 1 at
 `round-1/`; each keeps its own browser review namespace. The sounds remain
-finite samples and their musical quality awaits listening.
+finite samples. The owner preferred the body opening and chose it as the
+baseline; the wider pitch and velocity matrix still needs listening.
+
+## Factory release
+
+The factory bank appends four body-opening presets to the previous 36 without
+changing those recipes or their order:
+
+| Factory name | Voice | Round-three example |
+| --- | --- | --- |
+| Soft Arrival | KEY | FORK SOFT KEYS |
+| Wire Bloom | KEY | TESSERA Paired Wire |
+| Bowed Bloom | KEY | EMBOUCHURE Relaxed Bow |
+| Hollow Rise | BASS | FATHOM HOLLOW GROWL |
+
+`PrismOpeningPresets` freezes the destination coefficients from the saved
+round-three recipes. It never rerenders a donor at runtime. Its shared body
+mask retains the exact opening weights, original phase-seeding template,
+velocity, pitch and 0.8-second trajectory. Tests compare the whole patch,
+apart from its factory name, with independent saved audition fixtures.
+
+The existing six macros and HOLD remain the controls. On a motion recipe the
+phone bounds HOLD below `Prism.LOOP_THRESHOLD`, including accessibility edits
+and SCRAMBLE, and labels it as a finite note. Ordinary presets still reach
+LOOP. User saves, navigation drafts and pad recipes retain both endpoints;
+factory-preset promotion now embeds the complete motion recipe too.
+
+```text
+./gradlew --no-daemon test
+./gradlew :synth:generatePrismOpeningReleaseAudition
+```
+
+The release audition renders the actual factory presets at three notes and
+two velocities, with native and matched WAVs, complete saved recipes and a
+diagnostic manifest. JVM render and cancellation timings describe this
+machine, not Android performance. Phone interaction and MPC playback require
+device validation. The [motion studio](PRISM_MOTION_STUDIO.md) adds an editor,
+factory source selection and opt-in repeating motion. These four factory
+recipes retain their original finite opening until deliberately edited.

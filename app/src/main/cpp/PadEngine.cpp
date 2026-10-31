@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <ctime>
 
 #include "OboeOutput.h"
 
@@ -33,6 +34,19 @@ bool PadEngine::start() {
     sampleRate_ = opened.sampleRate;
     sharedMode_.store(opened.shared, std::memory_order_release);
 
+    // Actual stream rate, before the first callback. Delay lines and planar
+    // scratch must never be prepared or resized from the audio thread.
+    if (!aquarium_.prepare(sampleRate_)) {
+        LOGW("Aquarium preparation failed at stream rate %d", sampleRate_);
+        aquarium_.release();
+        // An unavailable optional effect must not take away ordinary dry
+        // playback. A requested wet stream, however, must never silently dry.
+        if (aquarium_.controlSettings().enabled) {
+            stream_->close();
+            stream_.reset();
+            return false;
+        }
+    }
     const oboe::Result started = stream_->requestStart();
     if (started != oboe::Result::OK) {
         LOGW("requestStart failed: %s", oboe::convertToText(started));
@@ -45,6 +59,32 @@ bool PadEngine::start() {
 
 double PadEngine::latencyMillis() const {
     return latencyMillisOf(stream_);
+}
+
+bool PadEngine::hardwarePosition(int64_t* framePosition, int64_t* timeNanos) {
+    if (!stream_ || framePosition == nullptr || timeNanos == nullptr) return false;
+    const oboe::ResultWithValue<oboe::FrameTimestamp> ts = stream_->getTimestamp(CLOCK_MONOTONIC);
+    if (ts.error() != oboe::Result::OK) return false;
+    *framePosition = ts.value().position;
+    *timeNanos = ts.value().timestamp;
+    return true;
+}
+
+int32_t PadEngine::framesPerBurst() const {
+    return stream_ ? stream_->getFramesPerBurst() : 0;
+}
+
+int32_t PadEngine::audioApi() const {
+    return stream_ ? static_cast<int32_t>(stream_->getAudioApi()) : -1;
+}
+
+bool PadEngine::configureAquarium(const aquarium::PerformanceSettings& settings, bool reset) {
+    if (!aquarium::validPerformanceSettings(settings)) return false;
+    if (stream_ && !aquarium_.isPrepared() && settings.enabled) return false;
+    // Also supports an explicitly configured, stopped engine driven by a host
+    // callback harness. A running stream was prepared by start(), above.
+    if (!stream_ && !aquarium_.isPrepared() && !aquarium_.prepare(sampleRate_)) return false;
+    return aquarium_.publish(settings, reset);
 }
 
 void PadEngine::stop() {
@@ -69,6 +109,13 @@ void PadEngine::stop() {
     while (commands_.pop(dropped)) {
         if (dropped.type == PadCommand::Type::NoteOn) ended_.push(dropped.voiceId);
     }
+    // A command the callback had taken off the ring and was holding for a
+    // later frame belonged to that stream as much as one still queued.
+    for (int32_t i = 0; i < heldCount_; ++i) {
+        if (held_[i].type == PadCommand::Type::NoteOn) ended_.push(held_[i].voiceId);
+    }
+    heldCount_ = 0;
+    aquarium_.release();
 }
 
 void PadEngine::onErrorAfterClose(oboe::AudioStream*, oboe::Result error) {
@@ -128,6 +175,7 @@ void PadEngine::adoptPendingBank() {
     }
     retired_.store(current_, std::memory_order_release);
     current_ = incoming;
+    aquarium_.clearTail();
 }
 
 void PadEngine::endVoice(Voice& v) {
@@ -195,6 +243,7 @@ void PadEngine::apply(const PadCommand& c) {
                 return;
             }
             Voice& v = freeVoice();
+            aquarium_.resumeAfterPanic();
             v.active = true;
             v.id = c.voiceId;
             v.sample = c.sample;
@@ -238,6 +287,7 @@ void PadEngine::apply(const PadCommand& c) {
         }
         case PadCommand::Type::Stop:
         case PadCommand::Type::AllOff: {
+            if (c.type == PadCommand::Type::AllOff) aquarium_.panic();
             const float fadeFrames = std::max(1.0f, c.fadeMs * 0.001f * static_cast<float>(sampleRate_));
             for (auto& v : voices_) {
                 if (!v.active) continue;
@@ -356,15 +406,59 @@ void PadEngine::render(float* out, int32_t numFrames) {
     }
 }
 
-oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
-    adoptPendingBank();
+void PadEngine::takeCommands() {
     PadCommand c;
-    while (commands_.pop(c)) apply(c);
+    while (commands_.pop(c)) {
+        if (heldCount_ < kHeldMax) {
+            held_[heldCount_++] = c;
+        } else {
+            // No room to wait: play it now. Early beats dropped - a dropped
+            // NoteOn would be counted by nothing, a dropped Stop a stuck note.
+            apply(c);
+        }
+    }
+}
+
+int32_t PadEngine::applyDue(int32_t frame, int32_t numFrames) {
+    int32_t next = numFrames;
+    int32_t kept = 0;
+    for (int32_t i = 0; i < heldCount_; ++i) {
+        const PadCommand& c = held_[i];
+        if (c.frameOffset <= frame) {
+            apply(c);
+        } else {
+            if (c.frameOffset < next) next = c.frameOffset;
+            // Compacting in place keeps push order, which is the order
+            // two commands due on the same frame must apply in.
+            if (kept != i) held_[kept] = c;
+            ++kept;
+        }
+    }
+    heldCount_ = kept;
+    return next;
+}
+
+oboe::DataCallbackResult PadEngine::onAudioReady(oboe::AudioStream*, void* audioData, int32_t numFrames) {
+    aquarium_.beginCallback();
+    adoptPendingBank();
+    takeCommands();
     auto* out = static_cast<float*>(audioData);
-    render(out, numFrames);
+    // The block in pieces: from each frame something is due on to the next,
+    // every command due at the start of a piece applied before it renders,
+    // so a note asked for at frame 37 begins at frame 37 and not at the top.
+    int32_t cursor = 0;
+    while (cursor < numFrames) {
+        const int32_t next = applyDue(cursor, numFrames);
+        render(out + 2 * cursor, next - cursor);
+        aquarium_.process(out + 2 * cursor, next - cursor);
+        cursor = next;
+    }
+    // What is still waiting is due in a later block: count this one off.
+    for (int32_t i = 0; i < heldCount_; ++i) held_[i].frameOffset -= numFrames;
+    framesRendered_.fetch_add(numFrames, std::memory_order_release);
     // The print tap takes the bus after the mix, so what it captures is
-    // what the speaker got: the clamp, the stolen voices and the fades
-    // are already in these frames. It is a no-op unless a print is armed.
+    // what the speaker got: the clamp, stolen voices, fades and this
+    // instance's Aquarium bus are already in these frames.
     print_.record(out, static_cast<size_t>(numFrames));
     return oboe::DataCallbackResult::Continue;
 }

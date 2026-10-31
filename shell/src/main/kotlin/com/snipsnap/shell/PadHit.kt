@@ -21,6 +21,8 @@ object PadHit {
         val gainRight: Float,
         /** Playback speed over the sample's own rate; 1.0 = as recorded. */
         val pitchRatio: Double,
+        /** -1 = finite; otherwise the native voice repeats from this frame. */
+        val loopStartFrame: Long = -1,
     ) {
         init {
             require(startFrame >= 0 && endFrameExclusive > startFrame) { "empty window $startFrame..$endFrameExclusive" }
@@ -29,6 +31,14 @@ object PadHit {
 
     /** Touch velocity 0..1 as the MPC's 0..127. */
     fun midiVelocity(velocity: Float): Int = (velocity.coerceIn(0f, 1f) * 127f).roundToInt()
+
+    /** Shared by playback and its layer indicator, including the existing gap fallback. */
+    fun layerIndex(pad: KitPad, velocity: Float): Int? {
+        if (pad.velocityLayers.isEmpty()) return null
+        val midi = midiVelocity(velocity)
+        return pad.velocityLayers.indexOfFirst { midi in it.velStart..it.velEnd }
+            .takeIf { it >= 0 } ?: pad.velocityLayers.lastIndex
+    }
 
     /**
      * The softest a touch-Y velocity can be: quiet, and deliberately not
@@ -129,17 +139,18 @@ object PadHit {
      * frames, or null when the engine never loaded it — then the hit is
      * null too, and the caller plays nothing rather than guessing.
      */
-    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, framesOf: (String) -> Long?): Hit? {
+    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, framesOf: (String) -> Long?): Hit? =
+        resolve(pad, velocity, hitIndex, velocity, framesOf)
+
+    /** Separate sample/chain selection from level, for a strip that changes tone at steady gain. */
+    fun resolve(pad: KitPad, velocity: Float, hitIndex: Int, gainVelocity: Float, framesOf: (String) -> Long?): Hit? {
         require(velocity in 0f..1f) { "velocity 0..1, got $velocity" }
+        require(gainVelocity in 0f..1f) { "gain velocity 0..1, got $gainVelocity" }
         require(hitIndex >= 0) { "hitIndex is a count, got $hitIndex" }
         val midi = midiVelocity(velocity)
-        val file = if (pad.velocityLayers.isEmpty()) {
-            pad.sampleFile
-        } else {
-            (pad.velocityLayers.firstOrNull { midi in it.velStart..it.velEnd } ?: pad.velocityLayers.last()).sampleFile
-        }
+        val file = layerIndex(pad, velocity)?.let { pad.velocityLayers[it].sampleFile } ?: pad.sampleFile
         val frames = framesOf(file)?.takeIf { it > 0 } ?: return null
-        val (left, right) = gains(pad.level, pad.pan, velocity)
+        val (left, right) = gains(pad.level, pad.pan, gainVelocity)
         val ratio = pitchRatio(pad.tuneCoarse, pad.tuneFine)
         val chain = pad.chain
         val window = if (chain == null) {
@@ -151,6 +162,7 @@ object PadHit {
             chain.window(base + hitIndex % cycle, frames)
         }
         if (window.isEmpty()) return null
-        return Hit(file, window.first, window.last + 1, left, right, ratio)
+        return Hit(file, window.first, window.last + 1, left, right, ratio,
+            loopStartFrame = if (pad.loop && !pad.oneShot && pad.chain == null) window.first else -1)
     }
 }

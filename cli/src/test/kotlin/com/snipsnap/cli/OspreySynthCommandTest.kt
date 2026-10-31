@@ -27,7 +27,7 @@ class OspreySynthCommandTest {
             ), PrintStream(output), PrintStream(errors)), errors.toString())
             val files = directory.listFiles { it.extension == "wav" }!!.sortedBy { it.name }
             val presets = OspreyPresets.all()
-            assertEquals(15, files.size)
+            assertEquals(31, files.size)
             for ((index, preset) in presets.withIndex()) {
                 val patch = preset.copy(midi = 63, velocity = .65f, seed = -71, durationSeconds = .25f)
                 val expected = ByteArrayOutputStream().also { WavWriter.write(it, patch.render()) }.toByteArray()
@@ -38,7 +38,7 @@ class OspreySynthCommandTest {
                 assertEquals(.25, actual.durationSeconds.toDouble(), .0001)
                 assertTrue(actual.peak() > 0f)
             }
-            assertTrue("15 rendered into" in output.toString())
+            assertTrue("31 rendered into" in output.toString())
         } finally {
             directory.deleteRecursively()
         }

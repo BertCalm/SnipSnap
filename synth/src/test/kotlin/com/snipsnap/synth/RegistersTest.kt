@@ -145,7 +145,14 @@ class RegistersTest {
             val cents = abs(1200 * ln(probe.effectiveHz / probe.requestedHz) / ln(2.0))
             assertTrue(cents < .1, "$voice held MIDI $midi moved by $cents cents")
             val seconds = probe.samples.size.toDouble() / Dsp.RATE
-            assertTrue(abs(probe.effectiveSpreadHz * seconds - (probe.effectiveSpreadHz * seconds).roundToInt()) < 1e-8)
+            if (probe.spreadModulationHz == 0.0) {
+                assertTrue(abs(probe.effectiveSpreadHz * seconds - (probe.effectiveSpreadHz * seconds).roundToInt()) < 1e-8)
+            } else {
+                // Model-6 TRANSISTOR closes its ensemble phase, retaining a continuous
+                // nominal swing instead of forcing the small bank offset onto this grid.
+                assertEquals(RegistersVoice.TRANSISTOR, voice)
+                assertEquals(1.0, probe.spreadModulationHz * seconds, 1e-12)
+            }
             assertTrue(abs(probe.motionHz * seconds - (probe.motionHz * seconds).roundToInt()) < 1e-8)
             assertTrue(probe.samples.take(2048).any { abs(it) > .01f }, "a held loop has no onset ramp")
             assertTrue(probe.rawPeak <= Registers.RAW_PEAK_CEILING)
