@@ -28,7 +28,10 @@ network. An independent quiet root and full-network fundamental cap preserve
 the reference tuning design. Compiled block readouts retain actual state exchange
 while reducing per-sample work. Saved model/note/velocity/exact seed, recipe replay,
 velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
-Kotlin listening, production tail termination, MATCH/SPAN/LOSS/BODY, HOLD, further
+The owner approved the aligned Kotlin character on 2026-10-30. Model 2 adds MATCH
+with 0–6 cents of upper-B detuning while retaining every fundamental, the aligned
+output and model-1 recipes. `generateFerryMatchAudition` supplies its separate gate.
+MATCH listening, production tail termination, SPAN/LOSS/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
 
