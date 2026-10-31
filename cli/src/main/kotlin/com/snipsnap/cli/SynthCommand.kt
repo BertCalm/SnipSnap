@@ -309,7 +309,7 @@ object SynthCommand {
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
-                OhmPatch.ENGINE -> Ohm.macrosFor(3)
+                OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
                 else -> throw CliError("--macros is only supported by TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM FERRY and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
@@ -463,7 +463,7 @@ object SynthCommand {
         }
         if (instrument) {
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
-            if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride != 3) throw CliError("OHM --instrument requires model 3")
+            if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
             if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OHM and TIDAL export a keys instrument here")
             if (engine == OhmPatch.ENGINE && opts["--attack"] != null) throw CliError("OHM keeps its authored attack; use --release for the held instrument")
             if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
@@ -666,8 +666,10 @@ object SynthCommand {
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is OhmPatch) {
-                val model = modelOverride ?: if (instrument || "HOLD" in macroOverrides) 3 else withNote.model
-                if (model < 3 && withNote.model == 3) throw CliError("OHM source options cannot be downgraded; choose a legacy recipe")
+                val model = modelOverride ?: if (withNote.model < 3 && (instrument || "HOLD" in macroOverrides))
+                    Ohm.MODEL_VERSION else withNote.model
+                if (withNote.model >= 3 && model < withNote.model)
+                    throw CliError("OHM expanded recipes cannot be downgraded; choose a recipe saved with model $model")
                 withNote.copy(model = model, seed = seedOverride ?: withNote.seed,
                     macros = Ohm.defaults(model) + withNote.macros + macroOverrides)
             }
@@ -723,7 +725,7 @@ object SynthCommand {
                 raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .02f..3f }
                     ?: throw CliError("OHM --release wants finite seconds in 0.02..3")
             } ?: patch.releaseSeconds
-            OhmPadMaker.Spec(patch.copy(model = 3, macros = Ohm.defaults(3) + patch.macros + ("HOLD" to 1f),
+            OhmPadMaker.Spec(patch.copy(macros = Ohm.defaults(patch.model) + patch.macros + ("HOLD" to 1f),
                 releaseSeconds = release))
         } catch (e: IllegalArgumentException) {
             throw CliError("OHM --instrument: ${e.message ?: "invalid held recipe"}")

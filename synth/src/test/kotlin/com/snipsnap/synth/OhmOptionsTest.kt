@@ -21,7 +21,7 @@ class OhmOptionsTest {
     fun `legacy defaults remain model two and do not gain optional fields`() {
         val legacy = OhmPatch("Accepted", Ohm.defaults())
         assertEquals(2, legacy.model)
-        assertEquals(3, Ohm.MODEL_VERSION)
+        assertEquals(4, Ohm.MODEL_VERSION)
         assertEquals(5, Ohm.MACROS.size)
         assertEquals(6, Ohm.macrosFor(3).size)
         assertFalse("options" in legacy.toJsonValue().entries)

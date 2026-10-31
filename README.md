@@ -1237,8 +1237,11 @@ remain open.
 OHM's optional **EXTEND** model adds friction bowing, portable captured excitation,
 FM elder, source-audio grains and captured-buffer freeze. HOLD supplies loop-only
 pads or an attack/sustain instrument through MAKE INSTRUMENT; the existing five
-factory recipes keep their accepted model-2 sound. Build the separate listening
-study with `:synth:generateOhmExpandedAudition` and three provisional MPC 3/MPC 2
+factory recipes keep their accepted model-2 sound. Rebuild the
+archived model-3 study with `:synth:generateOhmExpandedAudition`, or the three focused model-4
+comparisons with `:synth:generateOhmRefinementAudition`. Model 4 repairs grain
+and captured-memory history while saved models 1–3 retain their sound. Build
+three provisional MPC 3/MPC 2
 keygroups with `:shell:generateOhmExpandedHandoff`. [Extension notes](docs/OHM_EXPANDED.md)
 separate the physical bow, captured-loop treatment, measured host costs and
 remaining listening/device checks.

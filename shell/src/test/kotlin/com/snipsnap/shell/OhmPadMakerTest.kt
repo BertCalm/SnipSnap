@@ -39,10 +39,10 @@ class OhmPadMakerTest {
         val capture = OhmCapture.fromSnip(Snip(FloatArray(11_025) { i ->
             (.3 * sin(2 * PI * 167 * i / 44_100) * kotlin.math.exp(-i / 3_000.0)).toFloat()
         }, 1, 44_100), "Generated tap")
-        val patch = OhmPatch("OHM Captured Keys", Ohm.defaults(3) + mapOf(
+        val patch = OhmPatch("OHM Captured Keys", Ohm.defaults(4) + mapOf(
             "LENGTH" to .2f, "MEDDLING" to .6f, "COMMUNE" to .7f, "HOLD" to 1f),
             midi = 61, velocity = .65f, seed = Int.MIN_VALUE, gesture = OhmGesture.GATHER,
-            model = 3, options = OhmOptions(exciter = OhmExciter.CAPTURED, capture = capture), releaseSeconds = .15f)
+            model = 4, options = OhmOptions(exciter = OhmExciter.CAPTURED, capture = capture), releaseSeconds = .15f)
         val spec = OhmPadMaker.Spec(patch)
         val notes by lazy { OhmPadMaker.zoneMidis(spec).map { OhmPadMaker.renderZone(spec, it) } }
     }
@@ -129,8 +129,9 @@ class OhmPadMakerTest {
             assertEquals((48..72).toList(), program.keygroups.flatMap { (it.lowNote..it.highNote).toList() })
             for (zone in program.keygroups) for (note in zone.lowNote..zone.highNote) assertTrue(abs(note - zone.rootNote) <= 1)
         }
-        for (fraction in listOf(0f, .5f, 1f)) {
-            val converted = OhmPadMaker.spec(patch.copy(macros = patch.macros + ("HOLD" to 0f)), fraction)
+        for (model in 3..4) for (fraction in listOf(0f, .5f, 1f)) {
+            val converted = OhmPadMaker.spec(patch.copy(model = model, macros = patch.macros + ("HOLD" to 0f)), fraction)
+            assertEquals(model, converted.patch.model, "instrument setup must preserve the selected renderer")
             assertEquals(patch.options, converted.patch.options)
             assertEquals(patch.seed, converted.patch.seed)
             assertEquals(patch.gesture, converted.patch.gesture)
