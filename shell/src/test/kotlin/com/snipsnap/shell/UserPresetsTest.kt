@@ -809,6 +809,14 @@ class UserPresetsTest {
                 val decoder = VentPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(VentPatch::class.java, decoder.returnType, "VENT promotion names its public complete-JSON constructor")
                 assertTrue("private val promoted:" in text, "VENT factory promotions need a destination beside the fixed kit entries")
+            } else if (engine == com.snipsnap.synth.LibrationPatch.ENGINE) {
+                val constructor = com.snipsnap.synth.LibrationPatch::class.java.getConstructor(
+                    String::class.java, com.snipsnap.synth.LibrationVoice::class.java, Map::class.java,
+                    Int::class.javaPrimitiveType, Float::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType, Double::class.javaPrimitiveType,
+                )
+                assertEquals(com.snipsnap.synth.LibrationPatch::class.java, constructor.declaringClass)
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).contains("sourceSeconds = "))
             } else if (engine == OvenPatch.ENGINE) {
                 val constructor = OvenPatch::class.java.getConstructor(
                     String::class.java, OvenVoice::class.java, Map::class.java,

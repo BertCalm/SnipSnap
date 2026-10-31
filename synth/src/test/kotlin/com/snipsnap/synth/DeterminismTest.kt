@@ -12,6 +12,17 @@ import kotlin.test.assertTrue
 class DeterminismTest {
 
     @Test
+    fun `LIBRATION saved short soft notes replay the same populations and audio`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Recall canary", voice,
+                Libration.defaults(voice) + mapOf("REGION" to .375f, "SWARM" to .65f),
+                midi = 43, velocity = .35f, sourceSeconds = .37)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,

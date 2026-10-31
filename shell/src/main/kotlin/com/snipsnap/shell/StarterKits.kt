@@ -115,6 +115,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "libration", "LIBRATION",
+            "Wood, glass and departing orbits. Sixteen finite notes with soft and hard touch.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.libration() },
+        Starter(
             "cloud", "CLOUD",
             "Choirs and grain clouds. Atmosphere, not drums.",
             seeded = false,

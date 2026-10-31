@@ -214,6 +214,10 @@ import com.snipsnap.synth.OspreyVoice
 import com.snipsnap.synth.Oven
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.OvenVoice
+import com.snipsnap.synth.Libration
+import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.LibrationRenderSession
+import com.snipsnap.synth.LibrationVoice
 import com.snipsnap.synth.Prism
 import com.snipsnap.synth.PrismPatch
 import com.snipsnap.synth.PrismVoice
@@ -521,6 +525,7 @@ fun SynthScreen(
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val librationRenderer = remember { LibrationRenderSession() }
 
     val seededWork = remember {
         SynthWork.read(settings).mapNotNull { work ->
@@ -597,7 +602,8 @@ fun SynthScreen(
                         settings.isEmpty() || origami != null || orphica != null -> defaults
                         else -> defaults.mapValues { (name, fallback) ->
                             settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
-                                ?.takeIf { it.isFinite() }?.coerceIn(0f, 1f) ?: fallback
+                                ?.takeIf { it.isFinite() && (e != Engine.LIBRATION || name != "HOLD" || it == 0f) }
+                                ?.coerceIn(0f, 1f) ?: fallback
                         }
                     })
                 }
@@ -850,6 +856,11 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
+    fun updateLibrationPatch(patch: LibrationPatch) {
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        loadedPatchesByVoice[engine to voice] = patch
+    }
     fun updateOrphicaConfig(change: (OrphicaConfig) -> OrphicaConfig) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OrphicaPatch ?: return
         touched = true
@@ -1072,8 +1083,10 @@ fun SynthScreen(
         try {
             val previewJob = coroutineContext[Job]
             val rendered = runInterruptible(Dispatchers.Default) {
-                val patch = if (loadedPatch != null || engine == Engine.OPENSKY) buildCurrentPatch(engine.patchDisplayName(voice)) else null
+                val patch = if (loadedPatch != null || engine == Engine.OPENSKY || engine == Engine.LIBRATION)
+                    buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 val dry = when {
+                    patch is LibrationPatch -> librationRenderer.render(patch)
                     patch is OpenSkyPatch -> patch.render {
                         previewJob?.isActive == false || Thread.currentThread().isInterrupted
                     }
@@ -1168,12 +1181,14 @@ fun SynthScreen(
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
                 val cls = engine.drumClass(voice, macros)
-                // ORIGAMI authors its pitch. Detecting the folded upper bank
-                // can invent a cent offset and retune a correctly played note.
-                val authoredMidi = (patch as? OrigamiPatch)?.let {
-                    it.midi ?: Origami.midiFor(it.voice, it.resolvedMacros().getValue("TUNE"))
+                // ORIGAMI and LIBRATION author their pitch. Detecting upper
+                // partials can add a false cent offset to a correctly played note.
+                val authoredMidi = when (patch) {
+                    is OrigamiPatch -> patch.midi ?: Origami.midiFor(patch.voice, patch.resolvedMacros().getValue("TUNE"))
+                    is LibrationPatch -> patch.midi
+                    else -> null
                 }
-                val origamiSource = authoredMidi?.let {
+                val authoredSource = authoredMidi?.let {
                     mapOf("from" to "SYNTH", "rootMidi" to it.toString(), "rootNote" to Scales.nameOf(it), "rootOrigin" to "authored")
                 }
                 val (existed, updatedKit) = withContext(Dispatchers.IO) {
@@ -1202,7 +1217,7 @@ fun SynthScreen(
                             // with) whatever it was before, while sounding like
                             // the new voice.
                             model.replaceAudio(slot, recipe) { _ -> rendered }
-                            // A reopened pad keeps its identity; an ORIGAMI pad still
+                            // A reopened pad keeps its identity; an authored note still
                             // restates its authored root, tuning and finite one-shot
                             // flag, because the replaced audio may sound a new note.
                             val knownTune = authoredMidi?.let { model.tuningForKnownRoot(it) }
@@ -1218,7 +1233,7 @@ fun SynthScreen(
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
                                         tuneFine = knownTune?.second ?: identified.tuneFine,
                                         oneShot = if (authoredMidi != null) true else identified.oneShot,
-                                        source = origamiSource ?: identified.source,
+                                        source = authoredSource ?: identified.source,
                                     )
                                 }
                             }
@@ -1230,7 +1245,7 @@ fun SynthScreen(
                             // recipe-only edit; slot/sampleFile stay put).
                             model.assign(
                                 slot, rendered, cls, name,
-                                source = origamiSource ?: emptyMap(),
+                                source = authoredSource ?: emptyMap(),
                                 knownRootMidi = authoredMidi,
                             )
                             model.update(slot) { p -> p.copy(recipe = recipe) }
@@ -1917,6 +1932,11 @@ fun SynthScreen(
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
+                }
+
+                if (engine == Engine.LIBRATION) {
+                    LibrationControls(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch,
+                        classColor, scheme, ::updateLibrationPatch)
                 }
 
                 // OVEN's root and hammer energy are saved beside its six macros.
@@ -3380,6 +3400,36 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
+/** Finite performance controls live outside the already large bench composable. */
+@Composable
+private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
+    MacroSlider(
+        label = "ROOT",
+        value = (patch.midi - Libration.MIN_MIDI).toFloat() / (Libration.MAX_MIDI - Libration.MIN_MIDI),
+        fillColor = color, scheme = scheme, readout = Scales.nameOf(patch.midi),
+        onValueChange = { value -> onChange(patch.copy(midi =
+            (Libration.MIN_MIDI + value * (Libration.MAX_MIDI - Libration.MIN_MIDI))
+                .roundToInt().coerceIn(Libration.MIN_MIDI, Libration.MAX_MIDI))) },
+    )
+    MacroSlider(
+        label = "TOUCH", value = patch.velocity, fillColor = color, scheme = scheme,
+        onValueChange = { value -> onChange(patch.copy(velocity = value.coerceIn(0f, 1f))) },
+    )
+    MacroSlider(
+        label = "LENGTH",
+        value = kotlin.math.sqrt((patch.sourceSeconds - Libration.MIN_SOURCE_SECONDS) /
+            (Libration.MAX_SOURCE_SECONDS - Libration.MIN_SOURCE_SECONDS)).toFloat(),
+        fillColor = color, scheme = scheme, readout = "%.2f s".format(Locale.ROOT, patch.sourceSeconds),
+        enabled = patch.model >= 3,
+        onValueChange = { value ->
+            val v = value.coerceIn(0f, 1f).toDouble()
+            val seconds = Libration.MIN_SOURCE_SECONDS +
+                (Libration.MAX_SOURCE_SECONDS - Libration.MIN_SOURCE_SECONDS) * v * v
+            onChange(patch.copy(sourceSeconds = (seconds * 1000).roundToInt() / 1000.0))
+        },
+    )
+}
+
 /** Keep untouched physical grain settings exact, including sub-frame Float values. */
 internal fun orphicaPatchForControls(patch: OrphicaPatch, name: String, controls: Map<String, Float>): OrphicaPatch {
     val displayed = Orphica.macrosFrom(patch.config) + patch.macros
@@ -3408,7 +3458,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, LIBRATION;
 
     val displayName: String get() = name.replace('_', ' ')
 
@@ -3467,6 +3517,7 @@ private enum class Engine {
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
         OVEN -> OvenVoice.entries
+        LIBRATION -> LibrationVoice.entries
         ORIGAMI -> OrigamiVoice.entries
     }
 
@@ -3522,6 +3573,7 @@ private enum class Engine {
         EMBOUCHURE -> Embouchure.macrosFor(voice as EmbouchureVoice)
         BELLOWS -> Bellows.macrosFor(voice as BellowsVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
+        LIBRATION -> Libration.macrosFor(voice as LibrationVoice).filterNot { it.name == "HOLD" }
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
     }
 
@@ -3577,6 +3629,7 @@ private enum class Engine {
         EMBOUCHURE -> Embouchure.defaults(voice as EmbouchureVoice)
         BELLOWS -> Bellows.defaults(voice as BellowsVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
+        LIBRATION -> Libration.defaults(voice as LibrationVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
     }
 
@@ -3634,6 +3687,7 @@ private enum class Engine {
         EMBOUCHURE -> Embouchure.scramble(voice as EmbouchureVoice, random)
         BELLOWS -> Bellows.scramble(voice as BellowsVoice, random)
         OVEN -> Oven.scramble(voice as OvenVoice, random)
+        LIBRATION -> Libration.scramble(voice as LibrationVoice, random)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
@@ -3696,6 +3750,7 @@ private enum class Engine {
         EMBOUCHURE -> Embouchure.render(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
+        LIBRATION -> Libration.render(voice as LibrationVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
     }
 
@@ -3757,6 +3812,7 @@ private enum class Engine {
         EMBOUCHURE -> Embouchure.drumClassFor(voice as EmbouchureVoice, macros)
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
+        LIBRATION -> Libration.drumClassFor(voice as LibrationVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
     }
@@ -3813,6 +3869,7 @@ private enum class Engine {
         EMBOUCHURE -> EmbouchurePatch(name, voice as EmbouchureVoice, macros)
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
+        LIBRATION -> LibrationPatch(name, voice as LibrationVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
     }
 
