@@ -144,10 +144,12 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
             assertFiniteControls()
         }
-        // The cycle continues through LIBRATION before wrapping to LATTICE.
+        // The cycle continues through LIBRATION and MERIDIAN before wrapping to LATTICE.
         compose.onNodeWithContentDescription("ENGINE CHAMBER. CHOOSE ENGINE").assertExists()
         press("NEXT ENGINE")
         compose.onNodeWithContentDescription("ENGINE LIBRATION. CHOOSE ENGINE").assertExists()
+        press("NEXT ENGINE")
+        compose.onNodeWithContentDescription("ENGINE MERIDIAN. CHOOSE ENGINE").assertExists()
         press("NEXT ENGINE")
         compose.onNodeWithContentDescription("ENGINE LATTICE. CHOOSE ENGINE").assertExists()
     }
