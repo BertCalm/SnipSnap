@@ -6,6 +6,7 @@ import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.xpm.PadNoteMap
 
 /**
@@ -109,11 +110,11 @@ object RecipeReplay {
         }
         if ("layers" in e) {
             val banked = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
-            if (banked != null && com.snipsnap.synth.StrikeFxBank.isStrikeFx(banked)) {
-                return Plan.StrikeFx(
-                    com.snipsnap.synth.StrikeFxBank.roomOf(banked)!!,
-                    com.snipsnap.synth.StrikeFxBank.slapOf(banked)!!,
-                )
+            if (banked != null && StrikeFxBank.isStrikeFx(banked)) {
+                // Named layers without their dials (hand-edited, or from a later build) is no bank to replay.
+                val room = StrikeFxBank.roomOf(banked)
+                val slap = StrikeFxBank.slapOf(banked)
+                if (room != null && slap != null) return Plan.StrikeFx(room, slap)
             }
         }
         if ("patch" in e) {

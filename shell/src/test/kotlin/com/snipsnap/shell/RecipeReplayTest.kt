@@ -4,6 +4,7 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.json.JsonValue
+import com.snipsnap.synth.LayerRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.StrikeFxBank
 import java.io.File
@@ -93,6 +94,26 @@ class RecipeReplayTest {
         assertEquals(done.pad.velocityLayers, pad2.velocityLayers)
         assertEquals(Copy.STRIKE_FX_ON, done.toast)
         assertEquals(0.3f, StrikeFxBank.roomOf(PadRecipe.fromJsonValue(pad2.recipe!!)))
+    }
+
+    @Test
+    fun `a malformed or foreign bank does not plan as StrikeFx and does not throw`() {
+        val bare = PadRecipe(layers = listOf(LayerRecipe("DRY"), LayerRecipe("ROOM"), LayerRecipe("ECHO"))).toJsonValue() as JsonValue.Obj
+        assertTrue(RecipeReplay.plan(bare) !is RecipeReplay.Plan.StrikeFx)
+        val p = twins("PlanForeign")
+        p.desamplePad(1, evenIfFar = true)
+        val somePatch = PadRecipe.fromJsonValue(p.pad(1)!!.recipe!!).patch!!
+        val foreign = PadRecipe(patch = somePatch, layers = listOf(LayerRecipe("A"), LayerRecipe("B"))).toJsonValue() as JsonValue.Obj
+        assertEquals(RecipeReplay.Plan.Patch(PadRecipe.fromJsonValue(foreign)), RecipeReplay.plan(foreign))
+    }
+
+    @Test
+    fun `pasting a strike fx bank onto a printed board is refused`() {
+        val m = twins("FxPrinted")
+        m.update(2) { it.copy(recipe = JsonValue.Obj(mapOf("aquariumPad" to JsonValue.Num(99.0)))) }
+        val bank = PadRecipe(layers = StrikeFxBank.layers(0.3f, 0.6f)).toJsonValue() as JsonValue.Obj
+        val e = assertFailsWith<IllegalArgumentException> { RecipeReplay.apply(m, 2, bank, "SNARE 02") }
+        assertTrue(e.message!!.startsWith("REMOVE "), e.message)
     }
 
     @Test
