@@ -11,6 +11,17 @@ provides finite attacks, settled holds and held EDGE endpoints; the instrument
 bank expands to 36 programs / 612 roots. New presets await listening, and physical
 Android/MPC playback remains a separate check. See [CONTOUR.md](CONTOUR.md).
 
+**Trefoil model-two playable bank (2026-10-24).** The revised sound direction has
+positive owner feedback. Twelve finite presets, three native velocity layers,
+a sixteen-pad MPC starter and two exported-sample musical studies extend that
+baseline without changing its DSP. Preset, phone-adapter, starter and complete
+saved-recipe registration are implemented. `generateTrefoilPlayableBank` rebuilds
+the kit, MPC 3/MPC 2 programs, browser bank and replay artifacts. The original and
+revised physics/causal auditions remain available. HOLD, PAIR, on-device performance
+and physical MPC acceptance remain later work. Owner feedback on the playable
+bank was positive on 2026-10-26.
+See [TREFOIL.md](TREFOIL.md) for the model and reproduction.
+
 **Ferry first Kotlin port (2026-10-27).** PASSAGE ports the approved Python
 wood-to-wire handoff and nine register/speed references to one passive 22-state
 network. An independent quiet root and full-network fundamental cap preserve

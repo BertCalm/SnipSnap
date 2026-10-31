@@ -11,6 +11,12 @@ import kotlin.test.assertTrue
  */
 class DeterminismTest {
     @Test
+    fun `TREFOIL factory gestures retain seeded model two replay`() {
+        val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
+        assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)
+    }
+
+    @Test
     fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
         val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
         val samples = patch.render().samples

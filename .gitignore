@@ -429,6 +429,11 @@ testkit/scanned-chain-audition/
 testkit/scanned-chain-audition.zip
 testkit/scanned-chain-listen.html
 
+# Reproducible finite TREFOIL listening renders and evidence.
+testkit/trefoil-audition/
+testkit/trefoil-model-two-audition/
+testkit/trefoil-playable-bank/
+
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/
 testkit/contour-edge-audition/
