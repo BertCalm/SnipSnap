@@ -597,7 +597,8 @@ class Mpc3TrackWriter(
         // The misspelling is the format's, at exactly this path — the
         // per-instrument field below is spelled correctly. Both verbatim.
         "poliphony" to i(voice.polyphony.toLong()),
-        "portamentoTime" to d(voice.portamentoSeconds.toDouble()),
+        // Widening the Float directly would render 0.10000000149011612; go via its decimal text.
+        "portamentoTime" to d(voice.portamentoSeconds.toString().toDouble()),
         "portamentoLegato" to b(voice.legato),
         "padGroup" to obj(*(0 until 128).map { "value$it" to i(0) }.toTypedArray()),
         "instruments" to instruments,

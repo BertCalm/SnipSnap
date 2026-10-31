@@ -246,13 +246,13 @@ class Mpc3TrackWriterTest {
             val drum = drumOf(mode)
             assertEquals(mono, drum["monophonic"]!!.bool(), "$mode monophonic")
             assertEquals(poly, drum["poliphony"]!!.int(), "$mode poliphony")
-            assertEquals(time, drum["portamentoTime"]!!.num(), 1e-6, "$mode portamentoTime")
+            assertEquals(time, drum["portamentoTime"]!!.num(), "$mode portamentoTime")
             assertEquals(legato, drum["portamentoLegato"]!!.bool(), "$mode portamentoLegato")
             assertEquals(retrigger, drum["monoRetrigger"]!!.bool(), "$mode monoRetrigger")
         }
         check(VoiceMode.POLY, false, 0, 0.0, false, false)
         check(VoiceMode.LEAD, true, 1, 0.0, false, true)
-        check(VoiceMode.GLIDE, true, 1, VoiceMode.GLIDE.portamentoSeconds.toDouble(), true, false)
+        check(VoiceMode.GLIDE, true, 1, 0.1, true, false)
     }
 
     @Test
