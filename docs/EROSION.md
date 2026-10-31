@@ -158,17 +158,23 @@ produced 68 settings, 136 PCM24 WAVs and 68 saved native recipes. All five
 renderer source hashes match the generation manifest; every delivered WAV
 header and every audio/recipe page link was checked. The earlier focused
 PatchesTest (3), PadRecipeTest (20) and DeterminismTest (51) classes passed.
+After merging the newer development branch, 31 focused native/registry/recipe
+checks passed, including the EROSION determinism canary. The 64 shell convention
+checks also passed after keeping the native-proof note outside the README's
+machine-read engine list. Total final focused checks: 95, zero failures/errors.
 
 Across the 68 generated native cases, every class was PERC. Maximum native
 sample peak was .99000007 and maximum absolute mean .00104292 before PCM
 encoding. The median single local render observation was 7.40 ms. This is not
 a repeatable benchmark or a target-phone result.
 
-The required full JVM command was launched and remained running when this
-native listening round was prepared. It is explicitly unverified: no full-suite
+The required full JVM command was launched and interrupted before completion
+so the current development branch could be merged into the draft without
+changing files under a running build. It is explicitly unverified: no full-suite
 pass, Android compilation or release-readiness claim is made. The native change
 is kept as a draft for review. The repository documents full suite durations
-exceeding an hour on CI; this focused listening deliverable does not wait for
-that entire run. Full JVM completion is still required before merging.
+exceeding an hour on CI. Full JVM completion is still required before merging.
+The merged development changes only add a design document and adjust an Android
+test; all five native renderer source hashes remain unchanged.
 Owner-heard evidence: positive feedback on the first Python audition. Kotlin
 listening, phone performance and MPC hardware validation remain open.

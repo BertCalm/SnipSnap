@@ -1199,10 +1199,12 @@ UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SP
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. EROSION now has a
-[native ARC/CRATER proof](docs/EROSION.md), saved touch and a regenerable audition;
-it remains outside the picker and factory presets. BORE, ARCO
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO
 and SCOUR have preset rosters, so `snipsnap synth` renders them.
+
+EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
+regenerable audition. It remains outside the picker and factory presets.
+
 AEROSTAT, TREMOR and BALLAST now have app controls, factory preset browsing
 and dry FRESH TAPE starters. AEROSTAT uses the listener-approved PVC voice and
 refined factory recipes. BALLAST keeps its bass and saved GLINT identity; its
