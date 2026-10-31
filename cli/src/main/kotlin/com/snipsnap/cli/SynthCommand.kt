@@ -12,6 +12,7 @@ import com.snipsnap.loop.Session
 import com.snipsnap.loop.SessionBuilder
 import com.snipsnap.shell.DroneMaker
 import com.snipsnap.shell.FlockPadMaker
+import com.snipsnap.shell.RimePadMaker
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.OrphicaPadMaker
 import com.snipsnap.shell.TidalPadMaker
@@ -223,6 +224,10 @@ import kotlin.random.Random
  * becomes a captured-sustain instrument with `--instrument [--release S] [--touch]`,
  * retaining its exact model, seed and saved note/velocity. `--touch` adds three
  * independently captured source strengths up to the saved velocity.
+ * RIME replays complete saved patches and exposes --midi, --velocity, --seconds
+ * (excitation gate), --seed and all six --macros. Models 1–4 remain finite;
+ * explicitly choose --model 5 for HOLD or --instrument [--release S]. Held keys
+ * retain the unfolding opening before periodic sustain across nine native roots.
  * WICK offers twenty-five provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE recipes without adding a phone engine.
  * NACRE offers three playable finite PEARL starting points with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
@@ -335,9 +340,6 @@ object SynthCommand {
                 if (name in overrides) throw CliError("--macros repeats $name; supply each control once")
                 val value = fields[1].trim().toFloatOrNull()?.takeIf { it.isFinite() && it in 0f..1f }
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
-                if (engine == RimePatch.ENGINE && name == "HOLD" && value != 0f) {
-                    throw CliError("--macros HOLD: RIME renders finite notes; HOLD is not implemented")
-                }
                 if (engine == CausticPatch.ENGINE && name == "HOLD" && value > 0f) {
                     throw CliError("--macros HOLD is reserved for CAUSTIC; only 0 is supported")
                 }
@@ -371,7 +373,7 @@ object SynthCommand {
             }
         }
         val noteRange = if (noteFlags.isEmpty()) null else {
-            if (drone || (instrument && engine !in setOf(OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
+            if (drone || (instrument && engine !in setOf(RimePatch.ENGINE, OrphicaPatch.ENGINE, OpenSkyPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE))) throw CliError("${noteFlags.joinToString()} shape a pad audition - cannot combine with --instrument or --drone")
             when (engine) {
                 RimePatch.ENGINE -> Rime.MIN_MIDI..Rime.MAX_MIDI
                 "PLUCK" -> if (voice == "UPRIGHT") 28..52
@@ -446,7 +448,7 @@ object SynthCommand {
                 ?: throw CliError("--beats for TRIO is 1..4, got '$raw'")
         }
         fun seedFlag(flag: String): Int? = opts[flag]?.let { raw ->
-            val supported = if (flag == "--seed") setOf(RimePatch.ENGINE, SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE, ApsisPatch.ENGINE) else setOf(SkitterPatch.ENGINE)
+            val supported = if (flag == "--seed") setOf(SkitterPatch.ENGINE, VentPatch.ENGINE, OspreyPatch.ENGINE, FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE, ObbligatoPatch.ENGINE, OhmPatch.ENGINE, ApsisPatch.ENGINE, RimePatch.ENGINE) else setOf(SkitterPatch.ENGINE)
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
@@ -464,13 +466,14 @@ object SynthCommand {
         }
         val modelOverride = opts["--model"]?.let { raw ->
             val lastModel = when (engine) {
+                RimePatch.ENGINE -> Rime.MODEL_VERSION
                 FerryPatch.ENGINE -> Ferry.MODEL_VERSION
                 OspreyPatch.ENGINE -> Osprey.MODEL_VERSION
                 CreasePatch.ENGINE -> Crease.MODEL_VERSION
                 TidalPatch.ENGINE -> Tidal.MODEL_VERSION
                 CausticPatch.ENGINE -> CausticInstrument.MODEL_VERSION
                 OhmPatch.ENGINE -> Ohm.MODEL_VERSION
-                else -> throw CliError("--model is only supported by OSPREY, CREASE, TIDAL, CAUSTIC, OHM and FERRY, got $engine")
+                else -> throw CliError("--model is only supported by RIME, OSPREY, CREASE, TIDAL, CAUSTIC, OHM and FERRY, got $engine")
             }
             raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
@@ -480,9 +483,10 @@ object SynthCommand {
             throw CliError("--attack and --release shape a held instrument - add --instrument")
         }
         if (instrument) {
+            if (engine == RimePatch.ENGINE && opts["--attack"] != null) throw CliError("RIME retains its UNFOLD opening; use --release")
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
             if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
-            if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OHM and TIDAL export a keys instrument here")
+            if (engine !in setOf(RimePatch.ENGINE, "RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RIME, RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OHM and TIDAL export a keys instrument here")
             if (engine == OhmPatch.ENGINE && opts["--attack"] != null) throw CliError("OHM keeps its authored attack; use --release for the held instrument")
             if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
             if (engine == ContourPatch.ENGINE && opts["--attack"] != null) throw CliError("CONTOUR --instrument uses settled sustain without the finite attack; omit --attack and use --release")
@@ -651,7 +655,10 @@ object SynthCommand {
                 }
                 withNote.copy(model = Shoal.MODEL_VERSION, material = materialOverride)
             } else if (withNote is RimePatch) {
-                withNote.copy(macros = withNote.macros + macroOverrides, gateSeconds = secondsOverride ?: withNote.gateSeconds, seed = seedOverride ?: withNote.seed)
+                try {
+                    withNote.copy(model = modelOverride ?: withNote.model, macros = withNote.macros + macroOverrides,
+                        gateSeconds = secondsOverride ?: withNote.gateSeconds, seed = seedOverride ?: withNote.seed)
+                } catch (e: IllegalArgumentException) { throw CliError("RIME: ${e.message}; use --model 5 for HOLD") }
             } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is ContourPatch && macroOverrides.isNotEmpty()) {
@@ -756,9 +763,15 @@ object SynthCommand {
         } catch (e: IllegalArgumentException) {
             throw CliError("OHM --instrument: ${e.message ?: "invalid held recipe"}")
         } else null
+        val rimeInstrumentSpec = if (instrument && engine == RimePatch.ENGINE) try {
+            val release = opts["--release"]?.toFloatOrNull() ?: if (opts["--release"] == null) RimePadMaker.RELEASE.default
+                else throw IllegalArgumentException("release must be finite seconds")
+            RimePadMaker.Spec(chosen.single() as RimePatch, release)
+        } catch (e: IllegalArgumentException) { throw CliError("RIME --instrument: ${e.message}; use --model 5 for HOLD") } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")
+        if (rimeInstrumentSpec != null) return makeRimeInstrument(rimeInstrumentSpec, dir, out)
         if (skyInstrumentSpec != null) return makeOpenSkyInstrument(skyInstrumentSpec, dir, out)
         if (flockInstrumentSpec != null) return makeFlockInstrument(flockInstrumentSpec, dir, out)
         if (creaseInstrumentSpec != null) return makeCreaseInstrument(creaseInstrumentSpec, dir, out)
@@ -781,14 +794,16 @@ object SynthCommand {
             val safe = patch.name.replace(Regex("[^A-Za-z0-9]+"), "_").trim('_').ifEmpty { "PRESET" }
             val family = if (patch is ShoalPatch) "${voice}_${patch.material.name}" else voice
             val file = File(dir, "%s_%s_%02d_%s.wav".format(Locale.ROOT, engine, family, i + 1, safe))
+            val heldRime = patch is RimePatch && Rime.isLoop(patch.macros)
             val heldTidal = patch is TidalPatch && Tidal.isHeld(patch.macros["HOLD"] ?: 0f)
             val sampler = if (heldTidal) SmplChunk((patch as TidalPatch).midi,
+                SmplChunk.Loop(0, snip.frameCount.toLong())) else if (heldRime) SmplChunk((patch as RimePatch).midi,
                 SmplChunk.Loop(0, snip.frameCount.toLong())) else heldOhm?.let { SmplChunk((patch as OhmPatch).midi,
                 SmplChunk.Loop(it.loopStartFrame, it.snip.frameCount.toLong())) }
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+            if (patch is RimePatch || patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
@@ -796,6 +811,7 @@ object SynthCommand {
             if (patch is OhmPatch) File(dir, "${file.nameWithoutExtension}.patch.json").writeText(patch.toJsonText())
             val mode = when {
                 patch is OpenSkyPatch -> if (patch.wet) "  (room + shimmer, stereo)" else "  (dry, stereo)"
+                heldRime -> "  (resolved contour cycle, loop-enabled WAV)"
                 heldTidal -> "  (reconstructed aftermath, loop-enabled WAV)"
                 heldRibbon != null -> "  (captured RIBBON sustain, loop-enabled WAV)"
                 heldOhm != null -> "  (OHM attack plus captured sustain, loop-enabled WAV)"
@@ -901,6 +917,21 @@ object SynthCommand {
         if (spec.touchLayers) out.println("touch layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard excitation up to the saved velocity")
         return 0
     }
+
+    private fun makeRimeInstrument(spec: RimePadMaker.Spec, dir: File, out: PrintStream): Int {
+        val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
+        val midis = RimePadMaker.zoneMidis(spec)
+        val notes = midis.mapIndexed { i, midi ->
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
+            RimePadMaker.renderZone(spec, midi)
+        }
+        RimePadMaker.export(name, spec, notes, dir)
+        File(dir, "$name.patch").writeText(spec.heldPatch.toJsonText())
+        out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
+        out.println("${midis.size} zones, contour opening and periodic sustain - RELEASE ${RimePadMaker.secondsLabel(spec.releaseSeconds)}")
+        return 0
+    }
+
 
     private fun makeContourInstrument(spec: ContourPadMaker.Spec, dir: File, out: PrintStream): Int {
         val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))

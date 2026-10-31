@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** Nine finite musical recipes, outside the phone factory roster until integration. */
+/** Nine preserved finite musical recipes, shared by the CLI and phone factory roster. */
 object RimePresets {
     const val BANK_MODEL = 4
     data class Entry(val id: String, val role: String, val description: String, val patch: RimePatch)
@@ -35,6 +35,8 @@ object RimePresets {
             patch("Ringing Stone", RimeVoice.VESSEL, .70f, .40f, .28f, .25f, .68f, .55f)),
         Entry("open-vessel", "Unfolding texture", "The accepted slow reveal and long resonating body.", starter(RimeVoice.VESSEL)),
     )
-    fun forVoice(voice: RimeVoice): List<RimePatch> = entries().filter { it.patch.voice == voice }.map { it.patch }
-    fun all(): List<RimePatch> = entries().map { it.patch }
+    /** Paste complete lines from UserPresets here; source-note and model fields survive. */
+    private val promoted: List<RimePatch> = emptyList()
+    fun forVoice(voice: RimeVoice): List<RimePatch> = all().filter { it.voice == voice }
+    fun all(): List<RimePatch> = entries().map { it.patch } + promoted
 }

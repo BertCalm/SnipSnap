@@ -1,5 +1,15 @@
 # Synth roadmap — generate kits, not just capture them
 
+**RIME — HOLD and integration build (2026-10-31).** The nine finite model-4 recipes
+remain exact. Model 5 adds finite gate extension and independently measured
+periodic sustain. Nine-root XTY/XPM instruments retain UNFOLD's opening; the
+phone picker exposes saved root, excitation velocity, gate and complete-patch
+recall. Additional voices and the planned expanded library await the missing
+original specification. Device, MPC hardware and new HOLD sonic acceptance
+remain open. See [RIME.md](RIME.md).
+
+Earlier finite-bank milestone:
+
 **RIME — nine-preset musical bank (2026-10-31).** LOOP, GLINT and VESSEL
 project the same finite Koch contour through two pickups into an eight-mode body.
 DETAIL, EDGE, ANGLE, UNFOLD and BODY act before output conditioning; note, velocity,

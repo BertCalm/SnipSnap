@@ -10,6 +10,36 @@ import kotlin.io.path.createTempDirectory
 import kotlin.test.*
 
 class RimeSynthCommandTest {
+    @Test fun `explicit model five exports a complete saved recipe as held keys`() {
+        val root = createTempDirectory("rime-cli-held").toFile()
+        try {
+            val out = PrintStream(ByteArrayOutputStream())
+            assertEquals(0, SynthCommand.run(listOf("RIME", "LOOP", "--model", "5", "--instrument",
+                "--midi", "43", "--velocity", ".6", "--seed", "2718", "--release", ".4", "--out", root.path), out))
+            val patch = RimePatch.fromJsonText(root.listFiles()!!.single { it.extension == "patch" }.readText())
+            assertEquals(5, patch.model); assertEquals(43, patch.midi)
+            assertEquals(.6f, patch.velocity); assertEquals(2718, patch.seed)
+            val instrument = com.snipsnap.kit.InstrumentStore.list(root).single().second
+            assertEquals((31..55 step 3).toList(), instrument.zones.map { it.rootNote })
+            assertEquals(.4f, instrument.release)
+            assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test fun `held pad WAV retains its native root loop and complete effective recipe`() {
+        val root = createTempDirectory("rime-cli-cycle").toFile()
+        try {
+            assertEquals(0, SynthCommand.run(listOf("RIME", "VESSEL", "--model", "5", "--macros", "HOLD=1", "--out", root.path), PrintStream(ByteArrayOutputStream())))
+            val wave = root.listFiles()!!.single { it.extension == "wav" }
+            val sampler = assertNotNull(WavReader.readSmpl(wave))
+            assertEquals(48, sampler.rootNote)
+            assertEquals(0L, assertNotNull(sampler.loop).startFrame)
+            assertEquals(WavReader.read(wave).frameCount.toLong(), sampler.loop!!.endFrameExclusive)
+            val p = RimePatch.fromJsonText(File(root, wave.nameWithoutExtension + ".patch").readText())
+            assertTrue(Rime.isLoop(p.macros)); assertEquals(5, p.model)
+        } finally { root.deleteRecursively() }
+    }
+
     @Test fun `all renders the three named musical presets for a RIME voice`() {
         val root=createTempDirectory("rime-cli-bank").toFile()
         try {
@@ -32,7 +62,7 @@ class RimeSynthCommandTest {
             val expectedFile=File(root,"expected.wav");WavWriter.write(expectedFile,expected.render())
             assertContentEquals(expectedFile.readBytes(),actual.readBytes())
             assertEquals(44100,WavReader.read(actual).sampleRate)
-            assertTrue(Presets.forVoice("RIME","GLINT").isEmpty(),"provisional recipes stay outside the phone roster")
+            assertEquals(RimePresets.forVoice(RimeVoice.GLINT), Presets.forVoice("RIME","GLINT"))
         } finally {root.deleteRecursively()}
     }
 

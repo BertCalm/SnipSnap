@@ -8,9 +8,10 @@ import kotlin.math.*
 
 enum class RimeVoice { LOOP, GLINT, VESSEL }
 
-/** Finite contour instrument. Model 4 spreads ANGLE's return travel while retaining model-3 anchors. */
+/** Contour instrument. Saved models 1–4 retain their finite rendering laws. */
 object Rime {
-    const val MODEL_VERSION = 4
+    const val MODEL_VERSION = 5
+    const val HOLD_THRESHOLD = .85f
     const val MIN_MIDI = 24
     const val MAX_MIDI = 96
     val TIMBRAL = listOf("DETAIL", "EDGE", "ANGLE", "UNFOLD", "BODY")
@@ -34,14 +35,21 @@ object Rime {
             require(value.isFinite() && value in 0f..1f) { "RIME $name must be finite in 0..1" }
             values[name] = value
         }
-        require(values.getValue("HOLD") == 0f) { "RIME renders finite notes; HOLD is not implemented" }
+        require(model >= 5 || values.getValue("HOLD") == 0f) { "RIME models 1–4 render finite notes; HOLD is not implemented" }
         return values
     }
-    fun drumClassFor(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), gateSeconds: Float = gateSeconds(voice)): DrumClass {
-        val body = settled(voice, macros).getValue("BODY").toDouble()
-        val seconds = gateSeconds + .06 + .12 * body + max(.25, 1.25 * RimeBody.decaySeconds(voice, body))
+    fun isLoop(macros: Map<String, Float>): Boolean = (macros["HOLD"] ?: 0f) >= HOLD_THRESHOLD
+    internal fun extendedGate(gate: Float, hold: Float): Float = gate + (4f - gate) * (hold / HOLD_THRESHOLD).coerceIn(0f, 1f)
+    fun drumClassFor(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), gateSeconds: Float = gateSeconds(voice), model: Int = MODEL_VERSION): DrumClass {
+        val m = settled(voice, macros, model)
+        val body = m.getValue("BODY").toDouble()
+        if (isLoop(m)) return DrumClass.LOOP
+        val seconds = extendedGate(gateSeconds, m.getValue("HOLD")) + .06 + .12 * body + max(.25, 1.25 * RimeBody.decaySeconds(voice, body))
         return if (seconds > 1.5) DrumClass.LOOP else DrumClass.TONAL
     }
+
+    fun scramble(voice: RimeVoice, random: kotlin.random.Random): Map<String, Float> =
+        defaults(voice).mapValues { (name, value) -> if (name == "HOLD") 0f else (value + (random.nextFloat() - .5f) * .6f).coerceIn(0f, 1f) }
 
     /** Explicit diagnostic recipe switches, never hidden patch macro overrides. */
     data class Options(val contact: Boolean = true, val reference: Boolean = true, val body: Boolean = true,
@@ -63,11 +71,18 @@ object Rime {
 
     fun render(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
         velocity: Float = .8f, gateSeconds: Float = gateSeconds(voice), seed: Int = 1729, model: Int = MODEL_VERSION): Snip =
-        Snip(inspect(voice, macros, midi, velocity, gateSeconds, seed, model = model).samples, 1, Dsp.RATE)
+        if (model >= 5 && isLoop(macros)) Snip(RimeHeld.render(RimePatch("Held Rime", voice, macros, midi, velocity, gateSeconds, seed, model)).cycle, 1, Dsp.RATE)
+        else Snip(inspect(voice, macros, midi, velocity, gateSeconds, seed, model = model).samples, 1, Dsp.RATE)
 
     internal fun inspect(voice: RimeVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
         velocity: Float = .8f, gateSeconds: Float = gateSeconds(voice), seed: Int = 1729,
         options: Options = Options(), model: Int = MODEL_VERSION): Probe {
+        if (model >= 5) {
+            val m = settled(voice, macros, model)
+            require(gateSeconds.isFinite() && gateSeconds in .15f..4f) { "RIME gateSeconds must be .15..4" }
+            require(!isLoop(m)) { "use RimeHeld for periodic HOLD diagnostics" }
+            return inspect(voice, m + ("HOLD" to 0f), midi, velocity, extendedGate(gateSeconds, m.getValue("HOLD")), seed, options, 4)
+        }
         if (model == 1) {
             val old = RimeV1.inspect(voice, macros, midi, velocity, gateSeconds, seed,
                 RimeV1.Options(options.contact, options.reference, options.body, options.oversample, options.friction))

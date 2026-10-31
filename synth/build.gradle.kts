@@ -2432,3 +2432,12 @@ tasks.register<JavaExec>("generateNacrePlayableAudition") {
     workingDir = projectDir
     args("${rootDir}/testkit/nacre-playable-audition")
 }
+
+/** Extend an existing finite listening pack with measured periodic HOLD comparisons. */
+tasks.register<JavaExec>("generateRimeHoldAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeHoldAuditionGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+}

@@ -6,6 +6,7 @@ import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.AtomicFile
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
+import com.snipsnap.synth.RimePatch
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.CisternPatch
@@ -429,6 +430,10 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is RimePatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "RimePatch.fromJsonText($recipe),"
+        }
         if (patch is ApsisPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ApsisPatch.fromJsonText($recipe),"

@@ -7,8 +7,8 @@
   <meta name="description" content="Listen to Rime, a contour synthesis prototype for SnipSnap. Three dry starter sounds, musical phrases and controlled listening comparisons.">
   <title>Rime — SnipSnap listening room</title>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="style.css?v=bank1">
-  <script src="app.js?v=bank1" defer></script>
+  <link rel="stylesheet" href="style.css?v=hold5">
+  <script src="app.js?v=hold5" defer></script>
 </head>
 <body>
   <a class="skip" href="#bank">Skip to the sounds</a>
@@ -25,7 +25,7 @@
         <p class="hero-line">One silhouette.<br>Increasingly elaborate edges.</p>
         <p class="intro">A smooth pitched loop acquires fine detail, unfolds within the note, and excites a resonating body. Nine finite presets turn that contour into basses, keys and textures.</p>
         <a class="primary" href="#bank">Play the musical bank <span aria-hidden="true">↘</span></a>
-        <p class="small muted">Finite prototype · No external samples or rack effects</p>
+        <p class="small muted">Finite notes + held keys · No external samples or rack effects</p>
       </div>
       <figure class="contour-study">
         <div class="figure-heading"><span>THE SOURCE / KOCH CONTOUR</span><span>ITERATION 05</span></div>
@@ -51,7 +51,12 @@
       <div class="bank-kit-study"><div><strong>The full kit / 104 BPM</strong><p>An original four-bar study of the same recipes used in the MPC kit.</p></div><div id="bank-demo"></div></div>
       <div id="bank-presets"></div>
       <div class="bank-downloads"><a href="downloads/rime-musical-bank.zip" download><strong>9 native notes + patches</strong><span>WAV + JSON · ZIP ↓</span></a><a href="downloads/rime-mpc-kit.zip" download><strong>16-pad MPC kit</strong><span>MPC 3 + MPC 2 · ZIP ↓</span></a><a href="downloads/rime-pad-map.json" download><strong>Pad map & layer recipes</strong><span>JSON ↓</span></a></div>
-      <p class="footnote">The kit has an eight-note bass walk plus the other eight presets, with three velocity layers per pad. Downloads contain native one-shots. This bank is finite; HOLD and phone picker integration are later work. Hardware loading and musical acceptance still need your check.</p>
+      <p class="footnote">The kit has an eight-note bass walk plus the other eight presets, with three velocity layers per pad. Downloads contain native one-shots. These nine saved recipes remain finite. Try their new held instrument versions below. Hardware loading and musical acceptance still need your check.</p>
+    </section>
+    <section id="hold" class="section wrap" aria-labelledby="hold-heading">
+      <div class="section-heading"><span class="number">NEW</span><div><p class="eyebrow">Hold the contour</p><h2 id="hold-heading">Let the opening become a sustain.</h2><p>Compare immediate detail with an unfolding opening. Each clip continues through eight sustain cycles. UNFOLD develops the opening once; the resolved contour then repeats.</p></div></div>
+      <div id="hold-voices" class="starters"></div>
+      <p class="footnote">The instruments keep the opening, nine sampled roots, the sustain loop and a player-controlled release. The drum-pad HOLD sound starts directly from the resolved cycle. HOLD below 85% extends the finite gate; 85–100% selects periodic sustain. Original level retains native velocity for these clips; matched playback adjusts the whole clip. SnipSnap picker, note controls and MAKE INSTRUMENT are included in the source build. Device and MPC hardware checks remain open.</p>
     </section>
     <section id="revision" class="revision-section wrap" aria-labelledby="revision-heading">
       <div class="revision-heading"><div><p class="eyebrow">Revision 04 · Building on your preferred direction</p><h2 id="revision-heading">Explore the rest of the turn.</h2><p>The rounded/open contrast and all three starter sounds are preserved. Try the positions between 180° and 360°, then compare the return with the previous version.</p></div><label class="revision-voice">Voice for ANGLE & BODY<select id="revision-voice"><option value="LOOP">LOOP · Round Seed</option><option value="GLINT" selected>GLINT · Fine Frost</option><option value="VESSEL">VESSEL · Open Vessel</option></select></label></div>
@@ -76,7 +81,7 @@
       </div>
     </section>
     <section id="compare" class="section wrap">
-      <div class="section-heading"><span class="number">03</span><div><p class="eyebrow">Controlled comparisons</p><h2>Inside the note.</h2><p>Remove one part of the instrument and listen for its contribution. Use matched playback for tone; raw playback keeps one common gain across every clip.</p></div></div>
+      <div class="section-heading"><span class="number">03</span><div><p class="eyebrow">Controlled comparisons</p><h2>Inside the note.</h2><p>Remove one part of the instrument and listen for its contribution. Use matched playback for tone; original-level playback keeps a common gain across these diagnostic clips.</p></div></div>
       <div id="causal" class="causal-grid"></div>
       <details class="explorer"><summary><span>Explore the rest of the bench</span><span id="bench-count" class="small muted"></span><span class="expand" aria-hidden="true">+</span></summary>
         <p>Low, middle and high notes; soft and hard velocities; paired controls; and all-high settings at C7.</p>
@@ -93,12 +98,12 @@
       <div><p class="eyebrow">Keep the work</p><h2>Every sound has a recipe.</h2><p>The downloads retain the controls and performance. Causal recipes also record which internal path was removed. The source bundle includes the Kotlin renderer, tests and replay instructions.</p></div>
       <div class="evidence-links"><a href="downloads/rime-recipes.zip" download>All recipes & measurements <span>ZIP ↓</span></a><a href="downloads/rime-prototype-source.zip" download>Prototype source & patch <span>ZIP ↓</span></a><a href="manifest.json" download>Audition manifest <span>JSON ↓</span></a><a href="geometry.json" download>Contour reference data <span>JSON ↓</span></a></div>
     </section>
-    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 4 / BANK 1</span></span><p>Nine finite musical presets. Accepted controls and starters are unchanged; earlier recipes remain replayable. HOLD, remaining voices and phone picker integration are later work. Musical-bank and hardware acceptance are pending.</p><span id="build-info" class="small muted"></span></footer>
+    <footer class="wrap footer"><span>SNIPSNAP / RIME <span class="muted">— MODEL 5 / HOLD BUILD</span></span><p>Nine finite musical presets. Accepted controls and starters are unchanged; earlier recipes remain replayable. HOLD and phone integration are included in this build. Remaining voices depend on the original spec. Musical-bank and hardware acceptance are pending.</p><span id="build-info" class="small muted"></span></footer>
   </main>
   <aside class="transport" aria-label="Audition player"><div class="transport-inner wrap">
     <div class="now-playing"><span class="playing-dot" id="playing-dot"></span><div><span class="eyebrow">Listening room</span><p id="now-title" aria-live="polite">Choose a sound above</p></div></div>
     <div class="audio-wrap"><audio id="player" controls preload="none" aria-label="Current audition clip"></audio><div class="playback-error" id="playback-error" role="status"></div></div>
-    <fieldset class="mode-picker"><legend class="sr-only">Playback gain</legend><label><input type="radio" name="mode" value="matched" checked><span>Matched</span></label><label><input type="radio" name="mode" value="raw"><span>Raw</span></label></fieldset>
+    <fieldset class="mode-picker"><legend class="sr-only">Playback gain</legend><label><input type="radio" name="mode" value="matched" checked><span>Matched</span></label><label><input type="radio" name="mode" value="raw"><span>Original level</span></label></fieldset>
     <a id="current-download" class="player-download" hidden download aria-label="Download current WAV">WAV ↓</a>
   </div></aside>
   <noscript><p class="wrap">Enable JavaScript for the listening controls, or download <a href="downloads/rime-first-listen.zip">the starter audio pack</a>.</p></noscript>

@@ -521,3 +521,6 @@ testkit/SnipSnap Scour Kit/
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/
 testkit/obbligato-more-overlap-audition/
+
+# Reproducible Rime held instruments and listening evidence.
+testkit/rime-instruments/

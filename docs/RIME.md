@@ -1,4 +1,78 @@
-# Rime — revised finite listening prototype
+# Rime — contour instrument
+
+
+## HOLD and application integration build
+
+Model 5 preserves every finite model-4 recipe sample for sample when HOLD is zero.
+Models 1–4 keep their original rendering laws and refuse nonzero HOLD. The nine
+finite factory recipes remain pinned to model 4. A deliberate HOLD edit or MAKE
+INSTRUMENT uses model 5; loading an old patch alone never upgrades it.
+
+HOLD below .85 extends the saved excitation gate toward four seconds. At .85 and
+above, the source, seeded friction, modal body and output filters become periodic.
+The root fits a whole number of periods into approximately half a second. The
+modal bank settles after the fine-band opening, and two independently simulated
+cycles are compared with `Keys.seamError`. No wrap crossfade repairs that seam.
+A third guard cycle protects the measured region from decimator end padding.
+The bounded eight-entry render cache owns its samples and returns copies.
+The first Kotlin test run measured cold held renders at approximately 130–1242 ms
+under concurrent build/test load. These misses exceed the tens-of-ms goal; warm
+cache hits avoid the simulation. Android device timings remain unmeasured.
+
+The drum-pad HOLD path returns one resolved cycle and sets gated loop playback.
+MAKE INSTRUMENT retains the actual opening, makes a phase-aligned handoff to the
+settled sound, then places the loop marker after two independently simulated
+steady cycles. That handoff is outside the loop. UNFOLD shapes the opening once;
+it does not repeat the fine-band attack on every wrap. A .1–1.5 second RELEASE
+belongs to the MPC player's note-off envelope. Player velocity controls volume;
+each of these instruments has one saved excitation velocity per root.
+
+The app's dry HOLD audition also retains the opening and uses the actual loop
+marker, so UNFOLD remains audible on key-on. Processed audio cannot inherit a
+marker from a different buffer; a changed processing path plays through once.
+`RimeOpeningPreviewTest` compiles with the device tests and checks the PCM reader's
+one-time opening and sustain wrap. Its device execution remains unverified.
+
+The app picker includes RIME, the nine finite factory recipes, all six macros,
+absolute ROOT, VELOCITY and GATE, complete-patch drafts, SEND TO PAD and MAKE
+INSTRUMENT. The nine keyboard roots are spaced by minor thirds over two octaves
+centred on the saved note, shifted at the supported MIDI 24–96 boundaries.
+XTY, XPM, phone sidecar and WAV sampler chunks share the same roots and loop
+markers. Each instrument includes its ordinary `rime-patch.json` recipe.
+
+```sh
+# Existing finite recipe, explicitly selected new rendering model for HOLD:
+synth RIME GLINT --model 5 --macros HOLD=1 --out /absolute/held-cycle
+synth RIME GLINT --model 5 --instrument --release .6 --out /absolute/keys
+./gradlew :shell:generateRimeInstruments -PrimeInstrumentOutput=/absolute/instruments
+# Append six opening/sustain comparisons to a generated finite listening pack:
+./gradlew :synth:generateRimeHoldAudition -PrimeOutput=/absolute/audition
+```
+
+The audition preserves the 189 finite clips and adds six held comparisons, each
+with the opening and eight sustain repetitions. Their original-level files retain
+native velocity; whole-clip matching is available separately. Only the preview
+gets a terminal fade. The downloaded instrument's sustain remains unfaded.
+
+**Scope still open:** the uploaded original specification is absent from this
+workspace. The other three voice identities and their roles are awaiting owner
+clarification; they have not been guessed or replaced by variants of these three.
+The planned six-voice, 36-preset library is therefore incomplete. Device and MPC
+hardware acceptance are also open. Build and numerical checks do not establish
+sonic acceptance.
+
+### Why it is built this way
+
+- Keeping the nine finite recipes on their saved model protects the accepted sound direction.
+- Periodic forcing lets the body ring indefinitely without retriggering its opening.
+- Independent consecutive cycles make the seam check capable of finding a real mismatch.
+- Keeping the opening before the keygroup loop preserves UNFOLD as a playable gesture.
+- The short sustain cycle and bounded cache reduce repeat-render cost and exported sample size.
+
+## Earlier finite-build milestones
+
+The sections below record the successive finite audition rounds. Their deferred
+HOLD and picker statements describe those earlier milestones.
 
 ## Musical bank 1 — nine finite recipes and an MPC kit
 

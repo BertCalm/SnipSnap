@@ -1,8 +1,8 @@
 # Which document to trust
 
-**Rime.** [`RIME.md`](RIME.md) records the finite LOOP/GLINT/VESSEL contour-synthesis
-prototype, note-aware detail, two-port body, complete recipes and reproducible audition.
-HOLD, the phone picker and the full library await the first listening verdict.
+**Rime.** [`RIME.md`](RIME.md) records the preserved finite bank, versioned HOLD,
+attack-plus-loop MPC instruments and phone integration. The remaining three
+voices and expanded library await the original specification.
 **Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
 
 **Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT
