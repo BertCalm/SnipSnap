@@ -175,7 +175,6 @@ class StrikeFxLayersTest {
         val f = fixture("stacked")
         f.m.treatPad(1, "reversed")
         f.m.treatPad(1, "punched")
-        f.m.update(1) { it.copy(recipe = null) } // treatments leave a non-synth recipe
         val prior = f.m.priorTakes(1)
         val stacked = f.m.stackTakes(1, listOf(prior[1], prior[0]))
         val main = stacked.sampleFile
@@ -185,6 +184,22 @@ class StrikeFxLayersTest {
         assertEquals(listOf("DRY", "ROOM", "ECHO"), pad.velocityLayers.map { it.displayName })
         old.forEach { assertFalse(File(f.dir, it).exists(), it) }
         assertTrue(pad.velocityLayers.all { File(f.dir, it.sampleFile).isFile })
+    }
+
+    @Test
+    fun `keep on a treated pad keeps its treatment and adds the bank`() {
+        val f = fixture("treated")
+        f.m.treatPad(1, "reversed")
+        val before = f.m.kit.pad(1)!!
+        val recipeBefore = Breed.recipeOf(before)!!
+        assertEquals("reversed", recipeBefore.treatment)
+        val mainBytes = bytesOf(File(f.dir, before.sampleFile))
+        val pad = f.m.strikeFxLayers(1, 0.42f, 0.9f)
+        val recipe = Breed.recipeOf(pad)!!
+        assertEquals("reversed", recipe.treatment)
+        assertEquals(recipeBefore.fx, recipe.fx)
+        assertEquals(3, recipe.layers!!.size)
+        assertContentEquals(mainBytes, bytesOf(File(f.dir, pad.velocityLayers[0].sampleFile)))
     }
 
     @Test
