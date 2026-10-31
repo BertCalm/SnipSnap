@@ -1,5 +1,12 @@
 # Synth roadmap — generate kits, not just capture them
 
+**EROSION native finite proof (2026-10-31).** The owner accepted the initial
+Python ARC/CRATER audition. The native port preserves its finite discharge and
+collapse laws, adds saved touch, exact event-age sampling, bounded charge
+accounting, patch/recipe registration and `generateErosionAudition`. Native
+listening and validation remain pending; HOLD, factory presets, picker and a
+starter kit are deferred. See [EROSION.md](EROSION.md).
+
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six
