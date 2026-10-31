@@ -45,8 +45,9 @@ object InstrumentSuiteGenerator {
             dataDir.deleteRecursively()
             val program = render(dataDir)
             check(program.name == name) { "instrument name drifted: ${program.name} != $name" }
-            Mpc3TrackWriter().writeKeygroupTo(out, program)
-            KeygroupWriter().writeTo(dataDir, program)
+            val spanned = program.fullKeyboard()
+            Mpc3TrackWriter().writeKeygroupTo(out, spanned)
+            KeygroupWriter().writeTo(dataDir, spanned)
             programs += program
             samples += program.keygroups.sumOf { it.layers.size }
             println("wrote ${File(out, "$name.xty").absolutePath} (${program.keygroups.size} zones)")

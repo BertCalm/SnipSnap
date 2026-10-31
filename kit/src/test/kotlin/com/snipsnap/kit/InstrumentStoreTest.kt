@@ -6,7 +6,6 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
-import com.snipsnap.kit.InstrumentStore.toProgram
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer

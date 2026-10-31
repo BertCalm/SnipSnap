@@ -289,9 +289,30 @@ object OneNote {
             }
             WavWriter.write(File(dataDir, "$stem.wav"), snip, smpl = smpl)
         }
-        Mpc3TrackWriter().writeKeygroupTo(destRoot, program)
-        KeygroupWriter().writeTo(dataDir, program)
+        writeDescriptors(destRoot, dataDir, name, program)
+    }
+
+    /**
+     * Rewrite the three descriptors of the package called [name] under
+     * [destRoot] - the program file, the `.xpm` and the phone's sidecar - from
+     * [program], and touch nothing else. No WAV is read, written or deleted,
+     * so a voice-mode change costs no render.
+     *
+     * Refused when the package's track-data folder is not there: a descriptor
+     * with no samples beside it is a program that plays nothing.
+     */
+    fun rewriteDescriptors(destRoot: File, name: String, program: KeygroupProgram) {
+        val (_, dataDir) = occupies(destRoot, name)
+        check(dataDir.isDirectory) { "no package to rewrite: ${dataDir.name} is not in ${destRoot.path}" }
+        writeDescriptors(destRoot, dataDir, name, program)
+    }
+
+    /** All three descriptors carry the keyboard-spanning program; the samples keep their own roots. */
+    private fun writeDescriptors(destRoot: File, dataDir: File, name: String, program: KeygroupProgram) {
+        val spanned = program.fullKeyboard()
+        Mpc3TrackWriter().writeKeygroupTo(destRoot, spanned)
+        KeygroupWriter().writeTo(dataDir, spanned)
         // The phone's own reading of the package, beside the hardware's.
-        InstrumentStore.write(destRoot, name, program, dataDir.name)
+        InstrumentStore.write(destRoot, name, spanned, dataDir.name)
     }
 }

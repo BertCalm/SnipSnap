@@ -86,25 +86,25 @@ object InstrumentStore {
 
         /** Every layer must load, including soft samples that are not a zone's headline. */
         val sampleFiles: List<String> get() = zones.flatMap { it.playableLayers }.map { it.sample }.distinct()
-    }
 
-    /** The program this instrument was written from: one keygroup per zone, one layer per playable layer. */
-    fun Instrument.toProgram(): KeygroupProgram = KeygroupProgram(
-        name = name,
-        keygroups = zones.map { zone ->
-            Keygroup(
-                zone.lowNote, zone.highNote, zone.rootNote,
-                zone.playableLayers.map { l ->
-                    VelocityLayer(
-                        l.sample.substringAfterLast('/').substringAfterLast('\\').removeSuffix(".wav"),
-                        l.frameCount, l.velStart, l.velEnd, l.loopStartFrame,
-                    )
-                },
-            )
-        },
-        volumeRelease = playableRelease,
-        voiceMode = voiceMode,
-    )
+        /** The program this instrument was written from: one keygroup per zone, one layer per playable layer. */
+        fun toProgram(): KeygroupProgram = KeygroupProgram(
+            name = name,
+            keygroups = zones.map { zone ->
+                Keygroup(
+                    zone.lowNote, zone.highNote, zone.rootNote,
+                    zone.playableLayers.map { l ->
+                        VelocityLayer(
+                            l.sample.substringAfterLast('/').substringAfterLast('\\').removeSuffix(".wav"),
+                            l.frameCount, l.velStart, l.velEnd, l.loopStartFrame,
+                        )
+                    },
+                )
+            },
+            volumeRelease = playableRelease,
+            voiceMode = voiceMode,
+        )
+    }
 
     fun sidecar(destRoot: File, name: String): File = File(destRoot, "$name$SUFFIX")
 

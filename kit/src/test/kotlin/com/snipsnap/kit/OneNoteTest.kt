@@ -4,6 +4,10 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
 import com.snipsnap.mpc3.Mpc3Project
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.sin
@@ -184,5 +188,52 @@ class OneNoteTest {
         val err = assertFailsWith<IllegalArgumentException> { OneNote.program("Noise", noise) }
         assertTrue("pitch" in err.message!!.lowercase())
         assertFailsWith<IllegalArgumentException> { OneNote.program("bad:name", note220()) }
+    }
+
+    /** Two zones, 40..42 and 43..45, the shape a keygroup export takes before the keyboard is spanned. */
+    private fun twoZoneProgram(): Pair<KeygroupProgram, Map<String, Snip>> {
+        val snip = note220()
+        val frames = snip.frameCount.toLong()
+        val program = KeygroupProgram(
+            name = "Span",
+            keygroups = listOf(
+                Keygroup(40, 42, 41, listOf(VelocityLayer("Span_41", frames, 0, 127, 0L))),
+                Keygroup(43, 45, 44, listOf(VelocityLayer("Span_44", frames, 0, 127, 0L))),
+            ),
+        )
+        return program to mapOf("Span_41" to snip, "Span_44" to snip)
+    }
+
+    @Test
+    fun `a package plays end to end`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Span"))
+        assertEquals(listOf(0 to 42, 43 to 127), back.zones.map { it.lowNote to it.highNote })
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm").readText()
+        assertTrue("<LowNote>0</LowNote>" in xpm)
+        assertTrue("<HighNote>127</HighNote>" in xpm)
+    }
+
+    @Test
+    fun `rewriting descriptors changes the mode and leaves the samples alone`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val dataDir = File(temp, "Span_[TrackData]")
+        val wavs = dataDir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+        assertEquals(2, wavs.size)
+        val before = wavs.map { it.name to (it.lastModified() to it.length()) }
+        OneNote.rewriteDescriptors(temp, "Span", program.copy(voiceMode = VoiceMode.LEAD))
+        assertEquals(VoiceMode.LEAD, InstrumentStore.read(InstrumentStore.sidecar(temp, "Span")).voiceMode)
+        assertTrue("<Mono>True</Mono>" in File(dataDir, "Span.xpm").readText())
+        assertEquals(before, wavs.map { it.name to (it.lastModified() to it.length()) })
+    }
+
+    @Test
+    fun `rewriting a package that is not there is refused`() {
+        val (program, _) = twoZoneProgram()
+        assertFailsWith<IllegalStateException> { OneNote.rewriteDescriptors(temp, "Ghost", program.copy(name = "Ghost")) }
+        assertTrue(!File(temp, "Ghost.xty").exists())
+        assertTrue(!InstrumentStore.sidecar(temp, "Ghost").exists())
     }
 }
