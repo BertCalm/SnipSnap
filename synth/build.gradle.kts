@@ -1520,6 +1520,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     args("${rootDir}/testkit/valve-audition")
 }
 
+/** Render ROOM's listening gate (the real section across SIZE, WALLS and DISTANCE, manifest, page) under testkit/room-audition/. See RoomAuditionGenerator. */
+tasks.register<JavaExec>("generateRoomAudition") {
+    group = "distribution"
+    description = "Render ROOM's listening gate clips, manifest and page under testkit/room-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RoomAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/room-audition", "${rootDir}")
+}
+
 /** Render FORGE's DEPTH gate (YIELD 0.25 against DEPTH, DEPTH's in-between values, manifest, page) under testkit/forge-depth-audition/. See ForgeDepthAuditionGenerator. */
 tasks.register<JavaExec>("generateForgeDepthAudition") {
     group = "distribution"
