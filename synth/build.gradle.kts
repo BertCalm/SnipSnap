@@ -1551,3 +1551,9 @@ tasks.register<JavaExec>("generateOvenKit") {
     maxHeapSize = "768m"
     args("${rootDir}/testkit/oven-kit")
 }
+
+/** Luthier scan scratch: print the test runtime classpath so the scan can run as plain java processes in parallel. */
+tasks.register("printTestClasspath") {
+    dependsOn("testClasses")
+    doLast { println("CP=" + sourceSets["test"].runtimeClasspath.asPath) }
+}
