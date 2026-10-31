@@ -241,6 +241,35 @@ Why it is built this way:
 - Separate candidates let the owner judge sustained comfort before changing the
   named preset again. No new engine arithmetic is needed for this study.
 
+## Octave balance comparison
+
+Further listening still found something missing and asked whether harmonics were
+absent. Analysis of delivered calmer C4 PCM found the third and fifth present,
+with about 88% of analysed 20 Hz–12 kHz energy in the fundamental. The fourth
+harmonic, two octaves above the played note, was about 38 dB below the root.
+This motivates a registration test rather than another motion change.
+
+The separate `harmonics/` study compares COLOR .42 with .65 at C3/C4/C5. Both
+use the calmer SPREAD .40 / MOTION .08, model 6 and the same remaining controls,
+pitch and velocity. COLOR increases the 4-foot and 2-foot rank weights, opens
+the tone filter and slightly reduces the round foundation's share. This tests
+that combined registration change; it does not isolate the rank weights alone.
+
+Run `./gradlew :synth:generateRegistersOctaveBalanceAudition` with optional
+`-PregistersOutput=<directory>`. The shared generator renders six actual keyboard
+sequences, raw/matched PCM24 WAVs, replayable recipes, source fingerprints and
+independent recurrence checks. All six reference WAVs must match the published
+calmer ensemble. The earlier direction and refinement tasks retain their audio.
+The new setting remains a listening candidate; factory settings and synthesis
+arithmetic are unchanged.
+
+Why it is built this way:
+
+- Fixed gentle motion lets the owner judge octave balance and brightness.
+- Matched levels reduce loudness as a reason to choose the new setting.
+- One existing control tests whether a richer registration helps before adding
+  new rank controls or another sound layer.
+
 ## Playing and saving
 
 The shared controls are COLOR, AIR, EDGE, SPREAD and MOTION, plus TUNE and HOLD.
