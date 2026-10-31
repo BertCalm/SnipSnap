@@ -20,6 +20,11 @@ object NativeSurface {
     external fun needsRestart(handle: Long): Boolean
     external fun isShared(handle: Long): Boolean
     external fun latencyMillis(handle: Long): Double
+    external fun configureAquarium(handle: Long, parameterValues: FloatArray, seed: Long, model: Int,
+        bpm: Double, outputGain: Float, enabled: Boolean, reset: Boolean): Boolean
+    external fun aquariumFaulted(handle: Long): Boolean
+    external fun aquariumLimitedFrames(handle: Long): Long
+    external fun panic(handle: Long)
     external fun loadSample(handle: Long, mono: FloatArray, sourceRate: Int, slot: Int)
     external fun control(
         handle: Long, mode: Int,
@@ -37,5 +42,6 @@ object NativeSurface {
     external fun armPrint(handle: Long, maxFrames: Int): Boolean
     external fun printState(handle: Long): Int
     external fun requestStopPrint(handle: Long)
+    /** Complete interleaved stereo frames, including the live Aquarium bus. */
     external fun stopPrint(handle: Long): FloatArray?
 }

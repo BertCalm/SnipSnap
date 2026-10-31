@@ -56,6 +56,10 @@ jboolean Java_com_snipsnap_app_NativePads_aquariumFaulted(JNIEnv*, jobject, jlon
 jlong Java_com_snipsnap_app_NativePads_aquariumLimitedFrames(JNIEnv*, jobject, jlong);
 jfloat Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject);
 jlong Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint);
+jboolean Java_com_snipsnap_app_NativeSurface_configureAquarium(JNIEnv*, jobject, jlong, jfloatArray, jlong, jint, jdouble, jfloat, jboolean, jboolean);
+jboolean Java_com_snipsnap_app_NativeSurface_aquariumFaulted(JNIEnv*, jobject, jlong);
+jlong Java_com_snipsnap_app_NativeSurface_aquariumLimitedFrames(JNIEnv*, jobject, jlong);
+void Java_com_snipsnap_app_NativeSurface_panic(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_destroy(JNIEnv*, jobject, jlong);
 void Java_com_snipsnap_app_NativeSurface_loadSample(JNIEnv*, jobject, jlong, jfloatArray, jint, jint);
 void Java_com_snipsnap_app_NativeSurface_setCorner(JNIEnv*, jobject, jlong, jint, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat, jfloat);
@@ -772,8 +776,7 @@ TEST(jni_a_print_the_jvm_cannot_hold_comes_back_empty_handed) {
 
 TEST(jni_the_pads_print_crosses_as_stereo_at_its_full_length) {
     // The bridge's own arithmetic, and the mistake this one invites: the
-    // surface's print is mono, so there frames and floats are the same
-    // number and either reads correctly. The pads' is not. An array sized
+    // both live prints are stereo: frames and floats differ. An array sized
     // in frames would hand back the first half of the take at half its
     // length - a bounce that ends early and plays at the wrong speed -
     // and nothing above this line would notice, because the engine's
@@ -882,7 +885,7 @@ TEST(jni_request_stop_print_returns_at_once_and_stop_print_then_takes_the_print)
 
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
 
-    // The surface's twin, mono.
+    // The surface now crosses as complete stereo frames too.
     const jlong s = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
     auto* surf = reinterpret_cast<SurfaceEngine*>(s);
     Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, s, floats(ramp(1000)), 48000, 0);
@@ -896,7 +899,7 @@ TEST(jni_request_stop_print_returns_at_once_and_stop_print_then_takes_the_print)
     pull(surf, 256);
     jfloatArray mono = Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, s);
     CHECK(mono != nullptr);
-    CHECK_EQ(static_cast<int>(impl(mono)->length), static_cast<int>(surfFrames));
+    CHECK_EQ(static_cast<int>(impl(mono)->length), static_cast<int>(surfFrames * 2));
     CHECK(Java_com_snipsnap_app_NativeSurface_printState(e, nullptr, s) ==
           static_cast<jint>(PrintBuffer::State::Idle));
     Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, s);
@@ -1024,4 +1027,79 @@ TEST(jni_aquarium_refuses_invalid_domains_and_pending_or_region_exceptions) {
     CHECK(configure(good, 0, 1, 0, 0.0f));
     CHECK(!Java_com_snipsnap_app_NativePads_configureAquarium(e, nullptr, 0, good, 0, 1, 0, 0.5f, JNI_TRUE, JNI_FALSE));
     Java_com_snipsnap_app_NativePads_destroy(e, nullptr, h);
+}
+
+TEST(jni_surface_aquarium_returns_stereo_and_matches_seeded_tempo_synced_processing) {
+    auto* e = env();
+    const auto h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* surf = reinterpret_cast<SurfaceEngine*>(h);
+    const auto dryHandle = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    auto* dry = reinterpret_cast<SurfaceEngine*>(dryHandle);
+    std::vector<float> source(256);
+    for (int i = 0; i < 256; ++i) source[i] = .4f * std::sin(6.283185307179586 * i / 32);
+    for (auto handle : {h, dryHandle}) {
+        Java_com_snipsnap_app_NativeSurface_loadSample(e, nullptr, handle, floats(source), 48000, 0);
+        Java_com_snipsnap_app_NativeSurface_control(e, nullptr, handle, 0, .5f, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, JNI_TRUE);
+    }
+    aquarium::PerformanceSettings settings;
+    settings.enabled = true; settings.seed = 0xffff'ffffu; settings.bpm = 123.5; settings.outputGain = .125f;
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_mix", 1));
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_depth", .8f));
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_shape", 2));
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_rate", 4));
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_syncEnabled", 1));
+    CHECK(aquarium::setParameter(settings.parameters, "aqua_tide_syncDiv", 5));
+    const auto& params = settings.parameters.values;
+    const auto values = floats(std::vector<float>(params.begin(), params.end()));
+    CHECK(Java_com_snipsnap_app_NativeSurface_configureAquarium(e, nullptr, h, values, 0xffffffffLL, 1, 123.5, .125f, JNI_TRUE, JNI_FALSE));
+    aquarium::PerformanceBus expected;
+    CHECK(expected.prepare(48000)); CHECK(expected.publish(settings));
+    for (int i = 0; i < 30; ++i) {
+        auto reference = pull(dry, 1024);
+        expected.beginCallback(); expected.process(reference.data(), 1024);
+        CHECK(pull(surf, 1024) == reference);
+    }
+    CHECK(Java_com_snipsnap_app_NativeSurface_armPrint(e, nullptr, h, 257));
+    const auto actual = pull(surf, 257);
+    bool nonzero = false;
+    for (float value : actual) nonzero = nonzero || std::fabs(value) > .001f;
+    CHECK(nonzero);
+    const auto printed = Java_com_snipsnap_app_NativeSurface_stopPrint(e, nullptr, h);
+    CHECK(printed != nullptr);
+    CHECK_EQ(impl(printed)->length, 514);
+    CHECK(impl(printed)->f == actual);
+    CHECK(!Java_com_snipsnap_app_NativeSurface_aquariumFaulted(e, nullptr, h));
+    Java_com_snipsnap_app_NativeSurface_panic(e, nullptr, h);
+    pull(surf, 2000);
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, dryHandle);
+}
+
+TEST(jni_surface_aquarium_uses_the_shared_strict_domains_and_exception_checks) {
+    auto* e = env();
+    const auto h = Java_com_snipsnap_app_NativeSurface_create(e, nullptr, 48000);
+    const auto defaults = aquarium::ParameterSnapshot{};
+    const auto values = floats(std::vector<float>(defaults.values.begin(), defaults.values.end()));
+    auto config = [&](jlong handle, jfloatArray a, jlong seed, jint version, double bpm, float gain, jboolean on = JNI_TRUE) {
+        return Java_com_snipsnap_app_NativeSurface_configureAquarium(e, nullptr, handle, a, seed, version, bpm, gain, on, JNI_FALSE);
+    };
+    CHECK(!config(0, values, 0, 1, 0, .5f));
+    CHECK(!config(h, nullptr, 0, 1, 0, .5f));
+    CHECK(!config(h, floats({0, 1}), 0, 1, 0, .5f));
+    CHECK(!config(h, values, -1, 1, 0, .5f));
+    CHECK(!config(h, values, 0x100000000LL, 1, 0, .5f));
+    CHECK(!config(h, values, 0, 2, 0, .5f));
+    CHECK(!config(h, values, 0, 1, 1000.01, .5f));
+    CHECK(!config(h, values, 0, 1, 0, std::numeric_limits<float>::quiet_NaN()));
+    CHECK(!config(h, values, 0, 1, 0, .5f, 2));
+    pendingJniException = true;
+    CHECK(!config(h, values, 0, 1, 0, .5f));
+    pendingJniException = false;
+    CHECK(!config(h, floatsClaiming(52, {}), 0, 1, 0, .5f));
+    CHECK(pendingJniException);
+    pendingJniException = false;
+    Java_com_snipsnap_app_NativeSurface_panic(e, nullptr, 0);
+    CHECK(!Java_com_snipsnap_app_NativeSurface_aquariumFaulted(e, nullptr, 0));
+    CHECK_EQ(Java_com_snipsnap_app_NativeSurface_aquariumLimitedFrames(e, nullptr, 0), 0);
+    Java_com_snipsnap_app_NativeSurface_destroy(e, nullptr, h);
 }
