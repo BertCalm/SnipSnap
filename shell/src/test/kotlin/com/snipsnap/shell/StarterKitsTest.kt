@@ -1,5 +1,8 @@
 package com.snipsnap.shell
 
+import com.snipsnap.synth.Rime
+import com.snipsnap.synth.RimePatch
+import com.snipsnap.synth.RimeVoice
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberVoice
@@ -142,6 +145,9 @@ class StarterKitsTest {
         },
         "alloy" to OneEngine(AlloyPatch::class.java, AlloyVoice.entries.map { it.name }.toSet()) {
             (it as AlloyPatch).let { p -> Alloy.drumClassFor(p.voice, p.macros) }
+        },
+        "rime" to OneEngine(RimePatch::class.java, RimeVoice.entries.map { it.name }.toSet()) {
+            (it as RimePatch).let { p -> Rime.drumClassFor(p.voice, p.macros, p.gateSeconds, p.model) }
         },
         "contour" to OneEngine(ContourPatch::class.java, ContourVoice.entries.map { it.name }.toSet()) {
             (it as ContourPatch).let { p -> ContourEngine.drumClassFor(p.voice, p.macros) }

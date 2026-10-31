@@ -33,6 +33,9 @@ marker from a different buffer; a changed processing path plays through once.
 `RimeOpeningPreviewTest` compiles with the device tests and checks the PCM reader's
 one-time opening and sustain wrap. Its device execution remains unverified.
 
+FRESH TAPE includes the fixed `rime` starter: the same sixteen editable finite
+pads and three native velocity layers as the downloadable bank.
+
 The app picker includes RIME, the nine finite factory recipes, all six macros,
 absolute ROOT, VELOCITY and GATE, complete-patch drafts, SEND TO PAD and MAKE
 INSTRUMENT. The nine keyboard roots are spaced by minor thirds over two octaves
