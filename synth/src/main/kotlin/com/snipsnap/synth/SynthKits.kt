@@ -58,6 +58,9 @@ object SynthKits {
         }
     }
 
+    /** Meridian's native-note scale walk and eight dry saved journeys. */
+    fun meridian(): List<ArrangedPad?> = MeridianKits.build()
+
     /** Sixteen finite C-minor-pentatonic notes with complete scanned-chain recipes. */
     fun scannedChain(): List<ArrangedPad?> {
         val voices = List(8) { ScannedChainVoice.PLUCK } + List(4) { ScannedChainVoice.METAL } + List(4) { ScannedChainVoice.BLOOM }

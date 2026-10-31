@@ -50,7 +50,7 @@ internal object PatchTypes {
 
     /**
      * The engines with a [Patch] type but no preset roster in [Presets]: SNAP reads its
-     * table off a photo, TERRA, SILK, GYRE and MAGNET ship voices without factory
+     * table off a photo, TERRA, SILK, GYRE and MAGNET have no factory
      * presets. Named here so a new engine has to be either rostered or listed.
      */
     val ROSTERLESS: Set<String> = setOf(SnapPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE)

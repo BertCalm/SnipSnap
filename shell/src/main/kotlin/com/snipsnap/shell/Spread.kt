@@ -18,6 +18,7 @@ import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
@@ -108,6 +109,7 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
