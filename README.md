@@ -1141,7 +1141,11 @@ one filter, repeats darkening as they fade; its HEAD macro, turned up,
 feeds the repeats only the note's first 120 ms, so a held note's attack
 comes back as a repeat; the `delayed` character, the DELAY pedal, is its long,
 dark repeats with HEAD off, see
-[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962), REVERSE,
+[`docs/superpowers/specs/2026-10-22-delay-head-design.md`](docs/superpowers/specs/2026-10-22-delay-head-design.md)), SPRING (a Schroeder network, 1962),
+ROOM (the hit in a room: a box-shaped room's first reflections, then a sixteen-line
+bloom that settles darker; SIZE a booth to a hall, WALLS soft to hard, DISTANCE the mic,
+close lifting the bass and far dulling the top, 0 no room at all; see
+[`docs/superpowers/specs/2026-10-31-room-section-design-brief.md`](docs/superpowers/specs/2026-10-31-room-section-design-brief.md)), REVERSE,
 SMEAR (the attack taken out, the wash kept: the STN
 transient mask from `Separate` scaled by one AMOUNT knob, so a snare
 becomes the room it was struck in; a FLOOR makes it banded, so a kick
@@ -1164,7 +1168,7 @@ the kit's own grid, a note division at its tempo — ROLL (the hit's own
 head struck again) and GATE (the hit chopped into a square envelope)
 share that same grid, so all three land on the same beats. `FxChain` fixes the order — pitch → swell → reverse → smear → ghost →
 spike → eq → contour → wah → compressor → squash → forge → valve → crunch → ring →
-dub → vinyl → tape → ensemble → phase → echo → spring → motion — owns
+dub → vinyl → tape → ensemble → phase → echo → spring → room → motion — owns
 the total tail budget so stacked reverbs can't turn a hit into a phrase,
 and serializes per-pad next to the WAV.
 
