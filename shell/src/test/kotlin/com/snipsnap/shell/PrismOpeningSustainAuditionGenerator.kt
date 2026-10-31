@@ -7,7 +7,6 @@ import com.snipsnap.audio.WavReader
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
 import com.snipsnap.json.JsonValue
-import com.snipsnap.synth.Dsp
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.Keys
 import com.snipsnap.synth.PadRecipe
@@ -65,7 +64,7 @@ object PrismOpeningSustainAuditionGenerator {
             "sourceRevision" to git(repository, "rev-parse", "HEAD"),
             "sourceDirty" to git(repository, "status", "--porcelain", "--untracked-files=normal")?.isNotBlank(),
             "sourceFilesSha256" to sourcePaths.associateWith { hash(File(repository, it)) },
-            "sampleRate" to Dsp.RATE, "channels" to 1, "bitDepth" to 24,
+            "sampleRate" to WavWriter.MPC_SAMPLE_RATE, "channels" to 1, "bitDepth" to 24,
             "javaVersion" to System.getProperty("java.version"),
             "osArchitecture" to System.getProperty("os.arch"),
             "clipCount" to rows.size, "clips" to rows,
@@ -128,9 +127,9 @@ object PrismOpeningSustainAuditionGenerator {
         val note = if (instrument) opening(patch) else KeyNote(patch.render())
         val elapsedMillis = (System.nanoTime() - started) / 1e6
         val native = note.snip
-        check(native.channels == 1 && native.sampleRate == Dsp.RATE && native.samples.isNotEmpty() &&
+        check(native.channels == 1 && native.sampleRate == WavWriter.MPC_SAMPLE_RATE && native.samples.isNotEmpty() &&
             native.samples.all { it.isFinite() } && native.peak() <= 1f) { "${case.id}: invalid audio" }
-        val midi = Prism.midiFor(patch.voice, Prism.settled(patch.voice, patch.macros).getValue("TUNE"))
+        val midi = Prism.midiFor(patch.voice, (Prism.defaults(patch.voice) + patch.macros).getValue("TUNE"))
         val loopStart = if (looped) note.loopStartFrame.toInt() else null
         val spec = if (instrument) PrismPadMaker.Spec(patch, releaseSeconds = .6f) else null
         val recipeText: String
@@ -228,7 +227,7 @@ object PrismOpeningSustainAuditionGenerator {
             "settlingFrames" to start - probe.openingFrames - probe.bridgeFrames,
             "motionCycleFrames" to probe.motionCycleFrames, "loopFrames" to probe.loopFrames,
             "actualCycleSeconds" to probe.actualPeriodSeconds,
-            "loopSeconds" to probe.loopFrames.toDouble() / Dsp.RATE,
+            "loopSeconds" to probe.loopFrames.toDouble() / WavWriter.MPC_SAMPLE_RATE,
             "seamError" to seam, "precedingLoopRelativeRmsDelta" to cycleDelta,
             "precedingLoopSamplesSha256" to samplesHash(probe.precedingLoop),
             "openingToBridgeStep" to boundaryStep(probe.openingFrames),
