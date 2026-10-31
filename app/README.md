@@ -244,8 +244,9 @@ decay. The owner accepted the
 MPC held trial on 2026-10-31 without supplying model/OS details. Final clean
 source `617ba1b7` passed 78 focused JVM tests, all twelve complete accepted-WAV
 comparisons and all three local Android APK builds. The cache-copy mutation
-guard is proven. Full unfiltered JVM and on-device/emulator execution remain
-pending. The
+guard is proven. The full unfiltered JVM gate passed 7,430 cases with no
+failures, errors or skips at clean `097b2c8d`. On-device/emulator execution
+remains pending. The
 [OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
 separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase

@@ -534,9 +534,10 @@ final clean source `617ba1b7` passed 78 focused JVM tests and all twelve
 complete accepted-WAV comparisons, including the SEND/SPREAD delivery checks.
 Removing the defensive copy makes its cache-ownership test fail; restoring
 the exact source passes all seven held tests. Local debug, StrikeFx and
-instrumentation APK builds passed on that same clean source. Full unfiltered
-JVM and on-device/emulator execution
-remain pending; phone performance and touch lifecycle need their own device pass.
+instrumentation APK builds passed on that same clean source. The full unfiltered
+JVM gate passed 7,430 valid cases with no failures/errors/skips at clean
+`097b2c8d`. On-device/emulator execution remains pending; phone performance
+and touch lifecycle need their own device pass.
 Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
 reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records
 the APIs, regeneration commands, release approximation and acceptance ledger.

@@ -417,7 +417,7 @@ Loopable breathing and GLOW remain deferred.
 | Finite factory bank | The owner accepted the twelve model-2 musical recipes. Their registration and finite audio remain separate from held playback. |
 | Steady held listening proof | The owner accepted the steady proof. Its recorded host tests establish recurrence, independent-neighbour seam checks and source-withdrawal behavior under the tested settings. |
 | Held MPC keygroup trial | Owner accepted in conversation on 2026-10-31. No MPC model, OS/firmware or per-check hardware measurements were supplied. Do not infer a particular device, measured release time or polyphony limit. |
-| Phone integration | Authorized on 2026-10-31. Final focused validation passed 78 JVM tests and all three local Android APK builds at clean source `617ba1b7`. Full unfiltered JVM and emulator/physical-device execution remain pending. |
+| Phone integration | Authorized on 2026-10-31. Final focused checks and three Android APK builds passed at clean `617ba1b7`; the full unfiltered JVM gate passed 7,430 cases at clean `097b2c8d`. Emulator/physical-device execution remains pending. |
 | Production audio compatibility | All twelve complete production CLI/maker PCM24 WAVs, including sampler metadata, were rechecked at clean `617ba1b7` and remain byte-identical to the retained accepted trial. SEND/SPREAD's saved finite fades leave native instrument loops unchanged. |
 
 Owner acceptance is a listening and use decision. It does not replace a measured
@@ -432,7 +432,8 @@ The integration adds explicit saved held playback, dry touch preview and
 ordinary instrument-library/MPC export. The baseline for this update is
 `2b3e1688`. Final focused JVM checks, the complete accepted-audio comparison
 and local Android APK builds passed at clean implementation source `617ba1b7`.
-Full unfiltered JVM and emulator/physical-device execution remain pending.
+The full unfiltered JVM gate passed at clean `097b2c8d`. Emulator/physical-device
+execution remains pending.
 No physical phone measurements are claimed here.
 
 ### Saved playback and controls
@@ -524,6 +525,14 @@ audition recipes remain distinct from these normal `OverlapPatch` files.
 
 ### Host measurements and verification
 
+The unfiltered Gradle `test` task exited `0` at clean `097b2c8d`, with the same
+clean revision before and after the run. Across all nine pure-JVM modules,
+`897` JUnit reports contain `7,430` valid test cases with no failures, errors
+or skips: `6,957` cases emitted PASS events and `473` valid up-to-date cases
+were reused. Android SDK discovery was excluded only from this JVM run; the
+three Android APK builds passed separately. The full run completed on
+2026-10-31 in 1 hour 41 minutes 52 seconds.
+
 At clean implementation source `617ba1b7`, the final focused Gradle process
 exited `0`: `78` JVM tests passed (`43` synth, `33` shell and `2` CLI), with no
 failures, errors or skips. The shell count contains eight `OverlapPadMakerTest`,
@@ -578,8 +587,8 @@ prepared release without name/release recapture, and MAKE INSTRUMENT's three
 roots. The save/send cases also exercise the actual SPREAD overlay and compare
 complete recipes and PCM. APK builds do not execute the instrumentation cases.
 
-Full unfiltered JVM and on-device/emulator execution remain pending. A physical
-phone pass must check press, early release, cancellation,
+On-device/emulator execution remains pending. A physical phone pass must check
+press, early release, cancellation,
 background/focus loss,
 saved preset/instrument reopening and MPC export from the phone. Record
 device/build and cold/warm timing rather than treating the host benchmark,
