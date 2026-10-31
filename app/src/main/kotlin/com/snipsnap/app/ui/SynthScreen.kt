@@ -109,6 +109,7 @@ import com.snipsnap.loop.SessionStore
 import com.snipsnap.shell.Ages
 import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
+import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
@@ -294,6 +295,8 @@ import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.Overlap
 import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.OverlapHeld
+import com.snipsnap.synth.OverlapPlayback
 import com.snipsnap.synth.Apsis
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.ApsisVoice
@@ -609,7 +612,8 @@ private fun editablePreset(patch: Patch): Patch = if (patch is RegistersPatch) p
 private fun editableDefaults(base: Map<String, Float>, editable: Patch): Map<String, Float> = when (editable) {
     is OrphicaPatch -> Orphica.macrosFrom(editable.config)
     is OspreyPatch -> Osprey.defaults(editable.voice, editable.modelVersion)
-    is OverlapPatch -> Overlap.defaults(editable.topology, editable.model)
+    is OverlapPatch -> if (editable.playback == OverlapPlayback.HELD) OverlapHeld.defaults(editable.topology)
+        else Overlap.defaults(editable.topology, editable.model)
     is CreasePatch -> Crease.defaults(editable.voice, editable.model)
     is CausticPatch -> CausticInstrument.defaults(editable.voice, editable.model)
     is EmbouchurePatch -> Embouchure.defaults(editable.voice, editable.model)
@@ -789,7 +793,9 @@ fun SynthScreen(
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
-                            .firstOrNull { it.voice == v } else null
+                            .firstOrNull { it.voice == v }
+                        else if (e == Engine.OVERLAP) seededDrafts.filterIsInstance<OverlapPatch>()
+                            .firstOrNull { it.topology == v } else null
                     // The bag's value where it parses, the default where it
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
@@ -804,6 +810,7 @@ fun SynthScreen(
                         e == Engine.OHM && seed.restoredOhm != null -> Ohm.defaults(seed.restoredOhm.model) + seed.restoredOhm.macros
                         restoredScanned != null -> defaults + restoredScanned
                         recipe is TidalPatch -> Tidal.defaults(recipe.voice, recipe.model) + recipe.macros
+                        recipe is OverlapPatch -> editableDefaults(defaults, recipe) + recipe.macros
                         recipe != null -> defaults + recipe.macros
                         settings.isEmpty() || origami != null || orphica != null -> defaults
                         // EMBOUCHURE restores only the selected model's controls; a legacy
@@ -938,10 +945,10 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
+        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE, OVERLAP and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
-            patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
+            patch is PrismPatch || patch is CausticPatch || patch is NacrePatch || patch is OverlapPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
     }
@@ -1002,6 +1009,13 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.OVERLAP) {
+            // Mode, note and release edits can share a frame with SAVE/SEND.
+            val current = loadedPatchesByVoice[engine to voice] as? OverlapPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OverlapPatch(name, voice as OverlapTopology, controls)
+        }
         if (engine == Engine.ORIGAMI) {
             // Expression, gesture and pitch events can share a frame. Preserve
             // the newest complete recipe instead of the last composed snapshot.
@@ -1289,6 +1303,15 @@ fun SynthScreen(
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
+    fun updateOverlapPatch(change: (OverlapPatch) -> OverlapPatch) {
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OverlapPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        val updated = change(patch)
+        loadedPatchesByVoice[engine to voice] = updated
+        macrosByVoice[engine to voice] = editableDefaults(Overlap.defaults(updated.topology, updated.model), updated) + updated.macros
+    }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
         touched = true
@@ -1430,7 +1453,7 @@ fun SynthScreen(
                         // The named preset is being restored whole. A partial legacy
                         // OVERLAP recipe must fill its sliders from its saved model.
                         if (mine is OverlapPatch) {
-                            macrosByVoice[pair] = Overlap.defaults(mine.topology, mine.model) + mine.macros
+                            macrosByVoice[pair] = editableDefaults(Overlap.defaults(mine.topology, mine.model), mine) + mine.macros
                         }
                     } else currentPresetByVoice.remove(pair)
                     embouchureRestore.pending.remove(pair)
@@ -1543,7 +1566,9 @@ fun SynthScreen(
 
     var snip by remember { mutableStateOf<Snip?>(null) }
     var rendering by remember { mutableStateOf(false) }
-    val flockHeldPreview = rememberFlockHeldPreview(
+    val sampleHeldPreview = if (engine == Engine.OVERLAP) rememberOverlapHeldPreview(
+        buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
+    ) { onToast(Copy.RENDER_FAILED) } else rememberFlockHeldPreview(
         if (engine == Engine.FLOCK) buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch else null,
     ) { onToast(Copy.RENDER_FAILED) }
 
@@ -1604,8 +1629,8 @@ fun SynthScreen(
             rendering = false
             return@LaunchedEffect
         }
-        if (flockHeldPreview != null) {
-            // Its cancellable root capture is rendered once by rememberFlockHeldPreview.
+        if (sampleHeldPreview != null) {
+            // Its cancellable root capture is prepared once by the held preview helper.
             // A held gesture starts/stops that cached sample through InstrumentPlayer.
             voicePlayer?.stop()
             snip = null
@@ -1766,6 +1791,7 @@ fun SynthScreen(
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
+                                patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> 20f
                                 patch is OhmPatch && Ohm.isHeld(patch) -> 20f
                                 patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
                                 else -> null
@@ -1915,6 +1941,7 @@ fun SynthScreen(
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
+        (engine == Engine.OVERLAP && OverlapPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch))
     val heldInstrumentReady = when (engine) {
@@ -1970,6 +1997,10 @@ fun SynthScreen(
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch
             if (BellowsPadMaker.supports(patch)) HeldSpec.Bellows(BellowsPadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
+        Engine.OVERLAP -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
+            if (OverlapPadMaker.supports(patch)) HeldSpec.Overlap(OverlapPadMaker.Spec(patch)) else null
+        }
         Engine.FLOCK -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch
             if (FlockPadMaker.supports(patch))
@@ -2001,12 +2032,12 @@ fun SynthScreen(
     fun previewHeld() {
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         val spec = heldSpec() ?: return
-        flockHeldPreview?.silence()
+        sampleHeldPreview?.silence()
         heldSheet.holdPreviewing = true
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2029,7 +2060,7 @@ fun SynthScreen(
         if (heldSheet.holdDone >= 0 || heldSheet.holdPreviewing) return
         // Captured now: the sheet's own sound, before anything can move it.
         val spec = heldSpec() ?: return
-        flockHeldPreview?.silence()
+        sampleHeldPreview?.silence()
         val base = holdBase
         val midis = spec.zoneMidis
         heldSheet.holdTotal = midis.size * spec.progressPerZone
@@ -2040,7 +2071,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2051,7 +2082,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Filament) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2097,7 +2128,7 @@ fun SynthScreen(
     fun closeHeld() {
         // Every zone rendered means the write is under way; let it land.
         if (heldSheet.holdDone >= 0 && heldSheet.holdDone >= heldSheet.holdTotal) return
-        flockHeldPreview?.silence()
+        sampleHeldPreview?.silence()
         val job = heldSheet.holdJob
         if (job == null) {
             heldSheet.holdDone = -1
@@ -2374,7 +2405,7 @@ fun SynthScreen(
                 Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                ScopeLcd(if (flockHeldPreview != null) flockHeldPreview.snip else snip, flockHeldPreview?.rendering ?: rendering,
+                ScopeLcd(if (sampleHeldPreview != null) sampleHeldPreview.snip else snip, sampleHeldPreview?.rendering ?: rendering,
                     scheme, Modifier.fillMaxWidth().height(104.dp))
 
                 if (engine == Engine.SHOAL) TapeText("MOTION", TapeType.pixelSmall, scheme.ink2.tape)
@@ -2440,42 +2471,11 @@ fun SynthScreen(
                         ) { updateStoopRoot(root + 12) }
                     }
                 }
-                // OVERLAP keeps its reference note, velocity and render model
-                // beside the six controls. Copying the loaded recipe retains
-                // those fields through slider edits, saving and pad placement.
                 if (engine == Engine.OVERLAP) {
-                    val overlapPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (overlapPatch.midi - Overlap.MIN_MIDI).toFloat() / (Overlap.MAX_MIDI - Overlap.MIN_MIDI),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(overlapPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val midi = (Overlap.MIN_MIDI + value * (Overlap.MAX_MIDI - Overlap.MIN_MIDI)).roundToInt()
-                                .coerceIn(Overlap.MIN_MIDI, Overlap.MAX_MIDI)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch).copy(midi = midi)
-                        },
-                    )
-                    MacroSlider(
-                        label = "VELOCITY",
-                        value = overlapPatch.velocity,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch)
-                                    .copy(velocity = value.coerceIn(0f, 1f))
-                        },
-                    )
-                    TapeText(
-                        "ROOT IS THE REFERENCE NOTE. HOLD EXTENDS A FINITE SOUND.",
-                        TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
+                    OverlapPerformanceControls(
+                        patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
+                        settings = settings, fill = classColor, scheme = scheme,
+                        onEdit = ::updateOverlapPatch,
                     )
                 }
 
@@ -3231,11 +3231,14 @@ fun SynthScreen(
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
                 // BRASS GROW (model 3) swaps in its own four controls; other EMBOUCHURE models keep the engine's six.
-                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
+                val macroSpecs = remember(engine, voice, creaseModel, (loadedPatch as? EmbouchurePatch)?.model, (loadedPatch as? CausticPatch)?.model, (loadedPatch as? OverlapPatch)?.playback, (loadedPatch as? OverlapPatch)?.model, embouchureRestore.pending.containsKey(engine to voice)) {
                     if (embouchureRestore.waitsForRecipe(engine, voice)) emptyList()
                     else if (engine == Engine.CREASE) Crease.macrosFor(voice as CreaseVoice, creaseModel)
                     else if (loadedPatch is CausticPatch) CausticInstrument.macrosFor(loadedPatch.voice, loadedPatch.model)
                     else if (loadedPatch is EmbouchurePatch) Embouchure.macrosFor(loadedPatch.voice, loadedPatch.model)
+                    else if (loadedPatch is OverlapPatch && loadedPatch.playback == OverlapPlayback.HELD)
+                        OverlapHeld.macrosFor(loadedPatch.topology)
+                    else if (loadedPatch is OverlapPatch) Overlap.macrosFor(loadedPatch.topology, loadedPatch.model)
                     else engine.macrosFor(voice)
                 }
                 val registersRoot = if (engine == Engine.REGISTERS)
@@ -3246,7 +3249,7 @@ fun SynthScreen(
                 } else true
                 MacroSliders(
                     engine, voice, macroSpecs, macros, loadedPatch, origamiPatch, registersRoot, shoalHoldSupported,
-                    holdingRibbon = flockHeldPreview != null,
+                    holdingRibbon = sampleHeldPreview != null,
                     classColor = classColor,
                     scheme = scheme,
                     macroRange = ::macroRange,
@@ -3266,6 +3269,11 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.OVERLAP &&
+                                (loadedPatchesByVoice[engine to voice] as? OverlapPatch)?.playback == OverlapPlayback.HELD ->
+                                OverlapHeld.defaults(voice as OverlapTopology) +
+                                    OverlapHeld.macrosFor(voice as OverlapTopology)
+                                        .associate { it.name to random.nextFloat() }
                             engine == Engine.APSIS ->
                                 Apsis.scramble(voice as ApsisVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3432,8 +3440,8 @@ fun SynthScreen(
                 }
             }
 
-            if (flockHeldPreview != null) {
-                FlockHeldAudition(flockHeldPreview, classColor, scheme)
+            if (sampleHeldPreview != null) {
+                FlockHeldAudition(sampleHeldPreview, classColor, scheme)
             } else if (engine == Engine.APSIS) {
                 ApsisAuditionControls(classColor, scheme,
                     onAudition = { touched = true; snip?.let { audition(it, allowLoop = true) } },
@@ -3569,7 +3577,7 @@ fun SynthScreen(
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
-                    heldPreview = if (engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) flockHeldPreview else null,
+                    heldPreview = if ((engine == Engine.FLOCK && !heldSheet.holdFlockTouchLayers) || engine == Engine.OVERLAP) sampleHeldPreview else null,
                     fillColor = classColor,
                     scheme = scheme,
                     onAttack = { heldSheet.holdAttack = it },
@@ -3577,13 +3585,16 @@ fun SynthScreen(
                         if (engine == Engine.FLOCK) updateFlockPatch {
                             it.copy(releaseSeconds = FlockPadMaker.RELEASE.value(fraction)
                                 .coerceIn(FlockPadMaker.RELEASE.lo, FlockPadMaker.RELEASE.hi))
+                        } else if (engine == Engine.OVERLAP) updateOverlapPatch {
+                            it.copy(releaseSeconds = OverlapPadMaker.RELEASE.value(fraction)
+                                .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi))
                         } else if (engine == Engine.OHM) updateOhmPerformance {
                             it.copy(releaseSeconds = OhmPadMaker.RELEASE.value(fraction)
                                 .coerceIn(OhmPadMaker.RELEASE.lo, OhmPadMaker.RELEASE.hi))
                         } else heldSheet.holdRelease = fraction
                     },
                     onTouchLayers = {
-                        flockHeldPreview?.silence()
+                        sampleHeldPreview?.silence()
                         if (engine == Engine.FLOCK) heldSheet.holdFlockTouchLayers = it
                         else if (engine == Engine.FILAMENT) heldSheet.holdFilamentTouchLayers = it
                         else heldSheet.holdTouchLayers = it
@@ -4512,6 +4523,18 @@ private sealed interface HeldSpec {
         override fun preview(cancelled: () -> Boolean) = FlockPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
             FlockPadMaker.exportLayers(name, spec, notes, destRoot)
+    }
+
+    class Overlap(private val spec: OverlapPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = OverlapPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val releaseFraction get() = OverlapPadMaker.RELEASE.fraction(spec.releaseSeconds)
+        override val knobLabel get() = "RELEASE ${OverlapPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override val instrumentNote get() = "STEADY RESONANCE WHILE HELD. LIFT A KEY TO RELEASE."
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(OverlapPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = OverlapPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            OverlapPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
     }
 
     class Ohm(private val spec: OhmPadMaker.Spec) : HeldSpec {

@@ -114,6 +114,9 @@ object Cli {
         |                        (FLOCK: GATHER/RIBBON/SPLIT; --all,
         |                        --midi 36..84 --velocity 0..1 --seed signed-64-bit N;
         |                        HOLD extends a finite flock performance)
+        |                        (OVERLAP: --patch recipe.json --midi 24..84 --velocity 0..1;
+        |                        saved HELD recipes support --instrument [--release .1..1.5];
+        |                        finite recipes retain their original playback)
         |                        (OPENSKY: ANTHEM/SOAR/HALO/CRYSTAL; --midi N
         |                        --velocity 0..1 --gate S --dry|--wet;
         |                        --patch recipe.json loads a complete sound;

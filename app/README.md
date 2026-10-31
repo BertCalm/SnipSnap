@@ -226,16 +226,26 @@ can be changed by semitone or octave without resetting that recipe. Its 48
 provisional presets and dry starter kit await listening.
 TANGLE's six voices, 36 recipes and dry starter kit likewise await the
 owner's listening verdict; saved recipes preserve explicit note and velocity.
-OVERLAP adds four topologies and twelve approved factory recipes through
-`OverlapFactoryPresets`, with six macros plus saved ROOT and VELOCITY. Loading,
-editing, saving under YOURS and sending to a pad preserve the recipe's render
-model. Its fixed FRESH TAPE starter places the approved twelve first, followed
-by four octave-lower plucks. Every pad is a dry TONAL one-shot with a finite
-tail; HOLD extends excitation, and breathing has no tempo synchronization.
-ROOT is the geometry reference, so a resonant chord can suggest another pitch.
-Android compile/device CI and a real phone pass for this integration remain
-pending; the [OVERLAP checklist](../docs/OVERLAP.md#manual-real-phone-pass)
-covers the remaining flow. Held-note support is a separate future step.
+OVERLAP adds four topologies and twelve approved finite factory recipes through
+`OverlapFactoryPresets`. FINITE retains its six macros, renderer model and dry
+FRESH TAPE starter: the approved twelve followed by four octave-lower plucks.
+Explicit HELD playback exposes RING for SELF and KNOT/RING for the other three,
+with saved ROOT, VELOCITY and RELEASE. PULSE, GLOW and LOCK are off and HOLD is
+one; the complete macro map is retained. Its dry press-and-hold preview plays
+a prepared onset and steady loop, then releases on lift.
+Completed bodies use a bounded cache; no DSP runs on the press. SAVE PRESET
+under YOURS preserves the complete playback, reference, velocity and release.
+MAKE INSTRUMENT saves three sampled reference zones to the instrument library
+and normal MPC export path. SEND TO PAD plays the prepared sample once with
+a saved terminal fade; it does not create a held pad. ROOT remains a geometry
+reference, and sampler release differs from the prototype's physical resonator
+decay. The owner accepted the
+MPC held trial on 2026-10-31 without supplying model/OS details. Focused JVM
+checks, all twelve complete accepted-WAV comparisons and the cache-copy
+mutation guard pass. Debug, StrikeFx and instrumentation APKs build locally;
+full JVM and on-device/emulator execution remain pending. The
+[OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
+separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
