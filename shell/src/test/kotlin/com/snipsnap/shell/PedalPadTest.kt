@@ -224,6 +224,33 @@ class PedalPadTest {
     }
 
     @Test
+    fun `the PEDALS card is told where the amp is - a guitar pad before and after its first pedal, a drum, a stale patch, a layered pad`() {
+        val dir = File(temp, "Around")
+        val m = KitBuilderModel.create("Around", dir)
+        assertFalse(m.pedalsAroundTheAmp(1), "an empty slot has no amp")
+        guitarPad(m, 3)
+        assertTrue(m.pedalsAroundTheAmp(3), "a clean guitar pad: the next pedal goes in front of its amp")
+        m.pedalPad(3, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertTrue(m.pedalsAroundTheAmp(3), "its pedals sit in front of its amp")
+
+        m.assign(5, DrumSynth.snare(), DrumClass.SNARE)
+        assertFalse(m.pedalsAroundTheAmp(5), "a drum has no amp of its own")
+        m.pedalPad(5, board(PedalBoard.Pick("driven", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(5))
+
+        guitarPad(m, 7, audio = DrumSynth.snare())
+        assertFalse(m.pedalsAroundTheAmp(7), "a patch that no longer made its file is no amp")
+        m.pedalPad(7, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(7))
+
+        guitarPad(m, 9)
+        m.addGhostLayers(9)
+        assertFalse(m.pedalsAroundTheAmp(9), "a velocity-layered pad takes its pedals after the amp")
+        m.pedalPad(9, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(9))
+    }
+
+    @Test
     fun `a velocity-layered guitar pad keeps the after-the-amp way`() {
         val dir = File(temp, "Layered")
         val m = KitBuilderModel.create("Layered", dir)
