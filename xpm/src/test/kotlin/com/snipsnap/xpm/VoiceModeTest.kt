@@ -71,4 +71,13 @@ class VoiceModeTest {
         val whole = KeygroupProgram(name = "Whole", keygroups = listOf(kg(0, 127)))
         assertEquals(whole, whole.fullKeyboard())
     }
+
+    @Test
+    fun `fullKeyboard stretches both groups tied at the highest edge and nothing else`() {
+        val program = KeygroupProgram(name = "HighTie", keygroups = listOf(kg(40, 60), kg(50, 60), kg(30, 39)))
+        val full = program.fullKeyboard()
+        assertEquals(listOf(40 to 127, 50 to 127, 0 to 39), full.keygroups.map { it.lowNote to it.highNote })
+        assertEquals(program.keygroups.map { it.rootNote }, full.keygroups.map { it.rootNote })
+        assertEquals(program.keygroups.map { it.layers }, full.keygroups.map { it.layers })
+    }
 }

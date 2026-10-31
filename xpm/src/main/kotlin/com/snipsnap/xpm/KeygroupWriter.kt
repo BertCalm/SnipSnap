@@ -46,6 +46,7 @@ data class KeygroupProgram(
      * preserves existing package bytes; native MPC 3 already declares NoteOn.
      */
     val explicitNoteOn: Boolean = false,
+    /** How the keys share voices; written to both the `.xty` and the `.xpm` program headers. */
     val voiceMode: VoiceMode = VoiceMode.POLY,
 ) {
     init {
@@ -111,6 +112,7 @@ class KeygroupWriter {
         sb.append("    <PortamentoTime>").append(voice.portamentoSeconds.f()).append("</PortamentoTime>\n")
         sb.append("    <PortamentoLegato>").append(voice.legato.xmlBool()).append("</PortamentoLegato>\n")
         sb.append("    <PortamentoQuantized>False</PortamentoQuantized>\n")
+        sb.append("    <MonoRetrigger>").append(voice.retrigger.xmlBool()).append("</MonoRetrigger>\n")
         sb.append("    <Instruments>\n")
         program.keygroups.forEachIndexed { index, kg ->
             appendInstrument(sb, index, kg, program.volumeRelease, program.explicitNoteOn)

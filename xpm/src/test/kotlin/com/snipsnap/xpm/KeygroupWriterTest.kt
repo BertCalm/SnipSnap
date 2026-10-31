@@ -142,6 +142,17 @@ class KeygroupWriterTest {
         assertTrue("<PortamentoLegato>True</PortamentoLegato>" in glide)
     }
 
+    @Test
+    fun `MonoRetrigger follows the voice mode right after PortamentoQuantized`() {
+        for ((mode, expected) in listOf(VoiceMode.POLY to "False", VoiceMode.LEAD to "True", VoiceMode.GLIDE to "False")) {
+            val xml = KeygroupWriter().write(program().copy(voiceMode = mode))
+            assertTrue(
+                "<PortamentoQuantized>False</PortamentoQuantized>\n    <MonoRetrigger>$expected</MonoRetrigger>" in xml,
+                "$mode",
+            )
+        }
+    }
+
     /**
      * The generalisation of every assertion above: each element we emit must
      * appear, at the same nesting level, in a real commercial program.

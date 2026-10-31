@@ -17,10 +17,16 @@ enum class VoiceMode(val mono: Boolean, val legato: Boolean, val retrigger: Bool
     /** Voice limit written to the program: 1 when mono, 0 (unlimited) otherwise. */
     val polyphony: Int get() = if (mono) 1 else 0
 
-    /** Portamento time in seconds; only a legato mode glides. */
+    /** Portamento time; only a legato mode glides. The unit is the MPC's own (see [GLIDE_PORTAMENTO]). */
     val portamentoSeconds: Float get() = if (legato) GLIDE_PORTAMENTO else 0f
 
     companion object {
+        /**
+         * The portamento time a GLIDE program carries. UNVERIFIED: whether the
+         * hardware reads this as seconds or as a normalised 0..1 amount is not
+         * confirmed until the owner checks it on an MPC Live III. The constant
+         * moves if the hardware disagrees.
+         */
         const val GLIDE_PORTAMENTO = 0.1f
 
         /** Exact enum name, anything else (including null) is [POLY]. */

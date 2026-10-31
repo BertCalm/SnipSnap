@@ -226,11 +226,13 @@ class CreasePadMakerTest {
     fun `default single layer retains the approved package audio names and all metadata bytes`() {
         // SHA256s from the published 3fb2c43c Paper Keys instrument, not this implementation. The nine WAVs are
         // still the published bytes. The sidecar, the .xty and the .xpm were re-pinned when every export began
-        // spanning the keyboard: they differ from the published ones only in the outer zone edges (0 and 127).
+        // spanning the keyboard and carrying a voice mode: they differ from the published ones in the outer zone
+        // edges (0 and 127) AND the voice-mode fields (the sidecar's voiceMode, the .xty's monophonic/poliphony
+        // pair, the .xpm's program-level voice tags).
         val expected = mapOf(
             "Crease Paper Keys.instrument.json" to "cccac73fbbaef101cd5cac7017b8cd6c86c63c47cf16623c105d32ed5e1a1992",
             "Crease Paper Keys.xty" to "7914f2da97444a4af472330faba18114a9ea4962bf4ca5ddf66f8c74ca7583f3",
-            "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "0a415152824a6e89716924f39b9a9dbdcc22c46a7c599b34ac0a7224c703f287",
+            "Crease Paper Keys_[TrackData]/Crease Paper Keys.xpm" to "7a46aac454783287fbcd92e38f8368b0b45ac8844599abe9b4795b80bdb28391",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A3.wav" to "973f4979c6dba53b72e8de565aba6717cebc64d79e957d155cb65d0ac888f680",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_A4.wav" to "bd9a81541cea931a6052954a891236bd86e6e7a6209144d8bb40d4d15fe17103",
             "Crease Paper Keys_[TrackData]/CreasePaperKeys_C3.wav" to "a22d0f9005f0b45feff46f87a4d5b4ffc00b7cc4cf9a72aa1df455624c7de90e",

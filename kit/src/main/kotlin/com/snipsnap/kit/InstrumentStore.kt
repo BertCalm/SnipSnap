@@ -87,7 +87,11 @@ object InstrumentStore {
         /** Every layer must load, including soft samples that are not a zone's headline. */
         val sampleFiles: List<String> get() = zones.flatMap { it.playableLayers }.map { it.sample }.distinct()
 
-        /** The program this instrument was written from: one keygroup per zone, one layer per playable layer. */
+        /**
+         * The program this instrument was written from: one keygroup per zone, one layer per playable layer.
+         * It carries no `pitchBendRange` or `explicitNoteOn` because no package today sets either; add them
+         * to the sidecar before any maker does.
+         */
         fun toProgram(): KeygroupProgram = KeygroupProgram(
             name = name,
             keygroups = zones.map { zone ->
@@ -110,6 +114,11 @@ object InstrumentStore {
 
     /** Write the sidecar for [program], whose samples live under [dataDirName] beside it. */
     fun write(destRoot: File, name: String, program: KeygroupProgram, dataDirName: String) {
+        AtomicFile.writeText(sidecar(destRoot, name), render(program, dataDirName))
+    }
+
+    /** The sidecar's JSON text for [program], without touching the disk. */
+    fun render(program: KeygroupProgram, dataDirName: String): String {
         val zones = program.keygroups.map { kg ->
             val layer = kg.layers.last()
             JsonValue.Obj(
@@ -141,7 +150,7 @@ object InstrumentStore {
                 "zones" to JsonValue.Arr(zones),
             ),
         )
-        AtomicFile.writeText(sidecar(destRoot, name), Json.write(obj))
+        return Json.write(obj)
     }
 
     /**

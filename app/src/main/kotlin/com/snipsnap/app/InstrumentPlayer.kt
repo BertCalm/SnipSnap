@@ -136,6 +136,8 @@ class InstrumentPlayer(context: Context) {
         val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
         val sample = sampleIndex[hit.sampleFile] ?: return false
         // LEAD and GLIDE are one voice: a new note takes every sounding one with it.
+        // Released voices leave `voices` once noteOff ran, so a release tail is not choked by a new
+        // LEAD/GLIDE note on the phone (the reference engine chokes it); a native choke is the owner's follow-up.
         if (inst.voiceMode.mono) {
             for (id in voices.keys.toList()) NativePads.stopVoice(handle, id, PadEngine.CHOKE_FADE_MS)
             voices.clear()

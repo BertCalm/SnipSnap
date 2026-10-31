@@ -62,6 +62,7 @@ import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -144,17 +145,22 @@ fun KeysScreen(
         savingVoice = true
         scope.launch {
             try {
-                withContext(Dispatchers.IO) {
-                    // The package is named for its sidecar file, which may differ from the program's own name.
-                    OneNote.rewriteDescriptors(
-                        checkNotNull(sidecar.parentFile),
-                        sidecar.name.removeSuffix(InstrumentStore.SUFFIX),
-                        instrument.toProgram().copy(voiceMode = next),
-                    )
+                // Backing out of the screen must not strand the caller's copy: once the write is
+                // under way, the re-read and onSaved run to the end (onSaved updates App-level state
+                // that outlives this screen).
+                withContext(NonCancellable) {
+                    withContext(Dispatchers.IO) {
+                        // The package is named for its sidecar file, which may differ from the program's own name.
+                        OneNote.rewriteDescriptors(
+                            checkNotNull(sidecar.parentFile),
+                            sidecar.name.removeSuffix(InstrumentStore.SUFFIX),
+                            instrument.toProgram().copy(voiceMode = next),
+                        )
+                    }
+                    // The write is done; a failed re-read only leaves the caller's copy stale.
+                    val saved = withContext(Dispatchers.IO) { runCatching { InstrumentStore.read(sidecar) }.getOrNull() }
+                    if (saved != null) onSaved(saved)
                 }
-                // The write is done; a failed re-read only leaves the caller's copy stale.
-                val saved = withContext(Dispatchers.IO) { runCatching { InstrumentStore.read(sidecar) }.getOrNull() }
-                if (saved != null) onSaved(saved)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

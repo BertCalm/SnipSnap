@@ -257,6 +257,10 @@ object OneNote {
     /**
      * The shop's one packaging door - MAKE INSTRUMENT, MAKE PAD, the `keys`
      * and `pad` verbs, and `:shell`'s held RESIN pads all write through it.
+     *
+     * [spanKeyboard] stretches the outer zones to the whole keyboard in all
+     * three descriptors. A caller whose zones are deliberately narrow - the
+     * BELLOWS tonic bed is one key - passes false.
      */
     fun writePackage(
         name: String,
@@ -264,6 +268,7 @@ object OneNote {
         samples: Map<String, Snip>,
         destRoot: File,
         overwrite: Boolean,
+        spanKeyboard: Boolean = true,
     ) {
         destRoot.mkdirs()
         val (xty, dataDir) = occupies(destRoot, name)
@@ -289,7 +294,7 @@ object OneNote {
             }
             WavWriter.write(File(dataDir, "$stem.wav"), snip, smpl = smpl)
         }
-        writeDescriptors(destRoot, dataDir, name, program)
+        writeDescriptors(destRoot, dataDir, name, program, spanKeyboard)
     }
 
     /**
@@ -307,12 +312,28 @@ object OneNote {
         writeDescriptors(destRoot, dataDir, name, program)
     }
 
-    /** All three descriptors carry the keyboard-spanning program; the samples keep their own roots. */
-    private fun writeDescriptors(destRoot: File, dataDir: File, name: String, program: KeygroupProgram) {
-        val spanned = program.fullKeyboard()
-        Mpc3TrackWriter().writeKeygroupTo(destRoot, spanned)
-        KeygroupWriter().writeTo(dataDir, spanned)
-        // The phone's own reading of the package, beside the hardware's.
-        InstrumentStore.write(destRoot, name, spanned, dataDir.name)
+    /**
+     * All three descriptors carry the keyboard-spanning program (unless [spanKeyboard] is false); the
+     * samples keep their own roots.
+     *
+     * All-or-nothing: every descriptor is rendered before any is written, so a program that cannot render
+     * leaves the package as it was, and each file lands through [AtomicFile] so a failed write never leaves
+     * a torn one. The `.xpm` goes first, the sidecar last - it is the file the phone's shelf lists the
+     * package by.
+     */
+    private fun writeDescriptors(
+        destRoot: File,
+        dataDir: File,
+        name: String,
+        program: KeygroupProgram,
+        spanKeyboard: Boolean = true,
+    ) {
+        val written = if (spanKeyboard) program.fullKeyboard() else program
+        val xty = Mpc3TrackWriter().writeKeygroup(written)
+        val xpm = KeygroupWriter().write(written)
+        val sidecar = InstrumentStore.render(written, dataDir.name)
+        AtomicFile.writeText(File(dataDir, "${written.name}.xpm"), xpm)
+        AtomicFile.writeBytes(File(destRoot, "${written.name}.xty"), xty)
+        AtomicFile.writeText(InstrumentStore.sidecar(destRoot, name), sidecar)
     }
 }

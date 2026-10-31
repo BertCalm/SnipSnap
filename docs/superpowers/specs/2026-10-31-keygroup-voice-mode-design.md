@@ -37,11 +37,11 @@ play end to end.
 
 ## Format mapping
 
-| Mode  | `.xty` drum block (`monophonic`, `poliphony`, `portamentoTime`, `portamentoLegato`, `monoRetrigger`) | `.xpm` program tags (`Mono`, `Program_Polyphony`, `PortamentoTime`, `PortamentoLegato`, `PortamentoQuantized`) |
+| Mode  | `.xty` drum block (`monophonic`, `poliphony`, `portamentoTime`, `portamentoLegato`, `monoRetrigger`) | `.xpm` program tags (`Mono`, `Program_Polyphony`, `PortamentoTime`, `PortamentoLegato`, `PortamentoQuantized`, `MonoRetrigger`) |
 |-------|------|------|
-| POLY  | false, 0, 0.0, false, false | False, 0, 0.000000, False, False |
-| LEAD  | true, 1, 0.0, false, true   | True, 1, 0.000000, False, False |
-| GLIDE | true, 1, 0.1, true, false   | True, 1, 0.100000, True, False |
+| POLY  | false, 0, 0.0, false, false | False, 0, 0.000000, False, False, False |
+| LEAD  | true, 1, 0.0, false, true   | True, 1, 0.000000, False, False, True |
+| GLIDE | true, 1, 0.1, true, false   | True, 1, 0.100000, True, False, False |
 
 The portamento time `0.1` is a single named constant. Its unit on the
 hardware is unverified (seconds or a normalised 0..1); the owner checks it on
