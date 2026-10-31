@@ -111,7 +111,7 @@ object Lattice {
         velocity: Float = .75f, cancelled: () -> Boolean = { false }): Snip {
         stopIfUnwanted(cancelled)
         val m = settled(voice, macros)
-        if (voice == LatticeVoice.TRACE) return traceProbe(m, midi, velocity, cancelled).snip
+        if (voice == LatticeVoice.TRACE) return tracePerformance(m, midi, velocity, cancelled, evidence = false).snip
         val hold = m.getValue("HOLD")
         val settings = settingsFor(voice, m, midi, velocity)
         if (isLoop(hold)) return heldProbe(settings, cancelled).snip
@@ -141,15 +141,20 @@ object Lattice {
 
     /** The native motion's real branch output, available to numerical and audition probes. */
     internal fun traceProbe(macros: Map<String, Float> = emptyMap(), midi: Int = DEFAULT_MIDI,
-        velocity: Float = .75f, cancelled: () -> Boolean = { false }): Probe {
+        velocity: Float = .75f, cancelled: () -> Boolean = { false }): Probe =
+        requireNotNull(tracePerformance(macros, midi, velocity, cancelled, evidence = true).probe)
+
+    private fun tracePerformance(macros: Map<String, Float>, midi: Int, velocity: Float,
+        cancelled: () -> Boolean, evidence: Boolean): RenderResult {
         stopIfUnwanted(cancelled)
         val m = settled(LatticeVoice.TRACE, macros)
         val plan = LatticeMotion.plan(m.getValue("SPEED"), cancelled)
         val holdSeconds = LatticeMotion.MAX_HOLD_SECONDS * m.getValue("HOLD")
         val referenceHold = holdSeconds / plan.scale
         val settings = settingsFor(LatticeVoice.TRACE, m, midi, velocity)
-        return perform(settings, controls = null, effortHoldSeconds = referenceHold, cancelled = cancelled,
-            motion = plan, referenceExcitationSeconds = LatticeMotion.REFERENCE_EXCITATION_SECONDS + referenceHold)
+        return performKernel(settings, controls = null, effortHoldSeconds = referenceHold, cancelled = cancelled,
+            motion = plan, referenceExcitationSeconds = LatticeMotion.REFERENCE_EXCITATION_SECONDS + referenceHold,
+            evidence = evidence)
     }
 
     private fun stopIfUnwanted(cancelled: () -> Boolean = { false }) {
@@ -365,9 +370,18 @@ object Lattice {
     fun probe(settings: Settings = Settings(), controls: ((Double) -> Controls)? = null): Probe =
         perform(settings, controls)
 
+    private data class RenderResult(val snip: Snip, val probe: Probe?)
+
     private fun perform(settings: Settings, controls: ((Double) -> Controls)?, effortHoldSeconds: Double = 0.0,
         cancelled: () -> Boolean = { false }, motion: LatticeMotion.Plan? = null,
-        referenceExcitationSeconds: Double = settings.excitationSeconds): Probe {
+        referenceExcitationSeconds: Double = settings.excitationSeconds): Probe = requireNotNull(
+        performKernel(settings, controls, effortHoldSeconds, cancelled, motion, referenceExcitationSeconds,
+            evidence = true).probe)
+
+    /** Native TRACE needs only its mixed WAV; probes retain the complete independent evidence. */
+    private fun performKernel(settings: Settings, controls: ((Double) -> Controls)?, effortHoldSeconds: Double,
+        cancelled: () -> Boolean, motion: LatticeMotion.Plan?, referenceExcitationSeconds: Double,
+        evidence: Boolean): RenderResult {
         val started = System.nanoTime()
         val rate = Dsp.RATE * Dsp.OVERSAMPLE
         // Native motion owns a whole output-frame budget. Rounding at the internal rate
@@ -376,17 +390,17 @@ object Lattice {
         val frames = if (motion != null) {
             (settings.durationSeconds * Dsp.RATE).roundToInt().coerceAtLeast(1) * Dsp.OVERSAMPLE
         } else (settings.durationSeconds * rate).roundToInt().coerceAtLeast(1)
-        val dryRaw = FloatArray(frames)
-        val haloRaw = FloatArray(frames)
+        val dryRaw = if (evidence) FloatArray(frames) else null
+        val haloRaw = if (evidence) FloatArray(frames) else null
         val mixedRaw = FloatArray(frames)
         val bank = Source(settings, rate)
         val halo = if (settings.haloEnabled) Halo(Keys.midiHz(settings.midi).toDouble(), rate) else null
-        val stageEnergy = DoubleArray(SLOTS)
-        val groupEnergy = DoubleArray(GROUPS)
+        val stageEnergy = if (evidence) DoubleArray(SLOTS) else null
+        val groupEnergy = if (evidence) DoubleArray(GROUPS) else null
         val groupSamples = DoubleArray(GROUPS)
         var geometry = motion?.block(0)?.geometry ?: compile(controls?.invoke(0.0) ?: settings.controls())
         var drives = if (halo == null) null else motion?.block(0)?.drives ?: halo.drives(geometry)
-        var residual = geometry.groups.maxOf { abs(it.allocationResidual) }
+        var residual = if (evidence) geometry.groups.maxOf { abs(it.allocationResidual) } else 0.0
         var rawPeak = 0.0
         var mixAmount = settings.reject
         val attack = when (settings.contour) {
@@ -403,31 +417,33 @@ object Lattice {
         }
 
         fun collectBlockEnergy() {
+            val groups = groupEnergy ?: return
+            val stages = requireNotNull(stageEnergy)
             for (s in 0 until SLOTS) {
                 for (g in 0 until GROUPS) {
                     val r = geometry.groups[g].rejection[s]
-                    stageEnergy[s] += r * r * groupEnergy[g] / rate
+                    stages[s] += r * r * groups[g] / rate
                 }
             }
-            groupEnergy.fill(0.0)
+            groups.fill(0.0)
         }
 
         for (i in 0 until frames) {
             if (i % CONTROL_BLOCK == 0) {
                 stopIfUnwanted(cancelled)
-                if (i > 0) collectBlockEnergy()
+                if (evidence && i > 0) collectBlockEnergy()
                 if (motion != null) {
                     val block = motion.block(i / CONTROL_BLOCK)
                     geometry = block.geometry
                     drives = if (halo == null) null else block.drives
-                    residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
+                    if (evidence) residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
                     mixAmount = block.reject
                 } else {
                     val c = controls?.invoke(i.toDouble() / rate) ?: settings.controls()
                     if (controls != null || i == 0) {
                         geometry = compile(c)
                         drives = halo?.drives(geometry)
-                        residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
+                        if (evidence) residual = max(residual, geometry.groups.maxOf { abs(it.allocationResidual) })
                     }
                     mixAmount = c.reject
                 }
@@ -446,21 +462,22 @@ object Lattice {
             var dry = 0.0
             for (g in 0 until GROUPS) {
                 dry += groupSamples[g] * geometry.groups[g].transmission
-                groupEnergy[g] += groupSamples[g] * groupSamples[g]
+                if (groupEnergy != null) groupEnergy[g] += groupSamples[g] * groupSamples[g]
             }
             val collected = if (halo != null && drives != null) halo.process(groupSamples, drives!!) else 0.0
             check(dry.isFinite() && collected.isFinite()) { "LATTICE generated a non-finite branch at frame $i" }
-            dryRaw[i] = dry.toFloat()
-            haloRaw[i] = collected.toFloat()
+            if (dryRaw != null) dryRaw[i] = dry.toFloat()
+            if (haloRaw != null) haloRaw[i] = collected.toFloat()
             val mixed = (1.0 - mixAmount) * dry + mixAmount * collected
             mixedRaw[i] = mixed.toFloat()
-            rawPeak = max(rawPeak, max(abs(dry), max(abs(collected), abs(mixed))))
+            if (evidence) rawPeak = max(rawPeak, max(abs(dry), max(abs(collected), abs(mixed))))
         }
-        collectBlockEnergy()
+        if (evidence) collectBlockEnergy()
 
-        // Identical linear conditioning on both branches preserves the measured reference ratios.
-        val dry = condition(dryRaw)
-        val rejected = condition(haloRaw)
+        // Native output avoids two unused stem buffers and their antialias/DC/tail passes.
+        // Evidence requests keep exactly the same independent conditioning and operation order.
+        val dry = dryRaw?.let { condition(it) }
+        val rejected = haloRaw?.let { condition(it) }
         // Mix before antialiasing/decimation so even an authored changing REJECT trajectory
         // takes the same oversampled output path. The isolated stems remain at the common gain.
         val out = condition(mixedRaw)
@@ -470,21 +487,23 @@ object Lattice {
         check(out.all { it.isFinite() } && out.all { abs(it) <= .99f }) {
             "LATTICE exceeded declared raw headroom; fix source/collector gain before audition"
         }
-        val cross = dry.indices.sumOf { dry[it].toDouble() * rejected[it] }
-        val dryPower = dry.sumOf { it.toDouble() * it }
-        val haloPower = rejected.sumOf { it.toDouble() * it }
+        val snip = Snip(out, channels = 1, sampleRate = Dsp.RATE)
+        if (!evidence) return RenderResult(snip, null)
+        val passing = requireNotNull(dry)
+        val outline = requireNotNull(rejected)
+        val cross = passing.indices.sumOf { passing[it].toDouble() * outline[it] }
+        val dryPower = passing.sumOf { it.toDouble() * it }
+        val haloPower = outline.sumOf { it.toDouble() * it }
         val correlation = if (dryPower > 1e-30 && haloPower > 1e-30) cross / sqrt(dryPower * haloPower) else 0.0
         val diagnostics = Diagnostics(
-            geometry.groups.map { it.transmission }.toDoubleArray(), stageEnergy, residual,
+            geometry.groups.map { it.transmission }.toDoubleArray(), requireNotNull(stageEnergy), residual,
             bank.gain, (System.nanoTime() - started) / 1_000_000.0, rawPeak,
             peak(out), rms(out), out.sumOf { it.toDouble() } / out.size,
-            peak(dry), rms(dry), peak(rejected), rms(rejected), correlation,
+            peak(passing), rms(passing), peak(outline), rms(outline), correlation,
         )
-        return Probe(
-            Snip(out, channels = 1, sampleRate = Dsp.RATE),
-            Snip(dry, channels = 1, sampleRate = Dsp.RATE),
-            Snip(rejected, channels = 1, sampleRate = Dsp.RATE), diagnostics,
-        )
+        return RenderResult(snip, Probe(snip,
+            Snip(passing, channels = 1, sampleRate = Dsp.RATE),
+            Snip(outline, channels = 1, sampleRate = Dsp.RATE), diagnostics))
     }
 
     /** Public cue recipe for the single-source, common-gain restoration demonstration. */

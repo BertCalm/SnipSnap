@@ -32,6 +32,19 @@ class LatticeMotionTest {
     }
 
     @Test
+    fun `native output-only rendering matches full probes across timing and finite hold`() {
+        for ((speed, hold) in listOf(0f to 0f, 1f to 1f, .25f to .37f)) {
+            val macros = mapOf("SPEED" to speed, "HOLD" to hold)
+            val measured = Lattice.traceProbe(macros, midi = 55, velocity = .63f)
+            val rendered = Lattice.render(LatticeVoice.TRACE, macros, midi = 55, velocity = .63f)
+            assertContentEquals(measured.snip.samples, rendered.samples,
+                "the native output consumer changed audio at SPEED $speed HOLD $hold")
+            assertEquals(measured.snip.sampleRate, rendered.sampleRate)
+            assertEquals(measured.snip.channels, rendered.channels)
+        }
+    }
+
+    @Test
     fun `speed moves the harmonic change and source release after an unchanged attack`() {
         val expected = listOf(
             Triple(0f, .205, .885),

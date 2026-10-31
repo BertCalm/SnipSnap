@@ -47,6 +47,9 @@ knobs. SPEED also changes the source envelope's clock so slower gates still have
 energy to reject. The first 35 ms remain fixed. Compiled gate and collector
 coefficients are cached by SPEED in a bounded eight-entry cache; note, velocity
 and HOLD do not create separate geometry plans.
+Native TRACE rendering computes the mixed WAV without allocating or conditioning
+unused diagnostic stems. Full probes retain both branches and their energy
+evidence; tests require the native output to match those probes exactly.
 
 The factory bank adds Ringing Trace, Slow Trace and Quick Trace. The earlier
 twelve static patches and sixteen-pad starter remain available. R5 adds a
@@ -214,7 +217,7 @@ comparisons require the stage-sensitive collector.
   algorithm have been implemented. TRACE adds a fourth voice with the accepted
   movement, a saved SPEED setting and finite HOLD. Build and numerical validation
   are separate checks.
-- **R5 focused validation, 2026-10-31:** fifty Lattice tests across synth, shell
+- **R5 focused validation, 2026-10-31:** fifty-one Lattice tests across synth, shell
   and CLI passed with Gradle exit zero. Twenty-six listening recipes replayed
   sample-identically. All twenty-two R4 WAVs stayed byte-identical, and the new
   plain/native TRACE comparison is also identical to the accepted R4 comparison.
