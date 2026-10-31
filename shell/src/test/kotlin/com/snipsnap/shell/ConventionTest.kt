@@ -3868,6 +3868,166 @@ class ConventionTest {
         )
     }
 
+    // ---- Law: a kit chosen on the shelf keeps the snip that is waiting for a pad ----
+
+    /**
+     * SNIPS ▸ a snip ▸ → PAD arms a pick (`pendingSnipAssign`) and the shelf
+     * asks for a kit. Tapping one opened it through `goToScreen(AppScreen.KIT)`
+     * once its project had opened, and `goToScreen` runs `clearTransientState`,
+     * which nulls the pick. The snip was dropped, the next empty-pad long-press
+     * opened PAD CAPTURE instead of placing it, and the dock line the user had
+     * just read ("LONG-PRESS AN EMPTY PAD TO PLACE THIS SNIP.") was false. It
+     * was false in a second way too: said at the shelf, a moment before the
+     * landing, the landing rested it (`DockModel.moved`).
+     *
+     * The two handlers that land a kit the user chose on the shelf (`openKit`,
+     * `addKitToProject`) land through `landPickedKit`, which is `goToScreen`
+     * with the pick put back and the line said after the landing. Nothing else
+     * is kept: a pick is the one hand-off whose destination is a kit. This law
+     * holds the three links the fix is made of, each of which on its own
+     * brings the bug back:
+     *  - the handler lands through `landPickedKit(`, not a bare `goToScreen(`;
+     *  - `landPickedKit` reads the pick, leaves through `goToScreen(` (so the
+     *    rest is still abandoned) and puts the pick back only after it;
+     *  - the line is said after the landing, not before it.
+     *
+     * Every other way into a kit with a pick pending was read and needs
+     * nothing: `fresh` and `landKit` land with `landOn`, which clears nothing;
+     * `catchFirstSound` refuses while a pick is up; the project rows and NEW
+     * PROJECT are not drawn mid-pick; the place and stage rows, Back, the
+     * dock's door and KIT's own way to the shelf are departures, and a
+     * departure is the user giving the pick up.
+     */
+    private val pickLandingHandlers = listOf("openKit", "addKitToProject")
+
+    /** What is wrong with how the shelf-pick handler [name], whose stripped body is [body], lands; empty when nothing is. */
+    private fun pickLandingProblems(name: String, body: String): List<String> {
+        val problems = mutableListOf<String>()
+        if (!Regex("""(?<![.\w])landPickedKit\(""").containsMatchIn(body)) {
+            problems += "`$name` does not land through `landPickedKit(`, so a snip waiting for a pad is dropped when the kit opens"
+        }
+        if (Regex("""(?<![.\w])goToScreen\(""").containsMatchIn(body)) {
+            problems += "`$name` lands with a bare `goToScreen(`, which clears `pendingSnipAssign`; land through `landPickedKit(`"
+        }
+        return problems
+    }
+
+    /** What is wrong with `landPickedKit`'s own stripped [body]; empty when nothing is. */
+    private fun pickKeeperProblems(body: String): List<String> {
+        val problems = mutableListOf<String>()
+        val read = Regex("""\bval\s+(\w+)\s*=\s*pendingSnipAssign\b""").find(body)
+        val leave = Regex("""(?<![.\w])goToScreen\(""").find(body)
+        val line = body.indexOf("Copy.snipLanding(")
+        if (read == null) problems += "`landPickedKit` never reads the waiting snip into a `val`, so it has nothing to put back"
+        if (leave == null) {
+            problems += "`landPickedKit` does not leave through `goToScreen(`, so what a departure abandons " +
+                "(`pendingAddTo`, `pendingBreedWith`, an armed pad sheet) would stay armed"
+        }
+        if (read != null && leave != null) {
+            if (read.range.first > leave.range.first) {
+                problems += "`landPickedKit` reads `pendingSnipAssign` after `goToScreen(`, which has already cleared it"
+            }
+            val held = read.groupValues[1]
+            val back = Regex("""\bpendingSnipAssign\s*=(?!=)\s*""" + held + """\b""").find(body)
+            if (back == null || back.range.first < leave.range.first) {
+                problems += "`landPickedKit` does not put the snip back after `goToScreen(`, so the landing drops it"
+            }
+        }
+        if (line < 0 || (leave != null && line < leave.range.first)) {
+            problems += "`landPickedKit` does not say `Copy.snipLanding(` after the landing; a line said before it is rested by the move"
+        }
+        return problems
+    }
+
+    @Test
+    fun `law - a kit chosen on the shelf keeps the snip that is waiting for a pad`() {
+        // Positive controls: the scans have to see each fault they name, and let
+        // the right shapes through; otherwise a clean result would mean nothing.
+        val bareLanding = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            project = p\n            open = landed\n            goToScreen(AppScreen.KIT)\n        }\n",
+        )
+        val bareProblems = pickLandingProblems("openKit", bareLanding)
+        assertTrue(
+            bareProblems.any { "does not land through" in it } && bareProblems.any { "bare `goToScreen(`" in it },
+            "the scan accepts a handler that lands with a bare `goToScreen(`, the bug this law exists for: " + bareProblems,
+        )
+        val pickLanding = stripCommentsAndStrings(
+            "if (busy != null) return\n        scope.launch {\n            project = p\n            open = landed\n            landPickedKit(landed)\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            pickLandingProblems("openKit", pickLanding),
+            "the scan rejects a handler that lands through `landPickedKit(`",
+        )
+        // A comment that names the bare call is not a call.
+        val commented = stripCommentsAndStrings(
+            "scope.launch {\n            // not goToScreen(AppScreen.KIT): that drops the snip\n            landPickedKit(landed)\n        }\n",
+        )
+        assertEquals(
+            emptyList(),
+            pickLandingProblems("openKit", commented),
+            "the scan reads a comment that names `goToScreen(` as a call",
+        )
+
+        val speak = "if (waiting != null) dock.say(Copy.snipLanding(hasLandingPad(entry.kit)))\n"
+        val keeper = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        goToScreen(AppScreen.KIT)\n        pendingSnipAssign = waiting\n        " + speak,
+        )
+        assertEquals(emptyList(), pickKeeperProblems(keeper), "the scan rejects a helper that reads, leaves, restores and then speaks")
+        val noRestore = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        goToScreen(AppScreen.KIT)\n        " + speak,
+        )
+        assertTrue(
+            pickKeeperProblems(noRestore).any { "does not put the snip back" in it },
+            "the scan accepts a helper that never puts the snip back",
+        )
+        val restoresEarly = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        pendingSnipAssign = waiting\n        goToScreen(AppScreen.KIT)\n        " + speak,
+        )
+        assertTrue(
+            pickKeeperProblems(restoresEarly).any { "does not put the snip back" in it },
+            "the scan accepts a helper that restores the snip before the landing has cleared it",
+        )
+        val readsLate = stripCommentsAndStrings(
+            "goToScreen(AppScreen.KIT)\n        val waiting = pendingSnipAssign\n        pendingSnipAssign = waiting\n        " + speak,
+        )
+        assertTrue(
+            pickKeeperProblems(readsLate).any { "reads `pendingSnipAssign` after" in it },
+            "the scan accepts a helper that reads the snip after the landing has cleared it",
+        )
+        val keepsEverything = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        landOn(AppScreen.KIT)\n        pendingSnipAssign = waiting\n        " + speak,
+        )
+        assertTrue(
+            pickKeeperProblems(keepsEverything).any { "does not leave through" in it },
+            "the scan accepts a helper that lands with `landOn(`, which keeps the pad sheet, the add and breed picks armed too",
+        )
+        val speaksFirst = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        " + speak + "        goToScreen(AppScreen.KIT)\n        pendingSnipAssign = waiting\n",
+        )
+        assertTrue(
+            pickKeeperProblems(speaksFirst).any { "after the landing" in it },
+            "the scan accepts a helper that speaks before the landing, where the move rests the line",
+        )
+        val silent = stripCommentsAndStrings(
+            "val waiting = pendingSnipAssign\n        goToScreen(AppScreen.KIT)\n        pendingSnipAssign = waiting\n",
+        )
+        assertTrue(
+            pickKeeperProblems(silent).any { "after the landing" in it },
+            "the scan accepts a helper that never says what the pick will do",
+        )
+
+        // The real thing.
+        val code = stripCommentsAndStrings(appKt.readText(Charsets.UTF_8))
+        val faults = pickLandingHandlers.flatMap { pickLandingProblems(it, funBody(code, it)) } +
+            pickKeeperProblems(funBody(code, "landPickedKit"))
+        assertTrue(
+            faults.isEmpty(),
+            "a kit the user chose for a waiting snip must land with the snip still waiting, and the dock must say so " +
+                "after the landing. " + faults,
+        )
+    }
+
     // ---- Law: the camera app is only launched behind the CAMERA grant ----
 
     /**
