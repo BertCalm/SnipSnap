@@ -199,6 +199,31 @@ class PedalPadTest {
         assertTrue(worst(sustain.processAround(guitar.patch!!.render(), guitar.fx).samples, again) < 1e-3f, "the second pedal is not in front of the amp")
     }
 
+    /**
+     * A plain synth render does not depend on the bin: its patch alone re-renders it and no undo door
+     * reads the bin for it, so the render a re-sent patch replaced leaves on the clock. With pedals
+     * on, NONE reads the bin, so that original stays.
+     */
+    @Test
+    fun `a plain synth render keeps nothing in the bin, and a synth pad with pedals keeps its original`() {
+        val dir = File(temp, "SynthBin")
+        val m = KitBuilderModel.create("SynthBin", dir)
+        guitarPad(m, 3)
+        m.replaceAudio(3, guitar.toJsonValue()) { guitar.render() } // a re-sent patch bins the render it replaces
+        guitarPad(m, 4)
+        val file = m.pad(4)!!.sampleFile
+        val original = File(dir, file).readBytes()
+        m.pedalPad(4, board(PedalBoard.Pick("wahed", 0.7f)))
+        m.save()
+
+        val swept = KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(1, swept, "the replaced render leaves; the pedal pad's original stays")
+        assertTrue(m.binContents().none { it.originalName == m.pad(3)!!.sampleFile }, "nothing is kept for a plain synth render")
+        val undone = m.unEraPad(4)
+        assertContentEquals(original, File(dir, file).readBytes(), "NONE gave the render back")
+        assertEquals(guitar.toJsonValue(), undone.recipe, "and the patch")
+    }
+
     @Test
     fun `the single-file undo (the CLI's --undo) gives a guitar pad back its patch too`() {
         val dir = File(temp, "UndoOne")
@@ -221,6 +246,33 @@ class PedalPadTest {
         val onDisk = WavReader.read(File(dir, treated.sampleFile)).samples
         assertTrue(worst(wah.process(snare).samples, onDisk) < 1e-3f, "the pad's own audio was replaced by its stale patch")
         assertNull(com.snipsnap.synth.PadRecipe.fromJsonValue(treated.recipe!!).patch, "a stale patch rode on")
+    }
+
+    @Test
+    fun `the PEDALS card is told where the amp is - a guitar pad before and after its first pedal, a drum, a stale patch, a layered pad`() {
+        val dir = File(temp, "Around")
+        val m = KitBuilderModel.create("Around", dir)
+        assertFalse(m.pedalsAroundTheAmp(1), "an empty slot has no amp")
+        guitarPad(m, 3)
+        assertTrue(m.pedalsAroundTheAmp(3), "a clean guitar pad: the next pedal goes in front of its amp")
+        m.pedalPad(3, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertTrue(m.pedalsAroundTheAmp(3), "its pedals sit in front of its amp")
+
+        m.assign(5, DrumSynth.snare(), DrumClass.SNARE)
+        assertFalse(m.pedalsAroundTheAmp(5), "a drum has no amp of its own")
+        m.pedalPad(5, board(PedalBoard.Pick("driven", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(5))
+
+        guitarPad(m, 7, audio = DrumSynth.snare())
+        assertFalse(m.pedalsAroundTheAmp(7), "a patch that no longer made its file is no amp")
+        m.pedalPad(7, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(7))
+
+        guitarPad(m, 9)
+        m.addGhostLayers(9)
+        assertFalse(m.pedalsAroundTheAmp(9), "a velocity-layered pad takes its pedals after the amp")
+        m.pedalPad(9, board(PedalBoard.Pick("wahed", 0.7f)))
+        assertFalse(m.pedalsAroundTheAmp(9))
     }
 
     @Test

@@ -70,6 +70,9 @@ object AquariumPadSheet {
     fun undo(model: KitBuilderModel, slot: Int): KitPad = store.undo(model, slot)
     fun canUndo(model: KitBuilderModel, slot: Int): Boolean = store.canUndo(model, slot)
 
+    /** The pad REMOVE would bring back, read for the kit bin's sweep ([PrintedPads.sourcePad]). */
+    internal fun sourcePad(kitDir: File, pad: KitPad): KitPad = store.sourcePad(kitDir, pad)
+
     /**
      * Carries a standalone Aquarium baseline when a pad moves to another kit. A baseline whose
      * prior recipe itself needs hidden editing sources refuses; copy its complete kit folder.

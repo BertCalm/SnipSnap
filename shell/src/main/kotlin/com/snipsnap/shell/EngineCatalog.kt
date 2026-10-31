@@ -111,6 +111,8 @@ object EngineCatalog {
         // (a played string duet with sympathetic, watery returns), not from a listen.
         "NACRE" to EngineEntry(listOf(EngineCategory.STRINGS, EngineCategory.PADS), "A plucked string duet with shimmering, watery returns"),
         "ORIGAMI" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Metallic keys and soft sustained tones with folded overtones"),
+        // TREFOIL (#731) joins the picker beside ORIGAMI. Classified from TREFOIL.md, not from a listen.
+        "TREFOIL" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Pitched three-body tones that touch and exchange energy"),
         "OHM" to EngineEntry(listOf(EngineCategory.STRINGS), "Warm plucked string with octave and glassy companions"),
         "MERCURY" to EngineEntry(listOf(EngineCategory.BELLS), "Glass and steel tones that are tapped, rubbed and bent"),
         "CAUSTIC" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BELLS), "Resonant singing tones with a full body and long tail"),
@@ -118,6 +120,7 @@ object EngineCatalog {
         "APSIS" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Evolving ringing tones whose overtones sweep and linger"),
         "TIDAL" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Evolving ringing tones with a rough, string-like edge"),
         "CHAMBER" to EngineEntry(listOf(EngineCategory.DRUMS, EngineCategory.BELLS), "Tuned drum, bar, cowbell and triangle hits in a room"),
+        "LIBRATION" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Wooden and glassy notes with moving, lingering overtones"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

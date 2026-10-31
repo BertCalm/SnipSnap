@@ -2,6 +2,8 @@ package com.snipsnap.synth
 
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
@@ -10,6 +12,12 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test
+    fun `TREFOIL factory gestures retain seeded model two replay`() {
+        val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
+        assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)
+    }
+
     @Test
     fun `FERRY saved passage regenerates after compiled plan cache eviction`() {
         val patch = FerryPatch("Passage canary", midi = 55, velocity = .61f, seed = Long.MAX_VALUE)
@@ -147,6 +155,27 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ORIGAMI soft fold expression reproduces its saved gesture after cold recipe replay`() {
+        val patch = OrigamiPatch("Soft fold canary", OrigamiVoice.STILL,
+            Origami.defaults(OrigamiVoice.STILL) + mapOf("FOLD" to .83f, "MOTION" to .65f),
+            midi = 60, velocity = .43f, seed = Long.MIN_VALUE + 20261028L,
+            gesture = OrigamiGesture.UNFOLD, expression = OrigamiExpression.FOLD)
+        val text = PadRecipe(patch).toJsonText()
+        OrigamiGestureRenderer.clearCache()
+        val expected = patch.render().samples
+        OrigamiGestureRenderer.clearCache()
+        val saved = PadRecipe.fromJsonText(text)
+        val recalled = assertIs<OrigamiPatch>(saved.patch)
+        assertEquals(patch, recalled, "cold recipe replay must retain the complete expressive gesture")
+        assertEquals(OrigamiExpression.FOLD, recalled.expression)
+        assertEquals(.43f, recalled.velocity)
+        assertEquals(patch.seed, recalled.seed)
+        assertContentEquals(expected, saved.render().samples,
+            "saved soft FOLD expression changed its gesture, excitation or sound after cache eviction")
+        OrigamiGestureRenderer.clearCache()
+    }
+
+    @Test
     fun `FLOCK held recipes regenerate byte identically after cache eviction with full signed seeds`() {
         for (model in listOf(1, 2)) {
             val p = FlockPatch("Held canary", FlockVoice.RIBBON,
@@ -164,10 +193,13 @@ class DeterminismTest {
 
     @Test
     fun `native Caustic saved finite notes are byte identical across renders`() {
-        val patch = CausticPatch("Native finite canary", CausticVoice.ALLOY,
-            mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
-            midi = 57, velocity = .63f, model = 1)
-        assertContentEquals(patch.render().samples, patch.render().samples)
+        for (voice in CausticVoice.entries) {
+            val patch = CausticPatch("Native finite canary", voice,
+                mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
+                midi = 57, velocity = .63f, model = 1)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, voice.name)
+        }
     }
 
     @Test
@@ -186,6 +218,17 @@ class DeterminismTest {
             val recipe = PadRecipe.fromJsonText(PadRecipe(patch).toJsonText())
             assertContentEquals(patch.render().samples, recipe.render().samples,
                 "$name must recover the same gestures and settled acoustic state from its saved recipe")
+        }
+    }
+
+    @Test
+    fun `LIBRATION saved short soft notes replay the same populations and audio`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Recall canary", voice,
+                Libration.defaults(voice) + mapOf("REGION" to .375f, "SWARM" to .65f),
+                midi = 43, velocity = .35f, sourceSeconds = .37)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
         }
     }
 

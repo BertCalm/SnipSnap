@@ -158,6 +158,7 @@ import com.snipsnap.shell.ShelfModel
 import com.snipsnap.shell.Stage
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.InstantKit
+import com.snipsnap.shell.KitBench
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.LabelledHits
 import com.snipsnap.shell.LandingNote
@@ -218,7 +219,8 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * shrinks as each bench's step of the plan gives it its own header: MAKE's
  * three labs gain a chip of their own with the MAKE step, the gear's three
  * stay here. A screen that draws its own chip is handed the words by
- * `nav.backChip` (KEYS, INSTRUMENTS), so they come from the model either way.
+ * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
+ * SPLIT, VERSIONS, PAD CAPTURE, SONG), so they come from the model either way.
  */
 private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
 
@@ -288,7 +290,7 @@ private class CatchSession {
     val landed = LinkedHashSet<Int>()
 }
 
-/** X-RAY's own state: the picked file's display name and what [MpcXRay.read] made of it. Non-null IS "the screen is open" — there is no separate boolean to keep in sync with it. */
+/** X-RAY's argument: the picked file's display name and what [MpcXRay.read] made of it. Whether the screen is open is the navigation model's (`Bench.XRAY`), not this value's; with no reading, X-RAY has nothing to show and closes. */
 data class XRayView(val fileName: String, val reading: com.snipsnap.mpc3.MpcXRay.Reading)
 
 /**
@@ -403,7 +405,10 @@ fun App(shelf: KitShelf) {
      * shape — `docs/SCREEN_PLAN_2026_10.md` §2's table, as code. A tab-era
      * screen is a place with a stage, or a bench on one. The gear's three
      * (SETUP, HELP, MIDI) and KEYS open as a bench over wherever you are, so Back
-     * returns there; the rest land somewhere definite.
+     * returns there; the rest land somewhere definite. A bench that opens over
+     * where you are but is not named here (ORBIT, SURFACE, the MAKE labs, X-RAY,
+     * VERSIONS, PAD CAPTURE, SONG) has no [AppScreen]: it is opened by `nav.open(Bench.X)`, and a landing on
+     * a fixed place would be a place the user never visited.
      *
      * Exhaustive on purpose: a new [AppScreen] without a landing here does
      * not compile, which is the same guard the enum's own KDoc describes.
@@ -415,11 +420,7 @@ fun App(shelf: KitShelf) {
         AppScreen.KIT -> Location(Place.PROJECT, Stage.PADS)
         AppScreen.GROOVE -> Location(Place.PROJECT, Stage.BEAT)
         AppScreen.EXPORT -> Location(Place.PROJECT, Stage.OUT)
-        AppScreen.ORBIT -> Location(Place.PROJECT, Stage.BEAT, listOf(Bench.ORBIT))
         AppScreen.SPLIT -> Location(Place.PROJECT, Stage.PADS, listOf(Bench.SPLIT))
-        AppScreen.SYNTH -> Location(Place.MAKE, benches = listOf(Bench.SYNTH))
-        AppScreen.SNAP -> Location(Place.MAKE, benches = listOf(Bench.SNAP))
-        AppScreen.SURFACE -> Location(Place.MAKE, benches = listOf(Bench.SURFACE))
         AppScreen.KEYS -> nav.location.copy(benches = nav.location.benches + Bench.KEYS)
         AppScreen.PROPERTIES -> nav.location.copy(benches = nav.location.benches + Bench.SETUP)
         AppScreen.HELP -> nav.location.copy(benches = nav.location.benches + Bench.HELP)
@@ -489,12 +490,23 @@ fun App(shelf: KitShelf) {
     // spinner. Set and cleared by `fresh`, alongside `busy`, and by nothing else.
     var pendingKit by remember { mutableStateOf<String?>(null) }
     var lastCommit by remember { mutableStateOf<TapeCommit?>(null) }
-    // PAD SHEET: the long-press pad inspector, full-screen over PADS. Not a
-    // place or a stage of its own; it's PADS-scoped overlay state, cleared
-    // whenever the user leaves for another place or stage (see
-    // `clearTransientState` below).
+    // PAD SHEET, the pad editor, is a bench (`Bench.PAD_SHEET`) over PADS, and
+    // GRAIN FIELD, SPLICE and STACK open over it (`Bench.GRAIN_FIELD`,
+    // `Bench.SPLICE`, `Bench.STACK`), so there is no boolean for any of them
+    // here. These two are their argument: the pad the editor is on, which the
+    // three tools work on too (they are opened from the editor, for its pad, and
+    // the editor's pad arrows are out of reach inside them, so they cannot
+    // disagree), and the kit that pad is on. Neither is cleared by
+    // `clearTransientState` or by anything else: Back can restore PADS with the
+    // editor, or the editor with a tool, on top, and the screen needs them then.
+    // So once the editor has been opened the slot holds the last pad it was on,
+    // whether or not the editor is on screen now; only a reader that has just
+    // checked `location.benches` may take it to mean the editor is there. On
+    // arrival the bench closes itself if that is not the kit open now or the pad
+    // is gone (`KitBench.verdict`). One slot, latest opening wins when the
+    // history holds more than one editor entry, and that is accepted.
     var padSheetSlot by remember { mutableStateOf<Int?>(null) }
-    var myVoiceOpen by remember { mutableStateOf(false) }
+    var padSheetKitDir by remember { mutableStateOf<File?>(null) }
 
     /**
      * Open PAD SHEET on [slot]: the one door, for every way in — the pad
@@ -504,10 +516,42 @@ fun App(shelf: KitShelf) {
      * only one cannot miss what the others do. The hint itself is gone with
      * the strip (plan §3.3): a permanent tap door under the grid needs no
      * nudge toward the hold, and the velocity legend stays as the one
-     * line that teaches the gesture.
+     * line that teaches the gesture. What the door does on the way in is
+     * what the bench needs: the pad, the kit it is on, and the bench.
      */
     fun openPadSheet(slot: Int) {
         padSheetSlot = slot
+        padSheetKitDir = open?.dir
+        nav.open(Bench.PAD_SHEET)
+    }
+
+    /**
+     * Move the open editor to [slot]: the pad arrows, and the gathering
+     * variation's hop to the pad it just made. It sets the pad and nothing
+     * else, because the editor is already open. Going through [openPadSheet]
+     * would stack a second PAD SHEET on the first, and Back would then need a
+     * press for every pad stepped through.
+     */
+    fun retargetPadSheet(slot: Int) {
+        padSheetSlot = slot
+    }
+
+    /**
+     * What the editor, or a tool opened over it, does on arrival ([bench] is
+     * PAD_SHEET, GRAIN_FIELD, SPLICE or STACK): draw, or close because the kit
+     * it was opened for is not the open one, no kit is open, there is no pad
+     * recorded, or that pad has been emptied since. The one place the pad
+     * benches' arguments are read together, so the four arms agree.
+     */
+    fun padBenchVerdict(bench: Bench): KitBench.Verdict {
+        val entry = open
+        val slot = padSheetSlot
+        return KitBench.verdict(
+            bench,
+            padSheetKitDir?.path,
+            entry?.dir?.path,
+            slotFilled = entry?.let { e -> slot?.let { s -> e.kit.pad(s) != null } },
+        )
     }
     // KEYS: the instrument open on the grid, from the shelf's INSTRUMENTS list.
     var openInstrument by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
@@ -518,13 +562,12 @@ fun App(shelf: KitShelf) {
     var roomsRevision by remember { mutableStateOf(0) }
     // BIN (the plan's §3.1, over the bin-restore plan's DELETED KITS): the
     // shelf's own gate for the `BIN ▸` row — how many kits and snips the two
-    // bins hold right now. `binOpen` is in this effect's key list, not just
-    // `kits`/`onShelf`/`roomsRevision`: EMPTY THE BIN NOW changes nothing
-    // else this effect already watches, so without that key, emptying a bin
-    // and returning to the shelf would leave a stale count (and the row
-    // itself) showing after the door behind it is empty.
+    // bins hold right now. BIN being on top (`binOnTop`, below) is in this
+    // effect's key list, not just `kits`/`onShelf`/`roomsRevision`: EMPTY THE
+    // BIN NOW changes nothing else this effect already watches, so without
+    // that key, emptying a bin and returning to the shelf would leave a stale
+    // count (and the row itself) showing after the door behind it is empty.
     var binnedCount by remember { mutableStateOf(0) }
-    var binOpen by remember { mutableStateOf(false) }
     // The projects on the shelf (`docs/DIRECTION_2026_10.md` §2): the
     // library's project list, read with the rest of the shelf, and the one
     // that is open. `ShelfModel` is the project half of the shelf beside
@@ -533,8 +576,10 @@ fun App(shelf: KitShelf) {
     var projects by remember { mutableStateOf<List<ShelfModel.ProjectRow>>(emptyList()) }
     var project by remember { mutableStateOf<Project?>(null) }
     // Keyed on the place, not the whole location: a bench opening over the
-    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf.
+    // shelf (SNIPS, a kit's X-RAY) is not a reason to re-read the shelf. The
+    // one exception is BIN, whose leaving is the edge that re-counts the bins.
     val onShelf = location.place == Place.SHELF
+    val binOnTop = location.top == Bench.BIN
     // The instruments are MAKE's list now (plan §3.6), read when MAKE is the
     // place and re-read when a lab writes one (`roomsRevision` bumps on
     // every shelf asset a lab writes).
@@ -542,7 +587,7 @@ fun App(shelf: KitShelf) {
     LaunchedEffect(onMake, roomsRevision) {
         if (onMake) instruments = withContext(Dispatchers.IO) { shelf.instruments() }
     }
-    LaunchedEffect(kits, onShelf, roomsRevision, binOpen) {
+    LaunchedEffect(kits, onShelf, roomsRevision, binOnTop) {
         if (onShelf) {
             // Opening the shelf adopts every unheld kit into a project of
             // its own name (`ProjectMigration.adopt`, idempotent) — the one
@@ -605,38 +650,52 @@ fun App(shelf: KitShelf) {
     // `FROM SNIPS ▸` on an empty pad's strip: the slot a snip is being picked
     // for. SNIPS opens as a bench over PADS; picking a snip lands it here.
     var pendingSnipTarget by remember { mutableStateOf<Int?>(null) }
-    // TAKES + BIN (X2.3): same shape as PAD SHEET above — reachable only
-    // from the KIT action row, not one of MenuRow's fixed ten, so it's
-    // KIT-scoped overlay state rather than its own AppScreen entry.
-    var takesBinOpen by remember { mutableStateOf(false) }
-    // PAD CAPTURE (capture-to-pad): same shape as PAD SHEET/TAKES+BIN — a
-    // long-press on an *empty* pad opens this instead, so it's KIT-scoped
-    // overlay state too, not one of MenuRow's fixed ten.
+    // TAKES + BIN (X2.3) is a bench (`Bench.VERSIONS`), opened from the KIT
+    // action row with `nav.open`, so there is no boolean for it here. It is
+    // about a kit, though, and the history can bring it back after the user
+    // has opened a different one: this is the kit it was opened for. Not
+    // cleared by `clearTransientState` (Back can restore PADS with VERSIONS on
+    // top, and the screen needs it then). VERSIONS asks `KitBench.verdict` once
+    // per arrival (opened, restored by Back, or the open kit changed) and closes
+    // itself if that is not the kit open now. One slot: the latest opening wins
+    // when the history holds more than one VERSIONS entry, and that is accepted.
+    var versionsKitDir by remember { mutableStateOf<File?>(null) }
+    // PAD CAPTURE (capture-to-pad) is a bench too (`Bench.PAD_CAPTURE`), opened
+    // by the pad strip's CAPTURE door or by a long-press on an *empty* pad.
+    // These two are its argument: the empty slot it fills, and the kit that slot
+    // is on. Neither is cleared by `clearTransientState`, for the reason above.
+    // On arrival it closes itself if that is not the kit open now, or if the
+    // slot is no longer empty, so it is never drawn over a filled pad. A GRAB
+    // still in flight from an earlier arrival is stopped at write time instead:
+    // PadCaptureScreen refuses to replace a filled pad. A capture fills the slot
+    // and closes the screen itself, and keeps the kit's folder, so the check
+    // never trips on the screen's own work. One slot, latest opening wins, as
+    // above.
     var padCaptureSlot by remember { mutableStateOf<Int?>(null) }
-    // GRAIN FIELD: same shape as PAD SHEET/TAKES+BIN/PAD CAPTURE above — only
-    // reachable from PAD SHEET's own action row, not one of MenuRow's fixed
-    // ten, so it's KIT-scoped overlay state too. Opening it closes PAD SHEET
-    // (PadSheetScreen's own onGrainField clears padSheetSlot first) so the
-    // two overlays are never both non-null for the same KIT composition.
-    var grainFieldSlot by remember { mutableStateOf<Int?>(null) }
-    // TAPE SPLICE: same shape as GRAIN FIELD above — only reachable from
-    // PAD SHEET's own action row, not one of MenuRow's fixed ten, so it's
-    // KIT-scoped overlay state too. Opening it closes PAD SHEET the same
-    // way GRAIN FIELD's own onGrainField does below.
-    var spliceSlot by remember { mutableStateOf<Int?>(null) }
-    // STACK THE TAKES: same shape as SPLICE, over the same pad history.
-    var stackSlot by remember { mutableStateOf<Int?>(null) }
+    var padCaptureKitDir by remember { mutableStateOf<File?>(null) }
+    // GRAIN FIELD, TAPE SPLICE and STACK THE TAKES have no slot of their own:
+    // they are benches opened over the editor, from its own action row, for the
+    // pad it is on, so they read `padSheetSlot` above. Opening one leaves the
+    // editor where it is, and that is what makes Back from the tool land on it.
     // AUDITION (spec decision 2): PAD SHEET's own AUDITION ▸ arms a
     // comparison for a slot and switches to GROOVE, where the pattern to
     // audition inside actually lives (spec rule 2). Unlike GRAIN/SPLICE/
-    // STACK above, this is consumed once GrooveScreen has built the session
-    // from it (its own `onAuditionArmed`), not read continuously — a plain
-    // `Int?` one-shot request, same shape as `kitBankRequest` below.
+    // STACK, which open over the editor, this is consumed once GrooveScreen
+    // has built the session from it (its own `onAuditionArmed`), not read
+    // continuously — a plain `Int?` one-shot request, same shape as
+    // `kitBankRequest` below. It leaves the editor open too, in the history, so
+    // Back from GROOVE comes back to it.
     var auditionArmSlot by remember { mutableStateOf<Int?>(null) }
-    // ARRANGE: same shape again, but GROOVE-scoped rather than KIT-scoped —
-    // reachable only from GROOVE's own "SONG ▸" button, not one of MenuRow's
-    // fixed ten, so a boolean here rather than its own AppScreen entry.
-    var arrangeOpen by remember { mutableStateOf(false) }
+    // ARRANGE is a bench (`Bench.SONG`), opened from GROOVE's own "SONG ▸"
+    // button with `nav.open`, so there is no boolean for it here. The four vars
+    // below are its argument. None is cleared by `clearTransientState`: Back
+    // can restore BEAT with SONG on top, and the screen needs them then. They
+    // belong to one kit's groove, so `arrangeKitDir` is the kit SONG was opened
+    // for, and on arrival SONG closes itself if that is not the kit open now
+    // (`KitBench.verdict`). With no kit open at all it shows the same panel
+    // ORBIT does, so the user sees why. One slot: the latest opening wins when
+    // the history holds more than one SONG entry, and that is accepted.
+    var arrangeKitDir by remember { mutableStateOf<File?>(null) }
     // GROOVE's own swing/feel at the moment SONG ▸ was tapped — carried
     // across so ARRANGE plans the groove this screen is actually showing,
     // not the raw base it would otherwise reload from disk itself.
@@ -730,22 +789,26 @@ fun App(shelf: KitShelf) {
     // bench under BEAT now, and its session lives in this one folder. Held
     // here because SNIPS' own → LOOP and SYNTH's drone send both fill it.
     val loopDir = remember(context) { LoopWrites.dir(context) }
-    // X-RAY: same shelf-level shape as snipsOpen above, reached from
-    // KitsScreen's own X-RAY ▸ INSPECT A FILE row — but there's no kit
-    // it could belong to even in principle (the file picked is never
-    // landed anywhere), so it carries its own reading rather than a bare
-    // boolean.
+    // X-RAY, BIN and DOUBLES are benches (`Bench.XRAY`, `Bench.BIN`,
+    // `Bench.DOUBLES`), opened with `nav.open` like SNIPS, so there is no
+    // boolean for them here. BIN and DOUBLES take nothing: BIN lists what the
+    // two bins hold and DOUBLES measures the shelf itself on mount. X-RAY is
+    // the one with an argument — reached from KitsScreen's own X-RAY ▸ INSPECT
+    // A FILE row, but there's no kit it could belong to even in principle (the
+    // file picked is never landed anywhere), so it carries its own reading,
+    // and this var holds just that. It is deliberately not cleared when the
+    // place changes (`clearTransientState`): Back can restore the shelf with
+    // X-RAY on top, and the screen needs its reading then.
+    //
+    // One slot: it keeps the latest reading only. The history can hold more
+    // than one X-RAY entry (read file A, go to TAPE, read file B), and every
+    // one of them shows the latest file when Back restores it, not the file
+    // that entry was opened for. That is accepted: X-RAY is a one-off look at
+    // a file, not a document to come back to. The null guard where X-RAY is
+    // drawn covers a missing reading: X-RAY opens only after a reading lands,
+    // so none is expected, but a bench with nothing to show closes instead of
+    // drawing a blank screen.
     var xray by remember { mutableStateOf<XRayView?>(null) }
-    // DOUBLES: shelf-level too, same shape as X-RAY — reachable from
-    // KitsScreen's own DOUBLES ▸ row, a bare boolean since the screen
-    // measures the shelf itself on mount.
-    var doublesOpen by remember { mutableStateOf(false) }
-    // BIN (plan §3.1, over Task 2 of the bin-restore plan): same shape as
-    // `snipsOpen` above — a shelf-level overlay, not KIT-scoped, reachable
-    // from `KitsScreen`'s own `BIN ▸` row and from SNIPS' own door.
-    // `binOpen` itself is declared earlier in this function (with
-    // `binnedCount`, above) since the shelf's refresh effect needs it as
-    // a key; this comment marks where `snipsOpen`'s own sibling lives.
     // SNIPS → PAD's kit-gate fix: the file a SNIPS row's → PAD asked to
     // place on a pad, stashed here while the user picks a kit. SNIPS is only
     // ever reached from the shelf, where no kit is open by definition, so
@@ -755,7 +818,9 @@ fun App(shelf: KitShelf) {
     // instead of disabling the button (see `assignPendingSnip` below, and
     // the KITS/KIT branches' wiring further down). Cleared the moment the
     // assign lands, or by the MenuRow tab-switch reset below if the user
-    // gives up on the pick without ever long-pressing a pad.
+    // gives up on the pick without ever long-pressing a pad. A kit chosen
+    // from the shelf is the pick's destination, not the user giving up: it
+    // lands through `landPickedKit`, the one departure that keeps the pick.
     var pendingSnipAssign by remember { mutableStateOf<File?>(null) }
     // BREED (XX2 wired in): the kit BREED was pressed from, stashed here
     // while the user picks its cross partner — same shape as
@@ -1249,12 +1314,10 @@ fun App(shelf: KitShelf) {
                     // landed under YOURS on SYNTH, which is nowhere near here.
                     val boxed = LandingNote.landed(name, entries.map { it.kit.name }, skipped, presets)
                     if (boxed != null) openNote(boxed) else dock.say(Copy.landed(entries.size, skipped.size, presets))
-                    entries.firstOrNull()?.let { first ->
-                        padSheetSlot = null
-                        takesBinOpen = false
-                        arrangeOpen = false
-                        landKit(first)
-                    }
+                    // The landing replaces the benches, so an editor that was up
+                    // is gone with them; one the history brings back is judged
+                    // against this kit by its own verdict.
+                    entries.firstOrNull()?.let { first -> landKit(first) }
                     // Clearing a key of this effect cancels it on the next
                     // recomposition. Finish the shelf and navigation first.
                     ShareInbox.consume()
@@ -1274,9 +1337,6 @@ fun App(shelf: KitShelf) {
             // A new capture landing outranks a RE-TRIM in flight (RetrimRequest).
             retrim = null
             importCount++
-            padSheetSlot = null
-            takesBinOpen = false
-            arrangeOpen = false
             landOn(AppScreen.TAPE)
             ShareInbox.consume()
         } catch (e: CancellationException) {
@@ -1431,7 +1491,11 @@ fun App(shelf: KitShelf) {
                 orbitSelected = merged.orbits.size - 1
                 busy = null
                 dock.say(Copy.pathRingMade(ring.name))
-                landOn(AppScreen.ORBIT)
+                // ORBIT opens over SNAP, or wherever the user is by now, not
+                // at a BEAT they never visited: Back and ORBIT's chip return
+                // to where they were. Not opened twice if the user got to ORBIT
+                // while the ring built (roomFor says so).
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (ex: Exception) {
                 busy = null
                 Log.e(TAG, "buildPathRing: failed", ex)
@@ -1493,7 +1557,9 @@ fun App(shelf: KitShelf) {
                 busy = null
                 dock.say(Copy.chordKitMade(newEntry.kit.name, ring.name))
                 open = newEntry
-                landOn(AppScreen.ORBIT)
+                // Over SNAP, as PATH's ring does above; ORBIT draws the kit
+                // `open` now points at, which is the one just built.
+                if (nav.roomFor(Bench.ORBIT)) nav.open(Bench.ORBIT)
             } catch (e: Exception) {
                 busy = null
                 Log.e(TAG, "buildChordKit: failed", e)
@@ -1875,6 +1941,11 @@ fun App(shelf: KitShelf) {
                     }
                 }
                 xray = XRayView(name, reading)
+                // The reading lands whenever the file finishes, so X-RAY opens
+                // over wherever the user is by now, not over the shelf they
+                // asked from. A second reading landing while X-RAY shows is
+                // not a second screen: `xray` above is what the one shows.
+                if (nav.roomFor(Bench.XRAY)) nav.open(Bench.XRAY)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2105,6 +2176,14 @@ fun App(shelf: KitShelf) {
         }
     }
 
+    // True while BACK ONTO's write is running (set and cleared by `backOnto`).
+    // System Back on the TAPE deck is swallowed meanwhile (the root handler,
+    // below): RE-TRIM ▸ leaves the editor in the history, so a Back that
+    // landed on it now would be followed by the write's own return to the
+    // same location, which re-keys nothing and leaves the editor showing the
+    // pad as it was before the cut.
+    var backOntoWriting by remember { mutableStateOf(false) }
+
     /**
      * BACK ONTO (docs/RETRIM.md §4): [range] of [request]'s tape, read at
      * the file's own rate and cut as CHOP's slice would be (`Retrim.cut`),
@@ -2117,6 +2196,7 @@ fun App(shelf: KitShelf) {
     fun backOnto(request: RetrimRequest, range: IntRange) {
         if (busy != null) return
         busy = Busy(Copy.RETRIM_BUSY)
+        backOntoWriting = true
         scope.launch {
             try {
                 val (updated, treatment) = withContext(Dispatchers.IO) {
@@ -2156,6 +2236,7 @@ fun App(shelf: KitShelf) {
                 Log.e(TAG, "backOnto: failed", e)
                 dock.say(Copy.RETRIM_FAILED)
             } finally {
+                backOntoWriting = false
                 busy = null
             }
         }
@@ -2573,17 +2654,13 @@ fun App(shelf: KitShelf) {
                     if (open?.dir == entry.dir) {
                         open = null
                         // The kit under the open benches is gone; every
-                        // overlay over it goes with it, which is what a
-                        // tab-style departure clears.
+                        // bench over it goes with it, which is what a
+                        // tab-style departure closes. The landing replaces
+                        // the benches, and one the history brings back
+                        // (the pad editor, say) is judged against whatever
+                        // kit is open then, and closes if it is not its own.
                         if (nav.location.place != Place.SHELF) {
                             landOn(AppScreen.KITS)
-                            padSheetSlot = null
-                            takesBinOpen = false
-                            padCaptureSlot = null
-                            grainFieldSlot = null
-                            spliceSlot = null
-                            stackSlot = null
-                            arrangeOpen = false
                         }
                     }
                 } else {
@@ -2614,7 +2691,10 @@ fun App(shelf: KitShelf) {
      * (`entry`, captured before the `await`); a match means `open` must be
      * repointed at the renamed `Entry`, or it keeps naming a directory that
      * no longer exists — the same identity-guard discipline every
-     * `onKitUpdated` closure elsewhere in this file already applies.
+     * `onKitUpdated` closure elsewhere in this file already applies. The same
+     * step repoints the folders VERSIONS, PAD CAPTURE, SONG and the pad editor
+     * were opened for (`versionsKitDir`, `padCaptureKitDir`, `arrangeKitDir`,
+     * `padSheetKitDir`), so none of them sees the rename as a different kit.
      */
     fun renameKit(entry: KitShelf.Entry, newName: String) {
         if (busy != null) return
@@ -2626,6 +2706,15 @@ fun App(shelf: KitShelf) {
                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                     dock.say(Copy.kitRenamed(renamed.kit.name))
                     if (open?.dir == entry.dir) open = renamed
+                    // The benches opened for this kit follow it to its new
+                    // folder, in the same step as `open`, so a rename never
+                    // closes VERSIONS, PAD CAPTURE, SONG or the pad editor and
+                    // its tools mid-use: they compare the folder they were
+                    // opened for with the open kit's, and both moved.
+                    if (versionsKitDir == entry.dir) versionsKitDir = renamed.dir
+                    if (padCaptureKitDir == entry.dir) padCaptureKitDir = renamed.dir
+                    if (arrangeKitDir == entry.dir) arrangeKitDir = renamed.dir
+                    if (padSheetKitDir == entry.dir) padSheetKitDir = renamed.dir
                 } else {
                     dock.say(Copy.KIT_RENAME_FAILED)
                 }
@@ -2777,7 +2866,10 @@ fun App(shelf: KitShelf) {
             at = ShareOut.stamp(System.currentTimeMillis()),
             screen = location.top?.label ?: location.stage?.label ?: location.place.label,
             kit = open?.kit?.name,
-            pad = padSheetSlot?.let { PadNoteMap.labelForPad(it) },
+            // The slot is never cleared, so it names the last pad the editor was
+            // on, not the one on screen: it is the pad of this note only while
+            // the editor or one of its tools is one of the benches showing.
+            pad = padSheetSlot?.takeIf { location.benches.any { it in KitBench.PAD_BENCHES } }?.let { PadNoteMap.labelForPad(it) },
         )
     }
 
@@ -2846,36 +2938,27 @@ fun App(shelf: KitShelf) {
     // in the order it was pushed — a bench, then a stage, then a place.
 
     /**
-     * The transient state a screen change must abandon — overlays, armed
-     * hand-offs, one-shot requests. Extracted from [goToScreen] so Back
-     * runs exactly the same resets: returning to KIT with a pad sheet
-     * still armed from two screens ago would be a worse bug than the one
-     * the back stack fixes.
+     * The transient state a screen change must abandon — armed hand-offs and
+     * one-shot requests. Extracted from [goToScreen] so Back runs exactly
+     * the same resets: returning to KIT with a pick still armed from two
+     * screens ago would be a worse bug than the one the back stack fixes.
+     * The benches are not in it (see the note at its foot): they close by
+     * themselves, and what they were opened for is kept.
      */
     fun clearTransientState() {
-        myVoiceOpen = false
-        // Leaving KIT for another tab must not leave the
-        // sheet armed to reopen on the same slot next time
-        // KIT comes back into view.
-        padSheetSlot = null
-        takesBinOpen = false
-        padCaptureSlot = null
-        grainFieldSlot = null
-        spliceSlot = null
-        stackSlot = null
         // A tab switch away from GROOVE before GrooveScreen's own
         // LaunchedEffect consumed the arm (should never be observable — that
         // effect runs the same composition pass this sets `screen` in — but
         // matching every other one-shot request's own defensive reset here
         // costs nothing and rules it out structurally rather than by timing.
         auditionArmSlot = null
-        arrangeOpen = false
         // SNIPS is shelf-level, not KIT-scoped, but the same
         // "leaving must not leave an overlay/hand-off armed"
         // reasoning applies: a tab switch away from KITS
         // mid-pick abandons the → PAD hand-off rather than
         // leaving KitsScreen stuck on "PICK A KIT FOR THIS
-        // SNIP" forever.
+        // SNIP" forever. (A kit chosen for the snip is not giving up: it
+        // lands through [landPickedKit], which puts the pick back.)
         pendingSnipAssign = null
         pendingSnipTarget = null
         pendingAddTo = null
@@ -2888,21 +2971,55 @@ fun App(shelf: KitShelf) {
         // some later visit to some other kit.
         kitBankRequest = null
         tapeOpenOverride = null
-        // DELETED KITS is shelf-level too — same reasoning
-        // as SNIPS above: a tab switch away from KITS must
-        // not leave this overlay armed to reopen on top of
-        // whatever tab comes back into view later.
-        binOpen = false
-        // X-RAY is shelf-level too, same reasoning again.
-        xray = null
-        // DOUBLES likewise.
-        doublesOpen = false
+        // Not here: BIN, DOUBLES, X-RAY, VERSIONS, PAD CAPTURE, SONG, and the
+        // pad editor with GRAIN FIELD, SPLICE and STACK. They are benches, and
+        // a bench closes by itself when the place or stage changes
+        // (`Navigation.go` and `stage` land with no benches), so there is
+        // nothing left armed to reopen later. What they were opened for is
+        // kept on purpose: Back from the next place pops to the screen with the
+        // bench on top, and clearing it here would leave that bench with
+        // nothing to show. That is X-RAY's reading (`xray`), PAD CAPTURE's slot,
+        // the editor's pad (`padSheetSlot`, which its three tools read too) and
+        // the kit dirs and groove settings of VERSIONS, PAD CAPTURE, SONG and
+        // the editor. A bench whose kit is not the open one by then closes
+        // itself. AUDITION relies on this: it leaves the editor in the history,
+        // and the Back that returns from GROOVE runs this function.
     }
 
     /** The user leaving for [target]: the landing, and everything transient abandoned. */
     fun goToScreen(target: AppScreen) {
         landOn(target)
         clearTransientState()
+    }
+
+    /**
+     * A kit chosen on the shelf, landed on PADS: [goToScreen] with one
+     * exception. A SNIPS → PAD pick waiting in [pendingSnipAssign] survives
+     * the landing, because this kit is what the pick was waiting for. The
+     * shelf asked "PICK A KIT FOR THIS SNIP", and the next empty-pad
+     * long-press places it. A tab switch away from KITS is the user giving
+     * the pick up; a kit tapped is the user answering it. Every other thing
+     * a departure abandons (`pendingAddTo`, `pendingBreedWith`, an armed pad
+     * sheet) is still abandoned.
+     *
+     * The pick is read here, at the landing, not when the kit was tapped: a
+     * user who left for a place while the project opened has given it up,
+     * and this must not bring it back.
+     *
+     * The line is said here too, after the landing, not at the shelf. A line
+     * is scoped to where it was said, and the landing rests one said
+     * somewhere else ([DockModel.moved]). [entry] is the kit as it now
+     * stands: KitScreen shows bank B but always opens on bank A, and
+     * nothing here fills an upper bank, so an "empty pad" instruction is
+     * only followable if bank A has one. A kit already full there has
+     * nothing for the long-press to catch (the v1 "empty pads only" scope),
+     * so the line says so instead of pointing at a pad that does not exist.
+     */
+    fun landPickedKit(entry: KitShelf.Entry) {
+        val waiting = pendingSnipAssign
+        goToScreen(AppScreen.KIT)
+        pendingSnipAssign = waiting
+        if (waiting != null) dock.say(Copy.snipLanding(hasLandingPad(entry.kit)))
     }
 
     /** The place row: a place opens on the stage it was last on, benches closed. */
@@ -2946,6 +3063,10 @@ fun App(shelf: KitShelf) {
      * arrived since the shelf was opened (`ShelfModel.projectForKit`).
      * The kit itself is the one tapped, whatever the project's active kit
      * says: the row the user chose is the kit they want on the grid.
+     *
+     * It lands through [landPickedKit], so a snip waiting for a pad (SNIPS →
+     * PAD, the shelf in pick mode) is still waiting on the grid, and the
+     * dock says what the next empty-pad long-press will do.
      */
     fun openKit(entry: KitShelf.Entry) {
         if (busy != null) return
@@ -2972,8 +3093,9 @@ fun App(shelf: KitShelf) {
             }
             // Re-read after the await: the shelf may have moved under us.
             project = p
-            open = kits.firstOrNull { it.dir == entry.dir } ?: entry
-            goToScreen(AppScreen.KIT)
+            val landed = kits.firstOrNull { it.dir == entry.dir } ?: entry
+            open = landed
+            landPickedKit(landed)
         }
     }
 
@@ -3029,6 +3151,10 @@ fun App(shelf: KitShelf) {
      * kit (`ShelfModel.addKit`, then `activate`), and PADS comes back with
      * it on the grid. The kit is referenced, not copied — edit it in one
      * project and every project sees the edit (`DIRECTION_2026_10.md` §2).
+     *
+     * It lands through [landPickedKit] too. SNIPS stays open on the shelf
+     * while this pick is armed, so a snip can be waiting beside it, and the
+     * header then says "PICK A KIT FOR THIS SNIP".
      */
     fun addKitToProject(target: Project, entry: KitShelf.Entry) {
         if (busy != null) return
@@ -3052,8 +3178,9 @@ fun App(shelf: KitShelf) {
                 busy = null
             }
             project = updated
-            open = kits.firstOrNull { it.dir == entry.dir } ?: entry
-            goToScreen(AppScreen.KIT)
+            val landed = kits.firstOrNull { it.dir == entry.dir } ?: entry
+            open = landed
+            landPickedKit(landed)
         }
     }
 
@@ -3210,7 +3337,7 @@ fun App(shelf: KitShelf) {
     // With GROOVE up it reloads from the same request and pushes its own
     // program, which is the one to hear.
     LaunchedEffect(grooveReload) {
-        val grooveUp = location.top == null && location.stage == Stage.BEAT && !(arrangeOpen && open != null)
+        val grooveUp = location.top == null && location.stage == Stage.BEAT
         if (grooveReload > 0 && !grooveUp) beat.reloadFromDisk { dock.say(it) }
     }
     // A different kit is a different beat: the program, the position and the
@@ -3251,8 +3378,24 @@ fun App(shelf: KitShelf) {
     // shared path for the rest of its life, so the beat stops when one opens
     // (v1) and is not offered while one is up. The PADS grid is not among
     // them: it holds the same host the beat plays through.
+    //
+    // SONG counts only while it will draw ARRANGE, which is the verdict its own
+    // branch below acts on (`KitBench.verdict`). A SONG that Back restored for
+    // another kit draws nothing and closes itself on arrival, so the beat
+    // playing under it is not stopped for a screen that never opens; nor is it
+    // for SONG's no-kit panel, which makes no sound.
+    //
+    // The pad editor and its three tools (PAD_SHEET, GRAIN_FIELD, SPLICE, STACK)
+    // are deliberately not on this list. Each makes sound of its own on a private
+    // track (the HIT preview, the grain voice, the take previews), yet the beat
+    // plays under them today, they were drawn on the PADS stage, which is exempt,
+    // and that is the behaviour kept: "treat a pad while the beat plays" is a
+    // journey (UatSimTest) the editor exists for, and moving them onto the list
+    // would stop the beat the moment a pad is opened. Moving them from the PADS
+    // stage to benches changes where they are drawn, not what the beat does.
     val beatMustStop = location.top == Bench.ORBIT || location.top == Bench.SPLIT || location.top == Bench.LOOP ||
-        (location.top == null && location.stage == Stage.BEAT && arrangeOpen && open != null)
+        (location.top == Bench.SONG &&
+            KitBench.verdict(Bench.SONG, arrangeKitDir?.path, open?.dir?.path) == KitBench.Verdict.DRAW)
 
     /**
      * After every groove write on BEAT, the project's beat follows: the
@@ -3281,29 +3424,25 @@ fun App(shelf: KitShelf) {
     // The dock's capture choice (mic, or another app), the same shape.
     var captureSheetOpen by remember { mutableStateOf(false) }
 
-    // System Back, root policy: with no KIT-scoped or shelf-level overlay
-    // drawn (every such overlay owns its own BackHandler, mounted only while
-    // it's on screen, which always wins over this one — Compose's back
-    // dispatcher is LIFO and those are registered deeper/later), Back pops
-    // `Navigation`'s stack — a bench, then a stage, then a place, the order
-    // they were pushed (J11). One exclusion remains, for the screen that
-    // owns its own one-level back door: KEYS (its own back chip, via
-    // `onBack`, which also silences the instrument before leaving — this
-    // generic pop does not). SPLIT used to be excluded too, which left Back
-    // on it to finish the Activity; as a bench it pops like any other.
+    // System Back, root policy: with no sheet or note open (each owns its own
+    // BackHandler, mounted only while it's on screen, which always wins over
+    // this one — Compose's back dispatcher is LIFO and those are registered
+    // deeper/later), Back pops `Navigation`'s stack — a bench, then a stage,
+    // then a place, the order they were pushed (J11). A bench's screen owns
+    // an unconditional handler of its own too, mounted while it is drawn, so
+    // it out-ranks this one the same way; the pad editor and its tools are
+    // benches like the rest, and none of them is a term below. One exclusion
+    // remains, for the screen that owns its own one-level back door: KEYS (its
+    // own back chip, via `onBack`, which also silences the instrument before
+    // leaving — this generic pop does not). SPLIT used to be excluded too,
+    // which left Back on it to finish the Activity; as a bench it pops like
+    // any other.
     //
-    // "Drawn", not "set": a bench (SETUP, HELP, KEYS) opens over whatever
-    // is showing without clearing it, so a pad sheet can be armed under
-    // SETUP with its own BackHandler out of the composition. Back there
-    // must pop SETUP, not be left to a handler that isn't mounted.
-    val overlayDrawn = location.top == null && when (location.stage) {
-        Stage.PADS -> padSheetSlot != null || grainFieldSlot != null || spliceSlot != null || stackSlot != null || takesBinOpen ||
-            padCaptureSlot != null
-        Stage.BEAT -> arrangeOpen
-        null -> (location.place == Place.MAKE && myVoiceOpen) || (location.place == Place.SHELF && (binOpen || doublesOpen || xray != null))
-        else -> false
-    }
-    val anyOverlayOpen = overlayDrawn || benchNote != null || gearOpen || captureSheetOpen || kitSheetOpen
+    // "Drawn", not "set": a gear bench (SETUP, HELP) opens over whatever is
+    // showing without closing it, so the screen under it can have its own
+    // BackHandler out of the composition. Back there must pop the gear bench,
+    // not be left to a handler that isn't mounted.
+    val anyOverlayOpen = benchNote != null || gearOpen || captureSheetOpen || kitSheetOpen
     //
     // KITS is no longer among the exclusions (J11): with a real stack
     // there is nothing special about the shelf except that it is usually
@@ -3321,6 +3460,14 @@ fun App(shelf: KitShelf) {
             location.top != Bench.KEYS &&
             note == null && !captureBlocked && !micPermissionDenied,
     ) {
+        // BACK ONTO is writing onto the pad this deck was opened from, and
+        // lands on the editor when it is done (`backOnto`). Back now would
+        // restore that editor early, from the history, and the landing would
+        // then find it already open and leave it showing the pad as it was
+        // before the cut. So TAPE's Back waits for the write, as SPLICE's and
+        // STACK's do for theirs; the root handler stays registered, so Back is
+        // swallowed, never handed to the Activity.
+        if (backOntoWriting && nav.location.top == null && nav.location.stage == Stage.DECK) return@BackHandler
         val from = nav.location
         nav.back()
         // Popping a bench returns to what was under it, as it was — SETUP
@@ -3370,8 +3517,9 @@ fun App(shelf: KitShelf) {
                 }
                 // A bench that has no back chip of its own gets the frame's,
                 // reading what the model says it returns to. The screens
-                // that draw their own (KEYS, SPLIT, ORBIT, the pad benches)
-                // keep theirs until their own step of the plan rewords them.
+                // that draw their own chip (KEYS, SPLIT, ORBIT, BIN, VERSIONS,
+                // SONG, the pad editor and its tools, and the rest) are handed
+                // the same words as `backLabel`.
                 val top = location.top
                 val backChip = nav.backChip
                 if (top != null && top in FRAME_CHIP_BENCHES && backChip != null) {
@@ -3399,13 +3547,12 @@ fun App(shelf: KitShelf) {
                         top == Bench.SNIPS -> SnipsScreen(
                             shelf = shelf,
                             snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "SNIPS is a bench, so it has something to go back to" },
                             onBack = { pendingSnipTarget = null; nav.closeBench() },
-                            onBin = {
-                                // BIN is the shelf's: land there first, then
-                                // open it (the landing clears the overlays).
-                                goToScreen(AppScreen.KITS)
-                                binOpen = true
-                            },
+                            // BIN opens over SNIPS, wherever SNIPS is (the
+                            // shelf, PADS, DECK): Back from BIN returns here,
+                            // and a pick still pending for a pad survives it.
+                            onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
                             onOpenInTape = { file ->
                                 nav.closeBench()
@@ -3437,53 +3584,66 @@ fun App(shelf: KitShelf) {
                             onSendToLoop = ::sendSnipToLoop,
                             onShare = ::shareSnip,
                         )
-                        top == null && location.place == Place.SHELF -> if (xrayView != null) {
-                            XRayScreen(
-                                fileName = xrayView.fileName,
-                                reading = xrayView.reading,
-                                onBack = { xray = null },
-                            )
-                        } else if (binOpen) {
-                            BinScreen(
-                                shelf = shelf,
-                                snipsRoot = context.filesDir,
-                                onBack = { binOpen = false },
-                                onToast = { dock.say(it) },
-                                onKitRestored = {
-                                    // The section already owns its own toast
-                                    // and its own list refresh — this only
-                                    // needs to catch the shelf back up, the
-                                    // same reload `deleteKit`/`renameKit`
-                                    // already do after their own move. The
-                                    // `binnedCount` effect above is keyed
-                                    // on `kits`, so this refresh alone is
-                                    // also what re-reads the bin count.
-                                    scope.launch {
-                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                    }
-                                },
-                                // A snip back on its list changes nothing the
-                                // shelf shows; the count re-reads when BIN closes.
-                                onSnipRestored = {},
-                            )
-                        } else if (doublesOpen) {
-                            DoublesScreen(
-                                shelf = shelf,
-                                onBack = { doublesOpen = false },
-                                onToast = { dock.say(it) },
-                                onGoTo = { entry, slot ->
-                                    // The shelf's own onOpen, plus the pad:
-                                    // land on that kit with its PAD SHEET
-                                    // already up on the double in question.
-                                    doublesOpen = false
-                                    landKit(entry)
-                                    // Through openPadSheet (J16): DOUBLES' GO was
-                                    // the second of the three doors that opened
-                                    // the sheet without retiring its hint.
-                                    openPadSheet(slot)
-                                },
-                            )
-                        } else {
+                        // X-RAY: a bench over whatever is showing, since its
+                        // reading lands whenever the file finishes. With no
+                        // reading there is nothing to show, so it closes, as
+                        // KEYS does with no instrument. Otherwise it shows the
+                        // latest reading, whichever X-RAY entry this is.
+                        top == Bench.XRAY -> {
+                            if (xrayView == null) {
+                                nav.closeBench()
+                            } else {
+                                XRayScreen(
+                                    fileName = xrayView.fileName,
+                                    reading = xrayView.reading,
+                                    backLabel = checkNotNull(nav.backChip) { "X-RAY is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
+                                )
+                            }
+                        }
+                        top == Bench.BIN -> BinScreen(
+                            shelf = shelf,
+                            snipsRoot = context.filesDir,
+                            backLabel = checkNotNull(nav.backChip) { "BIN is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onKitRestored = {
+                                // The section already owns its own toast
+                                // and its own list refresh — this only
+                                // needs to catch the shelf back up, the
+                                // same reload `deleteKit`/`renameKit`
+                                // already do after their own move. The
+                                // `binnedCount` effect above is keyed
+                                // on `kits`, so this refresh alone is
+                                // also what re-reads the bin count.
+                                scope.launch {
+                                    kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                }
+                            },
+                            // A snip back on its list changes nothing the
+                            // shelf shows; the count re-reads when BIN closes.
+                            onSnipRestored = {},
+                        )
+                        top == Bench.DOUBLES -> DoublesScreen(
+                            shelf = shelf,
+                            backLabel = checkNotNull(nav.backChip) { "DOUBLES is a bench, so it has something to go back to" },
+                            onBack = { nav.closeBench() },
+                            onToast = { dock.say(it) },
+                            onGoTo = { entry, slot ->
+                                // The shelf's own onOpen, plus the pad:
+                                // land on that kit with its PAD SHEET
+                                // already up on the double in question.
+                                // DOUBLES stays in the history (the shelf with
+                                // DOUBLES on top), so Back from the pad lands
+                                // on the list the user came from.
+                                landKit(entry)
+                                // Through openPadSheet (J16): DOUBLES' GO was
+                                // the second of the three doors that opened
+                                // the sheet without retiring its hint.
+                                openPadSheet(slot)
+                            },
+                        )
+                        top == null && location.place == Place.SHELF -> {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
@@ -3525,33 +3685,20 @@ fun App(shelf: KitShelf) {
                                         // Through the project that holds it (plan
                                         // §3.1): the kit lands on PADS as the open
                                         // project's active kit.
+                                        //
+                                        // A SNIPS → PAD pick still pending rides
+                                        // the landing, and the dock's line about
+                                        // it is said there too (`landPickedKit`):
+                                        // said here, before the project has
+                                        // opened, the landing would rest it.
                                         openKit(entry)
-                                        // A kit opened while a SNIPS → PAD pick is
-                                        // still pending: tell the user what the
-                                        // next empty-pad long-press will do, since
-                                        // `KitScreen` itself carries no hint banner
-                                        // of its own for this mode. KitScreen can
-                                        // show bank B now (September UAT, finding
-                                        // 11) but always opens on bank A, and
-                                        // nothing here fills an upper bank anyway,
-                                        // so an "empty pad" instruction is only
-                                        // actually followable if bank A has one; a
-                                        // kit that's already full there has nothing
-                                        // for the long-press to catch (the v1
-                                        // "empty pads only" scope this task's
-                                        // brief calls out), so the hint says so
-                                        // instead of pointing at a pad that
-                                        // doesn't exist.
-                                        if (pendingSnipAssign != null) {
-                                            dock.say(Copy.snipLanding(hasLandingPad(entry.kit)))
-                                        }
                                     }
                                 },
                                 onFresh = ::fresh,
                                 onBackup = ::backupShelf,
                                 onChopAll = { chopAllPickerLauncher.launch(arrayOf("audio/wav", "audio/x-wav")) },
                                 onXRay = { xrayPickerLauncher.launch(arrayOf("*/*")) },
-                                onDoubles = { doublesOpen = true },
+                                onDoubles = { nav.open(Bench.DOUBLES) },
                                 onSnips = { nav.open(Bench.SNIPS) },
                                 assigningSnip = pendingSnipAssign != null,
                                 addingTo = pendingAddTo?.name,
@@ -3565,74 +3712,224 @@ fun App(shelf: KitShelf) {
                                 onDeleteKit = ::deleteKit,
                                 onRenameKit = ::renameKit,
                                 binnedCount = binnedCount,
-                                onBin = { binOpen = true },
+                                onBin = { nav.open(Bench.BIN) },
                                 shelfSort = shelfSort,
                                 onToggleSort = { setShelfSort(if (shelfSort == KitShelf.ShelfSort.RECENT) KitShelf.ShelfSort.ALPHA else KitShelf.ShelfSort.RECENT) },
                             )
                         }
-                        top == null && location.stage == Stage.PADS -> {
-                            val sheetSlot = padSheetSlot
-                            val sheetEntry = open
-                            val fieldSlot = grainFieldSlot
-                            val spliceSlotState = spliceSlot
-                            val stackSlotState = stackSlot
-                            when {
-                                // Checked before the PAD SHEET branch below:
-                                // opening GRAIN clears `padSheetSlot` at the
-                                // same time it sets `grainFieldSlot` (see
-                                // onGrainField below), so in practice the two
-                                // conditions are already mutually exclusive —
-                                // this ordering is belt-and-suspenders should
-                                // that ever not hold.
-                                fieldSlot != null && sheetEntry != null -> GrainFieldScreen(
-                                    entry = sheetEntry,
-                                    slot = fieldSlot,
-                                    onBack = { grainFieldSlot = null },
+                        // VERSIONS: a bench over PADS, opened from THIS KIT's
+                        // VERSIONS + BIN ▸. It is about the kit it was opened
+                        // for; `KitBench.verdict` is asked once per arrival (the
+                        // bench opened, Back restored it, or the open kit
+                        // changed, appeared or went away: the keys are the
+                        // location and the open kit's folder) and a bench that
+                        // no longer fits draws nothing and closes, so the open
+                        // kit's versions are never shown in its place. Never
+                        // asked on a recomposition: a RESTORE rewrites the
+                        // open kit with `open?.copy(kit = ...)`, which keeps
+                        // its folder, so the screen's own work cannot trip it.
+                        // The effect closes only the location it judged.
+                        top == Bench.VERSIONS -> {
+                            val versionsEntry = open
+                            val openDir = versionsEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(Bench.VERSIONS, versionsKitDir?.path, openDir?.path)
+                            }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && versionsEntry != null) {
+                                TakesBinScreen(
+                                    entry = versionsEntry,
+                                    backLabel = checkNotNull(nav.backChip) { "VERSIONS is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
+                                    onToast = { dock.say(it) },
+                                    onKitUpdated = { updatedKit ->
+                                        // Same shape as PAD SHEET's own
+                                        // onKitUpdated below: bumping
+                                        // `open.kit`'s identity is what
+                                        // makes the kit's host reload its bank
+                                        // (`PadHost.request`),
+                                        // so a restored sample is heard,
+                                        // not the stale cached one — but only
+                                        // onto the kit this restore actually
+                                        // ran against (see the identity guard
+                                        // comment on PAD SHEET's own
+                                        // onKitUpdated below).
+                                        if (open?.dir == versionsEntry.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
+                                )
+                            }
+                        }
+                        // PAD CAPTURE: a bench over PADS, opened by the pad
+                        // strip's CAPTURE door and by a long-press on an empty
+                        // pad. It fills one empty slot of one kit, so it closes
+                        // itself on arrival when that is not the open kit or the
+                        // slot has been filled since (a capture fills it, and
+                        // closes the screen itself).
+                        top == Bench.PAD_CAPTURE -> {
+                            val captureEntry = open
+                            val captureSlot = padCaptureSlot
+                            val openDir = captureEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(
+                                    Bench.PAD_CAPTURE,
+                                    padCaptureKitDir?.path,
+                                    openDir?.path,
+                                    slotFilled = captureEntry?.let { e -> captureSlot?.let { s -> e.kit.pad(s) != null } },
+                                )
+                            }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && captureEntry != null && captureSlot != null) {
+                                // Only `armed` is collected here — it changes
+                                // rarely. `level` is deliberately NOT collected
+                                // at this scope; PadCaptureScreen's own leaf
+                                // meter composable collects it, so the ~21Hz
+                                // tick recomposes just that leaf, not this
+                                // whole `when` branch (header + GRAB button).
+                                val captureArmed by MicSessionService.armed.collectAsState()
+                                PadCaptureScreen(
+                                    entry = captureEntry,
+                                    slot = captureSlot,
+                                    armed = captureArmed,
+                                    onRequestArm = ::requestArm,
+                                    backLabel = checkNotNull(nav.backChip) { "PAD CAPTURE is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
+                                    onToast = { dock.say(it) },
+                                    onKitUpdated = { updatedKit ->
+                                        // Same shape as PAD SHEET/TAKES+BIN's own
+                                        // onKitUpdated: bump `open.kit`'s identity
+                                        // so the kit's host reloads the pad GRAB
+                                        // just filled, not a stale cached (empty)
+                                        // sample — guarded the same way, against
+                                        // `captureEntry` captured at this
+                                        // composition, not whatever `open` is now.
+                                        if (open?.dir == captureEntry.dir) open = open?.copy(kit = updatedKit)
+                                        scope.launch {
+                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                        }
+                                    },
+                                    // App()'s own scope — same reasoning as
+                                    // PadSheetScreen's own appScope: the GRAB
+                                    // write must survive a MenuRow tab switch
+                                    // mid-write, not be cancelled by it.
+                                    appScope = scope,
+                                )
+                            }
+                        }
+                        // GRAIN FIELD, SPLICE and STACK: benches over the pad
+                        // editor (`Bench.PAD_SHEET`), opened from its action row
+                        // with `nav.open`, for the pad it is on (`padSheetSlot`).
+                        // Back and the chip close them and land on the editor.
+                        // Each asks the editor's own verdict once per arrival
+                        // (`padBenchVerdict`: the kit it was opened for is the
+                        // open kit, and the pad is still there), keyed on the
+                        // location and the open kit's folder, and closes the
+                        // location it judged.
+                        top == Bench.GRAIN_FIELD -> {
+                            val toolEntry = open
+                            val toolSlot = padSheetSlot
+                            val openDir = toolEntry?.dir
+                            val verdict = remember(location, openDir) { padBenchVerdict(Bench.GRAIN_FIELD) }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && toolEntry != null && toolSlot != null) {
+                                GrainFieldScreen(
+                                    entry = toolEntry,
+                                    slot = toolSlot,
+                                    backLabel = checkNotNull(nav.backChip) { "GRAIN FIELD is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onRequestArm = ::requestArm,
                                     // A print is a snip on the shelf: the same
                                     // reload request a share-sheet import raises.
                                     onFieldPrinted = { importCount++ },
                                 )
-                                // Checked before PAD SHEET below, same
-                                // reasoning as GRAIN FIELD above: opening
-                                // SPLICE clears `padSheetSlot` at the same
-                                // time it sets `spliceSlot` (see onSplice
-                                // below), so the two are already mutually
-                                // exclusive - this ordering is belt-and-
-                                // suspenders should that ever not hold.
-                                spliceSlotState != null && sheetEntry != null -> TapeSpliceScreen(
-                                    entry = sheetEntry,
-                                    slot = spliceSlotState,
-                                    onBack = { spliceSlot = null },
+                            }
+                        }
+                        top == Bench.SPLICE -> {
+                            val toolEntry = open
+                            val toolSlot = padSheetSlot
+                            val openDir = toolEntry?.dir
+                            val verdict = remember(location, openDir) { padBenchVerdict(Bench.SPLICE) }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && toolEntry != null && toolSlot != null) {
+                                TapeSpliceScreen(
+                                    entry = toolEntry,
+                                    slot = toolSlot,
+                                    backLabel = checkNotNull(nav.backChip) { "SPLICE is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onKitUpdated = { updatedKit ->
-                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        if (open?.dir == toolEntry.dir) open = open?.copy(kit = updatedKit)
                                         scope.launch {
                                             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                         }
                                     },
                                 )
-                                // STACK, same ordering reasoning as SPLICE
-                                // above: onStack clears `padSheetSlot` as it
-                                // sets `stackSlot`.
-                                stackSlotState != null && sheetEntry != null -> StackTakesScreen(
-                                    entry = sheetEntry,
-                                    slot = stackSlotState,
-                                    onBack = { stackSlot = null },
+                            }
+                        }
+                        top == Bench.STACK -> {
+                            val toolEntry = open
+                            val toolSlot = padSheetSlot
+                            val openDir = toolEntry?.dir
+                            val verdict = remember(location, openDir) { padBenchVerdict(Bench.STACK) }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && toolEntry != null && toolSlot != null) {
+                                StackTakesScreen(
+                                    entry = toolEntry,
+                                    slot = toolSlot,
+                                    backLabel = checkNotNull(nav.backChip) { "STACK is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     onKitUpdated = { updatedKit ->
-                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
+                                        if (open?.dir == toolEntry.dir) open = open?.copy(kit = updatedKit)
                                         scope.launch {
                                             kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
                                         }
                                     },
                                 )
-                                sheetSlot != null && sheetEntry != null -> PadSheetScreen(
+                            }
+                        }
+                        // PAD SHEET: the pad editor, a bench over PADS, opened by
+                        // the strip's OPEN ▸, the hold on a filled pad, DOUBLES'
+                        // GO ▸ and RE-TRIM's return, all through `openPadSheet`.
+                        // It works on one filled pad of one kit, so on arrival
+                        // it closes itself when that is not the open kit, no kit
+                        // is open, or the pad is gone (`padBenchVerdict`, the
+                        // one-shot verdict VERSIONS and PAD CAPTURE ask too).
+                        // Never asked on a recomposition, so a DELETE mid-use
+                        // leaves the editor's own "emptied" shell up as it
+                        // always did, and a write that rewrites `open.kit` (same
+                        // folder) cannot trip it. The editor is not kept alive
+                        // under a tool: it leaves composition when one opens and
+                        // re-opens its model on the way back (its open section
+                        // is PADS' state, `nav.padsOpenBox`, and survives).
+                        top == Bench.PAD_SHEET -> {
+                            val sheetSlot = padSheetSlot
+                            val sheetEntry = open
+                            val openDir = sheetEntry?.dir
+                            val verdict = remember(location, openDir) { padBenchVerdict(Bench.PAD_SHEET) }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.DRAW && sheetEntry != null && sheetSlot != null) {
+                                PadSheetScreen(
                                     entry = sheetEntry,
                                     slot = sheetSlot,
-                                    onSlotChange = ::openPadSheet,
-                                    onBack = { padSheetSlot = null },
+                                    backLabel = checkNotNull(nav.backChip) { "PAD SHEET is a bench, so it has something to go back to" },
+                                    onSlotChange = ::retargetPadSheet,
+                                    onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // The open box is PADS' state (plan §3.3): a
                                     // stage switch keeps it, a kit change resets it.
@@ -3661,42 +3958,35 @@ fun App(shelf: KitShelf) {
                                                     colorHex = pad?.colorHex,
                                                     drumClass = pad?.drumClass ?: com.snipsnap.audio.DrumClass.UNKNOWN,
                                                 )
-                                                padSheetSlot = null
+                                                // The editor stays in the history, so
+                                                // Back from TAPE before a trim lands on
+                                                // it, on this pad, as from AUDITION.
                                                 landOn(AppScreen.TAPE)
                                             }
                                         }
                                     },
-                                    onGrainField = { slot ->
-                                        // GRAIN closes PAD SHEET on the way
-                                        // in — the two overlays never render
-                                        // at once (see the `when` ordering
-                                        // comment above).
-                                        padSheetSlot = null
-                                        grainFieldSlot = slot
-                                    },
-                                    onSplice = { slot ->
-                                        // SPLICE closes PAD SHEET on the way
-                                        // in, same reasoning as GRAIN above.
-                                        padSheetSlot = null
-                                        spliceSlot = slot
-                                    },
-                                    onStack = { slot ->
-                                        padSheetSlot = null
-                                        stackSlot = slot
-                                    },
+                                    // GRAIN, SPLICE and STACK open over the
+                                    // editor and leave it where it is, so Back
+                                    // from the tool lands on it. The tool's pad is
+                                    // the editor's (`padSheetSlot`), which is the
+                                    // `slot` handed in here: nothing assigns it.
+                                    onGrainField = { nav.open(Bench.GRAIN_FIELD) },
+                                    onSplice = { nav.open(Bench.SPLICE) },
+                                    onStack = { nav.open(Bench.STACK) },
                                     onAudition = { slot ->
                                         // AUDITION ▸ (spec decision 2): unlike
-                                        // GRAIN/SPLICE/STACK, which stay
-                                        // KIT-scoped overlays, this one
-                                        // actually switches tabs — the
+                                        // GRAIN/SPLICE/STACK, which open over the
+                                        // editor, this one switches stage — the
                                         // comparison plays inside the pattern
                                         // (spec rule 2), which lives on
-                                        // GROOVE, not on KIT. `screen =`
-                                        // directly, not `goToScreen`, which
-                                        // would immediately clear the arm this
-                                        // same line sets - same precedent as
-                                        // RE-TRIM ▸'s own `onNavigateTape` above.
-                                        padSheetSlot = null
+                                        // GROOVE, not on PADS. `landOn`, not
+                                        // `goToScreen`, which would immediately
+                                        // clear the arm this same line sets - same
+                                        // precedent as RE-TRIM ▸'s own
+                                        // `onNavigateTape` above. The editor is
+                                        // not closed: the landing pushes
+                                        // PADS+[PAD_SHEET] onto the history, which
+                                        // is what Back from GROOVE returns to.
                                         auditionArmSlot = slot
                                         landOn(AppScreen.GROOVE)
                                     },
@@ -3738,134 +4028,86 @@ fun App(shelf: KitShelf) {
                                     // here covers all three with one wire.
                                     onShelfAssetWritten = { roomsRevision++ },
                                 )
-                                takesBinOpen && sheetEntry != null -> TakesBinScreen(
-                                    entry = sheetEntry,
-                                    onBack = { takesBinOpen = false },
-                                    onToast = { dock.say(it) },
-                                    onKitUpdated = { updatedKit ->
-                                        // Same shape as PAD SHEET's own
-                                        // onKitUpdated above: bumping
-                                        // `open.kit`'s identity is what
-                                        // makes the kit's host reload its bank
-                                        // (`PadHost.request`),
-                                        // so a restored sample is heard,
-                                        // not the stale cached one — but only
-                                        // onto the kit this restore actually
-                                        // ran against (see the identity guard
-                                        // comment on PAD SHEET's own
-                                        // onKitUpdated above).
-                                        if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
-                                        scope.launch {
-                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                        }
-                                    },
-                                )
-                                padCaptureSlot != null && sheetEntry != null -> {
-                                    // Only `armed` is collected here — it changes
-                                    // rarely. `level` is deliberately NOT collected
-                                    // at this scope; PadCaptureScreen's own leaf
-                                    // meter composable collects it, so the ~21Hz
-                                    // tick recomposes just that leaf, not this
-                                    // whole `when` branch (header + GRAB button).
-                                    val captureArmed by MicSessionService.armed.collectAsState()
-                                    PadCaptureScreen(
-                                        entry = sheetEntry,
-                                        slot = padCaptureSlot!!,
-                                        armed = captureArmed,
-                                        onRequestArm = ::requestArm,
-                                        onBack = { padCaptureSlot = null },
-                                        onToast = { dock.say(it) },
-                                        onKitUpdated = { updatedKit ->
-                                            // Same shape as PAD SHEET/TAKES+BIN's own
-                                            // onKitUpdated: bump `open.kit`'s identity
-                                            // so the kit's host reloads the pad GRAB
-                                            // just filled, not a stale cached (empty)
-                                            // sample — guarded the same way, against
-                                            // `sheetEntry` captured at this
-                                            // composition, not whatever `open` is now.
-                                            if (open?.dir == sheetEntry.dir) open = open?.copy(kit = updatedKit)
-                                            scope.launch {
-                                                kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                            }
-                                        },
-                                        // App()'s own scope — same reasoning as
-                                        // PadSheetScreen's own appScope above: the
-                                        // GRAB write must survive a MenuRow tab
-                                        // switch mid-write, not be cancelled by it.
-                                        appScope = scope,
-                                    )
-                                }
-                                else -> KitLoading(pendingKit) {
-                                    // A starter still rendering: the page is the placeholder grid for it
-                                    // (and, after 200 ms, the loading card over it), whatever kit is open;
-                                    // the kit is the page again once it has landed and the card has had its time.
-                                    KitScreen(
-                                        open,
-                                        // The switcher (plan §3.3): the project's line,
-                                        // its kit list, and the shelf in pick mode.
-                                        switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
-                                        // With fewer than two kits there is nothing to
-                                        // switch between: the chip is the shelf's door,
-                                        // not a one-row sheet naming the kit on screen.
-                                        onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
-                                        onAddFromShelf = ::addFromShelf,
-                                        // The grid's state, held by the navigation model.
-                                        bank = nav.padsBank,
-                                        onBankChange = { nav.padsBank = it },
-                                        selectedSlot = nav.padsSelectedSlot,
-                                        onSelectSlot = { nav.padsSelectedSlot = it },
-                                        // The strip's doors: the tap twin of the hold (W#22).
-                                        onOpenPad = ::openPadSheet,
-                                        onCaptureInto = { slot -> padCaptureSlot = slot },
-                                        onFromSnips = { slot ->
-                                            pendingSnipTarget = slot
-                                            nav.open(Bench.SNIPS)
-                                        },
-                                        versions = versions,
-                                        busy = busy != null,
-                                        onLongPress = ::openPadSheet,
-                                        onTakesBin = { takesBinOpen = true },
-                                        onTexture = ::texture,
-                                        onSetKey = ::setKey,
-                                        onSavePerformance = ::savePerformance,
-                                        onInKey = ::inKey,
-                                        onTwins = ::evilTwins,
-                                        onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
-                                        bankRequest = kitBankRequest,
-                                        onBankRequestConsumed = { kitBankRequest = null },
-                                        lightRequest = lightRequest,
-                                        onLightConsumed = { lightRequest = null },
-                                        beat = beat,
-                                        onBreed = ::startBreed,
-                                        // A second kit to cross with has to
-                                        // already be on the shelf — BREED can't
-                                        // offer a pick with nothing else there.
-                                        canBreed = kits.size > 1,
-                                        onSplit = { landOn(AppScreen.SPLIT) },
-                                        onDustAll = ::dustAll,
-                                        onEmptyLongPress = { slot ->
-                                            // SNIPS → PAD's landing: a pick still
-                                            // armed intercepts the press here,
-                                            // before it ever reaches the normal
-                                            // capture surface below — KitScreen.kt
-                                            // itself needs no changes for this.
-                                            val pending = pendingSnipAssign
-                                            if (pending != null) {
-                                                assignPendingSnip(pending, slot)
-                                            } else {
-                                                padCaptureSlot = slot
-                                            }
-                                        },
-                                        onEmptyTapHint = {
-                                            dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
-                                        },
-                                        onNavigateKits = { goToScreen(AppScreen.KITS) },
-                                        hasProject = project != null,
-                                        onNavigateTape = { goToScreen(AppScreen.TAPE) },
-                                        hosts = hosts,
-                                    )
-                                }
                             }
+                        }
+                        top == null && location.stage == Stage.PADS -> KitLoading(pendingKit) {
+                            // A starter still rendering: the page is the placeholder grid for it
+                            // (and, after 200 ms, the loading card over it), whatever kit is open;
+                            // the kit is the page again once it has landed and the card has had its time.
+                            KitScreen(
+                                open,
+                                // The switcher (plan §3.3): the project's line,
+                                // its kit list, and the shelf in pick mode.
+                                switcherLine = project?.let { Places.switcher(it) } ?: Places.NO_KITS,
+                                // With fewer than two kits there is nothing to
+                                // switch between: the chip is the shelf's door,
+                                // not a one-row sheet naming the kit on screen.
+                                onSwitchKit = { if ((project?.kits?.size ?: 0) < 2) addFromShelf() else kitSheetOpen = true },
+                                onAddFromShelf = ::addFromShelf,
+                                // The grid's state, held by the navigation model.
+                                bank = nav.padsBank,
+                                onBankChange = { nav.padsBank = it },
+                                selectedSlot = nav.padsSelectedSlot,
+                                onSelectSlot = { nav.padsSelectedSlot = it },
+                                // The strip's doors: the tap twin of the hold (W#22).
+                                onOpenPad = ::openPadSheet,
+                                onCaptureInto = { slot ->
+                                    padCaptureSlot = slot
+                                    padCaptureKitDir = open?.dir
+                                    nav.open(Bench.PAD_CAPTURE)
+                                },
+                                onFromSnips = { slot ->
+                                    pendingSnipTarget = slot
+                                    nav.open(Bench.SNIPS)
+                                },
+                                versions = versions,
+                                busy = busy != null,
+                                onLongPress = ::openPadSheet,
+                                onTakesBin = {
+                                    versionsKitDir = open?.dir
+                                    nav.open(Bench.VERSIONS)
+                                },
+                                onTexture = ::texture,
+                                onSetKey = ::setKey,
+                                onSavePerformance = ::savePerformance,
+                                onInKey = ::inKey,
+                                onTwins = ::evilTwins,
+                                onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
+                                bankRequest = kitBankRequest,
+                                onBankRequestConsumed = { kitBankRequest = null },
+                                lightRequest = lightRequest,
+                                onLightConsumed = { lightRequest = null },
+                                beat = beat,
+                                onBreed = ::startBreed,
+                                // A second kit to cross with has to
+                                // already be on the shelf — BREED can't
+                                // offer a pick with nothing else there.
+                                canBreed = kits.size > 1,
+                                onSplit = { landOn(AppScreen.SPLIT) },
+                                onDustAll = ::dustAll,
+                                onEmptyLongPress = { slot ->
+                                    // SNIPS → PAD's landing: a pick still
+                                    // armed intercepts the press here,
+                                    // before it ever reaches the normal
+                                    // capture surface below — KitScreen.kt
+                                    // itself needs no changes for this.
+                                    val pending = pendingSnipAssign
+                                    if (pending != null) {
+                                        assignPendingSnip(pending, slot)
+                                    } else {
+                                        padCaptureSlot = slot
+                                        padCaptureKitDir = open?.dir
+                                        nav.open(Bench.PAD_CAPTURE)
+                                    }
+                                },
+                                onEmptyTapHint = {
+                                    dock.say(if (pendingSnipAssign != null) "LONG-PRESS TO PLACE THIS SNIP" else "LONG-PRESS TO CAPTURE")
+                                },
+                                onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                hasProject = project != null,
+                                onNavigateTape = { goToScreen(AppScreen.TAPE) },
+                                hosts = hosts,
+                            )
                         }
                         top == null && location.stage == Stage.DECK -> TapeScreen(
                             entry = open,
@@ -4084,9 +4326,14 @@ fun App(shelf: KitShelf) {
                                 // write, under the same one writer SNIPS' → LOOP uses.
                                 onDroneToLoop = { name, recipe, root -> sendDroneToLoop(name, recipe, root) },
                                 // → SURFACE (SIREN, a LOOP): the pad has landed and
-                                // surface.json points at it; the same screen switch a
-                                // MenuRow tap makes, so SURFACE reads the file as it opens.
-                                onOpenSurface = { goToScreen(AppScreen.SURFACE) },
+                                // surface.json points at it, so SURFACE reads the file
+                                // as it opens. It opens over SYNTH, or wherever the user
+                                // is by now (this lands after the write): the frame chip
+                                // reads that screen, and the chip and Back both return
+                                // to it.
+                                onOpenSurface = {
+                                    if (nav.roomFor(Bench.SURFACE)) nav.open(Bench.SURFACE)
+                                },
                                 // App()'s own scope — same reasoning as PAD SHEET/PAD
                                 // CAPTURE's own appScope: SEND TO PAD's write must survive
                                 // a MenuRow tab switch, not be cancelled by it.
@@ -4097,6 +4344,7 @@ fun App(shelf: KitShelf) {
                         // same two ways SURFACE's do, so the same two hooks.
                         top == Bench.SPLIT -> SplitScreen(
                             entry = open,
+                            backLabel = checkNotNull(nav.backChip) { "SPLIT is a bench, so it has something to go back to" },
                             onToast = { dock.say(it) },
                             onPrinted = { importCount++ },
                             onKitUpdated = { updatedKit ->
@@ -4151,77 +4399,107 @@ fun App(shelf: KitShelf) {
                         // The place under the gear: HELP opens its section.
                         top == Bench.HELP -> HelpScreen(cameFrom = location.place)
                         top == Bench.MIDI -> MidiScreen()
-                        top == null && location.stage == Stage.BEAT -> {
+                        // SONG: a bench over BEAT, opened from GROOVE's SONG ▸
+                        // with GROOVE's swing, feel and template, which belong
+                        // to one kit's groove. Opened for a kit that is no
+                        // longer the open one, it closes itself on arrival,
+                        // drawing nothing first. With no kit open it says so
+                        // instead, as ORBIT does, so the user sees why.
+                        top == Bench.SONG -> {
                             val songEntry = open
-                            if (arrangeOpen && songEntry != null) {
+                            val openDir = songEntry?.dir
+                            val verdict = remember(location, openDir) {
+                                KitBench.verdict(Bench.SONG, arrangeKitDir?.path, openDir?.path)
+                            }
+                            LaunchedEffect(location, openDir) {
+                                if (verdict == KitBench.Verdict.CLOSE && nav.location == location) nav.closeBench()
+                            }
+                            if (verdict == KitBench.Verdict.NO_KIT) {
+                                NoKitPanel(
+                                    Copy.NO_KIT_FOR_SONG,
+                                    hasProject = project != null,
+                                    onAddFromShelf = ::addFromShelf,
+                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                )
+                            } else if (verdict == KitBench.Verdict.DRAW && songEntry != null) {
                                 ArrangeScreen(
                                     entry = songEntry,
-                                    onBack = { arrangeOpen = false },
+                                    backLabel = checkNotNull(nav.backChip) { "SONG is a bench, so it has something to go back to" },
+                                    onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     swingPercent = arrangeSwing,
                                     feel = arrangeFeel,
                                     feelTemplate = arrangeFeelTemplate,
                                 )
-                            } else {
-                                GrooveScreen(
-                                    entry = open,
-                                    // App's own scope — the same one PadSheetScreen's
-                                    // teardown save and ExportScreen's dub write use —
-                                    // so a pending debounced E save survives a MenuRow
-                                    // tab switch instead of being cancelled by it.
-                                    appScope = scope,
-                                    onToast = { dock.say(it) },
-                                    reloadRequest = grooveReload,
-                                    onArrange = { swing, f, tpl -> arrangeSwing = swing; arrangeFeel = f; arrangeFeelTemplate = tpl; arrangeOpen = true },
-                                    onOrbit = { nav.open(Bench.ORBIT) },
-                                    onLoop = { nav.open(Bench.LOOP) },
-                                    beat = beat,
-                                    onBeatWritten = ::mirrorBeat,
-                                    onNavigateKits = { goToScreen(AppScreen.KITS) },
-                                    hasProject = project != null,
-                                    onAddFromShelf = ::addFromShelf,
-                                    onNavigatePads = { goToStage(Stage.PADS) },
-                                    feel = grooveFeel,
-                                    onFeelChange = { grooveFeel = it },
-                                    swingPercent = grooveSwingPercent,
-                                    onSwingPercentChange = { grooveSwingPercent = it },
-                                    progIndex = grooveProgIndex,
-                                    onProgIndexChange = { grooveProgIndex = it },
-                                    seed = grooveSeed,
-                                    onSeedChange = { grooveSeed = it },
-                                    justLanded = grooveJustLanded,
-                                    onJustLandedChange = { grooveJustLanded = it },
-                                    preTake = groovePreTake,
-                                    onPreTakeChange = { groovePreTake = it },
-                                    // AUDITION (spec decision 2): the arm PAD
-                                    // SHEET's own AUDITION ▸ set, consumed
-                                    // once GrooveScreen has built a session
-                                    // from it.
-                                    auditionArmSlot = auditionArmSlot,
-                                    onAuditionArmed = { auditionArmSlot = null },
-                                    // Same shape as PAD SHEET's own
-                                    // onKitUpdated above: AUDITION's own
-                                    // choose-a-winner write lands through
-                                    // this same door.
-                                    onKitUpdated = { updatedKit ->
-                                        // Same "Frankenstein entry" guard as PAD
-                                        // SHEET's own onKitUpdated: this write is
-                                        // async (appScope), so by the time it
-                                        // lands the user may have switched to a
-                                        // different kit - `songEntry` is this
-                                        // composition's own stable snapshot, not
-                                        // `open` re-read live.
-                                        if (open?.dir == songEntry?.dir) open = open?.copy(kit = updatedKit)
-                                        scope.launch {
-                                            kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
-                                        }
-                                    },
-                                )
                             }
                         }
+                        top == null && location.stage == Stage.BEAT -> {
+                            val grooveEntry = open
+                            GrooveScreen(
+                                entry = open,
+                                // App's own scope — the same one PadSheetScreen's
+                                // teardown save and ExportScreen's dub write use —
+                                // so a pending debounced E save survives a MenuRow
+                                // tab switch instead of being cancelled by it.
+                                appScope = scope,
+                                onToast = { dock.say(it) },
+                                reloadRequest = grooveReload,
+                                onArrange = { swing, f, tpl ->
+                                    arrangeSwing = swing
+                                    arrangeFeel = f
+                                    arrangeFeelTemplate = tpl
+                                    arrangeKitDir = open?.dir
+                                    nav.open(Bench.SONG)
+                                },
+                                onOrbit = { nav.open(Bench.ORBIT) },
+                                onLoop = { nav.open(Bench.LOOP) },
+                                beat = beat,
+                                onBeatWritten = ::mirrorBeat,
+                                onNavigateKits = { goToScreen(AppScreen.KITS) },
+                                hasProject = project != null,
+                                onAddFromShelf = ::addFromShelf,
+                                onNavigatePads = { goToStage(Stage.PADS) },
+                                feel = grooveFeel,
+                                onFeelChange = { grooveFeel = it },
+                                swingPercent = grooveSwingPercent,
+                                onSwingPercentChange = { grooveSwingPercent = it },
+                                progIndex = grooveProgIndex,
+                                onProgIndexChange = { grooveProgIndex = it },
+                                seed = grooveSeed,
+                                onSeedChange = { grooveSeed = it },
+                                justLanded = grooveJustLanded,
+                                onJustLandedChange = { grooveJustLanded = it },
+                                preTake = groovePreTake,
+                                onPreTakeChange = { groovePreTake = it },
+                                // AUDITION (spec decision 2): the arm PAD
+                                // SHEET's own AUDITION ▸ set, consumed
+                                // once GrooveScreen has built a session
+                                // from it.
+                                auditionArmSlot = auditionArmSlot,
+                                onAuditionArmed = { auditionArmSlot = null },
+                                // Same shape as PAD SHEET's own
+                                // onKitUpdated above: AUDITION's own
+                                // choose-a-winner write lands through
+                                // this same door.
+                                onKitUpdated = { updatedKit ->
+                                    // Same "Frankenstein entry" guard as PAD
+                                    // SHEET's own onKitUpdated: this write is
+                                    // async (appScope), so by the time it
+                                    // lands the user may have switched to a
+                                    // different kit - `grooveEntry` is this
+                                    // composition's own stable snapshot, not
+                                    // `open` re-read live.
+                                    if (open?.dir == grooveEntry?.dir) open = open?.copy(kit = updatedKit)
+                                    scope.launch {
+                                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                    }
+                                },
+                            )
+                        }
                         top == Bench.ORBIT -> {
-                            // The one door to the rings: a bench under BEAT, from
-                            // GROOVE's ORBIT ▸ (plan §3.4). It needs only a kit.
+                            // The one door to the rings: a bench, from GROOVE's
+                            // ORBIT ▸ (plan §3.4) over BEAT, and from SNAP's PATH
+                            // and CHORD over SNAP. It needs only a kit.
                             val orbitEntry = open
                             if (orbitEntry == null) {
                                 NoKitPanel(
@@ -4234,6 +4512,7 @@ fun App(shelf: KitShelf) {
                                 OrbitScreen(
                                     entry = orbitEntry,
                                     kitsRoot = shelf.root,
+                                    backLabel = checkNotNull(nav.backChip) { "ORBIT is a bench, so it has something to go back to" },
                                     onBack = { nav.closeBench() },
                                     onToast = { dock.say(it) },
                                     // CLIP ▸ KIT rewrites the open kit's groove.json
@@ -4259,6 +4538,7 @@ fun App(shelf: KitShelf) {
                             }
                         }
                         top == Bench.LOOP -> LoopBench(
+                            backLabel = checkNotNull(nav.backChip) { "LOOP is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
                             // The empty grid's SNIPS door: SNIPS takes LOOP's place on
@@ -4279,12 +4559,12 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE && myVoiceOpen -> {
+                        top == Bench.MY_VOICE -> {
                             val voiceEntry = open
                             MyVoiceScreen(
                                 entry = voiceEntry,
                                 appScope = scope,
-                                onBack = { myVoiceOpen = false },
+                                onBack = { nav.closeBench() },
                                 onToast = { dock.say(it) },
                                 onKitUpdated = { updated ->
                                     if (open?.dir == voiceEntry?.dir) open = open?.copy(kit = updated)
@@ -4293,7 +4573,7 @@ fun App(shelf: KitShelf) {
                             )
                         }
                         top == null && location.place == Place.MAKE -> MakeList(
-                            onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { myVoiceOpen = true },
+                            onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
                         )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
@@ -4301,13 +4581,12 @@ fun App(shelf: KitShelf) {
                             onOpen = { openInstrument = it; landOn(AppScreen.KEYS) },
                             onBack = { nav.closeBench() },
                         )
-                        // The pad benches (PAD SHEET, GRAIN FIELD, SPLICE,
-                        // STACK, SPREAD, VERSIONS, PAD CAPTURE), BIN, SNIPS,
-                        // SONG, LOOP and the rest of the bench roster are
-                        // still PADS', SHELF's and BEAT's own overlays above,
-                        // and nothing opens them as a bench yet. Their steps
-                        // of the plan move them here; until then this draws
-                        // nothing rather than something false.
+                        // The pad editor benches (PAD SHEET, GRAIN FIELD,
+                        // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,
+                        // DRAW, FIELD) are still PADS' and SNAP's own overlays
+                        // above, and nothing opens them as a bench yet. Their
+                        // steps of the plan move them here; until then this
+                        // draws nothing rather than something false.
                         else -> Unit
                     }
                 }

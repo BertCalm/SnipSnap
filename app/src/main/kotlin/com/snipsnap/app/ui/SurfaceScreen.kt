@@ -1,6 +1,5 @@
 package com.snipsnap.app.ui
 
-import android.content.Context
 import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
@@ -45,7 +44,6 @@ import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MicSessionService
 import com.snipsnap.app.MidiInput
-import com.snipsnap.app.PREFS
 import com.snipsnap.app.SurfaceEngine
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.deviceSampleRate
@@ -66,8 +64,6 @@ import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.MidiDeviceId
-import com.snipsnap.shell.MidiLearn
-import com.snipsnap.shell.MidiLearnStore
 import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
@@ -78,6 +74,8 @@ import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceLoop
 import com.snipsnap.shell.SurfaceMidi
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SurfaceAquarium
+import com.snipsnap.shell.SurfaceSettingsWrites
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
 import com.snipsnap.shell.TouchSurface.Reading
@@ -92,7 +90,7 @@ import kotlinx.coroutines.sync.withLock
  * The panels of controls above the pad, in strip order - one shows
  * at a time (see the strip's own comment in [SurfaceScreen]).
  */
-private enum class Panel { VOICE, SHAPE, MOD, MIDI }
+private enum class Panel { VOICE, SHAPE, MOD, MIDI, FX }
 
 // The keys SURFACE writes into its MAKE bag (`SurfaceScreen`'s `settings`
 // parameter, §3.6): the player's unkeyed work, so leaving to hear a pad
@@ -290,7 +288,7 @@ fun SurfaceScreen(
      * pad. Not Compose state - the vars below stay the live state, seeded
      * from it when the screen composes and written back to it when they
      * change. Keys, all text: `mode` (a [Mode] name, default XY), `panel`
-     * (VOICE / SHAPE / MOD / MIDI, default VOICE), `printToPad` ("true" for → PAD,
+     * (VOICE / SHAPE / MOD / MIDI / FX, default VOICE), `printToPad` ("true" for → PAD,
      * default → TAPE), `bars` (the BARS index into [PrintLength.BARS],
      * default 0 = FREE), and the row picks `grainKnob`, `swarmKnob`,
      * `modSlot`, `modField` (indices, default 0). The kit's own sound is
@@ -362,6 +360,7 @@ fun SurfaceScreen(
     // starting does not withdraw the report and make it again.
     ReportBusy(remember(readingPad) { if (readingPad) Busy(Copy.SURFACE_LOADING_BUSY) else null })
     var kitSettings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    val settingsWrites = remember { SurfaceSettingsWrites() }
     // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
     // separate gesture from SET A..D (which always captures the live
     // touch): arming only picks a target, it never itself changes a
@@ -429,40 +428,23 @@ fun SurfaceScreen(
     // A keyboard's hand on the pad, through MIDI learn (the MIDI panel):
     // learned knobs move the puck, a learned key or pad is the finger
     // down. The rules are `:shell`'s SurfaceMidi and MidiLearn; this side
-    // opens the keyboard with the lifecycle, below, and keeps the bindings
-    // in the app's preferences beside every other screen's.
-    val prefs = remember { context.getSharedPreferences(PREFS, Context.MODE_PRIVATE) }
-    val learn = remember {
-        MidiLearn(MidiLearnStore.of(SurfaceMidi.SCREEN, MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))))
-    }
+    // opens the keyboard with the lifecycle, below; MidiLearnState keeps
+    // the bindings beside every other screen's.
+    val learnState = rememberMidiLearn(SurfaceMidi.SCREEN) { SurfaceMidi.prefer(it) }
+    val learn = learnState.learn
     val hand = remember { SurfaceMidi() }
-    var learnedBindings by remember { mutableStateOf(learn.bindings) }
-    var learnArmed by remember { mutableStateOf<String?>(null) }
-    var lastHeard by remember { mutableStateOf<String?>(null) }
     var midiDevices by remember { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
     var midiSupported by remember { mutableStateOf(false) }
     // A finger on the pad owns the puck; MIDI's moves wait until it lifts.
     var fingerDown by remember { mutableStateOf(false) }
 
-    fun saveLearn() {
-        learnedBindings = learn.bindings
-        val all = MidiLearnStore.read(prefs.getString(MidiLearnStore.PREFS_KEY, null))
-        val merged = MidiLearnStore.replace(all, SurfaceMidi.SCREEN, learn.bindings)
-        prefs.edit().putString(MidiLearnStore.PREFS_KEY, MidiLearnStore.write(merged)).apply()
-    }
-
     val midi = remember { MidiInput(context) }
     val midiListener = remember {
         object : MidiInput.Listener {
             override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {
-                // The live readout is only drawn on the MIDI panel; a knob
-                // sweeping elsewhere must not recompose the screen per message.
-                if (panel == Panel.MIDI) MidiLearn.heard(event)?.let { lastHeard = it }
+                learnState.heard(event)
                 val heard = hand.handle(event, device?.fingerprint?.key, learn)
-                if (heard.learned != null) {
-                    learnArmed = null
-                    saveLearn()
-                }
+                learnState.learned(heard.learned)
                 if (heard.moved && !fingerDown) target = hand.reading(mode)
             }
 
@@ -477,14 +459,8 @@ fun SurfaceScreen(
         }
     }
 
-    // A learn left waiting on another panel would bind the next knob
-    // turned there without the player seeing why.
-    LaunchedEffect(panel) {
-        if (panel != Panel.MIDI) {
-            learn.disarm()
-            learnArmed = null
-        }
-    }
+    // Only the MIDI panel shows the learn; leaving it stops a learn still waiting.
+    LaunchedEffect(panel) { learnState.showing = panel == Panel.MIDI }
 
     fun started(up: Boolean) {
         engineUp = up
@@ -525,6 +501,7 @@ fun SurfaceScreen(
         hand.release()
         hand.followed(Reading.REST, learn)
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
+        engine.panic()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     val audioVoice = remember(engine) { object : AudioVoice { override fun silence() = silenceSurface() } }
@@ -718,18 +695,11 @@ fun SurfaceScreen(
 
     fun persist(dir: File, next: SurfaceStore.Settings) {
         kitSettings = next
+        settingsWrites.stage(dir, next)
         scope.launch {
-            // Write `kitSettings` fresh here, not the `next` this call
-            // captured: two persist() calls close together (a fast PAD3
-            // double-tap, say) each launch their own IO write, and those
-            // can finish in either order - a write of its own captured
-            // value could let an older call's write land on disk after a
-            // newer one's and leave a stale choice there. By the time any
-            // of these coroutines actually runs, every synchronous
-            // `kitSettings = next` above it has already happened, so reading
-            // `kitSettings` here means every one of them writes the same,
-            // latest content - the write order stops mattering.
-            offMain { runCatching { SurfaceStore.save(dir, kitSettings) } }
+            // Each directory keeps its own latest snapshot. A later kit
+            // switch must never write its settings into this directory.
+            offMain { runCatching { settingsWrites.save(dir) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: kitSettings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -1205,6 +1175,26 @@ fun SurfaceScreen(
     val keepGestureNow by rememberUpdatedState({ gesture: Gesture -> keepGesture(gesture) })
     val finishPrintNow by rememberUpdatedState({ finishPrint() })
 
+    val surfaceSettingsReady = entry != null && settingsLoadedFor == entry.dir
+    val surfaceRouteOn = surfaceSettingsReady && kitSettings.aquariumFromKit
+    // Touch painting recomposes every frame; decode/validate saved JSON
+    // only when the sound, tempo or routing choice actually changes.
+    val aquariumRoute = remember(entry?.kit?.aquariumPerformance, entry?.kit?.tempoBpm, surfaceRouteOn) {
+        SurfaceAquarium.route(entry?.kit, surfaceRouteOn)
+    }
+    var aquariumPriorKit by remember { mutableStateOf<File?>(null) }
+    var aquariumWasOn by remember { mutableStateOf(false) }
+    var aquariumFaulted by remember { mutableStateOf(false) }
+    var aquariumPending by remember { mutableStateOf(false) }
+    var aquariumLimited by remember { mutableStateOf(0L) }
+    LaunchedEffect(engine, entry?.dir, surfaceSettingsReady, surfaceRouteOn, aquariumRoute.settings, aquariumRoute.bpm) {
+        val reset = aquariumPriorKit != entry?.dir || (surfaceRouteOn && !aquariumWasOn)
+        engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset)
+        aquariumPriorKit = entry?.dir
+        aquariumWasOn = surfaceRouteOn
+        aquariumPending = engine.hasPendingAquariumControls()
+    }
+
     // Screen-rate loop: read the clock and the room, hand the frame to
     // `SurfaceLoop`, then do what only this side can - poll the engine,
     // mirror state for the rows, paint, send. The arithmetic between
@@ -1216,6 +1206,9 @@ fun SurfaceScreen(
             val now = withFrameNanos { it }
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
+                aquariumFaulted = engine.aquariumFaulted()
+                aquariumPending = engine.hasPendingAquariumControls()
+                aquariumLimited = engine.aquariumLimitedFrames()
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
             val frame = loop.step(
@@ -1464,6 +1457,21 @@ fun SurfaceScreen(
                 }
             }
 
+            if (panel == Panel.FX) {
+                SurfaceAquariumPanel(
+                    route = aquariumRoute, optedIn = surfaceRouteOn,
+                    ready = surfaceSettingsReady, busy = printing || finishing,
+                    streamUp = engineUp, faulted = aquariumFaulted, pending = aquariumPending,
+                    limitedFrames = aquariumLimited, scheme = scheme,
+                    onToggle = {
+                        val dir = entry?.dir
+                        if (dir != null && settingsLoadedFor == dir && !printing && !finishing) {
+                            persist(dir, kitSettings.copy(aquariumFromKit = !kitSettings.aquariumFromKit))
+                        }
+                    },
+                    onReset = { engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset = true) },
+                )
+            }
             if (panel == Panel.SHAPE) {
                 if (mode == Mode.GRAIN) {
                     Spacer(Modifier.height(6.dp))
@@ -1597,62 +1605,13 @@ fun SurfaceScreen(
             if (panel == Panel.MIDI) {
                 Spacer(Modifier.height(6.dp))
 
-                // MIDI learn: tap a target, move a control on the keyboard.
-                // A lit chip is waiting for its control; tapping it again
-                // stops waiting, FORGET drops what the waiting one had.
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    for ((t, chip) in SurfaceMidi.TARGETS) {
-                        ActionButton(
-                            chip,
-                            scheme,
-                            enabled = midiSupported,
-                            dimmed = learnArmed != t,
-                            modifier = Modifier.weight(1f).semantics { selected = learnArmed == t },
-                        ) {
-                            if (learnArmed == t) {
-                                learn.disarm()
-                                learnArmed = null
-                            } else {
-                                learn.arm(t, SurfaceMidi.prefer(t))
-                                learnArmed = t
-                            }
-                        }
-                    }
-                    val armedNow = learnArmed
-                    ActionButton(
-                        "FORGET",
-                        scheme,
-                        enabled = armedNow != null && learnedBindings.any { it.target == armedNow },
-                        modifier = Modifier.weight(1.4f),
-                    ) {
-                        if (armedNow != null) {
-                            learn.forget(armedNow)
-                            learn.disarm()
-                            learnArmed = null
-                            saveLearn()
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(6.dp))
-
-                val armedLabel = SurfaceMidi.TARGETS.firstOrNull { it.first == learnArmed }?.second
-                TapeText(
-                    when {
-                        !midiSupported -> "THIS PHONE HAS NO MIDI"
-                        midiDevices.isEmpty() -> "PLUG IN A KEYBOARD TO LEARN"
-                        armedLabel != null -> "MOVE A CONTROL FOR $armedLabel"
-                        else -> "TAP A TARGET, THEN MOVE A CONTROL"
-                    },
-                    TapeType.pixel,
-                    scheme.ink.tape,
+                MidiLearnPanel(
+                    learnState,
+                    SurfaceMidi.TARGETS,
+                    supported = midiSupported,
+                    connected = midiDevices.isNotEmpty(),
+                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
                 )
-                TapeText("KNOBS MOVE THE PUCK, HOLD SOUNDS IT", TapeType.pixel, scheme.ink.tape)
-                for ((t, chip) in SurfaceMidi.TARGETS) {
-                    val bound = learnedBindings.firstOrNull { it.target == t }
-                    TapeText("$chip  ${bound?.let { MidiLearn.describe(it.source) } ?: "-"}", TapeType.pixel, scheme.amber.tape)
-                }
-                TapeText("LAST  ${lastHeard ?: "-"}", TapeType.pixel, scheme.ink.tape)
             }
 
             if (panel == Panel.MOD) {

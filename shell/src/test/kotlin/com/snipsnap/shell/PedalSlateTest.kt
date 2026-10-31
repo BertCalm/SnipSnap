@@ -221,6 +221,52 @@ class PedalSlateTest {
         assertNull(PedalSlate.boardOf(recipeOf(board(PedalBoard.Pick("driven", 0f), PedalBoard.Pick("wahed", 0.7f))))?.picks?.firstOrNull { it.key == "driven" })
     }
 
+    // ---------- the PEDALS card's chain (2026-10-30-pad-pedalboard-card-design.md) ----------
+
+    @Test
+    fun `the chain draws each side in rack order, because that is the order the sound meets it`() {
+        // SUSTAIN tapped before WAH, both before the amp: the side folds into one chain, which runs the wah
+        // section before the compressor, so the card draws WAH -> SUSTAIN.
+        val tapped = board(PedalBoard.Pick("compressed", 0.7f, PedalSide.PRE), PedalBoard.Pick("wahed", 0.7f, PedalSide.PRE), PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 0.5f))
+        val chain = PedalSlate.chain(recipeOf(tapped), null, aroundTheAmp = true)
+        assertEquals(listOf(PedalSide.PRE, PedalSide.AMP, PedalSide.POST), chain.passes.map { it.side })
+        assertEquals(listOf(listOf("WAH", "SUSTAIN"), listOf("DRIVE"), listOf("DELAY")), chain.passes.map { p -> p.links.map { it.word } })
+        assertEquals("WAH → SUSTAIN → DRIVE → AMP → DELAY", Copy.pedalChain(chain))
+        // And that order is the sound's, not the drawing's: the other tap order renders the same samples.
+        val heard = DrumSynth.snare()
+        val other = board(PedalBoard.Pick("wahed", 0.7f, PedalSide.PRE), PedalBoard.Pick("compressed", 0.7f, PedalSide.PRE), PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 0.5f))
+        assertContentEquals(tapped.process(heard).samples, other.process(heard).samples, "tap order within a side changed the sound")
+    }
+
+    @Test
+    fun `the chain keeps every side as a place, marks the AMT pedal, and names no amp a pad does not have`() {
+        val b = board(PedalBoard.Pick("wahed", 0.7f, PedalSide.POST), PedalBoard.Pick("delayed", 1f))
+        val chain = PedalSlate.chain(recipeOf(b), "wahed", aroundTheAmp = false)
+        assertEquals(listOf(0, 0, 2), chain.passes.map { it.links.size }, "an empty side is still a place on the card")
+        assertEquals(listOf("WAH", "DELAY"), chain.links.map { it.word }, "WAH sits before DELAY in the rack")
+        assertEquals(listOf(true, false), chain.links.map { it.marked })
+        assertEquals(listOf(true, false), chain.links.map { it.canFlip }, "WAH may cross the amp, DELAY may not")
+        assertEquals("WAH → DELAY", Copy.pedalChain(chain), "a pad with no amp of its own names none")
+        // The card shows only what plays: a silenced pick is not a link.
+        val shadowed = board(PedalBoard.Pick("wahed", 0.7f), PedalBoard.Pick("touchwahed", 0.7f))
+        assertEquals(listOf("TOUCH"), PedalSlate.chain(recipeOf(shadowed), null, aroundTheAmp = true).links.map { it.word })
+        val empty = PedalSlate.chain(null, null, aroundTheAmp = true)
+        assertTrue(empty.isEmpty)
+        assertEquals(Copy.PEDALS_NONE, Copy.pedalChain(empty))
+    }
+
+    @Test
+    fun `around the amp reads from a board recipe alone, and asks the file only for a pad with no pedals`() {
+        val wah = board(PedalBoard.Pick("wahed", 0.7f))
+        val jangle = com.snipsnap.synth.MagnetPatch("Jangle", com.snipsnap.synth.MagnetVoice.JANGLE, emptyMap())
+        val landing = com.snipsnap.synth.Magnet.landingChain(com.snipsnap.synth.MagnetVoice.JANGLE)
+        assertEquals(true, PedalSlate.aroundTheAmp(PadRecipe(patch = jangle, fx = landing, pedals = wah).toJsonValue()))
+        assertEquals(false, PedalSlate.aroundTheAmp(recipeOf(wah)), "no patch kept: the pedals went after the amp")
+        assertEquals(false, PedalSlate.aroundTheAmp(PadRecipe(patch = jangle, pedals = wah).toJsonValue()), "no landing chain, no amp to sit in front of")
+        assertNull(PedalSlate.aroundTheAmp(PadRecipe(patch = jangle, fx = landing).toJsonValue()), "no pedals yet: only the file can say")
+        assertNull(PedalSlate.aroundTheAmp(null))
+    }
+
     @Test
     fun `the mark is the last pedal tapped while it is on the pad, else the newest`() {
         val b = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 1f))
@@ -570,6 +616,30 @@ class PedalSlateTest {
         // A full pad that cannot change at all says that, not "tap one off".
         m.update(1) { it.copy(recipe = recipeOf(sixHeard)) }
         assertEquals(PedalSlate.Landed.NotBinned, PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven")))
+    }
+
+    /**
+     * The open question D5 left (docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md):
+     * a pedal pad left alone past the bin's days still changes, because the bin keeps its original.
+     */
+    @Test
+    fun `a pedal pad's next change after the bin's sweep lands, because the bin kept its original`() {
+        val dir = File(temp, "Swept")
+        val m = KitBuilderModel.create("Swept", dir)
+        val snare = DrumSynth.snare()
+        m.assign(1, snare, DrumClass.SNARE)
+        m.assign(2, snare, DrumClass.SNARE)
+        m.save()
+        PedalSlate.land(m, 1, PedalSlate.Gesture.On("driven"))
+        m.save()
+        val swept = KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(0, swept, "the sweep took the pedal pad's original")
+
+        val expected = board(PedalBoard.Pick("driven", 0.7f), PedalBoard.Pick("delayed", 0.7f))
+        assertEquals(PedalSlate.Landed.Applied(expected, stacked = false), PedalSlate.land(m, 1, PedalSlate.Gesture.On("delayed")))
+        m.pedalPad(2, expected)
+        m.save()
+        assertContentEquals(samples(m, dir, 2), samples(m, dir, 1), "DELAY joined DRIVE over the original, not over DRIVE's audio")
     }
 
     @Test

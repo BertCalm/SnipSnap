@@ -2,9 +2,13 @@ package com.snipsnap.app.ui
 
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performTouchInput
@@ -15,10 +19,16 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.PrintLength
 import com.snipsnap.shell.TouchSurface.Mode
+import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.synth.AquariumPerformanceSettings
+import com.snipsnap.synth.AquariumRecipe
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Assert.assertArrayEquals
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
@@ -41,6 +51,35 @@ import java.io.File
  */
 @RunWith(AndroidJUnit4::class)
 class SurfaceScreenTest : ComposeScreenTest() {
+
+    @Test fun the_FX_tab_saves_its_kit_route_and_can_disconnect_it_again() {
+        val source = tempoKit()
+        val sound = AquariumPerformanceSettings(
+            AquariumRecipe(mapOf("aqua_tide_mix" to 1f, "aqua_tide_depth" to 0f)), true, .125f)
+        val entry = source.copy(kit = source.kit.copy(aquariumPerformance = sound.toJsonValue()))
+        val metadata = KitStore.save(entry.kit, entry.dir)
+        val originalMetadata = metadata.readBytes()
+        val originalWave = File(entry.dir, "one.wav").readBytes()
+        try {
+            show(entry)
+            tap("FX")
+            waitFor("surface settings ready") {
+                compose.onNodeWithTag("surface-aquarium-route").fetchSemanticsNode().config
+                    .getOrNull(SemanticsProperties.Disabled) == null
+            }
+            val toggle = compose.onNodeWithTag("surface-aquarium-route")
+            toggle.assertIsNotSelected()
+            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+            waitFor("the routed choice saved") { SurfaceStore.load(entry.dir).aquariumFromKit }
+            toggle.assertIsSelected()
+            toggle.performSemanticsAction(SemanticsActions.OnClick) { assertTrue(it()) }
+            waitFor("the disconnected choice saved") { !SurfaceStore.load(entry.dir).aquariumFromKit }
+            toggle.assertIsNotSelected()
+            assertEquals(sound.toJsonValue(), entry.kit.aquariumPerformance)
+            assertArrayEquals(originalMetadata, metadata.readBytes())
+            assertArrayEquals(originalWave, File(entry.dir, "one.wav").readBytes())
+        } finally { entry.dir.deleteRecursively() }
+    }
 
     private val toasts = mutableListOf<String>()
 

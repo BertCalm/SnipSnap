@@ -289,6 +289,82 @@ object PedalSlate {
         }
     }
 
+    // ---- the board as a chain (docs/superpowers/specs/2026-10-30-pad-pedalboard-card-design.md) ----
+
+    /** One pedal on the drawn chain: a pick the pad carries, where the sound reaches it. */
+    data class Link(
+        val word: String,
+        val key: String,
+        val amount: Float,
+        val side: PedalSide,
+        val marked: Boolean,
+        val sides: List<PedalSide>,
+    ) {
+        /** It may move to the other side of the amp ([Gesture.Flip]). */
+        val canFlip: Boolean get() = sides.size > 1
+    }
+
+    /** One pass of the board: [side]'s pedals in the order the sound meets them. */
+    data class Pass(val side: PedalSide, val links: List<Link>)
+
+    /**
+     * The pad's pedals in the order the sound passes through them: the PRE pass, the AMP pass, then
+     * [aroundTheAmp]'s pad amp when there is one, then the POST pass ([PedalBoard.processAround]). All
+     * three passes are always listed, empty or not, so the card can draw an empty side as a place.
+     */
+    data class Chain(val passes: List<Pass>, val aroundTheAmp: Boolean) {
+        val links: List<Link> get() = passes.flatMap { it.links }
+        val isEmpty: Boolean get() = links.isEmpty()
+    }
+
+    /**
+     * Where a pick sits inside its pass. [PedalBoard.chainFor] folds a side into one chain, and a
+     * chain runs its sections in the rack's fixed order ([FxChain.SECTION_NAMES]), so within a side
+     * the sound meets the pedals in rack order, whatever order they were tapped in. A pedal's place is
+     * its first section ([Pedals.Entry.sections] is in rack order); a tie keeps tap order.
+     */
+    private fun rackPlace(pick: PedalBoard.Pick): Int =
+        pick.entry.sections.firstOrNull()?.let { FxChain.SECTION_NAMES.indexOf(it) } ?: Int.MAX_VALUE
+
+    /**
+     * [recipe]'s [audible] pedals ([boardOf]) as the chain the card draws, with [lastTapped]'s mark
+     * ([marked]). [aroundTheAmp] says whether the pad's own amp sits between the AMP and POST passes:
+     * [KitBuilderModel.pedalsAroundTheAmp] answers it for a pad on disk. An empty chain for a pad
+     * with no pedals.
+     */
+    fun chain(recipe: JsonValue.Obj?, lastTapped: String?, aroundTheAmp: Boolean): Chain {
+        val board = boardOf(recipe)
+        val mark = marked(board, lastTapped)
+        val picks = board?.picks.orEmpty()
+        val passes = listOf(PedalSide.PRE, PedalSide.AMP, PedalSide.POST).map { side ->
+            Pass(
+                side,
+                picks.withIndex()
+                    .filter { it.value.side == side }
+                    .sortedWith(compareBy({ rackPlace(it.value) }, { it.index }))
+                    .map { (_, p) -> Link(p.entry.word, p.key, p.amount, p.side, p.key == mark, p.entry.sides) },
+            )
+        }
+        return Chain(passes, aroundTheAmp)
+    }
+
+    /**
+     * Whether [recipe]'s pedals were rendered in front of the pad's own amp, read from the recipe
+     * alone: [KitBuilderModel.pedalPad] keeps the patch beside the board only when it rendered the
+     * board around the patch's landing chain, and that chain plays only when it is not a bypass.
+     * Null when the recipe carries no board: where the next pedal goes then depends on whether the
+     * file is still the patch's render, which only [KitBuilderModel.pedalsAroundTheAmp] can check.
+     */
+    fun aroundTheAmp(recipe: JsonValue.Obj?): Boolean? {
+        if (PadSheet.readPedals(recipe) == null) return null
+        val parsed = try {
+            PadRecipe.fromJsonValue(recipe!!)
+        } catch (_: Exception) {
+            return false
+        }
+        return parsed.patch != null && parsed.fx?.isBypass == false
+    }
+
     // ---- gestures ----
 
     /**
@@ -411,9 +487,11 @@ object PedalSlate {
         object GhostsPostdate : Landed
 
         /**
-         * The pad carries pedals and the bin holds no earlier take of it (the bin keeps a take 30 days
-         * after it went in, then lets it go): the board re-renders whole from the original, so
-         * changing it would play every pedal already in the audio twice. Nothing was touched.
+         * The pad carries pedals and the bin holds no earlier take of it (the bin keeps a pad's
+         * original for as long as the pad needs it, so this is, for example, a bin emptied by hand,
+         * BACK on the pad's kept row in THE BIN, or a recipe that came from another pad): the board
+         * re-renders whole from the original, so changing it would play every pedal already in the
+         * audio twice. Nothing was touched.
          */
         object NotBinned : Landed
     }

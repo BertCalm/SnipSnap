@@ -67,11 +67,11 @@ class SpreadTest {
     fun `Caustic spreads use the authored note instead of a dominant detected partial`() {
         val misleading = tone(220.0)
         assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
-        for (midi in listOf(36, 60, 84)) for (body in listOf(0f, .5f, 1f)) {
-            val patch = CausticPatch("Saved root", CausticVoice.ALLOY,
+        for (voice in CausticVoice.entries) for (midi in listOf(36, 60, 84)) for (body in listOf(0f, .5f, 1f)) {
+            val patch = CausticPatch("Saved root", voice,
                 mapOf("SOURCE" to .7f, "FOCUS" to .85f, "BODY" to body, "LENGTH" to .1f),
                 midi = midi, velocity = .35f, model = 1)
-            assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "BODY $body must retain MIDI $midi")
+            assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "$voice BODY $body must retain MIDI $midi")
         }
     }
 

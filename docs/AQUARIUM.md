@@ -1,6 +1,6 @@
 # Aquarium
 
-Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; the PERFORMANCE panel and remaining mixers are later work.
+Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; KIT PERFORMANCE controls and a qualified SURFACE route now connect live playback and stereo printing; other mixers remain later work.
 
 The offline bridge was developed against SnipSnap `b429ec2c4bc89d225ac476af234c1a88a46fb07d`; the PAD panel builds on `fd76ffa382c1bf94d6a82e5a9484e6cd4140e91c`. The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md) and [staged plan](superpowers/plans/2026-10-18-aquarium-foundation.md) explain the larger feature. The owner's positive October 18 listening verdict covers the underlying audition. No new listening verdict is claimed for these host policies.
 
@@ -32,7 +32,15 @@ Changes audition immediately. **SAVE TO KIT** stores the full versioned settings
 
 Old kits open dry without a write. Unknown/damaged live metadata is preserved during ordinary kit edits, shown as unreadable, and played dry until the owner explicitly saves a replacement. `:kit` stores this optional JSON opaquely, while `:shell` validates it using the synth codec; this avoids a circular dependency.
 
-This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SPLIT, ORBIT transport/audition, SURFACE, instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
+This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE can explicitly opt into these saved settings on its own independent stereo bus. SPLIT, ORBIT transport/audition, instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
+
+## SURFACE → FX
+
+**USE KIT FX** opts this kit's SURFACE into its saved KIT → PERFORMANCE sound and tempo. The choice is stored in surface.json and defaults off for old kits. Global bypass and unreadable-settings fallback are respected. This is SURFACE's own processor/history, not a shared audio master with the beat. An unused route does not clock a hidden wet core.
+
+The existing mono source/legacy chain feeds Aquarium in stereo. Normal finger release and source changes keep effect history running; focus/background release requests a priority panic and waits for fresh touch frames to resume. Stream preparation/recovery uses the actual device rate. Default dry floating overs remain unchanged; the opted-in wet branch uses Aquarium's accepted input clamp and linked sample-peak protection.
+
+Every SURFACE PRINT now keeps both output channels, including dual-mono dry output. TAPE/PAD receive stereo; a wet print is baked audio, and playing it through KIT FX applies the effect again. The FX tab states this. A minute of 48 kHz stereo print reserves 23.04 MB of floats before recording. No offline tail/fade or replayable PAD wrapper is implied. See the [route and capture contract](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md).
 
 ## Finite render contract
 
@@ -82,7 +90,7 @@ MPC 2 and MPC 3 exports carry the printed stereo WAVs and normal pad/layer metad
 - **Heard:** the earlier six-effect audition was accepted. This code does not establish a new listening result.
 - **Panel tests supplied:** all presets and controls, physical-unit accessibility, narrow layout and action states, real JNI preview/KEEP across different-rate velocity layers, saved context, remove/undo, stale-preview cancellation and failure refusal. JVM and emulator execution results belong in the change's validation report and CI checks.
 - **Performance checks supplied:** native continuous-clock and exact dry tests, stereo post-mix/PRINT equality, bounded transitions and queue behavior, linked protection, panic/restart/rate behavior, callback allocation interception, strict settings serialization and real Android live-control/print tests. Execution results belong in the current PR and CI checks.
-- **Later:** remaining continuous mixer/bounce routes, the PERFORMANCE panel and persistence, phone CPU/latency/power measurements, and hardware MPC acceptance.
+- **Later:** remaining continuous mixer/bounce routes, phone CPU/latency/power measurements, and hardware MPC acceptance.
 
 Biolume retains its feedforward harmonic path and pitch-ring seams; Reef retains its 5000-sample delay ceiling; Fathom retains its complementary one-pole crossovers. The native [README](../app/src/main/cpp/aquarium/README.md) records the accepted model and its limits.
 

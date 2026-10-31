@@ -340,6 +340,7 @@ class AquariumPanelTest : ComposeScreenTest() {
             if (screenVisible) PadSheetScreen(
                 entry = fixture.entry,
                 slot = currentSlot,
+                backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
                 onBack = {}, onToast = {}, onNavigateTape = {}, onGrainField = {}, onSplice = {}, onStack = {},
                 onKitUpdated = { updated = it }, onShelfAssetWritten = {}, appScope = appScope,

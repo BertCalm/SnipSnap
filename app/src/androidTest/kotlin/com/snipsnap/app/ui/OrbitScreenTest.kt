@@ -45,6 +45,7 @@ class OrbitScreenTest : ComposeScreenTest() {
     // Written by the screen on the main thread, read by the test's own.
     private val toasts = CopyOnWriteArrayList<String>()
     private val groovesWritten = AtomicInteger(0)
+    private val backs = AtomicInteger(0)
 
     @After
     fun cleanUp() {
@@ -80,7 +81,8 @@ class OrbitScreenTest : ComposeScreenTest() {
             OrbitScreen(
                 entry = entry,
                 kitsRoot = entry.dir.parentFile!!,
-                onBack = {},
+                backLabel = "◄ BEAT",
+                onBack = { backs.incrementAndGet() },
                 onToast = { toasts += it },
                 onGrooveWritten = { groovesWritten.incrementAndGet() },
             )
@@ -135,6 +137,17 @@ class OrbitScreenTest : ComposeScreenTest() {
         invokeClick("STOP")
         waitFor("PLAY back") { present("PLAY") }
         assertTrue("nothing went wrong playing: $toasts", toasts.isEmpty())
+    }
+
+    @Test
+    fun the_back_chip_is_spoken_from_the_label_it_is_given_and_closes_the_screen() {
+        show(kit())
+        // `show` passes "◄ BEAT": the chip's words come from the model's `backChip`, and
+        // its spoken name from `spokenBack` of them, not from a name kept in this screen.
+        assertTrue("the chip for \"◄ BEAT\" is spoken as BACK TO BEAT", present("BACK TO BEAT"))
+        assertTrue("and no longer names the GROOVE tab it used to say", !present("BACK TO GROOVE"))
+        invokeClick("BACK TO BEAT")
+        assertEquals("one tap on the chip closes the screen once", 1, backs.get())
     }
 
     @Test

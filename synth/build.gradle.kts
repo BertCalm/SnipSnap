@@ -2,6 +2,47 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateLibrationMusicalBank") {
+    group = "distribution"
+    description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationMusicalGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("librationMusicalOutput").orNull ?: "${rootDir}/testkit/libration-musical")
+}
+
+/** Finite first-listen proof, including actual trajectories and causal audio comparisons. */
+tasks.register<JavaExec>("generateLibrationAudition") {
+    group = "distribution"
+    description = "Render Libration's three dry voices, controlled comparisons, recipes and measured diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("librationOutput").orNull ?: "${rootDir}/testkit/libration-audition")
+}
+
+tasks.register<JavaExec>("replayLibrationAudition") {
+    group = "verification"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LibrationAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args("--replay", providers.gradleProperty("librationRecipe").orNull ?: "",
+        providers.gradleProperty("librationReplayOutput").orNull ?: "${rootDir}/testkit/libration-replay.wav")
+}
+
+tasks.register<JavaExec>("generateTrefoilPlayableBank") {
+    group = "distribution"
+    description = "Render twelve Trefoil presets, three native velocity layers, sixteen MPC pads and two musical performances."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilPlayableBankGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("trefoilBankOutput").orNull ?: "${rootDir}/testkit/trefoil-playable-bank")
+}
+
 /** Port the approved passive handoff and compare actual Kotlin exports with its retained references. */
 tasks.register<JavaExec>("generateFerryAudition") {
     group = "distribution"
@@ -71,6 +112,17 @@ tasks.register<JavaExec>("generateCairnAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("cairnOutput").orNull ?: "${rootDir}/testkit/cairn-reconstruction")
     if (providers.gradleProperty("cairnColdOnly").orNull == "true") args("--cold-only")
+}
+
+/** The current wind-duet handoff beside a slightly longer overlap. */
+tasks.register<JavaExec>("generateObbligatoMoreOverlapAudition") {
+    group = "distribution"
+    description = "Compare current and slightly longer OBBLIGATO overlaps, melodies and actual player taps."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ObbligatoMoreOverlapAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("obbligatoMoreOverlapOutput").orNull ?: "${rootDir}/testkit/obbligato-more-overlap-audition")
 }
 
 /** A focused comparison of previous and overlapping duet handoffs. */
@@ -254,6 +306,23 @@ tasks.register<JavaExec>("generateOhmExpandedAudition") {
             providers.gradleProperty("ohmExpandedReplayMode").orNull ?: "matched")
     } else {
         args(providers.gradleProperty("ohmExpandedOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-audition")
+    }
+}
+
+/** Three focused model-4 additions with complete, byte-pinned model-2 depth references. */
+tasks.register<JavaExec>("generateOhmRefinementAudition") {
+    group = "distribution"
+    description = "Render three OHM shared-depth comparisons, exact reference notes and portable replay evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OhmRefinementAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    val replay = providers.gradleProperty("ohmRefinementReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("ohmRefinementReplayOutput").get(),
+            providers.gradleProperty("ohmRefinementReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("ohmRefinementOutput").orNull ?: "${rootDir}/testkit/ohm-refinement-audition")
     }
 }
 
@@ -782,6 +851,9 @@ repositories {
 }
 
 dependencies {
+    // Versioned eighth-order 8(5,3) integrator and dense output for TREFOIL's
+    // offline Newtonian trajectory. Apache-2.0; never runs on the audio clock.
+    implementation("org.apache.commons:commons-math3:3.6.1")
     implementation(project(":audio"))
     implementation(project(":json"))
     // The factory kit builders hand ArrangedPads (audio + class + recipe)
@@ -792,6 +864,22 @@ dependencies {
     testImplementation(project(":xpm"))
     // The MPC 3 generators write native tracks with embedded groove clips.
     testImplementation(project(":mpc3"))
+}
+
+tasks.register<JavaExec>("generateTrefoilAudition") {
+    group = "distribution"
+    description = "Render finite TREFOIL studies, causal comparisons, trajectories and replayable recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.TrefoilAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    val replay = providers.gradleProperty("trefoilReplay").orNull
+    if (replay != null) {
+        args("--replay", replay, providers.gradleProperty("trefoilReplayWav").get(),
+            providers.gradleProperty("trefoilReplayMode").orNull ?: "matched")
+    } else {
+        args(providers.gradleProperty("trefoilOutput").orNull ?: "${rootDir}/testkit/trefoil-model-two-audition")
+    }
 }
 
 // The native processor and the JVM recipe reader share one canonical registry.
@@ -1368,14 +1456,24 @@ tasks.register<JavaExec>("generateThawAudition") {
     (project.findProperty("thawSections") as String?)?.let { args("--sections=$it") }
 }
 
-/** Render SCOUR's R1.1 listen (phrases, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
+/** Render SCOUR's R2 listen (the impact into a drop, raw and matched WAVs, manifest, page) under testkit/scour-audition/. */
 tasks.register<JavaExec>("generateScourAudition") {
     group = "distribution"
-    description = "Render SCOUR's phrases, PLATE beside PANE, the RING settings, the SHOT x HARDEN gate, sweeps and edges with a listening page under testkit/scour-audition/."
+    description = "Render SCOUR's kit bank B, its three voices into a drop at 120 and 90 BPM, each build alone, the voices side by side, and SHEET's sweeps and edges with a listening page under testkit/scour-audition/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ScourAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/scour-audition")
+}
+
+/** Export SCOUR's thirty-two dry pads over two banks (builds at 120 and 90 BPM, then the presets; bank B is SHEET's) to testkit/SnipSnap Scour Kit/. */
+tasks.register<JavaExec>("generateScourKit") {
+    group = "distribution"
+    description = "Export SCOUR's two banks (builds cut for 120 and 90 BPM, its twelve presets and SHEET's low hits) as an MPC kit under testkit/SnipSnap Scour Kit/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ScourKitGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit")
 }
 
 /** Render SUTURE's raw/matched mechanical and listening evidence locally. */
@@ -1489,6 +1587,16 @@ tasks.register<JavaExec>("generateValveAudition") {
     mainClass.set("com.snipsnap.synth.ValveAuditionGenerator")
     workingDir = projectDir
     args("${rootDir}/testkit/valve-audition")
+}
+
+/** Render ROOM's listening gate (the real section across SIZE, WALLS and DISTANCE, manifest, page) under testkit/room-audition/. See RoomAuditionGenerator. */
+tasks.register<JavaExec>("generateRoomAudition") {
+    group = "distribution"
+    description = "Render ROOM's listening gate clips, manifest and page under testkit/room-audition/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RoomAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/room-audition", "${rootDir}")
 }
 
 /** Render FORGE's DEPTH gate (YIELD 0.25 against DEPTH, DEPTH's in-between values, manifest, page) under testkit/forge-depth-audition/. See ForgeDepthAuditionGenerator. */
@@ -2174,6 +2282,17 @@ tasks.register<JavaExec>("generateCausticInstrumentAudition") {
     workingDir = projectDir
     maxHeapSize = "1g"
     args(providers.gradleProperty("causticInstrumentOutput").orNull ?: "${rootDir}/testkit/caustic-instrument-audition")
+}
+
+/** Four permanent native voices, kept separate from the preserved listening studies. */
+tasks.register<JavaExec>("generateCausticCharactersAudition") {
+    group = "distribution"
+    description = "Render CAUSTIC's four native voices, focused control comparisons and portable patch/WAV packs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.CausticCharactersAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("causticCharactersOutput").orNull ?: "${rootDir}/testkit/caustic-native-voices-audition")
 }
 
 tasks.register<JavaExec>("generateCausticKit") {

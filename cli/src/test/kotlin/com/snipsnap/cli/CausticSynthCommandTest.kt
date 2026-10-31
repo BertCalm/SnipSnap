@@ -19,6 +19,28 @@ import kotlin.test.assertTrue
 
 class CausticSynthCommandTest {
     @Test
+    fun `each character voice replays its own saved note and accepts native control overrides`() {
+        val root = createTempDirectory("caustic-cli-voices").toFile()
+        try {
+            for (voice in CausticVoice.entries.filter { it != CausticVoice.ALLOY }) {
+                assertEquals(1, Presets.forVoice("CAUSTIC", voice.name).size)
+                val patch = CausticPatch("SAVED DIRECTION", voice,
+                    mapOf("SOURCE" to .62f, "LENGTH" to 0f), midi = 55, velocity = .43f, model = 1)
+                val recipe = File(root, "${voice.name}.json").also { it.writeText(patch.toJsonText()) }
+                val destination = File(root, voice.name)
+                val errors = ByteArrayOutputStream()
+                assertEquals(0, Cli.run(arrayOf("synth", "caustic", voice.name.lowercase(),
+                    "--patch", recipe.path, "--midi", "67", "--velocity", ".29", "--model", "1",
+                    "--macros", "BODY=.64,FOCUS=.31", "--out", destination.path),
+                    PrintStream(ByteArrayOutputStream()), PrintStream(errors)), errors.toString())
+                val expected = patch.copy(midi = 67, velocity = .29f,
+                    macros = patch.macros + mapOf("BODY" to .64f, "FOCUS" to .31f))
+                assertContentEquals(wav(expected.render()), onlyWav(destination).readBytes(), voice.name)
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
     fun `native Alloy presets render as finite dry notes without changing their saved sound`() {
         val root = createTempDirectory("caustic-cli-presets").toFile()
         try {

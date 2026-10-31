@@ -48,27 +48,31 @@ object CausticKitGenerator {
             check(!findings.blocked()) { "CAUSTIC kit read-back failed: ${findings.joinToString { it.message }}" }
             File(staging, "read-back.txt").writeText(findings.joinToString("\n") { "${it.severity}: ${it.message}" } + "\n")
             File(staging, "pads.tsv").writeText(buildString {
-                append("pad\tname\tmidi\tvelocity\tmodel\tSOURCE\tFOCUS\tBODY\tLENGTH\tHOLD\tsample\n")
+                append("pad\tname\tvoice\tmidi\tvelocity\tmodel\tSOURCE\tFOCUS\tBODY\tLENGTH\tHOLD\tsample\n")
                 for (pad in kit.pads.sortedBy { it.slot }) {
                     val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
                     val patch = recipe.patch as? CausticPatch ?: error("CAUSTIC pad lost its native patch")
                     check(recipe.fx == null && recipe.board == null && patch.macros.getValue("HOLD") == 0f)
-                    append("${PadNoteMap.labelForPad(pad.slot)}\t${patch.name}\t${patch.midi}\t${patch.velocity}\t${patch.model}")
+                    append("${PadNoteMap.labelForPad(pad.slot)}\t${patch.name}\t${patch.voice.name}\t${patch.midi}\t${patch.velocity}\t${patch.model}")
                     for (macro in listOf("SOURCE", "FOCUS", "BODY", "LENGTH", "HOLD")) append("\t${patch.macros.getValue(macro)}")
                     append("\t${pad.sampleFile}\n")
                 }
             })
             File(staging, "README.txt").writeText("""
-                CAUSTIC / ALLOY native finite-note starter
+                CAUSTIC / Four native finite-note voices
 
                 Sixteen dry one-shot pads from the native CausticPatch renderer.
                 A01-A08 climb C minor pentatonic from C3 with Fuller Body.
-                A09-A16 contain all eight starting patches. New positions await listening.
+                A09-A10 keep Fuller Body and Preferred Alloy.
+                A11-A13 introduce Hollow Mallet, Rubbed Ring and Travelling Catches.
+                A14-A16 keep Sparse Alloy, Short Glint and Low Vessel.
+                The three new directions were chosen from the character study;
+                these native ports and new control positions remain for listening.
 
                 MPC 3: copy this folder intact and load SnipSnap Caustic Kit.xtd.
                 MPC 2: open the TrackData folder and load SnipSnap Caustic Kit.xpm.
                 The same folder contains kit.json with every editable native patch and its WAV.
-                pads.tsv records requested note, velocity, model and all five controls.
+                pads.tsv records voice, requested note, velocity, model and all five controls.
 
                 HOLD is reserved at zero. These are finite notes, with no seamless loops or
                 velocity-layer switching. MPC playback velocity changes sample level.

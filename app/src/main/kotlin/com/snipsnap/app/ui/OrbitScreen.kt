@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -162,6 +163,12 @@ import kotlin.math.sin
 fun OrbitScreen(
     entry: KitShelf.Entry,
     kitsRoot: File,
+    /**
+     * The back chip's words: `Navigation.backChip`. ORBIT opens over BEAT from
+     * GROOVE and over SNAP from its PATH and CHORD, so the chip names whichever
+     * of them [onBack] lands on, and the screen reader says BACK TO that.
+     */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     /**
@@ -1095,6 +1102,7 @@ fun OrbitScreen(
             preparing = preparing,
             frame = frame,
             setPanelOpen = setPanelOpen,
+            backLabel = backLabel,
             onBack = onBack,
             onStopPlayback = { stopPlayback() },
             onStartPlayback = { startPlayback() },
@@ -2113,6 +2121,7 @@ private fun OrbitHeaderRow(
     preparing: Boolean,
     frame: Long,
     setPanelOpen: Boolean,
+    backLabel: String,
     onBack: () -> Unit,
     onStopPlayback: () -> Unit,
     onStartPlayback: () -> Unit,
@@ -2124,7 +2133,7 @@ private fun OrbitHeaderRow(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            HeaderChip("◄ GRV", scheme, Modifier.width(56.dp), description = "BACK TO GROOVE") { onStopPlayback(); onBack() }
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 56.dp), description = spokenBack(backLabel)) { onStopPlayback(); onBack() }
             // The transport lives in the header so it never scrolls away
             // under a tall strip: PLAY is the first thing this screen is for.
             HeaderChip(

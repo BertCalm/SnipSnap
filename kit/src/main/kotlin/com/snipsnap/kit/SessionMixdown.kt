@@ -1,6 +1,7 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.audio.SongBus
 import com.snipsnap.mpc3.Mpc3Clip
 import java.io.File
 
@@ -8,12 +9,10 @@ import java.io.File
  * The whole session as one WAV — every kit's groove rendered by
  * [KitPreview] at the session tempo and summed: the demo beside every
  * `.xpj`, and the "share the beat, not just the kit" story. Deterministic
- * like everything else in the render path.
+ * like everything else in the render path. The sum shares [SongBus.PEAK]
+ * with [KitPreview], so a mix must never clip harshly.
  */
 object SessionMixdown {
-
-    /** The shared ceiling with [KitPreview] — a mix must never clip harshly. */
-    const val PEAK = 0.95f
 
     /**
      * A [Project]'s mixdown: the beat's first pattern on the active kit,
@@ -53,15 +52,7 @@ object SessionMixdown {
         for (r in renders) {
             for (i in r.samples.indices) out[i] += r.samples[i]
         }
-        var peak = 0f
-        for (s in out) {
-            val a = if (s < 0) -s else s
-            if (a > peak) peak = a
-        }
-        if (peak > PEAK) {
-            val k = PEAK / peak
-            for (i in out.indices) out[i] *= k
-        }
+        SongBus.ceiling(out)
         return Snip(out, 2, KitPreview.RATE)
     }
 }
