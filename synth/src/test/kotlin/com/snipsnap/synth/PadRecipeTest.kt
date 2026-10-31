@@ -80,6 +80,7 @@ class PadRecipeTest {
         FerryPatch("Passage Test", macros = mapOf("HANDOFF" to .7f), midi = 43, velocity = .6f, seed = Long.MIN_VALUE),
         // CHAMBER also exercises a saved note, velocity and exact seed beyond its factory defaults.
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
+        LibrationPatch("Gather Test", LibrationVoice.GATHER, mapOf("SWARM" to .4f), midi = 55, velocity = .6f),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),
             midi = 57, velocity = .6f, seed = -7, gesture = OhmGesture.GATHER),
