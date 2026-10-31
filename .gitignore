@@ -347,6 +347,7 @@ testkit/SnipSnap-Flock-Kit.zip.sha256
 
 # WICK's listening audio, diagnostic evidence and MPC/source kit are regenerated.
 testkit/wick-audition/
+testkit/wick-source-study/
 testkit/.wick-work/
 testkit/SnipSnap Wick Prototype Kit/
 testkit/SnipSnap-Wick-Prototype-Kit.zip
