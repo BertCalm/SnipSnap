@@ -4,9 +4,12 @@ import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.DrumSynth
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.json.JsonValue
+import com.snipsnap.synth.PadRecipe
+import com.snipsnap.synth.StrikeFxBank
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -63,6 +66,33 @@ class RecipeReplayTest {
         )
         assertIs<RecipeReplay.Plan.Refused>(room)
         assertTrue("FUNK ROOM" in room.reason, room.reason)
+    }
+
+    @Test
+    fun `a strike fx bank plans as StrikeFx, not as a patch and not refused`() {
+        val recipe = PadRecipe(layers = StrikeFxBank.layers(0.3f, 0.6f)).toJsonValue() as JsonValue.Obj
+        assertEquals(RecipeReplay.Plan.StrikeFx(0.3f, 0.6f), RecipeReplay.plan(recipe))
+        val p = twins("PlanPatch")
+        p.desamplePad(1, evenIfFar = true)
+        val somePatch = PadRecipe.fromJsonValue(p.pad(1)!!.recipe!!).patch!!
+        val withPatch = PadRecipe(patch = somePatch, layers = StrikeFxBank.layers(0.3f, 0.6f)).toJsonValue() as JsonValue.Obj
+        assertEquals(RecipeReplay.Plan.StrikeFx(0.3f, 0.6f), RecipeReplay.plan(withPatch))
+    }
+
+    @Test
+    fun `applying a strike fx plan banks the target pad from its own sample`() {
+        val m = KitBuilderModel.create("Fx", File(temp, "Fx"))
+        m.assign(1, DrumSynth.snare(), DrumClass.SNARE)
+        m.assign(2, DrumSynth.kick(), DrumClass.KICK)
+        val original2 = bytes(m, 2)
+        m.strikeFxLayers(1, 0.3f, 0.6f)
+        val done = RecipeReplay.apply(m, 2, m.pad(1)!!.recipe!!, "KICK 02")
+        val pad2 = m.pad(2)!!
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), pad2.velocityLayers.map { it.displayName })
+        assertContentEquals(original2, File(m.kitDir, pad2.velocityLayers[0].sampleFile).readBytes())
+        assertEquals(done.pad.velocityLayers, pad2.velocityLayers)
+        assertEquals(Copy.STRIKE_FX_ON, done.toast)
+        assertEquals(0.3f, StrikeFxBank.roomOf(PadRecipe.fromJsonValue(pad2.recipe!!)))
     }
 
     @Test
