@@ -253,3 +253,41 @@ Why it is built this way:
 - One renderer and one support predicate keep the sheet and exported instrument aligned.
 - Three roots and one captured velocity keep this extension small enough to audition directly.
 - Existing program release makes note-off behavior editable without changing the saved source.
+
+## Three sampled touch strengths, 2026-10-31
+
+THREAD, PULSE and CURL can now build three source captures at each of their
+C3/C4/C5 roots. Strengths 0.35/0.65/1 multiply the saved velocity and INJECT;
+the other timbral controls, bend profile and seed stay authored. HOLD drives the
+existing held network, whose real onset and converged loop remain independent
+for each capture. The hard strength is the original single-layer instrument.
+No synthesis-model version, approved factory recipe or ordinary-render arithmetic
+is changed. These are version-1 instrument captures, separate from saved models.
+
+Native velocity alone made only a small normalized spectral change in the first
+THREAD probe. Coupling it to the existing INJECT parameter also changes source
+upper partials and launch allocation. The focused Kotlin matrix now records
+gain-independent power-spectrum distances of 0.0335–0.0970 across its three
+voices and adjacent touches. The exact fixtures and limits live in FILAMENT.md;
+the owner's listening judgment remains open.
+
+Layers occupy MIDI velocity windows 1–42, 43–84 and 85–127. Each removes only
+its known velocity^.72 output level before the existing host's note gain. There
+is no per-layer loudness matching, new normalization or external effect. The
+delivery recipe records all nine derived held-key patches, capture version,
+velocity windows and release beside the original unchanged source patch.
+
+The phone enables TOUCH LAYERS by default and retains an OFF option. MAKE and
+PREVIEW render off the playback thread, serially and with cancellation. A
+three-layer program costs about three times the time and storage. The family
+audition task can package all 27 source samples and exported-file performances
+without replacing the historical single-layer handoff. Wider zoning, new voices
+and independent halo release remain outside this round. Physical phone/MPC
+acceptance and listening approval remain open.
+
+Why it is built this way:
+
+- Softer excitation changes the existing instrument's gesture through its own controls.
+- The hard anchor and single-layer option preserve the accepted material.
+- Each strength keeps its own real onset and converged sustain rather than borrowing a hard loop.
+- Versioned delivery metadata explains the derived captures without changing saved patch JSON.

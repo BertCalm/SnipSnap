@@ -9,6 +9,10 @@ testkit/filament-thread-keys/
 testkit/filament-pulse-keys/
 testkit/filament-curl-keys/
 testkit/filament-held-keys/
+testkit/filament-thread-touch-keys/
+testkit/filament-pulse-touch-keys/
+testkit/filament-curl-touch-keys/
+testkit/filament-held-touch-keys/
 testkit/crease-audition/
 testkit/crease-audition-r2/
 testkit/crease-keys-audition/
