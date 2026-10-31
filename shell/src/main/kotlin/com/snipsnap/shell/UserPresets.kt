@@ -34,6 +34,7 @@ import com.snipsnap.synth.OspreyPatch
 import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.SpoolPatch
@@ -429,6 +430,10 @@ object UserPresets {
      * Kotlin string literals.
      */
     fun rosterLine(patch: Patch): String {
+        if (patch is OtisPatch) {
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "OtisPatch.fromJsonText($recipe),"
+        }
         if (patch is ApsisPatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ApsisPatch.fromJsonText($recipe),"

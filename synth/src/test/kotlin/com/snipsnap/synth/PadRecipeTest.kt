@@ -35,6 +35,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        OtisPresets.forVoice(OtisVoice.SQUEEZE).first { it.name == "SHARED KEYS" }.copy(name = "Otis replay", midi = 57, velocity = .6f, seed = -31),
         CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
         SkinPatch("Room Kick Test", SkinVoice.KICK, mapOf("TUNE" to 0.3f)),

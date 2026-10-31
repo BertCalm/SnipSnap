@@ -2669,3 +2669,18 @@ The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-ex
 records implementation, cost, verification and the new listening gate. Owner
 acceptance of the expression curve and physical MPC playback remain listening
 and hardware checks.
+
+
+## Otis finite collection integration (2026-10-31)
+
+The owner accepted the organ baseline, stronger Steam, the harmonica direction with
+chord auditions, and Squeeze's restored Shared chord motion. The production OTIS
+collection retains those four source identities as sixteen editable finite scores.
+Registration covers Patches, Presets, native velocity, the synth picker/catalog,
+MAKE navigation drafts, CLI replay/overrides, StarterKits and a sixteen-pad MPC bank.
+The source references and published PCM fixtures remain independent tests.
+
+LENGTH scales a finite performance; this landing does not add periodic HOLD or a
+held-keyboard export. Shared pressure applies within the saved score. Independent
+MPC pads cannot share an offline renderer's state. Cold render cost, cache behavior,
+Android compilation and remaining device validation are recorded in [OTIS.md](OTIS.md).

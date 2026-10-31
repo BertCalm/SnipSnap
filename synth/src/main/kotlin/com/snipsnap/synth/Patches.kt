@@ -43,6 +43,7 @@ object Patches {
     fun fromJsonValue(value: JsonValue): Patch {
         val engine = value.obj()["engine"]?.str() ?: throw JsonException("patch has no engine")
         return when (engine) {
+            OtisPatch.ENGINE -> OtisPatch.fromJsonValue(value)
             LibrationPatch.ENGINE -> LibrationPatch.fromJsonValue(value)
             TrefoilPatch.ENGINE -> TrefoilPatch.fromJsonValue(value)
             FerryPatch.ENGINE -> FerryPatch.fromJsonValue(value)

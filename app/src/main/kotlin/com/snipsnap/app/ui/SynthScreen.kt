@@ -148,6 +148,9 @@ import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Otis
+import com.snipsnap.synth.OtisPatch
+import com.snipsnap.synth.OtisVoice
 import com.snipsnap.synth.Patches
 import com.snipsnap.synth.ScannedChain
 import com.snipsnap.synth.ScannedChainPatch
@@ -776,7 +779,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE) {
+                    val nativeFactory = if (e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.OTIS) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -790,6 +793,7 @@ fun SynthScreen(
                         ?: if (e == Engine.FILAMENT) seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
+                        else if (e == Engine.OTIS) seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
@@ -943,9 +947,9 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
+        // OTIS, FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        if (patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1007,6 +1011,12 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.OTIS) {
+            val current = loadedPatchesByVoice[engine to voice] as? OtisPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: OtisPatch(name, voice as OtisVoice, controls)
+        }
         if (engine == Engine.ORIGAMI) {
             // Expression, gesture and pitch events can share a frame. Preserve
             // the newest complete recipe instead of the last composed snapshot.
@@ -1179,6 +1189,8 @@ fun SynthScreen(
         // that edited recipe so onDispose can flush it before navigation.
         if (pair !in loadedPatchesByVoice) {
             when (engine) {
+                Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
+                    engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
                     engine.patchDisplayName(voice), voice as FilamentVoice, macrosByVoice.getValue(pair),
                 )
@@ -1747,10 +1759,15 @@ fun SynthScreen(
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
-                val cls = if (patch is OhmPatch) Ohm.drumClassFor(patch) else engine.drumClass(voice, macros)
+                val cls = when (patch) {
+                    is OtisPatch -> Otis.drumClassFor(patch)
+                    is OhmPatch -> Ohm.drumClassFor(patch)
+                    else -> engine.drumClass(voice, macros)
+                }
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is OtisPatch -> Otis.midiFor(patch)
                     is LibrationPatch -> patch.midi
                     is TrefoilPatch -> patch.midi
                     is ApsisPatch -> patch.midi
@@ -2285,6 +2302,7 @@ fun SynthScreen(
                     // Authored roots survive chords, octave layers and upper
                     // shimmer that can outweigh the fundamental in detection.
                     val midi = when (patch) {
+                        is OtisPatch -> Otis.midiFor(patch).toFloat()
                         is OrphicaPatch -> Orphica.configWithMacros(patch.config, patch.macros).midi.toFloat()
                         else -> Spread.detect(rendered, patch)
                     }
@@ -3964,6 +3982,10 @@ private fun macroReadout(
     registersRoot: Int?,
     shoalHoldSupported: Boolean,
 ): String? = when {
+    engine == Engine.OTIS && name == "TUNE" -> Scales.nameOf(Otis.midiFor(
+        (loadedPatch as? OtisPatch ?: OtisPatch("Otis", voice as OtisVoice)).withMacros(macros)))
+    engine == Engine.OTIS && name == "LENGTH" -> "%.2f s".format(Locale.ROOT, Otis.gestureSeconds(
+        (loadedPatch as? OtisPatch ?: OtisPatch("Otis", voice as OtisVoice)).withMacros(macros)))
     engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && name == "TUNE" ->
         Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
@@ -4991,7 +5013,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5011,6 +5033,7 @@ private enum class Engine {
         PLUCK -> PluckVoice.entries
         ORPHICA -> OrphicaMaterial.entries
         TONEWHEEL -> TonewheelVoice.entries
+        OTIS -> OtisVoice.entries
         REGISTERS -> RegistersVoice.entries
         FATHOM -> FathomVoice.entries
         RESIN -> ResinVoice.entries
@@ -5082,6 +5105,7 @@ private enum class Engine {
         PLUCK -> Pluck.macrosFor(voice as PluckVoice)
         ORPHICA -> Orphica.macrosFor(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.macrosFor(voice as TonewheelVoice)
+        OTIS -> Otis.macrosFor(voice as OtisVoice)
         REGISTERS -> Registers.macrosFor(voice as RegistersVoice)
         FATHOM -> Fathom.macrosFor(voice as FathomVoice)
         RESIN -> Resin.macrosFor(voice as ResinVoice)
@@ -5151,6 +5175,7 @@ private enum class Engine {
         PLUCK -> Pluck.defaults(voice as PluckVoice)
         ORPHICA -> Orphica.defaults(voice as OrphicaMaterial)
         TONEWHEEL -> Tonewheel.defaults(voice as TonewheelVoice)
+        OTIS -> Otis.defaults(voice as OtisVoice)
         REGISTERS -> Registers.defaults(voice as RegistersVoice)
         FATHOM -> Fathom.defaults(voice as FathomVoice)
         RESIN -> Resin.defaults(voice as ResinVoice)
@@ -5222,6 +5247,7 @@ private enum class Engine {
             it.name to if (it.name == "HOLD") random.nextFloat() * .95f else random.nextFloat()
         }
         TONEWHEEL -> Tonewheel.scramble(voice as TonewheelVoice, random)
+        OTIS -> Otis.scramble(voice as OtisVoice, random)
         REGISTERS -> Registers.scramble(voice as RegistersVoice, random)
         FATHOM -> Fathom.scramble(voice as FathomVoice, random)
         RESIN -> Resin.scramble(voice as ResinVoice, random)
@@ -5303,6 +5329,7 @@ private enum class Engine {
         PLUCK -> Pluck.render(voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> buildPatch(patchDisplayName(voice), voice, macros).render()
         TONEWHEEL -> Tonewheel.render(voice as TonewheelVoice, macros)
+        OTIS -> Otis.render(voice as OtisVoice, macros)
         REGISTERS -> Registers.render(voice as RegistersVoice, macros)
         FATHOM -> Fathom.render(voice as FathomVoice, macros)
         RESIN -> Resin.render(voice as ResinVoice, macros)
@@ -5376,6 +5403,7 @@ private enum class Engine {
         PLUCK -> (voice as PluckVoice).drumClass
         ORPHICA -> if (Orphica.isLoop(macros["HOLD"] ?: 0f)) DrumClass.LOOP else DrumClass.TONAL
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
+        OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
         FATHOM -> (voice as FathomVoice).drumClass
         RESIN -> (voice as ResinVoice).drumClass
@@ -5448,6 +5476,7 @@ private enum class Engine {
         PLUCK -> PluckPatch(name, voice as PluckVoice, macros, velocity = if (voice == PluckVoice.UPRIGHT) .65f else 1f)
         ORPHICA -> OrphicaPatch(name, OrphicaConfig(material = voice as OrphicaMaterial), macros)
         TONEWHEEL -> TonewheelPatch(name, voice as TonewheelVoice, macros)
+        OTIS -> OtisPatch(name, voice as OtisVoice, macros)
         REGISTERS -> RegistersPatch(name, voice as RegistersVoice, macros)
         FATHOM -> FathomPatch(name, voice as FathomVoice, macros)
         RESIN -> ResinPatch(name, voice as ResinVoice, macros)
@@ -5508,7 +5537,7 @@ private enum class Engine {
 
     /** A saved patch's human name — "Hat Closed Thump", "Bell Tines". */
     fun patchDisplayName(voice: Enum<*>): String {
-        val labelledVoice = if (voice is BallastVoice) voice.displayName else voice.name
+        val labelledVoice = if (voice is BallastVoice) voice.displayName else if (voice == OtisVoice.HARP) "BLUES_HARMONICA" else voice.name
         val voiceName = labelledVoice.split('_').joinToString(" ") { w -> w.lowercase().replaceFirstChar { it.uppercase() } }
         val engineName = displayName.lowercase().split(' ').joinToString(" ") { it.replaceFirstChar { letter -> letter.uppercase() } }
         return "$voiceName $engineName"
@@ -5643,6 +5672,7 @@ private val GlintVoice.drumClass: DrumClass
  * raw enum name — underscores and all, and liable to be ellipsized.
  */
 private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
+    Engine.OTIS -> if (voice == OtisVoice.HARP) "BLUES HARP" else voice.name
     Engine.THUMP -> thumpChipLabel(voice as ThumpVoice)
     Engine.SKIN -> skinChipLabel(voice as SkinVoice)
     Engine.ONSET -> when (voice as OnsetVoice) {

@@ -1,5 +1,9 @@
 # Otis: soul-family audition
 
+Historical research ledger. The owner subsequently accepted the source directions
+and restored Squeeze draw; current production behavior and limits are in
+[OTIS.md](OTIS.md). The dated findings below retain their original research scope.
+
 This is a finite-note research prototype inspired by the
 [XOtis musical brief](https://github.com/BertCalm/XO_OX-XOmnibus/blob/main/Docs/engines/otis-engine-architecture.md).
 The first question is whether four recognizable source identities deserve

@@ -194,6 +194,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is OtisPatch -> Otis.macrosFor(patch.voice)
         is LibrationPatch -> Libration.macrosFor(patch.voice)
         is FerryPatch -> Ferry.macrosFor(patch.voice)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
@@ -383,6 +384,7 @@ object Velocity {
      * velocity goes - it can't silently fall through to [soften].
      */
     private fun touchedRender(patch: Patch, v: Float): Snip? = when (patch) {
+        is OtisPatch -> patch.copy(velocity = patch.velocity * v).render()
         is LibrationPatch -> patch.copy(velocity = v).render()
         is ApsisPatch -> patch.copy(velocity = v).render()
         // UPRIGHT changes its released-string excitation. The existing five

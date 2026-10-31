@@ -2,6 +2,18 @@ plugins {
     kotlin("jvm")
 }
 
+/** Accepted finite Otis recipes, a sixteen-pad MPC program and cold/cache-hit timing. */
+tasks.register<JavaExec>("generateOtisIntegrationKit") {
+    group = "distribution"
+    description = "Export the accepted editable Otis note/chord/phrase bank and timing manifest."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisIntegrationGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisIntegrationOutput").orNull ?: "${rootDir}/testkit/otis-integration")
+}
+
+
 tasks.register<JavaExec>("generateOtisSqueezeDrawAudition") {
     group = "distribution"
     description = "Compare Squeeze model5 and model6 chord draw, retaining every earlier audition."

@@ -157,3 +157,9 @@ The musical-bank round adds model-3 playing response and bounded preparation
 reuse, seven exported-sample scores, three velocity-layer inspections, and a
 native sixteen-pad MPC 3/MPC 2 bank with forty PCM24 samples. The retained
 history and physical device checks remain separate.
+
+
+**Otis.** [`OTIS.md`](OTIS.md) records the accepted four-voice finite collection,
+its sixteen auditioned recipes, shared chord pressure, saved score format and
+production integration. [`OTIS_PROTOTYPE.md`](OTIS_PROTOTYPE.md) retains the listening
+history and frozen source revisions used for audio parity.
