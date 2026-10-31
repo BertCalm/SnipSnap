@@ -1791,7 +1791,7 @@ fun SynthScreen(
                         val terminalFade = if (!toSurface && (model.pad(slot)?.oneShot ?: true)) {
                             when {
                                 patch is FlockPatch && patch.playback == FlockPlayback.HELD -> 20f
-                                patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> 20f
+                                patch is OverlapPatch && patch.playback == OverlapPlayback.HELD -> OverlapPadMaker.ONE_SHOT_FADE_MS
                                 patch is OhmPatch && Ohm.isHeld(patch) -> 20f
                                 patch is MurmurPatch && Murmur.isLoop(patch.macros["HOLD"] ?: 0f) -> 8f
                                 else -> null
@@ -2299,6 +2299,8 @@ fun SynthScreen(
                         is TidalPatch -> Tidal.render(patch.voice, patch.macros, patch.midi, patch.velocity,
                             patch.seed, patch.model, cancelled)
                         is OpenSkyPatch -> patch.render(cancelled)
+                        is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD)
+                            OverlapPadMaker.deliveryRecipe(patch).render() else patch.render()
                         else -> patch.render()
                     }
                     // Authored roots survive chords, octave layers and upper
@@ -2334,7 +2336,8 @@ fun SynthScreen(
             name = patch.name,
             drumClass = spreadClass,
             colorHex = AutoPlace.colorFor(spreadClass),
-            recipe = PadRecipe(patch = patch).toJsonValue(),
+            recipe = (if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
+                OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
             source = mapOf(Spread.FROM_KEY to "SYNTH"),
         )
         appScope.launch {

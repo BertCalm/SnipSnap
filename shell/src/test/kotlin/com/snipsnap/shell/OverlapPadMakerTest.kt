@@ -1,5 +1,9 @@
 package com.snipsnap.shell
 
+import com.snipsnap.audio.AutoPlace
+import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Scale
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.SmplChunk
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
@@ -8,10 +12,12 @@ import com.snipsnap.kit.DestinationExists
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.mpc3.Mpc3Project
 import com.snipsnap.synth.KeyNote
+import com.snipsnap.synth.Overlap
 import com.snipsnap.synth.OverlapHeld
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.OverlapPlayback
 import com.snipsnap.synth.OverlapTopology
+import com.snipsnap.synth.PadRecipe
 import org.w3c.dom.Element
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -29,9 +35,111 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class OverlapPadMakerTest {
+    @Test
+    fun `one shot delivery saves the full held source and changes only its final fade`() {
+        val source = patch().copy(midi = 55, velocity = .37f, releaseSeconds = .43f,
+            macros = OverlapHeld.defaults(OverlapTopology.TREFOIL) + mapOf("KNOT" to .42f, "RING" to .51f))
+        val native = OverlapHeld.render(source).snip
+        val recipe = OverlapPadMaker.deliveryRecipe(source)
+        val restored = PadRecipe.fromJsonText(recipe.toJsonText())
+        assertEquals(source, restored.patch)
+        assertEquals(20f, restored.terminalFadeMs)
+        val delivered = restored.render()
+        assertEquals(native.frameCount, delivered.frameCount)
+        assertEquals(native.channels, delivered.channels)
+        assertEquals(native.sampleRate, delivered.sampleRate)
+        val fadeFrames = native.sampleRate / 50
+        val fadeStart = native.frameCount - fadeFrames
+        assertContentEquals(native.samples.copyOfRange(0, fadeStart), delivered.samples.copyOfRange(0, fadeStart),
+            "delivery must retain the onset and all sustain before the final 20 ms")
+        assertTrue(delivered.samples.last() == 0f, "a one-shot copy must finish at zero")
+        assertTrue((fadeStart until native.frameCount).any { native.samples[it] != delivered.samples[it] })
+        var nativeTailEnergy = 0.0
+        var deliveredTailEnergy = 0.0
+        for (frame in native.frameCount - fadeFrames / 2 until native.frameCount) {
+            nativeTailEnergy += native.samples[frame].toDouble() * native.samples[frame]
+            deliveredTailEnergy += delivered.samples[frame].toDouble() * delivered.samples[frame]
+        }
+        assertTrue(nativeTailEnergy > 1e-10, "the regression needs a genuinely active held tail")
+        assertTrue(deliveredTailEnergy < nativeTailEnergy * .251, "the final 10 ms must be attenuated by the saved fade")
+        assertContentEquals(native.samples, OverlapPadMaker.renderZone(OverlapPadMaker.Spec(source), source.midi).snip.samples,
+            "making a finite pad copy must not fade the cached source or the native instrument loop")
+        assertFailsWith<IllegalArgumentException> {
+            OverlapPadMaker.deliveryRecipe(source.copy(playback = OverlapPlayback.FINITE))
+        }
+    }
+
+    @Test
+    fun `held spread saves one shot audio authored reference tune and replayable delivery recipe`() {
+        val directory = createTempDirectory("overlap-held-spread").toFile()
+        try {
+            val source = patch().copy(midi = 55, velocity = .37f, releaseSeconds = .43f,
+                macros = OverlapHeld.defaults(OverlapTopology.TREFOIL) + mapOf("KNOT" to .42f, "RING" to .51f))
+            val recipe = OverlapPadMaker.deliveryRecipe(source)
+            val snip = recipe.render()
+            val sourceMidi = Spread.detect(snip, source)
+            assertEquals(55f, sourceMidi)
+            val model = KitBuilderModel.create("HELD SPREAD", directory)
+            val plan = Spread.plan(model.kit, sourceMidi,
+                Spread.Options(rootMidi = Spread.defaultRoot(sourceMidi), scale = Scale.MAJOR, padCount = 4))
+            assertEquals(listOf(55, 57, 59, 60), plan.notes.map { it.midi })
+            assertEquals(listOf(0, 2, 4, 5), plan.notes.map { it.tuneCoarse })
+            assertTrue(plan.notes.all { it.tuneFine == 0 })
+            Spread.apply(model, snip, plan, Spread.Sound(source.name, DrumClass.TONAL,
+                AutoPlace.colorFor(DrumClass.TONAL), recipe = recipe.toJsonValue(),
+                source = mapOf(Spread.FROM_KEY to "SYNTH")))
+            model.save()
+            val reopened = KitBuilderModel.open(directory)
+            val expectedWav = ByteArrayOutputStream().also { WavWriter.write(it, snip) }.toByteArray()
+            assertEquals(4, reopened.kit.pads.size)
+            for (note in plan.notes) {
+                val pad = assertNotNull(reopened.pad(note.slot))
+                assertTrue(pad.oneShot)
+                assertFalse(pad.loop)
+                assertEquals(note.tuneCoarse, pad.tuneCoarse)
+                assertEquals(note.tuneFine, pad.tuneFine)
+                assertEquals(Scales.nameOf(note.midi), pad.source[Spread.NOTE_KEY])
+                assertEquals("SYNTH", pad.source[Spread.FROM_KEY])
+                val savedRecipe = PadRecipe.fromJsonValue(assertNotNull(pad.recipe))
+                assertEquals(source, savedRecipe.patch, "every pad retains the original reference, macros, velocity and release")
+                assertEquals(20f, savedRecipe.terminalFadeMs)
+                val file = File(directory, pad.sampleFile)
+                assertContentEquals(expectedWav, file.readBytes(), "SPREAD writes the faded finite delivery, without changing its source")
+                assertEquals(null, WavReader.readSmpl(file), "one-shot spread copies must not acquire native sampler loops")
+            }
+            val pad = assertNotNull(reopened.pad(1))
+            val savedRecipe = assertNotNull(pad.recipe)
+            reopened.replaceAudio(1, null) { Snip(FloatArray(snip.frameCount), snip.channels, snip.sampleRate) }
+            RecipeReplay.apply(reopened, 1, savedRecipe, pad.displayName)
+            reopened.save()
+            val replayed = assertNotNull(KitBuilderModel.open(directory).pad(1))
+            assertEquals(savedRecipe, replayed.recipe)
+            assertEquals(pad.tuneCoarse, replayed.tuneCoarse)
+            assertEquals(pad.tuneFine, replayed.tuneFine)
+            assertContentEquals(expectedWav, File(directory, replayed.sampleFile).readBytes(),
+                "recipe replay must reconstruct the same finite delivery, including its terminal fade")
+        } finally { directory.deleteRecursively() }
+    }
+
+    @Test
+    fun `only held overlap spreads bypass detection for the saved reference MIDI`() {
+        val misleading = Snip(FloatArray(44100) { (.25 * sin(2 * PI * 220 * it / 44100)).toFloat() }, 1, 44100)
+        val detected = assertNotNull(Spread.detect(misleading))
+        assertEquals(57f, detected, .2f)
+        for (topology in OverlapTopology.entries) {
+            val held = patch().copy(topology = topology, macros = OverlapHeld.defaults(topology), midi = 48)
+            assertEquals(48f, Spread.detect(misleading, held))
+            for (model in 1..Overlap.MODEL_VERSION) {
+                val finite = held.copy(model = model, macros = Overlap.defaults(topology, model), playback = OverlapPlayback.FINITE)
+                assertEquals(detected, Spread.detect(misleading, finite), "finite $topology model $model retains its existing audio detector")
+            }
+        }
+    }
+
     @Test
     fun `three native roots retain the selected reference and limit resampling at both edges`() {
         assertEquals(listOf(36, 48, 60), OverlapPadMaker.zoneMidis(OverlapPadMaker.Spec(patch())))

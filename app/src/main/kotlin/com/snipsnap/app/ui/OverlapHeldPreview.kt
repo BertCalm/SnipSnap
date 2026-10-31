@@ -96,7 +96,7 @@ internal fun OverlapPerformanceControls(
                 .coerceIn(OverlapPadMaker.RELEASE.lo, OverlapPadMaker.RELEASE.hi)) } },
             readout = OverlapPadMaker.secondsLabel(patch.releaseSeconds))
         TapeText("STEADY HELD PREVIEW · LIFT TO RELEASE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
-        TapeText("SEND MAKES A ONE-SHOT. MAKE INSTRUMENT SUSTAINS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+        TapeText("SEND AND SPREAD MAKE FINITE PADS. MAKE INSTRUMENT SUSTAINS.", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
     } else {
         TapeText("ROOT IS THE REFERENCE NOTE. HOLD EXTENDS A FINITE SOUND.",
             TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)

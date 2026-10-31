@@ -11,6 +11,7 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.synth.KeyNote
 import com.snipsnap.synth.OverlapHeld
 import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.PadRecipe
 import com.snipsnap.xpm.Keygroup
 import com.snipsnap.xpm.KeygroupProgram
 import com.snipsnap.xpm.VelocityLayer
@@ -20,6 +21,7 @@ import kotlin.math.roundToInt
 
 /** The accepted steady OVERLAP articulation, with note-off owned by the sample player. */
 object OverlapPadMaker {
+    const val ONE_SHOT_FADE_MS = 20f
     const val RELEASE_MIN_SECONDS = OverlapHeld.MIN_RELEASE_SECONDS
     const val RELEASE_MAX_SECONDS = OverlapHeld.MAX_RELEASE_SECONDS
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS,
@@ -29,6 +31,12 @@ object OverlapPadMaker {
     fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
 
     fun supports(patch: OverlapPatch): Boolean = OverlapHeld.supports(patch)
+
+    /** A finite pad copy retains its held source recipe and fades only its final 20 ms. */
+    fun deliveryRecipe(patch: OverlapPatch): PadRecipe {
+        require(supports(patch)) { "OVERLAP one-shot delivery requires a model-2 steady held patch" }
+        return PadRecipe(patch = patch, terminalFadeMs = ONE_SHOT_FADE_MS)
+    }
 
     data class Spec(val patch: OverlapPatch) {
         init { require(supports(patch)) { "OVERLAP instruments require a model-2 steady held patch" } }

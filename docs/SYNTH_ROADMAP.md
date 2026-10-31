@@ -525,12 +525,17 @@ meaning in an existing recipe.
 Held playback adds RING for SELF and KNOT/RING for the other three, saved
 reference, velocity and sampler release, prepared onset-plus-loop notes, a
 bounded completed-note cache, saved presets and the instrument-library/MPC path.
+SEND and SPREAD make finite pads with a saved shared terminal fade; native
+instrument loops remain untouched. Held SPREAD uses the authored reference,
+while finite OVERLAP keeps its existing pitch detector.
 PULSE, LOCK and GLOW stay zero, HOLD stays one. The owner accepted the held
 MPC trial on 2026-10-31 without supplying model/OS or per-check measurements;
-54 focused JVM tests and all twelve complete accepted-WAV comparisons pass.
+an earlier checkpoint passed 54 focused JVM tests and all twelve complete
+accepted-WAV comparisons.
 Removing the defensive copy makes its cache-ownership test fail; restoring
 the exact source passes all seven held tests. Local debug, StrikeFx and
-instrumentation APK builds pass. Full JVM and on-device/emulator execution
+instrumentation APK builds passed at that checkpoint. Final SEND/SPREAD
+delivery revalidation, full JVM and on-device/emulator execution
 remain pending; phone performance and touch lifecycle need their own device pass.
 Saved HELD patches replay through CLI `--patch`; `--instrument` samples three
 reference zones and refuses finite patches. [OVERLAP.md](OVERLAP.md) records

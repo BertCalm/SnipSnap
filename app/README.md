@@ -236,14 +236,16 @@ a prepared onset and steady loop, then releases on lift.
 Completed bodies use a bounded cache; no DSP runs on the press. SAVE PRESET
 under YOURS preserves the complete playback, reference, velocity and release.
 MAKE INSTRUMENT saves three sampled reference zones to the instrument library
-and normal MPC export path. SEND TO PAD plays the prepared sample once with
-a saved terminal fade; it does not create a held pad. ROOT remains a geometry
+and normal MPC export path. SEND TO PAD and SPREAD make finite deliveries
+with saved terminal fades; they do not create held pads. Native instrument
+loops remain untouched. ROOT remains a geometry
 reference, and sampler release differs from the prototype's physical resonator
 decay. The owner accepted the
-MPC held trial on 2026-10-31 without supplying model/OS details. Focused JVM
-checks, all twelve complete accepted-WAV comparisons and the cache-copy
-mutation guard pass. Debug, StrikeFx and instrumentation APKs build locally;
-full JVM and on-device/emulator execution remain pending. The
+MPC held trial on 2026-10-31 without supplying model/OS details. An earlier
+checkpoint passed focused JVM checks, all twelve complete accepted-WAV
+comparisons, the cache-copy mutation guard and local Android APK builds.
+The final SEND/SPREAD delivery correction is being rechecked; full JVM and
+on-device/emulator execution remain pending. The
 [OVERLAP notes](../docs/OVERLAP.md#held-phone-workflow-as-built-2026-10-31)
 separate those checks and host cache timings from listening acceptance.
 RELAY exposes native VELOCITY and note names while preserving loaded phrase

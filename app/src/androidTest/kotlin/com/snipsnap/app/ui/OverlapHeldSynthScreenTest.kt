@@ -13,9 +13,12 @@ import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.onNodeWithText
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
+import com.snipsnap.audio.Scales
+import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
@@ -36,12 +39,14 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertSame
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 
@@ -163,7 +168,7 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun sameFrameNoteAndVelocityEditsSaveCompleteHeldStateAndSendOnlyAFiniteDelivery() {
+    fun sameFrameEditsSaveCompleteHeldStateAndSendAndSpreadOnlyFiniteDeliveries() {
         show(heldSource())
         // Capture callbacks from one composition, then invoke all three without
         // allowing a frame between them. Each edit must read the live patch.
@@ -203,8 +208,41 @@ class OverlapHeldSynthScreenTest : ComposeScreenTest() {
         val pad = KitStore.load(entry!!.dir).pad(1)!!
         val delivered = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
         assertTrue(pad.oneShot)
-        assertEquals(20f, delivered.terminalFadeMs)
+        assertEquals(OverlapPadMaker.ONE_SHOT_FADE_MS, delivered.terminalFadeMs)
         assertEquals(copy.copy(name = delivered.patch!!.name), delivered.patch)
+
+        // SPREAD is also a finite pad delivery. Exercise the actual overlay,
+        // retaining the authored geometry reference and the full saved patch.
+        waitForRender("SEND chooser to close") {
+            compose.onAllNodes(hasContentDescription("A01, EMPTY")).fetchSemanticsNodes().isEmpty()
+        }
+        activate("SPREAD ACROSS PADS")
+        waitForRender("held SPREAD panel") {
+            compose.onAllNodes(hasContentDescription("FEWER PADS")).fetchSemanticsNodes().isNotEmpty()
+        }
+        compose.onNodeWithText("ROOT ${Scales.nameOf(copy.midi)}").assertExists()
+        repeat(12) { activate("FEWER PADS") } // Four slots, with the existing A01 left intact.
+        activate("SPREAD")
+        waitForRender("held SPREAD finite pads") { KitStore.load(entry!!.dir).pad(4) != null }
+        val spreadKit = KitStore.load(entry!!.dir)
+        assertEquals(4, spreadKit.pads.size)
+        val firstSpread = spreadKit.pad(2)!!
+        assertEquals(2, firstSpread.tuneCoarse) // Major second above the saved reference.
+        assertEquals(0, firstSpread.tuneFine)
+        val firstRecipe = PadRecipe.fromJsonValue(requireNotNull(firstSpread.recipe))
+        val expected = OverlapPadMaker.deliveryRecipe(copy.copy(name = firstRecipe.patch!!.name))
+        val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
+        for (spreadPad in spreadKit.pads.filter { it.slot in 2..4 }) {
+            assertTrue(spreadPad.oneShot)
+            assertEquals(expected.toJsonValue(), spreadPad.recipe)
+            assertEquals(OverlapPadMaker.ONE_SHOT_FADE_MS,
+                PadRecipe.fromJsonValue(requireNotNull(spreadPad.recipe)).terminalFadeMs)
+            assertArrayEquals("SPREAD must keep the exact finite-delivery gain and ending",
+                encoded, File(entry!!.dir, spreadPad.sampleFile).readBytes())
+        }
+        waitForRender("SPREAD panel to close") {
+            compose.onAllNodes(hasContentDescription("FEWER PADS")).fetchSemanticsNodes().isEmpty()
+        }
     }
 
     @Test
