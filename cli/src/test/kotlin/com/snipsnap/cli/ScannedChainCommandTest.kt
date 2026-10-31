@@ -23,17 +23,20 @@ class ScannedChainCommandTest {
             assertEquals(0, Cli.run(arrayOf("synth", "scanned_chain", "bloom", "--all",
                 "--midi", "65", "--velocity", ".35", "--out", dir.path),
                 PrintStream(output), PrintStream(errors)), errors.toString())
-            val wav = assertNotNullFiles(dir).single()
-            val expectedPatch = ScannedChainPresets.forVoice(ScannedChainVoice.BLOOM).single()
-                .copy(midi = 65, velocity = .35f)
-            val expected = ByteArrayOutputStream().also { WavWriter.write(it, expectedPatch.render()) }
-            assertContentEquals(expected.toByteArray(), wav.readBytes(), "CLI preserves the complete preset recipe")
-            val actual = WavReader.read(wav)
-            assertEquals(44_100, actual.sampleRate)
-            assertEquals(1, actual.channels)
-            assertTrue(actual.samples.all { it.isFinite() })
-            assertTrue(actual.peak() > 1e-4f)
-            assertTrue("1 rendered into" in output.toString())
+            val wavs = assertNotNullFiles(dir).sortedBy { it.name }
+            val presets = ScannedChainPresets.forVoice(ScannedChainVoice.BLOOM)
+            assertEquals(presets.size, wavs.size)
+            for ((preset, wav) in presets.zip(wavs)) {
+                val expectedPatch = preset.copy(midi = 65, velocity = .35f)
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, expectedPatch.render()) }
+                assertContentEquals(expected.toByteArray(), wav.readBytes(), "CLI preserves ${preset.name}'s complete recipe")
+                val actual = WavReader.read(wav)
+                assertEquals(44_100, actual.sampleRate)
+                assertEquals(1, actual.channels)
+                assertTrue(actual.samples.all { it.isFinite() })
+                assertTrue(actual.peak() > 1e-4f)
+            }
+            assertTrue("${presets.size} rendered into" in output.toString())
             assertFalse("lands with" in output.toString(), "the audition remains dry")
         } finally {
             dir.deleteRecursively()

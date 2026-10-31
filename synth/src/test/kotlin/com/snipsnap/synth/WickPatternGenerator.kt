@@ -27,7 +27,7 @@ internal object WickPatternGenerator {
     private val soloVoices = ensembleVoices + listOf(WickVoice.BREATH, WickVoice.FLICKER, WickVoice.RATTLE)
     private val options = linkedMapOf<String, Any?>(
         "disableCascade" to false, "constantAvailability" to false, "gainOnly" to false,
-        "oversample" to 4, "legacyBubbleEnvelope" to false,
+        "oversample" to 4, "legacyBubbleEnvelope" to false, "legacyRattleEnvelope" to false,
     )
     private data class Note(val beat: Double, val midi: Int, val velocity: Float)
     private val score = listOf(
@@ -58,6 +58,8 @@ internal object WickPatternGenerator {
                 "options" to options, "loop" to false, "bpm" to BPM, "bars" to BARS,
                 "description" to if (voice == null) {
                     "The same two-bar C minor pentatonic score, shared in turn between PLUCK, WOOD and BUBBLE. Dry independently rendered notes, with full finite tails."
+                } else if (voice == WickVoice.RATTLE) {
+                    "Eight notes at 100 BPM, C3–C4, with the same timing, pitches and playing velocities as the other five solo voices. Listen for each note as a connected body with internal rattle motion. Voice defaults and their recovering gate network remain active; no effects."
                 } else {
                     "Eight notes at 100 BPM, C3–C4, with the same timing, pitches and playing velocities as the other five solo voices. Voice defaults and their internal cascades remain active; no effects."
                 },

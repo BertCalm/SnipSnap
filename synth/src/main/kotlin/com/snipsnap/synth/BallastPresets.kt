@@ -89,7 +89,7 @@ object BallastPresets {
         p(BallastVoice.SWARM, "CROWD GLASS", "TUNE" to 19 / 36f, "DRIVE" to 0.8f, "SYMPATHY" to 0.6f, "SPAN" to 0.85f, "GLASS" to 0.9f, "FRAME" to 0.6f, "HOLD" to 0.35f), // G2
         p(BallastVoice.SWARM, "BUSY TILES", "TUNE" to 12 / 36f, "DRIVE" to 0.7f, "SYMPATHY" to 0.7f, "SPAN" to 0.75f, "GLASS" to 0.95f, "FRAME" to 0.7f, "HOLD" to 0.45f), // C2
         p(BallastVoice.SWARM, "TILE STORM", "TUNE" to 7 / 36f, "DRIVE" to 0.9f, "SYMPATHY" to 0.55f, "SPAN" to 0.85f, "GLASS" to 1.0f, "FRAME" to 0.55f, "HOLD" to 0.3f), // G1
-        p(BallastVoice.SWARM, "LOUD ROOM", "TUNE" to 0 / 36f, "DRIVE" to 0.85f, "SYMPATHY" to 0.65f, "SPAN" to 0.9f, "GLASS" to 0.8f, "FRAME" to 0.75f, "HOLD" to 0.5f), // C1
+        p(BallastVoice.SWARM, "LOUD HALL", "TUNE" to 0 / 36f, "DRIVE" to 0.85f, "SYMPATHY" to 0.65f, "SPAN" to 0.9f, "GLASS" to 0.8f, "FRAME" to 0.75f, "HOLD" to 0.5f), // C1
         p(BallastVoice.SWARM, "LOOSE PILE", "TUNE" to 12 / 36f, "DRIVE" to 0.65f, "SYMPATHY" to 0.7f, "SPAN" to 0.7f, "GLASS" to 0.9f, "FRAME" to 0.8f, "HOLD" to 0.55f), // C2
         p(BallastVoice.SWARM, "NOISY FRAME", "TUNE" to 5 / 36f, "DRIVE" to 0.8f, "SYMPATHY" to 0.6f, "SPAN" to 0.8f, "GLASS" to 0.85f, "FRAME" to 0.9f, "HOLD" to 0.4f), // F1
         p(BallastVoice.SWARM, "SHAKEN BOX", "TUNE" to 24 / 36f, "DRIVE" to 0.75f, "SYMPATHY" to 0.65f, "SPAN" to 0.85f, "GLASS" to 0.95f, "FRAME" to 0.6f, "HOLD" to 0.35f), // C3

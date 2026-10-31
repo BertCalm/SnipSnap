@@ -26,6 +26,7 @@ import com.snipsnap.synth.ApsisVoice
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Origami
+import com.snipsnap.synth.OrigamiExpression
 import com.snipsnap.synth.OrigamiGesture
 import com.snipsnap.synth.OrigamiGestures
 import com.snipsnap.synth.OrigamiPatch
@@ -83,6 +84,10 @@ import com.snipsnap.synth.Nacre
 import com.snipsnap.synth.NacrePatch
 import com.snipsnap.synth.NacrePresets
 import com.snipsnap.synth.NacreVoice
+import com.snipsnap.synth.Ferry
+import com.snipsnap.synth.FerryPatch
+import com.snipsnap.synth.FerryPresets
+import com.snipsnap.synth.FerryVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Osprey
@@ -162,6 +167,10 @@ import kotlin.random.Random
  * seed and finite render model. Its held zones span C3-C5 and override TUNE.
  * Its model-4 voices accept --gesture STEADY|BLOOM|UNFOLD and all six controls
  * through --macros; MOTION sets gesture duration in BLOOM/UNFOLD.
+ * --expression LEVEL|FOLD keeps the existing level response by default, or lets
+ * strike velocity scale the chosen fold. FOLD instruments export three velocity layers.
+ * ALLOY accepts saved --patch JSON recipes, retaining their complete configuration
+ * and HOLD setting while --midi and --velocity override note and strike energy.
  * CONTOUR exports seventeen settled-sustain zones with release only, omitting its
  * finite key/pluck attack.
  *
@@ -197,7 +206,7 @@ import kotlin.random.Random
  * --midi and --macros TUNE/HOLD edits are refused in this mode.
  * OSPREY accepts `--seed N`, `--seconds .25..12` and `--model 1|2|3` for a finite SWELL gesture.
  * CREASE also accepts `--model 1|2|3`, retaining its approved note, velocity and six controls.
- * CAUSTIC ALLOY accepts `--model 1`, saved `--patch <json>` and `--macros` overrides,
+ * All four CAUSTIC voices accept `--model 1`, saved `--patch <json>` and `--macros` overrides,
  * retaining the patch's explicit note, velocity and native renderer model. It renders a
  * finite note; HOLD is reserved and must stay at zero.
  * LATTICE WARM/PLUCK/HOLLOW accepts existing `--patch` and `--macros` options.
@@ -211,7 +220,7 @@ import kotlin.random.Random
  * retaining its exact model, seed and saved note/velocity. `--touch` adds three
  * independently captured source strengths up to the saved velocity.
  * WICK offers twenty-five provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE recipes without adding a phone engine.
- * NACRE likewise auditions six provisional finite PEARL duets with native note and velocity.
+ * NACRE offers three playable finite PEARL starting points with native note and velocity.
  * FILAMENT exposes twelve approved THREAD/PULSE/CURL factory recipes with saved geometry and note/velocity overrides.
  * ORPHICA accepts `--seed N` for repeatable string excitation and grains, preserving all 64 bits.
  * Its `--midi N` resets relative TUNE to neutral and also sets the sampled root with --instrument;
@@ -233,7 +242,7 @@ object SynthCommand {
         }
         val opts = Options.parse(
             args,
-            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--tempo", "--beats"),
+            valued = setOf("--preset", "--out", "--midi", "--velocity", "--material", "--seed", "--seconds", "--model", "--scramble", "--attack", "--release", "--root", "--motion", "--rate", "--bpm", "--bars", "--loop", "--patch", "--gate", "--macros", "--gesture", "--expression", "--tempo", "--beats"),
             boolean = setOf("--all", "--instrument", "--touch", "--drone", "--dry", "--wet"),
         )
         val engine = opts.positional.getOrNull(0)?.uppercase()
@@ -247,12 +256,17 @@ object SynthCommand {
             OrigamiGesture.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
                 ?: throw CliError("--gesture wants ${OrigamiGesture.entries.joinToString("|") { it.name }}, got '$raw'")
         }
+        val expressionOverride = opts["--expression"]?.let { raw ->
+            if (engine != OrigamiPatch.ENGINE) throw CliError("--expression is only supported by ORIGAMI, got $engine")
+            OrigamiExpression.entries.firstOrNull { it.name == raw.uppercase(Locale.ROOT) }
+                ?: throw CliError("--expression wants ${OrigamiExpression.entries.joinToString("|") { it.name }}, got '$raw'")
+        }
         val skyFlags = listOf("--gate", "--dry", "--wet").filter { opts.has(it) || opts[it] != null }
         if (skyFlags.isNotEmpty() && engine != OpenSkyPatch.ENGINE) {
             throw CliError("${skyFlags.joinToString()} are only supported by OPENSKY, got $engine")
         }
-        if (opts["--patch"] != null && engine !in setOf(ApsisPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE)) {
-            throw CliError("--patch is only supported by APSIS, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, LATTICE and OHM, got $engine")
+        if (opts["--patch"] != null && engine !in setOf(ApsisPatch.ENGINE, AlloyPatch.ENGINE, OpenSkyPatch.ENGINE, ContourPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, CausticPatch.ENGINE, CreasePatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, LatticePatch.ENGINE, OhmPatch.ENGINE, FerryPatch.ENGINE)) {
+            throw CliError("--patch is only supported by APSIS, ALLOY, OPENSKY, CONTOUR, CHAMBER, TIDAL, CAUSTIC, CREASE, ORIGAMI, FLOCK, LATTICE, OHM and FERRY, got $engine")
         }
         if (opts.has("--dry") && opts.has("--wet")) throw CliError("--dry and --wet are two render modes - pick one")
         val gateOverride = opts["--gate"]?.let { raw ->
@@ -277,6 +291,7 @@ object SynthCommand {
         }
 
         val presets = when (engine) {
+            FerryPatch.ENGINE -> FerryVoice.entries.firstOrNull { it.name == voice }?.let { FerryPresets.forVoice(it) } ?: emptyList()
             VentPatch.ENGINE -> VentVoice.entries.firstOrNull { it.name == voice }?.let {
                 if (Vent.defaultModelFor(it) == Vent.MODEL) VentPresets.forVoice(it) else Presets.forVoice(engine, voice)
             } ?: emptyList()
@@ -293,6 +308,7 @@ object SynthCommand {
         }
         val macroOverrides = opts["--macros"]?.let { raw ->
             val names = when (engine) {
+                FerryPatch.ENGINE -> Ferry.macrosFor(FerryVoice.valueOf(voice))
                 TidalPatch.ENGINE -> Tidal.macrosFor(TidalVoice.valueOf(voice))
                 ApsisPatch.ENGINE -> Apsis.macrosFor(ApsisVoice.valueOf(voice))
                 ContourPatch.ENGINE -> ContourEngine.macrosFor(ContourVoice.valueOf(voice))
@@ -301,8 +317,8 @@ object SynthCommand {
                 CausticPatch.ENGINE -> CausticInstrument.macrosFor(CausticVoice.valueOf(voice))
                 "PLUCK" -> if (voice == "UPRIGHT") Pluck.macrosFor(PluckVoice.UPRIGHT)
                     else throw CliError("--macros for PLUCK requires UPRIGHT")
-                OhmPatch.ENGINE -> Ohm.macrosFor(3)
-                else -> throw CliError("--macros is only supported by TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM and PLUCK UPRIGHT, got $engine")
+                OhmPatch.ENGINE -> Ohm.macrosFor(Ohm.MODEL_VERSION)
+                else -> throw CliError("--macros is only supported by TIDAL, APSIS, CONTOUR, ORIGAMI, CAUSTIC, LATTICE, OHM FERRY and PLUCK UPRIGHT, got $engine")
             }.map { it.name }.toSet()
             val overrides = linkedMapOf<String, Float>()
             for (entry in raw.split(',')) {
@@ -315,6 +331,9 @@ object SynthCommand {
                     ?: throw CliError("--macros $name wants a finite value in 0..1, got '${fields[1]}'")
                 if (engine == CausticPatch.ENGINE && name == "HOLD" && value > 0f) {
                     throw CliError("--macros HOLD is reserved for CAUSTIC; only 0 is supported")
+                }
+                if (engine == FerryPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() != 0.0) {
+                    throw CliError("FERRY model 1 is finite; HOLD must be 0")
                 }
                 if (engine == TidalPatch.ENGINE && name == "HOLD" && fields[1].trim().toDoubleOrNull() !in listOf(0.0, 1.0)) {
                     throw CliError("TIDAL HOLD is a NOTE/HOLD switch; choose 0 or 1")
@@ -383,6 +402,7 @@ object SynthCommand {
                 ChamberPatch.ENGINE -> Chamber.MIDI_MIN..Chamber.MIDI_MAX
                 TidalPatch.ENGINE -> Tidal.MIN_MIDI..Tidal.MAX_MIDI
                 NacrePatch.ENGINE -> Nacre.MIN_MIDI..Nacre.MAX_MIDI
+                FerryPatch.ENGINE -> Ferry.MIN_MIDI..Ferry.MAX_MIDI
                 OhmPatch.ENGINE -> 48..72
                 PrismPatch.ENGINE -> {
                     val prismVoice = PrismVoice.valueOf(voice)
@@ -392,7 +412,7 @@ object SynthCommand {
                 ContourPatch.ENGINE -> ContourEngine.rootMidi(ContourVoice.valueOf(voice)).let {
                     (it - ContourEngine.TUNE_SEMITONES)..(it + ContourEngine.TUNE_SEMITONES)
                 }
-                else -> throw CliError("${noteFlags.joinToString()} are only supported by APSIS, ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM and FILAMENT, got $engine")
+                else -> throw CliError("${noteFlags.joinToString()} are only supported by APSIS, ORIGAMI, ALLOY, CAUSTIC, OVEN, CISTERN, FLOTILLA, TESSERA, PITCHWHEEL, REVEL, PRISM, REGISTERS, CONTOUR, STOOP, LACQUER, LATTICE, SPOOL, SKITTER, TANGLE, CREASE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED_CHAIN, OSPREY, OBBLIGATO, OPENSKY, VENT, FLOCK, WICK, ORPHICA, NACRE, CHAMBER, TIDAL, TRIO, OHM, FERRY and FILAMENT, got $engine")
             }
         }
         val midiOverride = opts["--midi"]?.let { raw ->
@@ -420,13 +440,13 @@ object SynthCommand {
             if (engine !in supported) throw CliError("$flag is only supported by ${supported.joinToString(" and ")}, got $engine")
             raw.toIntOrNull() ?: throw CliError("$flag wants an integer seed, got '$raw'")
         }
-        val longSeedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE)) opts["--seed"]?.let { raw ->
+        val longSeedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, FerryPatch.ENGINE)) opts["--seed"]?.let { raw ->
             raw.toLongOrNull() ?: throw CliError("--seed for $engine wants a signed 64-bit integer, got '$raw'")
         } else null
         val orphicaSeedOverride = if (engine == OrphicaPatch.ENGINE) opts["--seed"]?.let { raw ->
             raw.toLongOrNull() ?: throw CliError("--seed wants a 64-bit integer seed, got '$raw'")
         } else null
-        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE)) null else seedFlag("--seed")
+        val seedOverride = if (engine in setOf(FlockPatch.ENGINE, ChamberPatch.ENGINE, TidalPatch.ENGINE, OrphicaPatch.ENGINE, FerryPatch.ENGINE)) null else seedFlag("--seed")
         val secondsOverride = opts["--seconds"]?.let { raw ->
             if (engine != OspreyPatch.ENGINE) throw CliError("--seconds is only supported by OSPREY, got $engine")
             raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .25f..Osprey.MAX_SECONDS }
@@ -434,12 +454,13 @@ object SynthCommand {
         }
         val modelOverride = opts["--model"]?.let { raw ->
             val lastModel = when (engine) {
+                FerryPatch.ENGINE -> Ferry.MODEL_VERSION
                 OspreyPatch.ENGINE -> Osprey.MODEL_VERSION
                 CreasePatch.ENGINE -> Crease.MODEL_VERSION
                 TidalPatch.ENGINE -> Tidal.MODEL_VERSION
                 CausticPatch.ENGINE -> CausticInstrument.MODEL_VERSION
                 OhmPatch.ENGINE -> Ohm.MODEL_VERSION
-                else -> throw CliError("--model is only supported by OSPREY, CREASE, TIDAL, CAUSTIC and OHM, got $engine")
+                else -> throw CliError("--model is only supported by OSPREY, CREASE, TIDAL, CAUSTIC, OHM and FERRY, got $engine")
             }
             raw.toIntOrNull()?.takeIf { it in 1..lastModel }
                 ?: throw CliError("--model wants 1..$lastModel, got '$raw'")
@@ -450,7 +471,7 @@ object SynthCommand {
         }
         if (instrument) {
             if (engine == TidalPatch.ENGINE && opts["--attack"] != null) throw CliError("TIDAL keeps its encounter attack; use --release")
-            if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride != 3) throw CliError("OHM --instrument requires model 3")
+            if (engine == OhmPatch.ENGINE && modelOverride != null && modelOverride < 3) throw CliError("OHM --instrument requires model 3 or later")
             if (engine !in setOf("RESIN", RegistersPatch.ENGINE, OpenSkyPatch.ENGINE, OrphicaPatch.ENGINE, CreasePatch.ENGINE, ContourPatch.ENGINE, OrigamiPatch.ENGINE, FlockPatch.ENGINE, OhmPatch.ENGINE, TidalPatch.ENGINE)) throw CliError("RESIN, REGISTERS, OPENSKY HALO, ORPHICA, CREASE, CONTOUR, ORIGAMI FAN/STILL, FLOCK RIBBON, OHM and TIDAL export a keys instrument here")
             if (engine == OhmPatch.ENGINE && opts["--attack"] != null) throw CliError("OHM keeps its authored attack; use --release for the held instrument")
             if (engine == CreasePatch.ENGINE && opts["--attack"] != null) throw CliError("CREASE keeps its pressure attack - use --release to shape the held instrument")
@@ -539,6 +560,7 @@ object SynthCommand {
                 is ChamberPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is TidalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is NacrePatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
+                is FerryPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is OhmPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is ShoalPatch -> patch.copy(midi = midiOverride ?: patch.midi, velocity = velocityOverride ?: patch.velocity)
                 is RelayPatch -> patch.copy(
@@ -598,11 +620,16 @@ object SynthCommand {
                 if (gesture != OrigamiGesture.STEADY && withNote.model != OrigamiGestures.GEOMETRY_MODEL) {
                     throw CliError("--gesture $gesture requires ORIGAMI model 4; saved model ${withNote.model} keeps its original motion")
                 }
+                val expression = expressionOverride ?: withNote.expression
+                if (expression != OrigamiExpression.LEVEL && withNote.model != OrigamiGestures.GEOMETRY_MODEL) {
+                    throw CliError("--expression $expression requires ORIGAMI model 4; saved model ${withNote.model} keeps its original velocity response")
+                }
                 withNote.copy(
                     macros = withNote.macros + macroOverrides,
                     // Deliberately editing TUNE also edits an authored note, as in the native editor.
                     midi = macroOverrides["TUNE"]?.let { Origami.midiFor(withNote.voice, it) } ?: withNote.midi,
                     gesture = gesture,
+                    expression = expression,
                 )
             } else if (withNote is OpenSkyPatch) {
                 withNote.copy(gateSeconds = gateOverride ?: withNote.gateSeconds, wet = wetOverride ?: withNote.wet)
@@ -647,11 +674,15 @@ object SynthCommand {
                 model = modelOverride ?: withNote.model,
             ) else if (withNote is VentPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is FlockPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
+            else if (withNote is FerryPatch) withNote.copy(seed = longSeedOverride ?: withNote.seed,
+                macros = withNote.macros + macroOverrides, model = modelOverride ?: withNote.model)
             else if (withNote is ChamberPatch && longSeedOverride != null) withNote.copy(seed = longSeedOverride)
             else if (withNote is ObbligatoPatch && seedOverride != null) withNote.copy(seed = seedOverride)
             else if (withNote is OhmPatch) {
-                val model = modelOverride ?: if (instrument || "HOLD" in macroOverrides) 3 else withNote.model
-                if (model < 3 && withNote.model == 3) throw CliError("OHM source options cannot be downgraded; choose a legacy recipe")
+                val model = modelOverride ?: if (withNote.model < 3 && (instrument || "HOLD" in macroOverrides))
+                    Ohm.MODEL_VERSION else withNote.model
+                if (withNote.model >= 3 && model < withNote.model)
+                    throw CliError("OHM expanded recipes cannot be downgraded; choose a recipe saved with model $model")
                 withNote.copy(model = model, seed = seedOverride ?: withNote.seed,
                     macros = Ohm.defaults(model) + withNote.macros + macroOverrides)
             }
@@ -707,7 +738,7 @@ object SynthCommand {
                 raw.toFloatOrNull()?.takeIf { it.isFinite() && it in .02f..3f }
                     ?: throw CliError("OHM --release wants finite seconds in 0.02..3")
             } ?: patch.releaseSeconds
-            OhmPadMaker.Spec(patch.copy(model = 3, macros = Ohm.defaults(3) + patch.macros + ("HOLD" to 1f),
+            OhmPadMaker.Spec(patch.copy(macros = Ohm.defaults(patch.model) + patch.macros + ("HOLD" to 1f),
                 releaseSeconds = release))
         } catch (e: IllegalArgumentException) {
             throw CliError("OHM --instrument: ${e.message ?: "invalid held recipe"}")
@@ -744,7 +775,7 @@ object SynthCommand {
                 ?: heldRibbon?.let { SmplChunk((patch as FlockPatch).midi,
                     SmplChunk.Loop(it.loopStartFrame.toLong(), it.loopEndExclusive.toLong())) }
             FileOutputStream(file).buffered().use { WavWriter.write(it, snip, smpl = sampler) }
-            if (patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
+            if (patch is FerryPatch || patch is ApsisPatch || patch is ObbligatoPatch || patch is TidalPatch || patch is LatticePatch ||
                 patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT) {
                 File(dir, "${file.nameWithoutExtension}.patch").writeText(patch.toJsonText())
             }
@@ -795,12 +826,15 @@ object SynthCommand {
         val name = OneNote.freshName(dir, Names.sanitizeStem(spec.patch.name))
         val midis = OrigamiPadMaker.zoneMidis(spec)
         val notes = midis.mapIndexed { i, midi ->
-            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}")
-            OrigamiPadMaker.renderZone(spec, midi)
+            val progress = if (spec.layerCount > 1)
+                " (layers ${i * spec.layerCount + 1}..${(i + 1) * spec.layerCount}/${midis.size * spec.layerCount})" else ""
+            out.println("zone ${i + 1}/${midis.size} ${Scales.nameOf(midi)}$progress")
+            OrigamiPadMaker.renderVelocityZone(spec, midi)
         }
-        OrigamiPadMaker.export(name, spec, notes, dir)
+        OrigamiPadMaker.exportLayers(name, spec, notes, dir)
         out.println("instrument: ${File(dir, "$name.xty").path} (+ ${name}_[TrackData]/ with the .xpm twin)")
         out.println("${midis.size} zones, each holds - authored attack retained, RELEASE ${OrigamiPadMaker.secondsLabel(spec.releaseSeconds)}")
+        if (spec.layerCount > 1) out.println("expression layers: ${spec.layerCount} per zone, ${midis.size * spec.layerCount} samples; soft/mid/hard folded color up to the saved velocity")
         return 0
     }
 

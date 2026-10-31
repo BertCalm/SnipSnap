@@ -203,7 +203,7 @@ Guards proven by reverting them alone. Unfiltered heat noise put 1.23e-5 of the 
 - **YIELD's harsh zone.** At YIELD 0.25 the threshold sits inside the body's own slew. Slew peaks at every zero crossing, so the flow switches on and off twice a cycle. That makes the body harsher (0.0866) than the steady full fold at YIELD 0 (0.0206). The gate asks whether to keep it. A slew envelope or a level-normalised detector would smooth it, at the cost of the click's onset.
 - **Hats.** A hat is all fast material, so at YIELD 0.5 nearly all of it flows. The SKIN and THUMP closed hats file as SNARE through FORGE's defaults, and the THUMP open hat as CLAP. The gate asks whether that is too much. A detector referenced to the pad's typical slew rather than its peak is the candidate fix.
 - **The round trip refiles THUMP's hats** from HAT_CLOSED or HAT_OPEN to PERC at the neutral point. VALVE's neutral does exactly the same (the rack's 19.5 kHz corner), and SKIN's hat keeps its class. This predates FORGE.
-- **A THUMP kick files as PERC at CHARGE 1.** The snare and cowbell keep their classes everywhere.
+- **A THUMP kick files as PERC at CHARGE 1** on the AS BUILT medium; it stays KICK on TIGHT (see the CHARGE gate below). The snare and cowbell keep their classes everywhere.
 - **YIELD 0 misses VALVE's 45 dB aliasing bar at 4x** (42.5 dB), the same kind of miss as VALVE's DRIVE 1 (40.6). Whether that wants 8x is gate question seven.
 - **STANDOFF moves the attack's colour, not a tunable comb.** No notch at 1/(2·delay) survives the folder and the die. This was found in the prototype and holds here.
 - **44.1 kHz assumed**, VALVE's note: the round trip's corner is absolute. A 48 kHz pad renders finite and its own length, and is tested.
@@ -226,7 +226,7 @@ The owner answered the gate page's seven questions on the published clips. The a
 
 **What shipped from it.** `Treatments.EXTRA` gains `forged` (CHARGE 0.5, STANDOFF 0.5, YIELD 0.5, ARREST 1). `Pedals.entries` gains FORGE on the PRE side, not movable, gated. The pad sheet's pedal row derives from the library, so FORGE draws its chip there. That row now holds six chips, the card's ceiling, so DELAY's chip needs a layout decision when its own gate passes. `ForgeTest` pins that the chip at AMT 1 renders the heard clip sample for sample. At the pad sheet's AMT 0.7, the character's die is ARREST 0.7 and YIELD 0.65: a softer form of what was heard, not itself heard.
 
-## The CHARGE gate (opened 2026-10-27, awaiting the owner)
+## The CHARGE gate (opened and answered 2026-10-27)
 
 The first gate's "mixed" on CHARGE asked for a tune. The likeliest zap is the medium: at CHARGE 1 its 24 all-passes from 300 Hz stretch a 0.8 ms click to 14.0 ms, most of it the low end arriving late. `Forge.Medium` now carries the medium's shape. Only `Medium.SHIPPED` reaches a pad, and the refactor was proven byte-identical: a hash over three pads at four settings matched before and after. `ForgeChargeAuditionGenerator` renders four candidates through the real section, published at https://claude.ai/artifact/C6R9Xicrk6WDbR49Bodgrp:
 
@@ -237,4 +237,86 @@ The first gate's "mixed" on CHARGE asked for a tune. The likeliest zap is the me
 | HIGH | 24, 1.2 to 8 kHz | 5.2 ms | 0.756 | 0.209 |
 | TIGHT | 12, 1.2 to 8 kHz | 3.0 ms | 0.504 | 0.101 |
 
-Attack shares are the first 5 ms at CHARGE 1, every other macro at its default; the bell at CHARGE 0 reads 0.621. HIGH keeps the bell's brightness with a third of the sweep. Every candidate tames the kick's. The owner's pick becomes `Medium.SHIPPED`; nothing ships until then.
+Attack shares are the first 5 ms at CHARGE 1, every other macro at its default; the bell at CHARGE 0 reads 0.621. HIGH keeps the bell's brightness with a third of the sweep. Every candidate tames the kick's.
+
+### Heard at the CHARGE gate (2026-10-27)
+
+| Question | Answer |
+|---|---|
+| Which source did CHARGE turn into a laser zap at the first gate? | No answer |
+| The bell | SHORT |
+| The kick | TIGHT |
+| The snare | TIGHT |
+| The chop | AS BUILT |
+
+The picks split by source, and the three chosen media lie on one line (TIGHT, SHORT, AS BUILT: ever more sweep). Offered one medium for every pad, a fifth DEPTH knob, or no change, the owner chose one medium: TIGHT, the drums' pick, because FORGE is for drum one-shots first. `Forge.Medium.SHIPPED` is now 12 sections from 1.2 to 8 kHz. `Medium.AS_BUILT` keeps the first gate's shape for the record and the tuning audition. The bell and the chop now get a shorter sweep than the owner picked for them; a DEPTH knob remains the way back if that is missed.
+
+**What moved, measured (`ForgeTest`).**
+
+| Claim | AS BUILT | TIGHT |
+|---|---|---|
+| A 0.8 ms click's 90 % width at CHARGE 1 | 13.95 ms | 2.95 ms |
+| STANDOFF 0 against 1, the kick's first 6 ms | 1.27 of their RMS | 0.67 |
+| Kick share over 6 kHz, ARREST 0.5 to 1 (the heat) | 0.00050 to 0.00102 | 0.00084 to 0.00124 |
+| Kick crest factor, ARREST 0 to 1 | 5.01 to 2.99 | 5.24 to 3.09 |
+| A THUMP kick at CHARGE 1 | files as PERC | stays KICK |
+| Kick body share over 200 Hz after 50 ms, YIELD 0 / 0.25 / 0.5 | 0.021 / 0.087 / 0.004 | 0.038 / 0.021 / 0.022 |
+
+The last row is the one to re-hear. On the old medium, YIELD 0.25 was harsher on a kick's body than YIELD 0: the harsh middle the owner kept at the first gate. On the TIGHT medium that middle no longer reads harsher on this kick. The medium changes the peak the flow threshold is set against. This is disclosed, not fixed, because the owner heard TIGHT only at CHARGE 1 and on the chip, never at YIELD 0.25.
+
+The CHARGE 0 path is untouched: the neutral point, the folder's aliasing and the hat's classes measure as before. The chip (`forged`) now renders with the TIGHT medium, and `ForgeTest` still pins it sample for sample to `Forge.process` at its settings.
+
+## DEPTH, the fifth knob (2026-10-28)
+
+The owner asked for the DEPTH knob, the way back to the media the bell and the chop preferred at the CHARGE gate. `Forge.MACROS` gains `DEPTH`, appended after the owner's four. Its default and neutral are both 0, so a recipe saved before it, and the FORGE chip, render exactly as before. A hash over three pads at four settings matched with and without the change. DEPTH is inert at CHARGE 0, where there is no medium, as STANDOFF is inert without a shock.
+
+`Forge.Medium.forDepth` lands exactly on the three heard media: 0 is TIGHT (`Medium.SHIPPED`, the kick's and the snare's pick), 0.5 is SHORT (the bell's), and 1 is AS BUILT (the chop's). From 0 to 0.5 the band slides on a log scale from 1.2–8 kHz to 300 Hz–6 kHz, with twelve sections throughout. From 0.5 to 1 the band holds and the sections double, 12 to 24, a whole section at a time.
+
+| DEPTH | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| A 0.8 ms click's 90 % width at CHARGE 1 (`ForgeTest`) | 2.97 ms | 4.74 ms | 7.83 ms | 11.31 ms | 13.97 ms |
+
+The three endpoints were heard at the CHARGE gate; the steps between them were not. The tuning audition still renders its four named candidates directly.
+
+## The DEPTH gate (opened 2026-10-28)
+
+Two claims were still unheard after DEPTH shipped: YIELD 0.25's harsh middle on the TIGHT medium, and DEPTH's in-between steps. Before building anything for the first one, a measure: is the harsh middle still on the knobs?
+
+It is. DEPTH 1 is the AS BUILT medium the middle was heard on, so at the default CHARGE it comes back exactly. The kick's body share over 200 Hz after 50 ms, with ARREST 0 (`ForgeTest` asserts the DEPTH 1 row):
+
+| Kick, CHARGE 0.5 | YIELD 0 | YIELD 0.25 | YIELD 0.5 |
+|---|---|---|---|
+| DEPTH 0 (TIGHT, shipped) | 0.038 | 0.021 | 0.022 |
+| DEPTH 0.75 | 0.033 | 0.053 | 0.009 |
+| DEPTH 1 (AS BUILT) | 0.021 | 0.087 | 0.004 |
+
+The snare never lost it: its body share at YIELD 0.25 sits above YIELD 0 at every DEPTH (0.765 against 0.714 at DEPTH 0, 0.635 against 0.609 at DEPTH 1). At CHARGE 1 the kick's harsh row moves to YIELD 0 at DEPTH 0.5 and 0.75 (0.095), a reminder that CHARGE and DEPTH both set the peak the flow threshold is measured against.
+
+So restoring the middle on the shipped medium is a change to propose only if the owner's ear asks for it. `ForgeDepthAuditionGenerator` (`./gradlew :synth:generateForgeDepthAudition`, 24 clips) puts four questions to it: the kick at YIELD 0.25 across DEPTH 0, 0.75 and 1; the snare's surviving harsh middle; and CHARGE 1 at DEPTH 0, 0.25, 0.5, 0.75 and 1 on the bell and the chop. One level trap is recorded on the page: on the kick, YIELD 0.25 at DEPTH 1 plays 1.7 dB louder than at DEPTH 0, and louder can pass for better. Nothing in FORGE changes until the answers are in.
+
+### Heard at the DEPTH gate (2026-10-29)
+
+| Question | Owner's answer | What it settles |
+|---|---|---|
+| 1. On the kick at YIELD 0.25, is the grit back at DEPTH 1? | Yes, DEPTH 1 is enough | The harsh middle stays a DEPTH 1 sound. The shipped medium is not changed to restore it at DEPTH 0, and `ForgeTest` keeps the DEPTH 1 route from being retuned away. |
+| 2. On the snare, YIELD 0.25 is still harsh at DEPTH 0. Keep it? | Keep it | The slew detector stays as is: the first gate's verdict, now heard on the TIGHT medium. |
+| 3. On the bell, does DEPTH move smoothly from TIGHT to AS BUILT? | Smooth | `Medium.forDepth`'s interpolation stays: the log slide of the band, then the sections doubling. |
+| 4. The same on the chop | No answer: "I don't really hear the difference" | Nothing to change; see below. |
+
+The chop's non-answer agrees with the clips' own numbers. Here is the crest factor at CHARGE 1, with loudness against the dry clip:
+
+| DEPTH | 0 | 0.25 | 0.5 | 0.75 | 1 |
+|---|---|---|---|---|---|
+| Bell crest | 9.27 | 9.05 | 8.70 | 8.84 | 7.63 |
+| Bell loudness | -2.19 dB | -1.91 dB | -1.62 dB | -1.82 dB | -0.50 dB |
+| Chop crest | 7.70 | 7.73 | 7.56 | 7.73 | 6.91 |
+| Chop loudness | +2.97 dB | +2.79 dB | +3.43 dB | +3.04 dB | +4.24 dB |
+
+- **The bell** moves at every step.
+- **The chop** barely moves from DEPTH 0 to 0.75: its crest changes by under 0.2, and its loudness by 0.6 dB. Only DEPTH 1 stands apart, at 0.8 lower crest and 1.2 dB louder.
+
+Proposed, not verified: the room recording already carries its own smear (the room's reflections), and it masks the medium's sweep. A bell is a clean strike, so it shows the sweep plainly.
+
+That raises a question about the chop's AS BUILT pick at the CHARGE gate. AS BUILT is the DEPTH 1 medium, the one clip that plays louder, so the pick may have been partly level. DEPTH 1 stays the chop's setting either way, because it costs nothing on a pad where the ear hears little else.
+
+The gate changes no code. FORGE ships as merged in #720 and #736.

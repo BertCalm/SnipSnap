@@ -115,6 +115,20 @@ fun ChopScreen(
     onNavigateTape: () -> Unit,
     /** EMPTY_CHOP's own second route: a kit with samples already on it. No default, same reasoning as [onNavigateTape]. */
     onNavigateKits: () -> Unit,
+    /**
+     * The clock, in ms and monotonic, that the reading panel's 200 ms show delay and 500 ms
+     * minimum run on. A device test hands it the compose test clock, because the latch sleeps on
+     * a coroutine `delay`, which runs on that clock's virtual time, and [SystemClock] would not
+     * move with it (the same seam as `KitsScreen.loadingClock`).
+     */
+    loadingClock: () -> Long = SystemClock::uptimeMillis,
+    /**
+     * Called on the worker once the source has been read and chopped, before the result is handed
+     * back to the screen. The app has nothing to hold there; a device test blocks in it to keep a
+     * read open for as long as it likes, since a real decode of a short tape ends in a few
+     * milliseconds and the test clock is frozen.
+     */
+    holdRead: () -> Unit = {},
 ) {
     val scheme = LocalScheme.current
 
@@ -155,6 +169,7 @@ fun ChopScreen(
                     ?.let { ChopReviewModel.TapeRef.ofSnip(it.sourceFile, it.range.first, snipsDir) }
                 file to ChopReviewModel.chop(snip, tape = tape)
             }
+            holdRead()
             result.oomEncountered to built
         }
         // Same courtesy as TapeScreen's own toast: said even when the kit
@@ -172,11 +187,17 @@ fun ChopScreen(
 
     val file = sourceFile
     val loadedModel = model
+    val reason = emptyReason
+    // The decode in flight (TapeScreen's call, and its comment): the dock is
+    // told, and the screen's place is held - see holdWhileReading for the
+    // 200/500 rule. An empty face said over a decode that is about to finish
+    // would be a lie, so it waits behind it.
+    val decoding = file == null && loadedModel == null && reason == null
+    if (holdWhileReading(decoding, loadingClock)) return
     if (file == null || loadedModel == null) {
-        // Either still decoding, or nothing readable was found — the empty
-        // face covers both; a blank LCD for the moment it takes to read a
-        // file is the honest state to show in between (TapeScreen's call).
-        val reason = emptyReason
+        // Nothing readable was found: the empty face says which kind of
+        // nothing. (A half-set pair with no reason, which nothing writes,
+        // draws the same quiet panel the decode does.)
         if (reason != null) {
             EmptyChop(reason, onNavigateTape, onNavigateKits)
         } else {

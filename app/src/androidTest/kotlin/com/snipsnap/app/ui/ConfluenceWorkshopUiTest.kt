@@ -18,6 +18,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.ConfluenceWorkshop
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.PadSheetBoxes
+import com.snipsnap.shell.PedalSlate
 import com.snipsnap.shell.StarterKits
 import com.snipsnap.synth.ConfluenceAssemblyRecipe
 import com.snipsnap.synth.ConfluenceRole
@@ -79,6 +80,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
             PadSheetScreen(
                 entry = entry,
                 slot = currentSlot,
+                backLabel = "◄ PADS",
                 onSlotChange = { currentSlot = it },
                 onBack = {},
                 onToast = { toasts += it },
@@ -92,6 +94,8 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
                 workshopOpen = false,
                 openBox = openBox,
                 onOpenBox = { openBox = it },
+                pedalRow = PedalSlate.DEFAULT,
+                onPedalRowChange = {},
             )
         }
         waitFor("the original gathering's saved controls", timeoutMillis = 30_000) {

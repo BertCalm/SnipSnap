@@ -28,7 +28,8 @@ enum class ObbligatoRelationship {
  * HOLD extends a finite gesture, including at 1. It does not yet claim a settled sustain loop.
  * Model 5 is accepted. Model 6 adds activity-driven Fight entries. Model 7 is an explicit
  * gentler-voiced listening revision. Model 8 adds remembered articulations for Play,
- * Fight and Protect. These listening revisions remain opt-in.
+ * Fight and Protect. Model 9 lets an answer join before the outgoing phrase yields.
+ * These listening revisions remain opt-in.
  */
 object Obbligato {
     /** The accepted sound stays the default until the responsive experiment is heard. */
@@ -36,7 +37,9 @@ object Obbligato {
     const val EXPERIMENTAL_MODEL = 6
     const val MUSICAL_MODEL = 7
     const val CONVERSATION_MODEL = 8
-    const val MAX_MODEL = CONVERSATION_MODEL
+    const val OVERLAP_MODEL = 9
+    const val MORE_OVERLAP_MODEL = 10
+    const val MAX_MODEL = MORE_OVERLAP_MODEL
     // Keep source personalities stable between listening revisions. Models 1–4
     // remain renderable; model 5 makes Fight's challenges uneven and distinct.
     private const val SOURCE_SEED_MODEL = 1
@@ -237,7 +240,7 @@ object Obbligato {
             4 -> current.copy(irregularity = 0.0)
             else -> current
         }
-        val conversationMode = if (model == CONVERSATION_MODEL) when {
+        val conversationMode = if (model >= CONVERSATION_MODEL) when {
             r.callDepth > 0.0 -> ObbligatoConversation.Mode.PLAY
             r.rivalry > 0.0 -> ObbligatoConversation.Mode.FIGHT
             r.fluteLead > 0.0 -> ObbligatoConversation.Mode.PROTECT
@@ -249,7 +252,8 @@ object Obbligato {
             ObbligatoConversation.Mode.PROTECT -> r.fluteLead / .65
             null -> 0.0
         }.coerceIn(0.0, 1.0)
-        val conversation = conversationMode?.let { ObbligatoConversation(it, heldSeconds, mischief, seed) }
+        val conversation = conversationMode?.let { ObbligatoConversation(it, heldSeconds, mischief, seed,
+            overlap = model >= OVERLAP_MODEL, moreOverlap = model == MORE_OVERLAP_MODEL) }
         val interaction = if (conversation == null && model >= EXPERIMENTAL_MODEL && r.rivalry > 0.0)
             ObbligatoInteraction(heldSeconds, mischief, seed) else null
         // A .12-second lag overlapped the reed with the flute's first useful tone.

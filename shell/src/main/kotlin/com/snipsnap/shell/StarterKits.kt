@@ -156,6 +156,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.thaw() },
         Starter(
+            "scour", "SCOUR",
+            "Metal, glass and thunder-sheet impacts that build. Builds cut for 120 and 90 BPM land their slam on the downbeat.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.scour() },
+        Starter(
             "nimbus", "NIMBUS",
             "Six metal plates spread and gather in C minor pentatonic. Rings, shimmer and held suspension.",
             seeded = false,
@@ -317,6 +323,12 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.scannedChain() },
+        Starter(
+            "trefoil", "TREFOIL",
+            "Three-body plucks, keys, moving wires and long memory, with three touch layers in C minor pentatonic.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.trefoil() },
         Starter(
             "trio", "TRIO",
             "Plucked performers and single-strike replies in C minor pentatonic. Low, middle and high drama.",

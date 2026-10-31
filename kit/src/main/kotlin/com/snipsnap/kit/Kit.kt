@@ -285,6 +285,11 @@ data class Kit(
      * before the ledger existed.
      */
     val wear: WearLedger? = null,
+    /** SnipSnap's optional live-bus settings. Kept opaque here to avoid a kit → synth dependency.
+     * Unknown or damaged settings survive ordinary kit edits; the playback host validates them.
+     * MPC programs do not interpret this metadata or bake it into individual samples.
+     */
+    val aquariumPerformance: JsonValue? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }

@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -42,6 +43,7 @@ import com.snipsnap.app.AudioVoice
 import com.snipsnap.app.KitShelf
 import com.snipsnap.app.KitWrites
 import com.snipsnap.app.MicSessionService
+import com.snipsnap.app.MidiInput
 import com.snipsnap.app.SurfaceEngine
 import com.snipsnap.app.TiltSource
 import com.snipsnap.app.deviceSampleRate
@@ -55,10 +57,13 @@ import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
+import com.snipsnap.kit.MidiWire
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.EchoTime
 import com.snipsnap.shell.Gesture
 import com.snipsnap.shell.KitBuilderModel
+import com.snipsnap.shell.MidiDeviceId
 import com.snipsnap.shell.Modulator
 import com.snipsnap.shell.PadBanks
 import com.snipsnap.shell.PrintLength
@@ -67,7 +72,10 @@ import com.snipsnap.shell.SnipStore
 import com.snipsnap.shell.StreamFacts
 import com.snipsnap.shell.SurfaceKey
 import com.snipsnap.shell.SurfaceLoop
+import com.snipsnap.shell.SurfaceMidi
 import com.snipsnap.shell.SurfaceStore
+import com.snipsnap.shell.SurfaceAquarium
+import com.snipsnap.shell.SurfaceSettingsWrites
 import com.snipsnap.shell.TouchSurface
 import com.snipsnap.shell.TouchSurface.Mode
 import com.snipsnap.shell.TouchSurface.Reading
@@ -79,10 +87,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.withLock
 
 /**
- * The three panels of controls above the pad, in strip order - one shows
+ * The panels of controls above the pad, in strip order - one shows
  * at a time (see the strip's own comment in [SurfaceScreen]).
  */
-private enum class Panel { VOICE, SHAPE, MOD }
+private enum class Panel { VOICE, SHAPE, MOD, MIDI, FX }
 
 // The keys SURFACE writes into its MAKE bag (`SurfaceScreen`'s `settings`
 // parameter, §3.6): the player's unkeyed work, so leaving to hear a pad
@@ -247,13 +255,14 @@ private fun pct(v: Float): String = "${(v * 100f).roundToInt()}%"
  * through the same door SYNTH's SEND TO PAD uses (`assign` on an empty
  * slot, `replaceAudio` on a taken one, the original in the bin).
  *
- * The controls above the pad are three panels behind a strip - VOICE
+ * The controls above the pad are panels behind a strip - VOICE
  * (the pad, the ring, the sample triangle's other three), SHAPE (the
  * mode's knobs, the corners with what they are held to, the presets),
- * MOD (the modulators, the gesture) - one showing at a time, so the pad
- * keeps its height however many rows the panels hold. The mode row and
- * the print row (→ TAPE or → PAD, BARS, PRINT) stay above the strip in
- * every panel.
+ * MOD (the modulators, the gesture), MIDI (which keyboard control moves
+ * X, Y and Z and which one holds the pad, by MIDI learn) - one showing
+ * at a time, so the pad keeps its height however many rows the panels
+ * hold. The mode row and the print row (→ TAPE or → PAD, BARS, PRINT)
+ * stay above the strip in every panel.
  *
  * Polling: every pointer event updates the *target* reading; a frame
  * loop steps a screen-rate smoother toward it, paints the puck from the
@@ -279,7 +288,7 @@ fun SurfaceScreen(
      * pad. Not Compose state - the vars below stay the live state, seeded
      * from it when the screen composes and written back to it when they
      * change. Keys, all text: `mode` (a [Mode] name, default XY), `panel`
-     * (VOICE / SHAPE / MOD, default VOICE), `printToPad` ("true" for → PAD,
+     * (VOICE / SHAPE / MOD / MIDI / FX, default VOICE), `printToPad` ("true" for → PAD,
      * default → TAPE), `bars` (the BARS index into [PrintLength.BARS],
      * default 0 = FREE), and the row picks `grainKnob`, `swarmKnob`,
      * `modSlot`, `modField` (indices, default 0). The kit's own sound is
@@ -337,7 +346,21 @@ fun SurfaceScreen(
     var pad2Generation by remember { mutableStateOf(0) }
     var pad3Generation by remember { mutableStateOf(0) }
     var pad4Generation by remember { mutableStateOf(0) }
+    // Pad reads in flight across all four slots (loadPad, loadPad2, loadPad3
+    // and loadPad4 each count their read through `whileReading`). A count, not
+    // a flag: a PAD press and a PAD2 press can be reading at once, and the
+    // first to finish must not put the line down under the other. Not keyed
+    // on the entry: a read belongs to the screen, and a key would start the
+    // new entry's count at 0 while old reads still run (they go on counting
+    // down the old one), so the line would drop under reads still in flight.
+    var readsInFlight by remember { mutableIntStateOf(0) }
+    val readingPad = readsInFlight > 0
+    // The screen's one report to the dock (the sink is a single slot), keyed
+    // on whether any read is running and not on the count, so a second read
+    // starting does not withdraw the report and make it again.
+    ReportBusy(remember(readingPad) { if (readingPad) Busy(Copy.SURFACE_LOADING_BUSY) else null })
     var kitSettings by remember { mutableStateOf(SurfaceStore.Settings.DEFAULT) }
+    val settingsWrites = remember { SurfaceSettingsWrites() }
     // Which corner PRESET ◄ ► targets - armed by its own ARM A..D row, a
     // separate gesture from SET A..D (which always captures the live
     // touch): arming only picks a target, it never itself changes a
@@ -402,6 +425,43 @@ fun SurfaceScreen(
     // The bench's one number, polled about once a second (see PlayScreen).
     var latency by remember { mutableStateOf(StreamFacts.latency(null)) }
 
+    // A keyboard's hand on the pad, through MIDI learn (the MIDI panel):
+    // learned knobs move the puck, a learned key or pad is the finger
+    // down. The rules are `:shell`'s SurfaceMidi and MidiLearn; this side
+    // opens the keyboard with the lifecycle, below; MidiLearnState keeps
+    // the bindings beside every other screen's.
+    val learnState = rememberMidiLearn(SurfaceMidi.SCREEN) { SurfaceMidi.prefer(it) }
+    val learn = learnState.learn
+    val hand = remember { SurfaceMidi() }
+    var midiDevices by remember { mutableStateOf<List<MidiDeviceId>>(emptyList()) }
+    var midiSupported by remember { mutableStateOf(false) }
+    // A finger on the pad owns the puck; MIDI's moves wait until it lifts.
+    var fingerDown by remember { mutableStateOf(false) }
+
+    val midi = remember { MidiInput(context) }
+    val midiListener = remember {
+        object : MidiInput.Listener {
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) {
+                learnState.heard(event)
+                val heard = hand.handle(event, device?.fingerprint?.key, learn)
+                learnState.learned(heard.learned)
+                if (heard.moved && !fingerDown) target = hand.reading(mode)
+            }
+
+            override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
+
+            // The cable is out: a key held to HOLD will never be let go.
+            override fun onDeviceRemoved() {
+                if (!hand.hold) return
+                hand.release()
+                if (!fingerDown) target = hand.reading(mode)
+            }
+        }
+    }
+
+    // Only the MIDI panel shows the learn; leaving it stops a learn still waiting.
+    LaunchedEffect(panel) { learnState.showing = panel == Panel.MIDI }
+
     fun started(up: Boolean) {
         engineUp = up
         if (!up) onToast(Copy.noLowLatencyStream("THE SURFACE"))
@@ -438,7 +498,10 @@ fun SurfaceScreen(
         loop.dropRecording()
         recording = false
         gestureArmed = false
+        hand.release()
+        hand.followed(Reading.REST, learn)
         engine.control(mode, Reading.REST, tilt.tilt, gate = false)
+        engine.panic()
     }
     val lifecycleOwner = LocalLifecycleOwner.current
     val audioVoice = remember(engine) { object : AudioVoice { override fun silence() = silenceSurface() } }
@@ -447,17 +510,38 @@ fun SurfaceScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
+                    // The keyboard first, so nothing it sends can sound
+                    // the pad again after the silence.
+                    midi.close()
+                    midiDevices = emptyList()
                     silenceSurface()
                     AudioFocus.release(audioVoice)
                 }
-                Lifecycle.Event.ON_START -> AudioFocus.acquire(audioVoice)
+                // The keyboard rides the same events as KEYS' does: open
+                // while the screen can sound (addObserver replays ON_START).
+                Lifecycle.Event.ON_START -> {
+                    AudioFocus.acquire(audioVoice)
+                    midiSupported = midi.open(midiListener)
+                }
                 else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            midi.close()
             AudioFocus.release(audioVoice)
+        }
+    }
+
+    // [read] counted as a pad read in flight, from before it starts to after it
+    // ends however it ends (a superseded or cancelled load included).
+    suspend fun <T> whileReading(read: suspend () -> T): T {
+        readsInFlight++
+        try {
+            return read()
+        } finally {
+            readsInFlight--
         }
     }
 
@@ -467,12 +551,14 @@ fun SurfaceScreen(
     // SurfaceKey) and handed over with the sample, so the key the engine
     // holds is never for a pad other than the one it is playing.
     suspend fun loadPad(dir: File, pad: KitPad, key: KeySpec?, generation: Int) {
-        val loaded = offMain {
-            // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
-            // from an already-bounded Snip — readCapped's 600s ceiling is defense in
-            // depth, not expected to ever bind.
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
-                ?.let { it to SurfaceKey.sourceMidi(it) }
+        val loaded = whileReading {
+            offMain {
+                // pad.sampleFile is a kit pad sample, produced only by KitBuilderModel.assign
+                // from an already-bounded Snip — readCapped's 600s ceiling is defense in
+                // depth, not expected to ever bind.
+                runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+                    ?.let { it to SurfaceKey.sourceMidi(it) }
+            }
         }
         if (generation != voiceGeneration) return  // a later PAD or RING press already superseded this one
         if (loaded == null) {
@@ -557,8 +643,8 @@ fun SurfaceScreen(
     // left the *previous* sample sitting in the engine would still sound
     // wherever the puck favours that vertex, while padName2 said NO PAD2.
     suspend fun loadPad2(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad2Generation) return  // a later press already superseded this one
         if (snip == null) {
@@ -573,8 +659,8 @@ fun SurfaceScreen(
 
     // The engine's third source slot - the sample area's base-right vertex.
     suspend fun loadPad3(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad3Generation) return  // a later press already superseded this one
         if (snip == null) {
@@ -589,8 +675,8 @@ fun SurfaceScreen(
 
     // The engine's fourth source slot - the sample area's base-mid vertex.
     suspend fun loadPad4(dir: File, pad: KitPad, generation: Int) {
-        val snip = offMain {
-            runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull()
+        val snip = whileReading {
+            offMain { runCatching { WavReader.readCapped(File(dir, pad.sampleFile), TAPE_LOAD_MAX_SEC).snip }.getOrNull() }
         }
         if (generation != pad4Generation) return  // a later press already superseded this one
         if (snip == null) {
@@ -609,18 +695,11 @@ fun SurfaceScreen(
 
     fun persist(dir: File, next: SurfaceStore.Settings) {
         kitSettings = next
+        settingsWrites.stage(dir, next)
         scope.launch {
-            // Write `kitSettings` fresh here, not the `next` this call
-            // captured: two persist() calls close together (a fast PAD3
-            // double-tap, say) each launch their own IO write, and those
-            // can finish in either order - a write of its own captured
-            // value could let an older call's write land on disk after a
-            // newer one's and leave a stale choice there. By the time any
-            // of these coroutines actually runs, every synchronous
-            // `kitSettings = next` above it has already happened, so reading
-            // `kitSettings` here means every one of them writes the same,
-            // latest content - the write order stops mattering.
-            offMain { runCatching { SurfaceStore.save(dir, kitSettings) } }
+            // Each directory keeps its own latest snapshot. A later kit
+            // switch must never write its settings into this directory.
+            offMain { runCatching { settingsWrites.save(dir) } }
                 .onFailure {
                     Log.e("SurfaceScreen", "persist: kitSettings not saved", it)
                     onToast(Copy.SURFACE_SETTINGS_NOT_SAVED)
@@ -1096,6 +1175,26 @@ fun SurfaceScreen(
     val keepGestureNow by rememberUpdatedState({ gesture: Gesture -> keepGesture(gesture) })
     val finishPrintNow by rememberUpdatedState({ finishPrint() })
 
+    val surfaceSettingsReady = entry != null && settingsLoadedFor == entry.dir
+    val surfaceRouteOn = surfaceSettingsReady && kitSettings.aquariumFromKit
+    // Touch painting recomposes every frame; decode/validate saved JSON
+    // only when the sound, tempo or routing choice actually changes.
+    val aquariumRoute = remember(entry?.kit?.aquariumPerformance, entry?.kit?.tempoBpm, surfaceRouteOn) {
+        SurfaceAquarium.route(entry?.kit, surfaceRouteOn)
+    }
+    var aquariumPriorKit by remember { mutableStateOf<File?>(null) }
+    var aquariumWasOn by remember { mutableStateOf(false) }
+    var aquariumFaulted by remember { mutableStateOf(false) }
+    var aquariumPending by remember { mutableStateOf(false) }
+    var aquariumLimited by remember { mutableStateOf(0L) }
+    LaunchedEffect(engine, entry?.dir, surfaceSettingsReady, surfaceRouteOn, aquariumRoute.settings, aquariumRoute.bpm) {
+        val reset = aquariumPriorKit != entry?.dir || (surfaceRouteOn && !aquariumWasOn)
+        engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset)
+        aquariumPriorKit = entry?.dir
+        aquariumWasOn = surfaceRouteOn
+        aquariumPending = engine.hasPendingAquariumControls()
+    }
+
     // Screen-rate loop: read the clock and the room, hand the frame to
     // `SurfaceLoop`, then do what only this side can - poll the engine,
     // mirror state for the rows, paint, send. The arithmetic between
@@ -1107,6 +1206,9 @@ fun SurfaceScreen(
             val now = withFrameNanos { it }
             if (now - lastLatencyAt >= StreamFacts.POLL_NANOS) {
                 lastLatencyAt = now
+                aquariumFaulted = engine.aquariumFaulted()
+                aquariumPending = engine.hasPendingAquariumControls()
+                aquariumLimited = engine.aquariumLimitedFrames()
                 latency = if (engineUp) StreamFacts.latency(engine.latencyMillis(), engine.isShared()) else StreamFacts.NO_STREAM
             }
             val frame = loop.step(
@@ -1169,6 +1271,7 @@ fun SurfaceScreen(
                     ) {
                         mode = m
                         target = Reading.REST // the frame loop snaps to it on the mode change
+                        hand.followed(Reading.REST, learn)
                     }
                 }
             }
@@ -1228,13 +1331,14 @@ fun SurfaceScreen(
             Spacer(Modifier.height(6.dp))
 
             // The panel strip. SURFACE's controls grew a row at a time until
-            // a dozen sat above the pad and the pad was what was left; three
+            // a dozen sat above the pad and the pad was what was left; the
             // panels show one group at a time and give the pad its height
             // back. VOICE is what plays (the pad, the ring, the sample
             // triangle's other three); SHAPE is what the finger does to it
             // (the mode's knobs, the corners with what they are held to,
             // the presets); MOD is what moves on its own (the modulators,
-            // the gesture). A pick, not a sound, so not in surface.json -
+            // the gesture); MIDI is what a keyboard's controls do (learn).
+            // A pick, not a sound, so not in surface.json -
             // it rides the MAKE bag instead (§3.6) - and a
             // mutually-exclusive row for TalkBack, like
             // the mode row above.
@@ -1353,6 +1457,21 @@ fun SurfaceScreen(
                 }
             }
 
+            if (panel == Panel.FX) {
+                SurfaceAquariumPanel(
+                    route = aquariumRoute, optedIn = surfaceRouteOn,
+                    ready = surfaceSettingsReady, busy = printing || finishing,
+                    streamUp = engineUp, faulted = aquariumFaulted, pending = aquariumPending,
+                    limitedFrames = aquariumLimited, scheme = scheme,
+                    onToggle = {
+                        val dir = entry?.dir
+                        if (dir != null && settingsLoadedFor == dir && !printing && !finishing) {
+                            persist(dir, kitSettings.copy(aquariumFromKit = !kitSettings.aquariumFromKit))
+                        }
+                    },
+                    onReset = { engine.configureAquarium(aquariumRoute.settings, aquariumRoute.bpm, reset = true) },
+                )
+            }
             if (panel == Panel.SHAPE) {
                 if (mode == Mode.GRAIN) {
                     Spacer(Modifier.height(6.dp))
@@ -1481,6 +1600,18 @@ fun SurfaceScreen(
                     )
                     ActionButton("PRESET ►", scheme, enabled = armed != null, modifier = Modifier.weight(1f)) { stepPreset(+1) }
                 }
+            }
+
+            if (panel == Panel.MIDI) {
+                Spacer(Modifier.height(6.dp))
+
+                MidiLearnPanel(
+                    learnState,
+                    SurfaceMidi.TARGETS,
+                    supported = midiSupported,
+                    connected = midiDevices.isNotEmpty(),
+                    hint = "KNOBS MOVE THE PUCK, HOLD SOUNDS IT",
+                )
             }
 
             if (panel == Panel.MOD) {
@@ -1612,6 +1743,13 @@ fun SurfaceScreen(
                                     size.height.toFloat().coerceAtLeast(1f),
                                     target,
                                 )
+                                // A finger moved the puck, or just let it go:
+                                // the knobs pick it up from here. A key still
+                                // held to HOLD keeps sounding where it lifted.
+                                val fingers = down.isNotEmpty()
+                                if (fingers || fingerDown) hand.followed(target, learn)
+                                fingerDown = fingers
+                                if (!fingers && hand.hold) target = hand.reading(mode)
                             }
                         }
                     },

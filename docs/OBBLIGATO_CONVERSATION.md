@@ -1,5 +1,100 @@
 # OBBLIGATO: a conversation that develops
 
+## A little more overlap
+
+After hearing model 9, the owner asked for a little more overlap. Model 10 keeps
+that version available and extends genuine player passes from 240 to 290 ms:
+85 ms incoming pickup, the same 140 ms central crossover, and a 65 ms outgoing
+tail. Nominal supporting presence rises from .35 to .40. The shared envelope
+power budget stays in place. These timing and presence values are listening
+shapes; they do not promise constant mixed energy between nearly unison pipes.
+
+The added time gives the outgoing phrase longer to finish while its partner
+takes over. Opening, same-player renewals and settling keep their earlier
+curves. Model 5 remains the factory and missing-model default. Saved models 1–9
+keep their original rendering paths; five independently captured model-9 raw
+sum/stem and complete PCM24 receipts protect the latest preceding version.
+
+Remembered body slope waits until the 290 ms pass plus 40 ms of meter settling.
+A shortest 320 ms turn can therefore retain a zero slope if no body observation
+has arrived yet. Duration and intensity still summarize the actual full turn;
+the controller does not extend its decision clock just to obtain a slope.
+
+The new comparison has 24 mono PCM24 recordings at 44.1 kHz: models 9 and 10,
+three relationships, complete notes, four-note melodies, and actual player taps.
+Whole performances match .12 house loudness; each tap inherits its duet's gain.
+Individual recordings, patches and full settings are downloadable. This page
+omits another ZIP and embedded audio copy to keep the complete Site within the
+256 MiB hosting limit. Earlier comparison pages and their downloads remain.
+
+This revision passed 36 focused checks, including 48 earlier recipes across
+models 1–9 with exact raw sum/stem and complete PCM24 hashes, deterministic
+recipe replay, bounded continuous curves, 18 rendered note/HOLD combinations,
+high-MISCHIEF Fight, Protect's opening, and causal negative controls. All twelve
+model-9 comparison recordings also match the previous published WAVs exactly.
+
+Python/scipy analysis of the C4 PCM24 recordings uses 50 ms RMS windows with a
+1 ms hop. Both actual stems exceed half their local foreground for 58.7 → 67.7 ms
+at Play passes that finish before settling, and 62.0 → 73.3 ms at Fight passes.
+Including the final Play window, which contains SETTLE, gives 60.0 → 81.0 ms.
+Duet roots remain within 1.3 cents, with periodicity above .9994. The minimum
+50 ms coda mixed/source RMS ratios are .949, .694 and .796 for Play, Fight and
+Protect. These are measurements of the written audio, not listening verdicts.
+
+The first Fight crossing has a slightly deeper mono interference dip: minimum
+mixed/source RMS .313 → .295, with time below 35% of body-median level increasing
+from 22 to 27 ms. The first Play dip improves slightly, .354 → .360. More source
+coexistence cannot guarantee a constant mixed level when the two pipes oppose
+phase. The owner should judge that brief Fight crossing in the new comparison.
+Protect already maintains both players after support begins: the longer pickup
+reduces its first-300-ms half-foreground overlap from 208 to 193 ms, while the
+support continues beyond that window. It does not share Play's or Fight's gain.
+
+## Overlapping handoffs
+
+The next listening revision, model 9, keeps model 8 available. Genuine changes
+of player receive a 60 ms incoming pickup, the existing 140 ms central power
+crossover, and a 40 ms outgoing tail. A nominal .35 supporting presence makes
+the join and tail audible before returning to the normal .18 background floor.
+One common power correction bounds the overlap against the interpolated old/new
+gesture budget. It preserves the players' relative balance and introduces no
+new nonlinear shaping.
+
+Opening gestures, same-player renewals and settling retain their original
+curves. The 240 ms pass stays below the 320 ms ordinary dwell. The memory's
+body-contour window waits until that pass and 40 ms of meter settling have
+finished, so it does not copy the compulsory handoff as expressive intent.
+All earlier renderer recipes retain their original paths; five pre-edit model-8
+sum/stem and complete PCM24 receipts accompany the prior compatibility fixtures.
+
+The reason for the staged pass is musical: the answer joins while its partner
+still has a phrase to finish, with a brief central exchange that keeps the lead
+clear. The curve is a listening proposal; real mixed energy and actual source
+overlap must be checked in the rendered comparison.
+
+The overlap revision passed 30 focused checks, including exact raw sum/stem and
+PCM24 receipts for 43 earlier recipes across models 1–8, continuous replay,
+retained lead, the power budget, 18 rendered note/HOLD cases, Protect's opening
+and physical-response negative controls. All twelve model-8 comparison WAVs also
+match the previous published recordings byte for byte.
+
+Python analysis of the C4 recordings measured both actual stems above half their
+local foreground for an average 43.2 → 60.0 ms at Play passes and 44.7 → 62.0 ms
+at Fight passes. Main duet loudness remains .12 and roots remain within 1.5 cents.
+Mixed coda energy stays healthy. Brief mono interference remains a listening
+tradeoff: the first Fight crossing reaches .313 mixed/source RMS versus .413
+previously, with 22 ms below 35% of body-median level. The preceding Play crossing
+is slightly shallower. Longer simultaneous presence does not guarantee a more
+connected impression for every phase relationship.
+
+The 24-recording comparison includes both versions' actual stems, complete note
+and melody recipes, an offline ZIP player and a 15,064,379-byte hosted ZIP. The
+new embedded single-file copy is omitted from hosting to stay within the 256 MiB
+expanded output limit; the full 24-WAV ZIP remains available. Browser checks cover
+playback, downloads, notes and mobile layout; the 197 earlier
+non-navigation Site files retain their bytes. The broader suite is reported
+separately. No listening verdict is claimed for model 9.
+
 Status: model 8 rendered listening proof; broader checks and listening verdict pending.
 Baseline: `122c7c0c6486521951db33ffbf78aef32d7fb31f`. The owner described the
 gentler model-7 direction as better, then authorized this audition. Model 5

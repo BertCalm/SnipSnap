@@ -69,19 +69,19 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (53 starters including STRIKE FX, CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (55 starters including STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 63 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 65 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
-MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, ORIGAMI, OHM,
+MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
 MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL and CHAMBER.
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
@@ -155,8 +155,10 @@ chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
 VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
 THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
-one velocity layer, each voice's real onset before its settled loop and
-note-off release. Older saved models retain their existing pad workflow. Physical phone/MPC
+one or three velocity layers, each capture's real onset before its own settled
+loop and note-off release. TOUCH LAYERS opens ON; OFF keeps the single-layer
+instrument. Soft/mid/hard captures scale the saved velocity and INJECT, with
+the saved recipe as the unchanged hard anchor. Older saved models retain their existing pad workflow. Physical phone/MPC
 acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
@@ -238,10 +240,13 @@ RELAY exposes native VELOCITY and note names while preserving loaded phrase
 recipes through preview, save and SEND TO PAD. Its 36 dry presets include eight
 KEY, six BASS, six PLUCK, six ORGAN, four CHIME and six FLOW recipes; the six earlier
 seeds remain unchanged. Explicit selections keep the starter at sixteen distinct
-pads. `:synth:generateRelayPerformanceAudition` builds a 100-clip page covering the
-bank, musical performances, velocity response, starter pads and a separate PULSE
-mapping comparison. The owner approved the 36-preset bank's sound on 2026-10-21;
-hands-on device verification and the candidate PULSE mapping's listen remain open.
+pads. `:synth:generateRelayPerformanceAudition` builds an 88-clip page covering the
+bank, musical performances, velocity response, starter pads and six PULSE
+0-versus-1 pairs. The full-range diagnostic changes only PULSE in copies of the
+same six finite recipes; the production control and saved model stay unchanged.
+The earlier eased mapping was not adopted after the owner reported no audible
+difference on 2026-10-26. The owner approved the 36-preset bank's sound on
+2026-10-21; hands-on device verification remains open.
 ORPHICA adds a microsound harp whose finite sound received a positive owner
 listening verdict. Material, grain mode, explicit root and six macros preserve
 its saved physical recipe; stereo previews keep the grain image. HOLD adds
@@ -259,7 +264,7 @@ GRAINS, SNAP and DRAW work on source material beside the engine picker.
 |---|---|
 | Scaffold | `build.gradle.kts` (AGP 8.7.3, Kotlin 2.0.21 + Compose plugin, minSdk 29, foundation-only Compose — no Material; TapeOS draws itself) |
 | Theme | `theme/` — `:shell`'s `Schemes`/`Type`/`Layout`/`Motion` tables bound to Compose; bevel/LCD/desk modifiers |
-| Window | `ui/Chrome.kt` — SNIPSNAP.EXE titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
+| Window | `ui/Chrome.kt` — SNIPSNAP titlebar, 9-item menu row, 3-cell status bar with `Copy` quips, toast overlay |
 | Screens | The menu's screens under `ui/` — SHELF, KIT (4×4, MPC geometry: A13 top-left, A01 bottom-left), TAPE, CHOP, PLAY, KEYS, SURFACE, GROOVE, SYNTH, SNAP, EXPORT, SETUP, HELP, and the rest |
 | Data | `KitShelf` over `KitStore` (kits under app files/Kits). Every screen that makes a sound is on `PadEngine` now — the SoundPool interim is gone, and choke and velocity belong to `VoiceAllocator` beside it |
 | Native | `src/main/cpp/` — one library, two engines under Oboe (prefab, `com.google.oboe:oboe`, C++17): the SURFACE engine (a control ring, per-sample `ParameterSmoother`s, the `PrintBuffer` resample tap) and M4's `PadEngine` (32 sample voices, a command ring in and an endings ring out, the kit's bank adopted whole). `OboeOutput.h` opens every stream (Exclusive, then Shared). `NativeSurface`/`SurfaceEngine.kt` and `NativePads`/`PadEngine.kt` own them from Kotlin. The NDK is pinned in `build.gradle.kts` and AGP fetches it. `src/main/cpp/test/` drives both callbacks by hand on the host (`cmake -S app/src/main/cpp/test -B build/native-tests && cmake --build build/native-tests && ctest --test-dir build/native-tests`); CI's `native-tests` job runs it |
@@ -279,7 +284,8 @@ logcat tag to grab when something is wrong.
   SETUP flip should repaint the whole window instantly; a stale surface
   means a colour got captured outside the composition local.
 - **First FRESH TAPE dub time** on a real phone (the synth render is
-  seconds on desktop JVM; status bar shows DUBBING… meanwhile).
+  seconds on desktop JVM; the dock says LOADING and the kit's name, and
+  PADS shows sixteen placeholders, meanwhile).
 - **IMPORT (share sheet)**: share a WAV, an MP3 and a screen-recorded
   MP4 into SnipSnap from another app. Each should land on TAPE with a
   "TAPED FROM OUTSIDE" toast naming its length; a share while the app is

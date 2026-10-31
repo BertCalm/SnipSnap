@@ -51,6 +51,9 @@ object BoardSheet {
     fun undo(model: KitBuilderModel, slot: Int): KitPad = store.undo(model, slot)
     fun canUndo(model: KitBuilderModel, slot: Int): Boolean = store.canUndo(model, slot)
 
+    /** The pad REMOVE would bring back, read for the kit bin's sweep ([PrintedPads.sourcePad]). */
+    internal fun sourcePad(kitDir: File, pad: KitPad): KitPad = store.sourcePad(kitDir, pad)
+
     /** Source-only check before a copy creates any destination files. */
     fun requireImportable(sourceDir: File, original: KitPad) = store.requireImportable(sourceDir, original)
 

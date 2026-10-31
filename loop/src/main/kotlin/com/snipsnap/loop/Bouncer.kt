@@ -95,6 +95,10 @@ object Bouncer {
         // Bake once per distinct block rather than once per interval: a 1-block
         // track on an 840-interval cycle would otherwise be baked 840 times.
         val cache = HashMap<Block, Snip>()
+        // The same ceiling playback applies, in the same place: after the
+        // mix, before the sink. One per bounce, starting at unity, as one
+        // engine starts at unity.
+        val ceiling = IntervalCeiling()
 
         for (i in 0 until intervals) {
             val buffers = session.tracks.map { track ->
@@ -102,6 +106,7 @@ object Bouncer {
                 cache.getOrPut(b) { BlockBaker.bake(b, session, source) }
             }
             Mixer.mix(buffers, session.tracks, block)
+            ceiling.apply(block, session.sampleRate)
             sink.write(block)
         }
     }

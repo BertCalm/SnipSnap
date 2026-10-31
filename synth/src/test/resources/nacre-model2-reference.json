@@ -1,0 +1,89 @@
+{
+  "source": "Published second listening export on852279d90eea35a73e90ea862d0f03f569f4112e",
+  "recipe": {
+    "engine": "NACRE",
+    "version": 1,
+    "name": "Revised / model 2",
+    "voice": "PEARL",
+    "macros": {
+      "TOUCH": 0.30000001192092896,
+      "DUET": 0.15000000596046448,
+      "CURRENT": 0.20000000298023224,
+      "VENUE": 0.15000000596046448,
+      "BLOOM": 0.3499999940395355,
+      "HOLD": 0
+    },
+    "model": 2,
+    "midi": 48,
+    "velocity": 1,
+    "seed": "7"
+  },
+  "nativeSamplesSha256": "a266149e24ca1efe25f366a5844e2acca82561f20f98bed2dc267f61eee2615e",
+  "prelevelSamplesSha256": "9543a30dfa562dbed4118716b8de99ffd8367c2c904c550fa09bb8744cc27515",
+  "events": [
+    {
+      "performer": "bass",
+      "stringId": 0,
+      "timeSeconds": 0.018262623108425788,
+      "frequencyHz": 130.81277465820312,
+      "strength": 0.5249396552885092,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 1,
+      "timeSeconds": 0.034004479401353885,
+      "frequencyHz": 261.62554931640625,
+      "strength": 0.1910565541698011,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 0,
+      "timeSeconds": 0.03875213070202233,
+      "frequencyHz": 261.62554931640625,
+      "strength": 0.3877883296589245,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 2,
+      "timeSeconds": 0.04974633569428198,
+      "frequencyHz": 523.2510986328125,
+      "strength": 0.11823210409730803,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 1,
+      "timeSeconds": 0.052980346967894686,
+      "frequencyHz": 523.2510986328125,
+      "strength": 0.1644553363131716,
+      "direction": "ascending"
+    },
+    {
+      "performer": "bass",
+      "stringId": 3,
+      "timeSeconds": 0.06548819198721008,
+      "frequencyHz": 1046.502197265625,
+      "strength": 0.07320895135693205,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 2,
+      "timeSeconds": 0.06720856323376705,
+      "frequencyHz": 1046.502197265625,
+      "strength": 0.11856335172305148,
+      "direction": "ascending"
+    },
+    {
+      "performer": "upper",
+      "stringId": 3,
+      "timeSeconds": 0.0814367794996394,
+      "frequencyHz": 2093.00439453125,
+      "strength": 0.08551351764602094,
+      "direction": "ascending"
+    }
+  ]
+}

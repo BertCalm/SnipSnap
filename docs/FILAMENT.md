@@ -55,7 +55,7 @@ replay and native velocity layers. Held pads contain a settled sustain cycle
 and retain the starter's one-shot playback setting; playing them once does
 not add an attack or automatically repeat the sample.
 
-## Rendering and playable THREAD keys
+## Rendering and playable keys
 
 Ordinary rendering and diagnostics share the same synthesis core. Playback
 skips optional stem buffers and energy ledgers; the activity memory, filters,
@@ -72,7 +72,7 @@ the cache. Cache hits improve repeated previews; a newly edited patch still
 requires synthesis. Benchmark cold edits separately from cache hits.
 
 Model-3 THREAD, PULSE and CURL expose MAKE INSTRUMENT. Each renders native C3,
-C4 and C5 roots covering MIDI 48–72, with one velocity layer. It retains
+C4 and C5 roots covering MIDI 48–72, with one or three velocity layers. It retains
 the actual zero-state onset of the periodically driven network and marks
 its settled final cycle for repetition. Independently advanced preceding
 and following cycles check recurrence. It does not splice a finite pluck
@@ -80,8 +80,9 @@ onto a different sustain source. The ordinary HOLD pad remains sustain-only.
 
 The existing keygroup host owns note-velocity gain and note-off release.
 The captured velocity still changes source articulation and routing; exported
-layers remove its separate native gain law once. Standalone previews retain
-native gain. The program release fades the whole note, including its halo;
+layers remove its separate native gain law once. Ordinary synth and single-layer
+previews retain native gain. Touch previews use the instrument player's gain.
+The program release fades the whole note, including its halo;
 an independent post-release halo tail remains outside the held-instrument path.
 
 `FilamentKeys`, `FilamentPadMaker` and the phone's existing instrument sheet
@@ -135,7 +136,7 @@ release; CURL keeps its slower exchanged bloom and shared escaped halo. They
 start their original voice-specific periodic drives from a quiet network. The
 retained onset and accepted sustain belong to that one continuously advanced
 network, with the approved source parameters and fixed native output gain.
-The three-root/one-layer scope and 0.1–1.5 s program release apply to every voice.
+The three-root scope and 0.1–1.5 s program release apply to every voice.
 The program fade includes the halo. Physical phone/MPC acceptance and listening
 acceptance of the new PULSE/CURL keygroups remain open.
 
@@ -143,8 +144,84 @@ Why it is built this way:
 
 - One DSP core keeps optimization and diagnostic evidence tied to the same sound.
 - Retaining genuine startup preserves the guide's opening gesture before sustain.
-- Three roots and one layer make a small export and playback proof before wider zoning.
+- Three roots keep native captures bounded while every touch retains its own onset and loop.
 - Existing keygroup formats already carry the attack and loop; no new sample format is needed.
+
+## Three touch layers
+
+The phone's MAKE INSTRUMENT sheet opens with TOUCH LAYERS ON for current
+THREAD, PULSE and CURL. OFF keeps the existing single-layer instrument.
+This is an instrument-building choice, separate from the saved synth patch.
+The underlying synthesis models, twelve factory recipes and ordinary renderer
+are unchanged.
+
+`FilamentTouchKeys` captures soft, mid and hard performances at strengths
+0.35, 0.65 and 1.0. Each strength scales the source patch's velocity and INJECT;
+the saved values are the hard-touch anchors. INJECT changes the existing
+exciter's upper partials and launch distribution, so a softer sample has a
+different articulation and routed response after gain is removed. BEND,
+LENGTH, BUNDLE, COLLECT, seed and bend profile stay fixed. HOLD selects the
+existing periodically driven network. At INJECT zero its additional brightness
+mapping is idle; the original native velocity response remains. Zero source
+velocity stays silent.
+The strength anchors, INJECT coupling and MIDI split points are musical choices,
+not a calibrated force model. Partial recipes retain the voice's existing defaults.
+
+Each captured note starts from quiet state and retains its own settled loop.
+The known velocity^.72 level law is removed once by `FilamentKeys.layer`;
+there is no per-layer loudness matching, independent normalization or external
+effect. The hard capture is the previous single-layer instrument, sample for
+sample. Playback velocity supplies gain once and selects MIDI windows 1–42,
+43–84 and 85–127. Selection happens at note-on; this is sampled articulation,
+without aftertouch or a continuously morphing layer.
+
+`filament.patch.json` still contains the original source patch. In touch mode,
+`TrackData/filament.instrument.recipe.json` also records capture version 1,
+strengths, velocity windows, release and all nine exact held-key source recipes.
+Its renderer field identifies `FilamentKeys.layer`, which retains onset before
+the loop. A single-layer overwrite removes the old touch recipe with its replaced
+TrackData folder. The existing MPC 2/MPC 3 writers and phone sidecar carry each
+layer's own PCM, root and loop markers.
+
+PREVIEW in touch mode plays C4 soft, mid and hard through the instrument player,
+including note-off release. MAKE renders serially, with nine samples per voice
+instead of three. Both operations remain cancellable; capture time and storage
+are approximately three times those of the single-layer option. The ordinary
+dry-preview cache remains separate.
+
+Generate the complete three-layer handoff with:
+
+```sh
+./gradlew :shell:generateFilamentKeysAudition -PfilamentKeysVoice=ALL -PfilamentKeysTouchLayers=true
+```
+
+A fresh `testkit/filament-held-touch-keys/` contains three programs, 27 native
+PCM24 WAVs, exact source recipes, exported-file playback demos and individual
+and combined ZIPs. `filament-held-touch-keys.zip` contains the three program
+folders directly at its root. The demos select every layer using its actual
+MIDI velocity window, hold beyond its own file end, wrap and release. Their
+per-event note velocities and the fixed host gain are recorded in the manifest.
+The task without the touch property keeps the original single-layer handoff.
+
+Why it is built this way:
+
+- Coupling touch to INJECT makes excitation colour and routing respond to playing strength.
+- Keeping the hard anchor preserves the accepted material and the single-layer option.
+- Independent captures preserve each softer onset and its actual converged sustain.
+- Separate delivery metadata makes every derived source replayable without changing saved patches.
+
+The focused Kotlin touch probe uses the first recipe per voice at C4, saved
+velocity 0.72, LATE geometry and seeds `Int.MIN_VALUE + 31 + voice.ordinal`.
+In three Hann-windowed spectral comparisons per adjacent touch pair, normalized
+power total-variation distances range from 0.0335 to 0.0970. Normalizing spectral
+power removes a scalar-gain explanation. These are measurements of that fixture,
+not listening judgments or a guarantee at every macro corner. The native-velocity
+only prototype's first THREAD pair was about 0.001, which motivated explicitly
+coupling touch to the existing INJECT control.
+
+Physical phone playback, MPC hardware import and owner listening acceptance of
+these new touch instruments remain open. Wider zoning and independent halo
+release remain later work.
 
 ## Revised voice character
 
@@ -266,8 +343,8 @@ HOLD fits the excitation and pulse schedule to a loop, populates delay
 history and settles the filters in a bounded search. Evidence must compare
 genuinely synthesized successive cycles before wrap treatment, including
 exported PCM. Individual path delays need not divide the loop period.
-A held pad is sustain-only material. The separate THREAD keygroup pilot
-retains an attack before its loop; physical phone/MPC hardware acceptance
+A held pad is sustain-only material. The separate THREAD/PULSE/CURL keygroups
+retain an attack before each layer's loop; physical phone/MPC hardware acceptance
 remains outstanding.
 
 ## Reproduction and listening

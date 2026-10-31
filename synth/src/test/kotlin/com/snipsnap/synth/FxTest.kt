@@ -711,6 +711,24 @@ class FxTest {
     }
 
     @Test
+    fun `ROOM sits after SPRING and before MOTION, and an absent section keeps old recipes byte-stable`() {
+        val names = FxChain.SECTION_NAMES
+        assertEquals(names.indexOf("spring") + 1, names.indexOf("room"), "ROOM is not right after SPRING: $names")
+        assertEquals(names.indexOf("room") + 1, names.indexOf("motion"), "ROOM is not right before MOTION: $names")
+
+        val without = FxChain(spring = Spring.defaults())
+        assertTrue(!without.toJsonText().contains("room"), "no room key unless the section is set")
+        assertEquals(without, FxChain.fromJsonText(without.toJsonText()))
+
+        val with = FxChain(room = Room.defaults())
+        assertEquals(with, FxChain.fromJsonText(with.toJsonText()))
+        val chained = with.process(snare)
+        assertTrue(!chained.samples.contentEquals(snare.samples), "the room section is a no-op in the chain")
+        // ROOM bounds its own tail to the rack's budget, so capTail leaves its output as it is.
+        assertContentEquals(Room.process(snare, Room.defaults()).samples, chained.samples, "the chain's room row does not run Room.process")
+    }
+
+    @Test
     fun `amped exists, sets only valve, and is a bypass at AMT 0`() {
         assertTrue("amped" in Treatments.names)
         val chain = Treatments.chain("amped")
@@ -1210,6 +1228,32 @@ class FxTest {
             out.frameCount > long.frameCount * 1.5,
             "capTail truncated an octave-down hit to ${out.frameCount} from ${long.frameCount}",
         )
+    }
+
+    @Test
+    fun `a trail that reaches the tail budget fades away over its last 300 ms instead of stopping`() {
+        // The owner heard DELAY's trail stop while still sounding on held notes (the DELAY confirm listen, 2026-10-26) and
+        // chose a 300 ms raised-cosine fade at the budget for every pad (2026-10-27). A held note through ECHO's longest trail
+        // reaches the budget with the trail still sounding, so every frame of the fade can be checked against ECHO's own.
+        val rate = kick.sampleRate
+        val held = Snip(FloatArray(rate / 2) { 0.5f * sin(2.0 * PI * 220.0 * it / rate).toFloat() }, 1, rate)
+        val macros = mapOf("TIME" to 1f, "REPEAT" to 1f, "TONE" to 1f, "MIX" to 1f)
+        val trail = Echo.process(held, macros)
+        val out = FxChain(echo = macros).process(held)
+        val cut = held.frameCount + (FxChain.MAX_CHAIN_TAIL_SECONDS * rate).toInt()
+        assertTrue(trail.frameCount > cut, "ECHO's longest trail no longer reaches the budget, so this test proves nothing")
+        assertEquals(cut, out.frameCount, "the budget did not cut at one second past the note")
+        val n = (FxChain.CAP_FADE_SECONDS * rate).toInt()
+        val start = cut - n
+        assertContentEquals(trail.samples.copyOfRange(0, start), out.samples.copyOfRange(0, start), "the cut touched the sound before its fade")
+        var checked = 0
+        for (f in start until cut) {
+            if (abs(trail.samples[f]) < 1e-3f) continue
+            val g = 0.5 + 0.5 * cos(PI * (f - start) / n)
+            assertEquals(g, (out.samples[f] / trail.samples[f]).toDouble(), 1e-4, "frame ${f - start} of the fade is not the raised cosine")
+            checked++
+        }
+        assertTrue(checked > n / 2, "only $checked of the fade's $n frames carried enough trail to check")
     }
 
     @Test

@@ -1,6 +1,9 @@
 package com.snipsnap.app.ui
 
+import android.Manifest
 import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.activity.compose.BackHandler
@@ -44,12 +47,14 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.snipsnap.app.KitShelf
@@ -147,11 +152,18 @@ private class Line(val photo: Photo?, val voice: SnapVoice, val table: IntArray,
 
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
 
+/** The real CAMERA grant: TAKE PHOTO's default for `cameraGranted`. */
+private fun hasCameraGrant(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+
 /**
  * SNAP — a photo becomes a pad. TAKE PHOTO asks the system camera for a
  * picture (`TakePicturePreview`: the small bitmap the camera app hands
- * back, no file, no storage permission, no CAMERA permission of our own —
- * the camera app holds that), and `:synth`'s `Snap` does the rest: the
+ * back, no file, no storage permission). It does need the CAMERA grant
+ * this app holds for LIVE: Android refuses `ACTION_IMAGE_CAPTURE` to an
+ * app that declares CAMERA and was not granted it, so the tap checks the
+ * grant first and asks for it when it is missing. `:synth`'s `Snap` does
+ * the rest: the
  * LINE chips pick which line through the picture is read as one cycle of
  * a waveform (HORIZON across, PLUMB down, ORBIT around the centre), the
  * photo's own numbers set the four knobs (hue → TUNE, brightness →
@@ -178,7 +190,7 @@ private fun padTag(slot: Int): String = PadBanks.tag(slot)
 fun SnapScreen(
     entry: KitShelf.Entry?,
     // App()'s own busy lock: KIT ▸ renders off-thread through it (the
-    // same DUBBING…-shaped overlay FRESH TAPE and BREED use), since it
+    // same busy-then-land shape FRESH TAPE and BREED use), since it
     // lands on the shelf and leaves this screen rather than staying on
     // it the way FIELD/CLOUD's own local busy flags do.
     busy: Boolean,
@@ -219,9 +231,15 @@ fun SnapScreen(
     // one with the knobs and chip as they left them. An unparseable value
     // falls back to the default.
     settings: MutableMap<String, String> = mutableMapOf(),
+    // TAKE PHOTO's CAMERA check, asked at each tap rather than remembered
+    // (a grant given in Settings counts on the next tap). A seam for the
+    // device tests, which cannot press the system dialog: the default is the
+    // real grant.
+    cameraGranted: (Context) -> Boolean = ::hasCameraGrant,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     // The drawn line comes out of the bag first: a restored DRAWN chip
     // needs its table behind it (the photo is not held, so a DRAWN voice
@@ -403,11 +421,43 @@ fun SnapScreen(
             }
         }
     }
-    fun takePhoto() {
+    // Both refusals are a dock line, never a crash: no camera app to answer
+    // is `ActivityNotFoundException`; a CAMERA grant that is not there (or
+    // went away since the tap checked it) is the `SecurityException` Android
+    // throws for `ACTION_IMAGE_CAPTURE` from an app that declares CAMERA.
+    fun launchCamera() {
         try {
             camera.launch(null)
         } catch (ex: ActivityNotFoundException) {
             onToast(Copy.SNAP_NO_CAMERA)
+        } catch (ex: SecurityException) {
+            Log.w("SnapScreen", "camera: launch refused", ex)
+            onToast(Copy.SNAP_CAMERA_OFF)
+        }
+    }
+    // True from the moment the system dialog is asked for until it answers,
+    // so a second tap in between does not stack a second request.
+    var asking by remember { mutableStateOf(false) }
+    val cameraPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        asking = false
+        // The same tap's flow: the player allowed it, so the camera opens.
+        if (granted) launchCamera() else onToast(Copy.SNAP_CAMERA_OFF)
+    }
+    fun takePhoto() {
+        if (asking) return
+        // Read the grant as of this tap; the callback above does not
+        // re-check it, because the dialog's answer is the grant.
+        if (cameraGranted(context)) {
+            launchCamera()
+            return
+        }
+        asking = true
+        try {
+            cameraPermission.launch(Manifest.permission.CAMERA)
+        } catch (ex: ActivityNotFoundException) {
+            // No permission controller to ask: nothing is pending.
+            asking = false
+            onToast(Copy.SNAP_CAMERA_OFF)
         }
     }
 
@@ -1085,6 +1135,9 @@ fun SnapScreen(
                     GrainFieldScreen(
                         entry = null,
                         slot = null,
+                        // SNAP draws this one itself until it is routed, so it
+                        // still names its own way back.
+                        backLabel = prebuilt.backLabel,
                         onBack = {
                             quietResume = true
                             showField = false

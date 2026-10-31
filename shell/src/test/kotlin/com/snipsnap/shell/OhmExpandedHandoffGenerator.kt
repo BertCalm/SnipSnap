@@ -27,10 +27,11 @@ import kotlin.math.abs
 import kotlin.math.exp
 import kotlin.math.sin
 
-/** Three original, provisional model-3 studies through the production instrument exporter. */
+/** Three original, provisional expanded-source studies through the production instrument exporter. */
 object OhmExpandedHandoffGenerator {
     const val BUNDLE = "SnipSnap OHM Expanded Studies"
     const val ARCHIVE = "SnipSnap-Ohm-Expanded-Studies.zip"
+    private const val MODEL = 4
     private const val RATE = WavWriter.MPC_SAMPLE_RATE
 
     @JvmStatic
@@ -49,10 +50,13 @@ object OhmExpandedHandoffGenerator {
             "synth/src/main/kotlin/com/snipsnap/synth/Ohm.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OhmV2.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OhmV3.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/OhmTextures.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/Bore.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OhmPatch.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OhmOptions.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/OhmCapture.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Strings.kt",
+            "synth/src/main/kotlin/com/snipsnap/synth/Modes.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Dsp.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Tide.kt",
             "synth/src/main/kotlin/com/snipsnap/synth/Keys.kt",
@@ -76,14 +80,14 @@ object OhmExpandedHandoffGenerator {
         captureJson.writeText(capture.toJsonText() + "\n")
         val captureWav = File(bundle, "capture-source/original-tap.wav")
         WavWriter.write(captureWav, Snip(capture.samples(), 1, RATE))
-        val macros = Ohm.defaults(3) + mapOf("LENGTH" to .2f, "MEDDLING" to .65f, "COMMUNE" to .7f, "HOLD" to 1f)
+        val macros = Ohm.defaults(MODEL) + mapOf("LENGTH" to .2f, "MEDDLING" to .65f, "COMMUNE" to .7f, "HOLD" to 1f)
         fun patch(name: String, options: OhmOptions, gesture: OhmGesture = OhmGesture.STEADY) =
             OhmPatch(name, macros, midi = 60, velocity = .8f, seed = 731, gesture = gesture,
-                model = 3, options = options, releaseSeconds = .4f)
+                model = MODEL, options = options, releaseSeconds = .4f)
         val studies = listOf(
-            patch("OHM Plucked Study", OhmOptions(), OhmGesture.GATHER),
-            patch("OHM Bowed Study", OhmOptions(exciter = OhmExciter.BOW, elder = .35f, fmRatio = 1.5f, fmIndex = 1.2f)),
-            patch("OHM Captured Study", OhmOptions(exciter = OhmExciter.CAPTURED, grains = .55f,
+            patch("OHM M$MODEL Plucked Study", OhmOptions(), OhmGesture.GATHER),
+            patch("OHM M$MODEL Bowed Study", OhmOptions(exciter = OhmExciter.BOW, elder = .35f, fmRatio = 1.5f, fmIndex = 1.2f)),
+            patch("OHM M$MODEL Captured Study", OhmOptions(exciter = OhmExciter.CAPTURED, grains = .55f,
                 freeze = .5f, grainSeconds = .08f, capture = capture)),
         )
         val instruments = studies.map { patch ->
@@ -162,7 +166,7 @@ object OhmExpandedHandoffGenerator {
         for (path in sourcePaths) File(repository, path).copyTo(File(bundle, "source/$path").also { it.parentFile.mkdirs() })
         File(bundle, "README.txt").writeText(readme())
         File(bundle, "manifest.json").writeText(Json.write(json(linkedMapOf(
-            "schemaVersion" to 1, "engine" to "OHM", "model" to 3, "title" to BUNDLE,
+            "schemaVersion" to 1, "engine" to "OHM", "model" to MODEL, "title" to BUNDLE,
             "status" to "Three provisional original audition studies; owner listening and device acceptance pending.",
             "sourceCommit" to git(repository, "rev-parse", "HEAD"), "workingTreeDirty" to git(repository, "status", "--porcelain").isNotEmpty(),
             "sourceFilesSha256" to sourceHashes, "sourceFilesStableDuringRender" to true,
@@ -173,7 +177,7 @@ object OhmExpandedHandoffGenerator {
                 "file" to relative(bundle, captureJson), "fileSha256" to sha(captureJson), "pcmSha256" to capture.sha256,
                 "frames" to capture.frameCount, "label" to capture.label, "wav" to relative(bundle, captureWav), "wavSha256" to sha(captureWav)),
             "verification" to listOf("complete patch/source JSON replay", "27 mono PCM24 samples and sampler sheets", "native keygroup and compatibility loop/release fields", "phone instrument sidecars", "source hashes stable while rendering"),
-            "phoneImportScope" to "MPC keygroups are not imported as drum kits. Use OHM model 3/HOLD/MAKE INSTRUMENT on the phone; packaged sidecars describe the standard phone keys format.",
+            "phoneImportScope" to "MPC keygroups are not imported as drum kits. Use OHM model $MODEL/HOLD/MAKE INSTRUMENT on the phone; packaged sidecars describe the standard phone keys format.",
             "phoneHeard" to false, "mpcHardwareHeard" to false, "instruments" to instruments,
         ))) + "\n")
         val files = bundle.walkTopDown().filter { it.isFile }.sortedBy { relative(bundle, it) }.toList()
@@ -189,7 +193,7 @@ object OhmExpandedHandoffGenerator {
         }
         File(output, "$ARCHIVE.sha256").writeText("${sha(archive)}  $ARCHIVE\n")
         println("${archive.absolutePath}: ${archive.length()} bytes; SHA-256 ${sha(archive)}")
-        println("Three provisional instruments / 27 native zones; phone and MPC listening remains pending.")
+        println("Three provisional model-$MODEL instruments / 27 native zones; phone and MPC listening remains pending.")
     }
 
     private fun authoredCapture(): OhmCapture {
@@ -203,9 +207,9 @@ object OhmExpandedHandoffGenerator {
     }
 
     private fun readme() = """
-        OHM EXPANDED STUDIES — PROVISIONAL AUDITION INSTRUMENTS
+        OHM MODEL $MODEL EXPANDED STUDIES — PROVISIONAL AUDITION INSTRUMENTS
 
-        Three original model-3 studies: plucked shared family (GATHER), bowed string
+        Three original model-$MODEL studies: plucked shared family (GATHER), bowed string
         with FM elder, and an original generated tap with grains and audio freeze.
         These are listening studies, not accepted factory presets. The captured
         exciter is synthesized here and embedded in its patch, with no external assets.
@@ -225,11 +229,11 @@ object OhmExpandedHandoffGenerator {
         use the same loop bounds. Root previews add a finite release on a copy.
 
         SnipSnap's existing share/import door imports drum kits, not this keygroup
-        ZIP. On the phone use OHM model 3, choose the desired source and HOLD, then
+        ZIP. On the phone use OHM model $MODEL, choose the desired source and HOLD, then
         MAKE INSTRUMENT. The adjacent .instrument.json files use that same keys
         format; .patch.json files preserve every source, macro and release choice.
         A saved recipe can be rebuilt on the CLI:
-        snipsnap synth OHM STRING --patch "OHM Captured Study.patch.json" --instrument --out /tmp/ohm-keys
+        snipsnap synth OHM STRING --patch "OHM M$MODEL Captured Study.patch.json" --instrument --out /tmp/ohm-keys
 
         manifest.json records source/recipe/sample hashes and exact notes/options.
         source/ preserves the renderer/capture/package source snapshot.

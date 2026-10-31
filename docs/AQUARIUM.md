@@ -1,6 +1,6 @@
 # Aquarium
 
-Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; the PERFORMANCE panel and remaining mixers are later work.
+Aquarium's six accepted effects are editable from **PAD → TREATMENT → AQUARIUM**. The PAD panel connects presets, all 52 controls, explicit previews and whole-pad printing to the native offline renderer. It uses the same corrected model imported in [the foundation](https://github.com/BertCalm/SnipSnap/pull/595). The first continuous backend now connects PadEngine playback and its stereo PRINT tap; KIT PERFORMANCE controls and a qualified SURFACE route now connect live playback and stereo printing; other mixers remain later work.
 
 The offline bridge was developed against SnipSnap `b429ec2c4bc89d225ac476af234c1a88a46fb07d`; the PAD panel builds on `fd76ffa382c1bf94d6a82e5a9484e6cd4140e91c`. The [integration design](superpowers/specs/2026-10-18-aquarium-integration-design.md) and [staged plan](superpowers/plans/2026-10-18-aquarium-foundation.md) explain the larger feature. The owner's positive October 18 listening verdict covers the underlying audition. No new listening verdict is claimed for these host policies.
 
@@ -18,11 +18,29 @@ Preview, shaping and mono-to-stereo preparation run on a worker. Preview and kit
 
 ## First performance backend
 
-The [PadEngine route and policy contract](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md) maps each actual playback/recording owner. One continuous processor now follows each PadEngine's summed stereo mix and precedes its unchanged PRINT tap. It is available through the native/JNI/Kotlin API and starts dry; no PERFORMANCE menu or automatic kit-folder persistence is added yet. The shared kit host supplies current kit tempo, while SPLIT, ORBIT audition and instrument handles remain separate instances.
+The [PadEngine route and policy contract](superpowers/specs/2026-10-26-aquarium-padengine-performance-design.md) maps each actual playback/recording owner. One continuous processor now follows each PadEngine's summed stereo mix and precedes its unchanged PRINT tap. It starts dry for old kits. KIT now exposes a qualified PERFORMANCE panel and restores its saved live settings when the shared host opens. The shared kit host supplies current kit tempo, while SPLIT, ORBIT audition and instrument handles remain separate instances.
 
 Global bypass retains the configured processor's time and delay history through quiet gaps. Sound/seed/tempo edits fade the wet branch to silence for snapshot adoption, then fade back; gain has its own linear slew. These transitions are 20 ms, with at most a fade-out plus fade-in for a sound edit. They do not interpolate filter/selector laws. The existing +/-1 mix clamp precedes Aquarium. The live host applies fixed gain and stereo-linked sample-peak protection at 0.99 with a 50 ms release; during global bypass transitions the dry branch retains its existing +/-1 ceiling. This differs deliberately from finite PAD rendering's reject-on-excess policy.
 
-Panic, bank replacement, stream recovery and non-finite handling have explicit policies. The callback uses a bounded settings handoff and fixed scratch, with no preparation, allocation, freeing or locks. PRINT records the actual processed buffer, including transitions and protection. Other mixer/print routes, the PERFORMANCE controls and persistence, phone CPU/power measurements and physical MPC acceptance remain open.
+Panic, bank replacement, stream recovery and non-finite handling have explicit policies. The callback uses a bounded settings handoff and fixed scratch, with no preparation, allocation, freeing or locks. PRINT records the actual processed buffer, including transitions and protection. Other mixer/print routes, phone CPU/power measurements and physical MPC acceptance remain open.
+
+## PERFORMANCE controls and kit storage
+
+Expand **PERFORMANCE** on KIT for the live Aquarium bus. LIVE ON/BYPASSED, OUTPUT (including mute), RESET TAIL, the eleven accepted presets and all 52 controls use the shared host. Presets preserve the seed, output and explicit global bypass. Tempo follows the kit; no finite tail/fade context is saved here. The panel displays missing streams, queued settings, faults and cumulative protected frames. Individual zero-mix stages retain their paused private history; global bypass keeps the configured processor clocking.
+
+Changes audition immediately. **SAVE TO KIT** stores the full versioned settings in optional `kit.json.aquariumPerformance`; **REVERT**, collapsing the panel or leaving KIT restores the last saved snapshot. A failed save retains the draft for retry. Saved settings return when the kit's host reopens. Saves reopen current metadata under the shared kit-write mutex and use ordinary atomic kit saves/takes, without rewriting sample WAVs. Live-only changes do not reload the sample bank or restart the beat/recording/bounce clock. Actual pad/tempo changes retain the existing transport policy.
+
+Old kits open dry without a write. Unknown/damaged live metadata is preserved during ordinary kit edits, shown as unreadable, and played dry until the owner explicitly saves a replacement. `:kit` stores this optional JSON opaquely, while `:shell` validates it using the synth codec; this avoids a circular dependency.
+
+This panel reaches the shared KIT/PADS, beat/GROOVE and their native PRINT/BOUNCE, including banked count-in clicks. SURFACE can explicitly opt into these saved settings on its own independent stereo bus. SPLIT, ORBIT transport/audition, instruments and the other players remain separate. MPC kit exports do not bake the live bus into samples or create an MPC insert; the optional SnipSnap sidecar can retain settings for reopening in SnipSnap. Kept PAD prints remain baked audio as before. See the [control and storage contract](superpowers/specs/2026-10-28-aquarium-performance-controls-design.md).
+
+## SURFACE → FX
+
+**USE KIT FX** opts this kit's SURFACE into its saved KIT → PERFORMANCE sound and tempo. The choice is stored in surface.json and defaults off for old kits. Global bypass and unreadable-settings fallback are respected. This is SURFACE's own processor/history, not a shared audio master with the beat. An unused route does not clock a hidden wet core.
+
+The existing mono source/legacy chain feeds Aquarium in stereo. Normal finger release and source changes keep effect history running; focus/background release requests a priority panic and waits for fresh touch frames to resume. Stream preparation/recovery uses the actual device rate. Default dry floating overs remain unchanged; the opted-in wet branch uses Aquarium's accepted input clamp and linked sample-peak protection.
+
+Every SURFACE PRINT now keeps both output channels, including dual-mono dry output. TAPE/PAD receive stereo; a wet print is baked audio, and playing it through KIT FX applies the effect again. The FX tab states this. A minute of 48 kHz stereo print reserves 23.04 MB of floats before recording. No offline tail/fade or replayable PAD wrapper is implied. See the [route and capture contract](superpowers/specs/2026-10-31-aquarium-surface-stereo-design.md).
 
 ## Finite render contract
 
@@ -72,7 +90,7 @@ MPC 2 and MPC 3 exports carry the printed stereo WAVs and normal pad/layer metad
 - **Heard:** the earlier six-effect audition was accepted. This code does not establish a new listening result.
 - **Panel tests supplied:** all presets and controls, physical-unit accessibility, narrow layout and action states, real JNI preview/KEEP across different-rate velocity layers, saved context, remove/undo, stale-preview cancellation and failure refusal. JVM and emulator execution results belong in the change's validation report and CI checks.
 - **Performance checks supplied:** native continuous-clock and exact dry tests, stereo post-mix/PRINT equality, bounded transitions and queue behavior, linked protection, panic/restart/rate behavior, callback allocation interception, strict settings serialization and real Android live-control/print tests. Execution results belong in the current PR and CI checks.
-- **Later:** remaining continuous mixer/bounce routes, the PERFORMANCE panel and persistence, phone CPU/latency/power measurements, and hardware MPC acceptance.
+- **Later:** remaining continuous mixer/bounce routes, phone CPU/latency/power measurements, and hardware MPC acceptance.
 
 Biolume retains its feedforward harmonic path and pitch-ring seams; Reef retains its 5000-sample delay ceiling; Fathom retains its complementary one-pole crossovers. The native [README](../app/src/main/cpp/aquarium/README.md) records the accepted model and its limits.
 

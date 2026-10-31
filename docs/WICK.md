@@ -75,6 +75,16 @@ at MIDI 60. **Recovering Rattle**, **Depleted Rattle**, **Small Rattle** and
 **Held Rattle** are provisional listening recipes. The dense supplied setting
 is retained as Depleted Rattle. See the [design notes](WICK_RATTLE.md).
 
+After the first RATTLE audition, the owner described the result as one voice
+being hit repeatedly and asked for a more cohesive character. The current
+revision keeps the same controls and reserve network while softening openings
+and retaining more of the primary body between pulses. The opening comparison
+plays **Earlier separate hits** and **Connected body** at C3/C4/C5 with matching
+controls. `legacyRattleEnvelope=true` reproduces the earlier response as an
+explicit diagnostic recipe; ordinary RATTLE patches use the new response.
+The five accepted voices retain their render paths. See the
+[cohesion revision](WICK_RATTLE_COHESION.md) for its evidence and limits.
+
 `WickPresets` is deliberately outside the shared factory roster, Android picker
 and starter menu pending listening. The CLI, patch/recipe decoder and native
 velocity renderer support the prototype. `SynthKits.wick()` supplies sixteen
@@ -137,7 +147,8 @@ No Android device or MPC hardware acceptance is claimed in this round.
 Implementation measurements and checks are recorded beside the generated
 manifest and on the audition page. PLUCK, the revised BUBBLE direction, WOOD
 and the three-voice phrases have received positive listening feedback. BREATH is now accepted as a working voice.
-FLICKER is also accepted as a working voice. RATTLE's listening verdict remains open. The short-window classifier can
+FLICKER is also accepted as a working voice. The first RATTLE response was
+judged too much like repeated hits; the connected-body revision awaits listening. The short-window classifier can
 mislabel a late BREATH swell when the window ends before any real decay;
 its raw label and direct envelope evidence are retained in diagnostics.
 The source names, constants, voice settings and proposed release identity are

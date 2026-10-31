@@ -50,7 +50,7 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
 /**
  * DELETED KITS, a section of the BIN bench (`BinScreen.kt`) — it used to be a
  * screen of its own (`DeletedKitsScreen`) and is now the upper of the bench's
- * two lists. The bench owns the header row, the ◄ SHELF chip and Back; this
+ * two lists. The bench owns the header row, the back chip and Back; this
  * section draws one heading line and the list under it, nothing more.
  *
  * Originally (Task 2 of the bin-restore plan): the shelf-level listing

@@ -47,6 +47,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.onLongClick
@@ -79,6 +80,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.MidiWire
 import com.snipsnap.shell.Breed
+import com.snipsnap.shell.Busy
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.DustPrints
 import com.snipsnap.shell.KeyPicker
@@ -221,6 +223,7 @@ fun KitScreen(
      * player's eye.
      */
     beat: BeatPlayer,
+    onSavePerformance: (com.snipsnap.synth.AquariumPerformanceSettings, (String?) -> Unit) -> Unit,
 ) {
     val scheme = LocalScheme.current
 
@@ -259,6 +262,7 @@ fun KitScreen(
     val haptics = LocalHaptics.current
     val host = rememberPadHost(hosts, entry.dir)
     val player = host.engine
+    DisposableEffect(host) { onDispose { host.revertPerformance() } }
     // PAD SHEET can rewrite a pad's level/pan/audio while this screen isn't
     // showing it; the engine's bank doesn't know that on its own, so a
     // fresh `kit` reference (its identity changes on every real edit —
@@ -266,6 +270,12 @@ fun KitScreen(
     // host waits out a burst of edits before it rebuilds, and loads the
     // first at once, so this also covers the very first composition.
     LaunchedEffect(host, entry.kit) { host.request(entry) }
+    // The screen's one report to the dock (the sink is a single slot): the
+    // kit's bank is being read. `host.loading` is true only while the read
+    // itself runs, not through the host's wait for a burst of edits to end,
+    // and the value is remembered under it so the sink sees a job start and
+    // end and not a new object on every recomposition.
+    ReportBusy(remember(host.loading) { if (host.loading) Busy(Copy.KIT_LOADING_BUSY) else null })
     // Built at the engine's own polyphony so the status line and the
     // engine cannot drift: at the cap the engine steals exactly the voice
     // the allocator said it would.
@@ -436,7 +446,7 @@ fun KitScreen(
     val midi = remember(entry.dir) { MidiInput(engineContext) }
     val midiListener = remember(entry.dir) {
         object : MidiInput.Listener {
-            override fun onEvent(event: MidiWire.Event) = onMidi(event)
+            override fun onEvent(event: MidiWire.Event, device: MidiDeviceId?) = onMidi(event)
             override fun onDevicesChanged(devices: List<MidiDeviceId>) {
                 midiDevices = devices
                 // A controller seen before brings its pad map back. Panic FIRST:
@@ -611,11 +621,11 @@ fun KitScreen(
                             .weight(1f, fill = false)
                             .heightIn(min = Layout.MIN_HIT_TARGET.dp)
                             .raisedBevel(scheme)
-                            .tapeClick(label = Places.switchKitName(switcherLine), onClick = onSwitchKit)
+                            .tapeClick(label = Places.switchKitName(switcherLine), enabled = !busy, onClick = onSwitchKit)
                             .padding(horizontal = 10.dp),
                         contentAlignment = Alignment.CenterStart,
                     ) {
-                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, scheme.ink.tape, maxLines = 1)
+                        TapeText(kit.name.uppercase(java.util.Locale.ROOT) + " ▸", TapeType.pixel, if (busy) scheme.ink3.tape else scheme.ink.tape, maxLines = 1)
                     }
                     TapeText(Copy.countOf(kit.pads.size, "PAD", "PADS"), TapeType.lcdSmall, scheme.amber.tape, maxLines = 1)
                 }
@@ -854,6 +864,41 @@ fun KitScreen(
                 .padding(bottom = Layout.DOCK_H.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            var performanceOpen by remember(entry.dir) { mutableStateOf(false) }
+            var performanceSaving by remember(entry.dir) { mutableStateOf(false) }
+            var performanceStatus by remember(entry.dir) { mutableStateOf<String?>(null) }
+            val performanceDirty = host.performance != host.savedPerformance || host.performanceWarning != null
+            GroupBox(
+                legend = "PERFORMANCE",
+                summary = "AQUARIUM · ${if (host.performance.enabled && !host.performance.settings.isBypass) "LIVE" else "DRY"}${if (performanceDirty) " · UNSAVED" else ""}",
+                open = performanceOpen,
+                onToggle = {
+                    if (performanceOpen) host.revertPerformance()
+                    performanceOpen = !performanceOpen
+                    performanceStatus = null
+                },
+                scheme = scheme, enabled = !busy && !performanceSaving,
+                modifier = Modifier.testTag("performance-group"),
+            ) {
+                AquariumPerformancePanel(
+                    settings = host.performance, dirty = performanceDirty, busy = busy || performanceSaving,
+                    streamUp = host.up, pending = host.performancePending, faulted = host.performanceFaulted,
+                    limitedFrames = host.performanceLimitedFrames, bpm = kit.tempoBpm?.toDouble() ?: 0.0,
+                    warning = host.performanceWarning, status = performanceStatus,
+                    scheme = scheme, color = scheme.accent.tape,
+                    onChange = { host.auditionPerformance(it); performanceStatus = null },
+                    onReset = { host.auditionPerformance(host.performance, reset = true) },
+                    onSave = {
+                        performanceSaving = true
+                        performanceStatus = "SAVING PERFORMANCE…"
+                        onSavePerformance(host.performance) { error ->
+                            performanceSaving = false
+                            performanceStatus = error ?: "SAVED TO KIT"
+                        }
+                    },
+                    onRevert = { host.revertPerformance(); performanceStatus = null },
+                )
+            }
             GroupBox(
                 legend = "THIS KIT",
                 summary = Places.thisKit(kit.key?.let { KeyPicker.label(it) }, bankBEmpty, versions),
@@ -1347,12 +1392,23 @@ private fun TexturePanel(
             onFractionCommit = {},
         )
 
+        // Whether the job in flight is this button's own. `busy` is every
+        // job's, so on its own it would put the spinner on this button for
+        // a job started from the grid or the shelf; the dock says what the
+        // job is, and the ring belongs on the control that was pressed.
+        // Set on the press, cleared when the app is idle again.
+        var startedHere by remember { mutableStateOf(false) }
+        LaunchedEffect(busy) { if (!busy) startedHere = false }
         ActionButton(
-            if (busy) "DUBBING…" else "$kind ▸ NEW TAPE",
+            "$kind ▸ NEW TAPE",
             scheme,
             enabled = !busy,
+            working = busy && startedHere,
             modifier = Modifier.fillMaxWidth(),
-            onClick = onGo,
+            onClick = {
+                startedHere = true
+                onGo()
+            },
         )
     }
 }

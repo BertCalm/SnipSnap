@@ -144,7 +144,12 @@ object Velocity {
             // is naturally quieter as a side effect) - peakMatch restores
             // "timbre only, level is the hardware's job" for whichever
             // gain curve the caller applies on top.
-            peakMatch(reference, atVelocity(patch!!, velocity, spec))
+            // An authored quiet ORIGAMI reference is the hardest sample of its own set.
+            // Its softer layers must stay below that ceiling instead of replacing it
+            // with an absolute .3/.6 strike that could be harder than the saved note.
+            val strike = if (patch is OrigamiPatch && patch.expression == OrigamiExpression.FOLD)
+                OrigamiExpressions.relativeVelocity(patch, velocity) else velocity
+            peakMatch(reference, atVelocity(patch!!, strike, spec))
         } else {
             soften(reference, 1f - velocity.coerceIn(0f, 1f))
         }
@@ -189,6 +194,7 @@ object Velocity {
      * voice, never about which keys happen to be present on one instance.
      */
     private fun macroSpecsFor(patch: Patch): List<MacroSpec> = when (patch) {
+        is FerryPatch -> Ferry.macrosFor(patch.voice)
         is ApsisPatch -> Apsis.macrosFor(patch.voice)
         // ONSET's BLEND/BODY/EDGE are material controls, not a measured monotonic
         // brightness axis. Its velocity layers keep the saved model and blend
@@ -236,6 +242,7 @@ object Velocity {
         is MurkPatch -> Murk.macrosFor(patch.voice)
         is NimbusPatch -> Nimbus.macrosFor(patch.voice)
         is ThawPatch -> Thaw.macrosFor(patch.voice)
+        is ScourPatch -> Scour.macrosFor(patch.voice)
         is UndertowPatch -> Undertow.macrosFor(patch.voice)
         is CorollaPatch -> Corolla.macrosFor(patch.voice)
         is SuturePatch -> Suture.macrosFor(patch.voice)
@@ -269,6 +276,7 @@ object Velocity {
         is FilamentPatch -> Filament.macrosFor(patch.voice)
         is ScannedChainPatch -> ScannedChain.macrosFor(patch.voice)
         is ChamberPatch -> Chamber.macrosFor(patch.voice)
+        is TrefoilPatch -> Trefoil.macrosFor(patch.voice)
         is TidalPatch -> Tidal.macrosFor(patch.voice, patch.model)
         is NacrePatch -> NacreModels.macrosFor(patch.voice, patch.model)
         is OvenPatch -> Oven.macrosFor(patch.voice)
@@ -387,7 +395,7 @@ object Velocity {
             }
         is AerostatPatch -> Aerostat.render(patch.voice, patch.macros, velocity = v)
         is BallastPatch -> Ballast.render(patch.voice, patch.macros, velocity = v)
-        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v)
+        is TremorPatch -> Tremor.render(patch.voice, patch.macros, velocity = v, model = patch.model)
         is CisternPatch -> Cistern.render(patch.voice, patch.macros, patch.midi, velocity = v)
         is CircuitPatch -> Circuit.render(patch.voice, patch.macros, velocity = v)
         is MurkPatch -> Murk.render(patch.voice, patch.macros, velocity = v)
@@ -396,6 +404,8 @@ object Velocity {
         is CorollaPatch -> Corolla.render(patch.voice, patch.macros, velocity = v)
         is RevelPatch -> Revel.render(patch.voice, patch.macros, velocity = v, configuration = patch.configuration)
         is ThawPatch -> Thaw.render(patch.voice, patch.macros, velocity = v)
+        // SCOUR's velocity is shot speed: each shot lands harder and leaves more coverage.
+        is ScourPatch -> Scour.render(patch.voice, patch.macros, velocity = v)
         is TesseraPatch -> Tessera.render(patch.voice, patch.macros, velocity = v)
         is PitchwheelPatch -> patch.copy(velocity = v).render()
         is EmbouchurePatch -> patch.copy(velocity = v).render()
@@ -427,8 +437,10 @@ object Velocity {
         is FilamentPatch -> patch.copy(velocity = v).render()
         is ScannedChainPatch -> patch.copy(velocity = v).render()
         is ChamberPatch -> patch.copy(velocity = v).render()
+        is TrefoilPatch -> patch.copy(velocity = v).render()
         is TidalPatch -> patch.copy(velocity = v).render()
         is NacrePatch -> patch.copy(velocity = v).render()
+        is FerryPatch -> patch.copy(velocity = v).render()
         is OvenPatch -> patch.copy(velocity = v).render()
         is CreasePatch -> patch.copy(velocity = v).render()
         is TrioPatch -> patch.copy(velocity = v).render()
