@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UPRIGHT · Kotlin audition</title>
+<style>
+:root{font:16px system-ui,sans-serif;color:#30291f;background:#f2eee5}body{max-width:1100px;margin:auto;padding:32px 20px 120px}h1{font-size:clamp(36px,6vw,64px);margin:20px 0}h2{margin-top:44px}p{line-height:1.6;max-width:75ch}.tag{font-size:12px;letter-spacing:.1em;text-transform:uppercase}button,a{font:inherit}button{background:#ad4726;color:white;border:0;border-radius:6px;padding:12px 18px;cursor:pointer}button:focus-visible,a:focus-visible{outline:3px solid #276850;outline-offset:3px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}.card{border:1px solid #d8cdbb;border-radius:10px;background:#faf7f0;padding:20px}.card h3{font-size:18px}.card p{font-size:14px;color:#655a4a}.links{display:flex;gap:16px;margin-top:14px}a{color:#944020}.modes{display:flex;gap:10px;flex-wrap:wrap}.modes button[aria-pressed=false]{background:#ddd3c3;color:#30291f}details{border-top:1px solid #d8cdbb;padding:20px 0;margin-top:20px}summary{cursor:pointer}#transport{position:fixed;bottom:0;left:0;right:0;background:#30291f;color:white;padding:12px 20px;display:flex;align-items:center;gap:16px;justify-content:center;flex-wrap:wrap}#transport[hidden]{display:none}audio{max-width:100%;width:350px}#status{min-height:1.5em}small{color:#655a4a}footer{margin-top:36px}
+</style>
+<body>
+<p class="tag">SnipSnap / Luthier / Kotlin audition</p>
+<h1>Upright bass.</h1>
+<p>A round pluck and a muted note. Start with the same phrase, then compare the attack, the wood and how the note lets go.</p>
+<p><strong>Production PLUCK → UPRIGHT audio.</strong> Four controls and saved excitation strength. The original Python study supplied the listening direction; this page is a new Kotlin render.</p>
+<div class="modes" aria-label="Playback level"><button id="matched" aria-pressed="true">Even level</button><button id="native" aria-pressed="false">Playing dynamics</button></div>
+<p><small>Even level uses whole-file RMS with a peak guard. Perceived loudness can differ. Playing dynamics keeps the production excitation levels.</small></p>
+<p id="status" role="status">Loading the listening study…</p>
+<h2>Same phrase. Different decay.</h2><div class="grid" id="phrase"></div>
+<details><summary>Notes and playing strength</summary><div class="grid" id="note"></div></details>
+<details><summary>With and without the wooden response</summary><div class="grid" id="body"></div></details>
+<details><summary>Each control, from low to high</summary><div class="grid" id="control"></div></details>
+<details><summary>Pairs of controls</summary><div class="grid" id="pair"></div></details>
+<details><summary>Inside the voice</summary><p>The gesture is finger release → string ring → wooden response → damped tail. A released initial-displacement profile excites a tuned lossy string. The body is a one-way filtered readout. No finger collision, bowing, slap, bridge backreaction or measured upright realism is claimed.</p><p>These are finite notes. There is no HOLD loop, sustained keygroup or note-off-release claim. Recipes retain TUNE, TOUCH, DAMP, WOOD and source playing strength. Phrase recipes describe a finite audition performance with one production recipe per event.</p><h3>Why it is built this way</h3><p>One string keeps the note clear. The body responds to the same played string. Playing strength changes excitation as well as level. Muting supplies useful short notes alongside the round decay.</p><p><a href="report.json">Measurements and source fingerprints</a> · <a href="manifest.json">Manifest</a></p></details>
+<footer><a href="upright-bass-listening-pack.zip" download>Download the listening pack</a><p><small>Headphones or speakers that reproduce low bass help with the E1 notes. Phone and MPC behavior still require hardware checks.</small></p></footer>
+<div id="transport" hidden><span id="selected"></span><audio id="audio" controls preload="none" aria-label="Selected audition clip"></audio><button id="stop">Stop</button></div>
+<script>
+'use strict';
+const audio=document.getElementById('audio'),transport=document.getElementById('transport'),status=document.getElementById('status');
+let mode='matched',active=null,manifest;
+function stop(){audio.pause();audio.removeAttribute('src');audio.load();active=null;transport.hidden=true;}
+function setMode(next){if(next===mode)return;stop();mode=next;for(const id of ['matched','native'])document.getElementById(id).setAttribute('aria-pressed',String(id===mode));for(const a of document.querySelectorAll('[data-download]'))a.href=manifest.clips.find(c=>c.id===a.dataset.download)[mode];}
+for(const id of ['matched','native'])document.getElementById(id).onclick=()=>setMode(id);
+document.getElementById('stop').onclick=stop;
+async function play(c){if(active===c.id&&!audio.paused){audio.pause();return;}if(active!==c.id||audio.error){audio.pause();audio.src=c[mode];active=c.id;}if(audio.ended)audio.currentTime=0;transport.hidden=false;document.getElementById('selected').textContent=c.title;try{await audio.play();status.textContent='';}catch(e){if(e.name!=='AbortError')status.textContent='Playback could not start. Press Play again to retry, or download the WAV.';}}
+audio.onerror=()=>{if(active)status.textContent='Audio could not load. Press Play again to retry, or download the WAV.';};
+async function load(){try{const r=await fetch('manifest.json');if(!r.ok)throw Error();manifest=await r.json();for(const c of manifest.clips){const target=document.getElementById(c.group);if(!target)continue;const card=document.createElement('article');card.className='card';const h=document.createElement('h3');h.textContent=c.title;const p=document.createElement('p');p.textContent=c.description;const b=document.createElement('button');b.textContent='Play';b.setAttribute('aria-label','Play '+c.title);b.onclick=()=>play(c);const links=document.createElement('div');links.className='links';const wav=document.createElement('a');wav.href=c[mode];wav.textContent='WAV ↓';wav.download='';wav.dataset.download=c.id;const recipe=document.createElement('a');recipe.href=c.recipe;recipe.textContent='Recipe ↓';recipe.download='';links.append(wav,recipe);card.append(h,p,b,links);target.append(card);}status.textContent='';}catch(e){status.replaceChildren(document.createTextNode('The study could not load. '));const b=document.createElement('button');b.textContent='Retry';b.onclick=load;status.append(b);}}
+load();
+</script>
+</body></html>

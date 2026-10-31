@@ -68,6 +68,21 @@ internal object VentModel2 {
     private const val MAX_STEP = .02
     private const val STATE_BOUND = 256.0
     private const val LEASH_WINDOW = .08
+    private val cosineAtWindowEnd = cos(PI)
+
+    /**
+     * The old clamped cosine is constant outside its moving interval. Reuse its exact
+     * endpoint values instead of asking libm to recompute them at every RK4 stage.
+     * The interior keeps the same expression and arithmetic, so this does not revoice it.
+     */
+    private fun windowCosine(u: Double): Double {
+        val bounded = u.coerceIn(0.0, 1.0)
+        return when (bounded) {
+            0.0 -> 1.0
+            1.0 -> cosineAtWindowEnd
+            else -> cos(PI*bounded)
+        }
+    }
 
     private fun stopIfUnwanted() {
         if (Thread.currentThread().isInterrupted) throw CancellationException("VENT render no longer wanted")
@@ -97,7 +112,7 @@ internal object VentModel2 {
 
         // u² exp(2-2u) peaks at exactly one and has zero derivative at note entry.
         private fun pulse(u: Double): Double = u*u*exp(2.0-2.0*u)
-        private fun raised(u: Double): Double = .5-.5*cos(PI*u.coerceIn(0.0, 1.0))
+        private fun raised(u: Double): Double = .5-.5*windowCosine(u)
     }
 
     private class Orbit(val a: Double, val b: Double, val c: Double, random: Random) {
@@ -116,10 +131,12 @@ internal object VentModel2 {
             val k1y = x+a*y+fy*f1; val k1z = b+z*(x-c)+fz*f1
             val x2 = x+.5*dt*k1x; val y2 = y+.5*dt*k1y; val z2 = z+.5*dt*k1z
             val f2 = gesture?.at(t+.5*audioDt) ?: 0.0
-            val k2x = -y2-z2+fx*f2-anchor(t+.5*audioDt, hz, startPhase, anchorGain)*x2
+            // Stages two and three use the same clock, despite their different states.
+            val halfAnchor = anchor(t+.5*audioDt, hz, startPhase, anchorGain)
+            val k2x = -y2-z2+fx*f2-halfAnchor*x2
             val k2y = x2+a*y2+fy*f2; val k2z = b+z2*(x2-c)+fz*f2
             val x3 = x+.5*dt*k2x; val y3 = y+.5*dt*k2y; val z3 = z+.5*dt*k2z
-            val k3x = -y3-z3+fx*f2-anchor(t+.5*audioDt, hz, startPhase, anchorGain)*x3
+            val k3x = -y3-z3+fx*f2-halfAnchor*x3
             val k3y = x3+a*y3+fy*f2; val k3z = b+z3*(x3-c)+fz*f2
             val x4 = x+dt*k3x; val y4 = y+dt*k3y; val z4 = z+dt*k3z
             val f4 = gesture?.at(t+audioDt) ?: 0.0
@@ -212,6 +229,10 @@ internal object VentModel2 {
         var previousProjection = firstProjection
         var resets = 0
         var lastCycle = startPhase.toLong()
+        val velocityLevel = vel.pow(.35)
+        // COIL's established motion is already stationary after 72% of the passage.
+        val finalProjection = if (voice == VentVoice.COIL)
+            VentLinearProjection.forVoice(voice, view, 1.0) else firstProjection
         for (i in rawInternal.indices) {
             if (i % 2048 == 0) stopIfUnwanted()
             val t = i.toDouble()/INTERNAL_RATE
@@ -224,8 +245,9 @@ internal object VentModel2 {
             forceIntegral += gesture.at(t+.5/INTERNAL_RATE)*forceMagnitude*step
             stateSquares += (orbit.x*orbit.x+orbit.y*orbit.y+orbit.z*orbit.z)/3.0
             if (i % traceStride == 0) trace.add(VentTrace(t, orbit.x, orbit.y, orbit.z))
-            val projection = if (voice == VentVoice.COIL)
-                VentLinearProjection.forVoice(voice, view, t/(.72*seconds)) else firstProjection
+            val projectionProgress = if (voice == VentVoice.COIL) t/(.72*seconds) else 0.0
+            val projection = if (voice == VentVoice.COIL && projectionProgress < 1.0)
+                VentLinearProjection.forVoice(voice, view, projectionProgress) else finalProjection
             if (i % traceStride == 0) {
                 projectionSpan += previousProjection.distanceTo(projection)
                 previousProjection = projection
@@ -236,9 +258,9 @@ internal object VentModel2 {
             low2 += lowAlpha*(low1-low2)
             val dc = low2-dcIn+dcPole*dcOut
             dcIn = low2; dcOut = dc
-            val entry = .5-.5*cos(PI*(t/.006).coerceIn(0.0, 1.0))
-            val release = .5+.5*cos(PI*((t/seconds-.72)/.28).coerceIn(0.0, 1.0))
-            rawInternal[i] = (dc*entry*release*vel.pow(.35)).toFloat()
+            val entry = .5-.5*windowCosine(t/.006)
+            val release = .5+.5*windowCosine((t/seconds-.72)/.28)
+            rawInternal[i] = (dc*entry*release*velocityLevel).toFloat()
             check(rawInternal[i].isFinite() && abs(rawInternal[i]) < 1f) { "VENT clean internal audio exceeded headroom" }
         }
         stopIfUnwanted()

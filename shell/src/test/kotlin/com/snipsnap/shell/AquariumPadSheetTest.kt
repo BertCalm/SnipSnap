@@ -311,6 +311,40 @@ class AquariumPadSheetTest {
         assertTrue(encoded(destinationDry).contentEquals(bytes(target)))
     }
 
+    /** The aquarium's own store keeps the treated source; the kit bin has to keep what that source's undo reads. */
+    @Test fun `an aquarium print over a treated pad keeps the source's original in the kit bin, and after REMOVE, undo gives it back`() {
+        val m = model(name = "BinKept", recipe = null)
+        val original = bytes(m)
+        m.treatPad(1, "crushed")
+        AquariumPadSheet.apply(m, 1, context(), renderer)
+        m.save()
+
+        val swept = KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(0, swept, "the sweep took the original the print's treated source needs")
+        assertEquals(listOf<Int?>(1), m.binHolds().map { it.keptFor }, "kept for the printed pad's slot")
+        AquariumPadSheet.remove(m, 1)
+        m.untreatPad(1)
+        assertTrue(original.contentEquals(bytes(m)), "undo after REMOVE gives the original back")
+    }
+
+    /** A print over a print: the sweep follows both sources down to the treated pad, whose undo reads the kit bin. */
+    @Test fun `an aquarium over a board over a treated pad keeps the original underneath both, and after both REMOVEs, undo gives it back`() {
+        val m = model(name = "BinKeptNested", recipe = null)
+        val original = bytes(m)
+        m.treatPad(1, "crushed")
+        BoardSheet.apply(m, 1, .35f)
+        AquariumPadSheet.apply(m, 1, context(), renderer)
+        m.save()
+
+        val swept = KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
+        assertEquals(0, swept, "the sweep took the original the board's treated source needs")
+        assertEquals(listOf<Int?>(1), m.binHolds().map { it.keptFor }, "kept for the printed pad's slot")
+        AquariumPadSheet.remove(m, 1)
+        BoardSheet.remove(m, 1)
+        m.untreatPad(1)
+        assertTrue(original.contentEquals(bytes(m)), "undo after both REMOVEs gives the original back")
+    }
+
     @Test fun `nested board source can remove locally but standalone import refuses before destination writes`() {
         val source = model(name = "Nested")
         val board = BoardSheet.apply(source, 1, .35f)

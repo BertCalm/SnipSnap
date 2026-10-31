@@ -16,7 +16,7 @@ import kotlin.test.assertTrue
 
 /** The loop proof uses synthesized neighbors, never a returned cycle copied twice. */
 class FilamentKeysTest {
-    private fun thread() = FilamentPresets.forVoice(FilamentVoice.THREAD).first()
+    private fun patch(voice: FilamentVoice) = FilamentPresets.forVoice(voice).first()
 
     private fun encoded(samples: FloatArray, depth: WavWriter.BitDepth): FloatArray {
         val bytes = ByteArrayOutputStream().also {
@@ -42,10 +42,10 @@ class FilamentKeysTest {
 
     @Test
     fun `three keyboard roots retain a real onset and close against separately synthesized cycles after PCM encoding`() {
-        for (midi in listOf(48, 60, 72)) {
+        for (voice in FilamentVoice.entries) for (midi in listOf(48, 60, 72)) {
             // The upper fixture also exercises authored, non-default strand geometry.
-            val patch = thread().copy(midi = midi, config = if (midi == 72)
-                FilamentConfig(seed = Int.MIN_VALUE + 29, profile = FilamentProfile.LATE) else thread().config)
+            val patch = patch(voice).copy(midi = midi, config = if (midi == 72)
+                FilamentConfig(seed = Int.MIN_VALUE + 29, profile = FilamentProfile.LATE) else patch(voice).config)
             val saved = patch.toJsonText()
             val evidence = Filament.keyNoteMeasured(patch)
             val note = evidence.note
@@ -57,10 +57,10 @@ class FilamentKeysTest {
             assertEquals(Dsp.RATE, note.snip.sampleRate)
             assertEquals(evidence.cycleFrames, sustain.size)
             assertTrue(start >= evidence.cycleFrames, "the onset was replaced by a sustain cycle")
-            assertTrue(samples.all { it.isFinite() && abs(it) <= 1f }, "THREAD $midi output bounds")
-            assertTrue(rms(sustain) > 1e-5, "THREAD $midi sustain is silent")
+            assertTrue(samples.all { it.isFinite() && abs(it) <= 1f }, "${patch.voice} $midi output bounds")
+            assertTrue(rms(sustain) > 1e-5, "${patch.voice} $midi sustain is silent")
             assertTrue(rms(samples.copyOfRange(0, 44)) < rms(sustain) * .1,
-                "THREAD $midi starts in its settled state instead of retaining its real onset")
+                "${patch.voice} $midi starts in its settled state instead of retaining its real onset")
             assertTrue(evidence.attempts >= 4)
             assertTrue(evidence.stateError < 1e-5)
             assertTrue(evidence.fullCycleError < 1e-5)
@@ -72,25 +72,25 @@ class FilamentKeysTest {
                 val current = encoded(sustain, depth)
                 val following = encoded(evidence.continuation, depth)
                 assertTrue(relativeError(previous, current) < 1e-5,
-                    "THREAD $midi $depth differs from its synthesized predecessor")
+                    "${patch.voice} $midi $depth differs from its synthesized predecessor")
                 assertTrue(relativeError(current, following) < 1e-5,
-                    "THREAD $midi $depth differs from its synthesized continuation")
+                    "${patch.voice} $midi $depth differs from its synthesized continuation")
                 val persisted = encoded(samples, depth)
                 assertTrue(Keys.seamError(persisted, start) < Keys.MAX_SEAM_ERROR,
-                    "THREAD $midi $depth does not recur at the exported loop marker")
+                    "${patch.voice} $midi $depth does not recur at the exported loop marker")
             }
 
             // The accepted sustain is still the saved model-three held sound.
             val held = patch.copy(macros = patch.macros + ("HOLD" to 1f)).render().samples
-            assertContentEquals(held, sustain, "THREAD $midi keys changed the approved held renderer")
+            assertContentEquals(held, sustain, "${patch.voice} $midi keys changed the approved held renderer")
             val requestedHz = Keys.midiHz(midi).toDouble()
             assertTrue(abs(1200.0 * kotlin.math.log2(evidence.actualHz / requestedHz)) < 3.0,
-                "THREAD $midi loop-period fit moved the requested root")
+                "${patch.voice} $midi loop-period fit moved the requested root")
             val measuredHz = FineTuning.measuredHz(Snip(sustain, 1, Dsp.RATE), requestedHz.toFloat(), .12f, .5f)
             assertTrue(abs(FineTuning.cents(measuredHz, requestedHz)) < 25.0,
-                "THREAD $midi actual sustain lost the requested pitch: $measuredHz Hz")
+                "${patch.voice} $midi actual sustain lost the requested pitch: $measuredHz Hz")
             assertTrue(TangleMeasure.toneShare(sustain, requestedHz) > .025,
-                "THREAD $midi requested pitch is only a spectral trace")
+                "${patch.voice} $midi requested pitch is only a spectral trace")
             if (midi == 60) {
                 val publicNote = FilamentKeys.note(patch)
                 assertEquals(note.loopStartFrame, publicNote.loopStartFrame)
@@ -102,43 +102,49 @@ class FilamentKeysTest {
 
     @Test
     fun `sample layers remove one native velocity gain while retaining the played source`() {
-        val patch = thread().copy(midi = 60, velocity = .35f)
-        val native = FilamentKeys.note(patch)
-        val layer = FilamentKeys.layer(patch)
-        val gain = patch.velocity.toDouble().pow(.72)
-        assertEquals(native.loopStartFrame, layer.loopStartFrame)
-        assertEquals(native.snip.frameCount, layer.snip.frameCount)
-        for (i in native.snip.samples.indices step 31) {
-            assertTrue(abs(native.snip.samples[i] - layer.snip.samples[i] * gain) < 1e-6,
-                "host velocity compensation changed the native source at frame $i")
+        for (voice in FilamentVoice.entries) {
+            val patch = patch(voice).copy(midi = 60, velocity = .35f)
+            val native = FilamentKeys.note(patch)
+            val layer = FilamentKeys.layer(patch)
+            val gain = patch.velocity.toDouble().pow(.72)
+            assertEquals(native.loopStartFrame, layer.loopStartFrame)
+            assertEquals(native.snip.frameCount, layer.snip.frameCount)
+            for (i in native.snip.samples.indices step 31) {
+                assertTrue(abs(native.snip.samples[i] - layer.snip.samples[i] * gain) < 1e-6,
+                    "host velocity compensation changed the native source at frame $i")
+            }
+            assertTrue(layer.snip.samples.all { it.isFinite() && abs(it) <= 1f })
         }
-        assertTrue(layer.snip.samples.all { it.isFinite() && abs(it) <= 1f })
     }
 
     @Test
-    fun `the pilot refuses other voices old models and out of range notes before rendering`() {
-        for (voice in listOf(FilamentVoice.PULSE, FilamentVoice.CURL)) {
-            val patch = FilamentPresets.forVoice(voice).first()
-            assertFailsWith<IllegalArgumentException> { FilamentKeys.note(patch) }
-        }
-        for (model in listOf(Filament.ORIGINAL_MODEL, Filament.CHARACTER_MODEL)) {
-            assertFailsWith<IllegalArgumentException> { FilamentKeys.note(thread().copy(model = model)) }
-        }
-        for (midi in listOf(47, 73)) {
-            assertFailsWith<IllegalArgumentException> { FilamentKeys.note(thread(), midi = midi) }
+    fun `every current voice is supported while old models and out of range notes refuse before rendering`() {
+        for (voice in FilamentVoice.entries) {
+            val patch = patch(voice)
+            assertTrue(FilamentKeys.supports(patch))
+            for (model in listOf(Filament.ORIGINAL_MODEL, Filament.CHARACTER_MODEL)) {
+                assertTrue(!FilamentKeys.supports(patch.copy(model = model)))
+                assertFailsWith<IllegalArgumentException> { FilamentKeys.note(patch.copy(model = model)) }
+            }
+            for (midi in listOf(47, 73)) {
+                assertFailsWith<IllegalArgumentException> { FilamentKeys.note(patch, midi = midi) }
+            }
         }
     }
 
     @Test
     fun `cancellation stops before or during source work and zero velocity remains silent`() {
-        assertFailsWith<CancellationException> { FilamentKeys.note(thread(), cancelled = { true }) }
-        var checks = 0
-        assertFailsWith<CancellationException> {
-            FilamentKeys.note(thread(), cancelled = { ++checks > 2 })
+        for (voice in FilamentVoice.entries) {
+            val patch = patch(voice)
+            assertFailsWith<CancellationException> { FilamentKeys.note(patch, cancelled = { true }) }
+            var checks = 0
+            assertFailsWith<CancellationException> {
+                FilamentKeys.note(patch, cancelled = { ++checks > 2 })
+            }
+            assertTrue(checks > 2, "the engine never reached a cooperative cancellation point")
+            val zero = FilamentKeys.layer(patch.copy(velocity = 0f))
+            assertTrue(zero.loopStartFrame > 0)
+            assertTrue(zero.snip.samples.all { it == 0f }, "zero velocity acquired a non-finite compensation")
         }
-        assertTrue(checks > 2, "the engine never reached a cooperative cancellation point")
-        val zero = FilamentKeys.layer(thread().copy(velocity = 0f))
-        assertTrue(zero.loopStartFrame > 0)
-        assertTrue(zero.snip.samples.all { it == 0f }, "zero velocity acquired a non-finite compensation")
     }
 }

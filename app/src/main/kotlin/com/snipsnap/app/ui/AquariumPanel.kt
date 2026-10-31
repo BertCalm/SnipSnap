@@ -65,11 +65,8 @@ internal fun AquariumPanel(
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var groupId by remember { mutableStateOf(AquariumControls.groups.first().id) }
-    var expandedEffects by remember { mutableStateOf(emptySet<String>()) }
     var printSettingsOpen by remember { mutableStateOf(false) }
     val enabled = !busy
-    val group = AquariumControls.groups.first { it.id == groupId }
 
     Column(
         modifier.fillMaxWidth().testTag("aquarium-panel"),
@@ -116,46 +113,7 @@ internal fun AquariumPanel(
             )
         }
 
-        TapeText("PRESETS", TapeType.pixelSmall, scheme.ink2.tape)
-        for (row in AquariumControls.presets.chunked(3)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                for (preset in row) {
-                    val chosen = editor.presetId == preset.id
-                    ActionButton(
-                        preset.name, scheme, enabled = enabled, lit = chosen,
-                        accessibilityLabel = "Aquarium preset ${preset.name}",
-                        modifier = Modifier.weight(1f).testTag("aquarium-preset-${preset.id}")
-                            .semantics { selected = chosen },
-                        onClick = { onEditorChange(editor.selectPreset(preset.id)) },
-                    )
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            for (choice in AquariumControls.groups) {
-                val chosen = choice.id == groupId
-                ActionButton(
-                    choice.name.uppercase(Locale.ROOT), scheme, enabled = enabled, lit = chosen,
-                    accessibilityLabel = "Aquarium ${choice.name}",
-                    modifier = Modifier.weight(1f).testTag("aquarium-group-${choice.id}")
-                        .semantics { selected = chosen },
-                    onClick = { groupId = choice.id },
-                )
-            }
-        }
-        for (effect in group.effects) {
-            AquariumEffectPanel(
-                effect = effect, editor = editor, enabled = enabled,
-                detailsOpen = effect.id in expandedEffects, scheme = scheme, color = color,
-                onEditorChange = onEditorChange,
-                onDetailsToggle = {
-                    expandedEffects = if (effect.id in expandedEffects) expandedEffects - effect.id
-                        else expandedEffects + effect.id
-                },
-            )
-        }
+        AquariumSoundControls(editor, enabled, scheme, color, onEditorChange)
 
         Box(Modifier.testTag("aquarium-print-settings")) {
             GroupBox(
@@ -260,6 +218,61 @@ internal fun AquariumPanel(
             )
         }
     }
+}
+
+/** Shared physical controls; PAD owns finite rendering, PERFORMANCE owns a continuous bus. */
+@Composable
+internal fun AquariumSoundControls(
+    editor: AquariumEditor,
+    enabled: Boolean,
+    scheme: Scheme,
+    color: Color,
+    onEditorChange: (AquariumEditor) -> Unit,
+) {
+    var groupId by remember { mutableStateOf(AquariumControls.groups.first().id) }
+    var expandedEffects by remember { mutableStateOf(emptySet<String>()) }
+    val group = AquariumControls.groups.first { it.id == groupId }
+    TapeText("PRESETS", TapeType.pixelSmall, scheme.ink2.tape)
+    for (row in AquariumControls.presets.chunked(3)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (preset in row) {
+                val chosen = editor.presetId == preset.id
+                ActionButton(
+                    preset.name, scheme, enabled = enabled, lit = chosen,
+                    accessibilityLabel = "Aquarium preset ${preset.name}",
+                    modifier = Modifier.weight(1f).testTag("aquarium-preset-${preset.id}")
+                        .semantics { selected = chosen },
+                    onClick = { onEditorChange(editor.selectPreset(preset.id)) },
+                )
+            }
+            repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+        }
+    }
+
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        for (choice in AquariumControls.groups) {
+            val chosen = choice.id == groupId
+            ActionButton(
+                choice.name.uppercase(Locale.ROOT), scheme, enabled = enabled, lit = chosen,
+                accessibilityLabel = "Aquarium ${choice.name}",
+                modifier = Modifier.weight(1f).testTag("aquarium-group-${choice.id}")
+                    .semantics { selected = chosen },
+                onClick = { groupId = choice.id },
+            )
+        }
+    }
+    for (effect in group.effects) {
+        AquariumEffectPanel(
+            effect = effect, editor = editor, enabled = enabled,
+            detailsOpen = effect.id in expandedEffects, scheme = scheme, color = color,
+            onEditorChange = onEditorChange,
+            onDetailsToggle = {
+                expandedEffects = if (effect.id in expandedEffects) expandedEffects - effect.id
+                    else expandedEffects + effect.id
+            },
+        )
+    }
+
 }
 
 @Composable

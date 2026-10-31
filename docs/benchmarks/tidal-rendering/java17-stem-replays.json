@@ -1,0 +1,26 @@
+[
+  {
+    "id": "stream-population-a",
+    "waveSha256": "fdce5527764352d2396fb9ff1dce1fe4907671735b3be4a08a67229f0a2bee08",
+    "rawFloatReplayVerified": true,
+    "waveBytesMatchPublished": true
+  },
+  {
+    "id": "stream-tail",
+    "waveSha256": "b40650856356fec2e16ff482dbf6d4575cf7a961521d4c474b71cd27f2b5e38f",
+    "rawFloatReplayVerified": true,
+    "waveBytesMatchPublished": true
+  },
+  {
+    "id": "mechanism-no-tides-tail",
+    "waveSha256": "e3c8cf3cdff33c668f968a6cee28285274a04132bef8ac1ac8f85e1b560fc3a6",
+    "rawFloatReplayVerified": true,
+    "waveBytesMatchPublished": true
+  },
+  {
+    "id": "mechanism-fixed-envelope-tail",
+    "waveSha256": "33d60b1e6c6673319d66cf0046410be31cd41665aa251b2a91990a7dacd0f962",
+    "rawFloatReplayVerified": true,
+    "waveBytesMatchPublished": true
+  }
+]

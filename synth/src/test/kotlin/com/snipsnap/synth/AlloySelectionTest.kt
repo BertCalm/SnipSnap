@@ -12,8 +12,8 @@ class AlloySelectionTest {
     private val retainedVoices = setOf(AlloyVoice.BASS, AlloyVoice.SOFT)
 
     @Test
-    fun `new patches and the factory bank use the six selected voice recipes`() {
-        assertEquals(36, AlloyPresets.all().size)
+    fun `new patches and factory anchors retain the selected voices while authored roles keep their own configurations`() {
+        assertEquals(24, AlloyPresets.all().size)
         for (voice in AlloyVoice.entries) {
             val expected = if (voice in retainedVoices) Alloy.configFor(voice)
                 else AlloyContrastPresets.configFor(voice)
@@ -23,10 +23,12 @@ class AlloySelectionTest {
                 assertTrue(expected != Alloy.configFor(voice), "$voice still uses its original default")
             }
             val presets = AlloyPresets.forVoice(voice)
-            assertEquals(6, presets.size)
-            for (preset in presets) {
-                assertEquals(expected, preset.config, "${preset.name} bypassed the selected voice recipe")
-            }
+            assertEquals(4, presets.size)
+            assertEquals(expected, presets.first().config, "$voice lost its selected factory anchor")
+            assertEquals(4, presets.map { it.config }.distinct().size,
+                "$voice replaced its authored roles with one shared configuration")
+            assertTrue(presets.all { !Alloy.isLoop(it.macros.getValue("HOLD")) },
+                "$voice changed the approved finite role bank into held variants")
         }
     }
 

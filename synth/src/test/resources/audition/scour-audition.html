@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scour · listening audition</title>
+<style>
+  :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101719; color: #e0eeee; }
+  body { max-width: 1080px; margin: auto; padding: 24px; }
+  h1 { font-size: 2.4rem; margin-bottom: 8px; font-weight: 550; }
+  h2 { margin: 32px 0 8px; font-size: 1.65rem; }
+  h3 { margin: 24px 0 12px; font-weight: 500; }
+  p { line-height: 1.55; max-width: 800px; color: #b9cece; }
+  a { color: #8de0d1; }
+  button, select, input, textarea { font: inherit; }
+  button, select { background: #213235; color: #e0eeee; border: 1px solid #486165; border-radius: 8px; padding: 9px 12px; cursor: pointer; }
+  button:hover, button:focus-visible { border-color: #8de0d1; }
+  input[type=search], textarea { background: #192426; color: #e0eeee; border: 1px solid #486165; border-radius: 8px; padding: 10px; }
+  input[type=search] { min-width: 220px; }
+  textarea { display: block; width: 100%; box-sizing: border-box; margin: 10px 0; min-height: 96px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+  .player { position: sticky; top: 0; padding: 14px 0; background: #101719f2; z-index: 1; border-bottom: 1px solid #31494d; }
+  audio { width: 100%; margin-top: 8px; }
+  #now { margin: 0; min-height: 1.5em; }
+  .clips { display: grid; grid-template-columns: repeat(auto-fit,minmax(270px,1fr)); gap: 12px; }
+  article { background: #192426; border: 1px solid #31494d; border-radius: 12px; padding: 16px; }
+  article.playing { border-color: #8de0d1; }
+  article h4 { margin: 0 0 8px; font-size: 1rem; }
+  article p { margin: 8px 0 12px; font-size: .9rem; }
+  .meta { color: #8fa9aa; font-size: .8rem; }
+  .plays { display: flex; gap: 8px; flex-wrap: wrap; }
+  details { font-size: .82rem; color: #a8c2c2; margin-top: 12px; }
+  summary { cursor: pointer; }
+  dl { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; }
+  dt, dd { margin: 0; }
+  dd { overflow-wrap: anywhere; }
+  [hidden] { display: none !important; }
+  small { color: #8fa9aa; }
+  @media(max-width: 480px) { body { padding: 16px; } h1 { font-size: 2rem; } select,input[type=search] { width: 100%; } }
+</style>
+<header>
+  <small>SNIPSNAP · SCOUR R2 · THE IMPACT</small>
+  <h1>Scour</h1>
+  <p>An impact that builds: a roller spins up against a free plate while shot rains on it faster and harder, the dents spread and the plate's upper ring climbs, then one heavy slam lands and the hardened plate rings out. PLATE, a round metal plate, keeps its hardening; PANE, a square glass pane, gives it back as it rings; SHEET, a long steel thunder sheet an octave lower, keeps it too.</p>
+  <p>Start with <strong>SCOUR into a drop</strong>: the slam lands on the downbeat where the beat comes in. Every single gesture has a raw version and a version matched to the other clips' loudness; a phrase is a mix and has only the matched one. HOLD sets how long it rings.</p>
+  <div class="controls">
+    <label for="section">Listen to</label>
+    <select id="section"></select>
+    <input id="search" type="search" aria-label="Filter clips" placeholder="Filter names or controls">
+    <button id="export" type="button">Export listening notes</button>
+  </div>
+</header>
+<div class="player">
+  <div class="controls"><p id="now" aria-live="polite">Choose a clip.</p><label><input id="repeat" type="checkbox"> Repeat</label></div>
+  <audio id="audio" controls preload="none"></audio>
+</div>
+<main id="content"></main>
+<footer><p id="totals"></p><p><a href="manifest.json">Download the clip manifest</a>. Listening notes are saved in this browser and can be exported as JSON.</p></footer>
+<script id="manifest" type="application/json">__SCOUR_MANIFEST__</script>
+<script>
+(() => {
+  'use strict';
+  const manifest = JSON.parse(document.getElementById('manifest').textContent);
+  const content = document.getElementById('content');
+  const chooser = document.getElementById('section');
+  const search = document.getElementById('search');
+  const audio = document.getElementById('audio');
+  const repeat = document.getElementById('repeat');
+  const notesKey = 'snipsnap_scour_r2_listening';
+  let notes = {};
+  try { notes = JSON.parse(localStorage.getItem(notesKey) || '{}'); } catch (_) { /* Notes remain usable in memory. */ }
+  let playingCard = null;
+  function element(tag, text, className) {
+    const node = document.createElement(tag);
+    if (text !== undefined) node.textContent = text;
+    if (className) node.className = className;
+    return node;
+  }
+  function number(n, places = 3) { return Number(n).toFixed(places); }
+  function metric(dl, name, value) { dl.append(element('dt', name), element('dd', value)); }
+  function play(clip, mode, card) {
+    if (playingCard) playingCard.classList.remove('playing');
+    playingCard = card;
+    card.classList.add('playing');
+    audio.src = clip[mode];
+    audio.loop = repeat.checked;
+    document.getElementById('now').textContent = `${clip.name} · ${mode}`;
+    audio.play().catch(() => { document.getElementById('now').textContent += ' · press Play on the audio player'; });
+  }
+  function clipCard(clip) {
+    const card = element('article');
+    card.dataset.filter = [clip.name, clip.description, clip.voice, ...Object.entries(clip.macros).map(([name, value]) => `${name} ${value}`)].join(' ').toLowerCase();
+    card.append(element('h4', clip.name));
+    card.append(element('div', clip.kind === 'PHRASE' ? `${clip.voice} · ${clip.hits.length} pad hits at ${clip.tempoBpm} BPM${clip.drums ? ' · with drums' : ''}` : `${clip.voice} · MIDI ${clip.midi} · velocity ${clip.velocity}`, 'meta'));
+    card.append(element('p', clip.description));
+    const buttons = element('div', undefined, 'plays');
+    for (const mode of clip.raw ? ['raw', 'matched'] : ['matched']) {
+      const button = element('button', clip.raw ? (mode === 'raw' ? 'Play raw' : 'Play matched') : 'Play');
+      button.type = 'button';
+      button.addEventListener('click', () => play(clip, mode, card));
+      buttons.append(button);
+    }
+    card.append(buttons);
+    const details = element('details');
+    details.append(element('summary', 'Controls and measurements'));
+    const dl = element('dl');
+    for (const [name, value] of Object.entries(clip.macros)) metric(dl, name, number(value, 2));
+    const m = clip.metrics;
+    metric(dl, 'Duration', `${number(m.durationSeconds)} s`);
+    if (clip.kind !== 'PHRASE') {
+      metric(dl, 'Build / shots / coverage at the slam', `${number(m.buildSeconds, 2)} s / ${m.shots} / ${number(m.coverageAtClose)}`);
+      metric(dl, 'Top mode rise at the slam', `${number(m.topModeRisePercent, 1)} %`);
+      metric(dl, 'Raw peak / RMS', `${number(m.raw.peak, 5)} / ${number(m.raw.rms, 5)}`);
+      metric(dl, 'Raw loudness / DC', `${number(m.raw.loudness, 5)} / ${Number(m.raw.dc).toExponential(2)}`);
+    }
+    metric(dl, 'Matched peak / loudness', `${number(m.matched.peak, 5)} / ${number(m.matched.loudness, 5)}`);
+    metric(dl, 'Render', `${number(m.renderMillis, 1)} ms`);
+    details.append(dl);
+    card.append(details);
+    return card;
+  }
+  function filter() {
+    const query = search.value.trim().toLowerCase();
+    for (const card of content.querySelectorAll('article')) card.hidden = query !== '' && !card.dataset.filter.includes(query);
+    for (const group of content.querySelectorAll('.group')) group.hidden = !Array.from(group.querySelectorAll('article')).some(card => !card.hidden);
+  }
+  function build() {
+    const section = manifest.sections.find(s => s.id === chooser.value);
+    content.replaceChildren();
+    content.append(element('h2', section.display), element('p', section.body));
+    for (const group of section.groups) {
+      const wrapper = element('section', undefined, 'group');
+      wrapper.append(element('h3', group.label));
+      const clips = element('div', undefined, 'clips');
+      group.clips.forEach(clip => clips.append(clipCard(clip)));
+      wrapper.append(clips);
+      content.append(wrapper);
+    }
+    const label = element('label', 'Your listening notes');
+    label.htmlFor = 'notes';
+    const textarea = element('textarea');
+    textarea.id = 'notes';
+    textarea.placeholder = 'What changed, what did you hear, and what should be kept or revised?';
+    textarea.value = notes[section.id] || '';
+    textarea.addEventListener('input', () => {
+      notes[section.id] = textarea.value;
+      try { localStorage.setItem(notesKey, JSON.stringify(notes)); } catch (_) { /* Export still works. */ }
+    });
+    content.append(label, textarea);
+    filter();
+  }
+  for (const section of manifest.sections) {
+    const option = element('option', section.display);
+    option.value = section.id;
+    chooser.append(option);
+  }
+  chooser.addEventListener('change', build);
+  search.addEventListener('input', filter);
+  repeat.addEventListener('change', () => { audio.loop = repeat.checked; });
+  document.getElementById('export').addEventListener('click', () => {
+    const body = JSON.stringify({engine: 'SCOUR', model: manifest.model, auditionRevision: manifest.auditionRevision, savedAt: new Date().toISOString(), notes}, null, 2);
+    const url = URL.createObjectURL(new Blob([body], {type: 'application/json'}));
+    const link = element('a');
+    link.href = url;
+    link.download = 'scour-listening-notes.json';
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  });
+  document.getElementById('totals').textContent = `${manifest.phrases} phrases and ${manifest.gestures} gestures · ${manifest.wavFiles} 24-bit WAVs · dry mono at 44.1 kHz. Render timing is included for review.`;
+  build();
+})();
+</script>
+</html>

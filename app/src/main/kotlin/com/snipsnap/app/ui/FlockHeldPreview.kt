@@ -55,8 +55,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runInterruptible
-import kotlinx.coroutines.withContext
 import kotlin.coroutines.coroutineContext
 import kotlin.math.roundToInt
 
@@ -195,7 +193,7 @@ internal fun rememberFlockHeldPreview(
         delay(100)
         try {
             val job = coroutineContext[Job]
-            val held = runInterruptible(Dispatchers.Default) {
+            val held = offMainInterruptible(Dispatchers.Default) {
                 FlockHeld.render(renderPatch) {
                     job?.isActive == false || Thread.currentThread().isInterrupted
                 }
@@ -213,7 +211,7 @@ internal fun rememberFlockHeldPreview(
                     loopStartFrame = held.loopStartFrame.toLong(),
                 )),
             )
-            withContext(Dispatchers.IO) { player.open(instrument, mapOf(sample to held.snip)) }
+            offMain { player.open(instrument, mapOf(sample to held.snip)) }
             player.setReleaseSeconds(release.value)
             state.snip = held.snip
             state.ready = true

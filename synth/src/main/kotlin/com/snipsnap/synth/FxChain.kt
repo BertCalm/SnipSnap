@@ -8,7 +8,7 @@ import com.snipsnap.json.JsonValue
 /**
  * The per-pad effects rack. Order is fixed and not negotiable:
  *
- *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → SQUASH → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → MOTION
+ *    PITCH → SWELL → REVERSE → SMEAR → GHOST → SPIKE → EQ → CONTOUR → WAH → COMPRESSOR → SQUASH → FORGE → VALVE → CRUNCH → RING → DUB → VINYL → TAPE → ENSEMBLE → PHASE → ECHO → SPRING → ROOM → MOTION
  *
  * contour after EQ and before the dynamics, so SQUASH tames the resonant
  * peak rather than the peak riding over the squash; ensemble after tape and
@@ -19,8 +19,22 @@ import com.snipsnap.json.JsonValue
  * board, a filter in front of the compressor and the amp, and the
  * compressor then levels what the sweep did to the note.
  *
- * valve after squash and before crunch: a compressor feeds an amp, and the
+ * compressor after wah and before squash: the sustain pedal sits where a
+ * guitar board puts it (wah, compressor, drive, amp), and SQUASH, the
+ * sampler's punch, still has the last word on the hit before the amp.
+ *
+ * forge after squash and before valve: the hit is formed once its dynamics
+ * are set (FORGE has no gain envelope of its own, so SQUASH's punch is what it
+ * coins), and the amp then colours the formed blank. Its ceiling is relative
+ * to the pad's peak, so the order against SQUASH changes what is coined, not
+ * how loud it lands.
+ *
+ * valve after forge and before crunch: a compressor feeds an amp, and the
  * sampler's damage happens to a sound that already existed.
+ *
+ * room after spring and before motion: a spring tank is a device, and the
+ * room is where everything, the tank included, is heard. ROOM is the last
+ * space, and the tape still stops with the room on it.
  *
  * Pitch before everything, because in a sampler pitch *is* the transport:
  * SWELL's stretched head, REVERSE's flip and the whole rack all see the
@@ -70,6 +84,9 @@ data class FxChain(
     val ensemble: Map<String, Float>? = null,
     val valve: Map<String, Float>? = null,
     val wah: Map<String, Float>? = null,
+    val compressor: Map<String, Float>? = null,
+    val forge: Map<String, Float>? = null,
+    val room: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -85,15 +102,20 @@ data class FxChain(
     val isBypass: Boolean
         get() = !reverse && SECTIONS.all { it.get(this) == null }
 
-    fun process(snip: Snip): Snip {
-        // TRANSPORT then ARRIVAL: the tail budget is measured from what they leave behind.
+    fun process(snip: Snip): Snip = finish(head(snip))
+
+    /** [snip] through the TRANSPORT and ARRIVAL stages only: the sound the tail budget is measured from. */
+    internal fun head(snip: Snip): Snip {
         var head = snip
         for (sec in SECTIONS) {
             if (sec.stage == Stage.RACK) continue
             sec.get(this)?.let { head = sec.run(head, it) }
         }
-        return capTail(head, processRest(head))
+        return head
     }
+
+    /** The rack over a [head] (what [head] left), then the tail budget measured from it. */
+    internal fun finish(head: Snip): Snip = capTail(head, processRest(head))
 
     private fun processRest(snip: Snip): Snip {
         var s = snip
@@ -105,23 +127,6 @@ data class FxChain(
         return s
     }
 
-    /**
-     * ECHO and SPRING each bound their own tail, but stacked they add up —
-     * a hit through the full rack grew past the loop threshold and stopped
-     * reading as a hit at all. The chain owns the total budget: whatever the
-     * sections did, the result never gains more than [MAX_CHAIN_TAIL_SECONDS]
-     * over the input, faded so the cut never clicks.
-     */
-    private fun capTail(input: Snip, output: Snip): Snip {
-        val maxFrames = input.frameCount + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
-        if (output.frameCount <= maxFrames) return output
-        val out = output.samples.copyOfRange(0, maxFrames * output.channels)
-        // Per-FRAME through Dsp.fadeTail, like every other fade in the
-        // codebase: the per-sample ramp this used to run gave the two
-        // channels of a stereo frame different gains across the fade.
-        Dsp.fadeTail(out, ms = 10f, rate = output.sampleRate, channels = output.channels)
-        return Snip(out, output.channels, output.sampleRate)
-    }
 
     private fun reversed(snip: Snip): Snip {
         val out = FloatArray(snip.samples.size)
@@ -167,6 +172,34 @@ data class FxChain(
          */
         const val MAX_CHAIN_TAIL_SECONDS = 1.0f
 
+        /**
+         * How long the budget's cut fades, seconds, on a raised cosine. A trail still sounding at the cut fades away
+         * over its last 300 ms instead of stopping in 10 ms: the owner heard DELAY's trail stop on held notes at the DELAY confirm
+         * listen (2026-10-26) and chose this fade for every pad (2026-10-27; docs/superpowers/specs/2026-10-22-delay-head-design.md).
+         * The fade is the last 300 ms of the one-second budget, measured from the sound as TRANSPORT and ARRIVAL leave
+         * it, so it lands after the sound ends unless a RACK section moves the sound later than 0.7 s: MOTION's START
+         * can, by up to 0.75 s, which puts at most the sound's last 50 ms in the fade, under 1 dB down.
+         */
+        const val CAP_FADE_SECONDS = 0.3f
+
+        /** [capTail] measured from [input]'s length. */
+        internal fun capTail(input: Snip, output: Snip): Snip = capTail(input.frameCount, output)
+
+        /**
+         * The tail budget, one for the rack and the pedal board. ECHO and SPRING each bound their own tail, but stacked
+         * they add up: a hit through the full rack grew past the loop threshold and stopped reading as a hit at all. So
+         * whatever the sections did, [output] never runs more than [MAX_CHAIN_TAIL_SECONDS] past [soundFrames], the
+         * sound's own length, and when it would, its last [CAP_FADE_SECONDS] fade on a raised cosine (per frame, so a
+         * stereo frame keeps one gain). An output already inside the budget comes back untouched.
+         */
+        internal fun capTail(soundFrames: Int, output: Snip): Snip {
+            val maxFrames = soundFrames + (MAX_CHAIN_TAIL_SECONDS * output.sampleRate).toInt()
+            if (output.frameCount <= maxFrames) return output
+            val out = output.samples.copyOfRange(0, maxFrames * output.channels)
+            Dsp.fadeTailCosine(out, CAP_FADE_SECONDS, rate = output.sampleRate, channels = output.channels)
+            return Snip(out, output.channels, output.sampleRate)
+        }
+
         /** Which pass a section belongs to: the two before the tail budget is measured, and the rack. */
         enum class Stage { TRANSPORT, ARRIVAL, RACK }
 
@@ -197,7 +230,9 @@ data class FxChain(
             Section("eq", Eq.MACROS, { it.eq }, { c, m -> c.copy(eq = m) }, Eq::process),
             Section("contour", Contour.MACROS, { it.contour }, { c, m -> c.copy(contour = m) }, Contour::process),
             Section("wah", Wah.MACROS, { it.wah }, { c, m -> c.copy(wah = m) }, Wah::process),
+            Section("compressor", Compressor.MACROS, { it.compressor }, { c, m -> c.copy(compressor = m) }, Compressor::process),
             Section("squash", Squash.MACROS, { it.squash }, { c, m -> c.copy(squash = m) }, Squash::process),
+            Section("forge", Forge.MACROS, { it.forge }, { c, m -> c.copy(forge = m) }, Forge::process),
             Section("valve", Valve.MACROS, { it.valve }, { c, m -> c.copy(valve = m) }, Valve::process, gains = mapOf("DRIVE" to Valve::gainFor)),
             Section("crunch", Crunch.MACROS, { it.crunch }, { c, m -> c.copy(crunch = m) }, Crunch::process),
             Section("ring", Ring.MACROS, { it.ring }, { c, m -> c.copy(ring = m) }, Ring::process),
@@ -208,6 +243,7 @@ data class FxChain(
             Section("phase", Phase.MACROS, { it.phase }, { c, m -> c.copy(phase = m) }, Phase::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
+            Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
             Section("motion", Motion.MACROS, { it.motion }, { c, m -> c.copy(motion = m) }, Motion::process),
         )
 

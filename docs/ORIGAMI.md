@@ -139,6 +139,50 @@ listening pack under `testkit/origami-gestures`. New sound acceptance is a
 listening decision. The design and its verification ledger are in the
 [fold-gesture brief](superpowers/specs/2026-10-23-origami-fold-gestures.md).
 
+## Velocity expression
+
+Model-4 sounds offer **VELOCITY: LEVEL / FOLD** beside GESTURE. LEVEL keeps
+the accepted response. FOLD makes softer hits use less of the selected folded
+color, with the pitch, source and movement timing unchanged. Full velocity
+reaches the original FOLD value exactly; it never exceeds that value.
+
+The SOFT/MID/FULL preview hits audition relative strengths below the saved
+note's own velocity. They are temporary: they do not change the saved ceiling,
+presets, navigation recipe or SEND reference. In BLOOM the selected depth is
+the arrival color; in UNFOLD it is the starting color before returning open.
+STEADY retains its axis movement. No extra macro is added.
+
+For ordinary pads, SEND writes the reference note and complete recipe. Apply
+**SOFT HITS** to that pad for per-hit folded color. Its softer samples stay
+below the saved main velocity and are peak-matched before playback, so a quiet
+reference cannot accidentally acquire harder "soft" samples. Existing processed
+pad fallback behavior is unchanged.
+
+FAN/STILL MAKE INSTRUMENT writes three touch layers for each of the nine pitch
+zones when FOLD expression is selected. Soft/mid/full occupy MIDI velocities
+1–42, 43–84 and 85–127. Each layer keeps its own attack and loop; the player
+supplies velocity gain and key-up release. PREVIEW plays all three touches.
+LEVEL retains the original nine-sample instrument. FOLD writes 27 samples and
+therefore uses more preparation time, storage and sample memory.
+
+Expression is saved as an optional, independent version-1 object. Missing or
+null expression means LEVEL; models 1–3 retain their original sound and reject
+FOLD. The six factories remain LEVEL. The source geometry, gesture and held
+versions stay unchanged.
+
+```sh
+snipsnap synth ORIGAMI FAN --gesture BLOOM --expression FOLD --velocity .35 --out /path/to/notes
+snipsnap synth ORIGAMI STILL --gesture UNFOLD --expression FOLD --instrument --release .6 --out /path/to/instruments
+./gradlew --no-daemon :shell:generateOrigamiExpressionAudition
+```
+
+The audition writes nine embedded comparisons and the full study under
+`testkit/origami-expression`; complete exported instruments are kept in a
+sibling directory. The [expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records the curve, sampler contract and listening gate. A geometric fold can
+move partials downward, so expression is described as more folded color rather
+than a promise of greater brightness.
+
 ## Fourth listening round: folded color (model 4)
 
 The accepted model-3 source spectra, phases, amplitude budgets, fundamentals and

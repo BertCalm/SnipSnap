@@ -116,6 +116,19 @@ object TouchSurface {
     }
 
     /**
+     * The pad's reading with the puck put at ([x], [y]) and the depth at [z]
+     * by something other than a finger: a keyboard's knobs, through MIDI
+     * learn. The same weights [read] gives a finger there, and [z] only in
+     * [Mode.XYZ]; [touching] is whether that hand is holding the puck down.
+     */
+    fun at(mode: Mode, x: Float, y: Float, z: Float, touching: Boolean): Reading {
+        val px = x.coerceIn(0f, 1f)
+        val py = y.coerceIn(0f, 1f)
+        val (a, b, c, d) = if (mode == Mode.MORPH || mode == Mode.VECTOR) morphWeights(px, py) else listOf(0.25f, 0.25f, 0.25f, 0.25f)
+        return Reading(px, py, if (mode == Mode.XYZ) z.coerceIn(0f, 1f) else 0f, a, b, c, d, touching)
+    }
+
+    /**
      * [reading] with the finger moved by ([dx], [dy]) - a modulator aimed
      * at [Modulator.Target.X] or [Modulator.Target.Y] nudging the position
      * every mode reads, on this side of the bridge. The nudged point stops

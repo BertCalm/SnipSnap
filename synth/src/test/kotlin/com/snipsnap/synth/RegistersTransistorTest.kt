@@ -46,8 +46,8 @@ class RegistersTransistorTest {
     @Test
     fun `current and historic transistor recipes replay and reject unsupported models`() {
         val patch = RegistersPatch("Bright combo", voice, Registers.defaults(voice) + ("COLOR" to .76f), 69, .72f)
-        assertEquals(5, patch.model)
-        for (model in 4..5) {
+        assertEquals(6, patch.model)
+        for (model in 4..6) {
             val original = patch.copy(model = model)
             val loaded = RegistersPatch.fromJsonText(original.toJsonText())
             assertEquals(original, loaded)
@@ -67,7 +67,7 @@ class RegistersTransistorTest {
         for (oldVoice in listOf(RegistersVoice.PIPE, RegistersVoice.MUSETTE)) for (hold in listOf(.35f, 1f)) {
             val macros = mapOf("AIR" to .72f, "SPREAD" to .8f, "MOTION" to .7f, "HOLD" to hold)
             val accepted = Registers.probe(oldVoice, macros, model = 3).samples
-            for (model in 4..5) assertContentEquals(accepted,
+            for (model in 4..6) assertContentEquals(accepted,
                 Registers.probe(oldVoice, macros, model = model).samples, "$oldVoice model $model HOLD $hold changed")
         }
     }
@@ -90,17 +90,20 @@ class RegistersTransistorTest {
 
     @Test
     fun `bright driven top register keeps off harmonic alias energy low`() {
-        val probe = Registers.probe(voice, static + mapOf("COLOR" to 1f, "EDGE" to 1f), 96, model = 4)
-        val power = spectrum(probe.samples)
-        val binHz = Dsp.RATE.toDouble() / 65536
-        val band = power.indices.filter { it * binHz in 100.0..18_000.0 }
-        val total = band.sumOf { power[it] }
-        val offHarmonic = band.filter { bin ->
-            val hz = bin * binHz
-            abs(hz - (hz / probe.requestedHz).roundToInt() * probe.requestedHz) > 12.0
-        }.sumOf { power[it] } / total
-        println("TRANSISTOR bright driven C7 off-harmonic energy: $offHarmonic")
-        assertTrue(offHarmonic < .0025, "high notes expose aliased divider/drive energy: $offHarmonic")
+        // Keep the original source guard and exercise both fuller registrations too.
+        for (model in 4..6) {
+            val probe = Registers.probe(voice, static + mapOf("COLOR" to 1f, "EDGE" to 1f), 96, model = model)
+            val power = spectrum(probe.samples)
+            val binHz = Dsp.RATE.toDouble() / 65536
+            val band = power.indices.filter { it * binHz in 100.0..18_000.0 }
+            val total = band.sumOf { power[it] }
+            val offHarmonic = band.filter { bin ->
+                val hz = bin * binHz
+                abs(hz - (hz / probe.requestedHz).roundToInt() * probe.requestedHz) > 12.0
+            }.sumOf { power[it] } / total
+            println("TRANSISTOR model$model bright driven C7 off-harmonic energy: $offHarmonic")
+            assertTrue(offHarmonic < .0025, "model$model high notes expose aliased divider/drive energy: $offHarmonic")
+        }
     }
 
     @Test
@@ -129,7 +132,7 @@ class RegistersTransistorTest {
     fun `held divider banks recur independently at the pitch extremes and cancellation is honored`() {
         val macros = mapOf("COLOR" to 1f, "AIR" to 1f, "EDGE" to 1f,
             "SPREAD" to 1f, "MOTION" to 1f, "HOLD" to 1f)
-        for (model in 4..5) for (midi in listOf(24, 96)) {
+        for (model in 4..6) for (midi in listOf(24, 96)) {
             val p = Registers.probe(voice, macros, midi, .8f, model = model)
             val previous = requireNotNull(p.previousCycle)
             assertFalse(previous === p.samples)

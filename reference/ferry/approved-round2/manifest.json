@@ -1,0 +1,43 @@
+{
+  "verdict": "Ferry second listen: Clear throughout.",
+  "received_on": "2026-10-24",
+  "scope": "Python reference clips approved; Kotlin listening remains separate.",
+  "items": [
+    {
+      "path": "high-fast.wav",
+      "sha256": "b47e27ab5dfffee056798e709c892e82b7f9e018f0f3a2a1bd9e5f9b0ef96842"
+    },
+    {
+      "path": "high-slow.wav",
+      "sha256": "967da91f5dc87ba8aaad7e920c18ed7e23f30a58c7e79b2c07f3b3411f6520b5"
+    },
+    {
+      "path": "high-standard.wav",
+      "sha256": "07b0ab0b0dc370861ee19a08d5e4ee0c2cf93383623b581b7d3ee8cbb8833067"
+    },
+    {
+      "path": "low-fast.wav",
+      "sha256": "66391dc6fe61477bc8e7cc64fefa7749b8da3f16c3b4576b14457af2cb6e7d4e"
+    },
+    {
+      "path": "low-slow.wav",
+      "sha256": "2795c1b3ad6e1328f80023e75a57b96e558646316499ec23148d6d6444a483ab"
+    },
+    {
+      "path": "low-standard.wav",
+      "sha256": "b34b12bf3f6015eb9113b2bdeb3d9661fd673e34dba32afd9a6a986b95ac4c3c"
+    },
+    {
+      "path": "middle-fast.wav",
+      "sha256": "e87609c3984d6c6f7be140fc77d5e1bb00839ef27de94c3bed07063e304f679b"
+    },
+    {
+      "path": "middle-slow.wav",
+      "sha256": "39a598ce64fb098de6b4ae17e9728c0a68009c15a8c65faf4abbb19964bdb95c"
+    },
+    {
+      "path": "middle-standard.wav",
+      "sha256": "c790e38e8b458925aaccf78528fcf2f976b94ca2a4669bd284e539715b041729"
+    }
+  ]
+}

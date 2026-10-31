@@ -119,7 +119,7 @@
     const id = String(group.id || '').toLowerCase();
     const text = `${id} ${group.title || ''}`.toLowerCase();
     if (id === 'musical-patterns' || clips.some(clip => clip.kind === 'pattern')) return 'start';
-    if (id === 'bubble-tone' || id === 'breath-sustain' || id === 'flicker-register') return 'start';
+    if (id === 'bubble-tone' || id === 'breath-sustain' || id === 'flicker-register' || id === 'rattle-register' || id === 'rattle-reserve' || id === 'rattle-cohesion') return 'start';
     if (id === 'defaults' || /^(default|start|reference)/.test(id)) return 'start';
     if (/mechanism|comparison|ablation|cascade.disabled|depletion.disabled/.test(text) || clips.some(c => c.kind === 'comparison')) return 'mechanism';
     if (/held|hold/.test(id) || clips.every(c => c.kind === 'hold' || c.kind === 'held-sweep')) return 'held';
@@ -349,15 +349,22 @@
   function isBubbleTone(clip) {
     return clip?.groupId === 'bubble-tone' || /^bubble_tone_\d+_(reference|candidate)$/.test(String(clip?.id || ''));
   }
+  function isRattleCohesion(clip) {
+    return clip?.groupId === 'rattle-cohesion' || /^rattle_cohesion_\d+_(reference|candidate)$/.test(String(clip?.id || ''));
+  }
   function clipTitle(clip) {
     if (isBubbleTone(clip)) {
       if (/_reference$/.test(clip.id)) return 'Earlier pops';
       if (/_candidate$/.test(clip.id)) return 'Longer pitched tone';
     }
+    if (isRattleCohesion(clip)) {
+      if (/_reference$/.test(clip.id)) return 'Earlier separate hits';
+      if (/_candidate$/.test(clip.id)) return 'Connected body';
+    }
     return clip?.title || clip?.id || 'Wick clip';
   }
   function clipAccessibleTitle(clip) {
-    return `${clipTitle(clip)}${isBubbleTone(clip) && finite(clip.midi) ? ` at MIDI ${clip.midi}` : ''}`;
+    return `${clipTitle(clip)}${(isBubbleTone(clip) || isRattleCohesion(clip)) && finite(clip.midi) ? ` at MIDI ${clip.midi}` : ''}`;
   }
 
   function createCard(clip) {
@@ -425,8 +432,9 @@
   }
   function createGroup(group) {
     const bubbleTone = group.id === 'bubble-tone';
-    const prioritizeFlicker = group.id === 'defaults' || group.id === 'musical-patterns';
-    const clips = bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : prioritizeFlicker ? group.clips.slice().sort((a, b) => Number(b.voice === 'FLICKER') - Number(a.voice === 'FLICKER')) : group.clips;
+    const rattleCohesion = group.id === 'rattle-cohesion';
+    const prioritizeRattle = group.id === 'defaults' || group.id === 'musical-patterns';
+    const clips = rattleCohesion ? group.clips.slice().sort((a, b) => ([60, 48, 72].indexOf(a.midi) - [60, 48, 72].indexOf(b.midi)) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : bubbleTone ? group.clips.slice().sort((a, b) => (a.midi - b.midi) || Number(/_candidate$/.test(a.id)) - Number(/_candidate$/.test(b.id))) : prioritizeRattle ? group.clips.slice().sort((a, b) => Number(b.voice === 'RATTLE') - Number(a.voice === 'RATTLE')) : group.clips;
     const sweep = group.clips.some(clip => clip.kind === 'sweep' || clip.kind === 'held-sweep');
     const section = el('section', `clip-group${sweep ? ' sweep-group' : ''}`);
     section.dataset.group = String(group.id);
@@ -436,11 +444,12 @@
     const heading = el('div', 'group-heading');
     const headingId = `group-${String(group.id).replace(/[^\w-]/g, '-')}`;
     const musicalPatterns = group.id === 'musical-patterns';
-    const title = el('h4', '', musicalPatterns ? 'Five voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
+    const title = el('h4', '', rattleCohesion ? 'RATTLE · Earlier separate hits / Connected body' : musicalPatterns ? 'Six voices · Short musical phrases' : bubbleTone ? 'BUBBLE · Earlier pops / Longer pitched tone' : group.title || group.id);
     title.id = headingId;
     section.setAttribute('aria-labelledby', headingId);
     heading.append(title);
-    if (musicalPatterns) heading.append(el('p', '', 'Hear the same phrase played by FLICKER, BREATH, PLUCK, WOOD, and BUBBLE. The established three-voice arrangement follows, combining PLUCK, WOOD, and BUBBLE. These finite renders include the exact sequence recipes.'));
+    if (rattleCohesion) heading.append(el('p', '', 'Does the new version feel like one body, with the rattle moving inside it? Compare each earlier/new pair at the same pitch, velocity, and controls. C4 comes first, followed by C3 and C5.'));
+    else if (musicalPatterns) heading.append(el('p', '', 'Hear the same phrase played by RATTLE, FLICKER, BREATH, PLUCK, WOOD, and BUBBLE. The established three-voice arrangement follows, combining PLUCK, WOOD, and BUBBLE. These finite renders include the exact sequence recipes.'));
     else if (bubbleTone) heading.append(el('p', '', 'Can you hear the note ring through the smaller pops? Compare each pair at MIDI 48, 60, and 72. Pitch, velocity, and all controls match within each pair; FEED stays at 25%.'));
     else if (group.description) heading.append(el('p', '', group.description));
     header.append(heading);
@@ -564,7 +573,10 @@
     if (options.length) { parent.append(el('h5', '', 'Diagnostic render options')); showValueList(parent, options); }
     addEventLane(parent, data);
     if (clip.diagnosticsFile) parent.append(link('Download full trace JSON ↓', clip.diagnosticsFile));
-    if (clip.seamContextFile) parent.append(el('br'), link('Download two-cycle seam context WAV ↓', clip.seamContextFile));
+    if (clip.seamContextFile) {
+      const format = /\.flac$/i.test(clip.seamContextFile) ? 'FLAC' : 'WAV';
+      parent.append(el('br'), link(`Download two-cycle seam context ${format} ↓`, clip.seamContextFile));
+    }
     const all = el('details');
     all.append(el('summary', '', 'View complete diagnostic data'), el('pre', '', JSON.stringify(data, null, 2)));
     all.style.marginTop = '14px';
@@ -635,7 +647,7 @@
       if (!host.children.length) host.append(el('pre', '', JSON.stringify(info, null, 2)));
       host.append(link('Download build information ↓', 'build-info.json'));
     } catch (_) {
-      host.replaceChildren(el('p', '', 'This page presents the FLICKER/BREATH/WOOD/PLUCK/BUBBLE prototype and finite musical phrases. Per-render metrics and diagnostic traces are available on each clip; no full-release validation is claimed.'));
+      host.replaceChildren(el('p', '', 'This page presents the RATTLE/FLICKER/BREATH/WOOD/PLUCK/BUBBLE prototype and finite musical phrases. Per-render metrics and diagnostic traces are available on each clip; no full-release validation is claimed.'));
     }
   }
   async function init() {
@@ -652,7 +664,7 @@
         const host = $(`[data-host="${name}"]`);
         const groups = state.groups.filter(group => group.section === name);
         if (name === 'start') {
-          const priority = group => group.id === 'defaults' ? 0 : group.id === 'flicker-register' ? 1 : group.id === 'musical-patterns' ? 2 : group.id === 'breath-sustain' ? 3 : group.id === 'bubble-tone' ? 5 : 4;
+          const priority = group => group.id === 'rattle-cohesion' ? 0 : group.id === 'defaults' ? 1 : group.id === 'rattle-register' ? 2 : group.id === 'rattle-reserve' ? 3 : group.id === 'musical-patterns' ? 4 : group.id === 'flicker-register' ? 5 : group.id === 'breath-sustain' ? 6 : group.id === 'bubble-tone' ? 8 : 7;
           groups.sort((a, b) => priority(a) - priority(b));
         }
         groups.forEach(group => host.append(createGroup(group)));
@@ -660,7 +672,7 @@
       }
       const macros = [...new Set(state.groups.filter(group => group.section === 'controls').flatMap(group => group.clips.map(clip => clip.macro).filter(Boolean)))];
       macros.forEach(macro => { const option = el('option', '', macro); option.value = String(macro).toUpperCase(); $('#macro-filter').append(option); });
-      const first = entries.find(clip => clip.kind === 'defaults' && clip.voice === 'FLICKER' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
+      const first = entries.find(clip => clip.id === 'rattle_cohesion_60_candidate' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && clip.voice === 'RATTLE' && !clip.loop && clip.status !== 'failed') || entries.find(clip => clip.kind === 'defaults' && !clip.loop && clip.status !== 'failed') || entries.find(clip => !clip.loop && clip.status !== 'failed');
       if (first) {
         $('#first-play').disabled = false;
         $('#first-play').addEventListener('click', () => { switchTab('start'); playClip(first); });

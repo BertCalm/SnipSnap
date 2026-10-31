@@ -1,5 +1,7 @@
 # Direction, October 2026 — the project, the dock, and the second look
 
+> 2026-10-27: the owner retired CLASSIC; modern (VENT, OPENSKY) is the only look. See PR #704.
+
 *Decisions taken 2026-10-13 on the two proposals
 ([`MODERN_LOOK.md`](MODERN_LOOK.md), [`MODERN_SHAPE.md`](MODERN_SHAPE.md)),
 what they change, and the two things they add: a dark colourway for the

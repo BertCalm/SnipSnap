@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     kotlin("jvm")
 }
@@ -36,6 +38,15 @@ java {
 
 tasks.test {
     useJUnitPlatform()
+    // Measured 2026-10-24 on the default at 9c10bab15: Gradle's default 512m test heap held
+    // 266 to 298 MB live after full GCs, almost all of it rendered audio that the pad-maker
+    // tests memoise in companion `by lazy` fields (CreasePadMakerTest's touch notes alone
+    // are 34.5 MB), and SnipStoreTest's three-minute import then could not find room for
+    // its 32 MB buffer. The memos are deliberate (one render per class, not per test), so
+    // the live set grows with every engine (10 to 35 MB each). With 1g the whole suite
+    // passed at a 475 MB peak live set; 1536m is that peak with room for the next
+    // dozen engines, set here rather than discovered when one tips it over.
+    maxHeapSize = "1536m"
     testLogging {
         events("passed", "failed", "skipped")
         // FULL, because this module's tests are mostly LAWS, and a law's whole
@@ -141,6 +152,28 @@ tasks.register<JavaExec>("generateFlockHeldInstrument") {
     args(providers.gradleProperty("flockHeldOutput").orNull ?: "${rootDir}/testkit/flock-held-instrument")
 }
 
+/** Render independently excited soft, middle and hard RIBBON keygroup layers. */
+tasks.register<JavaExec>("generateFlockVelocityInstrument") {
+    group = "distribution"
+    description = "Export touch-layer RIBBON for SnipSnap/MPC with PCM24 readback, reference clips, source evidence and download ZIP parts."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FlockVelocityInstrumentGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("flockVelocityOutput").orNull ?: "${rootDir}/testkit/flock-velocity-instrument")
+}
+
+/** Three provisional expanded OHM studies through the production keygroup handoff. */
+tasks.register<JavaExec>("generateOhmExpandedHandoff") {
+    group = "distribution"
+    description = "Export three provisional OHM keygroups, complete source recipes, MPC 2/3 packages and a verified ZIP."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OhmExpandedHandoffGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("ohmExpandedHandoffOutput").orNull ?: "${rootDir}/testkit/ohm-expanded-handoff")
+}
+
 /** Package and play the approved CREASE sounds as continuous-onset held keys. */
 tasks.register<JavaExec>("generateCreaseKeysAudition") {
     group = "distribution"
@@ -163,10 +196,10 @@ tasks.register<JavaExec>("generateBallastKeys") {
     args("${rootDir}/testkit/ballast-keys")
 }
 
-/** Package Contour's accepted nine recipes as held instruments with verified native and compatibility programs. */
+/** Package Contour's 36 factory recipes as held instruments with verified native and compatibility programs. */
 tasks.register<JavaExec>("generateContourStarter") {
     group = "distribution"
-    description = "Render nine CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
+    description = "Render 36 CONTOUR held instruments, saved recipes, software checks and a ZIP under testkit/contour-starter/."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.ContourStarterGenerator")
     workingDir = projectDir
@@ -194,14 +227,19 @@ tasks.register<JavaExec>("generateCreaseTouchAudition") {
     args(providers.gradleProperty("creaseTouchOutput").orNull ?: "${rootDir}/testkit/crease-touch-audition")
 }
 
-/** Render and package the three native THREAD attack/sustain keys plus an exported-file playback demo. */
+/** Render native FILAMENT attack/sustain keys plus exported-file playback demos. */
 tasks.register<JavaExec>("generateFilamentKeysAudition") {
     group = "distribution"
-    description = "Package the FILAMENT THREAD three-root held instrument and native/reference-player listening files."
+    description = "Package FILAMENT held instruments and native/reference-player listening files."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.FilamentKeysAuditionGenerator")
     workingDir = rootDir
-    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-thread-keys").get())
+    maxHeapSize = "1g"
+    val voice = providers.gradleProperty("filamentKeysVoice").orElse("THREAD").get()
+    val touch = providers.gradleProperty("filamentKeysTouchLayers").orElse("false").get().toBooleanStrict()
+    val directory = if (voice == "ALL") "held" else voice.lowercase(Locale.ROOT)
+    val touchTag = if (touch) "-touch" else ""
+    args(providers.gradleProperty("filamentKeysAuditionDir").orElse("${rootDir}/testkit/filament-$directory$touchTag-keys").get(), voice, touch.toString())
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
@@ -212,4 +250,15 @@ tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     mainClass.set("com.snipsnap.shell.BellowsPlaybackAuditionGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("bellowsPlaybackOutput").orElse("${rootDir}/testkit/bellows-playback-audition").get())
+}
+
+/** Compare ORIGAMI strike expression and production three-layer held instruments. */
+tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
+    group = "distribution"
+    description = "Render ORIGAMI strike comparisons, sibling instrument banks and a portable C4 listening page."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiExpressionAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
 }

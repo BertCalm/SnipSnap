@@ -11,6 +11,8 @@ import com.snipsnap.synth.FlockPatch
 import com.snipsnap.synth.FlockPlayback
 import com.snipsnap.synth.FlockPresets
 import com.snipsnap.synth.FlockVoice
+import com.snipsnap.synth.FlockTouchKeys
+import com.snipsnap.json.Json
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.Presets
 import java.io.ByteArrayOutputStream
@@ -130,6 +132,57 @@ class FlockSynthCommandTest {
     }
 
     @Test
+    fun `explicit touch exports three physical performances per root and keeps exact saved source overrides`() {
+        val root = createTempDirectory("flock-cli-touch").toFile()
+        try {
+            val original = FlockPatch("MY RIBBON TOUCH", FlockVoice.RIBBON,
+                Flock.defaults(FlockVoice.RIBBON) + mapOf("FLOW" to .4f, "HOLD" to .1f),
+                midi = 37, velocity = .4f, seed = Long.MAX_VALUE, model = 1)
+            val source = File(root, "input.patch.json").also { it.writeText(original.toJsonText()) }
+            val dest = File(root, "instrument")
+            val output = ByteArrayOutputStream()
+            val errors = ByteArrayOutputStream()
+            assertEquals(0, Cli.run(arrayOf("synth", "FLOCK", "RIBBON", "--patch", source.path,
+                "--instrument", "--touch", "--midi", "48", "--velocity", ".55", "--seed", Long.MIN_VALUE.toString(),
+                "--release", ".3", "--out", dest.path), PrintStream(output), PrintStream(errors)), errors.toString())
+            val patch = original.copy(midi = 48, velocity = .55f, seed = Long.MIN_VALUE,
+                playback = FlockPlayback.HELD, releaseSeconds = .3f)
+            assertEquals(original, FlockPatch.fromJsonText(source.readText()), "building never rewrites the source recipe")
+            assertEquals(patch, FlockPatch.fromJsonText(File(dest, "${patch.name}.patch.json").readText()))
+            val (sidecar, instrument) = InstrumentStore.list(dest).single()
+            assertEquals((36..60 step 3).toList(), instrument.zones.map { it.rootNote })
+            assertEquals(27, instrument.sampleFiles.size)
+            assertEquals(.3f, instrument.release)
+            for (zone in instrument.zones) {
+                assertEquals(FlockTouchKeys.VELOCITY_WINDOWS, zone.playableLayers.map { it.velStart..it.velEnd })
+                for (layer in zone.playableLayers) {
+                    val wav = File(sidecar.parentFile, layer.sample)
+                    val sheet = requireNotNull(WavReader.readSmpl(wav))
+                    assertEquals(zone.rootNote, sheet.rootNote)
+                    assertEquals(layer.loopStartFrame, sheet.loop?.startFrame)
+                    assertEquals(layer.frameCount, sheet.loop?.endFrameExclusive)
+                }
+            }
+            val rootZone = instrument.zones.single { it.rootNote == patch.midi }
+            val spec = FlockPadMaker.Spec(patch, touchLayers = true)
+            for ((i, note) in FlockPadMaker.renderLayers(spec, patch.midi).withIndex()) {
+                val sheet = SmplChunk(patch.midi, SmplChunk.Loop(note.loopStartFrame, note.snip.frameCount.toLong()))
+                val expected = ByteArrayOutputStream().also { WavWriter.write(it, note.snip, smpl = sheet) }
+                assertContentEquals(expected.toByteArray(), File(sidecar.parentFile, rootZone.playableLayers[i].sample).readBytes(),
+                    "touch source $i keeps model 1, the full seed and authored velocity anchor")
+            }
+            val recipe = Json.parse(FlockPadMaker.recipeFile(dest, patch.name).readText()).obj()
+            assertTrue(recipe.getValue("touchLayers").bool())
+            assertEquals(FlockTouchKeys.RENDER_VERSION, recipe.getValue("touchVersion").int())
+            assertTrue("layers 25..27/27" in output.toString())
+            assertTrue("touch layers: 3 per zone, 27 samples" in output.toString())
+            assertTrue("instrument recipe:" in output.toString())
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `held route input errors refuse before creating any output`() {
         val directory = createTempDirectory("flock-cli-held-invalid").toFile()
         val destination = File(directory, "not-created")
@@ -143,6 +196,14 @@ class FlockSynthCommandTest {
                 listOf("RIBBON", "--instrument", "--release", "1.51"),
                 listOf("RIBBON", "--instrument", "--attack", ".1"),
                 listOf("RIBBON", "--instrument", "--all"),
+                listOf("RIBBON", "--touch"),
+                listOf("RIBBON", "--touch", "--drone"),
+                listOf("RIBBON", "--instrument", "--touch", "--all"),
+                listOf("RIBBON", "--instrument", "--touch", "--attack", ".1"),
+                listOf("RIBBON", "--instrument", "--touch", "--release", "NaN"),
+                listOf("RIBBON", "--instrument", "--touch", "--velocity", "NaN"),
+                listOf("GATHER", "--instrument", "--touch"),
+                listOf("SPLIT", "--instrument", "--touch"),
                 listOf("GATHER", "--instrument"),
                 listOf("SPLIT", "--instrument"),
                 listOf("GATHER", "--patch", source.path),

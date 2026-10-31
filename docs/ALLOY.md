@@ -6,12 +6,13 @@ changes the phase of a four-operator tonal body. It uses no external samples or
 Yamaha operator/sample data. The supplied [engineering specification](ALLOY_ENGINE_SPEC.md)
 describes a proposed hybrid gesture, rather than a reconstruction of the SY77.
 
-The [published audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site)
-contains 36 dry factory presets across BASS, KEY, PLUCK, BRASS, STRING and SOFT.
-The owner heard the initial twelve-preset audition and authorized expansion on the
-same engine tuning. The agreed roster has six presets per voice, superseding the
-uneven allocation proposed in the supplied specification. The original twelve
-retain their names and settings; the twenty-four additions await listening review.
+The [factory audition](https://snipsnap-alloy-factory-bank.bertcalm.chatgpt.site/factory/)
+contains 24 dry factory presets across BASS, KEY, PLUCK, BRASS, STRING and SOFT.
+Each voice has its existing first-preset reference and three distinct roles with
+explicit operator, routing and envelope configurations. The owner heard the
+[role comparison](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/roles/),
+reported that it was much better, and authorized integration of that bank.
+The original 36-preset gallery and selected-voice release remain frozen references.
 
 ## Controls and render contract
 
@@ -60,28 +61,38 @@ indefinite HOLD.
 Actual waveform classifier checks remain
 separate from those declared export classes.
 
-Generate the listening files with:
+The CLI accepts complete Alloy JSON through `--patch`, including retained held
+recipes and authored factory configurations. `--midi` and `--velocity` override
+only the saved root and energy; they keep the complete material, routing and
+envelope data. `--all` and numbered `--preset` selections use the active four
+factory patches per voice.
+
+Generate the current factory listening files with:
 
 ```sh
-./gradlew --no-daemon :synth:generateAlloyAudition
+./gradlew --no-daemon :synth:generateAlloyFactoryAudition
 ```
 
-The output is `testkit/alloy-audition/`: rendered WAVs, a manifest with exact recipes
+The output is `testkit/alloy-factory/`: rendered WAVs, a manifest with exact recipes
 and raw diagnostics, patch JSONs, native kit downloads and a static listening page.
 Generated audio is ignored by Git. The page groups presets, voice/register/velocity
 coverage, five-point sweeps, interaction grids, FUSE ablation, settled HOLD and
 extremes. Playback is explicit; held loops use Web Audio for gapless repetition.
 Keep/revise/skip decisions and notes stay in the browser and can be exported as JSON.
-The original preset clip IDs and browser storage key remain stable, so existing
-listening notes stay attached after the expansion. New preset IDs are based on
-their names rather than their position in the roster.
+The factory page uses a separate browser storage key. Historical pages and notes
+remain intact; preset IDs use names rather than positions in the roster.
 
-The default publication pack contains 309 listening clips and 393 WAVs, including
-all 36 preset renders and the existing diagnostic studies. `alloy-patches.zip`
-contains the complete patch library; `alloy-mpc-kit.zip` contains the sixteen-pad
-XPM program and PCM24 samples. The older `alloy-provisional-*.zip` URLs remain
-compatibility copies of the current archives. `-PalloyFull` expands the diagnostic
-sweeps and grids across all six voices; both modes include the complete preset roster.
+`alloy-patches.zip` contains the complete 24-patch library;
+`alloy-mpc-kit.zip` contains the sixteen-pad starter XPM program and PCM24 samples.
+`alloy-factory-preset-bank.zip` contains all 24 presets in three eight-pad programs,
+paired as Bass/Key, Pluck/Brass and String/Soft. Each program includes native
+recipes and exporter sample fingerprints. Use `-PalloyFactoryOutput=...` for a
+different destination. Run `-PalloyFactoryRefreshPage` separately to refresh only
+the player without rendering audio. The older audition tasks remain available;
+their generators read the current registry, while hosted historical packs stay frozen.
+The publication contains all 24 presets and 275 curated diagnostic cases. Add
+`-PalloyFactoryFull` to expand macro sweeps and grids across every voice for a
+larger development pack.
 
 Listen to FUSE-on and attack-modulation-removed pairs at the same level. The latter
 keeps the direct attack path and ordinary PM, so a difference cannot be credited
@@ -98,10 +109,9 @@ reviews remain available as a fixed reference.
 
 The listening selection uses the revised KEY, PLUCK, BRASS and STRING voices,
 and the original BASS and SOFT voices. `Alloy.defaultConfigFor` supplies that
-selection to new patches, factory presets and the patchless app preview. The
-36 factory names and macro settings remain the same; the 24 presets in the four
-revised voices adopt their selected configuration. Selecting one of those factory
-names again therefore uses its revised sound.
+selection to new patches and the patchless app preview. Factory references keep
+that selection; the three additional roles per voice carry their own explicit
+configurations. Editing their macros preserves those configurations.
 
 Saved patch and pad JSON keeps its explicit configuration, including original
 sounds. Model-1 JSON with a missing or null configuration still decodes with the
@@ -129,7 +139,7 @@ listening review; the voice choice does not approve every proposed preset.
 
 The [selected audition](https://snipsnap-alloy-audition.bertcalm.chatgpt.site/selected/)
 combines the agreed original BASS/SOFT and revised KEY/PLUCK/BRASS/STRING voices.
-It contains the current 36 factory presets, a matching sixteen-pad MPC kit,
+The frozen publication contains the preceding 36 factory presets, a matching sixteen-pad MPC kit,
 and voice, macro, interaction, source-ablation and held-loop studies.
 The default publication matrix has 310 clips and 395 listening WAVs; the starter
 and three-program factory bank add 52 MPC sample files.
@@ -170,10 +180,57 @@ engine metadata remains TONAL. The
 pitched-classifier guards still cover every factory preset and ordinary wood,
 tine and breath cases; all extreme cases retain pitch and numerical bounds.
 
-The voice choice has been heard and approved. This release pack is the preset
-listening gate; it does not assert physical phone or MPC acceptance. Rendering
+The voice choice has been heard and approved. This historical release pack was the
+earlier preset listening gate; it does not assert physical phone or MPC acceptance. Rendering
 performance still needs phone profiling. Host timing measurements are not phone
 latency measurements, and attack-plus-loop export remains a separate host feature.
+
+## Distinct factory roles
+
+The earlier macro-only presets shared one configuration per voice. Their openings
+changed while their sustained bodies often converged. Gain-normalized waveform
+tests proved that signals differed, which did not establish useful musical variety.
+The replacement bank uses the exact complete patches from the approved comparison,
+including their macros, MIDI roots, velocity and model-1 configuration. The sole
+display-name adjustment is Elastic Contact to Elastic Touch to fit the existing
+14-character preset strip; it changes no synthesis input.
+Approved JSON fixtures protect that correspondence. No oscillator arithmetic,
+selected voice defaults, patch schema or missing-config legacy fallback changes.
+
+The starter kit uses a Long Prism KEY pentatonic walk, then Hollow Rail, Reed
+Switch, Open Chime, Bright Stamp, Beating Glass and Velvet Rise. A15/A16 keep
+Held Filament and Endless Ember. All six earlier held references are available
+through `AlloyPresets.heldReferences()` outside the active 24-preset picker bank.
+Saved retired presets remain complete, renderable recipes.
+
+The 18 authored roles avoid the air/noise material path at their saved settings.
+Their wood and tine projections intentionally match in the approved inputs, so
+MATERIAL from 0 to .5 selects the same projection for those roles; above .5 it
+moves toward the inherited breath source. Default voice studies retain distinct
+wood, tine and breath projections. This integration preserves the auditioned
+recipes rather than retuning their controls. Beating Glass uses slightly offset
+upper partials; its root measurements and exact approved patch are retained.
+
+Picked Fibre at C2 is a second explicit classifier limit: the short low note has
+a stable pitched root, but the generic bass/decay heuristic calls it TOM. The
+`picked_fibre_c2` study records both raw and decoded listening-file classifications;
+engine and MPC metadata remain TONAL. The factory patch is unchanged from the
+approved comparison. A longer tail would change that sound merely to fit a
+heuristic, so the limitation remains visible instead.
+
+The original 36-preset corpus retains all 108 strict short-capture register and
+classification checks through frozen complete-input fixtures. The new roles add
+full-event feature checks with only the classifier's duration shortcut disabled:
+cropping slow swells before they reach their body gives a false short decay.
+Every new role still receives the same pitch and numerical bounds; the named C2
+picked-string case asserts its observed generic class and its pitched export class.
+
+Why it is built this way:
+
+- Operator balance and routing change the persistent body, beyond transient color.
+- Envelope differences provide short, ringing and slowly opening musical roles.
+- Exact accepted recipes avoid introducing a new sound-design pass during integration.
+- Separate historical pages and explicit saved configurations keep earlier sounds reproducible.
 
 ## Validation and remaining acceptance
 
@@ -190,5 +247,6 @@ High-register checks include a deterministic 4×/8× body comparison and near-Ny
 spectral probes. These bound solver divergence in the tested tonal cases; they
 do not establish complete alias elimination for every custom recipe or stochastic
 breath projection. Numerical checks do not establish sonic approval. The initial
-engine audition has been heard; expanded-preset listening, phone/device behavior,
-hardware MPC listening and final naming checks remain open.
+engine and distinct-role comparison have been heard, and the owner authorized this
+bank. Phone/device behavior and hardware MPC listening remain open. Further
+listening notes can still guide refinements; numerical checks do not replace them.

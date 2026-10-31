@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * Twenty-one provisional WICK recipes for the listening review. They stay
+ * Twenty-five provisional WICK recipes for the listening review. They stay
  * outside [Presets], the phone picker and FRESH TAPE until that review.
  * The dry engine supplies the identity; none needs a landing FX chain.
  */
@@ -46,6 +46,13 @@ object WickPresets {
             "CASCADE" to .80f, "TIMBRE" to .95f, "RECOVERY" to .40f),
         p(WickVoice.FLICKER, "Held Flicker", "SPARK" to .50f, "FEED" to .55f,
             "CASCADE" to .70f, "TIMBRE" to .75f, "RECOVERY" to .45f, "HOLD" to 1f),
+        p(WickVoice.RATTLE, "Recovering Rattle"),
+        p(WickVoice.RATTLE, "Depleted Rattle", "SPARK" to .75f, "FEED" to .80f,
+            "CASCADE" to .85f, "TIMBRE" to .65f, "RECOVERY" to .65f),
+        p(WickVoice.RATTLE, "Small Rattle", "SPARK" to .45f, "FEED" to .25f,
+            "CASCADE" to .45f, "TIMBRE" to .30f, "RECOVERY" to .50f),
+        p(WickVoice.RATTLE, "Held Rattle", "SPARK" to .60f, "FEED" to .55f,
+            "CASCADE" to .70f, "TIMBRE" to .40f, "RECOVERY" to .65f, "HOLD" to 1f),
     )
 
     fun forVoice(voice: WickVoice): List<WickPatch> = presets.filter { it.voice == voice }
