@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -74,16 +75,16 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  * genuinely-different things (JSON save history vs. deleted pad audio)
  * still have to cohabit one screen regardless of what either is called.
  *
- * Routed as KIT-scoped overlay state in `App`, the same way PAD SHEET is —
- * not an [AppScreen] entry. MenuRow's items are fixed at ten and TAKES+BIN
- * isn't one of them; it's only reachable from the KIT action row, exactly
- * like PAD SHEET is only reachable by long-pressing a pad.
+ * A bench (`Bench.VERSIONS`) over PADS in `App`, not an [AppScreen] entry:
+ * it's only reachable from the KIT action row, exactly like PAD SHEET is only
+ * reachable by long-pressing a pad. It is drawn only for the kit it was
+ * opened for; `App` closes it on arrival if that is no longer the open kit.
  *
  * Opens its own [KitBuilderModel] on [entry]'s folder, same as PAD SHEET,
  * and reports every successful restore back up via [onKitUpdated] so
  * `App`'s copy of the kit stays in step. The kit's engine bank needs no
  * special invalidation here: `App` renders this screen *instead of*
- * `KitScreen` (see `App.kt`'s `AppScreen.KIT` branch), and the kit's
+ * `KitScreen` (see `App.kt`'s `Bench.VERSIONS` branch), and the kit's
  * `PadHost` is not tied to that screen — it stays open while the beat is
  * playing, and closes with its last holder otherwise. Either way a restore
  * reaches it as a fresh `open.kit` through [onKitUpdated], and the host
@@ -115,6 +116,8 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
 @Composable
 fun TakesBinScreen(
     entry: KitShelf.Entry,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
@@ -380,7 +383,7 @@ fun TakesBinScreen(
         // on in this state).
         BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
-            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp), onLcd = true) { onBack() }
+            HeaderChip(backLabel, scheme, Modifier.align(Alignment.TopStart).widthIn(min = 64.dp), onLcd = true) { onBack() }
             if (loadFailed) {
                 TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
@@ -440,12 +443,12 @@ fun TakesBinScreen(
     // EMPTY THE BIN write in flight must not be interrupted by Back any
     // more than by the chip itself.
     // Always registered, no-op while busy — NOT `enabled = !busy`. This screen
-    // is one of App's overlays, so the root handler excludes itself whenever
-    // `takesBinOpen` is set; a disabled handler here would leave ZERO enabled
-    // callbacks mid-write and the dispatcher would fall through to
-    // Activity.finish() — Back would exit the app in the middle of a RESTORE.
-    // Swallowing is safe rather than a trap: MenuRow renders above this screen
-    // the whole time, so a tab is always there to leave by. SplitScreen's
+    // is a bench, so the root handler is enabled under it (it takes a press only
+    // when no screen of its own does); a disabled handler here would let Back
+    // fall through to the root handler's `nav.back()`, which pops VERSIONS out
+    // from under a RESTORE in flight. Swallowing is safe rather than a trap:
+    // the place row renders above this screen the whole time, so a place is
+    // always there to leave by. SplitScreen's
     // `BackHandler { if (!working) onExit() }` is the same shape.
     BackHandler { if (!busy) onBack() }
 
@@ -455,7 +458,7 @@ fun TakesBinScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
             Row(
                 Modifier
                     .weight(1f)

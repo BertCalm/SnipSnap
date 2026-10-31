@@ -4272,9 +4272,6 @@ class ConventionTest {
      * is still a `remember` var in App, wiped on every move (the spec's
      * §7.3.1), and its steps of the routing work give it an opener:
      *
-     * - **PR 3c**: VERSIONS, PAD_CAPTURE and SONG. Their arguments are nulled by
-     *   `clearTransientState` while the history still holds the bench, so they
-     *   need the place's state record first.
      * - **PR 3d**: PAD_SHEET, GRAIN_FIELD, SPLICE, STACK and SPREAD, the pad
      *   editor family.
      * - **PR 3e**: LIVE_SNAP, DRAW and FIELD, Snap's own screens. The spec's
@@ -4291,11 +4288,10 @@ class ConventionTest {
      * with nothing failing.
      */
     private val NOT_YET_OPENED: Set<Bench> = setOf(
-        Bench.VERSIONS, Bench.PAD_CAPTURE, Bench.SONG,
         Bench.PAD_SHEET, Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK, Bench.SPREAD,
         Bench.LIVE_SNAP, Bench.DRAW, Bench.FIELD,
     )
-    private val NOT_YET_OPENED_CEILING = 11
+    private val NOT_YET_OPENED_CEILING = 8
 
     /**
      * The benches something in :app opens, by the three ways it does. [sources]
@@ -4449,7 +4445,6 @@ class ConventionTest {
 
     /** Who gets a hand-drawn back label off a screen, and why it may stay until then. */
     private enum class WaiverOwner(val why: String) {
-        PR_3C("moves to a bench in PR 3c (VERSIONS, PAD_CAPTURE, SONG)"),
         PR_3D("moves to a bench in PR 3d (the pad editor family)"),
         PR_3E("moves to a bench in PR 3e (Snap's own screens: LIVE_SNAP, DRAW, FIELD)"),
         IN_SCREEN_PANEL("permanent: an in-screen panel, not a bench"),
@@ -4472,8 +4467,6 @@ class ConventionTest {
      * raise it in plain sight. A ceiling with slack would let the map grow back
      * after a shrink with nothing failing.
      *
-     * - **PR 3c** moves TakesBinScreen (VERSIONS), PadCaptureScreen and
-     *   ArrangeScreen (SONG).
      * - **PR 3d** moves the pad editor family: PadSheetScreen, StackTakesScreen,
      *   TapeSpliceScreen's back chip, and GrainFieldScreen's default.
      * - **PR 3e** moves Snap's own screens: LiveSnapScreen (LIVE_SNAP) and the
@@ -4486,9 +4479,6 @@ class ConventionTest {
      *   they step through pads and presets and go nowhere.
      */
     private val BACK_LABEL_WAIVERS: Map<String, List<BackLabelWaiver>> = mapOf(
-        "ui/TakesBinScreen.kt" to waive(WaiverOwner.PR_3C, "◄ KIT", "◄ KIT"),
-        "ui/PadCaptureScreen.kt" to waive(WaiverOwner.PR_3C, "◄ KIT"),
-        "ui/ArrangeScreen.kt" to waive(WaiverOwner.PR_3C, "◄ GROOVE"),
         "ui/PadSheetScreen.kt" to waive(WaiverOwner.PR_3D, "◄ KIT", "◄ KIT"),
         "ui/StackTakesScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD"),
         "ui/TapeSpliceScreen.kt" to waive(WaiverOwner.PR_3D, "◄ PAD") +
@@ -4500,7 +4490,7 @@ class ConventionTest {
         "ui/AquariumPanel.kt" to waive(WaiverOwner.IN_SCREEN_PANEL, "◄ PAD"),
         "ui/SurfaceScreen.kt" to waive(WaiverOwner.STEPPER, "◄ PAD", "◄ PAD2", "◄ PAD3", "◄ PAD4", "◄ PRESET"),
     )
-    private val BACK_LABEL_WAIVER_CEILING = 20
+    private val BACK_LABEL_WAIVER_CEILING = 16
 
     /** Every string literal in [code] (comments already stripped) that starts with the arrow and a capital: a hand-drawn back label. A lone arrow, a template (`"◄ ${...}"`) and the other arrow are not. */
     private fun handDrawnBackLabels(code: String): List<String> =
@@ -4574,7 +4564,7 @@ class ConventionTest {
         assertEquals(1, backLabelProblems(one, emptyMap()).size, "a literal with no waiver must be reported")
         assertEquals(
             1,
-            backLabelProblems(emptyMap(), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3C, "◄ SHELF"))).size,
+            backLabelProblems(emptyMap(), mapOf("ui/XScreen.kt" to waive(WaiverOwner.PR_3E, "◄ SHELF"))).size,
             "a waiver whose literal is gone must be reported",
         )
         assertEquals(

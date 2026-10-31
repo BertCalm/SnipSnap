@@ -412,6 +412,65 @@ class NavigationTest {
         assertEquals("◄ SHELF", doubles.backChip)
     }
 
+    // The kit-bound screens (PR 3c): VERSIONS and PAD CAPTURE over PADS, SONG over BEAT. The app closes one
+    // that no longer fits the open kit by `closeBench` on arrival, which is only a step back if the model
+    // leaves nothing behind.
+
+    @Test
+    fun `VERSIONS opened over PADS returns to PADS by the chip and by Back, and names PADS`() {
+        assertChipAndBackAgree(Location(Place.PROJECT, Stage.PADS), "◄ PADS") {
+            go(Place.PROJECT)
+            open(Bench.VERSIONS)
+        }
+    }
+
+    @Test
+    fun `PAD CAPTURE closed by its chip leaves nothing for Back to find, and names PADS`() {
+        val nav = Navigation().apply { go(Place.PROJECT) }
+        val before = Navigation().apply { go(Place.PROJECT) }.walkBack()
+
+        nav.open(Bench.PAD_CAPTURE)
+        assertEquals("◄ PADS", nav.backChip)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
+
+        assertEquals(before, nav.walkBack(), "PAD CAPTURE was opened and closed, so the history is as if it never was")
+    }
+
+    @Test
+    fun `SONG opened over BEAT survives a place tap, and Back restores it with its chip still naming BEAT`() {
+        val nav = beatWith(Bench.SONG)
+        assertEquals("◄ BEAT", nav.backChip)
+
+        nav.go(Place.SHELF)
+        assertNull(nav.backChip, "a bare place has nothing to go back from")
+        assertTrue(nav.back())
+
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.SONG)), nav.location, "Back restores SONG itself, not the bare BEAT under it")
+        assertEquals("◄ BEAT", nav.backChip)
+    }
+
+    @Test
+    fun `a kit-bound screen restored by Back and closed at once leaves the stage it was over, with no trace`() {
+        // What the app does on arrival at a VERSIONS, PAD CAPTURE or SONG opened for a kit that is not the open one.
+        val songTrip = beatWith(Bench.SONG).apply {
+            go(Place.SHELF)
+            back()
+        }
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.SONG)), songTrip.location)
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), songTrip.closeBench())
+        assertEquals(beatWith().walkBack(), songTrip.walkBack(), "SONG left the history as it would be had it never been opened")
+
+        val versionsTrip = Navigation().apply {
+            go(Place.PROJECT)
+            open(Bench.VERSIONS)
+            go(Place.SHELF)
+            back()
+        }
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.VERSIONS)), versionsTrip.location)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), versionsTrip.closeBench())
+        assertEquals(Navigation().apply { go(Place.PROJECT) }.walkBack(), versionsTrip.walkBack())
+    }
+
     @Test
     fun `per-place state survives a stage switch and a trip to another place`() {
         val nav = Navigation()
