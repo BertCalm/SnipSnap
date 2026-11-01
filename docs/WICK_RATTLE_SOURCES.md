@@ -1,6 +1,9 @@
 # WICK RATTLE: alternate source study
 
-Status: diagnostic audition, with no selected replacement. Repository baseline:
+Status: historical source-selection audition, subsequently accepted by the owner.
+Warm wire is now the default and all three alternate bodies have
+[normal saved patches](WICK_RATTLE_PATCHES.md). The design and measurements
+below record the earlier audition round. Repository baseline:
 `a5caac7fd6c8a2e6d09ec740c60fb995c6bef368`. The owner rejected the underlying
 tone of the connected-body RATTLE and asked to apply its character and movement
 to a different sound. That feedback changes the source slot; it does not call

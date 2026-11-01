@@ -37,6 +37,24 @@ CLI example:
 ./gradlew :cli:run --args="synth NACRE PEARL --all --midi 48 --velocity 0.65 --out /tmp/nacre"
 ```
 
+## MPC starter-kit trial
+
+`./gradlew --no-daemon :synth:generateNacreKit` exports **SnipSnap-Nacre-Kit.zip** into `testkit/`. The optional `-PnacreKitOutput=/absolute/output/root` selects another destination. The trial contains a native MPC 3 track (`.xtd`), an MPC 2 program (`.xpm`), sixteen shared mono 44.1 kHz PCM24 WAVs, editable `kit.json`, separate complete pad recipes, a pad map, measurements and checksums. Its listening page plays the actual exported samples.
+
+| Pads | Sound | Native notes | Baked strike |
+|---|---|---|---|
+| A01–A08 | Pearl Close | C3, Eb3, F3, G3, Bb3, C4, Eb4, F4 | 0.65 |
+| A09–A10 | Coral Reply, Kelp Passage | C3 | 0.65 |
+| A11–A12 | Pearl Close | C3 | 0.30, 1.00 |
+| A13–A14 | Coral Reply | C3 | 0.30, 1.00 |
+| A15–A16 | Kelp Passage | C3 | 0.30, 1.00 |
+
+All pads retain revision 3, seed 7, their preset's existing controls and the complete six-second ending. The note and physical strike are rendered natively; there is no export pitch shift, rack processing or per-sample loudness matching. The program retains the house's uniform mixer headroom. Hardware pad velocity changes playback level; it does not rerun the harp or select additional velocity layers. The soft/medium/hard examples are separate authored strikes.
+
+Every pad is a finite tonal one-shot with no mute group or sample loop. Different pads can overlap. The existing MPC 2 writer sets each pad to mono with polyphony 1, so retriggering the same pad can restart its tail. The native MPC 3 writer uses its existing non-monophonic configuration; the numeric polyphony field is not a verified voice-count claim. Check repeated strikes, chords, dynamic response and complete endings on the target MPC.
+
+The generator checks both program formats by reading them back, compares exported audio with the native recipe renders and records source provenance. These checks establish the exported files and settings; successful loading and musical behavior on hardware remain pending. The three starting presets and this kit remain outside the global factory menus until that listen. The existing renderer, older recipes and audition stay available.
+
 ## Cache and cost
 
 A four-entry LRU owns completed source buffers, with a retained audio bound of 25,401,600 bytes plus container overhead. Its key includes the resolved source voice, TOUCH, DUET, MIDI, physical velocity, full seed and source ablation flags. Return-only controls do not invalidate that source. New notes, strikes or strum settings can still need a cold source render.

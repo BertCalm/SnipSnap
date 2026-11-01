@@ -73,7 +73,11 @@ object Wick {
             .toMutableMap().apply { this["HOLD"] = getValue("HOLD").coerceAtMost(.95f) }
     }
 
-    /** Audition-only source swaps. These names describe spectra, not physical models. */
+    /**
+     * RATTLE's saved tonal bodies. CURRENT is the compatibility token for the earlier
+     * folded-FM body; new instruments start with WARM_WIRE. Names describe spectra,
+     * not physical string, reed or friction models.
+     */
     enum class RattleSource { CURRENT, WARM_WIRE, HOLLOW_REED, RUBBED_GLASS }
 
     data class Options(
@@ -85,8 +89,8 @@ object Wick {
         val legacyBubbleEnvelope: Boolean = false,
         /** Diagnostic reference: reproduce RATTLE's earlier separate, repeated openings. */
         val legacyRattleEnvelope: Boolean = false,
-        /** Diagnostic source study; ordinary patches retain the current folded-FM source. */
-        val rattleSource: RattleSource = RattleSource.CURRENT,
+        /** Explicit diagnostic override; null keeps the normal instrument's saved body. */
+        val rattleSource: RattleSource? = null,
     )
     data class Event(
         val timeSeconds: Double,
@@ -142,17 +146,24 @@ object Wick {
     )
 
     fun render(voice: WickVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
-               velocity: Float = 1f): Snip =
-        Snip(inspect(voice, macros, midi, velocity).samples, channels = 1, sampleRate = Dsp.RATE)
+               velocity: Float = 1f, rattleSource: RattleSource = RattleSource.WARM_WIRE): Snip =
+        Snip(inspect(voice, macros, midi, velocity, rattleSource = rattleSource).samples,
+            channels = 1, sampleRate = Dsp.RATE)
 
     fun inspect(voice: WickVoice, macros: Map<String, Float> = emptyMap(), midi: Int = rootMidi(voice),
-                velocity: Float = 1f, options: Options = Options()): Probe {
+                velocity: Float = 1f, options: Options = Options(),
+                rattleSource: RattleSource = RattleSource.WARM_WIRE): Probe {
         require(midi in MIN_MIDI..MAX_MIDI) { "WICK midi must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "WICK velocity must be finite and in 0..1" }
         require(options.oversample in listOf(1, 2, 4, 8)) { "WICK oversample must be 1, 2, 4 or 8" }
         val m = settled(macros, voice)
-        if (isLoop(m.getValue("HOLD"))) return held(voice, m, midi, velocity, options)
-        val engine = Engine(voice, m, midi, velocity, options, null)
+        // Resolve the normal saved body once, before either finite or held construction.
+        // Diagnostic CURRENT keeps historical audition recipes exact; it is no longer a
+        // synonym for the default. Other voices never enter this source-selection path.
+        val resolved = if (voice == WickVoice.RATTLE)
+            options.copy(rattleSource = options.rattleSource ?: rattleSource) else options
+        if (isLoop(m.getValue("HOLD"))) return held(voice, m, midi, velocity, resolved)
+        val engine = Engine(voice, m, midi, velocity, resolved, null)
         val up = engine.block(engine.finiteSamples)
         val raw = condition(up, options.oversample)
         Dsp.fadeTail(raw, ms = 12f)
@@ -236,8 +247,20 @@ object Wick {
                 RattleSource.CURRENT -> error("The current source does not use a harmonic study table")
             }
             val exposure = 1.8 * timbre.pow(.85) * (.8 + .2 * velocity)
+            // Above the accepted .45 setting, strong half-order color can make a
+            // twice-root period dominate the pitch cue. Soft-limit only those two
+            // partials near their accepted weights; the integer fifth keeps growing
+            // with TIMBRE, so the upper range still brightens at the requested root.
+            // The .48 asymptote is a measured register-probe margin, not a material law.
+            val boundedGlass = family == RattleSource.RUBBED_GLASS && timbre > .45
+            val halfOrderExposure = if (boundedGlass) {
+                val halfTimbre = .45 + .03 * (1.0 - exp(-(timbre - .45) / .03))
+                1.8 * halfTimbre.pow(.85) * (.8 + .2 * velocity)
+            } else exposure
             val weights = DoubleArray(ratios.size) { j ->
-                if (hz * ratios[j] >= 20_000.0) 0.0 else if (j == 0) 1.0 else color[j] * exposure
+                if (hz * ratios[j] >= 20_000.0) 0.0 else if (j == 0) 1.0
+                else if (boundedGlass && (j == 1 || j == 2)) color[j] * halfOrderExposure
+                else color[j] * exposure
             }
             // L1 normalization bounds the source rather than hiding growth with a limiter.
             val scale = 1.0 / weights.sum()
@@ -379,7 +402,7 @@ object Wick {
         val drive = 1.0 + 3.2 * timbre.pow(1.2) * reach
         val phaseOffset = Dsp.phases(2, Dsp.seedFor("WICK", voice.name, midi))
         val rattleCore = if (voice == WickVoice.RATTLE && options.rattleSource != RattleSource.CURRENT)
-            RattleCore(options.rattleSource, hz, timbre, velocity) else null
+            RattleCore(requireNotNull(options.rattleSource), hz, timbre, velocity) else null
         var sample = 0L
         var pulseIndex = 0L
         var delivered = 0
