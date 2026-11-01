@@ -791,6 +791,7 @@ fun SynthScreen(
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
+                        else if (e == Engine.PRISM) seededDrafts.firstOrNull { it is PrismPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
@@ -799,7 +800,7 @@ fun SynthScreen(
                     // does not (§3.6): an unparseable or non-finite string
                     // is a stale bag, never a crash.
                     // A reopened pad's working recipe is the freshest statement of
-                    // its macros; a complete OVEN, FILAMENT, CHAMBER or OHM recipe is next: their legacy
+                    // its macros; a complete OVEN, FILAMENT, CHAMBER, PRISM or OHM recipe is next: their legacy
                     // macro keys may predate an edit followed by a voice switch.
                     // SCANNED CHAIN's saved recipe carries its own macros likewise.
                     val workingPatch = seed.seededWork[e to v]?.recipe?.patch?.let(::editablePreset)

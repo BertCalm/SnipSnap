@@ -221,6 +221,13 @@ raw/matched listening comparisons and portable prototype recipes. The
 owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
 this finite renderer from the later phone editor, larger crowd and HOLD stages.
 
+CONFLUENCE VOICES adds nine approved Yaman, kulning and khöömei passages, a
+sixteen-pad starter and a MAKE bench for source/reference/solo/pair/group
+comparisons. The exact source bank and credits travel through native backup,
+merge and Breed. These are finite phrases at their native register; roots and
+keyboard sustain are not inferred. See the [selected-bank notes](docs/CONFLUENCE_SELECTED_BANK.md)
+and [listening comparisons](https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/bank/).
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
@@ -393,7 +400,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 56 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 57 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
