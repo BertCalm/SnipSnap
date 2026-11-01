@@ -417,8 +417,8 @@ Loopable breathing and GLOW remain deferred.
 | Finite factory bank | The owner accepted the twelve model-2 musical recipes. Their registration and finite audio remain separate from held playback. |
 | Steady held listening proof | The owner accepted the steady proof. Its recorded host tests establish recurrence, independent-neighbour seam checks and source-withdrawal behavior under the tested settings. |
 | Held MPC keygroup trial | Owner accepted in conversation on 2026-10-31. No MPC model, OS/firmware or per-check hardware measurements were supplied. Do not infer a particular device, measured release time or polyphony limit. |
-| Phone integration | Authorized on 2026-10-31. Final focused checks and three Android APK builds passed at clean `617ba1b7`; the full unfiltered JVM gate passed 7,430 cases at clean `097b2c8d`. Emulator/physical-device execution remains pending. |
-| Production audio compatibility | All twelve complete production CLI/maker PCM24 WAVs, including sampler metadata, were rechecked at clean `617ba1b7` and remain byte-identical to the retained accepted trial. SEND/SPREAD's saved finite fades leave native instrument loops unchanged. |
+| Phone integration | Implementation revision `2b07c5ef` has passing Android/native CI and a 355-test emulator run with no failures and one unrelated benchmark skip. The separate clean local `8b6d0aea` gate passed 7,452 JVM cases and all three APK assemblies. Physical-phone listening and timing remain unmeasured. |
+| Production audio compatibility | Local checkpoint `8b6d0aea` rechecked all twelve complete production PCM24 WAVs, including sampler metadata, against the accepted trial: all are byte-identical. The measured held-source files match implementation revision `2b07c5ef`; the local checkpoint was not published as the PR head. |
 
 Owner acceptance is a listening and use decision. It does not replace a measured
 latency, pitch, aliasing or sampler-envelope report. The existing held package
@@ -430,11 +430,11 @@ the same peak without protection.
 
 The integration adds explicit saved held playback, dry touch preview and
 ordinary instrument-library/MPC export. The baseline for this update is
-`2b3e1688`. Final focused JVM checks, the complete accepted-audio comparison
-and local Android APK builds passed at clean implementation source `617ba1b7`.
-The full unfiltered JVM gate passed at clean `097b2c8d`. Emulator/physical-device
-execution remains pending.
-No physical phone measurements are claimed here.
+`2b3e1688`. Implementation revision `2b07c5ef` has passing Android/native CI
+and a successful emulator run. The separate clean local `8b6d0aea` gate passed
+7,452 JVM cases and all three APK assemblies. Local focused, accepted-audio,
+benchmark and mutation evidence is recorded separately below. No physical-phone
+listening or timing is claimed.
 
 ### Saved playback and controls
 
@@ -525,18 +525,37 @@ audition recipes remain distinct from these normal `OverlapPatch` files.
 
 ### Host measurements and verification
 
-The unfiltered Gradle `test` task exited `0` at clean `097b2c8d`, with the same
-clean revision before and after the run. Across all nine pure-JVM modules,
-`897` JUnit reports contain `7,430` valid test cases with no failures, errors
-or skips: `6,957` cases emitted PASS events and `473` valid up-to-date cases
-were reused. Android SDK discovery was excluded only from this JVM run; the
-three Android APK builds passed separately. The full run completed on
-2026-10-31 in 1 hour 41 minutes 52 seconds.
+#### CI evidence for implementation revision `2b07c5ef`
 
-At clean implementation source `617ba1b7`, the final focused Gradle process
-exited `0`: `78` JVM tests passed (`43` synth, `33` shell and `2` CLI), with no
-failures, errors or skips. The shell count contains eight `OverlapPadMakerTest`,
-four integration and twenty-one `SpreadTest` cases. Coverage includes
+For source revision `2b07c5ef`, PR #778's Android and native jobs passed in
+[run 41249627352](https://github.com/BertCalm/SnipSnap/actions/runs/41249627352).
+A development APK was downloaded from that
+successful Android job with matching source-head provenance; its artifact
+name uses synthetic PR merge `8a72056b`, not the source-head SHA.
+
+The exact-head, unfiltered [emulator run 41249627309](https://github.com/BertCalm/SnipSnap/actions/runs/41249627309),
+job `124680223174`, completed `355` tests with `0` failures and `1` skip,
+ending `BUILD SUCCESSFUL`. The only skipped case was
+`LibrationRenderBenchmark.record_cold_physics_reuse_and_audio_recall`.
+This is executed emulator evidence, distinct from APK compilation and from
+physical-phone listening, touch latency or device-specific performance.
+
+#### Local checkpoint evidence
+
+The combined local gate exited `0` on 2026-11-01 at clean `8b6d0aea`, unchanged
+before and after the run. With the Android SDK available, it ran unfiltered
+tests across all nine pure-JVM modules (`test -x :app:test`) and assembled
+debug, StrikeFx and instrumentation APKs. Its `901` JUnit reports contain
+`7,452` valid cases with no failures, errors or skips: `5,991` emitted PASS
+events and `1,461` valid up-to-date cases were reused. All three APK hashes
+were reverified. This is local regression evidence, not a claim that the
+separate PR JVM job passed.
+
+At the same local checkpoint, `106` focused tests passed
+(`69` synth, `35` shell and `2` CLI), exit `0`, with no failures, errors or
+skips. That checkpoint was superseded by the authoritative PR head and was
+not pushed. These local results remain distinct from PR CI.
+Coverage includes
 finite JSON/audio compatibility, held round trip and version refusal, strict
 steady-control validation, cache ownership/eviction, cancellation without
 publication, loop/sample bounds, saved preset handling and complete
@@ -552,13 +571,16 @@ the restored seven-test `OverlapHeldTest` run exited `0` without failures,
 errors or skips. This demonstrates that the ownership guard detects its
 intended failure rather than only passing the implementation.
 
-All twelve complete WAVs were rechecked through the final installed production
-CLI and `OverlapPadMaker` at clean `617ba1b7`. They remain byte-identical to the
+All twelve complete WAVs were rechecked through the production CLI and
+`OverlapPadMaker` at clean local `8b6d0aea`. They remain byte-identical to the
 retained accepted trial, including
 PCM24 audio and `smpl` root/loop metadata. The references are MIDI `36`, `48`
 and `60` for all four topologies; every approved capture kept gain `1`.
+The measured `OverlapHeld`, prototype, maker and CLI source hashes match
+implementation revision `2b07c5ef`; this is source continuity, not a new CI audio measurement.
 
-`OverlapHeldBenchmark` recorded `24` production-render calls on a Linux host,
+The retained `OverlapHeldBenchmark` recorded `24` production-render calls on
+a Linux host,
 OpenJDK `21.0.13`, with four visible processors. At MIDI `48`, velocity `.8`:
 
 | Path | Render time range | Median |
@@ -578,21 +600,19 @@ JVM startup measurements. Reproduce the report with a new output filename:
 ./gradlew :synth:benchmarkOverlapHeld -PoverlapHeldBenchmarkOutput=/absolute/path/new-held-report.json
 ```
 
-The final local Android build exited `0` on 2026-10-31 at clean `617ba1b7`, completing
-`:app:assembleDebug`, `:app:assembleStrikeFx` and
-`:app:assembleDebugAndroidTest`. Debug, StrikeFx and instrumentation APKs were
-built. All four `OverlapHeldSynthScreenTest` cases compiled for explicit
+The combined local gate completed `:app:assembleDebug`,
+`:app:assembleStrikeFx` and `:app:assembleDebugAndroidTest`. Its compiled
+`OverlapHeldSynthScreenTest` coverage contains four cases for explicit
 mode/finite return, same-frame performance edits and saved one-shot delivery,
 prepared release without name/release recapture, and MAKE INSTRUMENT's three
 roots. The save/send cases also exercise the actual SPREAD overlay and compare
 complete recipes and PCM. APK builds do not execute the instrumentation cases.
 
-On-device/emulator execution remains pending. A physical phone pass must check
-press, early release, cancellation,
-background/focus loss,
-saved preset/instrument reopening and MPC export from the phone. Record
-device/build and cold/warm timing rather than treating the host benchmark,
-APK compilation or earlier MPC acceptance as that pass.
+A physical-phone pass still needs listening, press/early-release and
+cancellation behavior, background/focus loss, saved preset/instrument reopening
+and MPC export from the phone. Record device/build and cold/warm timing rather
+than treating host timings, emulator results, APK compilation or earlier MPC
+acceptance as that physical pass.
 
 ### Why it is built this way
 
