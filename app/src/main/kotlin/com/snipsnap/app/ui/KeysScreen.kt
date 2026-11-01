@@ -204,7 +204,7 @@ fun KeysScreen(
     // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
-    val learnState = rememberMidiLearn(KeysMidi.SCREEN, KeysMidi::prefer)
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, prefer = KeysMidi::prefer)
     val learn = learnState.learn
     var showLearn by remember { mutableStateOf(false) }
     LaunchedEffect(showLearn) { learnState.showing = showLearn }
