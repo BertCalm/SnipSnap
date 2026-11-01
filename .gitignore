@@ -26,6 +26,7 @@ testkit/crease-keys-audition/
 testkit/crease-touch-audition/
 testkit/nacre-audition/
 testkit/ferry-audition/
+testkit/ferry-match-audition/
 testkit/overlap-audition/
 testkit/overlap-audition-r1/
 testkit/confluence-audition/
@@ -66,6 +67,7 @@ design/*/*.html
 !design/confluence-audition/index.html
 !design/nacre-audition/index.html
 !design/ferry-audition/index.html
+!design/ferry-match-audition/index.html
 !design/nacre-gentle-audition/index.html
 !design/nacre-presence-audition/index.html
 !design/nacre-playable-audition/index.html
@@ -349,6 +351,7 @@ testkit/SnipSnap-Flock-Kit.zip.sha256
 
 # WICK's listening audio, diagnostic evidence and MPC/source kit are regenerated.
 testkit/wick-audition/
+testkit/wick-source-study/
 testkit/.wick-work/
 testkit/SnipSnap Wick Prototype Kit/
 testkit/SnipSnap-Wick-Prototype-Kit.zip
@@ -479,6 +482,7 @@ testkit/obliterate-core-inputs/
 testkit/obliterate-core-audition/
 testkit/obliterate-kotlin-audition/
 testkit/obliterate-shimmer-audition/
+testkit/obliterate-shimmer-kotlin/
 experiments/obliterate-shimmer/__pycache__/
 experiments/obliterate-core/__pycache__/
 
@@ -521,3 +525,6 @@ testkit/SnipSnap Scour Kit/
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/
 testkit/obbligato-more-overlap-audition/
+
+# PRISM opening-once / repeating-sustain listening evidence.
+testkit/prism-opening-sustain-audition/

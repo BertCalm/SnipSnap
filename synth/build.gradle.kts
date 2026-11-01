@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateFerryMatchAudition") {
+    group = "distribution"
+    description = "Render Ferry MATCH tuning comparisons, accepted aligned PCM checks and saved recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.FerryMatchAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("ferryMatchOutput").orNull ?: "${rootDir}/testkit/ferry-match-audition")
+}
+
 tasks.register<JavaExec>("generateLibrationMusicalBank") {
     group = "distribution"
     description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."
@@ -545,10 +555,10 @@ tasks.register<JavaExec>("generateObbligatoAudition") {
     args("${rootDir}/testkit/obbligato-audition")
 }
 
-/** Render the accepted model-five duet as sixteen velocity-layered pads for the app and MPC. */
+/** Render the accepted duet as sixteen velocity-layered pads for the app and MPC. */
 tasks.register<JavaExec>("generateObbligatoKit") {
     group = "distribution"
-    description = "Export sixteen model-five OBBLIGATO pads with native velocity layers, MPC 3, an MPC 2 twin, recipes and ZIP."
+    description = "Export sixteen accepted OBBLIGATO pads with native velocity layers, MPC 3, an MPC 2 twin, recipes and ZIP."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ObbligatoKitGenerator")
     workingDir = projectDir
@@ -611,6 +621,17 @@ tasks.register<JavaExec>("generateWickAudition") {
     workingDir = projectDir
     args(providers.gradleProperty("wickOutput").orNull ?: "${rootDir}/testkit/wick-audition")
     if (providers.gradleProperty("wickQuick").orNull == "true") args("--quick")
+}
+
+/** Same RATTLE movement with diagnostic alternate tonal bodies; normal patches stay fixed. */
+tasks.register<JavaExec>("generateWickSourceStudy") {
+    group = "distribution"
+    description = "Render four RATTLE source families at three notes, held notes and an identical phrase."
+    maxHeapSize = "768m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.WickSourceStudyGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("wickSourceOutput").orNull ?: "${rootDir}/testkit/wick-source-study")
 }
 
 tasks.register<JavaExec>("generateWickKit") {
@@ -2316,7 +2337,7 @@ tasks.register<JavaExec>("generateCausticKit") {
     args(providers.gradleProperty("causticKitOutput").orNull ?: "${rootDir}/testkit/caustic-kit")
 }
 
-/** SPARK revision-two control comparisons and ordered expression families. */
+/** SPARK revision-three control comparisons and ordered expression families. */
 tasks.register<JavaExec>("generateThumpSparkAudition") {
     group = "distribution"
     description = "Render revised SPARK control checks, optional preserved-baseline A/Bs, expression families, recipes and a sixteen-pad XPM kit."
@@ -2326,6 +2347,18 @@ tasks.register<JavaExec>("generateThumpSparkAudition") {
     maxHeapSize = "512m"
     args(providers.gradleProperty("sparkOutput").orNull ?: "${rootDir}/testkit/thump-spark-audition")
     providers.gradleProperty("sparkBaseline").orNull?.let { args(it) }
+}
+
+/** Local recipe neighborhoods on the unchanged, heard SPARK revision-three source. */
+tasks.register<JavaExec>("generateThumpSparkSweetSpots") {
+    group = "distribution"
+    description = "Render six SPARK starting points and nearby one-control variants, with editable recipes and matched comparisons."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ThumpSparkSweetSpotAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args(providers.gradleProperty("sparkSweetSpotOutput").orNull ?: "${rootDir}/testkit/thump-spark-sweet-spots")
+    providers.gradleProperty("sparkSweetSpotBaseline").orNull?.let { args(it) }
 }
 
 /** Retained model-one/model-two Apsis listening history. */
