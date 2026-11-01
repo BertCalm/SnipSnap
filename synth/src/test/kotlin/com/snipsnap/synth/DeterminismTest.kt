@@ -233,6 +233,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Held recall canary", voice,
+                Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
+                midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
     fun `SHOAL saved populations are byte identical for finite and captured moving HOLD`() {
         for (voice in ShoalVoice.entries) for (hold in listOf(0f, 1f)) {
             val patch = ShoalPatch("Population canary", voice,

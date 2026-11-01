@@ -112,6 +112,8 @@ import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
 import com.snipsnap.shell.CreasePadMaker
+import com.snipsnap.shell.LibrationPadMaker
+import com.snipsnap.shell.LibrationPad
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.ContourPadMaker
 import com.snipsnap.shell.DroneMaker
@@ -254,6 +256,7 @@ import com.snipsnap.synth.Oven
 import com.snipsnap.synth.OvenPatch
 import com.snipsnap.synth.OvenVoice
 import com.snipsnap.synth.Libration
+import com.snipsnap.synth.LibrationKeys
 import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LibrationRenderSession
 import com.snipsnap.synth.LibrationVoice
@@ -791,6 +794,7 @@ fun SynthScreen(
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
                         else if (e == Engine.TIDAL) seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
+                        else if (e == Engine.LIBRATION) seededDrafts.firstOrNull { it is LibrationPatch && it.voice == v }
                         else if (e == Engine.TREMOR) seededDrafts.firstOrNull { it is TremorPatch && it.voice == v }
                         else if (e == Engine.CHAMBER) seed.restoredChamber[v as ChamberVoice]
                         else if (e == Engine.NACRE) seededDrafts.filterIsInstance<NacrePatch>()
@@ -943,9 +947,9 @@ fun SynthScreen(
         for ((name, value) in macros) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
-        // FILAMENT, TIDAL, TREMOR, CHAMBER, PRISM, CAUSTIC, NACRE and UPRIGHT keep complete recipes in the
+        // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        if (patch is LibrationPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is CausticPatch || patch is NacrePatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1045,6 +1049,12 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: TidalPatch(name, voice as TidalVoice, controls)
+        }
+        if (engine == Engine.LIBRATION) {
+            val current = loadedPatchesByVoice[engine to voice] as? LibrationPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: engine.buildPatch(name, voice, controls)
         }
         if (engine == Engine.TREMOR) {
             // A queued save or pad update can share the frame of a preset choice.
@@ -1295,9 +1305,15 @@ fun SynthScreen(
         loadedPatchesByVoice[engine to voice] = change(patch)
     }
     fun updateLibrationPatch(patch: LibrationPatch) {
+        if (engine != Engine.LIBRATION || voice != patch.voice) return
         touched = true
         currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
         loadedPatchesByVoice[engine to voice] = patch
+        val controls = Libration.settled(patch.voice, patch.macros + ("HOLD" to 0f)) +
+            ("HOLD" to (patch.macros["HOLD"] ?: 0f))
+        macrosByVoice[engine to voice] = controls
+        for ((name, value) in controls) settings[macroSettingsKey(engine, voice, name)] = value.toString()
     }
     fun updateFlockPatch(change: (FlockPatch) -> FlockPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? FlockPatch ?: return
@@ -1589,7 +1605,8 @@ fun SynthScreen(
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
         v.start(0, loop = if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
-            (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f))))
+            (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f)) ||
+            (engine == Engine.LIBRATION && LibrationKeys.isHeld(macros["HOLD"] ?: 0f))))
             0 until heard.frameCount else null)
     }
 
@@ -1859,6 +1876,7 @@ fun SynthScreen(
                             model.update(slot) { ApsisPad.configure(it, patch) }
                         }
                         if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
+                        if (patch is LibrationPatch) model.update(slot) { LibrationPad.configure(it, patch, resetHeldTuning = true) }
                         model.save()
                         alreadyThere to model.kit
                     }
@@ -1923,13 +1941,14 @@ fun SynthScreen(
     val heldSheet = remember { HeldSheetState() }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
+    val supportsHeldInstrument = engine == Engine.LIBRATION || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.OHM && OhmPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OhmPatch)) ||
         (engine == Engine.FILAMENT && FilamentPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch))
     val heldInstrumentReady = when (engine) {
+        Engine.LIBRATION -> LibrationPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch)
         Engine.CREASE -> CreasePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch)
         Engine.OPENSKY -> OpenSkyPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
         Engine.BELLOWS -> BellowsPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BellowsPatch)
@@ -1959,6 +1978,10 @@ fun SynthScreen(
     // periodic sustain. CONTOUR starts directly from its settled tone.
     // These specs expose only a release control.
     fun heldSpec(): HeldSpec? = when (engine) {
+        Engine.LIBRATION -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch
+            if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(LibrationPadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.RESIN -> HeldSpec.Resin(ResinPadMaker.spec(voice as ResinVoice, macros, heldSheet.holdAttack, heldSheet.holdRelease))
         Engine.SIREN -> HeldSpec.Siren(SirenPadMaker.spec(voice as SirenVoice, macros, heldSheet.holdRelease))
         Engine.GLINT -> HeldSpec.Glint(GlintPadMaker.spec(voice as GlintVoice, macros, heldSheet.holdRelease))
@@ -2018,7 +2041,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                val heard = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Libration || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.preview { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -2052,7 +2075,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Tidal || spec is HeldSpec.Libration) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -2063,7 +2086,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
+                            val note = if (spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Libration || spec is HeldSpec.Flock || spec is HeldSpec.Filament) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3283,6 +3306,10 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         val random = Random(System.nanoTime())
                         val scrambled = when {
+                            engine == Engine.LIBRATION ->
+                                Libration.scramble(voice as LibrationVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice))) +
+                                    ("HOLD" to (macros["HOLD"] ?: 0f))
                             engine == Engine.APSIS ->
                                 Apsis.scramble(voice as ApsisVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -4406,6 +4433,17 @@ private sealed interface HeldSpec {
     fun preview(cancelled: () -> Boolean): Snip
     fun export(name: String, notes: List<List<KeyNote>>, destRoot: File): KeygroupProgram
 
+    class Libration(private val spec: LibrationPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = LibrationPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val instrumentNote get() = "THE NOTE SPEAKS, THEN KEEPS MOVING WHILE HELD. RELEASE FADES WHEN YOU LIFT A KEY."
+        override val knobLabel get() = "RELEASE ${LibrationPadMaker.secondsLabel(spec.releaseSeconds)}"
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = listOf(LibrationPadMaker.renderZone(spec, midi, cancelled))
+        override fun preview(cancelled: () -> Boolean) = LibrationPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            LibrationPadMaker.export(name, spec, notes.map { it.single() }, destRoot)
+    }
+
     class Resin(private val spec: ResinPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = ResinPadMaker.zoneMidis(spec)
         override val hasAttack get() = true
@@ -4865,7 +4903,7 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
-/** Finite performance controls live outside the already large bench composable. */
+/** Performance and playback controls live outside the already large bench composable. */
 @Composable
 private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
     MacroSlider(
@@ -4885,7 +4923,7 @@ private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Schem
         value = kotlin.math.sqrt((patch.sourceSeconds - Libration.MIN_SOURCE_SECONDS) /
             (Libration.MAX_SOURCE_SECONDS - Libration.MIN_SOURCE_SECONDS)).toFloat(),
         fillColor = color, scheme = scheme, readout = "%.2f s".format(Locale.ROOT, patch.sourceSeconds),
-        enabled = patch.model >= 3,
+        enabled = patch.model >= 3 && !LibrationKeys.isHeld(patch.macros["HOLD"] ?: 0f),
         onValueChange = { value ->
             val v = value.coerceIn(0f, 1f).toDouble()
             val seconds = Libration.MIN_SOURCE_SECONDS +
@@ -4893,6 +4931,22 @@ private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Schem
             onChange(patch.copy(sourceSeconds = (seconds * 1000).roundToInt() / 1000.0))
         },
     )
+    TapeText("PLAYBACK", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for ((hold, title) in listOf(0f to "NOTE", 1f to "HOLD")) {
+            val active = (patch.macros["HOLD"] ?: 0f) == hold
+            ActionButton(title, scheme, enabled = hold == 0f || LibrationKeys.supports(patch), lit = active,
+                modifier = Modifier.weight(1f).semantics { selected = active },
+                accessibilityLabel = "LIBRATION $title PLAYBACK",
+            ) {
+                if (!active && (hold == 0f || LibrationKeys.supports(patch))) onChange(patch.copy(macros = patch.macros + ("HOLD" to hold),
+                    heldModel = LibrationKeys.MODEL_VERSION))
+            }
+        }
+    }
+    TapeText(if (LibrationKeys.isHeld(patch.macros["HOLD"] ?: 0f))
+        "PADS REPEAT THE ORBIT · MAKE INSTRUMENT KEEPS ITS ATTACK"
+        else "ONE FINITE NOTE · PLAYS ONCE", TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
 }
 
 /** Keep untouched physical grain settings exact, including sub-frame Float values. */
@@ -5352,7 +5406,7 @@ private enum class Engine {
         BELLOWS -> Bellows.render(voice as BellowsVoice, macros)
         APSIS -> Apsis.render(voice as ApsisVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
-        LIBRATION -> Libration.render(voice as LibrationVoice, macros)
+        LIBRATION -> buildPatch(patchDisplayName(voice), voice, macros).render()
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
@@ -5427,7 +5481,7 @@ private enum class Engine {
         BELLOWS -> Bellows.drumClassFor(voice as BellowsVoice, macros)
         APSIS -> Apsis.drumClassFor(voice as ApsisVoice, macros)
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
-        LIBRATION -> Libration.drumClassFor(voice as LibrationVoice, macros)
+        LIBRATION -> LibrationKeys.drumClass(voice as LibrationVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
         MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
@@ -5497,7 +5551,8 @@ private enum class Engine {
         BELLOWS -> BellowsPatch(name, voice as BellowsVoice, macros)
         APSIS -> ApsisPatch(name, voice as ApsisVoice, macros)
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
-        LIBRATION -> LibrationPatch(name, voice as LibrationVoice, macros)
+        LIBRATION -> LibrationPatch(name, voice as LibrationVoice, macros,
+            heldModel = if (LibrationKeys.isHeld(macros["HOLD"] ?: 0f)) LibrationKeys.MODEL_VERSION else 0)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)

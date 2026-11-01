@@ -181,7 +181,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### LIBRATION — finite orbital gestures (native integration)
+### LIBRATION — finite gestures and recurring held keys (native integration)
 
 GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
 trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
@@ -191,11 +191,14 @@ picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
 soft/hard velocity layers through both MPC export formats.
 
 A bounded preview cache reuses trajectories and previously rendered audio.
-Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
-phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
-and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
-records the preserved rendering versions, audition generators, measured limits
-and hardware acceptance checks.
+The owner accepted finite phone/MPC behavior on 2026-10-31; phone timing remains
+unmeasured. An independently versioned HOLD path periodically traverses the same
+physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
+exports its real onset, verified sustain loop and player amplitude release.
+Generation is serial and cancellable, and fresh renders take seconds on the cloud
+JVM. The new held transport awaits owner listening and phone/MPC checks.
+[LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
+[held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
 ### CREASE — pressure memory in a phase map (native integration)
 

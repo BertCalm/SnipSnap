@@ -661,11 +661,15 @@ glass and departing tonal gestures. GATHER, TWINS and DEPARTURE share REGION,
 WANDER, NUDGE, SWARM and RESONANCE, with independent ROOT, TOUCH and finite LENGTH
 in SYNTH. Twelve approved presets and a sixteen-pad starter preserve complete
 recipes and native soft/hard strikes. A bounded screen cache reuses trajectories
-and revisited audio; fresh rendering remains an offline operation. HOLD and
-sustained loops remain later DSP work. The
+and revisited audio; fresh rendering remains an offline operation. NOTE retains
+the finite sound. Explicit HOLD repeats a phase-fitted orbit, and MAKE INSTRUMENT
+keeps its attack before a verified sustain loop, with key-up amplitude release.
+Held recipes use a separate version; existing finite recipes retain their sound.
+The
 [published audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site)
 retains the musical bank and MPC download.
-[Implementation and device profiling](docs/LIBRATION.md) describe the contracts.
+[Implementation and device profiling](docs/LIBRATION.md) and the
+[held instrument design](docs/LIBRATION_HOLD.md) describe the contracts.
 
 OVEN is a struck keyboard instrument: velocity-sensitive
 stiff strings, restrained paired-string beating, dark fixed body coloration and
