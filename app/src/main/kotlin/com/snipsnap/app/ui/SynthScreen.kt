@@ -1513,6 +1513,7 @@ fun SynthScreen(
                     is OhmPatch -> updateOhmPerformance { next }
                     is MeridianPatch -> keepMeridianPatch(next)
                     is TidalPatch -> updateTidalPatch(next.voice) { next }
+                    is AccordPatch -> updateAccordPatch(next.voice) { next }
                     else -> loadedPatchesByVoice[engine to voice] = next
                 }
             }
@@ -5055,12 +5056,6 @@ internal fun AccordPerformanceControls(
     scheme: Scheme,
     onEdit: (AccordVoice, (AccordPatch) -> AccordPatch) -> Unit,
 ) {
-    MacroSlider("ROOT", (patch.midi - Accord.MIN_MIDI).toFloat() / (Accord.MAX_MIDI - Accord.MIN_MIDI),
-        fill, scheme, readout = Scales.nameOf(patch.midi), onValueChange = { value ->
-            onEdit(patch.voice) { current -> current.copy(midi =
-                (Accord.MIN_MIDI + value * (Accord.MAX_MIDI - Accord.MIN_MIDI))
-                    .roundToInt().coerceIn(Accord.MIN_MIDI, Accord.MAX_MIDI)) }
-        })
     MacroSlider("TOUCH", patch.velocity, fill, scheme,
         onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
     MacroSlider("LENGTH", kotlin.math.sqrt((patch.sourceSeconds - Accord.MIN_SOURCE_SECONDS) /
