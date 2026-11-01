@@ -4,6 +4,7 @@ __pycache__/
 
 build/
 testkit/crease-playable-release/
+testkit/crease-phone-release/
 # Libration's generated listening audio, MPC packs and source snapshots.
 testkit/libration-audition/
 testkit/libration-audition-r2/
