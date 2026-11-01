@@ -169,6 +169,9 @@ class StarterKitsTest {
         "murmur" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
             (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
         },
+        "murmur-selected" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
+            (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
+        },
         "osprey-curated" to OneEngine(OspreyPatch::class.java, OspreyVoice.entries.map { it.name }.toSet()) {
             (it as OspreyPatch).let { p -> Osprey.drumClassFor(p.voice, p.macros) }
         },
@@ -557,7 +560,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

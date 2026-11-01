@@ -403,7 +403,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 61 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 62 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -573,8 +573,10 @@ musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBan
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Thirty-six dry presets and a sixteen-pad
-C minor pentatonic FRESH TAPE starter are included. Run
+remain saved with each patch. The original bank retains its 36 presets and
+sixteen-pad starter; six
+listening-selected KEY/CHOIR settings and the MURMUR SELECTED starter are also
+available. `./gradlew :synth:generateMurmurSelectedKit` exports the new MPC kit. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the approved six-voice sound, settled HOLD loops and the expanded bank's

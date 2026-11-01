@@ -1004,6 +1004,31 @@ object SynthKits {
             }
     }
 
+    /**
+     * The selected KEY and lower-air CHOIR settings, alongside all six voice roles.
+     * Six C-minor key notes leave room for the four heard C4 MOTION settings, four
+     * original voice contrasts, and C2/C3 held sources delivered as faded one-shots.
+     * The original [murmur] starter remains unchanged.
+     */
+    fun murmurSelected(): List<ArrangedPad?> {
+        val selected = MurmurPresets.selected()
+        val key = selected.single { it.voice == MurmurVoice.KEY && it.macros.getValue("MOTION") == .5f }
+        val notes = PENTATONIC.take(6).mapIndexed { i, semitone ->
+            pad(key.copy(name = "Murmur Selected ${i + 1}", midi = 48 + semitone), DrumClass.TONAL)
+        }
+        val heardKeys = selected.filter { it.voice == MurmurVoice.KEY }.map { pad(it, DrumClass.TONAL) }
+        val contrasts = listOf("CLOSED CIRCUIT", "SHORT ANSWER", "OPEN THROAT", "COPPER HUM").map { name ->
+            val patch = MurmurPresets.original().single { it.name == name }
+            pad(patch, Murmur.drumClassFor(patch.voice, patch.macros))
+        }
+        val choir = selected.filter { it.voice == MurmurVoice.CHOIR }.map { patch ->
+            // Keep the seamless held source in the recipe; the MPC drum pad plays it once.
+            val recipe = PadRecipe(patch, terminalFadeMs = 8f)
+            ArrangedPad(recipe.render(), DrumClass.LOOP, recipe.toJsonValue())
+        }
+        return notes + heardKeys + contrasts + choir
+    }
+
     /** Eight native-note lead pads followed by the accepted Round 3 source recipes. */
     fun openSky(): List<ArrangedPad?> {
         val presets = OpenSkyPresets.all()

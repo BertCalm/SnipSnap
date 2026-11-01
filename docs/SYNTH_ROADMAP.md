@@ -761,8 +761,13 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-The expanded preset bank's listening review, phone/MPC validation and release
-naming remain open.
+The shared roster also appends six listening-selected settings: four C4 KEY
+MOTION cases and lower-breath CHOIR at C2/C3, all with saved render version 3.
+MURMUR SELECTED is a separate FRESH TAPE starter; `generateMurmurSelectedKit`
+exports its sixteen pads as MPC 2 and MPC 3 with editable recipes. Original
+presets, the original starter and historical audition cases remain unchanged.
+The expanded bank's separate listening review, physical phone/MPC validation and
+release naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
