@@ -3,9 +3,12 @@ package com.snipsnap.app
 import android.content.res.AssetManager
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.RadialGradient
 import android.graphics.RectF
+import android.graphics.Shader
 import com.snipsnap.kit.Kit
 import com.snipsnap.shell.ArtCanvas
 import com.snipsnap.shell.ArtFill
@@ -19,7 +22,7 @@ import java.io.File
 
 /**
  * The Android half of [KitArt.draw] — the browser-tile cover art
- * (WAVEFORM/GRID/SLICES/RINGS, `:shell`'s [ArtCanvas] contract) painted
+ * (every tile style, `:shell`'s [ArtCanvas] contract) painted
  * with `android.graphics` instead of `java.awt`/`javax.imageio`, neither
  * of which exists on Android at any API level. [KitArt.render]/
  * [KitArt.png] stay exactly as they were — AWT, used by `:cli` and the
@@ -84,6 +87,12 @@ object AndroidKitArt {
             isAntiAlias = true
             strokeCap = Paint.Cap.ROUND
         }
+        private val pathStrokePaint = Paint().apply {
+            style = Paint.Style.STROKE
+            isAntiAlias = true
+            strokeCap = Paint.Cap.ROUND
+            strokeJoin = Paint.Join.ROUND
+        }
 
         override fun fillRect(x: Int, y: Int, w: Int, h: Int, colorRgb: Int) {
             fillPaint.color = (0xFF000000.toInt()) or colorRgb
@@ -131,16 +140,61 @@ object AndroidKitArt {
             return textPaint.measureText(text)
         }
 
-        // The tile family's path, gradient and circle primitives land with
-        // their device tests; until then the phone cannot paint a style
-        // that uses them, and says so rather than drawing nothing.
-        override fun fillPath(path: ArtPath, fill: ArtFill): Unit =
-            throw UnsupportedOperationException("the phone's canvas does not fill paths yet")
+        override fun fillPath(path: ArtPath, fill: ArtFill) {
+            painted(shapePaint, fill) { canvas.drawPath(androidPath(path), it) }
+        }
 
-        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill): Unit =
-            throw UnsupportedOperationException("the phone's canvas does not stroke paths yet")
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill) {
+            pathStrokePaint.strokeWidth = strokeWidth
+            painted(pathStrokePaint, fill) { canvas.drawPath(androidPath(path), it) }
+        }
 
-        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill): Unit =
-            throw UnsupportedOperationException("the phone's canvas does not fill circles yet")
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill) {
+            painted(shapePaint, fill) { canvas.drawCircle(cx, cy, r, it) }
+        }
+
+        /** Sets [paint]'s colour or shader and alpha for one draw, then clears the shader so the next solid fill is solid. */
+        private inline fun painted(paint: Paint, fill: ArtFill, draw: (Paint) -> Unit) {
+            when (fill) {
+                is ArtFill.Solid -> {
+                    paint.shader = null
+                    paint.color = (0xFF000000.toInt()) or fill.rgb
+                }
+                is ArtFill.Linear -> {
+                    paint.color = 0xFF000000.toInt()
+                    paint.shader = LinearGradient(
+                        fill.x0, fill.y0, fill.x1, fill.y1,
+                        (0xFF000000.toInt()) or fill.rgb0, (0xFF000000.toInt()) or fill.rgb1, Shader.TileMode.CLAMP,
+                    )
+                }
+                is ArtFill.Radial -> {
+                    paint.color = 0xFF000000.toInt()
+                    paint.shader = RadialGradient(
+                        fill.cx, fill.cy, fill.r.coerceAtLeast(0.001f),
+                        (0xFF000000.toInt()) or fill.inner, (0xFF000000.toInt()) or fill.outer, Shader.TileMode.CLAMP,
+                    )
+                }
+            }
+            paint.alpha = (fill.alpha.coerceIn(0f, 1f) * 255).toInt()
+            try {
+                draw(paint)
+            } finally {
+                paint.shader = null
+                paint.alpha = 255
+            }
+        }
+
+        private fun androidPath(path: ArtPath): Path {
+            val p = Path()
+            for (s in path.segments) {
+                when (s) {
+                    is ArtPath.Segment.Move -> p.moveTo(s.x, s.y)
+                    is ArtPath.Segment.Line -> p.lineTo(s.x, s.y)
+                    is ArtPath.Segment.Quad -> p.quadTo(s.cx, s.cy, s.x, s.y)
+                    ArtPath.Segment.Close -> p.close()
+                }
+            }
+            return p
+        }
     }
 }
