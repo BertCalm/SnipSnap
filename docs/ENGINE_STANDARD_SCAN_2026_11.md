@@ -91,7 +91,13 @@ VELVET, LORENTZ, GLINT. The full table is in `testkit/render-times/` after a run
 
 ### What to do, ranked by gain per risk
 
-1. **FILAMENT's denormals (measured, large, safe).** Its filter states decay into
+1. **Done, 2026-11-01: FILAMENT now floors its recursive states at 1e-100**
+   (`Filament.TINY_STATE`, ACCORD's floor), in every allpass, halo mode, DC blocker,
+   route filter and junction follower. THREAD 6.0 s to 0.77 s, PULSE 9.0 s to 1.02 s,
+   CURL 10.7 s to 1.06 s, same machine. Every FILAMENT test passes, including the two
+   that pin the published model-1 and model-2 WAVs by SHA-256, so the audio is byte for
+   byte what was published. The original finding follows.
+   **FILAMENT's denormals (measured, large, safe).** Its filter states decay into
    denormal numbers, which the processor handles through a slow path. Flushing
    states below 1e-30 to zero in `Filament.Allpass` and the junction's
    `RouteFilter` alone took THREAD from 6.0 s to 1.0 s, PULSE from 9.0 s to 1.2 s
