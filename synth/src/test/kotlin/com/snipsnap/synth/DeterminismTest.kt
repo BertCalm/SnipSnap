@@ -12,6 +12,13 @@ import kotlin.test.assertTrue
  * both depend on the second half.
  */
 class DeterminismTest {
+    @Test fun `EROSION native voices replay their saved touch`() {
+        for (voice in ErosionVoice.entries) {
+            val patch = ErosionPatch("Canary", voice, velocity = .6f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
     @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
