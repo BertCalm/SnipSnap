@@ -211,7 +211,14 @@ unit tests pass. Grouping preset state and draft/cache ownership reduces the
 actual SYNTH debug method from 263 registers to 245, below the budget implicated
 by the emulator's verifier rejection. The Confluence test scopes ROOM to its
 gathering card because STRIKE FX exposes another ROOM control. Device UI tests
-compile; the emulator job checks runtime behavior.
+compile. The emulator run at `8b61897a6fe0ea5518f7c0f241ba97a41ed5e1ec`
+executed 391 tests: 388 passed, two optional benchmarks were skipped, and one
+CHAMBER test failed because its 17-character preset name exceeded the existing
+14-character limit. All three Libration UI tests passed, including HOLD
+navigation, scramble, saving and gated pad delivery; SYNTH loaded without an
+ART verification error. The CHAMBER fixture now uses a valid name and checks
+that precondition before exercising the same-frame edits and save. Its runtime
+rerun remains part of final PR CI.
 
 All six native CTest executables pass with assertions enabled at the unchanged
 native source from `7d137063985c7f7dbb6c14cc0afada6508e9172d`. Source inputs match
