@@ -80,6 +80,7 @@ object EngineCatalog {
         "OBBLIGATO" to EngineEntry(listOf(EngineCategory.WINDS), "Flute and reed pair that play and answer each other"),
         "ALLOY" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.BASS), "FM-style keys, bass, plucks, brass and strings"),
         "THAW" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Icy glass-like plate tones, struck or rubbed"),
+        "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.DRUMS), "Impacts that build: metal, glass, thunder sheet and girder"),
         "MURK" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.DRUMS), "Tuned wood knocks and owl hoots, mostly as loops"),
         "NIMBUS" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Six cymbal-like metal plates that ring, shimmer and roll"),
         "COROLLA" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Soft metallic chimes that swell into clustered bell tones"),

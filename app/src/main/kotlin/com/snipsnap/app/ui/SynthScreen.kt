@@ -335,6 +335,9 @@ import com.snipsnap.synth.BellowsVoice
 import com.snipsnap.synth.Thaw
 import com.snipsnap.synth.ThawPatch
 import com.snipsnap.synth.ThawVoice
+import com.snipsnap.synth.Scour
+import com.snipsnap.synth.ScourPatch
+import com.snipsnap.synth.ScourVoice
 import com.snipsnap.synth.Undertow
 import com.snipsnap.synth.UndertowPatch
 import com.snipsnap.synth.UndertowVoice
@@ -683,7 +686,7 @@ private fun ControlsColumn(
  * RETRIGGERS"), debounced so a drag doesn't hammer the DSP. `design/
  * HANDOFF.md`'s SYNTH row says "5 voices" — that's roadmap-era and THUMP-
  * only; reality wins: THUMP alone ships eight voices, and the other
- * registered engines, including ALLOY, CIRCUIT, THAW, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN, MURMUR, TRIO, ORIGAMI and OHM, join it here.
+ * registered engines, including ALLOY, CIRCUIT, THAW, SCOUR, MURK, NIMBUS, UNDERTOW, TESSERA, PITCHWHEEL, PRISM, CONTOUR, STOOP, SKITTER, RELAY, REGISTERS, OVEN, MURMUR, TRIO, ORIGAMI and OHM, join it here.
  * GRAINS is out of scope — it has no voice enum, a different shape entirely.
  *
  * One copy carve-out remains: SCRAMBLE has no toast (the prototype's
@@ -5264,7 +5267,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, SCOUR, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5303,6 +5306,7 @@ private enum class Engine {
         MURK -> MurkVoice.entries
         NIMBUS -> NimbusVoice.entries
         THAW -> ThawVoice.entries
+        SCOUR -> ScourVoice.entries
         UNDERTOW -> UndertowVoice.entries
         COROLLA -> CorollaVoice.entries
         SUTURE -> SutureVoice.entries
@@ -5377,6 +5381,7 @@ private enum class Engine {
         MURK -> Murk.macrosFor(voice as MurkVoice)
         NIMBUS -> Nimbus.macrosFor(voice as NimbusVoice)
         THAW -> Thaw.macrosFor(voice as ThawVoice)
+        SCOUR -> Scour.macrosFor(voice as ScourVoice)
         UNDERTOW -> Undertow.macrosFor(voice as UndertowVoice)
         COROLLA -> Corolla.macrosFor(voice as CorollaVoice)
         SUTURE -> Suture.macrosFor(voice as SutureVoice)
@@ -5449,6 +5454,7 @@ private enum class Engine {
         MURK -> Murk.defaults(voice as MurkVoice)
         NIMBUS -> Nimbus.defaults(voice as NimbusVoice)
         THAW -> Thaw.defaults(voice as ThawVoice)
+        SCOUR -> Scour.defaults(voice as ScourVoice)
         UNDERTOW -> Undertow.defaults(voice as UndertowVoice)
         COROLLA -> Corolla.defaults(voice as CorollaVoice)
         SUTURE -> Suture.defaults(voice as SutureVoice)
@@ -5523,6 +5529,7 @@ private enum class Engine {
         MURK -> Murk.scramble(voice as MurkVoice, random)
         NIMBUS -> Nimbus.scramble(voice as NimbusVoice, random)
         THAW -> Thaw.scramble(voice as ThawVoice, random)
+        SCOUR -> Scour.scramble(voice as ScourVoice, random)
         UNDERTOW -> Undertow.scramble(voice as UndertowVoice, random)
         COROLLA -> Corolla.scramble(voice as CorollaVoice, random)
         SUTURE -> Suture.scramble(voice as SutureVoice, random)
@@ -5607,6 +5614,7 @@ private enum class Engine {
         MURK -> Murk.render(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.render(voice as NimbusVoice, macros)
         THAW -> Thaw.render(voice as ThawVoice, macros)
+        SCOUR -> Scour.render(voice as ScourVoice, macros)
         UNDERTOW -> Undertow.render(voice as UndertowVoice, macros)
         COROLLA -> Corolla.render(voice as CorollaVoice, macros)
         SUTURE -> Suture.render(voice as SutureVoice, macros)
@@ -5685,6 +5693,7 @@ private enum class Engine {
         MURK -> Murk.drumClassFor(voice as MurkVoice, macros)
         NIMBUS -> Nimbus.drumClassFor(voice as NimbusVoice, macros)
         THAW -> Thaw.drumClassFor(voice as ThawVoice, macros)
+        SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
         UNDERTOW -> Undertow.drumClassFor(voice as UndertowVoice, macros)
         COROLLA -> Corolla.drumClassFor(voice as CorollaVoice, macros)
         SUTURE -> Suture.drumClassFor(voice as SutureVoice, macros)
@@ -5758,6 +5767,7 @@ private enum class Engine {
         MURK -> MurkPatch(name, voice as MurkVoice, macros)
         NIMBUS -> NimbusPatch(name, voice as NimbusVoice, macros)
         THAW -> ThawPatch(name, voice as ThawVoice, macros)
+        SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
         UNDERTOW -> UndertowPatch(name, voice as UndertowVoice, macros)
         COROLLA -> CorollaPatch(name, voice as CorollaVoice, macros)
         SUTURE -> SuturePatch(name, voice as SutureVoice, macros)

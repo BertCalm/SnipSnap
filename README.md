@@ -1023,7 +1023,7 @@ render-time limits. Build its MPC program and replay files with:
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
 TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
-69 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+70 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1234,13 +1234,13 @@ KICK.
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
 LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
 TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
-TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
+TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, SCOUR, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
-picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+picker. `:synth` also holds engines that picker does not show. BORE, ARCO
+and KEEL have preset rosters, so `snipsnap synth` renders them.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. It remains outside the picker and factory presets.

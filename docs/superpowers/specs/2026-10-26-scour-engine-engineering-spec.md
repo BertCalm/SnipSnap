@@ -9,7 +9,8 @@ the Python harness and in two Kotlin scratch probes (section 20). The owner has 
 renders (section 20.1) and the R1 to R5 auditions. The R5 listen accepted the round as built (As built: R5, Heard
 on the R5 page).
 The HOLD loop the plan put in R2 is dropped (As built: R3). Section 10 is R1's two-voice design; the
-voices as built are in the As built sections. The phone's synth picker and a docs page remain.
+voices as built are in the As built sections. SCOUR is on the phone's synth picker (As built: R5.1); a docs
+page remains.
 Repository truth: `f931efc6` (2026-10-25). The draft cited `565551e`. Grepped for this
 version: `Modes.Bank` (`tune`, `step`, `drive`, `velocityAlong`, `MAX_NODE_KAPPA`),
 `Keys.MAX_SEAM_ERROR`, `Keys.seamError`, `Siren.bestCut`, `Tide.bandLimit`, `Dsp.decimate`,
@@ -594,6 +595,7 @@ the R1 gate still stands; Alternate B is not needed unless that audition disagre
 | SHEET sounds like a thunder sheet and earns bank B | heard: it rumbles, yes into a drop, the register is right; bank B with changes ("they sound pretty similar") | the R4 page (As built: R5) |
 | the free-free beam values (BEAM) | verified | the closed form `cos βL · cosh βL = 1` reproduces Leissa Table 4.72's beam row (As built: R5) |
 | BEAM's note reads | measured | 37 of 37 asserted corners at both windows, 243 of 243 on a grid at C3, E♭3 and F3 (As built: R5) |
+| SCOUR opens, plays and saves from the phone's synth picker | proposed | CI's `android-build` and `emulator-tests`; not yet played on a phone (As built: R5.1) |
 | bank B now varies enough, and BEAM sounds like a struck girder | heard: bank B varied enough, yes; bank C as it is, yes; BEAM into a drop, yes; "a struck girder" | the R5 page (As built: R5) |
 | a phone renders SCOUR in tens of ms | proposed | not measured on a phone |
 
@@ -1153,3 +1155,44 @@ same round, the owner said yes, with its own bank C.
    alike when they share a note and a short build. That is why the hits moved up the scale.
 3. **A beam is the sparse end of the family.** PLATE crowds, PANE is glassy, SHEET rumbles. BEAM's few,
    widely spaced modes are a clang, and it gets the same listening-point treatment for its note.
+
+## As built: R5.1, on the phone (2026-11-01)
+
+After the R5 listen accepted all four voices and the 48-pad kit, the owner chose to put SCOUR on the phone's
+synth picker, so a SCOUR pad can be opened, turned and saved in the app.
+
+### What changed
+
+- **The picker.** `SCOUR` joins `Engine` in `SynthScreen.kt` with the same seven branches every
+  engine has: voices, macros, defaults, scramble, render, filing and the patch. Each one calls SCOUR's
+  own function (`Scour.macrosFor`, `Scour.scramble`, `ScourPatch(name, voice, macros)` and so on), as
+  THAW's do. All six controls show, HOLD included, since SCOUR's HOLD sets the ring and never loops.
+- **Where it sits.** SCOUR sits between THAW and MURK in the enum, which is the house order of the picker
+  and its arrows.
+  - RIME stays last and MERIDIAN second to last, as `SynthEngineHeaderTest` expects.
+  - No emulator test steps between THAW and MURK. ORIGAMI's search from THUMP still reaches it in 57 of its
+    64 steps.
+- **The catalogue.** `EngineCatalog` gives SCOUR the categories PADS & FX and DRUMS & PERCUSSION, and the
+  description "Impacts that build: metal, glass, thunder sheet and girder" (58 of 60 characters).
+- **What it gives.** Factory presets browse by voice through `Presets`, which already rosters SCOUR's
+  sixteen. "Reopen in the synth" now offers the SCOUR starter's 48 pads, since it lists any pad whose
+  engine and voice the picker knows.
+- **Prose.**
+  - Both READMEs count 70 picker engines and list SCOUR after THAW.
+  - The root README's list of rostered engines the picker does not show drops SCOUR.
+  - `Scour.MODEL_VERSION`'s comment no longer says no saved SCOUR sound exists.
+
+### Measured and checked
+
+| Check | Result |
+|---|---|
+| Every `when (this)` over `Engine` names every engine once | all seven: 70 branches each, none missing or repeated, no `else` |
+| `ConventionTest` (the picker lists, counts and catalogue laws) | passing |
+| Compiling and running the app | not possible in this container (no Android SDK); CI's `android-build` and `emulator-tests` are the proof |
+
+### Disclosed, not fixed
+
+- SCOUR has not been opened on a phone yet.
+- There is no SCOUR-specific emulator test. The generic ones cover it: every catalogued engine appears in
+  the picker walk of `SynthEngineHeaderTest`.
+- SCOUR's controls show plain values, with no unit labels (BUILD in seconds, say).
