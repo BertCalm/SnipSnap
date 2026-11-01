@@ -3,8 +3,9 @@
 **Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
 BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
 Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)
-separates the approved Python direction from pending native tests, listening,
-phone performance and HOLD. The complete frozen reference bundle is retained
+separates the approved Python direction, passed focused/output/rate probes and
+earlier SDK build from pending corrected Android/complete tests, listening, phone
+performance and HOLD. The complete frozen reference bundle is retained
 under [`reference/accord`](../reference/accord/README.md).
 
 **Rime.** [`RIME.md`](RIME.md) records the preserved finite bank, versioned HOLD,

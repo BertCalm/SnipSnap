@@ -12,7 +12,7 @@ import kotlin.math.sqrt
 
 /**
  * Manual full-length native validation, deliberately outside the unit-test loop.
- * Actual performances retain the engine's frozen calibration. This generator
+ * Actual performances retain the engine's shared-velocity calibration. This generator
  * never normalizes a render or exports an overloaded WAV to conceal a failure.
  */
 object AccordValidationGenerator {
@@ -81,6 +81,45 @@ object AccordValidationGenerator {
                 "basis" to "mechanism0 positive crossings in reference cycles32..48; candidate, not a locking assertion")
             for ((voice, profile) in profiles) add("period_derived_pace_resonance", voice, profile, midi = midi,
                 macros = mapOf("PACE" to paceMacro, "CONTACT" to 1f))
+            if (midi in listOf(36, 48)) for ((voice, profile) in profiles) for (velocity in listOf(.5f, .9f)) {
+                add("default_resonance_uncalibrated_velocity", voice, profile, midi = midi, velocity = velocity,
+                    macros = mapOf("PACE" to paceMacro, "CONTACT" to 1f))
+            }
+        }
+        // Combine the separately observed synchronization and resonant-pace
+        // maxima, instead of assuming a Cartesian endpoint grid bounds them.
+        val synchronized = AccordDynamics.prepare(
+            parameters = AccordDynamics.Parameters(.5, 0.0, .05, .005), cycles = 48)
+        val synchronizedCrossings = synchronized.events.filter {
+            it.mechanism == 0 && it.direction == 1 && it.cycle >= 32.0
+        }
+        val synchronizedPeriod = (synchronizedCrossings.last().cycle - synchronizedCrossings.first().cycle) /
+            (synchronizedCrossings.size - 1)
+        for (midi in listOf(36, 48)) {
+            val harmonic = ceil(Accord.frequencyFor(midi) * synchronizedPeriod / 8.0).toInt()
+            val referenceHz = Accord.frequencyFor(midi) * synchronizedPeriod / (2.0 * harmonic)
+            val pace = (ln(referenceHz) / (2.0 * ln(2.0))).toFloat().coerceIn(0f, 1f)
+            resonanceMeasurements += linkedMapOf("midi" to midi, "measuredPeriodReferenceCycles" to synchronizedPeriod,
+                "contactHarmonic" to harmonic, "desiredReferenceHz" to referenceHz, "paceMacro" to pace,
+                "basis" to "measuredstrongsync:coupling.5/mismatch0/raft0, positivecrossingscycles32..48")
+            for ((voice, profile) in profiles) {
+                val macros = mapOf("PACE" to pace, "COUPLING" to .5f, "MISMATCH" to 0f,
+                    "RAFT" to 0f, "CONTACT" to 1f)
+                for (velocity in listOf(.5f, .9f)) add("synchronized_resonance_uncalibrated_velocity",
+                    voice, profile, midi = midi, velocity = velocity, macros = macros)
+                if ((midi == 36 && voice == AccordVoice.TINE && profile == AccordAcousticProfile.LONG_RING) ||
+                    (midi == 48 && profile in listOf(AccordAcousticProfile.REFERENCE, AccordAcousticProfile.BASE) &&
+                        voice in listOf(AccordVoice.TINE, AccordVoice.BRUSH))) {
+                    add("synchronized_period_derived_resonance", voice, profile, midi = midi, macros = macros)
+                }
+            }
+        }
+        val measuredWorstPace = (ln(Accord.frequencyFor(36) * period /
+            (2.0 * ceil(Accord.frequencyFor(36) * period / 8.0))) / (2.0 * ln(2.0))).toFloat()
+        for (step in 0..20) {
+            val velocity = step / 20f
+            add("worst_resonance_velocity_sweep", AccordVoice.TINE, AccordAcousticProfile.LONG_RING,
+                midi = 36, velocity = velocity, macros = mapOf("PACE" to measuredWorstPace, "CONTACT" to 1f))
         }
         val seeds = if (quick) listOf(Long.MIN_VALUE, Long.MAX_VALUE) else listOf(Long.MIN_VALUE, Long.MAX_VALUE, -1L, 0L)
         for (seed in seeds) for ((voice, profile) in listOf(
@@ -110,7 +149,7 @@ object AccordValidationGenerator {
     }
 
     /** Inspect the un-faded conditioned continuation, then apply the stored gain. */
-    private fun tailMetrics(probe: Accord.Probe): Map<String, Any> {
+    private fun tailMetrics(probe: Accord.Probe, patch: AccordPatch): Map<String, Any> {
         val samples = probe.raw.samples
         val calibration = probe.diagnostics.calibrationGain
         fun rms(from: Int, to: Int): Double {
@@ -127,14 +166,21 @@ object AccordValidationGenerator {
         val fadeStart = samples.size - fadeFrames
         val active = rms(0, minOf(samples.size, 8 * Dsp.RATE))
         val last100ms = rms(max(0, samples.size - Dsp.RATE / 10), samples.size)
+        val config = AccordAcoustics.configuration(patch.voice, patch.acousticProfile, patch.midi,
+            patch.velocity, patch.macros.getValue("CONTACT"), patch.macros.getValue("RAFT"))
         return linkedMapOf("conditionedActiveRmsBeforeCalibration" to active,
             "conditionedLast100msRmsBeforeCalibration" to last100ms,
             "preFadeLast100msRms" to last100ms * calibration,
-            "preFadeLast100msRelativeToActiveDb" to 20 * log10(max(last100ms, 1e-30) / max(active, 1e-30)),
+            "preFadeLast100msRelativeToActiveDb" to if (active > 1e-15)
+                20 * log10(max(last100ms, 1e-30) / active) else -300.0,
+            "activeNonSilent" to (active > 1e-15),
             "fadeEntryAbsoluteSample" to abs(samples[fadeStart].toDouble()) * calibration,
             "last4msBeforeFadePeak" to peak(max(0, fadeStart - fadeFrames), fadeStart) * calibration,
             "last4msWithoutFadePeak" to peak(fadeStart, samples.size) * calibration,
-            "unforcedReleaseSeconds" to samples.size.toDouble() / Dsp.RATE - 8.0)
+            "unforcedReleaseSeconds" to samples.size.toDouble() / Dsp.RATE - 8.0,
+            "resolvedReleaseSeconds" to config.releaseSeconds,
+            "longestActualT60" to (config.tongue + config.body).maxOf { it.t60 },
+            "tailPolicy" to "max(profile nominal,1.1*longest actualt60), followed by4ms house fade")
     }
 
     private fun performance(): Map<String, Any> {
@@ -189,15 +235,20 @@ object AccordValidationGenerator {
                 val peak = metrics.getValue("peak") as Double
                 val finite = metrics.getValue("finite") as Boolean
                 val dc = metrics.getValue("dc") as Double
+                val tail = tailMetrics(probe, patch)
                 val row = linkedMapOf<String, Any?>("index" to index, "sections" to case.sections,
                     "patch" to patch.toJsonValue(), "actual" to metrics,
-                    "tailBoundary" to tailMetrics(probe),
+                    "tailBoundary" to tail,
                     "diagnostics" to probe.diagnostics.toJsonValue())
                 rows += row
                 if (!finite) failures += "$index: nonfinite output"
                 if (peak > .94001) failures += "$index: output peak $peak exceeds .94001"
                 if (abs(dc) >= .005) failures += "$index: DC $dc exceeds .005"
-                if (probe.diagnostics.minimumD <= 0.0) failures += "$index: nonpositive mechanical Schur denominator"
+                if (tail.getValue("activeNonSilent") == true &&
+                    (tail.getValue("preFadeLast100msRelativeToActiveDb") as Double) > -50.0) {
+                    failures += "$index: captured tail RMS remains above -50dB relative to active source"
+                }
+                if (patch.velocity > 0f && probe.diagnostics.minimumD <= 0.0) failures += "$index: nonpositive mechanical Schur denominator"
                 if (peak > maximumPeak) { maximumPeak = peak; worstCase = row }
             } catch (failure: Exception) {
                 if (failure is CancellationException) throw failure
@@ -219,9 +270,10 @@ object AccordValidationGenerator {
             "renderedCases" to rows.size, "mechanicalGridValuesPerAxis" to if (quick) 2 else 3,
             "profiles" to profiles.map { "${it.first}/${it.second}" },
             "paceResonanceMeasurements" to resonanceMeasurements,
-            "matchingPolicy" to "Actual fixed engine calibration; no per-render, per-velocity or per-case normalization",
+            "matchingPolicy" to "Engine performance calibration from normal/hard reference touches, one scalar shared by every velocity; no additional generator normalization or per-event AGC",
             "maximumPeak" to maximumPeak, "worstCase" to worstCase,
             "requiredPeakCeiling" to .94001, "failureCount" to failures.size, "failures" to failures,
+            "requiredTailLast100msRelativeRmsDb" to -50.0,
             "performance" to performance, "renders" to rows,
             "wallSeconds" to (System.nanoTime() - began) / 1e9,
             "limitations" to listOf("Finite sampled control/seed matrix, not an analytic all-seed bound",

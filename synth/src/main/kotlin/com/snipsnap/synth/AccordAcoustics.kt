@@ -86,6 +86,13 @@ internal object AccordAcoustics {
         return Math.round((sourceSeconds + releaseSeconds(profile)) * Dsp.RATE).toInt()
     }
 
+    /** The resolved tail is part of the actual acoustic performance, including silence. */
+    fun renderFrames(config: Config, sourceSeconds: Double): Int {
+        require(sourceSeconds.isFinite() && sourceSeconds in Accord.MIN_SOURCE_SECONDS..Accord.MAX_SOURCE_SECONDS)
+        require(config.releaseSeconds.isFinite() && config.releaseSeconds > 0.0)
+        return Math.round((sourceSeconds + config.releaseSeconds) * Dsp.RATE).toInt()
+    }
+
     /** Profile overrides precede note/velocity, CONTACT, then RAFT. Width is final. */
     fun configuration(
         voice: AccordVoice,
@@ -154,12 +161,19 @@ internal object AccordAcoustics {
                 1.0 + .3 * t - .1 * t * t * t
             }
         }
+        val resolvedTongue = mapped(tongue, .42, false)
+        val resolvedBody = mapped(body, .20, true)
+        // The accepted captured tails are minima, rather than a reason to cut
+        // a material mode while it still rings. After 1.1 t60 every unforced
+        // mode has lost at least66dB; the final house fade is then only an edge.
+        val longestT60 = (resolvedTongue + resolvedBody).maxOf { it.t60 }
+        val release = max(releaseSeconds(profile), 1.1 * longestT60)
         return Config(voice, profile, midi, 440.0 * 2.0.pow((midi - 69) / 12.0),
             baseWidth * min(1.0, 2.0.pow(-register)) * exp(-ln(1.5) * delta) * 2.0.pow(-contactOffset),
-            mapped(tongue, .42, false), mapped(body, .20, true),
+            resolvedTongue, resolvedBody,
             baseBody * exp(.10 * delta) * 2.0.pow(.5 * raftOffset),
             baseBrush * 10.0.pow(brushRegisterDb(register) / 20.0) * exp(-.18 * delta - .15 * contactOffset),
-            basePulse * exp(.13 * delta + .15 * contactOffset), amp, releaseSeconds(profile))
+            basePulse * exp(.13 * delta + .15 * contactOffset), amp, release)
     }
 
     private fun brushRegisterDb(register: Double): Double {
@@ -191,7 +205,7 @@ internal object AccordAcoustics {
         require(sourceStartCycles.isFinite() && sourceStartCycles >= 0.0)
         require(paceHz.isFinite() && paceHz > 0.0)
         require(pressure.all { it.isFinite() && it >= 0.0 && it <= 2.0000001 })
-        val frames = renderFrames(sourceSeconds, config.profile)
+        val frames = renderFrames(config, sourceSeconds)
         if (config.ampGain == 0.0) return Result(FloatArray(frames), 0.0, maximumPole(config), 0.0, 0, 0.0, config.releaseSeconds)
         val forceBuffer = DoubleArray(frames * Dsp.OVERSAMPLE)
         val positive = kernel(config.widthMs)

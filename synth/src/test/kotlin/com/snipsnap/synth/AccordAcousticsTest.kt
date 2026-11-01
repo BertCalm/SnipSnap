@@ -10,24 +10,58 @@ import kotlin.test.assertTrue
 /** Tests the accepted acoustic transfer, independently of event/solver behavior. */
 class AccordAcousticsTest {
     @Test
-    fun `the sparse force floor cannot change Float excitation samples`() {
+    fun `factory calibration meets the same continuous law as a neighboring performance`() {
+        val cases = listOf(
+            AccordVoice.BRUSH to AccordAcousticProfile.BASE,
+            AccordVoice.WOOD to AccordAcousticProfile.BASE,
+            AccordVoice.TINE to AccordAcousticProfile.REFERENCE,
+            AccordVoice.TINE to AccordAcousticProfile.SOFT_ATTACK,
+            AccordVoice.TINE to AccordAcousticProfile.BRIGHT_EDGE,
+            AccordVoice.TINE to AccordAcousticProfile.LONG_RING,
+        )
+        for ((voice, profile) in cases) {
+            val factory = Accord.probe(voice, acousticProfile = profile)
+            val neighboring = Accord.probe(voice, mapOf("CONTACT" to .500001f), acousticProfile = profile)
+            val gainRatio = neighboring.diagnostics.calibrationGain / factory.diagnostics.calibrationGain
+            assertTrue(abs(gainRatio - 1.0) < 1e-4, "$voice/$profile factory/dynamic gain discontinuity $gainRatio")
+            assertEquals(factory.samples.samples.size, neighboring.samples.samples.size)
+            var error = 0.0
+            var energy = 0.0
+            for (i in factory.samples.samples.indices) {
+                val a = factory.samples.samples[i].toDouble()
+                val difference = a - neighboring.samples.samples[i]
+                error += difference * difference
+                energy += a * a
+            }
+            assertTrue(error < energy * 1e-8, "$voice/$profile infinitesimal contact edit jumped in output")
+        }
+    }
+
+    @Test
+    fun `the sparse force floor cannot change representable Float excitation amplitudes`() {
         val unfloored = DoubleArray((AccordAcoustics.INTERNAL_RATE * .4).toInt())
         unfloored[0] = 1.0
         unfloored[10_000] = .3
         val floored = unfloored.copyOf()
         AccordAcoustics.filterExcitation(unfloored, tinyStateFloor = false)
         AccordAcoustics.filterExcitation(floored)
-        assertContentEquals(FloatArray(unfloored.size) { unfloored[it].toFloat() },
-            FloatArray(floored.size) { floored[it].toFloat() })
+        // A sub-Float negative tail casts to -0.0 while the cleared state is
+        // +0.0. Canonicalize only those identical-amplitude zeros; every other
+        // representable Float must remain bit-identical, as must PCM export.
+        fun amplitudes(values: DoubleArray) = FloatArray(values.size) {
+            val sample = values[it].toFloat()
+            if (sample == 0f) 0f else sample
+        }
+        assertContentEquals(amplitudes(unfloored), amplitudes(floored))
         assertTrue(unfloored.indices.maxOf { abs(unfloored[it] - floored[it]) } < 1e-94)
     }
 
     @Test
     fun `roughness prefix reuse and eviction cannot change rendered audio`() {
         val config = AccordAcoustics.configuration(AccordVoice.BRUSH, AccordAcousticProfile.BASE, 48, .75f)
-        val pressure = DoubleArray(500) { 1.0 }
+        val pressure = DoubleArray((Accord.MIN_SOURCE_SECONDS * 2000).toInt()) { 1.0 }
         fun render(seed: Long) = AccordAcoustics.renderConditioned(config, emptyList(), pressure,
-            .25, seed, 0.0, 2.0).samples
+            Accord.MIN_SOURCE_SECONDS, seed, 0.0, 2.0).samples
         AccordAcoustics.clearRoughnessCache()
         val first = render(1)
         assertContentEquals(first, render(1))

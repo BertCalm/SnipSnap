@@ -30,14 +30,16 @@ class AccordTest {
         return sqrt(energy / (end - from))
     }
 
-    private fun distance(a: FloatArray, b: FloatArray): Double {
-        require(a.size == b.size)
+    private fun distance(a: FloatArray, b: FloatArray, frames: Int = minOf(a.size, b.size)): Double {
+        // Capture length follows actual mode loss, so note/velocity/RAFT edits
+        // can change the tail. Compare one declared shared active interval.
+        require(frames in 1..minOf(a.size, b.size))
         var energy = 0.0
-        for (i in a.indices) {
+        for (i in 0 until frames) {
             val d = a[i].toDouble() - b[i]
             energy += d * d
         }
-        return sqrt(energy / a.size)
+        return sqrt(energy / frames)
     }
 
     /** Integrated Hann-windowed FFT energy; compares spectral balance independently of output gain. */
@@ -103,8 +105,11 @@ class AccordTest {
         for (voice in AccordVoice.entries) for (midi in listOf(36, 48, 60, 72)) {
             val snip = Accord.render(voice, midi = midi, sourceSeconds = 2.0)
             val label = "$voice MIDI$midi"
+            val configuration = AccordAcoustics.configuration(voice, Accord.defaultProfile(voice), midi, .75f)
             assertEquals(1, snip.channels)
             assertEquals(44_100, snip.sampleRate)
+            assertEquals(Math.round((2.0 + configuration.releaseSeconds) * Dsp.RATE).toInt(), snip.frameCount,
+                "$label length did not follow the resolved acoustic release")
             assertTrue(snip.samples.all { it.isFinite() }, "$label has nonfinite output")
             assertTrue(snip.peak() in .001f..0.94001f, "$label peak ${snip.peak()}")
             assertTrue(abs(snip.samples.average()) < .005, "$label has DC ${snip.samples.average()}")
@@ -115,6 +120,8 @@ class AccordTest {
         for (profile in listOf(AccordAcousticProfile.SOFT_ATTACK,
             AccordAcousticProfile.BRIGHT_EDGE, AccordAcousticProfile.LONG_RING)) {
             val snip = Accord.render(AccordVoice.TINE, acousticProfile = profile, sourceSeconds = 2.0)
+            val configuration = AccordAcoustics.configuration(AccordVoice.TINE, profile, 48, .75f)
+            assertEquals(Math.round((2.0 + configuration.releaseSeconds) * Dsp.RATE).toInt(), snip.frameCount)
             assertTrue(snip.samples.all { it.isFinite() })
             assertTrue(snip.peak() <= .94001f, "$profile peak ${snip.peak()}")
             assertTrue(abs(snip.samples.average()) < .005)
@@ -185,8 +192,10 @@ class AccordTest {
         val before = Accord.cacheSnapshot().mechanicalPreparations
         for (voice in AccordVoice.entries) {
             val silent = Accord.render(voice, velocity = 0f, sourceSeconds = .75)
+            val configuration = AccordAcoustics.configuration(voice, Accord.defaultProfile(voice), 48, 0f)
             assertTrue(silent.samples.all { it == 0f })
-            assertTrue(silent.frameCount > Dsp.RATE / 2)
+            assertEquals(Math.round((.75 + configuration.releaseSeconds) * Dsp.RATE).toInt(), silent.frameCount,
+                "$voice silent output lost its declared release calculation")
         }
         assertEquals(before, Accord.cacheSnapshot().mechanicalPreparations)
     }
@@ -204,16 +213,21 @@ class AccordTest {
         val heavy = Accord.probe(AccordVoice.WOOD, mapOf("COUPLING" to 0f, "RAFT" to .1f), sourceSeconds = 2.0)
         val light = Accord.probe(AccordVoice.WOOD, mapOf("COUPLING" to 0f, "RAFT" to .9f), sourceSeconds = 2.0)
         assertEquals(heavy.events, light.events, "RAFT reconnected mechanisms at exactly zero coupling")
-        assertTrue(distance(heavy.samples.samples, light.samples.samples) / rms(heavy.samples.samples) > .01,
+        assertTrue(distance(heavy.samples.samples, light.samples.samples, 2 * Dsp.RATE) /
+            rms(heavy.samples.samples, 0, 2 * Dsp.RATE) > .01,
             "RAFT lost its acoustic body behavior when mechanics were independent")
     }
 
     @Test
-    fun `reference calibration preserves velocity energy and hardness rather than leveling each touch`() {
+    fun `one performance gain preserves velocity energy and hardness rather than leveling each touch`() {
         for (voice in AccordVoice.entries) for (midi in listOf(36, 48, 60, 72)) {
-            val renders = listOf(.3f, .75f, 1f).map { velocity ->
-                Accord.render(voice, midi = midi, velocity = velocity, sourceSeconds = 2.0)
+            val probes = listOf(.3f, .75f, 1f).map { velocity ->
+                Accord.probe(voice, midi = midi, velocity = velocity, sourceSeconds = 2.0)
             }
+            val renders = probes.map { it.samples }
+            val gains = probes.map { it.diagnostics.calibrationGain }
+            for (gain in gains) assertEquals(gains.first(), gain,
+                "$voice MIDI$midi changed its scalar performance gain with velocity")
             val energies = renders.map { rms(it.samples, 0, 2 * Dsp.RATE) }
             val highs = renders.map { upperShare(it.samples, hz(midi), 2.0) }
             assertTrue(energies[0] < energies[1] * .9 && energies[1] < energies[2],
@@ -221,6 +235,30 @@ class AccordTest {
             assertTrue(highs[0] < highs[1] && highs[1] < highs[2],
                 "$voice MIDI$midi hardness did not brighten the excitation: $highs")
             assertTrue(renders.all { it.peak() <= .94001f }, "$voice MIDI$midi overloads at hard touch")
+        }
+    }
+
+    @Test
+    fun `the measured coherent resonance regression stays bounded with one gain for every touch`() {
+        // The first native full matrix measured peak 4.824982 at this actual
+        // period-derived setting. Retain it as a real regression fixture,
+        // rather than weakening the output ceiling or testing only defaults.
+        val controls = mapOf("PACE" to .9522643f, "CONTACT" to 1f)
+        // .5 and .9 are deliberately absent from the gain's normal/hard
+        // reference pair, so these bounds test intermediate touches too.
+        val probes = listOf(.3f, .5f, .75f, .9f, 1f).map { velocity ->
+            Accord.probe(AccordVoice.TINE, controls, midi = 36, velocity = velocity,
+                acousticProfile = AccordAcousticProfile.LONG_RING, sourceSeconds = 8.0)
+        }
+        val gains = probes.map { it.diagnostics.calibrationGain }
+        for (gain in gains) assertEquals(gains.first(), gain,
+            "the coherent fixture independently normalized a touch")
+        val energy = probes.map { rms(it.samples.samples, 0, 8 * Dsp.RATE) }
+        assertTrue(energy[0] < energy[2] * .9 && energy.zipWithNext().all { (a, b) -> a < b },
+            "shared resonance protection flattened the five-touch energy law: $energy")
+        for (probe in probes) {
+            assertTrue(probe.samples.samples.all { it.isFinite() })
+            assertTrue(probe.samples.peak() <= .94001f, "coherent fixture overloads: ${probe.samples.peak()}")
         }
     }
 
@@ -249,15 +287,15 @@ class AccordTest {
         for (voice in AccordVoice.entries) for (control in listOf("PACE", "COUPLING", "MISMATCH", "CONTACT", "RAFT")) {
             val low = Accord.render(voice, mapOf(control to .1f), sourceSeconds = 2.0).samples
             val middle = Accord.render(voice, mapOf(control to .5f), sourceSeconds = 2.0).samples
-            val relative = distance(low, middle) / max(rms(middle), 1e-12)
+            val relative = distance(low, middle, 2 * Dsp.RATE) / max(rms(middle, 0, 2 * Dsp.RATE), 1e-12)
             assertTrue(relative > .01, "$voice $control low/middle relative difference $relative")
         }
         // The effect of harder contacts must depend on articulation density.
         val corners = listOf(.1f, .9f).flatMap { pace -> listOf(.1f, .9f).map { contact ->
             Accord.render(AccordVoice.WOOD, mapOf("PACE" to pace, "CONTACT" to contact), sourceSeconds = 2.0).samples
         } }
-        val atSlow = distance(corners[0], corners[1])
-        val atFast = distance(corners[2], corners[3])
+        val atSlow = distance(corners[0], corners[1], 2 * Dsp.RATE)
+        val atFast = distance(corners[2], corners[3], 2 * Dsp.RATE)
         assertTrue(abs(atFast - atSlow) > .001, "PACE x CONTACT did not change contact articulation")
     }
 
@@ -288,7 +326,10 @@ class AccordTest {
     fun `active pitch remains rooted over declared windows and reports full confidence`() {
         for (voice in AccordVoice.entries) for (midi in listOf(36, 48, 60, 72)) {
             val snip = Accord.render(voice, midi = midi, sourceSeconds = 2.0)
-            val windows = listOf(.25f, .5f, .75f, 1f, 1.25f, 1.5f)
+            // Keep the original .4/1.1/1.6-second probes in this fixed union.
+            // In particular, BRUSH C2's known .4-second detector blind spot
+            // remains visible instead of moving the grid around that failure.
+            val windows = listOf(.25f, .4f, .5f, .75f, 1f, 1.1f, 1.25f, 1.5f, 1.6f)
             val estimates = windows.map { from -> Pitch.detect(snip, from, .3f) }
             println("ACCORD $voice MIDI$midi active=" + windows.zip(estimates).map { (from, estimate) ->
                 if (estimate == null) "$from:null" else
@@ -300,7 +341,7 @@ class AccordTest {
             // retain every null/wrong-register result in the printed report,
             // and require useful coverage over one fixed grid for all voices.
             val confident = estimates.filterNotNull().filter { it.confidence >= .3f }
-            assertTrue(confident.size >= 2, "$voice MIDI$midi has only ${confident.size}/${windows.size} confident active windows")
+            assertTrue(confident.size >= 3, "$voice MIDI$midi has only ${confident.size}/${windows.size} confident active windows")
             val errors = confident.map { abs(cents(it.hz.toDouble(), hz(midi))) }.sorted()
             // Forced windows can move the apparent period. This asserts the
             // declared root survives, not an unsupported universal five cents.

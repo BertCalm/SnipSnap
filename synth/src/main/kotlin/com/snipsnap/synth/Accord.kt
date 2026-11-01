@@ -41,6 +41,7 @@ object Accord {
     private const val PRESSURE_RATE = 2000
     private const val MAX_TRACE_BYTES = 32L * 1024 * 1024
     private const val MAX_AUDIO_BYTES = 8L * 1024 * 1024
+    private const val PERFORMANCE_PEAK_CEILING = .85
 
     fun supportsModel(model: Int): Boolean = model == MODEL_VERSION
     fun defaultProfile(voice: AccordVoice): AccordAcousticProfile =
@@ -134,9 +135,13 @@ object Accord {
         val velocity: Float, val seed: Long, val model: Int, val profile: AccordAcousticProfile,
         val initializer: AccordInitializer, val start: Double, val seconds: Double)
     private data class CalibrationKey(val voice: AccordVoice, val profile: AccordAcousticProfile, val midi: Int, val model: Int)
+    private data class Calibrated(val gain: Double, val reusable: AccordAcoustics.Result? = null)
     private val cacheLock = Any()
     private val traces = LinkedHashMap<TraceKey, AccordDynamics.Trace>(8, .75f, true)
     private val audio = LinkedHashMap<AudioKey, Probe>(8, .75f, true)
+    // Velocity is fixed to .75 in these keys. A saved performance has one gain
+    // for all touches, chosen before playback rather than tracking its envelope.
+    private val performanceGains = LinkedHashMap<AudioKey, Double>(64, .75f, true)
     private var traceBytes = 0L
     private var audioBytes = 0L
     private var mechanicalPreparations = 0L
@@ -144,7 +149,7 @@ object Accord {
     private var audioHits = 0L
 
     internal fun clearCaches() = synchronized(cacheLock) {
-        traces.clear(); audio.clear()
+        traces.clear(); audio.clear(); performanceGains.clear()
         traceBytes = 0; audioBytes = 0
         mechanicalPreparations = 0; preparationHits = 0; audioHits = 0
         AccordAcoustics.clearRoughnessCache()
@@ -225,16 +230,34 @@ object Accord {
     )
 
     /**
-     * This recipe is fixed by the model, never the user's edited performance.
-     * Calibrating each velocity or each COUPLING setting would erase dynamics.
-     * A shared hard-contact/body probe reserves headroom for the same note.
+     * Factory reference gains are generated ahead of playback. Other saved
+     * performances use one normal/hard calibration shared by every velocity.
+     * This retains each render's gathering envelope while keeping strongly
+     * resonant control combinations usable without per-hit AGC or clipping.
      */
     internal fun referenceCalibrationGain(voice: AccordVoice, profile: AccordAcousticProfile, midi: Int): Double =
         computeReferenceCalibration(CalibrationKey(voice, profile, midi, MODEL_VERSION))
 
-    private fun calibration(key: CalibrationKey): Double {
+    private fun calibration(key: AudioKey, trace: AccordDynamics.Trace, pace: Double): Calibrated {
         require(key.model == AccordCalibration.MODEL_VERSION) { "ACCORD reference calibration model mismatch" }
-        return AccordCalibration.gain(key.voice, key.profile, key.midi)
+        require(AccordCalibration.VERSION == 2) { "ACCORD calibration table requires regeneration for the captured-tail policy" }
+        if (key.seed == DEFAULT_SEED && key.initializer == AccordInitializer.REFERENCE_SINE_20261022 &&
+            key.start == 8.0 && key.seconds == 8.0 && key.macros == defaults(key.voice)) {
+            return Calibrated(AccordCalibration.gain(key.voice, key.profile, key.midi))
+        }
+        val gainKey = key.copy(velocity = .75f)
+        synchronized(cacheLock) { performanceGains[gainKey]?.let { return Calibrated(it) } }
+        val normal = condition(key.voice, key.profile, key.midi, .75f, key.macros,
+            trace, key.seed, key.start, key.seconds, pace)
+        val hard = condition(key.voice, key.profile, key.midi, 1f, key.macros,
+            trace, key.seed, key.start, key.seconds, pace)
+        val gain = sharedGain(normal, hard, key.seconds)
+        checkCancelled()
+        synchronized(cacheLock) {
+            while (performanceGains.size >= 64 && gainKey !in performanceGains) performanceGains.remove(performanceGains.keys.first())
+            performanceGains[gainKey] = gain
+        }
+        return Calibrated(gain, when (key.velocity) { .75f -> normal; 1f -> hard; else -> null })
     }
 
     private fun computeReferenceCalibration(key: CalibrationKey): Double {
@@ -242,13 +265,17 @@ object Accord {
         val trace = prepare(TraceKey(parameters(macros), DEFAULT_SEED,
             AccordInitializer.REFERENCE_SINE_20261022, key.model), 24.0).trace
         val normal = condition(key.voice, key.profile, key.midi, .75f, macros, trace, DEFAULT_SEED, 8.0, 8.0, 2.0)
-        val desired = AccordAcoustics.calibrationGain(normal.samples, 8.0)
-        val hard = condition(key.voice, key.profile, key.midi, 1f,
-            macros + ("CONTACT" to 1f) + ("RAFT" to 1f), trace, DEFAULT_SEED, 8.0, 8.0, 2.0)
-        val hardPeak = hard.samples.maxOf { abs(it.toDouble()) }
-        val gain = min(desired, .90 / max(hardPeak, 1e-12))
-        require(gain.isFinite() && gain > 0) { "ACCORD invalid reference calibration" }
+        val hard = condition(key.voice, key.profile, key.midi, 1f, macros, trace, DEFAULT_SEED, 8.0, 8.0, 2.0)
+        val gain = sharedGain(normal, hard, 8.0)
         checkCancelled()
+        return gain
+    }
+
+    private fun sharedGain(normal: AccordAcoustics.Result, hard: AccordAcoustics.Result, seconds: Double): Double {
+        val peak = max(normal.samples.maxOf { abs(it.toDouble()) }, hard.samples.maxOf { abs(it.toDouble()) })
+        val gain = min(AccordAcoustics.calibrationGain(normal.samples, seconds),
+            PERFORMANCE_PEAK_CEILING / max(peak, 1e-12))
+        require(gain.isFinite() && gain > 0.0) { "ACCORD invalid shared-velocity calibration" }
         return gain
     }
 
@@ -288,7 +315,9 @@ object Accord {
                     audioMilliseconds = 0.0, renderMilliseconds = elapsed(began), audioCacheHit = true))
             }
         }
-        val frames = AccordAcoustics.renderFrames(sourceSeconds, acousticProfile)
+        val config = AccordAcoustics.configuration(voice, acousticProfile, midi, velocity,
+            m.getValue("CONTACT"), m.getValue("RAFT"))
+        val frames = AccordAcoustics.renderFrames(config, sourceSeconds)
         if (velocity == 0f) {
             val silence = Snip(FloatArray(frames), 1, Dsp.RATE)
             return Probe(silence, silence.copy(samples = FloatArray(frames)),
@@ -300,15 +329,18 @@ object Accord {
         val lookup = prepare(TraceKey(parameters(m), seed, initializer, model), sourceStartCycles + pace * sourceSeconds)
         val physicsMs = elapsed(physicsBegan)
         val calibrationBegan = System.nanoTime()
-        val gain = calibration(CalibrationKey(voice, acousticProfile, midi, model))
+        val calibrated = calibration(key, lookup.trace, pace)
+        val gain = calibrated.gain
         val calibrationMs = elapsed(calibrationBegan)
         val audioBegan = System.nanoTime()
-        val result = condition(voice, acousticProfile, midi, velocity, m, lookup.trace, seed, sourceStartCycles, sourceSeconds, pace)
+        val result = calibrated.reusable ?: condition(voice, acousticProfile, midi, velocity,
+            m, lookup.trace, seed, sourceStartCycles, sourceSeconds, pace)
+        check(result.samples.size == frames) { "ACCORD calibration reused a different captured duration" }
         val raw = Snip(result.samples, 1, Dsp.RATE)
         val output = FloatArray(raw.samples.size) { (raw.samples[it] * gain).toFloat() }
         require(output.all { it.isFinite() }) { "ACCORD non-finite acoustic output" }
-        // The fixed gain is the energy policy. An unexpected peak must remain
-        // visible to probes; no per-render normalizer changes soft/hard touch.
+        // One gain is shared across touches for this saved performance. There
+        // is no envelope follower, event normalization or output limiter.
         Dsp.fadeTail(output)
         val head = min(output.size, (Dsp.RATE * .003).toInt())
         for (i in 0 until head) output[i] *= i.toFloat() / max(1, head - 1)
@@ -345,8 +377,10 @@ object Accord {
 
     /** A long finite sample has LOOP filing, not a claim of seamless playback. */
     fun drumClassFor(patch: AccordPatch): DrumClass {
-        settled(patch.voice, patch.macros)
-        return if (AccordAcoustics.renderFrames(patch.sourceSeconds, patch.acousticProfile) > (1.5 * Dsp.RATE).toInt())
+        val m = settled(patch.voice, patch.macros)
+        val config = AccordAcoustics.configuration(patch.voice, patch.acousticProfile, patch.midi,
+            patch.velocity, m.getValue("CONTACT"), m.getValue("RAFT"))
+        return if (AccordAcoustics.renderFrames(config, patch.sourceSeconds) > (1.5 * Dsp.RATE).toInt())
             DrumClass.LOOP else Classifier.classify(render(patch.copy(velocity = .75f))).drumClass
     }
 

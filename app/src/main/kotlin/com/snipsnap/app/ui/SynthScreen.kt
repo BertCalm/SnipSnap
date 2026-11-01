@@ -1501,16 +1501,15 @@ fun SynthScreen(
     // the shelf when the screen opens and again after every save. A file
     // this build cannot read lists nothing here, and its save refuses in
     // words rather than writing over it (UserPresets.save's own rule).
-    var userPresets by remember { mutableStateOf<List<UserPresets.Saved>>(emptyList()) }
+    val presetShelf = remember { PresetShelfState() }
     // FORGET → BIN, and the bin it waits in (the WS5 follow-up): read
     // beside the strip, since a held chip and DELETED PRESETS both need
     // it, and refreshed with the strip after every move.
-    var binnedPresets by remember { mutableStateOf<List<UserPresets.Binned>>(emptyList()) }
     LaunchedEffect(Unit) {
         try {
             val (live, bin) = offMain { embouchureRestore.readShelf(shelfRoot) }
-            userPresets = live
-            binnedPresets = bin
+            presetShelf.userPresets = live
+            presetShelf.binnedPresets = bin
             // The YOURS presets the bag named (§3.6), now that the shelf has
             // been read: re-adopt each whole, or drop the highlight when the
             // preset was forgotten while the lab was away. Live state is
@@ -1576,16 +1575,9 @@ fun SynthScreen(
             }
         }
     }
-    var namingPreset by remember { mutableStateOf(false) }
-    var saveBusy by remember { mutableStateOf(false) }
-    // The chip being held, while its FORGET slip asks; the bin's door; and
-    // one busy flag for both moves, so a second tap never races the file.
-    var forgetTarget by remember { mutableStateOf<Patch?>(null) }
-    var binOpen by remember { mutableStateOf(false) }
-    var binBusy by remember { mutableStateOf(false) }
     fun forgetPreset(patch: Patch) {
-        if (binBusy) return
-        binBusy = true
+        if (presetShelf.binBusy) return
+        presetShelf.binBusy = true
         // The strip the chip was held on, captured now: the highlight there
         // must not keep naming a chip that is gone, whatever voice is
         // showing by the time the write lands.
@@ -1596,8 +1588,8 @@ fun SynthScreen(
                     UserPresets.forget(shelfRoot, patch.engine, patch.voiceName, patch.name, System.currentTimeMillis())
                 }
                 val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
-                userPresets = live
-                binnedPresets = bin
+                presetShelf.userPresets = live
+                presetShelf.binnedPresets = bin
                 if (gone == null) {
                     // A row that outran the tap: nothing by that name was there.
                     onToast(Copy.BIN_ITEM_GONE)
@@ -1611,19 +1603,19 @@ fun SynthScreen(
                 Log.e("SynthScreen", "forgetPreset: failed", e)
                 onToast(Copy.PRESET_FORGET_FAILED)
             } finally {
-                binBusy = false
+                presetShelf.binBusy = false
             }
         }
     }
     fun restorePreset(binned: UserPresets.Binned) {
-        if (binBusy) return
-        binBusy = true
+        if (presetShelf.binBusy) return
+        presetShelf.binBusy = true
         appScope.launch {
             try {
                 val back = offMain { UserPresets.unforget(shelfRoot, binned) }
                 val (live, bin) = offMain { UserPresets.read(shelfRoot) to UserPresets.bin(shelfRoot) }
-                userPresets = live
-                binnedPresets = bin
+                presetShelf.userPresets = live
+                presetShelf.binnedPresets = bin
                 // The name it actually landed under — a clash with a preset
                 // saved since may have freshened it — never the row's own.
                 onToast(if (back == null) Copy.BIN_ITEM_GONE else Copy.presetRestored(back.name))
@@ -1633,7 +1625,7 @@ fun SynthScreen(
                 Log.e("SynthScreen", "restorePreset: failed", e)
                 onToast(Copy.PRESET_RESTORE_FAILED)
             } finally {
-                binBusy = false
+                presetShelf.binBusy = false
             }
         }
     }
@@ -1643,9 +1635,9 @@ fun SynthScreen(
             is UserPresets.Check.Replaces -> check.name
             else -> return
         }
-        if (saveBusy) return
-        saveBusy = true
-        namingPreset = false
+        if (presetShelf.saveBusy) return
+        presetShelf.saveBusy = true
+        presetShelf.namingPreset = false
         // Captured now: the dialog's own engine/voice/macros, before an
         // engine cycle or a slider drag can move them under the write.
         val savedEngine = engine
@@ -1657,7 +1649,7 @@ fun SynthScreen(
                     val s = UserPresets.save(shelfRoot, patch, System.currentTimeMillis())
                     s to UserPresets.read(shelfRoot)
                 }
-                userPresets = all
+                presetShelf.userPresets = all
                 currentPresetByVoice[savedEngine to savedVoice] = saved.name
                 embouchureRestore.pending.remove(savedEngine to savedVoice)
                 onToast(if (check is UserPresets.Check.Replaces) Copy.presetReplaced(name) else Copy.presetSaved(name))
@@ -1667,7 +1659,7 @@ fun SynthScreen(
                 Log.e("SynthScreen", "savePreset: failed", e)
                 onToast(Copy.PRESET_SAVE_FAILED)
             } finally {
-                saveBusy = false
+                presetShelf.saveBusy = false
             }
         }
     }
@@ -1817,13 +1809,11 @@ fun SynthScreen(
     }
 
     // ---- SEND TO PAD ----
-    var showChooser by remember { mutableStateOf(false) }
-    var sendBusy by remember { mutableStateOf(false) }
+    val padChooser = remember { PadChooserState() }
     // → SURFACE opened the chooser: after the landing, point the kit's
     // surface at the slot and open the SURFACE screen on it. Read at the
     // start of the send, so a chooser opened one way and cancelled cannot
     // leak its intent into the next.
-    var sendToSurface by remember { mutableStateOf(false) }
     val kit = entry?.kit
     val reopeningPad = remember { mutableStateOf(false) }
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
@@ -1858,10 +1848,10 @@ fun SynthScreen(
 
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
-        if (sendBusy) return
+        if (padChooser.sendBusy) return
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
-        sendBusy = true
-        val toSurface = sendToSurface
+        padChooser.sendBusy = true
+        val toSurface = padChooser.sendToSurface
         appScope.launch {
             try {
                 // The patch's own init validates its macros (Patches.
@@ -2021,7 +2011,7 @@ fun SynthScreen(
                         alreadyThere to model.kit
                     }
                 }
-                showChooser = false
+                padChooser.showChooser = false
                 onKitUpdated(updatedKit)
                 if (toSurface) {
                     // The pad is on disk; now the surface's own sidecar says
@@ -2061,8 +2051,8 @@ fun SynthScreen(
                     onToast(Copy.SEND_FAILED)
                 }
             } finally {
-                sendBusy = false
-                sendToSurface = false
+                padChooser.sendBusy = false
+                padChooser.sendToSurface = false
             }
         }
     }
@@ -2457,16 +2447,12 @@ fun SynthScreen(
     // ---- SPREAD ----
     // The patch as it stood when SPREAD opened, rendered once: the panel
     // previews and the write lands the same audio its pitch was measured on.
-    var spreadSource by remember { mutableStateOf<SpreadSource?>(null) }
-    var spreadPatch by remember { mutableStateOf<Patch?>(null) }
-    var spreadClass by remember { mutableStateOf(DrumClass.TONAL) }
-    var spreadOpening by remember { mutableStateOf(false) }
-    var spreadBusy by remember { mutableStateOf(false) }
+    val spreadSheet = remember { SpreadSheetState() }
 
     fun openSpread() {
-        if (spreadOpening || sendBusy || entry == null) return
+        if (spreadSheet.spreadOpening || padChooser.sendBusy || entry == null) return
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
-        spreadOpening = true
+        spreadSheet.spreadOpening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is MeridianPatch) MeridianSynth.padLanding(patch).drumClass
             else when (patch) {
@@ -2500,30 +2486,30 @@ fun SynthScreen(
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 coroutineContext.ensureActive()
-                spreadPatch = patch
-                spreadClass = cls
-                spreadSource = src
+                spreadSheet.spreadPatch = patch
+                spreadSheet.spreadClass = cls
+                spreadSheet.spreadSource = src
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e("SynthScreen", "openSpread: render failed", e)
                 onToast(Copy.RENDER_FAILED)
             } finally {
-                spreadOpening = false
+                spreadSheet.spreadOpening = false
             }
         }
     }
 
     fun spread(options: Spread.Options) {
         val e = entry ?: return
-        val src = spreadSource ?: return
-        val patch = spreadPatch ?: return
-        if (spreadBusy) return
-        spreadBusy = true
+        val src = spreadSheet.spreadSource ?: return
+        val patch = spreadSheet.spreadPatch ?: return
+        if (spreadSheet.spreadBusy) return
+        spreadSheet.spreadBusy = true
         val sound = Spread.Sound(
             name = patch.name,
-            drumClass = spreadClass,
-            colorHex = AutoPlace.colorFor(spreadClass),
+            drumClass = spreadSheet.spreadClass,
+            colorHex = AutoPlace.colorFor(spreadSheet.spreadClass),
             recipe = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).recipe
                 else if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
                 OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
@@ -2546,7 +2532,7 @@ fun SynthScreen(
                     }
                 }
                 if (plan.notes.isNotEmpty()) {
-                    spreadSource = null
+                    spreadSheet.spreadSource = null
                     onKitUpdated(updatedKit)
                 }
                 onToast(Spread.toast(plan))
@@ -2555,7 +2541,7 @@ fun SynthScreen(
                 Log.e("SynthScreen", "spread: failed", ex)
                 onToast(Copy.SPREAD_FAILED)
             } finally {
-                spreadBusy = false
+                spreadSheet.spreadBusy = false
             }
         }
     }
@@ -2610,24 +2596,24 @@ fun SynthScreen(
                 PresetList(
                     engine = engine,
                     voice = voice,
-                    yours = UserPresets.forVoice(userPresets, engine.name, voice.name).map { it.patch },
+                    yours = UserPresets.forVoice(presetShelf.userPresets, engine.name, voice.name).map { it.patch },
                     current = currentPresetByVoice[engine to voice],
                     scheme = scheme,
                     onSelect = ::loadPreset,
-                    onHold = { forgetTarget = it },
+                    onHold = { presetShelf.forgetTarget = it },
                 )
                 // The door back, gated on the bin holding something, the way
                 // the shelf's DELETED KITS row is: never a door onto an empty
                 // room. Every engine's bin, not only this voice's — a preset
                 // forgotten on SNARE is found from KICK.
-                if (binnedPresets.isNotEmpty()) {
+                if (presetShelf.binnedPresets.isNotEmpty()) {
                     LabButton(
-                        "DELETED PRESETS ▸ ${binnedPresets.size} WAITING",
+                        "DELETED PRESETS ▸ ${presetShelf.binnedPresets.size} WAITING",
                         scheme,
-                        enabled = !binBusy,
+                        enabled = !presetShelf.binBusy,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        binOpen = true
+                        presetShelf.binOpen = true
                     }
                 }
 
@@ -3515,30 +3501,30 @@ fun SynthScreen(
                     // before it is placed. No kit is needed — a preset is
                     // the shelf's, not the open kit's.
                     LabButton(
-                        if (saveBusy) "…" else "SAVE PRESET ▸",
+                        if (presetShelf.saveBusy) "…" else "SAVE PRESET ▸",
                         scheme,
-                        enabled = !saveBusy && !embouchureRestore.waitsForRecipe(engine, voice),
+                        enabled = !presetShelf.saveBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SAVE PRESET",
                     ) {
                         if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
-                        namingPreset = true
+                        presetShelf.namingPreset = true
                     }
                     LabButton(
-                        if (sendBusy) "…" else "SEND TO PAD ▸",
+                        if (padChooser.sendBusy) "…" else "SEND TO PAD ▸",
                         scheme,
-                        enabled = kit != null && !sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
+                        enabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SEND TO PAD",
                     ) {
                         if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
-                        showChooser = true
+                        padChooser.showChooser = true
                     }
                 }
                 LabButton(
                     "REOPEN PAD ▸ EDIT ITS RECIPE",
                     scheme,
-                    enabled = reopenablePads.isNotEmpty() && !sendBusy,
+                    enabled = reopenablePads.isNotEmpty() && !padChooser.sendBusy,
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "REOPEN PAD RECIPE",
                 ) {
@@ -3548,9 +3534,9 @@ fun SynthScreen(
                     val slot = source.slot
                     val target = kit?.pad(slot)
                     LabButton(
-                        if (sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
+                        if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
+                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3559,9 +3545,9 @@ fun SynthScreen(
                 // One sound, a whole bank of notes: its own row, since the
                 // three above already fill theirs at the pixel face.
                 LabButton(
-                    if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    if (spreadSheet.spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
                     scheme,
-                    enabled = kit != null && !sendBusy && !spreadOpening &&
+                    enabled = kit != null && !padChooser.sendBusy && !spreadSheet.spreadOpening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "SPREAD ACROSS PADS",
@@ -3574,14 +3560,14 @@ fun SynthScreen(
                 // replay its sweep at every wrap (the spec's SURFACE section).
                 if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
                     LabButton(
-                        if (sendBusy && sendToSurface) "…" else "→ SURFACE ▸",
+                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE ▸",
                         scheme,
-                        enabled = kit != null && !sendBusy,
+                        enabled = kit != null && !padChooser.sendBusy,
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "TO SURFACE",
                     ) {
-                        sendToSurface = true
-                        showChooser = true
+                        padChooser.sendToSurface = true
+                        padChooser.showChooser = true
                     }
                 }
                 // RESIN, SIREN, GLINT or OPENSKY HALO, held: the sound as a
@@ -3688,45 +3674,45 @@ fun SynthScreen(
             )
         }
 
-        if (showChooser) {
-            val cancelChooser = { if (!sendBusy) { showChooser = false; sendToSurface = false } }
+        if (padChooser.showChooser) {
+            val cancelChooser = { if (!padChooser.sendBusy) { padChooser.showChooser = false; padChooser.sendToSurface = false } }
             SlotChooserOverlay(
                 kit = kit,
                 previewColor = classColor,
                 scheme = scheme,
-                busy = sendBusy,
+                busy = padChooser.sendBusy,
                 onPick = ::sendToSlot,
                 onCancel = cancelChooser,
             )
             // Innermost: same self-guarded cancel as the overlay's own
-            // CANCEL — a send in flight (sendBusy) makes both no-ops.
+            // CANCEL — a send in flight (padChooser.sendBusy) makes both no-ops.
             SynthOverlayBackHandler(onBack = cancelChooser)
         }
 
         ReopenPadDialog(reopeningPad, reopenablePads, scheme, onPick = ::reopenPad)
 
-        spreadSource?.let { src ->
+        spreadSheet.spreadSource?.let { src ->
             // Self-guarded like the chooser's CANCEL: a write in flight
             // keeps the panel up until it lands.
-            val cancelSpread = { if (!spreadBusy) spreadSource = null }
+            val cancelSpread = { if (!spreadSheet.spreadBusy) spreadSheet.spreadSource = null }
             SpreadOverlay(
                 kit = kit,
                 source = src,
-                colorHex = AutoPlace.colorFor(spreadClass),
+                colorHex = AutoPlace.colorFor(spreadSheet.spreadClass),
                 scheme = scheme,
-                busy = spreadBusy,
+                busy = spreadSheet.spreadBusy,
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
             SynthOverlayBackHandler(onBack = cancelSpread)
         }
 
-        if (namingPreset) {
-            val cancelNaming = { namingPreset = false }
+        if (presetShelf.namingPreset) {
+            val cancelNaming = { presetShelf.namingPreset = false }
             PresetNameDialog(
                 engine = engine,
                 voice = voice,
-                yours = userPresets,
+                yours = presetShelf.userPresets,
                 scheme = scheme,
                 onCancel = cancelNaming,
                 onSave = ::savePreset,
@@ -3734,28 +3720,28 @@ fun SynthScreen(
             SynthOverlayBackHandler(onBack = cancelNaming)
         }
 
-        forgetTarget?.let { target ->
-            val cancelForget = { forgetTarget = null }
+        presetShelf.forgetTarget?.let { target ->
+            val cancelForget = { presetShelf.forgetTarget = null }
             PresetForgetDialog(
                 name = target.name,
                 scheme = scheme,
                 onCancel = cancelForget,
                 onForget = {
-                    forgetTarget = null
+                    presetShelf.forgetTarget = null
                     forgetPreset(target)
                 },
             )
             SynthOverlayBackHandler(onBack = cancelForget)
         }
 
-        if (binOpen) {
+        if (presetShelf.binOpen) {
             // Same self-guarded close as the chooser's CANCEL: a move in
             // flight makes both no-ops, and the handler stays registered.
-            val closeBin = { if (!binBusy) binOpen = false }
+            val closeBin = { if (!presetShelf.binBusy) presetShelf.binOpen = false }
             DeletedPresetsOverlay(
-                binned = binnedPresets,
+                binned = presetShelf.binnedPresets,
                 scheme = scheme,
-                busy = binBusy,
+                busy = presetShelf.binBusy,
                 onRestore = ::restorePreset,
                 onClose = closeBin,
             )
@@ -4068,6 +4054,39 @@ private fun MacroSliders(
             }
         }
     }
+}
+
+/**
+ * Fifteen independent remember/delegate locals pushed SynthScreen's debug dex
+ * to 264 registers. D8 emitted a primitive move for a MutableState reference,
+ * and ART rejected the entire screen. Remember these holders once instead,
+ * preserving each observable field and its screen lifetime without retaining
+ * every delegate in the large composable's register set.
+ */
+private class PresetShelfState {
+    var userPresets by mutableStateOf<List<UserPresets.Saved>>(emptyList())
+    var binnedPresets by mutableStateOf<List<UserPresets.Binned>>(emptyList())
+    var namingPreset by mutableStateOf(false)
+    var saveBusy by mutableStateOf(false)
+    var forgetTarget by mutableStateOf<Patch?>(null)
+    var binOpen by mutableStateOf(false)
+    // One busy flag for both bin moves prevents concurrent shelf writes.
+    var binBusy by mutableStateOf(false)
+}
+
+private class PadChooserState {
+    var showChooser by mutableStateOf(false)
+    var sendBusy by mutableStateOf(false)
+    // Surface intent is cleared together with the chooser on cancel or send.
+    var sendToSurface by mutableStateOf(false)
+}
+
+private class SpreadSheetState {
+    var spreadSource by mutableStateOf<SpreadSource?>(null)
+    var spreadPatch by mutableStateOf<Patch?>(null)
+    var spreadClass by mutableStateOf(DrumClass.TONAL)
+    var spreadOpening by mutableStateOf(false)
+    var spreadBusy by mutableStateOf(false)
 }
 
 /**

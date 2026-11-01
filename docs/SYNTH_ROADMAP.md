@@ -8,10 +8,17 @@ from the approved Python direction. Native model/initializer/profile/note/touch/
 seed/passage recipes, strict JSON and velocity dispatch, six starting recipes,
 a dry sixteen-pad one-shot starter and diagnostic audition are implemented.
 The complete frozen handoff, six Python WAVs and unchanged manifests live in
-`reference/accord/`. The native build/probe/timing record is pending the coordinated
-validation run; native listening, wider controls and phone/MPC acceptance remain
-open. Nonzero HOLD is refused, and there is no Accord app picker entry in this
-SDK-free implementation session. See [ACCORD.md](ACCORD.md) and the
+`reference/accord/`. The SDK-built picker includes ROOT, TOUCH, LENGTH and TINE
+profiles with complete typed recall. A 360-case probe exposed resonant overload
+and short captured tails; the corrected constant per-performance gain shared
+across velocity and extended unforced release explicitly revise the original
+cross-setting gain policy. The corrected pipeline passed 43 focused tests,
+429 full-length output cases, six deterministic 4×/8× comparisons and calibration
+spot checks; it generated the native audition and kit. Android assembly/
+instrumentation-source compilation and six C++ host tests passed before the
+correction. A rebuilt APK, complete JVM suite, Compose execution, native
+listening and phone/MPC acceptance remain open.
+Nonzero HOLD is refused. See [ACCORD.md](ACCORD.md) and the
 [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md).
 
 **EROSION native finite proof (2026-10-31).** The owner accepted the initial

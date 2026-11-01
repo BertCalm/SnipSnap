@@ -17,6 +17,7 @@ object AccordAuditionGenerator {
     private data class Case(val id: String, val title: String, val section: String,
         val patch: AccordPatch, val description: String, val match: Boolean = true)
     private data class PhasePoint(val time: Double, val r1: Double, val r2: Double)
+    private data class CausalRaw(val id: String, val raw: Snip, val engineGain: Double)
 
     private fun cases(quick: Boolean): List<Case> {
         val result = mutableListOf<Case>()
@@ -31,7 +32,7 @@ object AccordAuditionGenerator {
             val anchor = AccordPresets.forVoice(voice).first()
             for (midi in listOf(36, 60, 72)) result += Case("${voice.name.lowercase()}-note-$midi",
                 "${voice.name} · C${midi / 12 - 1}", "notes", anchor.copy(midi = midi),
-                "The same mechanical event history at another root. Native reference calibration belongs to this profile and note.")
+                "The same mechanical event history at another root. One performance calibration gain is shared across its touch velocities.")
             for ((touch, velocity) in listOf("soft" to .3f, "normal" to .75f, "hard" to 1f)) {
                 result += Case("${voice.name.lowercase()}-touch-$touch", "${voice.name} · $touch", "velocity",
                     anchor.copy(velocity = velocity), "C3 at velocity $velocity. Keep playback volume fixed; no comparison normalization is applied.", match = false)
@@ -66,7 +67,7 @@ object AccordAuditionGenerator {
                     result += Case("${a.lowercase()}-${av.toInt()}-${b.lowercase()}-${bv.toInt()}",
                         "$a ${av.toInt()} × $b ${bv.toInt()}", "interactions",
                         brush.copy(macros = brush.macros + mapOf(a to av, b to bv)),
-                        "Controlled corner of $a × $b; native playback retains its fixed reference calibration.")
+                        "Controlled corner of $a × $b; native playback uses one gain for this saved performance, shared across touch velocities.")
                 }
             }
         }
@@ -81,6 +82,32 @@ object AccordAuditionGenerator {
         var gain = Loudness.of(comparison).toDouble() / Loudness.of(active).coerceAtLeast(1e-12f)
         gain = minOf(gain, .99 / snip.peak().coerceAtLeast(1e-12f))
         return snip.copy(samples = FloatArray(snip.samples.size) { (snip.samples[it] * gain).toFloat() })
+    }
+
+    /** Match production fades after a single diagnostic gain; never normalize individual contacts. */
+    private fun controlledGain(root: File, comparisons: List<CausalRaw>): Map<String, Any?> {
+        require(comparisons.size == 4)
+        val maximum = comparisons.maxOf { it.raw.peak().toDouble() }
+        val gain = .85 / maxOf(maximum, 1e-12)
+        val files = comparisons.map { comparison ->
+            val output = FloatArray(comparison.raw.samples.size) { (comparison.raw.samples[it] * gain).toFloat() }
+            Dsp.fadeTail(output)
+            val head = minOf(output.size, (Dsp.RATE * .003).toInt())
+            for (i in 0 until head) output[i] *= i.toFloat() / maxOf(1, head - 1)
+            val snip = comparison.raw.copy(samples = output)
+            val path = "controlled-gain/${comparison.id}.wav"
+            AccordAuditionFiles.writeAudio(File(root, path), snip)
+            linkedMapOf("id" to comparison.id, "file" to path,
+                "sha256" to AccordAuditionFiles.hash(File(root, path)),
+                "unscaledConditionedPeak" to comparison.raw.peak(), "sharedDiagnosticGain" to gain,
+                "productionCalibrationGain" to comparison.engineGain,
+                "metrics" to AccordAuditionFiles.metrics(snip))
+        }
+        return linkedMapOf("kind" to "DIAGNOSTIC_COMMON_GAIN_NOT_ENGINE_LEVELS",
+            "method" to "One scalar .85 / maximum unscaled conditioned peak across all four mechanical comparisons, then identical production head/tail fades.",
+            "sharedGain" to gain, "maximumUnscaledConditionedPeak" to maximum,
+            "scope" to "Preserves conditioned amplitude differences across this diagnostic group. These sidecars are not production engine levels and are not individually matched.",
+            "files" to files)
     }
 
     private fun repository(): File = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
@@ -188,12 +215,20 @@ object AccordAuditionGenerator {
         val repo = repository()
         val allCases = cases("--quick" in args)
         val entries = mutableListOf<Map<String, Any?>>()
+        val causal = mutableListOf<CausalRaw>()
         var maximumPcmError = 0.0
         val began = System.nanoTime()
         for ((index, case) in allCases.withIndex()) {
             val probe = Accord.probe(case.patch)
             val native = probe.samples
+            val macros = Accord.settled(case.patch.voice, case.patch.macros)
+            val configuration = AccordAcoustics.configuration(case.patch.voice, case.patch.acousticProfile,
+                case.patch.midi, case.patch.velocity, macros.getValue("CONTACT"), macros.getValue("RAFT"))
+            require(native.samples.size == AccordAcoustics.renderFrames(configuration, case.patch.sourceSeconds))
             require(native.peak() <= 1f && native.samples.all { it.isFinite() })
+            if (case.id in setOf("mechanics-independent", "mechanics-mobile", "mechanics-light", "mechanics-scattered-start")) {
+                causal += CausalRaw(case.id, probe.raw, probe.diagnostics.calibrationGain)
+            }
             val rawPath = "raw/${case.id}.wav"
             maximumPcmError = maxOf(maximumPcmError, AccordAuditionFiles.writeAudio(File(root, rawPath), native))
             val matchedPath = if (case.match) "matched/${case.id}.wav" else null
@@ -209,6 +244,9 @@ object AccordAuditionGenerator {
             val diagnosticPath = "diagnostics/${case.id}.json"
             AccordAuditionFiles.writeJson(File(root, diagnosticPath), linkedMapOf(
                 "native" to probe.diagnostics.toJsonValue(), "unleveledMetrics" to AccordAuditionFiles.metrics(probe.raw),
+                "unleveledAudioPolicy" to "Metrics describe unscaled conditioned samples, which may exceed unity. No clipped unscaled PCM is exported.",
+                "resolvedReleaseSeconds" to configuration.releaseSeconds,
+                "capturedReleaseSeconds" to (native.samples.size.toDouble() / Dsp.RATE - case.patch.sourceSeconds),
                 "phaseSummary" to phase,
                 "phaseOrder" to points.map { listOf(it.time, it.r1, it.r2) },
                 "contacts" to probe.events.map { linkedMapOf("seconds" to it.timeSeconds, "cycle" to it.cycle,
@@ -219,7 +257,11 @@ object AccordAuditionGenerator {
             entries += linkedMapOf("id" to case.id, "title" to case.title, "section" to case.section,
                 "voice" to case.patch.voice.name, "profile" to case.patch.acousticProfile.name,
                 "midi" to case.patch.midi, "velocity" to case.patch.velocity,
-                "sourceSeconds" to case.patch.sourceSeconds, "raw" to rawPath, "matched" to matchedPath,
+                "sourceSeconds" to case.patch.sourceSeconds,
+                "resolvedReleaseSeconds" to configuration.releaseSeconds,
+                "capturedReleaseSeconds" to (native.samples.size.toDouble() / Dsp.RATE - case.patch.sourceSeconds),
+                "productionCalibrationGain" to probe.diagnostics.calibrationGain,
+                "raw" to rawPath, "matched" to matchedPath,
                 "rawSha256" to AccordAuditionFiles.hash(File(root, rawPath)),
                 "matchedSha256" to matchedPath?.let { AccordAuditionFiles.hash(File(root, it)) },
                 "recipe" to recipePath, "diagnostics" to diagnosticPath, "plot" to plotPath,
@@ -227,12 +269,15 @@ object AccordAuditionGenerator {
                 "matchedMetrics" to matched?.let(AccordAuditionFiles::metrics))
             println("Accord audition ${index + 1}/${allCases.size}: ${case.id}")
         }
+        val causalComparison = controlledGain(root, causal)
+        AccordAuditionFiles.writeJson(File(root, "diagnostics/controlled-gain-comparison.json"), causalComparison)
         entries += pythonReferences(root, repo)
         val sourceNames = listOf("Accord.kt", "AccordDynamics.kt", "AccordAcoustics.kt", "AccordPatch.kt",
-            "AccordPresets.kt", "AccordKits.kt", "Dsp.kt", "Modes.kt").map { "synth/src/main/kotlin/com/snipsnap/synth/$it" } +
+            "AccordPresets.kt", "AccordKits.kt", "AccordCalibration.kt", "Dsp.kt", "Modes.kt").map { "synth/src/main/kotlin/com/snipsnap/synth/$it" } +
             listOf("synth/src/test/kotlin/com/snipsnap/synth/AccordAuditionGenerator.kt",
                 "synth/src/test/kotlin/com/snipsnap/synth/AccordAuditionFiles.kt",
-                "synth/src/test/resources/audition/accord-audition.html", "synth/build.gradle.kts")
+                "synth/src/test/resources/audition/accord-audition.html",
+                "synth/src/test/resources/accord/calibration-model-1.json", "synth/build.gradle.kts")
         val hashes = linkedMapOf<String, String>()
         for (path in sourceNames) {
             val file = File(repo, path)
@@ -244,8 +289,11 @@ object AccordAuditionGenerator {
         val manifest = linkedMapOf<String, Any?>("title" to "Accord native audition", "engine" to "ACCORD",
             "status" to "Native Kotlin build; owner listening, phone timing and MPC hardware checks remain pending",
             "model" to Accord.MODEL_VERSION, "defaultVoice" to "BRUSH", "archive" to "Accord-native-audition.zip",
+            "calibrationVersion" to AccordCalibration.VERSION,
             "playback" to "Finite one-shot performances; HOLD unsupported. LOOP is duration classification only.",
-            "levelPolicy" to "raw/ files are exact native calibrated output. Optional matched/ files use one static audition gain. Touch and causal comparisons retain native levels.",
+            "levelPolicy" to "raw/ files are exact production output. The engine uses one calibration gain per saved performance, shared across its velocities; controls, seed and duration edits may select a different constant gain. Factory references use the versioned table. Optional matched/ files use a static comparison gain measured on active excitation only.",
+            "releasePolicy" to "Native captured release is resolved from the actual note/touch/RAFT modal decays. Python reference lengths remain unchanged; all file durations come from actual frames.",
+            "controlledGainComparison" to causalComparison,
             "maximumPcm24Error" to maximumPcmError,
             "generationSeconds" to (System.nanoTime() - began) / 1e9,
             "source" to mapOf("revision" to git(repo, "rev-parse", "HEAD"),
@@ -262,9 +310,20 @@ object AccordAuditionGenerator {
             ACCORD NATIVE AUDITION
             Open index.html. Its manifest is embedded, so local file playback needs no server.
             Native level is the engine's exact calibrated PCM24 output, retaining velocity.
-            Matched level is an optional fixed audition gain; touch/causal clips offer no matching.
+            One constant engine gain is shared across velocities of a saved performance.
+            Macro, seed and duration edits can change that constant gain. Factory references
+            use the versioned calibration table. There is no contact normalization or fast AGC.
+            Matched level is an optional fixed audition gain from active excitation only;
+            touch and causal engine-level clips offer no additional matching.
+            controlled-gain/ contains four separate mechanical diagnostic comparisons with
+            ONE shared .85/max(group unscaled peak) gain and the production head/tail fades.
+            Those are diagnostic amplitudes, not production engine levels. Their shared gain
+            and pre-gain peaks are in diagnostics/controlled-gain-comparison.json.
             recipes/ contains complete replayable patches. diagnostics/ contains measured native
             states/metrics, exact contact lists and crossing-derived phase/raster SVGs.
+            Unscaled conditioned audio may exceed unity; only its metrics are reported.
+            Native capture tails follow actual modal decay and can be longer than the Python
+            references. Every manifest duration comes from actual frames, not a nominal profile.
             These finite performances do not wrap seamlessly and reject sustained HOLD.
             Native listening acceptance, phone timing and MPC hardware checks remain open.
             Build: ./gradlew :synth:generateAccordAudition

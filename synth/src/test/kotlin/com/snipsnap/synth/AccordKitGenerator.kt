@@ -53,11 +53,15 @@ object AccordKitGenerator {
                     "class" to pad.drumClass.name, "oneShot" to pad.oneShot,
                     "sample" to sample.relativeTo(destination).invariantSeparatorsPath,
                     "sampleSha256" to AccordAuditionFiles.hash(sample), "frames" to info.frameCount,
+                    "seconds" to info.frameCount.toDouble() / info.sampleRate,
+                    "capturedReleaseSeconds" to (info.frameCount.toDouble() / info.sampleRate - patch.sourceSeconds),
                     "recipe" to recipeFile.relativeTo(destination).invariantSeparatorsPath)
             }
             AccordAuditionFiles.writeJson(File(destination, "manifest.json"), linkedMapOf(
                 "engine" to "ACCORD", "model" to Accord.MODEL_VERSION, "name" to AccordKits.NAME,
                 "audio" to "44.1 kHz mono PCM24", "playback" to "FINITE_ONE_SHOT",
+                "calibrationVersion" to AccordCalibration.VERSION,
+                "levelPolicy" to "Exact engine output; no additional export gain matching. The engine's constant performance gain is shared across touch velocities.",
                 "scope" to "Sixteen dry finite performances. LOOP is duration filing; no seamless or held playback is claimed.",
                 "stagingPreflightPassed" to true, "exportPreflightPassed" to true, "pads" to pads))
             File(destination, "README.txt").writeText("""
@@ -73,7 +77,10 @@ object AccordKitGenerator {
 
                 Every pad plays once. LOOP is a duration classification only;
                 these are finite performances, without seamless or sustained HOLD.
-                No effects, choking, gain matching or hidden velocity normalization.
+                No effects, choking or additional export gain matching. The engine uses one
+                constant calibration gain per saved performance, shared across its velocities;
+                there is no per-contact normalization or fast automatic gain control.
+                Capture tails follow actual note, touch and body decay; file lengths vary.
                 Native acceptance, phone performance and MPC hardware listening remain separate checks.
             """.trimIndent() + "\n")
             val archive = File(root, "SnipSnap-Accord-Kit.zip")

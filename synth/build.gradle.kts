@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateAccordRateReference") {
+    group = "verification"
+    description = "Compare deterministic Accord contacts at 4x/8x and bound sampled-Hann folding separately from waveform error."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.AccordRateReferenceGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootProject.projectDir
+    args(providers.gradleProperty("accordRateOutput").orNull ?: "${rootDir}/testkit/accord-rate-reference")
+}
+
 tasks.register<JavaExec>("generateAccordAudition") {
     group = "distribution"
     description = "Render native Accord voices, TINE profiles, note/touch/control comparisons, recipes and numerical diagnostics."
