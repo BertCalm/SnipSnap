@@ -166,10 +166,11 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
 a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
-HANDOFF control, provisional CLI starting points and an actual-engine audition
+HANDOFF and MATCH controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryAudition`; [implementation notes](docs/FERRY.md)
-separate Python listening approval from Kotlin, tail, HOLD and phone acceptance.
+`./gradlew :synth:generateFerryMatchAudition`; [implementation notes](docs/FERRY.md)
+record the aligned Kotlin listening approval and keep MATCH, tail, HOLD and phone
+acceptance separate. Model-1 saved patches retain their original sound.
 
 CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
 and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
