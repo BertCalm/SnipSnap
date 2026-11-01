@@ -403,7 +403,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 60 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 61 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1232,6 +1232,12 @@ in its own order. On the pad sheet, AMT is staged until KEEP, original/result
 previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
 See [`docs/WIDE.md`](docs/WIDE.md).
 
+**OBLITERATE** adds an octave halo before fuzz, captured fragments and stereo chop.
+Its staged board saves SHIMMER, clock and pattern controls alongside AMT, retains
+the shared original across every velocity zone, and caches completed renders for
+repeated auditions. Existing WIDE/RUSH recipes keep their original version and sound.
+See [`docs/OBLITERATE.md`](docs/OBLITERATE.md) for controls, timing and device profiling.
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
@@ -1244,7 +1250,7 @@ SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVE
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+SCOUR, KEEL and LORENTZ have preset rosters, so `snipsnap synth` renders them.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. It remains outside the picker and factory presets.
@@ -1328,7 +1334,7 @@ and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
 phone/MPC checks.
 
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
-CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
+CRANE, FAN and STILL. Twelve presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
 SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
 and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
@@ -1339,7 +1345,10 @@ renderer has its own model 1, separate from finite model 4; the six controls
 remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
 once between the source and folded color; MOTION sets their duration. STEADY
 retains existing audio and JSON. The new gesture is saved with its own version,
-and held keys finish it before the sustain loop. See the
+and held keys finish it before the sustain loop. The six performance presets pair
+BLOOM/UNFOLD with velocity FOLD. The reference recipes and starter layout stay unchanged.
+The [performance bank](docs/ORIGAMI.md#performance-bank) includes four ready-made MPC
+keygroups and musical auditions. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 Optional `VELOCITY: FOLD` adds hit-dependent folded color without changing pitch
 or gesture timing. The preview offers soft/mid/full touches. MAKE INSTRUMENT

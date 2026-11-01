@@ -3025,3 +3025,6 @@ LENGTH scales a finite performance; this landing does not add periodic HOLD or a
 held-keyboard export. Shared pressure applies within the saved score. Independent
 MPC pads cannot share an offline renderer's state. Cold render cost, cache behavior,
 Android compilation and remaining device validation are recorded in [OTIS.md](OTIS.md).
+## LORENTZ finite collision handoff
+
+LORENTZ ports the accepted third Python listening pass into the JVM synth: falling sweep, finite collision, irreversible capture and a steady sub tail. FUSE and LORENTZ share the root but have distinct contact behavior. IMPACT and GAP retain their widened audible ranges; HOLD is a finite decay extension. Saved model/velocity, factory anchors, CLI controls, raw reference probes, a dry sixteen-pad kit and Kotlin audition tasks are wired in. Classification uses actual PCM rather than forcing every hit into KICK. Android picker integration remains deferred to an SDK-backed session. See [LORENTZ](engines/LORENTZ.md) for source provenance, validation and the As built record.

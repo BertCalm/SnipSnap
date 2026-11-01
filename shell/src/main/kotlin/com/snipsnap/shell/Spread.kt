@@ -118,6 +118,7 @@ object Spread {
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is OtisPatch -> Otis.midiFor(patch).toFloat()
+        is com.snipsnap.synth.LorentzPatch -> com.snipsnap.synth.Lorentz.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is KeelPatch -> Keel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()

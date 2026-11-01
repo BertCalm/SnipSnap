@@ -303,7 +303,15 @@ class UserPresetsTest {
         val stoopValue = Regex("\\b(touch|color|shadow|wear|length|hold) = ([-0-9.E]+)f")
         for (preset in Presets.all()) {
             val line = UserPresets.rosterLine(preset)
-            if (preset is com.snipsnap.synth.RimePatch) {
+            if (preset is com.snipsnap.synth.LorentzPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("LorentzPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.LorentzPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete collision model and native touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is com.snipsnap.synth.RimePatch) {
                 val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
                 val promoted = com.snipsnap.synth.RimePatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "complete contour model, note, velocity, gate and seed promotion")
@@ -991,6 +999,12 @@ class UserPresetsTest {
                 val decoder = com.snipsnap.synth.RimePatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.RimePatch::class.java, decoder.returnType)
                 assertTrue("private val promoted:" in text, "RIME complete recipes need a promotion destination")
+            } else if (engine == com.snipsnap.synth.LorentzPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.LorentzPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.LorentzPatch::class.java, decoder.returnType)
+                assertTrue("private val promoted:" in text, "LORENTZ complete recipes need a voice-filtered promotion destination")
+                assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine })
+                    .startsWith("LorentzPatch.fromJsonText("), "LORENTZ promotion retains the complete native recipe")
             } else if (engine == com.snipsnap.synth.TrefoilPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.TrefoilPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.TrefoilPatch::class.java, decoder.returnType)

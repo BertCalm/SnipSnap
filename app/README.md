@@ -73,8 +73,8 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (60 starters including STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME and OTIS,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (61 starters including STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, OTIS and OBBLIGATO,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
@@ -174,10 +174,13 @@ recipes survive drafts, saved presets and pad reopening. The sixteen-pad starter
 stays finite. Hardware latency and listening remain acceptance checks.
 See [TIDAL](../docs/TIDAL.md) and [HOLD](../docs/TIDAL_HOLD.md).
 
-ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
+ORIGAMI adds the accepted CRANE, FAN and STILL voices, twelve factory presets,
 six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
 model, seed, note and velocity; authored root metadata keeps keyed placement
-accurate. HOLD and instrument sustain are deferred. See [ORIGAMI](../docs/ORIGAMI.md).
+accurate. FAN/STILL MAKE INSTRUMENT supplies C3–C5 held keys. Six new performance
+factories pair BLOOM/UNFOLD with velocity FOLD, while the six original references
+and starter remain unchanged. Select a performance factory and MAKE INSTRUMENT
+for native held playing. See [ORIGAMI](../docs/ORIGAMI.md#performance-bank).
 
 OVEN adds GRAND, FELT, FORGED and BLOOM with six macros and the ten approved
 factory recipes. ROOT and VELOCITY set a native rendered strike; the complete
