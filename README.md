@@ -166,10 +166,11 @@ if (!Preflight.check(kit, kitDir).blocked()) {
 
 FERRY's first finite PASSAGE port preserves the approved wood-to-wire handoff in
 a 22-state passive Kotlin network. Saved note/velocity/seed/model recipes, a
-HANDOFF control, provisional CLI starting points and an actual-engine audition
+HANDOFF and MATCH controls, provisional CLI starting points and actual-engine auditions
 are available outside the factory roster and phone picker. Run
-`./gradlew :synth:generateFerryAudition`; [implementation notes](docs/FERRY.md)
-separate Python listening approval from Kotlin, tail, HOLD and phone acceptance.
+`./gradlew :synth:generateFerryMatchAudition`; [implementation notes](docs/FERRY.md)
+record the aligned Kotlin listening approval and keep MATCH, tail, HOLD and phone
+acceptance separate. Model-1 saved patches retain their original sound.
 
 CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
 and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
@@ -643,6 +644,8 @@ GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 The [motion studio](docs/PRISM_MOTION_STUDIO.md) adds source selection,
 amount/time editing and opt-in repeating motion in a separate detail panel.
+With REPEAT and looping HOLD, [MAKE INSTRUMENT](docs/PRISM_OPENING_SUSTAIN.md)
+keeps one body opening before a repeating sustain and note-off release.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
 animated by GLASS or RIPPLE energy transport. Velocity changes contact and
@@ -970,7 +973,11 @@ starter are included. Run `./gradlew :synth:generateLatticeAudition` for the
 listening pack, native patch downloads and MPC 3/XPM starter export. The
 [private audition](https://snipsnap-lattice-audition.bertcalm.chatgpt.site) and
 [LATTICE notes](docs/LATTICE.md) separate the accepted source direction from new
-HOLD/preset listening and phone/MPC verification still to come.
+HOLD/preset listening and phone/MPC verification still to come. TRACE adds the
+accepted moving pluck as a saved fourth voice: SPEED sets how quickly its body
+gives way to the rejected ringing tail, and HOLD extends finite effort without
+looping. Its three presets and separate TRACE kit accompany the preserved static
+bank and starter.
 
 TIDAL brings two original source populations through a seeded encounter:
 PAIR gathers and passes, while STREAM exposes evolving ringing material.

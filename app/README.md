@@ -215,6 +215,9 @@ body openings, and a dry pitched starter. The
 earlier bank, body-opening studies and original/revised GLASS comparisons.
 Its MOTION detail panel edits amount/time, chooses a source, and switches from
 the saved finite opening to repeating movement with genuine held loops.
+With REPEAT and looping HOLD, MAKE INSTRUMENT preserves the opening once and
+loops the sustain region while a key is held; its sheet previews the complete
+performance and exports nine sample roots with note-off release.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.
