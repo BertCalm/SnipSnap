@@ -21,6 +21,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.SynthWork
 import com.snipsnap.shell.UserPresets
+import com.snipsnap.shell.Copy
 import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordAcousticProfile
 import com.snipsnap.synth.AccordInitializer
@@ -40,12 +41,14 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.CopyOnWriteArrayList
 
 /** Real phone bindings must retain the complete finite ensemble, especially TINE's selected profile. */
 @RunWith(AndroidJUnit4::class)
 class AccordSynthScreenTest : ComposeScreenTest() {
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private val settings = ConcurrentHashMap<String, String>()
+    private val toasts = CopyOnWriteArrayList<String>()
     private val folders = mutableListOf<File>()
     private var visit by mutableIntStateOf(0)
 
@@ -67,7 +70,7 @@ class AccordSynthScreenTest : ComposeScreenTest() {
             listOf(SynthWork.Working(PadRecipe(source), null)))
         setPhoneContent {
             key(visit) {
-                SynthScreen(entry, shelf, onToast = {}, onKitUpdated = {}, onShelfAssetWritten = {},
+                SynthScreen(entry, shelf, onToast = { toasts += it }, onKitUpdated = {}, onShelfAssetWritten = {},
                     onDroneToLoop = { _, _, _ -> }, onOpenSurface = {}, appScope = appScope, settings = settings)
             }
         }
@@ -199,9 +202,16 @@ class AccordSynthScreenTest : ComposeScreenTest() {
         waitFor("saved typed preset") { UserPresets.read(shelf).any { it.name == "MY BRIGHT TINE" } }
         assertEquals(edited.copy(name = "MY BRIGHT TINE"),
             UserPresets.read(shelf).single { it.name == "MY BRIGHT TINE" }.patch)
+        toasts.clear()
         activate("SEND TO PAD")
         activate("A01, EMPTY")
-        waitFor("typed recipe on A01", 60_000) { KitStore.load(kitDir).pad(1)?.recipe != null }
+        // This bounds a real asynchronous render/write on a software emulator;
+        // it is not a phone latency assertion. Refusals fail immediately.
+        waitFor("typed recipe on A01", 180_000) {
+            assertFalse("SEND TO PAD failed; messages: ${toasts.joinToString()}",
+                toasts.any { it == Copy.SYNTH_PAD_REFUSED || it == Copy.SEND_FAILED })
+            KitStore.load(kitDir).pad(1)?.recipe != null
+        }
         val pad = requireNotNull(KitStore.load(kitDir).pad(1))
         val landed = PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).patch as AccordPatch
         assertEquals(edited.copy(name = landed.name), landed)
