@@ -21,8 +21,9 @@ import androidx.compose.ui.input.pointer.pointerInput
  * for that reason.
  *
  * [onPress] gets the touch's y and the pad's height, for the velocity the
- * screen takes from where on the pad the finger landed, and the down event's
- * own `uptimeMillis`; [onRelease] gets the up event's (or, if the press was
+ * screen takes from where on the pad the finger landed, the panel's
+ * [pressure] reading at first contact (for the AREA velocity mode), and the
+ * down event's own `uptimeMillis`; [onRelease] gets the up event's (or, if the press was
  * cancelled, the last event's). The lambdas are read when each gesture
  * starts, so a caller that changes them wants them behind
  * `rememberUpdatedState`, as before. [key] restarts the tracking, and a
@@ -30,12 +31,12 @@ import androidx.compose.ui.input.pointer.pointerInput
  */
 internal fun Modifier.pressTracking(
     key: Any?,
-    onPress: (y: Float, height: Float, uptimeMillis: Long) -> Unit,
+    onPress: (y: Float, height: Float, pressure: Float, uptimeMillis: Long) -> Unit,
     onRelease: (uptimeMillis: Long) -> Unit,
 ): Modifier = pointerInput(key) {
     awaitEachGesture {
         val down = awaitFirstDown(requireUnconsumed = false)
-        onPress(down.position.y, size.height.toFloat().coerceAtLeast(1f), down.uptimeMillis)
+        onPress(down.position.y, size.height.toFloat().coerceAtLeast(1f), down.pressure, down.uptimeMillis)
         var last = down.uptimeMillis
         try {
             while (true) {

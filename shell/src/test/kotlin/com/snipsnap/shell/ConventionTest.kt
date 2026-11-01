@@ -2850,9 +2850,9 @@ class ConventionTest {
             "KIT's pointer coroutine must use the current callback after a kit or strip owner changes.",
         )
         assertTrue(
-            Regex("""currentOnTap\(slot,\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\)\)""")
+            Regex("""currentOnTap\(slot,\s*PadFeelStore\.shape\(\s*PadHit\.velocityAt\(down\.position\.y,\s*size\.height\.toFloat\(\)\),""")
                 .containsMatchIn(src),
-            "the pad grid is not passing touch-position velocity to its current callback. With STRIKE off, " +
+            "the pad grid is not passing touch-position velocity (through PadFeelStore's modes and curve) to its current callback. With STRIKE off, " +
                 "position must still reach SOFT HITS; a fixed value would make the other layers unreachable.",
         )
         assertTrue(

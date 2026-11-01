@@ -29,13 +29,13 @@ class PressTrackingTest : ComposeScreenTest() {
                     Box(
                         Modifier.width(100.dp).fillMaxHeight()
                             .semantics { contentDescription = "PAD A" }
-                            .pressTracking("a", { y, h, _ -> log += "A down ${"%.2f".format(java.util.Locale.ROOT, y / h)}" }, { log += "A up" }),
+                            .pressTracking("a", { y, h, _, _ -> log += "A down ${"%.2f".format(java.util.Locale.ROOT, y / h)}" }, { log += "A up" }),
                     )
                 }
                 Box(
                     Modifier.width(100.dp).fillMaxHeight()
                         .semantics { contentDescription = "PAD B" }
-                        .pressTracking("b", { _, _, _ -> log += "B down" }, { log += "B up" }),
+                        .pressTracking("b", { _, _, _, _ -> log += "B down" }, { log += "B up" }),
                 )
             }
         }

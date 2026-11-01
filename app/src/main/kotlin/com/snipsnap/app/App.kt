@@ -381,6 +381,9 @@ fun App(shelf: KitShelf) {
     val haptics = remember(context) {
         Haptics.of(context) { hapticsOn && dock.capture !is DockModel.Capture.Armed }
     }
+    // PAD VELOCITY (SETUP): how a tap becomes a velocity. Read here, at start,
+    // so every pad agrees with the saved choice before SETUP is ever opened.
+    remember(context) { PadFeelStore.init(context) }
     // REDUCED MOTION: the system's own "remove animations", kept current while
     // the app is up (it can change under us; see `rememberReduceMotion`). The
     // drawings that loop (the busy bar, the spinner) read it through
