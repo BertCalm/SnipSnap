@@ -63,6 +63,13 @@ and instrument landing. The sample contains its onset and a loop to its end.
 Release is the player's volume envelope; offline samples cannot run a fresh
 physical trajectory after an arbitrary live note-off.
 
+`LibrationPatch` keeps finite source models 1..3 and omits `heldModel` from
+legacy finite JSON. HOLD one requires held model 1 and finite source model 3;
+raw JSON rejects fractional HOLD before narrowing to Float. Returning to NOTE
+keeps the saved source fields and calls the original renderer. The separate
+versioned keyboard recipe can also make held keys directly from a finite
+model-3 patch, without changing that source patch.
+
 The five timbral defaults remain the finite voice defaults. GATHER uses
 `0/.48/.12/.55/.40`, TWINS `1/.40/.14/.95/.53`, and DEPARTURE
 `.5/.52/.72/.78/.66` in REGION/WANDER/NUDGE/SWARM/RESONANCE order. A new patch
@@ -88,6 +95,79 @@ Risks are a long first render, motion becoming too repetitive, loss of low-level
 departure detail, modal or conditioning state failing to recur, and a key-up
 fade being mistaken for a separately simulated release tail. The audition must
 expose those behaviors before any new sustain preset is called approved.
+
+## Implementation and measured handoff (2026-11-01)
+
+`LibrationKeys` chooses a 3.8..4.2-second loop in multiples of 64 output frames,
+fitting the root to integer turns below .1 cent. The six-second physical table
+is sampled at 500 Hz. A raised-cosine descriptor traversal goes from time zero
+to five seconds and back. Each cloud carrier and excitation pulse receives a
+constant phase-rate correction so its integrated phase closes over that loop.
+No oscillator, envelope or modal state resets at the wrap.
+
+The exciter, fourteen-mode bank, output filter and decimator run continuously
+from rest. Three actual cycles precede the retained fourth; a fifth continues
+the circuit for recurrence verification. The exported key sample keeps the
+onset and first four cycles. Pad HOLD takes only the recurring cycle and rotates
+it to a quiet trigger, without fading or replacing repeated samples. The same
+note gain applies to the entire attack and loop, with peak capped at .94.
+
+SYNTH provides NOTE/HOLD, retains ROOT/TOUCH/LENGTH and the full versioned patch,
+keeps HOLD through SCRAMBLE and navigation, and sends held pads as gated loops.
+MAKE INSTRUMENT retains the attack and exposes .1..1.5-second release. Minor-third
+sampled roots span up to twelve semitones either side of the saved root, clipped
+to MIDI 36..84. Adjacent keygroups tile that span with at most one semitone of
+sample transposition. One authored excitation touch is rendered per zone; live
+key velocity changes playback gain. Optional velocity layers remain future work.
+
+The screen cache retains at most 4 MiB of final loop audio and two physical
+populations. Each keygroup-generation session retains one physical population;
+zones render serially and cancellation interrupts the off-main render. Saved
+recipes contain neither cache state nor measured timing.
+
+The [held audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site/hold/)
+contains ROUND KEYS, FINE KEYS and SPLIT PATH as three nine-zone instruments,
+covering C3..C5, plus eighteen recordings. Long holds cross two actual sample
+wraps before key-up. Long holds and keyboard phrases reload the exported PCM24
+files through `InstrumentEngine`; authored-touch and release comparisons use
+the same source and player. All listening WAVs use one monitor gain of .75.
+
+Across those 27 exported zones, measured from source revision
+`56c401e36596e8004d11b38bf1774555b5862eaa`:
+
+| Quantity | Maximum |
+|---|---:|
+| Real preceding/following cycle relative RMS difference | `1.247e-7` |
+| Source/modal state relative difference | `4.865e-12` |
+| Cloud/excitation phase discrepancy in turns | `2.299e-10` |
+| Native project seam error | `3.986e-15` |
+| Exported PCM24 project seam error | `2.875e-14` |
+| Absolute root fitting error | `.00273` cent |
+| Unconditioned peak | `.34085` |
+| Physical-source relative Jacobi drift | `1.316e-14` |
+
+Serial elapsed time per zone was 1.98..9.54 seconds, median 4.78 seconds on the
+cloud JVM. The first zone prepares physics; later zones reuse that population.
+These are fresh audio renders with session reuse, not phone timings or audio
+cache hits. The 4×/16× bright-C6 diagnostic measured normalized spectral-power
+distance at most `6.971e-6` over two windows in each voice, with RMS ratios
+`1.0000116..1.0000152`. This checks rate agreement, not a complete alias bound.
+
+The generator checks native/MPC-compatible program construction, PCM24 sample
+agreement, root and loop markers, complete recipes, release to silence and
+byte-exact ZIP round trips. An independent RIFF/ZIP/WAV audit passed all 27
+zones and 18 clips, and confirmed 361 existing finite WAV/JSON/ZIP files remain
+byte-identical. Chromium checks at 1440 and 390 pixels cover all clips, seeking,
+notes, notes export, instrument download and the retained twelve-preset bank.
+
+Rebuild the handoff from a clean committed checkout:
+
+```sh
+./gradlew --no-daemon :shell:generateLibrationHoldAudition
+```
+
+The output is isolated in `testkit/libration-sustain/`. The three original finite
+audition folders and their archives remain separate.
 
 ## Evidence ledger
 
