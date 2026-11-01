@@ -1,9 +1,15 @@
 package com.snipsnap.kit
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.json.Json
+import com.snipsnap.json.JsonValue
 import com.snipsnap.mpc3.MpcFormat
 import com.snipsnap.mpc3.MpcFormats
 import com.snipsnap.mpc3.Mpc3Project
+import com.snipsnap.xpm.Keygroup
+import com.snipsnap.xpm.KeygroupProgram
+import com.snipsnap.xpm.VelocityLayer
+import com.snipsnap.xpm.VoiceMode
 import java.io.File
 import kotlin.math.PI
 import kotlin.math.sin
@@ -184,5 +190,203 @@ class OneNoteTest {
         val err = assertFailsWith<IllegalArgumentException> { OneNote.program("Noise", noise) }
         assertTrue("pitch" in err.message!!.lowercase())
         assertFailsWith<IllegalArgumentException> { OneNote.program("bad:name", note220()) }
+    }
+
+    /** Two zones, 40..42 and 43..45, the shape a keygroup export takes before the keyboard is spanned. */
+    private fun twoZoneProgram(): Pair<KeygroupProgram, Map<String, Snip>> {
+        val snip = note220()
+        val frames = snip.frameCount.toLong()
+        val program = KeygroupProgram(
+            name = "Span",
+            keygroups = listOf(
+                Keygroup(40, 42, 41, listOf(VelocityLayer("Span_41", frames, 0, 127, 0L))),
+                Keygroup(43, 45, 44, listOf(VelocityLayer("Span_44", frames, 0, 127, 0L))),
+            ),
+        )
+        return program to mapOf("Span_41" to snip, "Span_44" to snip)
+    }
+
+    @Test
+    fun `a package plays end to end`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Span"))
+        assertEquals(listOf(0 to 42, 43 to 127), back.zones.map { it.lowNote to it.highNote })
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm").readText()
+        assertTrue("<LowNote>0</LowNote>" in xpm)
+        assertTrue("<HighNote>127</HighNote>" in xpm)
+    }
+
+    @Test
+    fun `rewriting descriptors changes the mode and leaves the samples alone`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val dataDir = File(temp, "Span_[TrackData]")
+        val wavs = dataDir.listFiles { f -> f.extension == "wav" }!!.sortedBy { it.name }
+        assertEquals(2, wavs.size)
+        val before = wavs.map { it.name to (it.lastModified() to it.length()) }
+        OneNote.rewriteDescriptors(temp, "Span", program.copy(voiceMode = VoiceMode.LEAD))
+        assertEquals(VoiceMode.LEAD, InstrumentStore.read(InstrumentStore.sidecar(temp, "Span")).voiceMode)
+        assertTrue("<Mono>True</Mono>" in File(dataDir, "Span.xpm").readText())
+        assertEquals(before, wavs.map { it.name to (it.lastModified() to it.length()) })
+    }
+
+    @Test
+    fun `rewriting a package that is not there is refused`() {
+        val (program, _) = twoZoneProgram()
+        assertFailsWith<IllegalStateException> { OneNote.rewriteDescriptors(temp, "Ghost", program.copy(name = "Ghost")) }
+        assertTrue(!File(temp, "Ghost.xty").exists())
+        assertTrue(!InstrumentStore.sidecar(temp, "Ghost").exists())
+    }
+
+    @Test
+    fun `a package can decline to span the keyboard`() {
+        val snip = Snip(FloatArray(2_000) { 0.1f }, 1, rate)
+        val program = KeygroupProgram(
+            "Bed",
+            listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("Bed_48", 2_000L, 1, 127, 0L)))),
+        )
+        OneNote.writePackage("Bed", program, mapOf("Bed_48" to snip), temp, overwrite = false, spanKeyboard = false)
+        val dataDir = File(temp, "Bed_[TrackData]")
+        val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
+        assertEquals(listOf(48 to 48), back.zones.map { it.lowNote to it.highNote })
+        val xpm = File(dataDir, "Bed.xpm").readText()
+        assertTrue("<LowNote>48</LowNote>" in xpm)
+        assertTrue("<HighNote>48</HighNote>" in xpm)
+        assertTrue("<LowNote>0</LowNote>" !in xpm)
+        assertTrue("<HighNote>127</HighNote>" !in xpm)
+
+        OneNote.rewriteDescriptors(temp, "Bed", InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed")).toProgram()
+            .copy(voiceMode = VoiceMode.LEAD))
+        val rewritten = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
+        assertEquals(listOf(48 to 48), rewritten.zones.map { it.lowNote to it.highNote })
+        val rewrittenXpm = File(dataDir, "Bed.xpm").readText()
+        assertTrue("<LowNote>48</LowNote>" in rewrittenXpm)
+        assertTrue("<HighNote>48</HighNote>" in rewrittenXpm)
+    }
+
+    /**
+     * Nothing in the writers throws for a valid program, so this exercises the atomic path instead: the
+     * `.xpm` path is made a non-empty directory, so its write must fail, and the files that would have
+     * followed it must not have been touched.
+     */
+    @Test
+    fun `a rewrite that cannot render leaves the package untouched`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val xty = File(temp, "Span.xty")
+        val sidecar = InstrumentStore.sidecar(temp, "Span")
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm")
+        val xtyBefore = xty.readBytes()
+        val sidecarBefore = sidecar.readText()
+        assertTrue(xpm.delete())
+        assertTrue(xpm.mkdirs())
+        File(xpm, "blocker").writeText("x")
+
+        assertFailsWith<Exception> { OneNote.rewriteDescriptors(temp, "Span", program.copy(voiceMode = VoiceMode.LEAD)) }
+
+        assertTrue(xtyBefore.contentEquals(xty.readBytes()), ".xty is byte-identical")
+        assertEquals(sidecarBefore, sidecar.readText(), "sidecar is byte-identical")
+        assertEquals(VoiceMode.POLY, InstrumentStore.read(sidecar).voiceMode)
+    }
+
+    @Test
+    fun `the KEYS save path round-trips and then changes the mode in all three descriptors`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val xty = File(temp, "Span.xty")
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm")
+        val xtyBefore = xty.readBytes()
+        val xpmBefore = xpm.readText()
+
+        val read = InstrumentStore.read(InstrumentStore.sidecar(temp, "Span"))
+        OneNote.rewriteDescriptors(temp, "Span", read.toProgram())
+        assertTrue(xtyBefore.contentEquals(xty.readBytes()), ".xty unchanged by a same-mode rewrite")
+        assertEquals(xpmBefore, xpm.readText(), ".xpm unchanged by a same-mode rewrite")
+
+        OneNote.rewriteDescriptors(temp, "Span", read.toProgram().copy(voiceMode = VoiceMode.LEAD))
+        val xpmLead = xpm.readText()
+        assertTrue("<Mono>True</Mono>" in xpmLead)
+        assertTrue("<MonoRetrigger>True</MonoRetrigger>" in xpmLead)
+        val payload = com.snipsnap.mpc3.Acvs.read(xty).payloadText.filterNot { it.isWhitespace() }
+        assertTrue("\"monophonic\":true" in payload)
+        assertTrue("\"monoRetrigger\":true" in payload)
+    }
+
+    @Test
+    fun `a legacy trigger declaration survives a mode rewrite`() {
+        val program = KeygroupProgram(
+            "Triggered Bed",
+            listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("Triggered_Bed", 2_000, 0, 127)))),
+            explicitNoteOn = true,
+        )
+        val samples = mapOf("Triggered_Bed" to Snip(FloatArray(2_000) { 0.1f }, 1, rate))
+        OneNote.writePackage(program.name, program, samples, temp, overwrite = false, spanKeyboard = false)
+        val sidecar = InstrumentStore.sidecar(temp, program.name)
+        val legacySidecar = (Json.parse(sidecar.readText()) as JsonValue.Obj).entries.toMutableMap()
+            .also { it.remove("explicitNoteOn") }
+        sidecar.writeText(Json.write(JsonValue.Obj(legacySidecar)))
+
+        val loaded = InstrumentStore.read(sidecar)
+        assertTrue(loaded.explicitNoteOn, "the old sidecar recovers trigger mode from its XPM")
+        OneNote.rewriteDescriptors(temp, program.name, loaded.toProgram().copy(voiceMode = VoiceMode.LEAD))
+
+        val xpm = File(temp, "${program.name}_[TrackData]/${program.name}.xpm").readText()
+        assertTrue("<TriggerMode>2</TriggerMode>" in xpm)
+        assertEquals(true, (Json.parse(sidecar.readText()) as JsonValue.Obj).entries["explicitNoteOn"]?.let { (it as JsonValue.Bool).value })
+        assertTrue("<LowNote>48</LowNote>" in xpm)
+        assertTrue("<HighNote>48</HighNote>" in xpm)
+    }
+
+    @Test
+    fun `a failure on the second descriptor restores the first`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm")
+        val xty = File(temp, "Span.xty")
+        val sidecar = InstrumentStore.sidecar(temp, "Span")
+        val xpmBefore = xpm.readBytes()
+        val sidecarBefore = sidecar.readBytes()
+        val parked = File(temp, "parked.xty")
+        assertTrue(xty.renameTo(parked))
+        assertTrue(xty.mkdirs())
+        File(xty, "blocker").writeText("x")
+
+        try {
+            assertFailsWith<Exception> {
+                OneNote.rewriteDescriptors(temp, "Span", program.copy(voiceMode = VoiceMode.LEAD))
+            }
+            assertTrue(xpmBefore.contentEquals(xpm.readBytes()), "the first descriptor was rolled back")
+            assertTrue(sidecarBefore.contentEquals(sidecar.readBytes()), "the last descriptor was untouched")
+        } finally {
+            xty.deleteRecursively()
+            assertTrue(parked.renameTo(xty))
+        }
+    }
+
+    @Test
+    fun `a failure on the third descriptor restores the first two`() {
+        val (program, samples) = twoZoneProgram()
+        OneNote.writePackage("Span", program, samples, temp, overwrite = false)
+        val xpm = File(temp, "Span_[TrackData]/Span.xpm")
+        val xty = File(temp, "Span.xty")
+        val sidecar = InstrumentStore.sidecar(temp, "Span")
+        val xpmBefore = xpm.readBytes()
+        val xtyBefore = xty.readBytes()
+        val parked = File(temp, "parked-sidecar")
+        assertTrue(sidecar.renameTo(parked))
+        assertTrue(sidecar.mkdirs())
+        File(sidecar, "blocker").writeText("x")
+
+        try {
+            assertFailsWith<Exception> {
+                OneNote.rewriteDescriptors(temp, "Span", program.copy(voiceMode = VoiceMode.LEAD))
+            }
+            assertTrue(xpmBefore.contentEquals(xpm.readBytes()), "the first descriptor was rolled back")
+            assertTrue(xtyBefore.contentEquals(xty.readBytes()), "the second descriptor was rolled back")
+        } finally {
+            sidecar.deleteRecursively()
+            assertTrue(parked.renameTo(sidecar))
+        }
     }
 }

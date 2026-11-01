@@ -38,7 +38,7 @@ object ObbligatoMusicalAuditionGenerator {
     @JvmStatic
     fun main(args: Array<String>) {
         require(args.size <= 1) { "Usage: ObbligatoMusicalAuditionGenerator [output-directory]" }
-        require(Obbligato.MODEL == 5 && Obbligato.EXPERIMENTAL_MODEL == 6 && Obbligato.MUSICAL_MODEL == 7)
+        require(Obbligato.LEGACY_MODEL == 5 && Obbligato.EXPERIMENTAL_MODEL == 6 && Obbligato.MUSICAL_MODEL == 7)
         val root = File(args.firstOrNull() ?: "../testkit/obbligato-musical-audition").absoluteFile
         check(root.isDirectory || root.mkdirs()) { "Could not create $root" }
         val base = ObbligatoPresets.all().single { it.name == "Fight" }
@@ -46,7 +46,7 @@ object ObbligatoMusicalAuditionGenerator {
         val takes = listOf(
             Triple("responsive6", "Previous responsive Fight", Obbligato.EXPERIMENTAL_MODEL),
             Triple("gentler7", "Gentler Fight", Obbligato.MUSICAL_MODEL),
-            Triple("accepted5", "Accepted Fight reference", Obbligato.MODEL),
+            Triple("accepted5", "Accepted Fight reference", Obbligato.LEGACY_MODEL),
         ).map { (id, title, model) ->
             val patch = base.copy(name = title, model = model)
             val report = Obbligato.probe(patch.macros, patch.midi, patch.velocity, patch.seed, model = model)
@@ -112,8 +112,8 @@ object ObbligatoMusicalAuditionGenerator {
         }
         val manifest = linkedMapOf<String, Any?>(
             "schemaVersion" to 1, "engine" to "OBBLIGATO", "audition" to "Gentler Fight comparison",
-            "status" to "Gentler Fight is unapproved. The accepted instrument and kit remain model 5.",
-            "acceptedModel" to Obbligato.MODEL, "previousModel" to Obbligato.EXPERIMENTAL_MODEL,
+            "status" to "Historical comparison: model 5 was accepted when gentler model 7 was first compared with model 6.",
+            "acceptedModel" to Obbligato.LEGACY_MODEL, "previousModel" to Obbligato.EXPERIMENTAL_MODEL,
             "candidateModel" to Obbligato.MUSICAL_MODEL, "sampleRate" to Dsp.RATE, "channels" to 1,
             "pcmBits" to 24, "midi" to MIDI, "velocity" to VELOCITY, "seed" to SEED,
             "targetLoudnessBeforeHeadroom" to TARGET_LEVEL, "commonHeadroomAttenuation" to commonAttenuation,
@@ -222,12 +222,12 @@ object ObbligatoMusicalAuditionGenerator {
 <title>OBBLIGATO · gentler Fight comparison</title><style>
 :root{color-scheme:dark;--bg:#101511;--panel:#19221b;--ink:#eaf2e9;--muted:#acbbaa;--accent:#ff8a7a;--line:#354738}*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 system-ui,sans-serif}main{max-width:1060px;margin:auto;padding:40px 22px 64px}.eyebrow,.take-label,label,summary{font:12px/1.5 ui-monospace,monospace;letter-spacing:.06em}.eyebrow,.take-label{color:var(--accent)}h1{font-size:clamp(34px,6vw,60px);letter-spacing:-.04em;margin:8px 0}h2{margin:0;font-size:25px}h3{margin:0;font-size:21px}p{color:var(--muted);margin:10px 0 18px}.intro{max-width:760px}a{color:var(--accent);text-underline-offset:3px}.tools{display:flex;gap:14px 22px;flex-wrap:wrap;margin:24px 0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;margin:22px 0 34px}.card,.note{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:22px}.listen{margin:18px 0}.take-label{display:flex;gap:12px;justify-content:space-between;align-items:center}audio{display:block;width:100%;margin-top:8px}details{border-top:1px solid var(--line);margin-top:18px;padding-top:14px}summary{cursor:pointer;min-height:36px}button,select,textarea{font:inherit;border:1px solid var(--line);border-radius:5px;padding:10px;background:#0f1711;color:var(--ink)}button{cursor:pointer;min-height:44px}select,textarea{width:100%;margin-top:8px}textarea{resize:vertical}label{display:block;color:var(--accent);margin-top:16px}button:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:4px}.small{font-size:14px}.status{min-height:1.5em;margin:8px 0}footer{margin-top:32px} @media(max-width:680px){main{padding:25px 16px 45px}.grid{grid-template-columns:1fr}.card,.note{padding:18px}.take-label{font-size:11px}}
 </style></head><body><main>
-<div class="eyebrow">SNIPSNAP / OBBLIGATO / LISTENING COMPARISON</div>
+<div class="eyebrow">SNIPSNAP / OBBLIGATO / HISTORICAL COMPARISON</div>
 <h1>A gentler conversation</h1>
 <p class="intro">A response to the harshness you heard: a softer reed edge and closer tuning, with the same two players answering one another. Start with the single note, then hear both versions in a short melody.</p>
 <div class="tools"><a href="$ARCHIVE" id="pack-link" download>Download all 10 WAVs and recipes ↓</a><a href="standalone.html" id="standalone-link" download>Single-file listening page ↓</a><a href="manifest.json" id="manifest-download" download="manifest.json">Settings and measurements ↓</a></div>
 <p class="small" id="embedded-note" hidden>This single file embeds all ten recordings and the instrument patches. The complete recipe ZIP is available from the published page.</p>
-<p class="small">Complete duets and phrases are matched to the same loudness. The source players below keep their duet's gain. Dry mono throughout, without rack effects. This variation awaits your listening verdict; the accepted instrument and kit remain unchanged.</p>
+<p class="small">Complete duets and phrases are matched to the same loudness. The source players below keep their duet's gain. Dry mono throughout, without rack effects. This archived comparison keeps the original model-5 reference and candidate recipes.</p>
 <div class="grid">
 <section class="card"><h2>Previous responsive Fight</h2><p>The preceding comparison, kept as the direct reference.</p>${player("responsive6_duet", "PREVIOUS · SINGLE NOTE")}<a href="patches/responsive6.patch" data-patch="responsive6" download="responsive6.patch">Previous patch ↓</a></section>
 <section class="card"><h2>Gentler Fight</h2><p>Less reed rasp and high-frequency emphasis, with less pitch friction between the players.</p>${player("gentler7_duet", "GENTLER · SINGLE NOTE")}<a href="patches/gentler7.patch" data-patch="gentler7" download="gentler7.patch">Candidate patch ↓</a></section>
@@ -257,9 +257,9 @@ document.getElementById('export-notes').addEventListener('click', () => { const 
     private fun readme() = """
         OBBLIGATO gentler Fight comparison
 
-        Compare Previous responsive Fight with Gentler Fight. The latter is an unapproved
-        candidate, responding to the owner's request for less harshness and more musicality.
-        The accepted instrument and kit remain unchanged and are included as a reference.
+        This historical comparison pairs Previous responsive Fight with Gentler Fight,
+        responding to the owner's request for less harshness and more musicality.
+        The then-accepted instrument is included as the fixed model-5 reference.
 
         Open index.html with audio/, patches/, recipes/ and manifest.json beside it.
         The separate standalone.html embeds the ten WAVs and main patches; it is excluded

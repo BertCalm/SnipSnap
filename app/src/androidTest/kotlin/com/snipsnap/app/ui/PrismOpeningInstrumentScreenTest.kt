@@ -72,6 +72,11 @@ class PrismOpeningInstrumentScreenTest : ComposeScreenTest() {
         settings["engine"] = "PRISM"
         settings["voice"] = patch.voice.name
         SynthDrafts.write(settings, listOf(patch))
+        // Navigation retains slider values beside the complete recipe. PRISM's
+        // draft restore reapplies this macro bag, so seed both parts of that state.
+        for ((name, value) in Prism.defaults(patch.voice) + patch.macros) {
+            settings["macro.PRISM.${patch.voice.name}.$name"] = value.toString()
+        }
         setPhoneContent {
             key(screenGeneration) {
                 SynthScreen(entry = null, shelfRoot = root, onToast = {}, onKitUpdated = {},

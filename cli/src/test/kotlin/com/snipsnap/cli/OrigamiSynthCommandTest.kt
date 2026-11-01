@@ -355,8 +355,8 @@ class OrigamiSynthCommandTest {
 
                 val (sidecar, instrument) = InstrumentStore.list(dir).single()
                 assertEquals((48..72 step 3).toList(), instrument.zones.map { it.rootNote })
-                assertEquals(48, instrument.zones.first().lowNote)
-                assertEquals(72, instrument.zones.last().highNote)
+                assertEquals(0, instrument.zones.first().lowNote)
+                assertEquals(127, instrument.zones.last().highNote)
                 assertEquals(release, instrument.release)
                 val layerCount = if (voice == OrigamiVoice.FAN) 3 else 1
                 assertEquals(9 * layerCount, instrument.sampleFiles.size)

@@ -56,6 +56,7 @@ internal class PrismMotionStudioState {
     private val baselines = mutableMapOf<PrismVoice, PrismPatch>()
     private var sourceGeneration = 0L
     private var previewGeneration = 0L
+    private var auditionPlayback: HeldPreviewPlayback? = null
     internal var sourceJob: Job? = null
     internal var previewJob: Job? = null
 
@@ -66,6 +67,10 @@ internal class PrismMotionStudioState {
     }
 
     fun baseline(patch: PrismPatch): PrismPatch = baselines.getOrPut(patch.voice) { patch }
+
+    /** Loop metadata belongs to the rendered audio, including finite source/static comparisons. */
+    fun rememberPlayback(playback: HeldPreviewPlayback) { auditionPlayback = playback }
+    fun loopFor(snip: Snip): IntRange? = auditionPlayback?.takeIf { it.snip === snip }?.loop
 
     fun cancelPreview() {
         previewGeneration++
@@ -114,6 +119,20 @@ internal fun rememberPrismMotionStudio(): PrismMotionStudioState = remember { Pr
 /** OPEN recipes stay finite; repeating motion may enter PRISM's verified loop region. */
 internal fun prismFiniteMotion(patch: PrismPatch?): Boolean = patch?.motion?.let { !it.repeat } == true
 
+/** Only unchanged PRISM HOLD PCM is a verified sustain region; processing may add a finite tail. */
+internal fun prismAuditionPlayback(patch: PrismPatch, dry: Snip, finished: Snip = dry): HeldPreviewPlayback {
+    val hold = patch.macros["HOLD"] ?: Prism.defaults(patch.voice).getValue("HOLD")
+    return HeldPreviewPlayback(finished, if (finished === dry && Prism.isLoop(hold)) 0 until dry.frameCount else null)
+}
+
+/** Comparisons retain their own playback mode instead of inheriting the bench's current HOLD. */
+internal fun renderPrismMotionPreview(patch: PrismPatch, kind: String): HeldPreviewPlayback = when (kind) {
+    "SOURCE" -> HeldPreviewPlayback(requireNotNull(PrismMotionSources.originalSource(patch)).render())
+    "STATIC" -> HeldPreviewPlayback(PrismMotionEditor.staticDestination(patch).render())
+    "MOVING" -> prismAuditionPlayback(patch, patch.render())
+    else -> error("Unknown PRISM preview $kind")
+}
+
 /** Reset the motion section only. Timbre, note, touch and unrelated recipe state remain edited. */
 private fun resetPrismMotion(current: PrismPatch, baseline: PrismPatch): PrismPatch {
     val controls = if (prismFiniteMotion(baseline) && Prism.isLoop(current.macros["HOLD"] ?: 0f))
@@ -134,7 +153,7 @@ internal fun PrismMotionPanel(
     color: Color,
     currentPatch: () -> PrismPatch?,
     onEdit: (PrismVoice, (PrismPatch) -> PrismPatch) -> Unit,
-    onPreview: (Snip) -> Unit,
+    onPreview: (HeldPreviewPlayback) -> Unit,
     onStopPreview: (Boolean) -> Unit,
     onBeforeEdit: () -> Unit = {},
 ) {
@@ -208,11 +227,7 @@ internal fun PrismMotionPanel(
         studio.previewJob = scope.launch {
             try {
                 val rendered = offMainInterruptible(Dispatchers.Default) {
-                    when (kind) {
-                        "SOURCE" -> requireNotNull(original).render()
-                        "STATIC" -> PrismMotionEditor.staticDestination(captured).render()
-                        else -> captured.render()
-                    }
+                    renderPrismMotionPreview(captured, kind)
                 }
                 coroutineContext.ensureActive()
                 if (studio.acceptsPreview(generation) && readPatch() == captured) hear(rendered)
