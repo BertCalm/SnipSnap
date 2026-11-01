@@ -20,7 +20,6 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class OrphicaPadMakerTest {
@@ -116,8 +115,11 @@ class OrphicaPadMakerTest {
             assertTrue(hit.loops)
             assertEquals(zone.loopStartFrame, hit.loopStartFrame)
         }
-        assertNull(instrument.zoneFor(52))
-        assertNull(instrument.zoneFor(78))
+        // The outer zones stretch to the keyboard's ends, so keys past the authored span land in them.
+        assertEquals(0, instrument.zones.first().lowNote)
+        assertEquals(127, instrument.zones.last().highNote)
+        assertEquals(instrument.zones.first(), instrument.zoneFor(52))
+        assertEquals(instrument.zones.last(), instrument.zoneFor(78))
     }
 
     @Test fun `captured keys hold after the sample ends and release on note off`() {
