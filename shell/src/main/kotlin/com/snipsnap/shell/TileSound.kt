@@ -13,7 +13,7 @@ import kotlin.math.sqrt
  * Every shape is scaled by the sound's own peak, so a quiet pad draws as
  * boldly as a loud one, and silence draws flat rather than NaN.
  */
-internal class TileSound(val mono: FloatArray, val sampleRate: Int) {
+class TileSound(val mono: FloatArray, val sampleRate: Int) {
 
     val frames: Int get() = mono.size
 
@@ -161,5 +161,9 @@ internal class TileSound(val mono: FloatArray, val sampleRate: Int) {
     }
 }
 
-/** A pad's slot, its sound and its class colour (packed 0xRRGGBB). */
-internal data class PadSound(val slot: Int, val sound: TileSound, val color: Int)
+/**
+ * A pad's slot, its sound and its class colour (packed 0xRRGGBB). Public so
+ * the phone's art picker can read a kit's pads once and hand them to
+ * [KitArt.draw] for every preview.
+ */
+data class PadSound(val slot: Int, val sound: TileSound, val color: Int)

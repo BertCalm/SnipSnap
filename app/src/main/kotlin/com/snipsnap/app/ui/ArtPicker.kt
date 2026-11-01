@@ -40,6 +40,9 @@ import com.snipsnap.shell.Layout
 import com.snipsnap.shell.Mark
 import com.snipsnap.shell.Palettes
 import com.snipsnap.shell.Scheme
+import com.snipsnap.shell.TileSound
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
@@ -51,23 +54,42 @@ internal fun artSummary(knobs: ArtKnobs): String =
     Copy.artSummary(knobs.style.name, knobs.palette.name, seedLabel(knobs.seedSlot), knobs.mark.id.uppercase())
 
 /**
- * The picker's previews: one [PREVIEW_SIZE] tile per knob set, drawn off
- * the main thread through the phone's own renderer (the same code the
- * export writes with) and kept for the sheet's life, so flipping back to
- * a palette already seen is instant.
+ * The picker's previews: one tile per knob set, drawn off the main thread
+ * by [render] and kept for the sheet's life, so flipping back to a palette
+ * already seen is instant. At most two draw at once, so eight cells
+ * opening together do not hold eight kits' worth of pixels at the same
+ * moment. A render that throws is an empty cell, never the screen.
  */
-internal class ArtPreviews(private val assets: AssetManager, private val kit: Kit, private val kitDir: File) {
+internal class ArtPreviews(private val render: (ArtKnobs) -> ImageBitmap) {
     private val cache = ConcurrentHashMap<ArtKnobs, ImageBitmap>()
 
-    suspend fun bitmap(knobs: ArtKnobs): ImageBitmap =
-        cache[knobs] ?: offMain {
-            AndroidKitArt.bitmap(kit, kitDir, knobs, PREVIEW_SIZE, assets = assets).asImageBitmap()
-        }.also { cache[knobs] = it }
+    /** The preview already drawn for [knobs], without drawing it. */
+    fun cached(knobs: ArtKnobs): ImageBitmap? = cache[knobs]
+
+    /** The preview for [knobs], drawn now if it is not cached; null when the drawing failed. */
+    suspend fun bitmap(knobs: ArtKnobs): ImageBitmap? =
+        cache[knobs] ?: offMain(DRAWING) { runCatching { render(knobs) }.getOrNull() }?.also { cache[knobs] = it }
 
     companion object {
         /** Big enough to judge a style on a phone, small enough that eight draw in a breath. */
         const val PREVIEW_SIZE = 256
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        private val DRAWING = Dispatchers.IO.limitedParallelism(2)
+
+        /** Previews of [kit] through the phone's own renderer, its pads read once for every preview. */
+        fun forKit(assets: AssetManager, kit: Kit, kitDir: File): ArtPreviews {
+            val pads by lazy { TileSound.pads(kit, kitDir) }
+            return ArtPreviews { knobs -> AndroidKitArt.bitmap(kit, pads, knobs, PREVIEW_SIZE, assets = assets).asImageBitmap() }
+        }
     }
+}
+
+/** What a preview cell holds: drawing, drawn, or a drawing that failed. */
+private sealed class Preview {
+    data object Drawing : Preview()
+    data class Drawn(val image: ImageBitmap) : Preview()
+    data object Failed : Preview()
 }
 
 /**
@@ -93,7 +115,7 @@ internal fun ArtPickerSheet(
 private fun ArtPickerContent(kit: Kit, kitDir: File, knobs: ArtKnobs, onKnobs: (ArtKnobs) -> Unit, modifier: Modifier) {
     val scheme = LocalScheme.current
     val context = LocalContext.current
-    val previews = remember(kit, kitDir) { ArtPreviews(context.assets, kit, kitDir) }
+    val previews = remember(kit, kitDir) { ArtPreviews.forKit(context.assets, kit, kitDir) }
     Column(
         modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -133,7 +155,10 @@ private fun ArtPickerContent(kit: Kit, kitDir: File, knobs: ArtKnobs, onKnobs: (
 /** A style's live preview with its name under it; the picked style is framed in the scheme's amber. */
 @Composable
 private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, scheme: Scheme, modifier: Modifier, onPick: () -> Unit) {
-    val image by produceState<ImageBitmap?>(null, knobs) { value = previews.bitmap(knobs) }
+    // Seeded from the cache, so a preview already drawn shows at once instead of DRAWING… for a frame.
+    val preview by produceState<Preview>(previews.cached(knobs)?.let { Preview.Drawn(it) } ?: Preview.Drawing, knobs) {
+        value = previews.bitmap(knobs)?.let { Preview.Drawn(it) } ?: Preview.Failed
+    }
     Column(
         modifier
             .tapeClick(label = "STYLE: ${knobs.style.name}", onClick = onPick)
@@ -143,11 +168,11 @@ private fun StyleCell(previews: ArtPreviews, knobs: ArtKnobs, picked: Boolean, s
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Box(Modifier.fillMaxWidth().aspectRatio(1f).lcdPanel(scheme), contentAlignment = Alignment.Center) {
-            val img = image
-            if (img == null) {
-                TapeText(Copy.ART_BUSY, TapeType.pixelSmall, scheme.lcdInk.tape)
-            } else {
-                Image(img, contentDescription = null, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+            when (val p = preview) {
+                Preview.Drawing -> TapeText(Copy.ART_BUSY, TapeType.pixelSmall, scheme.lcdInk.tape)
+                is Preview.Drawn -> Image(p.image, contentDescription = null, modifier = Modifier.fillMaxWidth().aspectRatio(1f))
+                // Nothing to show: the cell stays an empty panel and the style can still be picked.
+                Preview.Failed -> Unit
             }
         }
         TapeText(

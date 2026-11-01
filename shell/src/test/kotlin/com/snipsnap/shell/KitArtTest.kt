@@ -320,6 +320,29 @@ class KitArtTest {
     }
 
     @Test
+    fun `drawing from pads already read lands the same bytes`() {
+        // The phone's picker reads the kit's pads once and draws eight previews from them.
+        val dir = File(temp, "preread")
+        val kit = buildKit(dir)
+        val pads = TileSound.pads(kit, dir)
+        for (style in KitArt.Style.entries) {
+            val k = knobs(style, seed = 2)
+            val fromDisk = BufferedImage(160, 160, BufferedImage.TYPE_INT_RGB)
+            val fromPads = BufferedImage(160, 160, BufferedImage.TYPE_INT_RGB)
+            for ((img, read) in listOf(fromDisk to false, fromPads to true)) {
+                val g = img.createGraphics()
+                g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+                if (read) KitArt.draw(KitArt.AwtCanvas(g), kit, pads, k, 160, kit.name)
+                else KitArt.draw(KitArt.AwtCanvas(g), kit, dir, k, 160, kit.name)
+                g.dispose()
+            }
+            for (y in 0 until 160) for (x in 0 until 160) {
+                assertEquals(rgb(fromDisk, x, y), rgb(fromPads, x, y), "${style.id}: pixel $x,$y")
+            }
+        }
+    }
+
+    @Test
     fun `the name is never set too small to read`() {
         // Every strip style under every mark variant, with a long name, at the export size: the
         // name's lit rows must span at least 3.5 percent of the tile, which is about four pixels

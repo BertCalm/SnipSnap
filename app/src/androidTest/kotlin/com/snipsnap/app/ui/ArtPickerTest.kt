@@ -118,6 +118,28 @@ class ArtPickerTest : ComposeScreenTest() {
     }
 
     @Test
+    fun aPickThatCannotBeSavedSaysSo() {
+        val e = entry()
+        show(e)
+        tap("ART: BLOOM · VENT · AUTO · STACKED")
+        waitFor("the picker's title") {
+            compose.onAllNodesWithText(Copy.ART_SHEET_TITLE, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+        }
+        // A kit folder the app can no longer write into: the sidecar cannot land.
+        assertTrue(e.dir.setWritable(false, false))
+        try {
+            press("PALETTE: RISO")
+            waitFor("the failure to be said") { Copy.ART_SAVE_FAILED in toasts }
+            press("CLOSE")
+            pump()
+            assertTrue("a pick that did not save is not called set", Copy.ART_SET !in toasts)
+            assertEquals(null, ArtSidecar.read(e.dir))
+        } finally {
+            e.dir.setWritable(true, false)
+        }
+    }
+
+    @Test
     fun eightPreviewsArrive() {
         show(entry())
         tap("ART: BLOOM · VENT · AUTO · STACKED")

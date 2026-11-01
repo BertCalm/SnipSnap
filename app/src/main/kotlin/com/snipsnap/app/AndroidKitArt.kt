@@ -16,6 +16,8 @@ import com.snipsnap.shell.ArtFont
 import com.snipsnap.shell.ArtKnobs
 import com.snipsnap.shell.ArtPath
 import com.snipsnap.shell.KitArt
+import com.snipsnap.shell.PadSound
+import com.snipsnap.shell.TileSound
 import com.snipsnap.shell.TextAnchor
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -73,11 +75,21 @@ object AndroidKitArt {
         size: Int = KitArt.DEFAULT_SIZE,
         label: String = kit.name,
         assets: AssetManager,
+    ): Bitmap = bitmap(kit, TileSound.pads(kit, kitDir), knobs, size, label, assets)
+
+    /** [bitmap] from [pads] already read, so the picker decodes a kit's WAVs once for all its previews. */
+    fun bitmap(
+        kit: Kit,
+        pads: List<PadSound>,
+        knobs: ArtKnobs,
+        size: Int = KitArt.DEFAULT_SIZE,
+        label: String = kit.name,
+        assets: AssetManager,
     ): Bitmap {
         // ARGB_8888: KitArt.draw's own first call is a full-canvas fillRect
         // (the palette's ground), so the bitmap starts fully opaque.
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-        KitArt.draw(AndroidCanvas(Canvas(bitmap), assets), kit, kitDir, knobs, size, label)
+        KitArt.draw(AndroidCanvas(Canvas(bitmap), assets), kit, pads, knobs, size, label)
         return bitmap
     }
 

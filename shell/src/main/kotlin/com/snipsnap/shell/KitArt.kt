@@ -136,12 +136,26 @@ object KitArt {
         size: Int,
         label: String,
         ringsSeed: Int = 0,
+    ) = draw(canvas, kit, TileSound.pads(kit, kitDir), knobs, size, label, ringsSeed)
+
+    /**
+     * [draw] from [pads] already read ([TileSound.pads]): the phone's art
+     * picker reads a kit once and draws all eight previews from it, rather
+     * than decoding every WAV once per preview.
+     */
+    fun draw(
+        canvas: ArtCanvas,
+        kit: Kit,
+        pads: List<PadSound>,
+        knobs: ArtKnobs,
+        size: Int,
+        label: String,
+        ringsSeed: Int = 0,
     ) {
         require(size in 64..2048) { "size wants 64..2048, got $size" }
         val palette = knobs.palette
         canvas.fillRect(0, 0, size, size, palette.ground)
         val zone = nameZone(canvas, knobs.style, knobs.mark, size)
-        val pads = TileSound.pads(kit, kitDir)
         val seed = TileSound.seedOf(pads, knobs.seedSlot)
 
         when (knobs.style) {

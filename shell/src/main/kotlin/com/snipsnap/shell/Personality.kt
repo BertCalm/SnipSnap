@@ -542,6 +542,8 @@ object Copy {
     const val ART_BUSY = "DRAWING…"
     /** The toast when the picker closes on changed knobs. */
     const val ART_SET = "ART SET."
+    /** A pick that could not be written to the kit's art.json: this export still uses it. */
+    const val ART_SAVE_FAILED = "THE ART DID NOT SAVE. THIS EXPORT USES IT, BUT IT WILL NOT BE HERE NEXT TIME."
 
     /** The ART row's reading: style · palette · seed pad · mark. */
     fun artSummary(style: String, palette: String, seed: String, mark: String): String = "$style · $palette · $seed · $mark"

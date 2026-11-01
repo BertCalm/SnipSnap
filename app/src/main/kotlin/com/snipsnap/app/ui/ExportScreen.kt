@@ -375,6 +375,8 @@ private fun ExportContent(
     /** The art picker's sheet, and the knobs it opened on (so closing on a change can say so). */
     var artPickerOpen by remember(model) { mutableStateOf(false) }
     var knobsAtOpen by remember(model) { mutableStateOf<ArtKnobs?>(null) }
+    /** Whether a pick since the sheet opened failed to reach art.json; closing then does not say ART SET. */
+    var artSaveFailed by remember(model) { mutableStateOf(false) }
 
     /**
      * A dub locks the row (`enabled = !busy`), and a locked row cannot be
@@ -901,6 +903,7 @@ private fun ExportContent(
                         scheme = scheme,
                         onOpen = {
                             knobsAtOpen = model.artKnobs
+                            artSaveFailed = false
                             artPickerOpen = true
                         },
                     )
@@ -914,15 +917,24 @@ private fun ExportContent(
                                 revision++
                                 // Saved as it is picked, under the lock every kit write takes, so the
                                 // next export (here, on the CLI, after a restart) draws the same tile.
+                                // The write takes the live knobs, not this tap's: two quick taps can reach
+                                // the lock in either order, and the last write must be the last pick.
                                 appScope.launch {
-                                    offMain {
-                                        KitWrites.mutex.withLock { runCatching { ArtSidecar.write(session.dir, picked) } }
+                                    val saved = offMain {
+                                        KitWrites.mutex.withLock {
+                                            val live = model.artKnobs ?: return@withLock true
+                                            runCatching { ArtSidecar.write(session.dir, live) }.isSuccess
+                                        }
+                                    }
+                                    if (!saved) {
+                                        artSaveFailed = true
+                                        onToast(Copy.ART_SAVE_FAILED)
                                     }
                                 }
                             },
                             onDismiss = {
                                 artPickerOpen = false
-                                if (model.artKnobs != knobsAtOpen) onToast(Copy.ART_SET)
+                                if (model.artKnobs != knobsAtOpen && !artSaveFailed) onToast(Copy.ART_SET)
                             },
                         )
                     }
