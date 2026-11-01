@@ -11,6 +11,10 @@
 #include <limits>
 #include <thread>
 #include <vector>
+#include <array>
+#include <memory>
+#include <new>
+#include <cmath>
 
 #include "SurfaceEngine.h"
 
@@ -24,6 +28,15 @@ using snipsnap::SurfaceEngine;
 
 namespace {
 inline SurfaceEngine* engine(jlong handle) { return reinterpret_cast<SurfaceEngine*>(handle); }
+
+// ORBIT's AudioTrack worker owns this handle, including destruction.
+// Region copies use fixed native scratch, never pin a Java array or
+// allocate/free C++ storage while processing. This is not an Oboe callback.
+struct ArrayAquariumBus {
+    snipsnap::aquarium::PerformanceBus bus;
+    std::array<float, snipsnap::aquarium::PerformanceBus::kBlockFrames * 2> scratch{};
+};
+inline ArrayAquariumBus* arrayBus(jlong handle) { return reinterpret_cast<ArrayAquariumBus*>(handle); }
 
 /**
  * Ask a print to stop and wait (bounded, on the caller's thread) for the
@@ -73,6 +86,63 @@ bool decodeAquarium(JNIEnv* env, jfloatArray values, jlong seed, jint model,
 }  // namespace
 
 extern "C" {
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_create(JNIEnv*, jobject, jint rate) {
+    std::unique_ptr<ArrayAquariumBus> state(new (std::nothrow) ArrayAquariumBus);
+    if (!state || !state->bus.prepare(rate)) return 0;
+    return reinterpret_cast<jlong>(state.release());
+}
+
+JNIEXPORT void JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_destroy(JNIEnv*, jobject, jlong handle) {
+    delete arrayBus(handle);
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_configure(
+    JNIEnv* env, jobject, jlong handle, jfloatArray values, jlong seed, jint model,
+    jdouble bpm, jfloat gain, jboolean enabled, jboolean reset) {
+    snipsnap::aquarium::PerformanceSettings settings;
+    if (!handle || !decodeAquarium(env, values, seed, model, bpm, gain, enabled, reset, settings)) return JNI_FALSE;
+    return arrayBus(handle)->bus.publish(settings, reset == JNI_TRUE) ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_process(
+    JNIEnv* env, jobject, jlong handle, jfloatArray samples, jdouble bpm, jboolean reset) {
+    if (!handle || !samples || env->ExceptionCheck() || !std::isfinite(bpm) || bpm < 0 || bpm > 1000 ||
+        (reset != JNI_FALSE && reset != JNI_TRUE)) return JNI_FALSE;
+    const jsize n = env->GetArrayLength(samples);
+    if (env->ExceptionCheck() || n < 0 || n % 2 != 0) return JNI_FALSE;
+    auto& state = *arrayBus(handle);
+    auto settings = state.bus.controlSettings();
+    if (settings.bpm != bpm || reset == JNI_TRUE) {
+        settings.bpm = bpm;
+        if (!state.bus.publish(settings, reset == JNI_TRUE)) return JNI_FALSE;
+    }
+    state.bus.beginCallback();
+    for (jsize offset = 0; offset < n;) {
+        const jsize count = std::min<jsize>(n - offset, static_cast<jsize>(state.scratch.size()));
+        env->GetFloatArrayRegion(samples, offset, count, state.scratch.data());
+        if (env->ExceptionCheck()) return JNI_FALSE;
+        state.bus.process(state.scratch.data(), count / 2);
+        env->SetFloatArrayRegion(samples, offset, count, state.scratch.data());
+        if (env->ExceptionCheck()) return JNI_FALSE;
+        offset += count;
+    }
+    return JNI_TRUE;
+}
+
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_faulted(JNIEnv*, jobject, jlong handle) {
+    return handle && arrayBus(handle)->bus.faulted() ? JNI_TRUE : JNI_FALSE;
+}
+
+JNIEXPORT jlong JNICALL
+Java_com_snipsnap_app_NativeAquariumBus_limitedFrames(JNIEnv*, jobject, jlong handle) {
+    return handle ? static_cast<jlong>(arrayBus(handle)->bus.limitedFrames()) : 0;
+}
 
 JNIEXPORT jlong JNICALL
 Java_com_snipsnap_app_NativeSurface_create(JNIEnv*, jobject, jint preferredSampleRate) {

@@ -62,6 +62,8 @@ object OrbitStore {
             "sampleRate" to num(set.sampleRate),
             "seed" to num(set.seed),
             "orbits" to JsonValue.Arr(set.orbits.map { orbitJson(it) }),
+            *(if (set.aquariumFromKit) arrayOf("aquariumFromKit" to JsonValue.Bool(true)) else emptyArray()),
+            *(if (set.aquariumTailSeconds != 3f) arrayOf("aquariumTailSeconds" to num(set.aquariumTailSeconds)) else emptyArray()),
             // Only where there is one, so a set with no arrangement keeps
             // the exact shape it had at version 6 - the same rule the hit
             // fields follow, stated once and held to at every bump.
@@ -163,6 +165,8 @@ object OrbitStore {
             // Absent before version 7, and absent since wherever a set has
             // no arrangement. Either way every ring plays, forever.
             sections = obj["sections"]?.arr().orEmpty().map { sectionFrom(it) },
+            aquariumFromKit = obj["aquariumFromKit"]?.bool() ?: false,
+            aquariumTailSeconds = (obj["aquariumTailSeconds"]?.num() ?: 3.0).toFloat(),
         )
     }
 
