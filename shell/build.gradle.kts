@@ -274,6 +274,17 @@ tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
     args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
 }
 
+/** Export continuous LIBRATION keys and play their PCM24 samples through real note-on/note-off. */
+tasks.register<JavaExec>("generateLibrationHoldAudition") {
+    group = "distribution"
+    description = "Render three LIBRATION held instruments, playback comparisons and measured recurrence evidence."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationHoldAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("librationHoldOutput").orElse("${rootDir}/testkit/libration-sustain").get())
+}
+
 /** One opening before a separately marked sustain region, compared with unchanged PRISM pad renders. */
 tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     group = "distribution"
@@ -285,6 +296,18 @@ tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
 }
 
+/** The phone's nine approved cultural passages, all five playback modes and the complete portable bank. */
+tasks.register<JavaExec>("generateConfluenceSelectedAudition") {
+    group = "distribution"
+    description = "Render the cultural passage audition through the app workshop and package its unchanged source bank."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ConfluenceSelectedAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootDir
+    args(providers.gradleProperty("confluenceSelectedAuditionOutput").orElse("${rootDir}/testkit/confluence-selected-audition").get())
+    providers.gradleProperty("confluenceSelectedAuditionRevision").orNull?.let { args(it) }
+}
+
 /** Three native Rime keyboard instruments, each with nine attack-plus-loop zones. */
 tasks.register<JavaExec>("generateRimeInstruments") {
     group = "distribution"
@@ -292,4 +315,24 @@ tasks.register<JavaExec>("generateRimeInstruments") {
     mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
+}
+
+tasks.register<JavaExec>("generateScannedChainControlsAudition") {
+    group = "distribution"
+    description = "Render Scanned Chain editor sweeps, complete recipes and numerical evidence."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ScannedChainControlsAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("scannedChainControlsOutput").orElse("${rootDir}/testkit/scanned-chain-controls").get())
+}
+
+/** Reproduce the six factory performance recipes and four MPC-ready held instruments. */
+tasks.register<JavaExec>("generateOrigamiPerformanceBank") {
+    group = "distribution"
+    description = "Render the ORIGAMI performance bank, native/matched takes, portable audition and MPC downloads."
+    maxHeapSize = "1536m"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.OrigamiPerformanceBankGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("origamiPerformanceOutput").orElse(rootDir.resolve("testkit/origami-performance-bank").absolutePath).get())
 }

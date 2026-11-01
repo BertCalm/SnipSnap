@@ -15,7 +15,7 @@ class WickSourceStudyTest {
     fun `source-study option cannot alter the five other voices or ordinary RATTLE defaults`() {
         for (voice in WickVoice.entries) {
             val normal = Wick.inspect(voice)
-            val choice = if (voice == WickVoice.RATTLE) Wick.RattleSource.CURRENT else Wick.RattleSource.WARM_WIRE
+            val choice = Wick.RattleSource.WARM_WIRE
             val explicit = Wick.inspect(voice, options = Wick.Options(rattleSource = choice))
             assertContentEquals(normal.raw, explicit.raw, "$voice raw source isolation")
             assertContentEquals(normal.samples, explicit.samples, "$voice output source isolation")
@@ -26,7 +26,8 @@ class WickSourceStudyTest {
     @Test
     fun `three alternate bodies retain the requested register and identical causal events`() {
         for (midi in listOf(48, 60, 72)) {
-            val reference = Wick.inspect(WickVoice.RATTLE, midi = midi)
+            val reference = Wick.inspect(WickVoice.RATTLE, midi = midi,
+                options = Wick.Options(rattleSource = Wick.RattleSource.CURRENT))
             for (source in Wick.RattleSource.entries.filter { it != Wick.RattleSource.CURRENT }) {
                 val probe = Wick.inspect(WickVoice.RATTLE, midi = midi, options = Wick.Options(rattleSource = source))
                 val label = "$source MIDI$midi"

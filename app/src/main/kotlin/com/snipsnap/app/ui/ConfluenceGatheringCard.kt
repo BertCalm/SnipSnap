@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.snipsnap.app.theme.TapeType
@@ -36,7 +37,7 @@ internal fun ConfluenceGatheringCard(
     onMake: () -> Unit,
 ) {
     val enabled = controls != null && ready && !loading && !busy
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(Modifier.fillMaxWidth().testTag("confluence-gathering"), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         TapeText("GATHERING · A NEW VARIATION", TapeType.pixelSmall, scheme.ink.tape, maxLines = 2)
         TapeText(
             "REBUILDS THE SAVED GATHERING. THIS PAD'S CURRENT EDITS AND FX STAY ON THE ORIGINAL.",

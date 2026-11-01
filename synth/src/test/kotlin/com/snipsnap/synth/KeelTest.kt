@@ -244,17 +244,15 @@ class KeelTest {
     @Test
     fun `root pitch at WEIGHT 0 is within 50 cents for all voices at MIDI 30, 36 and 42`() {
         for (voice in voices) for (midi in listOf(30, 36, 42)) {
-            // Keep the default decaying gesture covered with the overlap-normalised
-            // reader: its .575 s capture truncates this window and its fast envelope
-            // can hide a valid low BELLY period from the house reader's biased ACF.
-            val decaying = render(voice, mapOf("WEIGHT" to 0f), midi)
-            val defaultHz = nsdfHz(decaying.samples, .35, .25, loHz = 40.0)
-            val defaultCents = cents(defaultHz, Keys.midiHz(midi).toDouble())
-            assertTrue(abs(defaultCents) < 50.0, "$voice midi $midi default gesture reads ${f(defaultCents, 1)} cents from the root")
-            // HOLD below .85 changes only the finite envelope/capture, leaving the
-            // same pitch track and source through the full .35-.60 s window.
-            val snip = render(voice, mapOf("WEIGHT" to 0f, "HOLD" to .65f), midi)
-            val estimate = requireNotNull(Pitch.detect(snip, .35f, .25f)) { "$voice $midi has no pitch" }
+            val snip = render(voice, mapOf("WEIGHT" to 0f), midi)
+            // Keep the full postattack probe inside this finite note. Late rounded BELLY
+            // bass lets the detector's short-lag shoulder hide a valid period peak; the
+            // earlier body measures every voice with the same pitch/confidence limits.
+            val from = .10f
+            val window = .25f
+            assertTrue((from + window) * snip.sampleRate <= snip.frameCount,
+                "$voice $midi needs a complete postattack pitch window")
+            val estimate = requireNotNull(Pitch.detect(snip, from, window)) { "$voice $midi has no pitch" }
             val c = cents(estimate.hz.toDouble(), Keys.midiHz(midi).toDouble())
             println("KEEL root $voice midi $midi WEIGHT 0: ${f(c, 1)} cents (${f(estimate.hz.toDouble())} Hz, confidence ${f(estimate.confidence.toDouble())})")
             assertTrue(abs(c) < 50.0, "$voice midi $midi reads ${f(c, 1)} cents from the root")

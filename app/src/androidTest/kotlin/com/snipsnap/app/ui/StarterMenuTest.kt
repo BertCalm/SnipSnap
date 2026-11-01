@@ -56,12 +56,17 @@ class StarterMenuTest : ComposeScreenTest() {
     }
 
     @Test
-    fun a_starter_below_the_phone_viewport_can_be_scrolled_to_and_picked() {
+    fun a_starter_below_the_phone_viewport_can_be_scrolled_to_and_picked() = canPick("murmur", "MURMUR")
+
+    @Test
+    fun the_selected_murmur_starter_can_be_scrolled_to_and_picked() = canPick("murmur-selected", "MURMUR SELECTED")
+
+    private fun canPick(id: String, displayName: String) {
         val picked = mutableListOf<StarterKits.Starter>()
         var dismissals = 0
         show(onPick = { picked += it }, onDismiss = { dismissals++ })
 
-        val murmur = button("PICK MURMUR")
+        val murmur = button("PICK $displayName")
         murmur.assertIsNotDisplayed()
         var drags = 0
         while (!rowFitsViewport(murmur) && drags < 24) {
@@ -69,14 +74,14 @@ class StarterMenuTest : ComposeScreenTest() {
             drags++
         }
         murmur.assertIsDisplayed()
-        assertTrue("The whole MURMUR row must fit inside the scroll viewport", rowFitsViewport(murmur))
+        assertTrue("The whole $displayName row must fit inside the scroll viewport", rowFitsViewport(murmur))
         // A real touch also checks that a child pick does not hit the scrim.
         murmur.performTouchInput { down(0, center); up(0) }
         pump()
 
         compose.runOnIdle {
             assertEquals(1, picked.size)
-            assertSame(StarterKits.byId("murmur"), picked.single())
+            assertSame(StarterKits.byId(id), picked.single())
             assertEquals(0, dismissals)
         }
     }

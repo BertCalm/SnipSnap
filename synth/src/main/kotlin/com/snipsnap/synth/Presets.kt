@@ -21,6 +21,10 @@ object Presets {
             AccordPresets.forVoice(v)
         }
         OtisPatch.ENGINE -> OtisVoice.entries.firstOrNull { it.name == voice }?.let(OtisPresets::forVoice) ?: emptyList()
+        LorentzPatch.ENGINE -> {
+            val v = LorentzVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
+            LorentzPresets.forVoice(v)
+        }
         LibrationPatch.ENGINE -> {
             val v = LibrationVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             LibrationPresets.forVoice(v)
@@ -326,7 +330,10 @@ object Presets {
     }
 
     fun all(): List<Patch> =
-        AccordPresets.all() + OtisPresets.all() + TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() +
+        OtisPresets.all() +
+        LorentzPresets.all() +
+        AccordPresets.all() +
+        TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() + MeridianPresets.all() +
             ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +

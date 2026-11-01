@@ -175,6 +175,9 @@ class StarterKitsTest {
         "murmur" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
             (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
         },
+        "murmur-selected" to OneEngine(MurmurPatch::class.java, MurmurVoice.entries.map { it.name }.toSet()) {
+            (it as MurmurPatch).let { p -> Murmur.drumClassFor(p.voice, p.macros) }
+        },
         "osprey-curated" to OneEngine(OspreyPatch::class.java, OspreyVoice.entries.map { it.name }.toSet()) {
             (it as OspreyPatch).let { p -> Osprey.drumClassFor(p.voice, p.macros) }
         },
@@ -196,14 +199,15 @@ class StarterKitsTest {
                 assertFalse(Preflight.check(kit, dir).blocked(), "${starter.id} failed preflight")
                 // Regenerable where the engine records how: most starter pads
                 // carry recipes (not all — some treatments are render-only).
-                if (starter.id != StarterKits.CONFLUENCE_ID) {
+                if (starter.id !in setOf(StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID)) {
                     assertTrue(kit.pads.any { it.recipe != null }, "${starter.id}: no pad carries a recipe")
                 }
                 // Most starters fill bank A. The wordless source bank has eight pads;
                 // VENT leaves four capture slots free; the A/B dip fills bank B with a twin of each,
-                // and SCOUR fills it with its third voice, the thunder sheet.
+                // and SCOUR fills banks B and C with its thunder sheet and its beam.
                 val slots = when (starter.id) {
-                    "lucky-dip-ab", "scour" -> 32
+                    "scour" -> 48
+                    "lucky-dip-ab" -> 32
                     StarterKits.CONFLUENCE_ID -> 8
                     "vent" -> 12
                     "strike-fx" -> 4
@@ -221,6 +225,7 @@ class StarterKitsTest {
                 val expectedRenderOnly = when (starter.id) {
                     "cloud" -> (7..16).toList()
                     StarterKits.CONFLUENCE_ID -> (1..8).toList()
+                    StarterKits.CONFLUENCE_VOICES_ID -> (1..16).toList()
                     else -> emptyList()
                 }
                 assertEquals(expectedRenderOnly, renderOnly, "${starter.id}: pads with no recipe")
@@ -228,7 +233,7 @@ class StarterKitsTest {
             oneEngineStarters[starter.id]?.let { engine ->
                 val model = KitBuilderModel.open(dir)
                 assertEquals(KeySpec.parse("Cminpent"), model.kit.key)
-                assertEquals(if (starter.id == "scour") 32 else 16, model.kit.pads.size)
+                assertEquals(if (starter.id == "scour") 48 else 16, model.kit.pads.size)
                 val patches = model.kit.pads.map { pad ->
                     val recipe = assertNotNull(Breed.recipeOf(pad.recipe), "${starter.id} ${pad.displayName}: no recipe")
                     val patch = assertNotNull(recipe.patch, "${starter.id} ${pad.displayName}: the recipe has no patch")
@@ -562,7 +567,7 @@ class StarterKitsTest {
     @Test
     fun `starter IDs are stable, include new synth kits, and blank leads`() {
         assertEquals(
-            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "accord", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
+            listOf("blank", "factory", "strike-fx", "lucky-dip", "lucky-dip-ab", "melodic", "chip", "overlap", "obbligato", "accord", "otis", "libration", "meridian", "tidal", "ohm", "cloud", StarterKits.CONFLUENCE_ID, StarterKits.CONFLUENCE_VOICES_ID, "circuit", "thaw", "scour", "nimbus", "undertow", "suture", "revel", "tessera", "pitchwheel", "prism", "origami", "rime", "filament", "chamber", "alloy", "contour", "stoop", "lacquer", "spool", "skitter", "tangle", "caustic", "crease", "lattice", "flock", "relay", "shoal", "embouchure", "bellows", "murmur", "murmur-selected", "scanned-chain", "trefoil", "trio", "osprey", "osprey-curated", "opensky", "vent", "skin", "cistern", "upright", "aerostat", "tremor", "ballast", "keel", "velocity"),
             StarterKits.ALL.map { it.id },
         )
         val chamber = StarterKits.byId("chamber")!!

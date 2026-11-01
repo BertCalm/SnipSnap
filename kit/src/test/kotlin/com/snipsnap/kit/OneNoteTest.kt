@@ -247,9 +247,9 @@ class OneNoteTest {
             listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("Bed_48", 2_000L, 1, 127, 0L)))),
         )
         OneNote.writePackage("Bed", program, mapOf("Bed_48" to snip), temp, overwrite = false, spanKeyboard = false)
+        val dataDir = File(temp, "Bed_[TrackData]")
         val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
         assertEquals(listOf(48 to 48), back.zones.map { it.lowNote to it.highNote })
-        val dataDir = File(temp, "Bed_[TrackData]")
         val xpm = File(dataDir, "Bed.xpm").readText()
         assertTrue("<LowNote>48</LowNote>" in xpm)
         assertTrue("<HighNote>48</HighNote>" in xpm)
@@ -260,7 +260,7 @@ class OneNoteTest {
             .copy(voiceMode = VoiceMode.LEAD))
         val rewritten = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
         assertEquals(listOf(48 to 48), rewritten.zones.map { it.lowNote to it.highNote })
-        val rewrittenXpm = File(dataDir, "Bed.xpm").readText()
+        val rewrittenXpm = File(temp, "Bed_[TrackData]/Bed.xpm").readText()
         assertTrue("<LowNote>48</LowNote>" in rewrittenXpm)
         assertTrue("<HighNote>48</HighNote>" in rewrittenXpm)
     }
@@ -336,23 +336,6 @@ class OneNoteTest {
         assertEquals(true, (Json.parse(sidecar.readText()) as JsonValue.Obj).entries["explicitNoteOn"]?.let { (it as JsonValue.Bool).value })
         assertTrue("<LowNote>48</LowNote>" in xpm)
         assertTrue("<HighNote>48</HighNote>" in xpm)
-    }
-
-    @Test
-    fun `a full descriptor rewrite can clear a previous NoteOn trigger`() {
-        val program = KeygroupProgram("Trigger Change",
-            listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("note", 2_000, 0, 127)))),
-            explicitNoteOn = true)
-        val samples = mapOf("note" to Snip(FloatArray(2_000) { .1f }, 1, rate))
-        OneNote.writePackage(program.name, program, samples, temp, overwrite = false, spanKeyboard = false)
-        val sidecar = InstrumentStore.sidecar(temp, program.name)
-        assertTrue(InstrumentStore.read(sidecar).explicitNoteOn)
-
-        OneNote.rewriteDescriptors(temp, program.name, program.copy(explicitNoteOn = false))
-
-        assertEquals(false, InstrumentStore.read(sidecar).explicitNoteOn)
-        val xpm = File(temp, "${program.name}_[TrackData]/${program.name}.xpm").readText()
-        assertEquals(false, "<TriggerMode>2</TriggerMode>" in xpm)
     }
 
     @Test

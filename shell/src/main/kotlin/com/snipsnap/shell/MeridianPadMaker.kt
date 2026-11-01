@@ -97,7 +97,6 @@ object MeridianPadMaker {
     fun export(name: String, spec: Spec, notes: List<List<KeyNote>>, destRoot: File,
         overwrite: Boolean = false): KeygroupProgram {
         val (program, samples) = assemble(name, spec, notes)
-        // The sampled range is deliberate: neighboring keys transpose at most one semitone.
         OneNote.writePackage(name, program, samples, destRoot, overwrite, spanKeyboard = false)
         return program
     }
