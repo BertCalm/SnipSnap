@@ -149,9 +149,11 @@ object InstrumentStore {
                 "name" to JsonValue.Str(program.name),
                 "release" to JsonValue.Num(program.volumeRelease.toDouble()),
                 "voiceMode" to JsonValue.Str(program.voiceMode.name),
-                "explicitNoteOn" to JsonValue.Bool(program.explicitNoteOn),
-                "zones" to JsonValue.Arr(zones),
-            ),
+            ).apply {
+                // Default packages keep their established bytes; only an explicit trigger needs the new field.
+                if (program.explicitNoteOn) put("explicitNoteOn", JsonValue.Bool(true))
+                put("zones", JsonValue.Arr(zones))
+            },
         )
         return Json.write(obj)
     }
