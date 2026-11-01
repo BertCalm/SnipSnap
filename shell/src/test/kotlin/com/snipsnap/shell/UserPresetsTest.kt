@@ -901,6 +901,50 @@ class UserPresetsTest {
     }
 
     @Test
+    fun `LIBRATION promotion reconstructs finite held and returned note recipes`() {
+        val root = shelf()
+        try {
+            val finite = com.snipsnap.synth.LibrationPresets.all().first().copy(
+                name = "MY ORBIT", midi = 43, velocity = .37f, sourceSeconds = .512,
+            )
+            val held = finite.copy(name = "MY HELD ORBIT", macros = finite.macros + ("HOLD" to 1f),
+                heldModel = com.snipsnap.synth.LibrationKeys.MODEL_VERSION)
+            val noteAgain = held.copy(name = "MY NOTE AGAIN", macros = held.macros + ("HOLD" to 0f))
+            for ((index, source) in listOf(finite, held, noteAgain).withIndex()) {
+                UserPresets.save(root, source, index.toLong() + 1L)
+                val saved = UserPresets.read(root).single { it.name == source.name }.patch
+                assertEquals(source, saved)
+                val line = UserPresets.rosterLine(saved)
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("LibrationPatch", call.name)
+                assertEquals(3, call.positional.size)
+                val name = (call.positional[0] as KotlinLiteral.Str).value
+                val voice = call.positional[1] as KotlinLiteral.Ref
+                assertEquals("LibrationVoice", voice.owner)
+                val map = call.positional[2] as KotlinLiteral.Call
+                assertEquals("mapOf", map.name)
+                assertTrue(map.named.isEmpty())
+                val macros = map.positional.associate { node ->
+                    val pair = node as KotlinLiteral.Pair
+                    (pair.first as KotlinLiteral.Str).value to float(pair.second)
+                }
+                val implicit = setOf("name", "voice", "macros") +
+                    if (source.heldModel == 0) setOf("heldModel") else emptySet()
+                assertEquals(fieldsOf(com.snipsnap.synth.LibrationPatch::class.java) - implicit, call.named.keys,
+                    "promotion retains every saved performance and held version field")
+                val rebuilt = com.snipsnap.synth.LibrationPatch(name,
+                    com.snipsnap.synth.LibrationVoice.valueOf(voice.name), macros,
+                    midi = int(call.named.getValue("midi")), velocity = float(call.named.getValue("velocity")),
+                    model = int(call.named.getValue("model")), sourceSeconds = double(call.named.getValue("sourceSeconds")),
+                    heldModel = call.named["heldModel"]?.let(::int) ?: 0)
+                assertEquals(source, rebuilt, "the pasteable constructor rebuilds the saved recipe")
+            }
+        } finally {
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `every roster line names a table and a helper that exist`() {
         val engines = Presets.all().map { it.engine }.distinct()
         assertTrue(engines.size >= 8, "every registered engine ships a roster: $engines")
@@ -971,6 +1015,7 @@ class UserPresetsTest {
                     String::class.java, com.snipsnap.synth.LibrationVoice::class.java, Map::class.java,
                     Int::class.javaPrimitiveType, Float::class.javaPrimitiveType,
                     Int::class.javaPrimitiveType, Double::class.javaPrimitiveType,
+                    Int::class.javaPrimitiveType,
                 )
                 assertEquals(com.snipsnap.synth.LibrationPatch::class.java, constructor.declaringClass)
                 assertTrue(UserPresets.rosterLine(Presets.all().first { it.engine == engine }).contains("sourceSeconds = "))

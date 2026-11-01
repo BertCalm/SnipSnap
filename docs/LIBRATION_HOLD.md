@@ -169,6 +169,25 @@ Rebuild the handoff from a clean committed checkout:
 The output is isolated in `testkit/libration-sustain/`. The three original finite
 audition folders and their archives remain separate.
 
+## Listening and device checks
+
+The new transport still needs owner listening. On the audition page, let each
+long hold reach both marked wraps and its key-up ending. Compare the finite
+note, the keyboard phrase, authored soft/hard touch and the three release lengths.
+
+For MPC, extract a complete instrument ZIP and keep its program and TrackData
+folder together. Load `.xty` on MPC 3 or the adjacent `.xpm` on MPC 2. Try MIDI
+48, 60 and 72, plus 61 between sampled roots; hold for at least 23 seconds, then
+release. Check the attack, repeated sustain and ending. Live key velocity changes
+gain; the saved instrument has one excitation touch per zone.
+
+On the feature phone build, use ROUND KEYS, FINE KEYS or SPLIT PATH. Choose
+HOLD, change ROOT/TOUCH and a sound control, save, leave and return, then SEND
+to a pad. NOTE should restore the saved finite LENGTH. In MAKE INSTRUMENT,
+cancel one generation, make a replacement, and check a held key through its
+wrap and release. Record any issue with its recipe, MIDI note, device/OS and
+action. This is a new check, separate from the accepted finite instrument.
+
 ## Evidence ledger
 
 - Verified: finite phone/MPC acceptance is an owner report; the repository APIs
