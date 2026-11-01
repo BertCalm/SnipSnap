@@ -1,6 +1,6 @@
 package com.snipsnap.synth
 
-/** PIPE/MUSETTE audition settings and four TRANSISTOR registrations at C4. */
+/** PIPE/MUSETTE audition settings and five TRANSISTOR registrations at C4. */
 object RegistersPresets {
     private fun p(voice: RegistersVoice, name: String, vararg macros: Pair<String, Float>) =
         RegistersPatch(name, voice, Registers.defaults(voice) + macros.toMap(),
@@ -25,6 +25,10 @@ object RegistersPresets {
         // The owner's preferred depth direction keeps Compact Keys' registration and
         // keyer, with enough side-bank movement and vibrato to carry through sustain.
         p(RegistersVoice.TRANSISTOR, "Rich Ensemble", "SPREAD" to .65f, "MOTION" to .32f),
+        // Selected after the octave-balance audition: bring the upper ranks forward
+        // while retaining the calmer bank spread and gentle vibrato.
+        p(RegistersVoice.TRANSISTOR, "Octave Keys", "COLOR" to .65f,
+            "SPREAD" to .40f, "MOTION" to .08f),
     )
 
     fun forVoice(voice: RegistersVoice): List<RegistersPatch> = presets.filter { it.voice == voice }

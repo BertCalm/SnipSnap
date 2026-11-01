@@ -539,14 +539,14 @@ ranks, immediate keying, electronic key-click, vibrato and transistor drive.
 Its fuller body adds a rounded same-pitch foundation while retaining the opening
 click. The sustain revision keeps subtle ensemble movement in short held loops
 and reduces rendering work; accepted model-4 and model-5 recipes remain replayable.
-Ten starting settings, saved recipes, native velocity and CLI rendering share
+Eleven starting settings, saved recipes, native velocity and CLI rendering share
 the same renderer. MAKE INSTRUMENT preserves the finite attack before a verified
 held loop, then writes the existing phone, MPC 2 and MPC 3 keygroup package.
-[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/directions/)
-opens with the owner's selected Rich Ensemble direction, now a named TRANSISTOR
-preset with stronger bank motion and vibrato and a nine-zone MPC download. The
-earlier R5/R6, body, chiff and airflow comparisons remain available. Physical
-phone/MPC listening of Rich Ensemble is pending;
+[The audition](https://snipsnap-registers-audition.bertcalm.chatgpt.site/harmonics/)
+opens with the owner's selected Octave Keys preset: stronger octave registration
+with calmer ensemble motion, plus a matching nine-zone MPC download. The earlier
+Rich Ensemble, R5/R6, body, chiff and airflow comparisons remain available. Physical
+phone/MPC listening of the Octave Keys instrument is pending;
 [implementation notes](docs/REGISTERS.md) describe compatibility and export behavior.
 
 PRISM is a preset-first additive engine: 32 partials in five groups make keys,
