@@ -2,6 +2,11 @@
 
 Status: concept, prototyped in Python with the repository's own classifier as the judge. Nothing
 in Kotlin, nothing heard.
+Erratum 2026-11-01, after review of PR 796: the harness's pitch probe normalized its NSDF
+wrongly and clipped every confidence to 1.0 (fixed in `.claude/skills/luthier/scripts/probes.py`,
+see the QUARRY brief's erratum); the ride, crash and siren gates were not evaluated; the
+assembler was placed in the wrong module; and the mute-group path needs an override. All four
+are corrected below and every number is regenerated. The drum verdicts did not change.
 Repository truth: commit `dfc8fd0a`, read 2026-11-01. APIs grepped before being named:
 `Classifier` (the rules quoted below, `Classifier.kt:139-206`), `FeatureExtractor`
 (`Features.kt`: bands under 200 Hz, under 2 kHz, 2 kHz and up; decay is the time to −20 dB),
@@ -41,6 +46,11 @@ Input: one captured `Snip` (or a longer capture the chopper can cut), a key (`ro
 
 The layout is fixed by the slot list, so `AutoPlace` is not used; its conventions are kept
 (kick A01, snare A02, closed hat A03, open hat A04, hats choke each other, nothing else does).
+One integration fact decides how: `KitAssembler.assembleArranged` sets every pad's choke
+group from its class through `AutoPlace.muteGroupFor` (`KitAssembler.kt:164`), and
+`ArrangedPad` has no override, so a ride or crash tagged HAT_OPEN would be choked by the
+closed hat. `ArrangedPad` gains an optional `muteGroup` override, honoured by the assembler,
+and A06 and A07 carry group 0 (found in review of PR 796).
 
 | Pad | Slot | Made from the source by | Tag (`DrumClass`) | Probe |
 |---|---|---|---|---|
@@ -49,8 +59,8 @@ The layout is fixed by the slot list, so `AutoPlace` is not used; its convention
 | A03 | HAT CLOSED | the source read faster (the sampler trick: faster is higher) for the first 30 ms, over its noise read faster, high-passed at 9 kHz, short | HAT_CLOSED | classifier says HAT_CLOSED |
 | A04 | HAT OPEN | the same, long | HAT_OPEN | classifier says HAT_OPEN |
 | A05 | CLAP | four bursts of the source's noise 12 ms apart, rising, then its tail | CLAP | classifier says CLAP |
-| A06 | RIDE | the source read 4× faster, band-passed 4 to 11 kHz, long, with a short cycle ping as the bell | HAT_OPEN (no ride class exists) | centroid over 4 kHz, decay over 300 ms |
-| A07 | CRASH | the source read 3× faster, paulstretched into a wash, high-passed at 3 kHz, capped under the LOOP line | HAT_OPEN | under 1.5 s, decay over 500 ms |
+| A06 | RIDE | the source's noise read 4× faster as the wash, band-passed 4 to 11 kHz, long; the real transient read 4× faster as the stick; a short cycle ping as the bell | HAT_OPEN (no ride class exists), choke group 0 | centroid over 4 kHz, decay over 300 ms |
+| A07 | CRASH | the source's noise and the source itself, both read 3× faster, paulstretched into one wash, high-passed at 3 kHz, capped under the LOOP line | HAT_OPEN, choke group 0 | under 1.5 s, decay over 500 ms |
 | A08 | SIREN | the source's cycle along a pitch trajectory: a drop (boom bap), a rise and fall (house), a climb (techno) | PERC | the trajectory's range in semitones |
 | A09 to A12 | BASS | QUARRY at the key's root, third, fifth, octave from C1 plus root, low-passed per genre | TONAL | root within 20 cents |
 | A13 to A16 | TONE | QUARRY an octave and a half up, grain field open, longer | TONAL | root within 20 cents |
@@ -122,17 +132,21 @@ The four that remain all come from the sine-sweep kick source: its snare (boom b
 claps read PERC, because a single swept sine has almost no noise to quarry. That is the fallback
 set, by design, and it is the right one: a source with nothing in it should blend, not be forced.
 
-**Bass and tones (96 pads):** 78 within 20 cents of the target note, the worst of those 12.2
-cents; 18 read exactly one or two octaves, or an octave and a fifth, below the target at
-confidence 1.0. Every one of those 18 is an exact sub-harmonic, which a period-based detector
-gives on any periodic signal when the note is shorter than its window (techno's 160 ms bass
-dominates the list). It is a measurement ambiguity, not a tuning error; the Kotlin probe should
-use `Pitch.detect`'s first-peak rule inside the note's first 150 ms.
+**Every other slot, gated as the table says (regenerated with the fixed probe):**
 
-**Untagged slots:** all 192 pads land under the 1.5 s LOOP line. The classifier files the siren
-PERC twelve times, the ride PERC nine and SNARE three, the crash across four classes, and 94 of
-96 bass and tone pads PERC. The assembler tags these itself; the classifier is the judge only
-where a class exists for the slot.
+| Slot | Gate | Result |
+|---|---|---|
+| RIDE (12) | centroid over 4 kHz, decay over 300 ms | 12 / 12 after the noise-based recipe; the first recipe tiled a sped-up kick into a 23 ms ride, and a review caught that the gate had never been run |
+| CRASH (12) | under 1.5 s, decay over 500 ms | 12 / 12; decays 580 to 911 ms |
+| SIREN (12) | the pitch trajectory spans at least half the genre's semitones, read in five windows | 7 / 12; the five others gave the probe fewer than two confident readings (the bark's cycle in every genre, the house rise-and-fall on the pluck and the kick), so they are unmeasured by this probe rather than known bad. A sweep needs a shorter-window tracker; the Kotlin probe should read `Pitch.detect` every 20 ms. |
+| BASS and TONE (96) | within 20 cents of the target, confidence 0.3 or better | 78 / 96, worst 11.2 cents, confidences 0.82 to 0.999. The 18 misses are all from the snare source: its bass pads read near 900 to 1800 Hz (a harmonic region, 36 semitones high) and its tones 220 cents high at confidence about 0.8. A noise-dominated source's forced cycle has a weak fundamental, which is a real finding and exactly the case the tonal fallback exists for. The first version of this brief called these sub-harmonic probe errors; that was the probe's bug, and it is retracted. |
+
+**The fallback set, complete:** 27 of 192 pads fail their gate: 1 snare and 3 claps (the sine
+sweep has no noise), 5 sirens (unmeasured, above), 18 bass and tone pads (the snare source has
+no fundamental to sing). Every one names a source with nothing to give for that slot, which is
+what the blend is for. All 192 pads land under the 1.5 s LOOP line. The classifier, where no
+class exists for the slot, files the siren PERC, the ride SNARE or PERC, the crash HAT_OPEN or
+SNARE, and 94 of 96 bass and tone pads PERC; the assembler tags these itself.
 
 ## Risks
 
@@ -144,15 +158,21 @@ where a class exists for the slot.
    their tags are the assembler's, and `Balance.TARGETS` and the pad colour follow the tag.
 3. **Kicks from a source with no low end** are manufactured by the forced cycle; the prototype's
    twelve kicks all passed, but a real phone capture with the mic's roll-off has not been tried.
-4. **Sub-harmonic pitch readings** (above). A test that asserts the root must measure early and
-   take the first peak.
+4. **The pitch probe.** The harness's NSDF was mis-normalized until 2026-11-01 (erratum above);
+   the Kotlin tests use `Pitch.detect`, which was never affected, but any number this brief
+   quotes with a confidence came from the fixed script. A sweep (the siren) needs a tracker
+   with a short window, which neither probe is yet.
 5. **The LOOP line.** A crash wants to be long; it is capped at 1.45 s so the kit stays a one-shot
    kit. HOLD is not part of this feature.
 6. **Render time**, proposed: sixteen offline chains per kit; the whitening STFT and paulstretch
    on under a second of material are cheap, the eight QUARRY notes cost tens of milliseconds each
    with its cache. The Python harness renders a kit in under two seconds with nothing cached. A
    genre change re-renders all sixteen; a key change re-renders eight.
-7. **Recipes.** These pads are derived audio, neither a raw capture (whose recipe is an
+7. **Module placement.** `:synth` depends on `:kit` (`synth/build.gradle.kts:893`), and the
+   assembler needs `FxChain`, `Eras`, QUARRY and later `Desample` from `:synth`, so it cannot
+   live in `:kit` without a dependency cycle. It lives in `:synth` beside `SynthKits`, which
+   already builds `ArrangedPad` lists for `:kit` to assemble (found in review of PR 796).
+8. **Recipes.** These pads are derived audio, neither a raw capture (whose recipe is an
    `FxChain`) nor a synth patch. The deterministic promise ("a kit folder rebuilds its WAVs from
    the sidecar") needs each pad to carry `{slot, genre, key, source hash, version}` and the
    source WAV kept in the folder. This is the same decision QUARRY's brief files as R0, and it
@@ -162,11 +182,13 @@ where a class exists for the slot.
 
 - **R0** the recipe decision above, shared with QUARRY; two real capture fixtures (one tonal, one
   drum) under a second each, checked into test resources.
-- **R1** the drum eight, purist only, in `:kit` (a `KitFromAnything` object returning
-  `List<ArrangedPad>` into `KitAssembler.assembleArranged`), the genre table as data, the
-  landing chains; the Kotlin test runs the real classifier over the five judged slots on both
-  fixtures and asserts the agreements the prototype reached, with the fallback set reported,
-  not hidden. CLI: `kitfrom <wav> --key Am --genre house --out <dir>`.
+- **R1** the drum eight, purist only, in `:synth` beside `SynthKits` (a `KitFromAnything`
+  object returning `List<ArrangedPad>` into `KitAssembler.assembleArranged`, with the
+  `muteGroup` override added to `ArrangedPad` first), the genre table as data, the landing
+  chains; the Kotlin test runs the real classifier over the five judged slots on both fixtures
+  and asserts the agreements the prototype reached, runs the ride, crash and siren gates, and
+  reports the fallback set rather than hiding it. CLI: `kitfrom <wav> --key Am --genre house
+  --out <dir>`.
 - **R2** bass and tones through `Body` as the bridge, then QUARRY when its R1 lands; `InKey` is
   not needed since the notes are rendered at pitch.
 - **R3** the blend rule with `Desample`, the `source` map wording, found-before-made via the
@@ -182,9 +204,14 @@ where a class exists for the slot.
 | `KitAssembler.assembleArranged` takes arranged pads | verified | `KitAssembler.kt:85` |
 | 56 of 60 judged drum slots agree with the real classifier | measured | results JSON `score` |
 | The four misses are all from the sine-sweep source | measured | results JSON `kits` rows with `agrees: false` |
-| 78 of 96 bass and tone pads within 20 cents, worst 12.2 | measured | results JSON, `pitch_hz` rows |
-| The 18 misses are exact sub-harmonics | measured | summary run, all at 1200, 1902 or 2400 cents |
+| 78 of 96 bass and tone pads within 20 cents at confidence 0.3 or better, worst 11.2 | measured | results JSON, `gate_pass` rows |
+| The 18 misses are all the snare source's, reading a harmonic region | measured | results JSON, `cents` rows |
+| Ride and crash gates pass 24 of 24 | measured | results JSON, `gate_pass` |
+| Siren gate passes 7 of 12, 5 unmeasured by the probe | measured | results JSON, `siren_reads` |
+| The fallback set is 27 of 192 pads | measured | results JSON `score.fallback_by_slot` |
 | All 192 pads under the LOOP line | measured | `under_loop_line` |
+| `:synth` depends on `:kit`, so the assembler lives in `:synth` | verified | `synth/build.gradle.kts:893` |
+| `KitAssembler` derives the choke group from the class with no override | verified | `KitAssembler.kt:164` |
 | The landing chains and grooves suit their genres | proposed | not prototyped |
 | A bark's kit sounds like the bark | heard? | not heard; audition pad-beside-source |
 | The techno numbers | proposed | extrapolated from HOUSE's corner; no techno rows exist in the repo |
@@ -201,8 +228,8 @@ where a class exists for the slot.
 - **The genre is a table, not a brain.** Three rows of plain numbers, each traced to a preset
   the repo already ships, so a fourth genre is a row and a listen, not a new mechanism.
 - **The fallback is bounded and spoken.** When the source has nothing to give for a slot (a pure
-  sine has no noise), the synth blends in at no more than half and the pad says so. Forcing a
-  clap out of a sine would have been a lie in the kit folder.
+  sine has no noise, a snare has no fundamental), the synth blends in at no more than half and
+  the pad says so. Forcing a clap out of a sine would have been a lie in the kit folder.
 - **Found beats made.** A capture that already contains a snare should put that snare on A02.
   Synthesizing over a real hit is the one thing this feature must never do.
 

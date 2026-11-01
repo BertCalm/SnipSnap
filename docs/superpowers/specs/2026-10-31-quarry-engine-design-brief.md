@@ -1,6 +1,11 @@
 # QUARRY: design brief
 
 Status: concept, prototyped in Python. Nothing rendered in Kotlin, nothing heard.
+Erratum 2026-11-01: the harness's pitch probe (`.claude/skills/luthier/scripts/probes.py`)
+normalized its NSDF wrongly (one energy term subtracted from the total instead of used as
+is), which halved the denominator at short lags and clipped every confidence to 1.0. Found in
+review of PR 796, fixed in the shared script, every number below regenerated. The root claims
+held; the confidence claims and the "octave low at C4" risk did not, and are corrected below.
 Repository truth: commit `2b3e1688`, read 2026-10-31. APIs grepped before being named:
 `Grains` (`synth/.../Grains.kt`, renders a cloud from a source `Snip`, no `Patch`),
 `SnapPatch` (`Patches.kt:401`, a patch that carries 256 table ints inline),
@@ -137,18 +142,20 @@ Root at C2, C3, C4 on the finished 44.1 kHz render, NSDF pitch, window 0.3 s:
 
 | Source | CYCLE (BLEND 0) | FIELD (BLEND 1) | BLEND .5 |
 |---|---|---|---|
-| PLUCK | within 0.1 cent, all three | −3.5 / +0.3 / +2.9 cents | within 1 cent |
-| KICK | within 0.7 cent | within 0.7 cent | within 3.3 cents |
-| BARK | 0.0 / +0.1 / **−1200** (octave low at C4) | within 0.2 cent | 0.1 / 0.1 / **−1200** |
-| SNARE | within 0.3 cent | within 0.2 cent | within 0.2 cent |
+| PLUCK | within 0.1 cent, confidence .997 to .999 | −3.4 / +0.4 / +3.0 cents, confidence .59 to .73 | within 1 cent, .85 to .89 |
+| KICK | within 0.1 cent, .997 to .999 | within 1.7 cents, .99 | within 3.4 cents, .99 |
+| BARK | within 0.3 cent, .81 (C4) to .99 | within 0.2 cent, .81 to .99 | within 0.3 cent, .81 to .99 |
+| SNARE | within 0.3 cent, .98 to .997 | within 0.2 cent, .97 to .996 | within 0.2 cent, .97 to .996 |
 
-Confidence 1.0 in every row. Energy never grows after the attack in any row. Aliasing at C5
+Every row clears the Kotlin tests' confidence floor of 0.3; the pluck's FIELD is the least
+sure (0.59 at C4), which is the pitch-synchronous cloud's transposition smearing the period.
+Energy never grows after the attack in any row. Aliasing at C5
 on the two brightest sources: 0.0 share above the output Nyquist before band-limiting, 0
 partials above Nyquist after it (the mip-map works). HOLD at C3, scrub frozen, grain schedule
 periodic in the loop, 1 s warm-up: seam 5e-9 (pluck) and 2e-7 (bark), both under 1e-3.
 Macro activity (log-spectral dB between extremes, C3): BLEND 6.0 / 2.4, GRAIN 5.7 / 1.6,
 STAIN 11.3 / 15.7, ATTACK 19.0 / 24.1 (pluck / bark). Drum guard, kick source, ATTACK 1, C2:
-the head holds 61 % of the energy, the note reads at C2 with confidence 1.0, −60 dB at 1.44 s.
+the head holds 61 % of the energy, the note reads at C2 with confidence 0.97, −60 dB at 1.44 s.
 
 Two designs were abandoned on numbers before the one above: a free-running cloud (GRAINS'
 own schedule, re-pitched) lost the root on every forced source and at C2 on the pluck; a
@@ -158,12 +165,14 @@ and the free-running one is still reported as `FIELD_FREE` for comparison.
 
 ## Risks
 
-1. **Octave-low reading on forced sources at high notes** (*measured*: bark CYCLE at C4 reads
-   130.8 Hz). The 46 ms excerpt sped up to a 3.8 ms period carries its energy around the 40th
-   harmonic, so the fundamental is weak. Two mitigations to probe in Kotlin: tie the excerpt
-   length to the period (a native-rate single-cycle rip, formants kept, with the formant-lag
-   risk the strobe run showed), or raise STAIN's floor for forced sources at high TUNE. The
-   probe is the C4 root on a drum source.
+1. **Weak fundamental on forced sources at high notes.** The first run reported the bark's
+   CYCLE at C4 an octave low; that was the probe's normalization bug (erratum above) and with
+   the fix it reads within 0.3 cent at confidence 0.81, the lowest confidence in the table. The
+   mechanism behind the lower confidence is real: a 46 ms excerpt sped up to a 3.8 ms period
+   carries its energy around the 40th harmonic. Two mitigations stay on the list for Kotlin if
+   a real capture shows it: tie the excerpt length to the period (a native-rate single-cycle
+   rip, formants kept, with the formant-lag risk the strobe run showed), or raise STAIN's floor
+   for forced sources at high TUNE. The probe is the C4 root and confidence on a drum source.
 2. **GRAIN near-dead on a stationary source** (*measured* 1.6 dB on the bark against 5.7 dB on
    the pluck). A slide through stationary noise changes nothing. Disclosed; the test must use a
    source with an arc, and the audition page should show both.
@@ -206,9 +215,9 @@ should settle it before any DSP, because every test fixture depends on it.
 - **R0**, the decision above, plus a fixture: two real captures checked into the test
   resources (one TONAL, one drum), 44.1 kHz mono, under a second each.
 - **R1**, CYCLE and STAIN only (BLEND fixed at 0), `QuarryPatch`, determinism, the root probe at
-  C2/C3/C4 on both fixtures including the C4 drum case from risk 1, the classifier guard, the
-  keygroup path via a `Keys.quarryPad`. The number that says R1 works: root within 5 cents on
-  the drum fixture at C4.
+  C2/C3/C4 on both fixtures with `Pitch.detect`'s confidence recorded (risk 1), the classifier
+  guard, the keygroup path via a `Keys.quarryPad`. The number that says R1 works: root within
+  5 cents at confidence 0.3 or better on the drum fixture at C4.
 - **R2**, FIELD on both paths and HOLD; seam against a real preceding cycle.
 - **R3**, the KIT FROM ANYTHING hook: `KitAssembler` asks QUARRY for the bass and tone slots
   from the kit's own source at the key's degrees, blended under the purist pad at a stated
@@ -222,9 +231,10 @@ should settle it before any DSP, because every test fixture depends on it.
 | `SnapPatch` carries table data inline and validates it | verified | `Patches.kt:401` |
 | A captured pad's recipe stores only its `FxChain` | verified | `PadRecipe.kt` KDoc |
 | Nine engines reach the keygroup path | verified | `Keys.kt` `*Pad` functions, lines 216 to 578 |
-| The forced cycle holds the root at C2 and C3 on every source | measured | results JSON, `root` |
-| The pitch-synchronous transposed cloud holds the root on a pitched source | measured | within 4 cents |
-| The sliding excerpt holds the root on forced sources | measured | within 0.7 cent, all notes |
+| The forced cycle holds the root at C2, C3 and C4 on every source | measured | results JSON, `root`; confidence .81 to .999 |
+| The pitch-synchronous transposed cloud holds the root on a pitched source | measured | within 3.4 cents, confidence .59 to .73 |
+| The sliding excerpt holds the root on forced sources | measured | within 1.7 cents, all notes, confidence .81 to .997 |
+| The harness pitch probe is normalized correctly | verified | `probes.py`, fixed 2026-11-01; the fix raised no root reading by more than 0.3 cent and lowered every confidence from 1.0 |
 | A free-running cloud loses the root on forced sources | measured | `FIELD_FREE` rows |
 | HOLD closes | measured | seam 5e-9 and 2e-7 |
 | Tens of ms per knob turn in Kotlin | proposed | cache story above, no Kotlin yet |
