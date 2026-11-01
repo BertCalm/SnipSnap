@@ -147,6 +147,7 @@ import com.snipsnap.shell.Schemes
 import com.snipsnap.shell.Spread
 import com.snipsnap.shell.SurfaceStore
 import com.snipsnap.shell.SynthDrafts
+import com.snipsnap.shell.SynthRoot
 import com.snipsnap.shell.SynthWork
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Onset
@@ -1423,14 +1424,6 @@ fun SynthScreen(
         touched = true
         origamiPreview.strike(voice as OrigamiVoice, hit)
     }
-    fun updateStoopRoot(midi: Int) {
-        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? StoopPatch ?: return
-        touched = true
-        currentPresetByVoice.remove(engine to voice)
-        // Copy the current recipe so transposition retains its source,
-        // answering gesture, chord intervals and velocity.
-        loadedPatchesByVoice[engine to voice] = patch.copy(midi = midi.coerceIn(Stoop.MIDI_MIN, Stoop.MIDI_MAX))
-    }
     fun updateTrioPatch(change: (TrioPatch) -> TrioPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? TrioPatch ?: return
         touched = true
@@ -1500,6 +1493,30 @@ fun SynthScreen(
         touched = true
         currentPresetByVoice.remove(engine to voice)
         loadedPatchesByVoice[engine to voice] = patch.copy(config = change(patch.config))
+    }
+    /**
+     * ROOT / OCT for every tonal engine, through one rule (`SynthRoot` in `:shell`).
+     * An engine whose root is TUNE steps TUNE through [updateMacro], so the slider,
+     * the saved settings and ORIGAMI's note override move together. An engine that
+     * saves its root as a note gets a copy with the new note and the rest of its
+     * recipe kept (STOOP's source and chord intervals, ORPHICA's grain settings,
+     * NACRE's seed), through the same keep path its other performance edits use.
+     */
+    fun updateRoot(control: SynthRoot.Control, midi: Int) {
+        when (control) {
+            is SynthRoot.Tune -> updateMacro("TUNE", control.tuneFor(midi))
+            is SynthRoot.Field -> {
+                val next = control.at(midi)
+                touched = true
+                currentPresetByVoice.remove(engine to voice)
+                when (next) {
+                    is OhmPatch -> updateOhmPerformance { next }
+                    is MeridianPatch -> keepMeridianPatch(next)
+                    is TidalPatch -> updateTidalPatch(next.voice) { next }
+                    else -> loadedPatchesByVoice[engine to voice] = next
+                }
+            }
+        }
     }
     fun editPrismMotion(target: PrismVoice, change: (PrismPatch) -> PrismPatch) {
         if (engine != Engine.PRISM || voice != target) return
@@ -2688,32 +2705,6 @@ fun SynthScreen(
                         fillColor = classColor, scheme = scheme, onValueChange = ::updateUprightVelocity,
                     )
                 }
-                if (engine == Engine.STOOP) {
-                    val root = (loadedPatch as? StoopPatch)?.midi ?: Stoop.DEFAULT_MIDI
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ActionButton(
-                            "OCT −", scheme, enabled = root - 12 >= Stoop.MIDI_MIN,
-                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
-                        ) { updateStoopRoot(root - 12) }
-                        ActionButton(
-                            "−", scheme, enabled = root > Stoop.MIDI_MIN,
-                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
-                        ) { updateStoopRoot(root - 1) }
-                        TapeText("ROOT ${Scales.nameOf(root)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
-                        ActionButton(
-                            "+", scheme, enabled = root < Stoop.MIDI_MAX,
-                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
-                        ) { updateStoopRoot(root + 1) }
-                        ActionButton(
-                            "OCT +", scheme, enabled = root + 12 <= Stoop.MIDI_MAX,
-                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
-                        ) { updateStoopRoot(root + 12) }
-                    }
-                }
                 if (engine == Engine.OVERLAP) {
                     OverlapPerformanceControls(
                         patch = buildCurrentPatch(engine.patchDisplayName(voice)) as OverlapPatch,
@@ -2727,12 +2718,6 @@ fun SynthScreen(
                         patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as NacrePatch,
                         fillColor = classColor,
                         scheme = scheme,
-                        onRootChange = { root ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name ?: engine.patchDisplayName(voice)) as NacrePatch).copy(midi = root)
-                        },
                         onVelocityChange = { value ->
                             touched = true
                             currentPresetByVoice.remove(engine to voice)
@@ -2754,10 +2739,6 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         loadedPatchesByVoice[engine to voice] = edit(buildCurrentPatch(rimePatch.name) as RimePatch)
                     }
-                    MacroSlider(label = "ROOT ${Scales.nameOf(rimePatch.midi)}",
-                        value = (rimePatch.midi - Rime.MIN_MIDI).toFloat() / (Rime.MAX_MIDI - Rime.MIN_MIDI),
-                        fillColor = classColor, scheme = scheme,
-                        onValueChange = { value -> editRime { it.copy(midi = (Rime.MIN_MIDI + value * (Rime.MAX_MIDI - Rime.MIN_MIDI)).roundToInt().coerceIn(Rime.MIN_MIDI, Rime.MAX_MIDI)) } })
                     MacroSlider(label = "VELOCITY", value = rimePatch.velocity, fillColor = classColor, scheme = scheme,
                         onValueChange = { value -> editRime { it.copy(velocity = value.coerceIn(0f, 1f)) } })
                     MacroSlider(label = "GATE ${"%.2f".format(java.util.Locale.ROOT, rimePatch.gateSeconds)} s",
@@ -2793,12 +2774,6 @@ fun SynthScreen(
                         patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch,
                         fillColor = classColor,
                         scheme = scheme,
-                        onRootChange = { root ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch).copy(midi = root)
-                        },
                         onVelocityChange = { value ->
                             touched = true
                             currentPresetByVoice.remove(engine to voice)
@@ -2813,21 +2788,6 @@ fun SynthScreen(
                 // legacy model keeps its timing through root/velocity edits.
                 if (engine == Engine.CREASE) {
                     val creasePatch = buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (creasePatch.midi - Crease.MIDI_MIN).toFloat() / (Crease.MIDI_MAX - Crease.MIDI_MIN),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(creasePatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val root = (Crease.MIDI_MIN + value * (Crease.MIDI_MAX - Crease.MIDI_MIN)).roundToInt()
-                                .coerceIn(Crease.MIDI_MIN, Crease.MIDI_MAX)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as CreasePatch).copy(midi = root)
-                        },
-                    )
                     MacroSlider(
                         label = "VELOCITY",
                         value = creasePatch.velocity,
@@ -2854,29 +2814,6 @@ fun SynthScreen(
                     OrphicaModePicker(config.mode, scheme) { mode ->
                         updateOrphicaConfig { it.copy(mode = mode) }
                     }
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ActionButton(
-                            "OCT −", scheme, enabled = config.midi - 12 >= Orphica.MIDI_MIN,
-                            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
-                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 12) } }
-                        ActionButton(
-                            "−", scheme, enabled = config.midi > Orphica.MIDI_MIN,
-                            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
-                        ) { updateOrphicaConfig { it.copy(midi = config.midi - 1) } }
-                        TapeText("ROOT ${Scales.nameOf(config.midi)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
-                        ActionButton(
-                            "+", scheme, enabled = config.midi < Orphica.MIDI_MAX,
-                            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
-                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 1) } }
-                        ActionButton(
-                            "OCT +", scheme, enabled = config.midi + 12 <= Orphica.MIDI_MAX,
-                            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
-                        ) { updateOrphicaConfig { it.copy(midi = config.midi + 12) } }
-                    }
                 }
 
                 // MURMUR has five timbral controls and HOLD. Its requested root and
@@ -2884,23 +2821,7 @@ fun SynthScreen(
                 // operator/formant definition through preview, saving and placement.
                 if (engine == Engine.MURMUR) {
                     val murmurPatch = loadedPatch as? MurmurPatch
-                    val midi = murmurPatch?.midi ?: Murmur.DEFAULT_MIDI
                     val velocity = murmurPatch?.velocity ?: 1f
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (midi - Murmur.MIN_MIDI).toFloat() / (Murmur.MAX_MIDI - Murmur.MIN_MIDI),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val root = (Murmur.MIN_MIDI + value * (Murmur.MAX_MIDI - Murmur.MIN_MIDI)).roundToInt()
-                                .coerceIn(Murmur.MIN_MIDI, Murmur.MAX_MIDI)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as MurmurPatch).copy(midi = root)
-                        },
-                    )
                     MacroSlider(
                         label = "VELOCITY",
                         value = velocity,
@@ -2942,21 +2863,6 @@ fun SynthScreen(
                 if (engine == Engine.OVEN) {
                     val ovenPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch
                     MacroSlider(
-                        label = "ROOT",
-                        value = (ovenPatch.midi - Oven.MIDI_MIN).toFloat() / (Oven.MIDI_MAX - Oven.MIDI_MIN),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(ovenPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val midi = (Oven.MIDI_MIN + value * (Oven.MIDI_MAX - Oven.MIDI_MIN)).roundToInt()
-                                .coerceIn(Oven.MIDI_MIN, Oven.MIDI_MAX)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OvenPatch).copy(midi = midi)
-                        },
-                    )
-                    MacroSlider(
                         label = "VELOCITY",
                         value = ovenPatch.velocity,
                         fillColor = classColor,
@@ -2975,18 +2881,6 @@ fun SynthScreen(
                 // Copy the complete recipe so edits keep its strand roster and model.
                 if (engine == Engine.FILAMENT) {
                     val filamentPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (filamentPatch.midi - Filament.MIN_MIDI).toFloat() / (Filament.MAX_MIDI - Filament.MIN_MIDI),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(filamentPatch.midi),
-                        onValueChange = { value ->
-                            val midi = (Filament.MIN_MIDI + value * (Filament.MAX_MIDI - Filament.MIN_MIDI)).roundToInt()
-                                .coerceIn(Filament.MIN_MIDI, Filament.MAX_MIDI)
-                            updateFilamentPatch { it.copy(midi = midi) }
-                        },
-                    )
                     MacroSlider(
                         label = "VELOCITY",
                         value = filamentPatch.velocity,
@@ -3045,21 +2939,6 @@ fun SynthScreen(
                             "HARMONIC TONE CAN LOOP. WOOD, BOWL AND WIRE TURN HOLD OFF."
                         else "MATERIAL NOTES ARE FINITE. HOLD IS AVAILABLE FOR HARMONIC TONE.",
                         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3,
-                    )
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (shoalPatch.midi - Shoal.MIN_MIDI).toFloat() / (Shoal.MAX_MIDI - Shoal.MIN_MIDI),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(shoalPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val midi = (Shoal.MIN_MIDI + value * (Shoal.MAX_MIDI - Shoal.MIN_MIDI)).roundToInt()
-                                .coerceIn(Shoal.MIN_MIDI, Shoal.MAX_MIDI)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ShoalPatch).copy(midi = midi)
-                        },
                     )
                     MacroSlider(
                         label = "VELOCITY",
@@ -3138,21 +3017,6 @@ fun SynthScreen(
                 if (engine == Engine.VENT) {
                     val ventPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch
                     MacroSlider(
-                        label = "ROOT",
-                        value = (ventPatch.midi - Vent.MIDI_MIN).toFloat() / (Vent.MIDI_MAX - Vent.MIDI_MIN),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(ventPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val midi = (Vent.MIDI_MIN + value * (Vent.MIDI_MAX - Vent.MIDI_MIN)).roundToInt()
-                                .coerceIn(Vent.MIDI_MIN, Vent.MIDI_MAX)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as VentPatch).copy(midi = midi)
-                        },
-                    )
-                    MacroSlider(
                         label = "VELOCITY",
                         value = ventPatch.velocity,
                         fillColor = classColor,
@@ -3171,24 +3035,8 @@ fun SynthScreen(
                 // fields beside its six macros; SECONDS bounds the complete render.
                 if (engine == Engine.OSPREY) {
                     val ospreyPatch = loadedPatch as? OspreyPatch
-                    val midi = ospreyPatch?.midi ?: Osprey.DEFAULT_MIDI
                     val velocity = ospreyPatch?.velocity ?: 1f
                     val seconds = ospreyPatch?.durationSeconds ?: 8f
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (midi - Osprey.MIDI_MIN).toFloat() / (Osprey.MIDI_MAX - Osprey.MIDI_MIN),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val root = (Osprey.MIDI_MIN + value * (Osprey.MIDI_MAX - Osprey.MIDI_MIN)).roundToInt()
-                                .coerceIn(Osprey.MIDI_MIN, Osprey.MIDI_MAX)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OspreyPatch).copy(midi = root)
-                        },
-                    )
                     MacroSlider(
                         label = "VELOCITY",
                         value = velocity,
@@ -3224,23 +3072,7 @@ fun SynthScreen(
                 // its accepted timbre or the saved renderer model.
                 if (engine == Engine.OPENSKY) {
                     val openSkyPatch = buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch
-                    val midiSpan = (OpenSkyPatch.MIDI_MAX - OpenSkyPatch.MIDI_MIN).toFloat()
                     val gateSpan = OpenSkyPatch.GATE_SECONDS_MAX - OpenSkyPatch.GATE_SECONDS_MIN
-                    MacroSlider(
-                        label = "NOTE",
-                        value = (openSkyPatch.midi - OpenSkyPatch.MIDI_MIN) / midiSpan,
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(openSkyPatch.midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as OpenSkyPatch)
-                                    .copy(midi = (OpenSkyPatch.MIDI_MIN + value * midiSpan).roundToInt()
-                                        .coerceIn(OpenSkyPatch.MIDI_MIN, OpenSkyPatch.MIDI_MAX))
-                        },
-                    )
                     MacroSlider(
                         label = "VEL",
                         value = openSkyPatch.velocity,
@@ -3369,15 +3201,6 @@ fun SynthScreen(
                 if (engine == Engine.TREFOIL) {
                     val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch
                     MacroSlider(
-                        label = "ROOT", value = (patch.midi - Trefoil.MIN_MIDI).toFloat() / (Trefoil.MAX_MIDI - Trefoil.MIN_MIDI),
-                        fillColor = classColor, scheme = scheme, readout = Scales.nameOf(patch.midi),
-                        onValueChange = { value ->
-                            touched = true; currentPresetByVoice.remove(engine to voice)
-                            val midi = (Trefoil.MIN_MIDI + value * (Trefoil.MAX_MIDI - Trefoil.MIN_MIDI)).roundToInt().coerceIn(Trefoil.MIN_MIDI, Trefoil.MAX_MIDI)
-                            loadedPatchesByVoice[engine to voice] = (buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch).copy(midi = midi)
-                        },
-                    )
-                    MacroSlider(
                         label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
                         onValueChange = { value ->
                             touched = true; currentPresetByVoice.remove(engine to voice)
@@ -3397,23 +3220,7 @@ fun SynthScreen(
 
                 if (engine == Engine.OBBLIGATO) {
                     val duet = loadedPatch as? ObbligatoPatch
-                    val midi = duet?.midi ?: Obbligato.DEFAULT_MIDI
                     val velocity = duet?.velocity ?: Obbligato.DEFAULT_VELOCITY
-                    MacroSlider(
-                        label = "ROOT",
-                        value = (midi - Obbligato.MIDI_MIN).toFloat() / (Obbligato.MIDI_MAX - Obbligato.MIDI_MIN),
-                        fillColor = classColor,
-                        scheme = scheme,
-                        readout = Scales.nameOf(midi),
-                        onValueChange = { value ->
-                            touched = true
-                            currentPresetByVoice.remove(engine to voice)
-                            val root = (Obbligato.MIDI_MIN + value * (Obbligato.MIDI_MAX - Obbligato.MIDI_MIN)).roundToInt()
-                                .coerceIn(Obbligato.MIDI_MIN, Obbligato.MIDI_MAX)
-                            loadedPatchesByVoice[engine to voice] =
-                                (buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch).copy(midi = root)
-                        },
-                    )
                     MacroSlider(
                         label = "VELOCITY",
                         value = velocity,
@@ -3475,6 +3282,16 @@ fun SynthScreen(
                         currentPresetByVoice.remove(engine to voice)
                         keepMeridianPatch(changed)
                     }
+                }
+
+                // ROOT and OCT, one row for every tonal engine. SynthRoot (in :shell, tested
+                // there) says whether this patch has a root and how it is stored; the row
+                // never knows which engine it is on. EMBOUCHURE's restore gate hides it
+                // with the sliders, since a recipe not yet read has no root to show.
+                val rootControl = if (embouchureRestore.waitsForRecipe(engine, voice)) null
+                    else SynthRoot.of(buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)))
+                if (rootControl != null) {
+                    RootStepperRow(rootControl, scheme) { midi -> updateRoot(rootControl, midi) }
                 }
 
                 val creaseModel = (loadedPatch as? CreasePatch)?.model ?: Crease.MODEL_VERSION
@@ -3953,18 +3770,6 @@ private fun ApsisPlayingControls(
     scheme: Scheme,
     onPatch: (ApsisPatch) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Apsis.MIDI_MIN).toFloat() / (Apsis.MIDI_MAX - Apsis.MIDI_MIN),
-        fillColor = classColor,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            val midi = (Apsis.MIDI_MIN + value * (Apsis.MIDI_MAX - Apsis.MIDI_MIN)).roundToInt()
-                .coerceIn(Apsis.MIDI_MIN, Apsis.MIDI_MAX)
-            onPatch(patch.copy(midi = midi))
-        },
-    )
     MacroSlider(
         label = "VELOCITY", value = patch.velocity, fillColor = classColor, scheme = scheme,
         onValueChange = { onPatch(patch.copy(velocity = it.coerceIn(0f, 1f))) },
@@ -5287,14 +5092,6 @@ internal fun AccordPerformanceControls(
 @Composable
 private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
     MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Libration.MIN_MIDI).toFloat() / (Libration.MAX_MIDI - Libration.MIN_MIDI),
-        fillColor = color, scheme = scheme, readout = Scales.nameOf(patch.midi),
-        onValueChange = { value -> onChange(patch.copy(midi =
-            (Libration.MIN_MIDI + value * (Libration.MAX_MIDI - Libration.MIN_MIDI))
-                .roundToInt().coerceIn(Libration.MIN_MIDI, Libration.MAX_MIDI))) },
-    )
-    MacroSlider(
         label = "TOUCH", value = patch.velocity, fillColor = color, scheme = scheme,
         onValueChange = { value -> onChange(patch.copy(velocity = value.coerceIn(0f, 1f))) },
     )
@@ -5344,19 +5141,6 @@ internal fun TidalPerformanceControls(
     scheme: Scheme,
     onEdit: (TidalVoice, (TidalPatch) -> TidalPatch) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Tidal.MIN_MIDI).toFloat() / (Tidal.MAX_MIDI - Tidal.MIN_MIDI),
-        fillColor = fill,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onEdit(patch.voice) { current ->
-                current.copy(midi = (Tidal.MIN_MIDI + value * (Tidal.MAX_MIDI - Tidal.MIN_MIDI))
-                    .roundToInt().coerceIn(Tidal.MIN_MIDI, Tidal.MAX_MIDI))
-            }
-        },
-    )
     MacroSlider("VELOCITY", patch.velocity, fill, scheme,
         onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
     TapeText("SOURCE", TapeType.pixelSmall, scheme.ink2.tape)
@@ -6448,18 +6232,6 @@ private fun TrioPerformanceControls(
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 4,
     )
     MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Trio.MIN_MIDI).toFloat() / (Trio.MAX_MIDI - Trio.MIN_MIDI),
-        fillColor = fillColor,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            val root = (Trio.MIN_MIDI + value * (Trio.MAX_MIDI - Trio.MIN_MIDI)).roundToInt()
-                .coerceIn(Trio.MIN_MIDI, Trio.MAX_MIDI)
-            onEdit { it.copy(midi = root) }
-        },
-    )
-    MacroSlider(
         label = "VELOCITY", value = patch.velocity,
         fillColor = fillColor, scheme = scheme,
         onValueChange = { value -> onEdit { it.copy(velocity = value.coerceIn(0f, 1f)) } },
@@ -6522,17 +6294,6 @@ private fun ChamberNoteControls(
         TapeText("WIDER RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
     }
     MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Chamber.MIDI_MIN).toFloat() / (Chamber.MIDI_MAX - Chamber.MIDI_MIN),
-        fillColor = fillColor,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onPatchChange { it.copy(midi = (Chamber.MIDI_MIN + value *
-                (Chamber.MIDI_MAX - Chamber.MIDI_MIN)).roundToInt().coerceIn(Chamber.MIDI_MIN, Chamber.MIDI_MAX)) }
-        },
-    )
-    MacroSlider(
         label = "VELOCITY",
         value = patch.velocity,
         fillColor = fillColor,
@@ -6545,26 +6306,50 @@ private fun ChamberNoteControls(
     )
 }
 
-/** Root and strike strength travel with the complete finite harp recipe. */
+/**
+ * ROOT and OCT steppers: the row STOOP and ORPHICA had first, now one row for every
+ * tonal engine. A semitone or an octave a tap, each tap gated by the engine's own
+ * range so the readout never names a note the engine refuses. The readout is the
+ * note the patch plays (a saved-note engine's base note, a TUNE engine's snapped
+ * note); [SynthRoot] decides which, and the screen hands the chosen note back
+ * through [onRoot].
+ */
+@Composable
+private fun RootStepperRow(control: SynthRoot.Control, scheme: Scheme, onRoot: (Int) -> Unit) {
+    val root = control.midi
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ActionButton(
+            "OCT −", scheme, enabled = control.canStep(-12),
+            accessibilityLabel = "ROOT OCTAVE DOWN", modifier = Modifier.weight(1f),
+        ) { onRoot(root - 12) }
+        ActionButton(
+            "−", scheme, enabled = control.canStep(-1),
+            accessibilityLabel = "ROOT DOWN", modifier = Modifier.weight(1f),
+        ) { onRoot(root - 1) }
+        TapeText("ROOT ${Scales.nameOf(root)}", TapeType.pixel, scheme.ink.tape, Modifier.weight(1.4f))
+        ActionButton(
+            "+", scheme, enabled = control.canStep(1),
+            accessibilityLabel = "ROOT UP", modifier = Modifier.weight(1f),
+        ) { onRoot(root + 1) }
+        ActionButton(
+            "OCT +", scheme, enabled = control.canStep(12),
+            accessibilityLabel = "ROOT OCTAVE UP", modifier = Modifier.weight(1f),
+        ) { onRoot(root + 12) }
+    }
+}
+
+/** Strike strength travels with the complete finite harp recipe; ROOT is the shared row above the sliders. */
 @Composable
 private fun NacreNoteControls(
     patch: NacrePatch,
     fillColor: Color,
     scheme: Scheme,
-    onRootChange: (Int) -> Unit,
     onVelocityChange: (Float) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - Nacre.MIN_MIDI).toFloat() / (Nacre.MAX_MIDI - Nacre.MIN_MIDI),
-        fillColor = fillColor,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onRootChange((Nacre.MIN_MIDI + value * (Nacre.MAX_MIDI - Nacre.MIN_MIDI)).roundToInt()
-                .coerceIn(Nacre.MIN_MIDI, Nacre.MAX_MIDI))
-        },
-    )
     MacroSlider(
         label = "VELOCITY", value = patch.velocity, fillColor = fillColor, scheme = scheme,
         onValueChange = { onVelocityChange(it.coerceIn(0f, 1f)) },
@@ -6581,22 +6366,8 @@ private fun CausticNoteControls(
     patch: CausticPatch,
     fillColor: Color,
     scheme: Scheme,
-    onRootChange: (Int) -> Unit,
     onVelocityChange: (Float) -> Unit,
 ) {
-    MacroSlider(
-        label = "ROOT",
-        value = (patch.midi - CausticInstrument.MIDI_MIN).toFloat() /
-            (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN),
-        fillColor = fillColor,
-        scheme = scheme,
-        readout = Scales.nameOf(patch.midi),
-        onValueChange = { value ->
-            onRootChange((CausticInstrument.MIDI_MIN + value *
-                (CausticInstrument.MIDI_MAX - CausticInstrument.MIDI_MIN)).roundToInt()
-                .coerceIn(CausticInstrument.MIDI_MIN, CausticInstrument.MIDI_MAX))
-        },
-    )
     MacroSlider(
         label = "VELOCITY",
         value = patch.velocity,
