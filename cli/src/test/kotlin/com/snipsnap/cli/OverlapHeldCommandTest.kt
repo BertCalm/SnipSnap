@@ -40,8 +40,11 @@ class OverlapHeldCommandTest {
             assertEquals(expected, OverlapPatch.fromJsonText(saved.readText()))
             val (sidecar, instrument) = InstrumentStore.list(instrumentDir).single()
             assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
-            assertEquals(42, instrument.zones.first().lowNote)
-            assertEquals(78, instrument.zones.last().highNote)
+            // OneNote's shared descriptor writer now spans the outer zones across
+            // the keyboard, retaining the native roots and internal splits.
+            assertEquals(listOf(0, 55, 67), instrument.zones.map { it.lowNote })
+            assertEquals(listOf(54, 66, 127), instrument.zones.map { it.highNote })
+            assertTrue((0..127).all { instrument.zoneFor(it) != null })
             assertEquals(.3f, instrument.release)
             val zone = instrument.zones.single { it.rootNote == 60 }
             val held = OverlapHeld.render(expected)
