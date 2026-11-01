@@ -90,6 +90,9 @@ android {
         // A UI test waits for the screen to settle; system animations would
         // make "settled" a moving target.
         animationsDisabled = true
+        // The plain-JVM suite (src/test) runs on JUnit 5 like every other
+        // module's; `:app:testDebugUnitTest`.
+        unitTests.all { it.useJUnitPlatform() }
     }
 }
 
@@ -152,4 +155,8 @@ dependencies {
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     debugImplementation(composeBom)
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    // The plain-JVM suite (src/test): resource files checked against the
+    // :shell code that defines what they draw. No device needed.
+    testImplementation(kotlin("test"))
 }
