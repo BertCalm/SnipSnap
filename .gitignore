@@ -546,3 +546,6 @@ testkit/prism-opening-sustain-audition/
 testkit/erosion-native-audition/
 # Reproducible Rime held instruments and listening evidence.
 testkit/rime-instruments/
+
+# Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
+testkit/apsis-populations/

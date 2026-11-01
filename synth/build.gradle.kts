@@ -2,6 +2,16 @@ plugins {
     kotlin("jvm")
 }
 
+tasks.register<JavaExec>("generateApsisPopulations") {
+    group = "distribution"
+    description = "Render Kotlin GRAIN and ANCHOR, complete recipes, native WAVs and pre-output reference floats."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ApsisPopulationAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("apsisPopulationOutput").orNull ?: "${rootDir}/testkit/apsis-populations")
+}
+
 tasks.register<JavaExec>("generateFerryMatchAudition") {
     group = "distribution"
     description = "Render Ferry MATCH tuning comparisons, accepted aligned PCM checks and saved recipes."
