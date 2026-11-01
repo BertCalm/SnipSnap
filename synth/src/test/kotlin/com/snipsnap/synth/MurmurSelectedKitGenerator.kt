@@ -101,7 +101,7 @@ object MurmurSelectedKitGenerator {
                 require(PadRecipe.fromJsonText(recipeFile.readText()) == recipe)
                 linkedMapOf<String, Any?>(
                     "slot" to pad.slot, "pad" to PadNoteMap.labelForPad(pad.slot),
-                    "name" to pad.displayName, "preset" to pad.source.getValue("preset"),
+                    "name" to pad.displayName, "preset" to patch.name,
                     "voice" to patch.voice.name, "class" to pad.drumClass.name, "playback" to "ONE_SHOT",
                     "oneShot" to true, "loop" to false, "muteGroup" to 0, "effects" to false,
                     "pitchMidi" to patch.midi, "note" to Scales.nameOf(patch.midi),
