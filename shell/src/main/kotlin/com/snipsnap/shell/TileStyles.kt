@@ -28,38 +28,46 @@ internal object TileStyles {
         val cx = size / 2f
         val cy = size / 2f
         val r = size * 0.40f
-        val bins = 90
-        val env = seed?.envelope(bins) ?: FloatArray(bins)
-        val n = 360
-        val perPetal = n / BLOOM_PETALS
-        val xs = FloatArray(n)
-        val ys = FloatArray(n)
-        // Each petal's reach is the envelope at that petal's place round the circle, clockwise from
-        // the top: the hit is the first petal, the tail the last, so a drum's bloom diminishes and a
-        // sustained sound's stays full. Read in decibels and averaged over the petal's own span.
-        val petalReach = FloatArray(BLOOM_PETALS) { p ->
-            val from = bins * p / BLOOM_PETALS
-            val to = bins * (p + 1) / BLOOM_PETALS
-            var s = 0f
-            for (b in from until to) s += env[b]
-            reach(s / (to - from))
-        }
-        for (i in 0 until n) {
-            val a = (i.toDouble() / n) * 2 * Math.PI - Math.PI / 2
-            // d: 0 at the petal's centre, 1 at its edges; the cosine body keeps every petal round.
-            val k = i % perPetal
-            val d = kotlin.math.abs(k - perPetal / 2f) / (perPetal / 2f)
-            val body = 0.5f + 0.5f * cos(Math.PI * d).toFloat()
-            val rr = r * (0.50f + 0.50f * body * (0.60f + 0.40f * petalReach[i / perPetal]))
-            xs[i] = cx + (rr * cos(a)).toFloat()
-            ys[i] = cy + (rr * sin(a)).toFloat()
-        }
-        val petal = ArtPath.polygon(xs, ys)
+        val petal = petals(cx, cy, r, seed?.envelope(90) ?: FloatArray(90), BLOOM_PETALS, n = 360, centredAtTop = false)
         canvas.fillPath(petal, ArtFill.Radial(cx, cy, r, palette.field1, palette.field2))
         canvas.strokePath(petal, size * 0.008f, ArtFill.Solid(palette.ink, 0.35f))
         canvas.fillCircle(cx, cy, r * 0.42f, ArtFill.Solid(palette.ground))
 
         holeName(canvas, palette, label, zone, cx, cy)
+    }
+
+    /**
+     * A flower outline: [count] petals round ([cx], [cy]), each a cosine
+     * body (always a rounded form, never a spike) reaching between half of
+     * [r] and all of it by the envelope at that petal's place round the
+     * circle, clockwise from the top: the hit is the first petal, the tail
+     * the last. Read in decibels and averaged over the petal's own span.
+     * [centredAtTop] turns the flower so the first petal's tip points up.
+     */
+    fun petals(cx: Float, cy: Float, r: Float, env: FloatArray, count: Int, n: Int, centredAtTop: Boolean): ArtPath {
+        val bins = env.size
+        val perPetal = n / count
+        val reachOf = FloatArray(count) { p ->
+            val from = bins * p / count
+            val to = maxOf(from + 1, bins * (p + 1) / count)
+            var s = 0f
+            for (b in from until to) s += env[b]
+            reach(s / (to - from))
+        }
+        val turn = if (centredAtTop) -Math.PI / count else 0.0
+        val xs = FloatArray(perPetal * count)
+        val ys = FloatArray(perPetal * count)
+        for (i in xs.indices) {
+            val a = (i.toDouble() / xs.size) * 2 * Math.PI - Math.PI / 2 + turn
+            // d: 0 at the petal's centre, 1 at its edges.
+            val k = i % perPetal
+            val d = kotlin.math.abs(k - perPetal / 2f) / (perPetal / 2f)
+            val body = 0.5f + 0.5f * cos(Math.PI * d).toFloat()
+            val rr = r * (0.50f + 0.50f * body * (0.60f + 0.40f * reachOf[i / perPetal]))
+            xs[i] = cx + (rr * cos(a)).toFloat()
+            ys[i] = cy + (rr * sin(a)).toFloat()
+        }
+        return ArtPath.polygon(xs, ys)
     }
 
     /**
@@ -200,6 +208,174 @@ internal object TileStyles {
         val tracking = 0.18f
         val (text, fitted) = TileType.fitTrackedText(canvas, label.uppercase(), ArtFont.SPACE_GROTESK_BOLD, zone.w.toFloat(), minOf(size * 0.08f, zone.h * 0.6f), tracking)
         TileType.tracked(canvas, text, ArtFont.SPACE_GROTESK_BOLD, fitted, zone.x.toFloat(), zone.y + zone.h * 0.72f, tracking, palette.ink)
+    }
+
+    // ---- the four redrawn: each draws every pad of the seed kit, class-coloured ----
+
+    /** Where the wheel (Slices) and the orbits (Rings) sit, as shares of the tile. */
+    const val WHEEL_CY = 0.42f
+    const val WHEEL_R = 0.34f
+
+    /**
+     * Waveform: every pad's sound end to end as one river. The river's
+     * banks are the joined sound's loudness per column (smoothed, so it
+     * flows rather than steps), never thinner than a hairline so a gap
+     * between hits is a narrows, not a break; each pad's reach is filled
+     * with a gradient from its class colour to the next pad's, so the
+     * colours blend along the water.
+     */
+    fun river(canvas: ArtCanvas, size: Int, palette: Palette, pads: List<PadSound>, label: String, zone: KitArt.Box) {
+        if (pads.isNotEmpty()) {
+            val m = KitArt.margin(size).toFloat()
+            val cols = 240
+            val total = pads.sumOf { it.sound.frames }
+            val joined = FloatArray(total)
+            var at = 0
+            val starts = IntArray(pads.size)
+            pads.forEachIndexed { i, p ->
+                starts[i] = at
+                p.sound.mono.copyInto(joined, at)
+                at += p.sound.frames
+            }
+            val raw = FloatArray(cols)
+            for (c in 0 until cols) {
+                val a = (total.toLong() * c / cols).toInt()
+                val b = (total.toLong() * (c + 1) / cols).toInt().coerceAtLeast(a + 1).coerceAtMost(total)
+                var best = 0f
+                for (i in a until b) best = maxOf(best, kotlin.math.abs(joined[i]))
+                raw[c] = best
+            }
+            val top = raw.max().coerceAtLeast(1e-6f)
+            val level = FloatArray(cols) { c ->
+                var s = 0f
+                var n = 0
+                for (j in maxOf(0, c - 4)..minOf(cols - 1, c + 4)) { s += reach(raw[j] / top); n++ }
+                s / n
+            }
+            val cy = size * WHEEL_CY
+            val amp = size * 0.27f
+            val hair = size * 0.006f
+            val x = FloatArray(cols + 1) { m + (size - 2 * m) * it / cols }
+            fun bank(c: Int) = maxOf(hair, amp * level[c.coerceIn(0, cols - 1)])
+            // Each pad's reach of the river, in columns, overlapping its neighbour by one so no seam shows.
+            pads.forEachIndexed { i, p ->
+                val c0 = (starts[i].toLong() * cols / total).toInt().coerceIn(0, cols - 1)
+                val c1 = if (i + 1 < pads.size) (starts[i + 1].toLong() * cols / total).toInt().coerceIn(c0 + 1, cols) else cols
+                val path = ArtPath().moveTo(x[c0], cy - bank(c0))
+                for (c in c0 + 1..c1) path.lineTo(x[c], cy - bank(c))
+                for (c in c1 downTo c0) path.lineTo(x[c], cy + bank(c) * 0.85f)
+                path.close()
+                val next = pads.getOrNull(i + 1)?.color ?: p.color
+                canvas.fillPath(path, ArtFill.Linear(x[c0], 0f, x[c1], 0f, p.color, lerp(p.color, next, 0.5f), alpha = 0.92f))
+            }
+        }
+        stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+    }
+
+    /** Petals on each of Grid's pad flowers. */
+    const val GRID_PETALS = 5
+
+    /**
+     * Grid: the 4×4 bank, each pad's cell a small bloom of that pad's own
+     * envelope ([GRID_PETALS] petals, the hit's petal pointing up) in its
+     * class colour, with a hole of ground at its heart; an empty pad is a
+     * faint dot.
+     */
+    fun padBlooms(canvas: ArtCanvas, size: Int, palette: Palette, pads: List<PadSound>, label: String, zone: KitArt.Box) {
+        val bySlot = pads.associateBy { it.slot }
+        for (slot in 1..16) {
+            val cell = KitArt.gridCell(size, slot)
+            val cx = cell.x + cell.w / 2f
+            val cy = cell.y + cell.h / 2f
+            val pad = bySlot[slot]
+            if (pad == null) {
+                canvas.fillCircle(cx, cy, cell.w * 0.06f, ArtFill.Solid(palette.ink, 0.15f))
+                continue
+            }
+            val flower = petals(cx, cy, cell.w * 0.48f, pad.sound.envelope(40), GRID_PETALS, n = 120, centredAtTop = true)
+            canvas.fillPath(flower, ArtFill.Radial(cx, cy, cell.w * 0.48f, lighten(pad.color, 0.25f), pad.color, alpha = 0.92f))
+            canvas.fillCircle(cx, cy, cell.w * 0.12f, ArtFill.Solid(palette.ground))
+        }
+        stripName(canvas, palette, label, zone, ArtFont.OSWALD_BOLD)
+    }
+
+    /**
+     * Slices: one wedge per pad round a wheel, starting at twelve o'clock,
+     * each reaching out by the square root of its length (so a long loop
+     * does not flatten every one-shot), round an open hub, rimmed in a
+     * faint line of ink.
+     */
+    fun wheel(canvas: ArtCanvas, size: Int, palette: Palette, pads: List<PadSound>, label: String, zone: KitArt.Box) {
+        val shown = pads.take(32)
+        if (shown.isNotEmpty()) {
+            val cx = size / 2f
+            val cy = size * WHEEL_CY
+            val r = size * WHEEL_R
+            val hub = r * 0.18f
+            val maxLen = shown.maxOf { it.sound.frames }.toFloat()
+            val step = 360f / shown.size
+            shown.forEachIndexed { i, p ->
+                val reachOut = hub + (r - hub) * kotlin.math.sqrt(p.sound.frames / maxLen)
+                val a0 = -90f + i * step + step * 0.04f
+                val a1 = -90f + (i + 1) * step - step * 0.04f
+                val arc = 7
+                val xs = FloatArray(arc * 2)
+                val ys = FloatArray(arc * 2)
+                for (k in 0 until arc) {
+                    val a = Math.toRadians((a0 + (a1 - a0) * k / (arc - 1)).toDouble())
+                    xs[k] = cx + (reachOut * cos(a)).toFloat()
+                    ys[k] = cy + (reachOut * sin(a)).toFloat()
+                    val b = Math.toRadians((a1 - (a1 - a0) * k / (arc - 1)).toDouble())
+                    xs[arc + k] = cx + (hub * cos(b)).toFloat()
+                    ys[arc + k] = cy + (hub * sin(b)).toFloat()
+                }
+                canvas.fillPath(ArtPath.polygon(xs, ys), ArtFill.Solid(p.color, 0.85f))
+                canvas.strokePath(ArtPath.polyline(xs.copyOf(arc), ys.copyOf(arc)), size * 0.006f, ArtFill.Solid(palette.ink, 0.25f))
+            }
+        }
+        stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+    }
+
+    /**
+     * Rings: one seeded arc per pad round a common centre, its sweep the
+     * pad's length and its weight the pad's peak, each laid twice — a wide
+     * faint glow, then the line — so they overlap like light, not a chart.
+     */
+    fun orbits(canvas: ArtCanvas, size: Int, palette: Palette, pads: List<PadSound>, ringsSeed: Int, label: String, zone: KitArt.Box) {
+        if (pads.isNotEmpty()) {
+            val rnd = kotlin.random.Random(ringsSeed)
+            val cx = size / 2f
+            val cy = size * WHEEL_CY
+            val r = size * 0.36f
+            val maxLen = pads.maxOf { it.sound.frames }.toFloat()
+            val maxPeak = pads.maxOf { it.sound.peak }.coerceAtLeast(1e-6f)
+            pads.forEachIndexed { i, p ->
+                val rr = r * (i + 1) / (pads.size + 1)
+                val sweep = 30f + 300f * (p.sound.frames / maxLen)
+                val start = rnd.nextInt(360).toFloat()
+                val n = 48
+                val xs = FloatArray(n)
+                val ys = FloatArray(n)
+                for (k in 0 until n) {
+                    val a = Math.toRadians((start + sweep * k / (n - 1)).toDouble())
+                    xs[k] = cx + (rr * cos(a)).toFloat()
+                    ys[k] = cy + (rr * sin(a)).toFloat()
+                }
+                val arc = ArtPath.polyline(xs, ys)
+                val w = size * 0.006f + (p.sound.peak / maxPeak) * size * 0.014f
+                canvas.strokePath(arc, w * 3.2f, ArtFill.Solid(p.color, 0.14f))
+                canvas.strokePath(arc, w, ArtFill.Solid(p.color, 0.95f))
+            }
+        }
+        stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
+    }
+
+    /** Straight-line distance between two packed colours, 0..441. */
+    fun distance(a: Int, b: Int): Double {
+        val dr = ((a shr 16) and 0xFF) - ((b shr 16) and 0xFF)
+        val dg = ((a shr 8) and 0xFF) - ((b shr 8) and 0xFF)
+        val db = (a and 0xFF) - (b and 0xFF)
+        return kotlin.math.sqrt((dr * dr + dg * dg + db * db).toDouble())
     }
 
     /** A 0..1 level as reach: decibels over a 40 dB window, so a decaying hit still spreads. */

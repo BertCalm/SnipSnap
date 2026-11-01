@@ -89,17 +89,17 @@ object KitArt {
 
     /** The family: four redrawn, four new, one blurb each for the CLI's listing. */
     enum class Style(val id: String, val blurb: String) {
-        /** The kit laid on tape: every pad's audio, joined, class-coloured. */
-        WAVEFORM("waveform", "all the pads end to end, each in its class colour"),
+        /** The kit laid on tape: every pad's audio joined as one river, class colours blending along it. */
+        WAVEFORM("waveform", "every pad end to end as one river, class colours blending along it"),
 
-        /** The instrument itself: the 4x4 bank-A grid, lit by class. */
-        GRID("grid", "the 4x4 pad grid, lit by class colour"),
+        /** The instrument itself: the 4x4 bank, each pad a small bloom of its own sound. */
+        GRID("grid", "the 4x4 bank, each pad a small bloom of its own sound"),
 
-        /** A chopped break as a bar chart: one bar per pad. */
-        SLICES("slices", "one bar per pad, height from length"),
+        /** A chopped break as a wheel: one wedge per pad, reaching out by its length. */
+        SLICES("slices", "one wedge per pad, radiating, sized by length"),
 
-        /** Seeded orbits: one arc per pad, sized by its sound. */
-        RINGS("rings", "seeded arcs, one per pad, sized by the sound"),
+        /** Seeded orbits: one glowing arc per pad, weighted by its sound. */
+        RINGS("rings", "seeded arcs per pad with weight and glow"),
 
         /** The seed pad's loudness wrapped round a circle, the name in the hole. */
         BLOOM("bloom", "the seed's loudness wrapped round a circle, the name in the hole"),
@@ -149,22 +149,10 @@ object KitArt {
             Style.RIDGES -> TileStyles.ridges(canvas, size, palette, seed, label, zone)
             Style.FIELD -> TileStyles.field(canvas, size, palette, seed, label, zone)
             Style.RIBBON -> TileStyles.ribbon(canvas, size, palette, seed, label, zone)
-            Style.WAVEFORM -> {
-                waveformStrip(canvas, fieldBox(size), kit, kitDir)
-                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
-            }
-            Style.GRID -> {
-                grid(canvas, fieldBox(size), kit, palette.ground)
-                TileStyles.stripName(canvas, palette, label, zone, ArtFont.OSWALD_BOLD)
-            }
-            Style.SLICES -> {
-                slices(canvas, fieldBox(size), kit, kitDir)
-                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
-            }
-            Style.RINGS -> {
-                rings(canvas, fieldBox(size), kit, kitDir, ringsSeed)
-                TileStyles.stripName(canvas, palette, label, zone, ArtFont.SPACE_GROTESK_BOLD)
-            }
+            Style.WAVEFORM -> TileStyles.river(canvas, size, palette, pads, label, zone)
+            Style.GRID -> TileStyles.padBlooms(canvas, size, palette, pads, label, zone)
+            Style.SLICES -> TileStyles.wheel(canvas, size, palette, pads, label, zone)
+            Style.RINGS -> TileStyles.orbits(canvas, size, palette, pads, ringsSeed, label, zone)
         }
 
         val (mx, my) = markOrigin(canvas, knobs.mark, size)
@@ -255,6 +243,20 @@ object KitArt {
             Mark.Variant.LOCKUP -> 0.44f
         }
         return Math.round(size * share)
+    }
+
+    /** A bank-A pad's cell in the Grid style, MPC layout: A01 bottom-left, A13 top-left. */
+    internal fun gridCell(size: Int, slot: Int): Box {
+        require(slot in 1..16) { "bank A has slots 1..16, got $slot" }
+        val box = fieldBox(size)
+        val side = minOf(box.w, box.h)
+        val ox = box.x + (box.w - side) / 2
+        val oy = box.y + (box.h - side) / 2
+        val gap = maxOf(2, (side * 0.04f).toInt())
+        val cell = (side - 3 * gap) / 4
+        val row = 3 - (slot - 1) / 4
+        val col = (slot - 1) % 4
+        return Box(ox + col * (cell + gap), oy + row * (cell + gap), cell, cell)
     }
 
     /** The box the name must stay inside; KitArtTest measures legibility over it. */
@@ -424,73 +426,6 @@ object KitArt {
             canvas.fillRect(box.x + c, min(top, bottom), 1, max(1, abs(bottom - top)), vs[owner].color)
         }
     }
-
-    private fun grid(canvas: ArtCanvas, box: Box, kit: Kit, ground: Int) {
-        val side = min(box.w, box.h)
-        val ox = box.x + (box.w - side) / 2
-        val oy = box.y + (box.h - side) / 2
-        val gap = (side * 0.04f).toInt().coerceAtLeast(2)
-        val cell = (side - 3 * gap) / 4
-        val bevel = max(2, cell / 24)
-
-        for (row in 0 until 4) {
-            for (col in 0 until 4) {
-                // MPC layout: A01 bottom-left, A13 top-left.
-                val slot = (3 - row) * 4 + col + 1
-                val pad = kit.pad(slot)
-                val x = ox + col * (cell + gap)
-                val y = oy + row * (cell + gap)
-                if (pad == null) {
-                    // Empty pads sit dim on the LCD; the kit is the light.
-                    canvas.fillRect(x, y, cell, cell, TileStyles.lighten(ground, 0.07f))
-                } else {
-                    val c = Schemes.classColor(pad.drumClass)
-                    canvas.fillRect(x, y, cell, cell, c)
-                    // The raised bevel every TapeOS pad wears.
-                    canvas.fillRect(x, y, cell, bevel, TileStyles.lighten(c, 0.35f))
-                    canvas.fillRect(x, y, bevel, cell, TileStyles.lighten(c, 0.35f))
-                    canvas.fillRect(x, y + cell - bevel, cell, bevel, TileStyles.darken(c, 0.35f))
-                    canvas.fillRect(x + cell - bevel, y, bevel, cell, TileStyles.darken(c, 0.35f))
-                }
-            }
-        }
-    }
-
-    private fun slices(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File) {
-        val vs = voices(kit, kitDir).take(32)
-        if (vs.isEmpty()) return
-        val maxLen = vs.maxOf { it.mono.size }.toFloat()
-        val gap = max(1, (box.w * 0.012f).toInt())
-        val barW = max(1, (box.w - gap * (vs.size - 1)) / vs.size)
-        val used = barW * vs.size + gap * (vs.size - 1)
-        var x = box.x + (box.w - used) / 2
-        for (v in vs) {
-            // sqrt keeps a long loop from flattening every one-shot.
-            val h = max(2, (sqrt(v.mono.size / maxLen) * box.h).toInt())
-            canvas.fillRect(x, box.y + box.h - h, barW, h, v.color)
-            x += barW + gap
-        }
-    }
-
-    private fun rings(canvas: ArtCanvas, box: Box, kit: Kit, kitDir: File, seed: Int) {
-        val vs = voices(kit, kitDir)
-        if (vs.isEmpty()) return
-        val rnd = Random(seed)
-        val cx = box.x + box.w / 2f
-        val cy = box.y + box.h / 2f
-        val maxR = min(box.w, box.h) / 2f * 0.95f
-        val maxLen = vs.maxOf { it.mono.size }.toFloat()
-        val maxPeak = max(1e-6f, vs.maxOf { it.peak })
-
-        vs.forEachIndexed { i, v ->
-            val r = maxR * (i + 1) / (vs.size + 1)
-            val sweep = 30f + 300f * (v.mono.size / maxLen)
-            val start = rnd.nextInt(360).toFloat()
-            val stroke = 1.5f + (v.peak / maxPeak) * (maxR * 0.05f)
-            canvas.drawArc(cx, cy, r, start, sweep, stroke, v.color)
-        }
-    }
-
 }
 
 /**

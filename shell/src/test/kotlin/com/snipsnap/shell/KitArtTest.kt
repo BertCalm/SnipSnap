@@ -254,6 +254,51 @@ class KitArtTest {
     }
 
     @Test
+    fun `the redrawn four are no longer bars and boxes`() {
+        val dir = File(temp, "redrawn")
+        val kit = buildKit(dir)
+        val palette = Palettes.VENT
+        val size = 200
+        fun tile(style: KitArt.Style) = decode(KitArt.png(kit, dir, knobs(style, palette), size = size))
+
+        // GRID: a filled cell is a small bloom with a hole of ground at its centre, not a lit box.
+        val grid = tile(KitArt.Style.GRID)
+        val cell = KitArt.gridCell(size, slot = 1)
+        assertEquals(palette.ground, rgb(grid, cell.x + cell.w / 2, cell.y + cell.h / 2), "the kick's cell has a hole")
+        assertTrue(rgb(grid, cell.x + cell.w / 2, cell.y + cell.h / 5) != palette.ground, "and a petal above it")
+
+        // SLICES: wedges radiate from a hole; a bar chart has neither the hole's ring nor the diagonal.
+        val slices = tile(KitArt.Style.SLICES)
+        val cx = size / 2
+        val cy = Math.round(size * TileStyles.WHEEL_CY)
+        assertEquals(palette.ground, rgb(slices, cx, cy), "the wheel's hub is open")
+        val r = size * TileStyles.WHEEL_R * 0.55f
+        val diagonal = (0 until 8).count { k ->
+            val a = Math.PI / 4 + k * Math.PI / 2 / 8
+            rgb(slices, (cx + r * Math.cos(a)).toInt(), (cy + r * Math.sin(a)).toInt()) != palette.ground
+        }
+        assertTrue(diagonal > 0, "something lies on the lower-right diagonal")
+
+        // WAVEFORM: one flowing river — at the middle column the lit run is one contiguous span.
+        val river = tile(KitArt.Style.WAVEFORM)
+        fun litRows(x: Int) = (0 until Math.round(size * 0.78f)).filter { y -> rgb(river, x, y) != palette.ground }
+        val mid = litRows(size / 2)
+        assertTrue(mid.isNotEmpty() && mid.last() - mid.first() + 1 == mid.size, "one contiguous run at the middle column")
+        val near = litRows(size / 2 - 1)
+        assertTrue(kotlin.math.abs(near.size - mid.size) <= 3, "neighbouring columns flow (${near.size} vs ${mid.size})")
+
+        // RINGS: each arc carries a glow — pixels of the class colour blended well into the ground, wider than the stroke.
+        val rings = tile(KitArt.Style.RINGS)
+        val glow = (0 until size).sumOf { y ->
+            (0 until size).count { x ->
+                val c = rgb(rings, x, y)
+                c != palette.ground && TileStyles.distance(c, palette.ground) < 60
+            }
+        }
+        assertTrue(glow > 200, "a faint glow surrounds the arcs ($glow pixels)")
+    }
+
+    @Test
     fun `the seed pad changes the field and the rings seed changes only rings`() {
         val dir = File(temp, "seeded")
         val kit = buildKit(dir)
