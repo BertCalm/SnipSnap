@@ -95,4 +95,4 @@ Focused validation passed: 10 synth bank tests, 7 kit portability tests, and 68 
 
 The source manifest fingerprints the nine original WAVs, both legal texts and source notice. No changes were made to the legacy Confluence renderer, wordless bank or Assembly APIs. The current default branch also restores full PRISM macro drafts before default controls; the independently identified startup regression was resolved upstream while this bank was being built. Its existing device regression tests remain intact.
 
-Two inherited integration regressions were corrected without changing their assertions: the narrow-keygroup rewrite test now declares its own package directory, and OVERLAP export explicitly preserves its authored native zone range instead of accepting OneNote's full-keyboard default.
+Two inherited integration regressions were corrected without changing their assertions: the narrow-keygroup rewrite test now declares its own package directory, and OVERLAP/MERIDIAN exporters explicitly preserve their authored native zone ranges instead of accepting OneNote's full-keyboard default.
