@@ -1063,6 +1063,14 @@ fun SynthScreen(
     }
     val activeRecipe = loadedRecipesByVoice[engine to voice] ?: recalledRecipesByVoice[engine to voice]
     fun buildCurrentPatch(name: String): Patch {
+        if (engine == Engine.SCANNED_CHAIN) {
+            // Envelope and macro edits can share a frame with SAVE or SEND.
+            // Read the live complete source rather than the previous composition's patch.
+            val current = loadedPatchesByVoice[engine to voice] as? ScannedChainPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: ScannedChainPatch(name, voice as ScannedChainVoice, controls)
+        }
         if (engine == Engine.OVERLAP) {
             // Mode, note and release edits can share a frame with SAVE/SEND.
             val current = loadedPatchesByVoice[engine to voice] as? OverlapPatch
@@ -4046,6 +4054,12 @@ private fun MacroSliders(
                 // HOLD remains a finite 2–6 s control. Held RIBBON uses
                 // its saved release instead, without changing HOLD's value.
                 if (holdingRibbon && spec.name == "HOLD") continue
+                if (engine == Engine.SCANNED_CHAIN) {
+                    ScannedMacroSlider(spec.name, macros.getValue(spec.name), classColor, scheme) { value ->
+                        onMacro(spec.name, value)
+                    }
+                    continue
+                }
                 MacroSlider(
                     label = spec.name,
                     value = macros.getValue(spec.name),
