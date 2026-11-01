@@ -82,6 +82,7 @@ import com.snipsnap.app.ui.LocalBusySink
 import com.snipsnap.app.ui.LocalJobs
 import com.snipsnap.app.ui.LoopBench
 import com.snipsnap.app.ui.MakeList
+import com.snipsnap.app.ui.MyVoiceScreen
 import com.snipsnap.app.ui.MessageBox
 import com.snipsnap.app.ui.MidiScreen
 import com.snipsnap.app.ui.Dock
@@ -221,7 +222,7 @@ private const val PREF_OVERLAY_ASKED = "bubble_overlay_asked"
  * `nav.backChip` (KEYS, INSTRUMENTS, BIN, DOUBLES, X-RAY, SNIPS, ORBIT, LOOP,
  * SPLIT, VERSIONS, PAD CAPTURE, SONG), so they come from the model either way.
  */
-private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE)
+private val FRAME_CHIP_BENCHES = setOf(Bench.SETUP, Bench.HELP, Bench.MIDI, Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.MY_VOICE)
 
 /** About how many characters one line of the dock's `now` region holds on a phone; it draws two. */
 private const val DOCK_LINE_CHARS = 44
@@ -4564,7 +4565,21 @@ fun App(shelf: KitShelf) {
                                 )
                             }
                         }
-                        top == null && location.place == Place.MAKE -> MakeList(onOpen = { nav.open(it) }, hasKit = open != null)
+                        top == Bench.MY_VOICE -> {
+                            val voiceEntry = open
+                            MyVoiceScreen(
+                                entry = voiceEntry,
+                                appScope = scope,
+                                onToast = { dock.say(it) },
+                                onKitUpdated = { updated ->
+                                    if (open?.dir == voiceEntry?.dir) open = open?.copy(kit = updated)
+                                    scope.launch { kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) } }
+                                },
+                            )
+                        }
+                        top == null && location.place == Place.MAKE -> MakeList(
+                            onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
+                        )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
                             backLabel = checkNotNull(nav.backChip) { "INSTRUMENTS is a bench, so it has something to go back to" },
