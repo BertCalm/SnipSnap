@@ -2398,17 +2398,6 @@ tasks.register<JavaExec>("generateNacrePresenceAudition") {
     args("${rootDir}/testkit/nacre-presence-audition")
 }
 
-/** Ordinary saved patches across registers, strike strengths, controls and a short phrase. */
-tasks.register<JavaExec>("generateNacrePlayableAudition") {
-    group = "distribution"
-    description = "Render NACRE playable presets, register/velocity matrix, control sweeps and overlap phrases."
-    maxHeapSize = "1g"
-    classpath = sourceSets["test"].runtimeClasspath
-    mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
-    workingDir = projectDir
-    args("${rootDir}/testkit/nacre-playable-audition")
-}
-
 /** Sixteen finite harp pads for the MPC listening trial, retaining exact native strikes. */
 tasks.register<JavaExec>("generateNacreKit") {
     group = "distribution"
@@ -2418,4 +2407,15 @@ tasks.register<JavaExec>("generateNacreKit") {
     mainClass.set("com.snipsnap.synth.NacreKitGenerator")
     workingDir = projectDir
     args(providers.gradleProperty("nacreKitOutput").orNull ?: "${rootDir}/testkit")
+}
+
+/** Ordinary saved patches across registers, strike strengths, controls and a short phrase. */
+tasks.register<JavaExec>("generateNacrePlayableAudition") {
+    group = "distribution"
+    description = "Render NACRE playable presets, register/velocity matrix, control sweeps and overlap phrases."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.NacrePlayableAuditionGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/nacre-playable-audition")
 }
