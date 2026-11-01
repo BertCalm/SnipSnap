@@ -171,13 +171,17 @@ are available outside the factory roster and phone picker. Run
 `./gradlew :synth:generateFerryAudition`; [implementation notes](docs/FERRY.md)
 separate Python listening approval from Kotlin, tail, HOLD and phone acceptance.
 
-CAIRN's finite two-voice reconstruction gives KNOCK a compact contact cluster
-and ANSWER a shared mount that wakes higher stones. Model-pinned recipes,
-contact-aligned playback, a 243-point middle-control check and a 92-clip audition
-are available outside the factory roster and phone picker. The earlier six-voice
-recordings remain preserved. [Implementation notes](docs/CAIRN.md) describe the
-new core and measured server render cost; [private comparison](https://cairn-voice-comparison.bertcalm.chatgpt.site/reconstruction/)
-provides the next listening gate. HOLD loops and the other four voices are deferred.
+CAIRN gives KNOCK compact punctuation, ANSWER quieter higher replies, and the
+new TUMBLE a tightening cascade of real rebounds. Model 3 adds TUMBLE's passive
+flight/contact law while preserving the earlier two voices. Each has powered
+HOLD, measured against a real preceding segment. The
+[three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/)
+compares one-shots/HOLD at C3–C5, common controls and dry musical roles. Earlier
+auditions and original six-voice recordings remain available.
+[Implementation notes](docs/CAIRN_TUMBLE.md) explain the new voice; the
+[KNOCK/ANSWER foundation](docs/CAIRN.md) records their mechanics and compatibility.
+Factory expansion, the remaining voices, phone/MPC timing and the Android picker
+remain deferred.
 
 APSIS's first listening prototype is a pitched center with independently
 orbiting resonant bodies. PASSAGE exposes STRETCH, DISTANCE, BODIES, ALIGN,

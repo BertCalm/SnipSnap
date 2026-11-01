@@ -1,5 +1,7 @@
 # CAIRN reconstruction audio, traces and listening comparisons regenerate.
 testkit/cairn-reconstruction/
+testkit/cairn-hold/
+testkit/cairn-tumble/
 __pycache__/
 
 build/
