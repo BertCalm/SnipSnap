@@ -14,8 +14,10 @@ source and only the source, transformed.
   A03 HAT CL   the source sped up (the sampler trick: faster is higher), high-passed hard, short
   A04 HAT OP   the same, long
   A05 CLAP     four bursts of the whitened source 12 ms apart, then its tail
-  A06 RIDE     the sped-up source band-passed, long, with a short cycle ping as the bell
-  A07 CRASH    the sped-up source paulstretched into a wash, high-passed, under 1.5 s
+  A06 RIDE     the source's noise read 4x faster as the wash, band-passed, long; the real transient
+               read 4x faster as the stick; a short cycle ping as the bell
+  A07 CRASH    the source's noise and the source, both read 3x faster, paulstretched into one wash,
+               high-passed, under 1.5 s
   A08 SIREN    the source's cycle with a pitch trajectory (a drop, a rise-and-fall, a climb)
   A09..A12 BASS  the QUARRY engine (2026-10-31 brief) at the key's root, third, fifth, octave, low
   A13..A16 TONE  the same an octave and a half up, with the grain field open
@@ -23,6 +25,11 @@ source and only the source, transformed.
 The genre table (GENRES) is "shape": every number is derived from the house's own THUMP preset
 rows for BOOM BAP and HOUSE (ThumpPresets.kt) and from HOUSE's WAREHOUSE / PEAK TIME corner for
 TECHNO, translated into milliseconds and hertz. None has been heard.
+
+Every pad is gated as the brief's slot table says (classifier agreement for the five slots that have a
+class; centroid and decay for ride and crash; the ordered pitch trajectory for the siren; root within 20
+cents at confidence 0.3 for bass and tones). The pads that fail are the fallback set the blend rule serves;
+the pads the probe could not read are reported as unmeasured, apart from the fallback set.
 
 Run from the repository root (needs cli/build/libs/snipsnap.jar, from ./gradlew :cli:snipsnapJar):
   python3 docs/superpowers/specs/2026-11-01-kit-from-anything-prototype.py <out_dir>
@@ -52,6 +59,10 @@ _spec.loader.exec_module(quarry)
 RATE = sk.RATE
 JAR = os.path.join(ROOT, "cli", "build", "libs", "snipsnap.jar")
 LOOP_MIN_SECONDS = 1.5          # Classifier.LOOP_MIN_SECONDS: anything longer is a LOOP, so every pad stays under
+
+def hz_for(midi: int) -> float:
+    return 440.0 * 2 ** ((midi - 69) / 12)
+
 
 SLOTS = ["KICK", "SNARE", "HAT_CLOSED", "HAT_OPEN", "CLAP", "RIDE", "CRASH", "SIREN",
          "BASS1", "BASS3", "BASS5", "BASS8", "TONE1", "TONE3", "TONE5", "TONE8"]
@@ -241,19 +252,28 @@ def clap(src, a, g, name):
 
 
 def ride(src, a, g, name):
-    fast = speed(src, 4.0)
+    # the real transient read 4x faster for the stick, the source's noise read 4x faster for the wash:
+    # tiling the sped-up source alone ran out of material (a kick's ride decayed in 23 ms, review of PR 796)
     n = int(min(1.4, g["ride_decay_ms"] * 2.5e-3) * RATE)
+    fast = speed(src, 4.0)
     s = int(a["loud"] / 4.0)
-    x = np.resize(fast[s:], n) if len(fast) - s < n else fast[s:s + n]
-    wash = bp(x, 4000.0, 11000.0) * decay_env(n, g["ride_decay_ms"], 0.3)
+    stick = np.zeros(n)
+    seg = fast[s:s + int(0.03 * RATE)]
+    stick[:len(seg)] = seg * np.hanning(2 * len(seg))[len(seg):]
+    wash = np.resize(speed(noise_of(src, a, n, sk.seed_for("ride", name)), 4.0), n)
+    wash = bp(wash, 4000.0, 11000.0) * decay_env(n, g["ride_decay_ms"], 0.3)
     ping = cycle_at(a, np.full(n, 1800.0)) * decay_env(n, 60.0, 0.2)
-    return norm(0.9 * norm(wash) + 0.35 * ping)
+    return norm(norm(wash) + 0.4 * norm(bp(stick, 4000.0, 11000.0)) + 0.35 * ping)
 
 
 def crash(src, a, g, name):
-    fast = speed(src[a["loud"]:], 3.0)
-    wash = paulstretch(fast, max(2.0, (g["crash_sec"] * RATE) / max(1, len(fast))), sk.seed_for("crash", name))
+    # the source's noise read 3x faster (bright by construction) under the real material read 3x faster,
+    # paulstretched into one wash: a kick alone stretched into a 155 Hz tom (review of PR 796)
     n = int(min(LOOP_MIN_SECONDS - 0.05, g["crash_sec"]) * RATE)
+    fast = speed(src[a["loud"]:], 3.0)
+    bright = speed(noise_of(src, a, max(len(fast), 4096), sk.seed_for("crash", name)), 3.0)
+    material = norm(np.resize(bright, max(len(fast), 4096))) + 0.6 * norm(np.pad(fast, (0, max(0, 4096 - len(fast)))))
+    wash = paulstretch(material, max(2.0, n / len(material)), sk.seed_for("crash", name, "wash"))
     wash = np.resize(wash, n)
     return norm(hp(wash, 3000.0, order=2) * decay_env(n, g["crash_sec"] * 650.0, 8.0))
 
@@ -341,6 +361,8 @@ def main(out_dir: str) -> int:
     verdicts = classify(paths)
     hits = {s: 0 for s in JUDGED}
     total = 0
+    gate_fail = {}
+    unmeasured = {}
     for fn, (name, genre, slot, x) in index.items():
         v = verdicts.get(fn[:28], verdicts.get(fn, {}))
         row = {"source": name, "genre": genre, "slot": slot, "file": fn, **v}
@@ -349,17 +371,66 @@ def main(out_dir: str) -> int:
             row["wanted"] = JUDGED[slot]
             row["agrees"] = v.get("class") == JUDGED[slot]
             hits[slot] += int(row["agrees"])
+            row["gate_pass"] = row["agrees"]
+        elif slot == "RIDE":
+            row["gate_pass"] = v.get("centroid_hz", 0) > 4000 and v.get("decay_ms", 0) > 300
+        elif slot == "CRASH":
+            row["gate_pass"] = v.get("seconds", 9) < LOOP_MIN_SECONDS and v.get("decay_ms", 0) > 500
+        elif slot == "SIREN":
+            # the trajectory, checked in order against the one the genre asked for: eight 50 ms windows,
+            # each confident reading compared with the expected pitch at that window's centre (the cycle's
+            # fundamental IS the trajectory, so the expectation is exact), tolerance 150 cents for the
+            # travel inside a window. Fewer than six confident readings is UNMEASURED, kept apart from a
+            # fail: a probe that cannot read a pad says nothing about the pad (review of PR 800). A min/max
+            # span passed a 35-semitone jumble as a 7-semitone drop; this does not.
+            kind, seconds, semis = GENRES[genre]["siren"]
+            src_for_a = quarry.SOURCES[name]()
+            a_s = quarry.analyse(src_for_a, quarry.SOURCE_PITCHED[name])
+            base = a_s["ref_hz"] if a_s["pitched"] else 440.0
+            win = 0.05
+            reads, worst = 0, 0.0
+            for k in range(8):
+                t0 = 0.02 + k * (seconds - 0.1 - win) / 7
+                tc = (t0 + win / 2) / seconds
+                if kind == "drop":
+                    exp_semi = semis * (1 - tc)
+                elif kind == "risefall":
+                    exp_semi = semis * (1 - abs(2 * tc - 1))
+                else:
+                    exp_semi = semis * min(1.0, tc / 0.8)
+                hz, conf = pr.pitch(x, RATE, lo_hz=60.0, hi_hz=4000.0, window_seconds=win, start_seconds=t0)
+                if hz > 0 and conf >= 0.3:
+                    reads += 1
+                    worst = max(worst, abs(pr.cents(hz, base * 2 ** (exp_semi / 12))))
+            row["siren_reads"] = reads
+            row["siren_worst_cents_off_trajectory"] = round(float(worst), 1) if reads else None
+            row["siren_status"] = "unmeasured" if reads < 6 else ("pass" if worst <= 150 else "fail")
+            row["gate_pass"] = row["siren_status"] == "pass"
+            if row["siren_status"] == "unmeasured":
+                row["gate_pass"] = None
         if slot.startswith(("BASS", "TONE", "SIREN")):
-            # the same call the QUARRY probe used (40 Hz floor, 0.3 s window): with a 30 Hz floor and a
-            # short window the NSDF picked exact sub-harmonics (1/2, 1/3, 1/4 of the note) at confidence 1.0
-            # on half the rows, a detector ambiguity every periodic signal has, not a synthesis error
+            # the same call the QUARRY probe uses (40 Hz floor, 0.3 s window). Before probes.py's NSDF
+            # normalization was fixed (2026-11-01) this read exact sub-harmonics at confidence 1.0 on
+            # half the rows; with the fix the misses are real (the snare source's weak fundamental)
             hz, conf = pr.pitch(x, RATE, lo_hz=40.0, window_seconds=0.3)
             row["pitch_hz"] = round(hz, 2)
             row["pitch_confidence"] = round(conf, 3)
+            if slot != "SIREN":
+                deg = SCALES[scale][("1", "3", "5", "8").index(slot[-1])]
+                target = hz_for((36 if slot.startswith("BASS") else 60) + root + deg)
+                row["target_hz"] = round(target, 2)
+                row["cents"] = round(float(pr.cents(hz, target)), 1) if hz > 0 else None
+                row["gate_pass"] = bool(hz > 0 and abs(pr.cents(hz, target)) <= 20 and conf >= 0.3)
         row["under_loop_line"] = len(x) / RATE < LOOP_MIN_SECONDS
+        if row.get("gate_pass", True) is False:
+            gate_fail.setdefault(slot, []).append(f"{name}/{genre}")
+        elif row.get("gate_pass", True) is None:
+            unmeasured.setdefault(slot, []).append(f"{name}/{genre}")
         results["kits"].append(row)
     results["score"] = {"judged_slots": total, "agreed": sum(hits.values()), "by_slot": hits,
-                        "kits": len(quarry.SOURCES) * len(GENRES)}
+                        "kits": len(quarry.SOURCES) * len(GENRES), "pads": len(index),
+                        "fallback_set": sum(len(v) for v in gate_fail.values()), "fallback_by_slot": gate_fail,
+                        "unmeasured": sum(len(v) for v in unmeasured.values()), "unmeasured_by_slot": unmeasured}
     with open(os.path.join(out_dir, "report.json"), "w") as f:
         json.dump(results, f, indent=2)
     print(json.dumps(results["score"], indent=2))
