@@ -330,10 +330,7 @@ object OneNote {
         val written = if (spanKeyboard) program.fullKeyboard() else program
         val xty = Mpc3TrackWriter().writeKeygroup(written)
         val xpm = KeygroupWriter().write(written)
-        // The same transaction writes this program's XPM first, so a missing
-        // false flag resolves against that matching XPM. Keep legacy sidecar
-        // bytes while still persisting every explicit NoteOn declaration.
-        val sidecar = InstrumentStore.render(written, dataDir.name, omitDefaultNoteOn = true)
+        val sidecar = InstrumentStore.render(written, dataDir.name)
         replaceDescriptors(
             listOf(
                 File(dataDir, "${written.name}.xpm") to xpm.toByteArray(Charsets.UTF_8),

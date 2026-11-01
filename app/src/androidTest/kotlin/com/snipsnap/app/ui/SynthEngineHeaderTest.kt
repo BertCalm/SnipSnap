@@ -180,7 +180,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
         assertTrue("the list starts closed", !listIsOpen())
         openList()
         assertTrue(listIsOpen())
-        // THUMP is far down an A to Z list of 63, out of the first screenful: find it by name.
+        // THUMP is far down an A to Z list of 70, out of the first screenful: find it by name.
         type("thump")
         assertEquals("the current engine is marked", 1, compose.onAllNodesWithText("● CURRENT", useUnmergedTree = true).fetchSemanticsNodes().size)
         type("onset")
