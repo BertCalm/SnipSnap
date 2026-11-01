@@ -1552,8 +1552,8 @@ object Copy {
     const val PEDALS_FULL = "A PAD HOLDS ${com.snipsnap.synth.PedalBoard.MAX_PICKS} PEDALS. TAP ONE OFF FIRST."
     /**
      * A pedal change on a pad that carries pedals the bin cannot restore (it keeps a pad's original
-     * as long as the pad needs it, so, for example, the bin was emptied by hand, BACK on the pad's
-     * kept row in THE BIN took the original out, or the recipe came from another pad): the board
+     * as long as the pad needs it, so, for example, the bin was emptied by hand or the recipe came
+     * from another pad): the board
      * re-renders whole from the original, so it would play every pedal already in the audio twice.
      * Refused; the pedals are part of the sound now.
      */

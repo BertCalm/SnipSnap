@@ -1462,9 +1462,11 @@ class KitBuilderModel private constructor(
      * ([PrintedPads.sourcePad]), followed down through a print over a print (an aquarium over a
      * board) to the pad underneath, whose NONE is the one that reads the bin. Throws when a saved
      * source will not read, or when the prints loop back on themselves, which only a hand-edited kit
-     * could hold: either way [binHolds] cannot know what that pad needs, and fails closed.
+     * could hold: either way [binHolds] cannot know what that pad needs, and fails closed. Public for
+     * THE BIN's screen, which asks of this pad, not the print over it, whether it can undo itself
+     * ([PadSheet.hasOwnWayBack]): a printed pad's NONE removes the print first.
      */
-    private fun unprinted(pad: KitPad): KitPad {
+    fun unprinted(pad: KitPad): KitPad {
         var under = pad
         val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
         while (PrintedPads.has(under.recipe)) {

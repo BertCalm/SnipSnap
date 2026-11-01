@@ -473,4 +473,31 @@ object PadSheet {
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct()
         return if (files.all { it in binned }) UnTreat.READY else UnTreat.GHOSTS_POSTDATE
     }
+
+    /**
+     * Whether [pad]'s own sheet has a door that gives back the newest bin entry under [file], given
+     * the `originalName`s in the bin ([binned]):
+     * - NONE when [unTreatState] is READY: it restores every file the pad plays;
+     * - for the pad's main file only, NONE after SOFT HITS off when it is GHOSTS_POSTDATE (NONE's
+     *   refusal says so, and clearing the soft hits drops every layer, so a layer's entry is not
+     *   given back);
+     * - for the pad's main file only, MUTATE's UNDO ([MutateSheet.read]) or OUTSIDE's UNDO
+     *   ([OutsideSheet.read]).
+     *
+     * Pass the pad underneath any prints ([KitBuilderModel.unprinted]), not the print: a printed
+     * pad's NONE removes the print first, and that pad's door is the one that reads the bin.
+     *
+     * THE BIN hides BACK on a row a pad keeps only when this is true (the owner's call, 2026-10-31):
+     * BACK copies over the pad's audio and leaves its recipe, so where the pad can undo itself, that
+     * undo is the honest way back. Everything else a pad can keep an entry for has no such door on
+     * the sheet: a SPLICE, a DE-SAMPLE, a round-robin chain, a treatment only the CLI makes. There
+     * BACK is the only way back in the app, so it stays.
+     */
+    fun hasOwnWayBack(pad: KitPad, file: String, binned: Set<String>): Boolean {
+        if (file !in binned || (file != pad.sampleFile && pad.velocityLayers.none { it.sampleFile == file })) return false
+        val state = unTreatState(pad, binned)
+        if (state == UnTreat.READY) return true
+        if (file != pad.sampleFile) return false
+        return state == UnTreat.GHOSTS_POSTDATE || MutateSheet.read(pad.recipe) != null || OutsideSheet.read(pad.recipe) != null
+    }
 }
