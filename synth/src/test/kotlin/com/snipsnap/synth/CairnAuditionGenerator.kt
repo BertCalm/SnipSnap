@@ -32,7 +32,7 @@ object CairnAuditionGenerator {
         // Time the first call before touching the engine object. This includes class
         // initialisation, cold mechanics and the complete output stage, not Gradle startup.
         val firstStart = System.nanoTime()
-        val first = Cairn.inspect(CairnVoice.ANSWER)
+        val first = Cairn.inspect(CairnVoice.ANSWER, model = 1)
         val firstMs = (System.nanoTime() - firstStart) / 1e6
         if ("--cold-only" in args) {
             File(root, "cold.json").writeText(Json.write(json(mapOf("firstAnswerMs" to firstMs,
@@ -52,7 +52,7 @@ object CairnAuditionGenerator {
             for (groove in listOf(.25f, .5f, .75f)) for (friction in listOf(.25f, .5f, .75f))
                 for (body in listOf(.25f, .5f, .75f)) {
                     val motion = Cairn.motion(CairnVoice.ANSWER, middle + mapOf("WEIGHT" to weight,
-                        "SLOPE" to slope, "GROOVE" to groove, "FRICTION" to friction, "BODY" to body))
+                        "SLOPE" to slope, "GROOVE" to groove, "FRICTION" to friction, "BODY" to body), model = 1)
                     minimumReplies = min(minimumReplies, motion.events.count { it.stone > 0 })
                     cubePoints++
                 }
@@ -60,9 +60,9 @@ object CairnAuditionGenerator {
         val cases = mutableListOf<Case>()
         fun add(id: String, section: String, voice: CairnVoice, m: Map<String, Float>, description: String,
                 midi: Int = 60, velocity: Float = 1f, uncoupled: Boolean = false) {
-            cases += Case(id, section, CairnPatch(id, voice, m, midi, velocity), description, uncoupled)
+            cases += Case(id, section, CairnPatch(id, voice, m, midi, velocity, model = 1), description, uncoupled)
         }
-        for (v in CairnVoice.entries) {
+        for (v in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER)) {
             val stem = v.name.lowercase()
             for (note in listOf(48, 60, 72)) add("$stem-default-$note", "Voices", v, Cairn.defaults(v),
                 if (v == CairnVoice.KNOCK) "Compact direct contacts on a lossy mount." else "The shared mount wakes higher stones.", note)
@@ -86,7 +86,7 @@ object CairnAuditionGenerator {
             val p = case.patch
             val start = System.nanoTime()
             val r = Cairn.inspect(p.voice, p.macros, p.midi, p.velocity, p.startAtContact,
-                Cairn.Options(disableCoupling = case.uncoupled))
+                Cairn.Options(disableCoupling = case.uncoupled), model = 1)
             val elapsed = (System.nanoTime() - start) / 1e6
             val d = r.diagnostics
             val file = File(root, "audio/${case.id}.wav")
@@ -136,13 +136,13 @@ object CairnAuditionGenerator {
         }
         // Separate uncached controls from a cached-motion pitch turn. Warm the JIT
         // first, but report the untouched first call as a separate cold number.
-        repeat(8) { Cairn.render(CairnVoice.ANSWER, middle) }
+        repeat(8) { Cairn.render(CairnVoice.ANSWER, middle, model = 1) }
         val bench = mutableListOf<Map<String, Any>>()
-        for (voice in CairnVoice.entries) for (i in 0..11) {
+        for (voice in listOf(CairnVoice.KNOCK, CairnVoice.ANSWER)) for (i in 0..11) {
             val m = middle + ("SLOPE" to (.35f + i * .007f))
-            val a = Cairn.inspect(voice, m, options = Cairn.Options(bypassCache = true))
-            Cairn.inspect(voice, m) // populate exactly this motion key for the pitch-only trial
-            val b = Cairn.inspect(voice, m + ("TUNE" to .75f))
+            val a = Cairn.inspect(voice, m, options = Cairn.Options(bypassCache = true), model = 1)
+            Cairn.inspect(voice, m, model = 1) // populate exactly this motion key for the pitch-only trial
+            val b = Cairn.inspect(voice, m + ("TUNE" to .75f), model = 1)
             bench += mapOf("voice" to voice.name, "trial" to i,
                 "uncachedMs" to (a.diagnostics.mechanicsMs + a.diagnostics.audioMs),
                 "cachedMotionPitchMs" to (b.diagnostics.mechanicsMs + b.diagnostics.audioMs),
@@ -150,7 +150,7 @@ object CairnAuditionGenerator {
         }
         File(root, "manifest.json").writeText(Json.write(json(mapOf(
             "title" to "Cairn / KNOCK and ANSWER reconstruction", "generatedAt" to Instant.now().toString(),
-            "sourceRevision" to revision, "sourceSha256" to sourceFiles, "model" to Cairn.MODEL_VERSION,
+            "sourceRevision" to revision, "sourceSha256" to sourceFiles, "model" to 1,
             "engine" to "Kotlin JVM, 4x internal, mono 44.1 kHz",
             "scope" to "Finite two-voice reconstruction. Historical recordings remain separate. No HOLD loop or phone benchmark.",
             "proof" to mapOf("middleCubePoints" to cubePoints, "minimumHigherContacts" to minimumReplies),

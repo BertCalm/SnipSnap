@@ -107,13 +107,30 @@ object XpnImporter {
         destRoot: File,
         overwrite: Boolean = false,
         budget: WriteBudget = WriteBudget(DEFAULT_BUDGET_BYTES),
+    ): ImportResult = importPrepared(xpnFile, destRoot, overwrite, budget, null)
+
+    /** KitBackup's native closure is checked in the same transaction as rendered samples. */
+    internal fun importWithNativeSources(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+        budget: WriteBudget,
+        beforePublish: (Kit, File) -> Kit,
+    ): ImportResult = importPrepared(xpnFile, destRoot, overwrite, budget, beforePublish)
+
+    private fun importPrepared(
+        xpnFile: File,
+        destRoot: File,
+        overwrite: Boolean,
+        budget: WriteBudget,
+        beforePublish: ((Kit, File) -> Kit)?,
     ): ImportResult {
         require(xpnFile.isFile) { "no such file: $xpnFile" }
         ZipFile(xpnFile).use { zip ->
             val entries = entriesOf(zip)
             val programEntry = programEntries(entries).firstOrNull()
                 ?: throw IllegalArgumentException("no .xpm program inside $xpnFile")
-            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget)
+            return importProgram(zip, entries, programEntry, xpnFile, destRoot, overwrite, budget, beforePublish)
         }
     }
 
@@ -161,6 +178,7 @@ object XpnImporter {
         destRoot: File,
         overwrite: Boolean,
         budget: WriteBudget,
+        beforePublish: ((Kit, File) -> Kit)? = null,
     ): ImportResult {
         run {
             val programBytes = zip.getInputStream(programEntry).use {
@@ -324,7 +342,8 @@ object XpnImporter {
                         com.snipsnap.mpc3.LimitedRead.bytes(it, what = "kit sidecar $sidecarName")
                     }.toString(Charsets.UTF_8)
                 }
-                val kit = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
+                val restored = ImportSidecar.restore(Kit(kitName, pads), sidecarText, staging, sidecarName)
+                val kit = beforePublish?.invoke(restored, staging) ?: renderedPersonalSources(restored)
                 KitStore.save(kit, staging)
                 // Only now, with everything down safely, does destDir
                 // change: the pre-existing-kit check above already
@@ -382,6 +401,17 @@ object XpnImporter {
             }
         }
     }
+
+    /** Ordinary XPNs carry rendered audio and provenance, never the private editing source bundle. */
+    private fun renderedPersonalSources(kit: Kit): Kit = kit.copy(pads = kit.pads.map { pad ->
+        if (pad.source["engine"] != "CONFLUENCE_PERSONAL" &&
+            pad.source["engine"] != "CONFLUENCE_PERSONAL_RENDERED" &&
+            !pad.source.containsKey(ConfluencePersonalFiles.SOURCE_ID_KEY)) pad
+        else pad.copy(source = (pad.source - setOf(
+            ConfluencePersonalFiles.SOURCE_ID_KEY, "personalRecipe", "personalVoiceManifestSha256",
+            "personalSourceSha256", "personalSourceFileSha256", "sourceHashes", "referenceMidi", "rootMidi",
+        )) + ("engine" to "CONFLUENCE_PERSONAL_RENDERED"))
+    })
 
     // ---------- program parsing ----------
 

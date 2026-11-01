@@ -1,0 +1,19 @@
+{
+  "engine": "RIME",
+  "version": 1,
+  "name": "Open Vessel",
+  "voice": "VESSEL",
+  "macros": {
+    "DETAIL": 0.8500000238418579,
+    "EDGE": 0.47999998927116394,
+    "ANGLE": 0.25,
+    "UNFOLD": 0.8500000238418579,
+    "BODY": 0.8500000238418579,
+    "HOLD": 0
+  },
+  "model": 2,
+  "midi": 48,
+  "velocity": 0.800000011920929,
+  "gateSeconds": 2.5999999046325684,
+  "seed": 1729
+}
