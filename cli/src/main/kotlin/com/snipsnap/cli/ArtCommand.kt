@@ -65,7 +65,8 @@ object ArtCommand {
     /** `displayName` lowercased with spaces hyphenated, for the `--scheme` flag. */
     private fun schemeWord(s: Scheme) = s.id.displayName.lowercase().replace(' ', '-')
 
-    private fun parseScheme(word: String): Scheme =
+    /** Internal, not private: `snipsnap mark` reads the same `--scheme` words. */
+    internal fun parseScheme(word: String): Scheme =
         Schemes.ALL.firstOrNull { schemeWord(it) == word.lowercase() }
             ?: throw CliError("unknown scheme '$word' - schemes: ${schemeIds()}")
 }

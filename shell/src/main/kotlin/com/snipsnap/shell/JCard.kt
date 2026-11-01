@@ -139,14 +139,28 @@ object JCard {
     }
 
     private fun spine(c: ArtCanvas, kit: Kit, scheme: Scheme, w: Int, top: Int, h: Int, m: Int, catalog: String?) {
-        // The catalog number leads the spine, the way real labels press it.
+        // The SnipSnap symbol leads the spine, the way a label's logo does,
+        // a margin in from the left end and 0.6 of the band tall.
+        val mark = markBox(top, h, m)
+        val (ink, accent) = Mark.lcdTones(scheme)
+        Mark.draw(c, Mark.Variant.SYMBOL, mark.x.toFloat(), mark.y.toFloat(), mark.h.toFloat(), ink, accent)
+
+        // Then the catalog number, the way real labels press it, and the
+        // kit's line, centred in what the symbol leaves.
         val line = (catalog?.let { "$it  " } ?: "") +
             "${kit.name.uppercase()}  ${keyTempoLine(kit)}  ${mileageLine(kit)}"
         val px = (h * 0.4f).toInt()
+        val textLeft = mark.x + mark.w + m
         PixelType.draw(
-            c, line, w / 2, top + (h - min(px, PixelType.ROWS * (px / PixelType.ROWS))) / 2,
-            px, scheme.lcdInk, centered = true, maxWidthPx = w - 2 * m,
+            c, line, (textLeft + (w - m)) / 2, top + (h - min(px, PixelType.ROWS * (px / PixelType.ROWS))) / 2,
+            px, scheme.lcdInk, centered = true, maxWidthPx = w - m - textLeft,
         )
+    }
+
+    /** Where the spine's symbol sits: the test that checks parity through a plain canvas skips this box. */
+    internal fun markBox(spineTop: Int, spineH: Int, m: Int): KitArt.Box {
+        val size = spineH * 0.6f
+        return KitArt.Box(m, (spineTop + (spineH - size) / 2f).toInt(), kotlin.math.ceil(size).toInt(), kotlin.math.ceil(size).toInt())
     }
 
     private fun back(c: ArtCanvas, kit: Kit, kitDir: File, scheme: Scheme, w: Int, top: Int, h: Int, m: Int) {

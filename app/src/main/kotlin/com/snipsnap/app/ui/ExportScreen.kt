@@ -302,8 +302,8 @@ fun ExportScreen(
                         ExportWizardModel(
                             kit,
                             entry.dir,
-                            artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s) },
-                            jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c) },
+                            artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s, assets = context.assets) },
+                            jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c, assets = context.assets) },
                         ),
                     )
                 }.getOrNull()
@@ -551,7 +551,7 @@ private fun ExportContent(
             if (style == null || (outcome.format != ExportFormat.EXPANSION && outcome.format != ExportFormat.XPN)) {
                 null
             } else {
-                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, style)) }.getOrNull()
+                runCatching { LandingNote.Tile(AndroidKitArt.png(kit, session.dir, style, assets = context.assets)) }.getOrNull()
             }
         }
         onNote(
