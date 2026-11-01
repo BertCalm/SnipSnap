@@ -69,7 +69,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         val originalBytes = File(directory, original.sampleFile).readBytes()
         val toasts = CopyOnWriteArrayList<String>()
         setPhoneContent {
-            if (shown) MyVoiceScreen(KitShelf.Entry(directory, model.kit), appScope, onBack = { shown = false }, onToast = { toasts += it }, onKitUpdated = {})
+            if (shown) MyVoiceScreen(KitShelf.Entry(directory, model.kit), appScope, onToast = { toasts += it }, onKitUpdated = {})
         }
         waitFor("the saved personal source", timeoutMillis = 30_000) { hasText(title) }
         click("Open personal voice $title")
@@ -157,7 +157,7 @@ class MyVoiceScreenTest : ComposeScreenTest() {
         assertTrue(ConfluencePersonalWorkshop.listVoices(phone).none { it.id == voice.id })
         val toasts = CopyOnWriteArrayList<String>()
         setPhoneContent {
-            if (shown) MyVoiceScreen(KitShelf.Entry(directory, model.kit), appScope, onBack = { shown = false }, onToast = { toasts += it }, onKitUpdated = {})
+            if (shown) MyVoiceScreen(KitShelf.Entry(directory, model.kit), appScope, onToast = { toasts += it }, onKitUpdated = {})
         }
         waitFor("the kit's portable voice row", timeoutMillis = 30_000) { hasText("VOICES IN THIS KIT") }
         click("Open kit voice $title")
