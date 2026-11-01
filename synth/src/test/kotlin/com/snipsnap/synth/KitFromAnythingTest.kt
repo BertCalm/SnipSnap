@@ -116,6 +116,41 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `describe is the one text the CLI prints and the result sheet draws`() {
+        // the sweep fails some gates and is blended, the pluck clears them all: both shapes of the report
+        val clean = KitFromAnything.assemble(pluck, key, Genre.HOUSE)
+        val c = KitFromAnything.describe(clean, "Pluck Kit", key, Genre.HOUSE)
+        assertTrue(c.header.startsWith("Pluck Kit in A minor, house at 124 bpm - "), c.header)
+        assertEquals(16, c.rows.size)
+        assertEquals(clean.gates.map { it.gate }, c.rowGates, "each row carries the gate it prints, for the sheet to colour by")
+        assertTrue(c.rows.first().startsWith("A01  KICK"), c.rows.first())
+        assertEquals(listOf(c.tableHeader) + c.rows + c.blends + c.summary, c.lines)
+        if (clean.fallbackSet.isEmpty() && clean.unmeasured.isEmpty()) assertEquals("every pad cleared its gate", c.summary)
+
+        val blended = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        assertTrue(blended.blends.isNotEmpty(), "the sweep must blend, or this test checks nothing about blend lines")
+        val b = KitFromAnything.describe(blended, "Sweep Kit", key, Genre.BOOM_BAP)
+        assertEquals(blended.blends.size, b.blends.size)
+        for ((line, blend) in b.blends.zip(blended.blends)) {
+            assertTrue(blend.slot.name in line && "blended with ${blend.synth} at " in line && "gate after: ${blend.after.gate.name.lowercase()}" in line, line)
+        }
+        assertTrue("${blended.fallbackSet.size} pad(s) failed a gate and were blended" in b.summary, b.summary)
+    }
+
+    @Test
+    fun `describe prints pad numbers in ASCII digits whatever the device locale`() {
+        val saved = java.util.Locale.getDefault()
+        java.util.Locale.setDefault(java.util.Locale.forLanguageTag("ar-EG"))
+        try {
+            val r = KitFromAnything.describe(KitFromAnything.assemble(pluck, key, Genre.TECHNO), "Pluck Kit", key, Genre.TECHNO)
+            for (row in r.rows) assertTrue(row[0] == 'A' && row[1] in '0'..'9' && row[2] in '0'..'9', row)
+            assertTrue(r.header.contains("132 bpm"), r.header)
+        } finally {
+            java.util.Locale.setDefault(saved)
+        }
+    }
+
+    @Test
     fun `same source, same bytes`() {
         val a = KitFromAnything.assemble(bark, key, Genre.TECHNO)
         val b = KitFromAnything.assemble(bark, key, Genre.TECHNO)
