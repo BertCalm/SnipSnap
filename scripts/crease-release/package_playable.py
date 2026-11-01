@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import wave
 import zipfile
+import sys
 from datetime import datetime, timezone
 import numpy as np
 import matplotlib
@@ -12,7 +13,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import playable as b
 
-out=b.ROOT/'testkit/crease-playable-release'
+out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else b.ROOT/'testkit/crease-playable-release'
 m=json.loads((out/'manifest.json').read_text())
 entries={}
 for clip in m['clips']:
