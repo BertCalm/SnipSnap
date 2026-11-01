@@ -121,6 +121,12 @@ object StarterKits {
             seeded = false,
         ) { SynthKits.overlap() },
         Starter(
+            "obbligato", "OBBLIGATO",
+            "Flute and reed share the lead across four relationships, with soft, medium and strong strikes.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.obbligato() },
+        Starter(
             "otis", "OTIS",
             "Organ, steam pipe, blues harmonica and shared Squeeze chords. Sixteen finite performances.",
             seeded = false,
