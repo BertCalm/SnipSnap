@@ -168,6 +168,36 @@ clipping.
   - `bakePattern` reads `source.muteGroups(kit)`. A hit in group g ends the earlier voices in g over `AutoPlace.CHOKE_FADE`, the fade ORBIT uses (`OrbitEngine.kt:374`).
   - **Test:** in group 1, an open hat followed by a closed hat leaves under −60 dB of open hat after the fade. The same pattern rendered by the grid and by ORBIT agrees within a stated tolerance.
 
+#### Phase 3, as built (2026-11-01)
+
+- **Changed against the design: no overhang buffers.**
+  - The design gave a baked pattern a body plus an overhang and had the mix add the previous interval's overhang. That would have broken the one-interval-per-buffer rule that `Mixer`, `Residency` and the drone path all lean on, and it could not place an early hit: that needs the *next* interval's audio before it is mixed, a lookahead the live engine does not have.
+  - Instead, a pattern interval renders from three patterns on one timeline: the one before it in the chain at minus one interval, itself at zero, and the one after at plus one interval (`Neighbourhood`, `Arrangement.neighbourhoodAt`). It writes only its own frames.
+  - Every buffer is still exactly one interval, the inputs are pattern data rather than baked audio, and neighbouring intervals compute every shared voice identically, so a voice split across a boundary joins without a seam.
+  - `Residency` and `Bouncer` key their caches by the neighbourhood. A chain of n patterns still bakes n entries per track, and a swap re-bakes the swapped pattern and its two neighbours, nothing further away.
+- **3a, the click:** subsumed. Between patterns nothing is cut at the bar line. A pattern heard alone (`BlockBaker.bake(block)`) fades over `TAIL_FADE_MS` at its end, and a voice past its one-interval carry fades the same way.
+- **3b, tails and early hits:** a hit late in one pattern rings into the next, and the chain wraps, so a one-pattern loop carries its own tail to its downbeat. A hit nudged early on the downbeat starts in the bar before, where it was written.
+- **3c, chokes:** `bakePattern` reads `source.muteGroups(kit)` and applies KitPreview's rule (`AutoPlace.CHOKE_FADE`, a voice already fading keeps its ramp) across the three-pattern timeline, within one kit.
+- **Measured:** `PatternTailTest`, 6 tests, plus all 426 existing `:loop` tests.
+  - Two intervals with an open-hat-style tone on the last 16th equal the same hit placed once on a plain timeline, within 1e-6 per sample (before: cut at the bar line, a 0.27 step).
+  - A lone pattern's last frame is under 1% of the hit's level.
+  - A downbeat hit nudged 200 frames early starts 200 frames before the bar.
+  - A closed hat chokes the previous pattern's open hat across the bar, and its own open hat inside one pattern; the control without a group still rings.
+  - Live playback through `LoopEngine` equals `Bouncer.render` sample for sample on a chain with tails, an early hit and a choke.
+- **Each mechanism proven by disabling it alone:**
+  - Ignoring the neighbours fails the tail, early-hit and cross-bar choke tests ("expected 95800 but was 96000" for the early hit).
+  - Skipping chokes fails both choke tests (432 of energy where 0 was expected).
+  - Dropping the lone fade fails the fade test (last frame still at 0.5).
+- **Disclosed, not fixed:**
+  - Only patterns carry. Into or out of a loop, drone or silence interval, a pattern's tail fades at the bar line and an early hit loses its head, as before.
+  - The chain wraps, so the first interval after pressing play carries the tail of the chain's last pattern. That is what makes a bounced cycle loop seamlessly, and it is the same audio every later pass plays.
+  - A voice carries at most one interval past its own; a pad longer than that fades out there.
+  - Chokes act within one track's patterns. Two tracks playing the same kit do not choke each other, where ORBIT's do.
+  - A carried tail plays at the level and pan its track has in the interval it sounds in; muting a track silences its tails at once.
+  - A hit nudged early by more than a 16th can start before the previous pattern's last hits; a choke from the pattern two back is then not seen by the interval after.
+  - The grid/ORBIT agreement test the plan named was not written: the two engines apply track level and pan differently, so it would compare more than the choke.
+- **Heard:** nothing. A loop with an open hat on the last 16th is the one to listen to, at the loop point.
+
 ### Phase 4. Export the song from the app (S pure, then S app)
 
 **Goal:** what SONG ▸ plays can leave the phone. Today the mix exists only in memory.
