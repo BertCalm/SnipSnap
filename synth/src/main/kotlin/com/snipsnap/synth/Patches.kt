@@ -45,6 +45,7 @@ object Patches {
         return when (engine) {
             ErosionPatch.ENGINE -> ErosionPatch.fromJsonValue(value)
             RimePatch.ENGINE -> RimePatch.fromJsonValue(value)
+            OtisPatch.ENGINE -> OtisPatch.fromJsonValue(value)
             LibrationPatch.ENGINE -> LibrationPatch.fromJsonValue(value)
             TrefoilPatch.ENGINE -> TrefoilPatch.fromJsonValue(value)
             FerryPatch.ENGINE -> FerryPatch.fromJsonValue(value)

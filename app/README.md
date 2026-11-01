@@ -74,14 +74,14 @@ schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
 (`docs/BENCH.md` A1). The FRESH TAPE menu (57 starters including STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN and RIME,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME and OTIS,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 68 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
-TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
+The SYNTH source picker has 69 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
@@ -110,6 +110,11 @@ response. Saved sounds, including its six original factory recipes, retain
 their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
 response without changing the authored room, controls, ROOT, VELOCITY or seed.
 See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
+OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
+performances. Complete scores survive preset saves, navigation and SEND TO PAD.
+LENGTH changes finite timing; all Otis kit pads play once. Shared pressure applies
+within a score. Render costs and device-validation limits are in [OTIS.md](../docs/OTIS.md).
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD

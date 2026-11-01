@@ -36,6 +36,100 @@ tasks.register<JavaExec>("generateRimeAudition") {
     providers.gradleProperty("rimeReplay").orNull?.let { args("--replay", it) }
 }
 
+/** Accepted finite Otis recipes, a sixteen-pad MPC program and cold/cache-hit timing. */
+tasks.register<JavaExec>("generateOtisIntegrationKit") {
+    group = "distribution"
+    description = "Export the accepted editable Otis note/chord/phrase bank and timing manifest."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisIntegrationGenerator")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisIntegrationOutput").orNull ?: "${rootDir}/testkit/otis-integration")
+}
+
+
+tasks.register<JavaExec>("generateOtisSqueezeDrawAudition") {
+    group = "distribution"
+    description = "Compare Squeeze model5 and model6 chord draw, retaining every earlier audition."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisSqueezeDrawStudy")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisSqueezeOutput").orNull ?: "${rootDir}/testkit/otis-squeeze-draw")
+}
+
+/** Listening-led character pass; prior audition generators remain pinned to their models. */
+tasks.register<JavaExec>("generateOtisCharacterAudition") {
+    group = "distribution"
+    description = "Render Steam power, harmonica chords and distinct Squeeze with model5 Shared pressure."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisCharacterStudy")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisCharacterOutput").orNull ?: "${rootDir}/testkit/otis-character-v5")
+}
+
+/** Versioned hardening A/Bs keep the accepted listening studies on model3. */
+tasks.register<JavaExec>("generateOtisHardeningAudition") {
+    group = "distribution"
+    description = "Render frozen model3 against model4 DC/release hardening, raw/matched WAVs and diagnostics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisHardeningStudy")
+    maxHeapSize = "1g"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisOutput").orNull ?: "${rootDir}/testkit/otis-hardening/refinements")
+    if (project.hasProperty("otisTimings")) args("--timings")
+}
+
+/** First-listen research pack for the four XOtis-inspired soul sources. */
+tasks.register<JavaExec>("generateOtisPhrasePressureAudition") {
+    group = "distribution"
+    description = "Render the separate shared-phrase-pressure Squeeze experiment with matched and raw audio."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisPhrasePressureGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisPressureOutput").orNull ?: "${rootDir}/testkit/otis-hardening/pressure")
+}
+
+tasks.register<JavaExec>("generateOtisAudition") {
+    group = "distribution"
+    description = "Render the experimental ORGAN/STEAM/HARP/SQUEEZE dry audition, recipes and listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisOutput").orNull ?: "${rootDir}/testkit/otis-audition")
+    if (project.hasProperty("otisEmbedAudio")) args("--embed-audio")
+    val baseline = providers.gradleProperty("otisBaseline").orNull
+    if (baseline != null) args("--baseline=$baseline")
+}
+
+/** Musical range and playing-strength study using the fixed current Otis prototype. */
+tasks.register<JavaExec>("generateOtisRangeAudition") {
+    group = "distribution"
+    description = "Render C3/C4/C5 Otis notes, phrases and chords without changing the sound models."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisOutput").orNull ?: "${rootDir}/testkit/otis-range-audition", "--range")
+    if (project.hasProperty("otisEmbedAudio")) args("--embed-audio")
+}
+
+/** Three authored prototype settings per family, heard against the accepted defaults. */
+tasks.register<JavaExec>("generateOtisPresetAudition") {
+    group = "distribution"
+    description = "Render twelve authored Otis presets against the unchanged model-3 defaults."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.OtisAuditionGenerator")
+    maxHeapSize = "768m"
+    workingDir = projectDir
+    args(providers.gradleProperty("otisOutput").orNull ?: "${rootDir}/testkit/otis-preset-audition", "--presets")
+    if (project.hasProperty("otisEmbedAudio")) args("--embed-audio")
+}
+
+
 tasks.register<JavaExec>("generateLibrationMusicalBank") {
     group = "distribution"
     description = "Render Libration's finite bank, performance probes, musical scores and layered MPC starter."

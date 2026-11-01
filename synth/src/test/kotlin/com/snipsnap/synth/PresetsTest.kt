@@ -160,7 +160,7 @@ class PresetsTest {
 
     @Test
     fun `all sums every registered engine's roster with nothing lost or duplicated`() {
-        val expected = TrefoilPresets.all() + ApsisPresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
+        val expected = OtisPresets.all() + TrefoilPresets.all() + ApsisPresets.all() + ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() +
             VelvetPresets.all() + FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() +
             SkinPresets.all() + MeridianPresets.all() + ResinPresets.all() + TidePresets.all() + GlintPresets.all() + SirenPresets.all() + ForkPresets.all() +
             BorePresets.all() + ObbligatoPresets.all() + ArcoPresets.all() + MercuryPresets.all() +

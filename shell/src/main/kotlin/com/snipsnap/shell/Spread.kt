@@ -31,6 +31,8 @@ import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.OverlapPatch
 import com.snipsnap.synth.OverlapPlayback
 import com.snipsnap.synth.Patch
+import com.snipsnap.synth.Otis
+import com.snipsnap.synth.OtisPatch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.StoopPatch
@@ -115,6 +117,7 @@ object Spread {
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
+        is OtisPatch -> Otis.midiFor(patch).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
         is KeelPatch -> Keel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()

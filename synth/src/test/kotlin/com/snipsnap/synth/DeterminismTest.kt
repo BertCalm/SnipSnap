@@ -20,6 +20,17 @@ class DeterminismTest {
     }
 
     @Test
+    fun `OTIS accepted chords retain source state after cold recipe replay`() {
+        for (voice in OtisVoice.entries) {
+            val patch = OtisPresets.forVoice(voice).first { "CHORD" in it.name }
+            Otis.clearCache()
+            val original = patch.render()
+            Otis.clearCache()
+            assertContentEquals(original.samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
     fun `TREFOIL factory gestures retain seeded model two replay`() {
         val p=TrefoilPresets.all().first { it.voice==TrefoilVoice.TANGLE }
         assertContentEquals(p.render().samples,Patches.fromJsonText(p.toJsonText()).render().samples)
