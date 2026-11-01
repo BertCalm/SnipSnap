@@ -410,7 +410,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 64 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 65 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -678,13 +678,15 @@ Saved model-1 and model-2 recipes retain their sound. Run
 `generateShoalAudition` for the preserved model-2 listening matrix.
 [Implementation notes](docs/SHOAL.md) describe the material and loop contracts.
 
-RIME projects a finite Koch contour through two contact pickups into a resonating
-body. LOOP, GLINT and VESSEL cover bass, keyed strikes and unfolding textures.
-The nine model-4 recipes retain the accepted sound direction. Model 5 adds HOLD:
-finite gate extension below 85%, periodic sustain above it, and nine-root MPC
-keygroups that retain the contour opening. The picker exposes note, velocity,
-gate and all six controls, with complete recipe recall. Additional voices and
-the planned expanded bank await the original specification. See [RIME.md](docs/RIME.md).
+RIME projects finite contours through two contact pickups into a resonating body.
+LOOP, REED, GLINT, FILIGREE, CRUST and VESSEL cover bass, hollow leads, fine keys
+and crystalline textures. The 36 factory recipes include the nine accepted
+model-4 notes. Model 6 adds the remaining voices and periodic scale motion during
+HOLD; saved models 1–5 retain their behavior. RIME COMPLETE is a separate
+six-voice, sixteen-pad starter beside the preserved original RIME bank. The
+picker retains absolute note, velocity, gate and full recipe recall, and exports
+nine-root held instruments for both MPC generations. Owner listening and hardware
+acceptance remain open. See [RIME.md](docs/RIME.md).
 
 LIBRATION turns precomputed rotating-frame three-body trajectories into wood,
 glass and departing tonal gestures. GATHER, TWINS and DEPARTURE share REGION,

@@ -9,34 +9,35 @@ import kotlin.math.abs
 import kotlin.test.*
 
 class RimeBankTest {
-    @Test fun `nine complete finite presets cover the roles and retain the accepted anchors`() {
+    @Test fun `thirty six complete presets cover six voices and retain the accepted anchors`() {
         val entries = RimePresets.entries()
-        assertEquals(9, entries.size)
-        assertEquals(9, entries.map { it.id }.distinct().size)
-        assertEquals(9, entries.map { it.patch.name }.distinct().size)
+        assertEquals(36, entries.size)
+        assertEquals(36, entries.map { it.id }.distinct().size)
+        assertEquals(36, entries.map { it.patch.name }.distinct().size)
         for (voice in RimeVoice.entries) {
-            assertEquals(3, RimePresets.forVoice(voice).size)
+            assertEquals(6, RimePresets.forVoice(voice).size)
             assertTrue(RimePresets.all().contains(RimePresets.starter(voice)))
         }
         for ((id, role, description, p) in entries) {
             assertTrue(id.isNotBlank() && role.isNotBlank() && description.isNotBlank())
-            assertEquals(4, p.model)
-            assertEquals(Rime.defaults(p.voice,4).keys, p.macros.keys)
-            assertEquals(0f, p.macros.getValue("HOLD"))
+            assertTrue(p.model in listOf(4, 6))
+            assertEquals(Rime.defaults(p.voice,p.model).keys, p.macros.keys)
             assertEquals(p, Patches.fromJsonText(p.toJsonText()))
         }
     }
 
     @Test fun `each preset pair changes spectral shape at the same note gate and velocity`() {
+        val clustered = mutableListOf<String>()
         for (voice in RimeVoice.entries) {
             val presets = RimePresets.forVoice(voice)
-            val notes = presets.map { it.copy(gateSeconds=.6f,velocity=.8f).render().samples }
+            val notes = presets.map { it.copy(midi=Rime.rootMidi(voice),gateSeconds=.6f,velocity=.8f,macros=it.macros+("HOLD" to 0f)).render().samples }
             for (i in notes.indices) for (j in i+1 until notes.size) {
                 val distance = RimeControlMeasure.distance(notes[i],notes[j],.6)
                 println("RIME bank $voice ${presets[i].name}/${presets[j].name} spectral distance $distance")
-                assertTrue(distance > .10, "$voice recipes cluster after level matching: $distance")
+                if (distance <= .10) clustered += "$voice ${presets[i].name}/${presets[j].name}: $distance"
             }
         }
+        assertTrue(clustered.isEmpty(), "Recipes cluster after level matching:\n${clustered.joinToString("\n")}")
     }
 
     @Test fun `native bank notes retain pitch headroom and complete recipes over three registers`() {
@@ -46,8 +47,12 @@ class RimeBankTest {
             assertTrue(note.samples.all { it.isFinite() })
             assertTrue(note.peak() <= .94001f)
             assertTrue(abs(note.samples.average()) < .002)
-            assertEquals(if(note.durationSeconds>1.5)DrumClass.LOOP else DrumClass.TONAL,
-                Rime.drumClassFor(patch.voice,patch.macros,patch.gateSeconds))
+            if (patch.model == 6) {
+                val actual = Classifier.classify(note).drumClass
+                assertTrue(actual in setOf(DrumClass.PERC, DrumClass.TONAL, DrumClass.LOOP), "${patch.name}/${patch.midi} classified as $actual")
+            }
+            assertEquals(if(Rime.isLoop(patch.macros) || note.durationSeconds>1.5)DrumClass.LOOP else DrumClass.TONAL,
+                Rime.drumClassFor(patch.voice,patch.macros,patch.gateSeconds,patch.model))
             val hz = Keys.midiHz(patch.midi)
             val measured = FineTuning.measuredHz(note,hz,fromSec=.02f,bodySeconds=.18f)
             assertNotNull(measured,"${patch.name}/${patch.midi} root missing")
@@ -70,7 +75,7 @@ class RimeBankTest {
             assertTrue(bundle.archive.isFile)
             val patches=RimeKits.patches()
             assertEquals(listOf(36,39,41,43,46,48,51,53),patches.take(8).map { it.midi })
-            assertTrue(patches.map { it.name }.containsAll(RimePresets.all().map { it.name }))
+            assertTrue(patches.map { it.name }.containsAll(RimePresets.legacyEntries().map { it.patch.name }))
             for (pad in kit.pads) {
                 val saved=PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
                 val p=assertIs<RimePatch>(saved.patch)

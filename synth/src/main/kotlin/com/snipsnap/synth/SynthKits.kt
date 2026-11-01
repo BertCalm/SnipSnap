@@ -933,6 +933,7 @@ object SynthKits {
 
     /** The nine finite RIME recipes plus a minor-pentatonic bass walk. */
     fun rime(): List<ArrangedPad?> = RimeKits.build()
+    fun rimeComplete(): List<ArrangedPad?> = RimeKits.buildComplete()
 
     /**
      * A dry pitched wheel kit for the first audition. A01–A08 walk CLUNK up C minor

@@ -15,14 +15,25 @@ object RimeKits {
             10 to "Bb2", 12 to "C3", 15 to "Eb3", 17 to "F3")
         return walk.mapIndexed { i, (offset, note) -> root.copy(
             name = if (i == 0) root.name else "${root.name} $note", midi = root.midi + offset)
-        } + RimePresets.all().filter { it.name != root.name }
+        } + RimePresets.legacyEntries().map { it.patch }.filter { it.name != root.name }
+    }
+
+    /** A separate bank keeps the accepted sixteen-pad kit reproducible. */
+    fun completePatches(): List<RimePatch> {
+        val finite = RimePresets.entries().map { it.patch }.filter { !Rime.isLoop(it.macros) }
+        return (RimeVoice.entries.flatMap { voice -> finite.filter { it.voice == voice }.take(2) } +
+            listOf(RimeVoice.REED, RimeVoice.FILIGREE, RimeVoice.CRUST, RimeVoice.VESSEL).map { voice ->
+                finite.filter { it.voice == voice }[2]
+            }).map { it.copy(model = Rime.MODEL_VERSION, gateSeconds = it.gateSeconds.coerceAtMost(.8f)) }
     }
 
     /** Native re-strikes supply timbre; the MPC velocity curve owns their level. */
-    fun build(): List<ArrangedPad?> = patches().map { patch ->
+    fun build(): List<ArrangedPad?> = build(patches())
+    fun buildComplete(): List<ArrangedPad?> = build(completePatches())
+    private fun build(patches: List<RimePatch>): List<ArrangedPad?> = patches.map { patch ->
         val recipe = PadRecipe(patch)
         val reference = recipe.render()
-        ArrangedPad(reference, Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds),
+        ArrangedPad(reference, Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model),
             recipe = recipe.toJsonValue(), oneShot = true,
             softVariants = listOf(SOFT_VELOCITY, MID_VELOCITY).map { velocity ->
                 Velocity.peakMatch(reference, patch.copy(velocity = velocity).render())

@@ -2816,6 +2816,14 @@ tasks.register<JavaExec>("generateRimeHoldAudition") {
     args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
 }
 
+tasks.register<JavaExec>("generateRimeCompleteAudition") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RimeCompleteAuditionGenerator")
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
+}
+
 /** The approved collision source through the actual JVM output stage. */
 tasks.register<JavaExec>("generateLorentzAudition") {
     group = "distribution"

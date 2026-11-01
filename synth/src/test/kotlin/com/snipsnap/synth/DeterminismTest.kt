@@ -302,7 +302,7 @@ class DeterminismTest {
 
     @Test
     fun `RIME models preserve complete recipe determinism through velocity and body changes`() {
-        for (model in 1..Rime.MODEL_VERSION) for (voice in RimeVoice.entries) {
+        for (model in 1..Rime.MODEL_VERSION) for (voice in if (model < 6) Rime.LEGACY_VOICES else RimeVoice.entries) {
             val patch = RimePatch("Rime canary", voice, Rime.defaults(voice, model) + ("BODY" to .8f),
                 midi = 53, velocity = .6f, gateSeconds = .25f, seed = 2718, model = model)
             assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)

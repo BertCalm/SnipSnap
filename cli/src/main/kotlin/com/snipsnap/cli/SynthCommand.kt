@@ -707,7 +707,7 @@ object SynthCommand {
                 try {
                     withNote.copy(model = modelOverride ?: withNote.model, macros = withNote.macros + macroOverrides,
                         gateSeconds = secondsOverride ?: withNote.gateSeconds, seed = seedOverride ?: withNote.seed)
-                } catch (e: IllegalArgumentException) { throw CliError("RIME: ${e.message}; use --model 5 for HOLD") }
+                } catch (e: IllegalArgumentException) { throw CliError("RIME: ${e.message}; use --model 5 or 6 for HOLD") }
             } else if (withNote is PluckPatch && withNote.voice == PluckVoice.UPRIGHT && macroOverrides.isNotEmpty()) {
                 withNote.copy(macros = withNote.macros + macroOverrides)
             } else if (withNote is MeridianPatch) {
@@ -839,7 +839,7 @@ object SynthCommand {
             val release = opts["--release"]?.toFloatOrNull() ?: if (opts["--release"] == null) RimePadMaker.RELEASE.default
                 else throw IllegalArgumentException("release must be finite seconds")
             RimePadMaker.Spec(chosen.single() as RimePatch, release)
-        } catch (e: IllegalArgumentException) { throw CliError("RIME --instrument: ${e.message}; use --model 5 for HOLD") } else null
+        } catch (e: IllegalArgumentException) { throw CliError("RIME --instrument: ${e.message}; use --model 5 or 6 for HOLD") } else null
         // Resolve every recipe and instrument specification before creating output files.
         val dir = File(dirArg)
         if (!dir.isDirectory && !dir.mkdirs()) throw CliError("could not make the output folder: $dirArg")

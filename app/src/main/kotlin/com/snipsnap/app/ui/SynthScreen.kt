@@ -1142,7 +1142,7 @@ fun SynthScreen(
                 ?: RimePatch(name, voice as RimeVoice)
             val controls = macrosByVoice.getValue(engine to voice)
             return current.copy(name = name, macros = controls,
-                model = if ((controls["HOLD"] ?: 0f) > 0f) Rime.MODEL_VERSION else current.model)
+                model = if (current.model < 5 && (controls["HOLD"] ?: 0f) > 0f) Rime.MODEL_VERSION else current.model)
         }
         if (engine == Engine.TIDAL) {
             // Accessibility and pointer events can arrive before recomposition.
@@ -2221,7 +2221,7 @@ fun SynthScreen(
             buildCurrentPatch(engine.patchDisplayName(voice)) as TidalPatch, heldSheet.holdRelease,
         ))
         Engine.RIME -> HeldSpec.Rime(RimePadMaker.spec(
-            (buildCurrentPatch(engine.patchDisplayName(voice)) as RimePatch).copy(model = Rime.MODEL_VERSION), heldSheet.holdRelease,
+            rimeInstrumentSource(buildCurrentPatch(engine.patchDisplayName(voice)) as RimePatch), heldSheet.holdRelease,
         ))
         Engine.CONTOUR -> HeldSpec.Contour(ContourPadMaker.spec(
             buildCurrentPatch(engine.patchDisplayName(voice)) as ContourPatch, heldSheet.holdRelease,
@@ -2744,6 +2744,11 @@ fun SynthScreen(
 
                 if (engine == Engine.RIME) {
                     val rimePatch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as RimePatch
+                    if (Rime.isLoop(rimePatch.macros)) {
+                        TapeText(if (rimePatch.model >= 6) "UNFOLD 60–100 REPEATS DETAIL DURING HOLD. LOWER SETTINGS UNFOLD ONCE."
+                            else "UNFOLD SHAPES THE OPENING. HELD DETAIL STAYS STEADY.",
+                            TapeType.pixelSmall, scheme.ink2.tape)
+                    }
                     fun editRime(edit: (RimePatch) -> RimePatch) {
                         touched = true
                         currentPresetByVoice.remove(engine to voice)

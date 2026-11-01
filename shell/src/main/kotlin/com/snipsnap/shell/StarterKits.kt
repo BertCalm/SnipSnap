@@ -255,6 +255,12 @@ object StarterKits {
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.rime() },
         Starter(
+            "rime-complete", "RIME COMPLETE",
+            "All six contour voices, with three native velocity layers per pad.",
+            seeded = false,
+            key = KeySpec.parse("Cminpent"),
+        ) { SynthKits.rimeComplete() },
+        Starter(
             "filament", "FILAMENT",
             "Glass threads, pulsing routes and blooming curls in C minor pentatonic.",
             seeded = false,

@@ -317,6 +317,14 @@ tasks.register<JavaExec>("generateRimeInstruments") {
     args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-instruments")
 }
 
+tasks.register<JavaExec>("generateRimeCompleteInstruments") {
+    group = "distribution"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.RimeInstrumentGenerator")
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("rimeInstrumentOutput").orNull ?: "${rootDir}/testkit/rime-complete-instruments", "--complete")
+}
+
 tasks.register<JavaExec>("generateScannedChainControlsAudition") {
     group = "distribution"
     description = "Render Scanned Chain editor sweeps, complete recipes and numerical evidence."
