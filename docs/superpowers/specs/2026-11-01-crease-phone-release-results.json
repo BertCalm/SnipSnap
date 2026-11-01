@@ -78,7 +78,75 @@
     "physicalPhonePlayback": "not tested",
     "optimizedApk": "separate optimized smoke passed"
   },
-  "fullJvmGate": "running separately",
+  "fullJvmGate": {
+    "result": "passed",
+    "exitCode": 0,
+    "modules": {
+      "json": {
+        "tests": 16,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "xpm": {
+        "tests": 40,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "audio": {
+        "tests": 457,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "kit": {
+        "tests": 429,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "mpc3": {
+        "tests": 93,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "synth": {
+        "tests": 3999,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "loop": {
+        "tests": 426,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "cli": {
+        "tests": 244,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      },
+      "shell": {
+        "tests": 1731,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0
+      }
+    },
+    "total": {
+      "tests": 7435,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "elapsed": "1h 38m 24s",
+    "jvmSourcesUnchangedFromTestStart": true,
+    "scope": "Complete nine-module JVM gate; unchanged tasks reused valid cached results"
+  },
   "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard",
   "optimizedApk": {
     "result": "passed",

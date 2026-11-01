@@ -63,7 +63,9 @@ and background/resume. A separate optimized-APK check passes native cache/stream
 startup, actual pointer hold/release, ending choice and background cleanup.
 These are emulator observations, not physical phone timing. The normal debug
 app assembles across its four native ABIs and its device tests compile.
-Repository-wide JVM verification is recorded separately when it completes.
+The complete nine-module JVM gate passes: 7,435 tests, zero
+failures, errors or skips, including valid unchanged cached results. Gradle
+exited 0 in 1h 38m 24s. The JVM sources stayed unchanged throughout this run.
 
 ## Phone landing
 
