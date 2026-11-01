@@ -298,19 +298,18 @@ object KitFromAnything {
 
     /** [result] as a [Report]; [name] is the kit's name on the shelf. */
     fun describe(result: Result, name: String, key: KeySpec, genre: Genre): Report {
-        val root = java.util.Locale.ROOT
         val a = result.analysis
         val header = "$name in ${key.label}, ${genre.label} at ${genre.style.bpm.toInt()} bpm - " +
-            if (a.pitched) "the source has a note (%.1f Hz)".format(root, a.hz) else "the source has no note, every cycle is forced"
+            if (a.pitched) "the source has a note (%.1f Hz)".format(java.util.Locale.ROOT, a.hz) else "the source has no note, every cycle is forced"
         // Locale.ROOT on the pad number: %d follows the default locale, and on an ar-EG or fa-IR
         // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
         val rows = result.gates.map { g ->
-            "%-4s %-11s %-10s %s".format("A%02d".format(root, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail)
+            "%-4s %-11s %-10s %s".format("A%02d".format(java.util.Locale.ROOT, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail)
         }
         val blends = result.blends.map { b ->
-            "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(root,
+            "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(java.util.Locale.ROOT,
                 b.slot.name, b.synth, b.share,
-                if (b.distance != null) ", distance %.3f%s".format(root, b.distance, if (b.far) " (far)" else "") else "",
+                if (b.distance != null) ", distance %.3f%s".format(java.util.Locale.ROOT, b.distance, if (b.far) " (far)" else "") else "",
                 b.after.gate.name.lowercase(), b.after.detail)
         }
         val failed = result.fallbackSet

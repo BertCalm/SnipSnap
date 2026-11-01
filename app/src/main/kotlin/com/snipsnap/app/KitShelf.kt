@@ -273,8 +273,12 @@ class KitShelf(val root: File) {
         val kept = File(dir, com.snipsnap.synth.KitFromAnything.SOURCE_FILE)
         try {
             com.snipsnap.audio.WavWriter.write(kept, source)
+            // read back through the bounded reader like every other :app read; the file is the one just
+            // written, so a source the assembler would refuse as too long arrives here already capped
+            // and is refused in words by assemble
+            val readBack = WavReader.readCapped(kept, com.snipsnap.synth.KitFromAnything.MAX_SOURCE_SECONDS + 0.5f).snip
             val result = com.snipsnap.synth.KitFromAnything.assemble(
-                WavReader.read(kept), key, genre, sourceFile = com.snipsnap.synth.KitFromAnything.SOURCE_FILE,
+                readBack, key, genre, sourceFile = com.snipsnap.synth.KitFromAnything.SOURCE_FILE,
             )
             val kit = com.snipsnap.kit.KitAssembler.assembleArranged(
                 name, com.snipsnap.kit.Balance.apply(result.pads), dir, key = key, tempoBpm = genre.style.bpm,
