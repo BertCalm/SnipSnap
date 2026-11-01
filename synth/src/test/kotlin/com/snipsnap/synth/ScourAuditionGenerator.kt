@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Loudness
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.audio.WavWriter
 import com.snipsnap.json.Json
@@ -12,16 +13,16 @@ import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 /**
- * SCOUR's second listen (R1.1), written to gitignored testkit/scour-audition/.
+ * SCOUR's fifth listen (R4, the thunder sheet), written to gitignored testkit/scour-audition/.
  * Run `./gradlew :synth:generateScourAudition`, then open index.html directly.
  *
- * The owner's first listen asked for three things, and the page leads with them: hear SCOUR in a
- * phrase ("we may need to see what a phrase would sound like"), hear PLATE and PANE as different
- * instruments ("sounds the same as plate though"), and set how far hardening lengthens the ring
- * ("probably would be adjustable"). Then the gate, the sweeps and the edges again, with RING where
- * TRAVERSE was. Single gestures keep the engine's unlevelled output beside an [AuditionLevel] copy
- * of the same render. A phrase is a mix of the engine's own pad renders (and THUMP's drums under the
- * impact), so it has only the matched copy. No rack effects. HOLD's top step is reserved for R2.
+ * The fourth listen liked the kit and asked for more voices, SHEET first, so R4 adds SHEET and the kit's
+ * bank B. This page leads with bank B in pad order (SHEET's builds cut for 120 and 90 BPM, its four
+ * presets, and four short hits on a low line), then all three voices into a drop over a beat, each build
+ * alone, the three voices side by side, and SHEET's controls swept and at their edges (PLATE and PANE are
+ * unchanged since the last listen, so their sweeps are not repeated). Single gestures keep the engine's unlevelled output beside an
+ * [AuditionLevel] copy of the same render; a phrase is a mix of the engine's own pad renders and THUMP's
+ * drums, so it has only the matched copy. No rack effects.
  */
 object ScourAuditionGenerator {
 
@@ -36,96 +37,104 @@ object ScourAuditionGenerator {
         val velocity: Float = 1f,
     )
 
-    /** One SCOUR pad hit inside a phrase: when, which note, how hard, with what macros. */
-    private class Hit(val frame: Int, val semitones: Int, val velocity: Float, val macros: Map<String, Float>)
+    /** One SCOUR pad hit inside a phrase: the frame its slam lands on, and the macros it plays. */
+    private class Hit(val slamFrame: Int, val macros: Map<String, Float>)
 
-    private class Phrase(val id: String, val name: String, val description: String, val voice: ScourVoice, val hits: List<Hit>, val drums: Boolean, val bars: Int)
+    /**
+     * A phrase at [bpm]: [bars] bars of THUMP's beat, the full beat from bar [drop] on (bars before it carry
+     * only a kick on each bar's one and closed hats), and SCOUR's [hits].
+     */
+    private class Phrase(
+        val id: String, val name: String, val description: String, val voice: ScourVoice,
+        val bpm: Int, val bars: Int, val drop: Int, val hits: List<Hit>,
+    )
 
     private val sections = linkedMapOf(
-        "PHRASES" to ("SCOUR in a phrase" to
-            "Three ways a producer could play it from pads, at 90 BPM: a riff on a scale (every note the default sound, played the way a keygroup plays it), an impact that hardens over a plain THUMP beat, and a slow chord bed. Each is the engine's own renders summed at their trigger times; nothing is added."),
-        "VOICES" to ("PLATE beside PANE" to
-            "The same settings on both voices, note by note. PLATE is a round metal plate; PANE is now a square glass pane, heard at one point on its diagonal, with its own overtones (1, 1.69, 2.55, 4.35...) instead of PLATE's (1, 1.73, 2.33, 3.91...)."),
-        "RING" to ("How far should hardening lengthen the ring?" to
-            "RING, the new knob where TRAVERSE was, at five settings on the same blast (SHOT .8, HARDEN 1). .25 is R1's shorter ring, .5 leaves the ring alone, .75 is the longer ring you picked last time and the new default, and 1 lengthens it twice as far."),
-        "GATE" to ("SHOT × HARDEN (the gate, again)" to
-            "The first listen's gate at the new default ring. Each pair is the same blast with HARDEN 0 and HARDEN 1."),
+        "KIT" to ("Bank B, pad by pad" to
+            "SynthKits.scour()'s bank B, all SHEET, in pad order. B01-B04 are builds cut for 120 BPM and B05-B08 for 90 BPM, one beat to two bars, at C2: hit one that long before a downbeat and its slam lands on it. B09-B12 are SHEET's four presets and B13-B16 short hits on C2, E-flat 2, F2 and G2. Bank A is unchanged."),
+        "DROPS" to ("SCOUR into a drop" to
+            "The build runs up to the downbeat and the slam lands on it, where the full beat comes in. Before the drop the beat is only a kick and hats. One bar of build at 120 BPM, two bars at 90, and short hits on the bar at 120, each at the voice's lowest note (C3, and C2 on SHEET). Each is the engine's own pad render placed so the slam is on the beat; nothing is added."),
+        "BUILDS" to ("Each build alone" to
+            "The one-bar build at 120 BPM on its own, with HARDEN 0 (the plate does not climb) and HARDEN 1 (the most climb)."),
+        "VOICES" to ("The three voices" to
+            "The same impact on each voice at TUNE 0, .5 and 1, every control at its default: C3, C4 and C5 on PLATE and PANE, an octave lower on SHEET."),
         "SWEEPS" to ("Each control swept" to
-            "RPM, SHOT, HARDEN, RING and HOLD at 0, .5 and 1 (HOLD's top step is reserved, so its last step is .98), the others at their defaults; then velocity at .3, .65 and 1."),
+            "SHEET's BUILD, RPM, SHOT, HARDEN and HOLD at 0, .5 and 1, the others at their defaults; then velocity at .3, .65 and 1."),
         "EDGES" to ("Edges" to
-            "Every control at its low end, at its high end, and the brightest and darkest corners."),
+            "SHEET's controls at their low end, at their high end, and its brightest and darkest corners."),
     )
 
     private fun fmt(v: Float) = "%.2f".format(java.util.Locale.ROOT, v).trimEnd('0').trimEnd('.')
     private fun tag(v: Float) = (v * 100).toInt().toString().padStart(3, '0')
     private fun title(voice: ScourVoice) = voice.name.lowercase().replaceFirstChar { it.uppercase() }
+    /** The note [semitones] above [voice]'s lowest, as "C3". */
+    private fun note(voice: ScourVoice, semitones: Int = 0) = Scales.nameOf(Scour.rootMidi(voice) + semitones)
+
+    /** Seconds of [bars] bars of 4/4 at [bpm]. */
+    private fun barSeconds(bpm: Int, bars: Int) = bars * 4 * 60.0 / bpm
 
     private fun cases(): List<Case> = buildList {
-        for ((tune, note) in listOf(0f to "C3", .5f to "C4", 1f to "C5")) for (voice in ScourVoice.entries) add(Case("VOICES", note,
-            "${voice.name.lowercase()}_$note", "${title(voice)} · $note", "Defaults at $note.", voice, mapOf("TUNE" to tune)))
-        for (voice in ScourVoice.entries) add(Case("VOICES", "C4 hardened", "${voice.name.lowercase()}_C4_hardened",
-            "${title(voice)} · C4 hardened", "SHOT .8 and HARDEN 1 at C4: the blast at full hardening.", voice, mapOf("SHOT" to .8f, "HARDEN" to 1f)))
-        for (voice in ScourVoice.entries) {
-            val v = title(voice)
-            val low = voice.name.lowercase()
-            for (ring in listOf(0f, .25f, .5f, .75f, 1f)) add(Case("RING", v, "${low}_ring${tag(ring)}", "$v · RING ${fmt(ring)}",
-                when (ring) {
-                    0f -> "Hardening shortens the ring twice as far as R1 did."
-                    .25f -> "R1's ring: hardening shortens every mode by 1 + damp·HARDEN·coverage (the shorter clip)."
-                    .5f -> "Hardening leaves the ring alone; only the stretch of the upper modes is left."
-                    .75f -> "The new default: hardening lengthens every mode by the same factor (the longer clip you picked)."
-                    else -> "Hardening lengthens the ring twice as far as the default."
-                }, voice, mapOf("SHOT" to .8f, "HARDEN" to 1f, "RING" to ring)))
-            for (shot in listOf(0f, .7f, 1f)) for (harden in listOf(0f, 1f)) add(Case("GATE", v, "${low}_shot${tag(shot)}_harden${tag(harden)}",
-                "$v · SHOT ${fmt(shot)} · HARDEN ${fmt(harden)}",
-                if (shot == 0f) "Almost no shots: HARDEN should change little here." else "The blast at SHOT ${fmt(shot)}; compare HARDEN 0 with HARDEN 1.",
-                voice, mapOf("SHOT" to shot, "HARDEN" to harden)))
-            for (macro in listOf("RPM", "SHOT", "HARDEN", "RING", "HOLD")) for (x in listOf(0f, .5f, 1f)) {
-                val value = if (macro == "HOLD" && x == 1f) .98f else x
-                add(Case("SWEEPS", "$v · $macro", "${low}_${macro.lowercase()}_${tag(value)}",
-                    "$v · $macro ${fmt(value)}", "$macro at ${fmt(value)}, the rest at defaults.", voice, mapOf(macro to value)))
-            }
-            for (vel in listOf(.3f, .65f, 1f)) add(Case("SWEEPS", "$v · velocity", "${low}_velocity_${tag(vel)}",
-                "$v · velocity ${fmt(vel)}", "Shot speed: softer hits land quieter and leave less coverage.", voice, emptyMap(), velocity = vel))
-            val lowEnd = mapOf("RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f, "RING" to 0f)
-            val highEnd = mapOf("RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "RING" to 1f, "HOLD" to .98f)
-            add(Case("EDGES", v, "${low}_all_low", "$v · everything low", "RPM, SHOT, HARDEN and RING at 0.", voice, lowEnd))
-            add(Case("EDGES", v, "${low}_all_high", "$v · everything high", "Every control at its top (HOLD .98).", voice, highEnd))
-            add(Case("EDGES", v, "${low}_bright", "$v · bright corner", "C5 with everything high.", voice, highEnd + ("TUNE" to 1f)))
-            add(Case("EDGES", v, "${low}_dark", "$v · dark corner", "C3 with everything low.", voice, lowEnd + ("TUNE" to 0f)))
+        for ((i, pad) in SynthKits.scour().withIndex()) {
+            if (i < 16) continue // bank A is unchanged since the last listen
+            val patch = PadRecipe.fromJsonValue(requireNotNull(requireNotNull(pad).recipe)).patch as ScourPatch
+            val slot = "B%02d".format(i - 15)
+            add(Case("KIT", if (i < 24) "Builds (B01-B08)" else "Presets and hits (B09-B16)", slot.lowercase(),
+                "$slot · ${patch.name}", "${title(patch.voice)} · ${patch.name}", patch.voice, patch.macros))
         }
+        val oneBar = Scour.buildFor(barSeconds(120, 1))
+        for (voice in ScourVoice.entries) for (harden in listOf(0f, 1f)) add(Case("BUILDS", title(voice),
+            "${voice.name.lowercase()}_build_harden${tag(harden)}", "${title(voice)} · one bar, HARDEN ${fmt(harden)}",
+            if (harden == 0f) "The build without the climb: the rain accelerates and swells, the plate stays put." else "The build with the most climb: the upper ring rises as the dents spread.",
+            voice, mapOf("BUILD" to oneBar, "HARDEN" to harden, "TUNE" to 0f)))
+        for (tune in listOf(0f, .5f, 1f)) for (voice in ScourVoice.entries) {
+            val name = note(voice, (tune * Scour.TUNE_SEMITONES).toInt())
+            add(Case("VOICES", "TUNE ${fmt(tune)}", "${voice.name.lowercase()}_tune${tag(tune)}", "${title(voice)} · $name",
+                "Defaults at $name.", voice, mapOf("TUNE" to tune)))
+        }
+        val voice = ScourVoice.SHEET
+        val v = title(voice)
+        val low = voice.name.lowercase()
+        for (macro in listOf("BUILD", "RPM", "SHOT", "HARDEN", "HOLD")) for (x in listOf(0f, .5f, 1f)) {
+            add(Case("SWEEPS", "$v · $macro", "${low}_${macro.lowercase()}_${tag(x)}",
+                "$v · $macro ${fmt(x)}", "$macro at ${fmt(x)}, the rest at defaults.", voice, mapOf(macro to x)))
+        }
+        for (vel in listOf(.3f, .65f, 1f)) add(Case("SWEEPS", "$v · velocity", "${low}_velocity_${tag(vel)}",
+            "$v · velocity ${fmt(vel)}", "How hard the slam and the shots land: softer leaves less coverage and a gentler hit.", voice, emptyMap(), velocity = vel))
+        val lowEnd = mapOf("BUILD" to 0f, "RPM" to 0f, "SHOT" to 0f, "HARDEN" to 0f)
+        val highEnd = mapOf("BUILD" to 1f, "RPM" to 1f, "SHOT" to 1f, "HARDEN" to 1f, "HOLD" to 1f)
+        add(Case("EDGES", v, "${low}_all_low", "$v · everything low", "BUILD, RPM, SHOT and HARDEN at 0: a bare hit.", voice, lowEnd))
+        add(Case("EDGES", v, "${low}_all_high", "$v · everything high", "Every control at its top: an eight-second build and the longest ring.", voice, highEnd))
+        add(Case("EDGES", v, "${low}_bright", "$v · bright corner", "${note(voice, Scour.TUNE_SEMITONES)} with everything high.", voice, highEnd + ("TUNE" to 1f)))
+        add(Case("EDGES", v, "${low}_dark", "$v · dark corner", "${note(voice)} with everything low.", voice, lowEnd + ("TUNE" to 0f)))
     }
 
     // ---- phrases ------------------------------------------------------------------------------------
 
-    private const val BPM = 90
-
-    /** An eighth note at 90 BPM: 14,700 frames, a whole number, so every step lands on a frame. */
-    private val EIGHTH = (60.0 / BPM / 2 * Dsp.RATE).roundToInt()
-    private val BAR = 8 * EIGHTH
-
-    /** THUMP's beat under the impact: kick on 1 and 3, snare on 2 and 4, a closed hat on every eighth. */
+    /** THUMP's beat under SCOUR, levelled on its own and set at these shares of SCOUR's level. */
     private const val DRUM_SHARE = 0.5f
     private const val HAT_SHARE = 0.35f
+
+    private fun barFrames(bpm: Int) = (barSeconds(bpm, 1) * Dsp.RATE).roundToInt()
 
     private fun phrases(): List<Phrase> = ScourVoice.entries.flatMap { voice ->
         val v = title(voice)
         val low = voice.name.lowercase()
-        // C minor pentatonic up and back on quarter notes: C3 Eb3 F3 G3 Bb3 C4 Bb3 G3, accented on the beat.
-        val riff = listOf(0, 3, 5, 7, 10, 12, 10, 7).mapIndexed { i, s -> Hit(i * 2 * EIGHTH, s, if (i % 2 == 0) 1f else .8f, emptyMap()) }
-        val impact = listOf(0, 2).map { bar -> Hit(bar * BAR, 0, 1f, mapOf("SHOT" to .8f, "HARDEN" to 1f)) }
-        val bed = mapOf("SHOT" to .3f, "RPM" to .6f, "HOLD" to .6f, "RING" to 1f)
-        val chords = listOf(0, 3, 7).map { Hit(0, it, .9f, bed) } + listOf(8, 12, 15).map { Hit(2 * BAR, it, .9f, bed) }
         listOf(
-            Phrase("${low}_riff", "$v · riff", "Eight pad hits on C minor pentatonic, quarter notes at 90 BPM, every note the default sound. Each note's blast overlaps the next note's roll, as it would from pads.", voice, riff, drums = false, bars = 3),
-            Phrase("${low}_impact", "$v · impact over a beat", "One hardening hit at C3 (SHOT .8, HARDEN 1) on bars 1 and 3, over THUMP's kick, snare and closed hat at 90 BPM.", voice, impact, drums = true, bars = 4),
-            Phrase("${low}_bed", "$v · chord bed", "C minor, then A-flat major, three pads struck together each time: sparse shot (SHOT .3), a long blast (HOLD .6), the longest ring (RING 1).", voice, chords, drums = false, bars = 4),
+            Phrase("${low}_drop_120", "$v · one bar into the drop, 120 BPM",
+                "A one-bar build (2.0 s) at ${note(voice)} over a kick and hats, the slam on the downbeat of bar 3 where the full beat comes in.",
+                voice, 120, 4, 3, listOf(Hit(2 * barFrames(120), mapOf("TUNE" to 0f, "BUILD" to Scour.buildFor(barSeconds(120, 1)))))),
+            Phrase("${low}_drop_90", "$v · two bars into the drop, 90 BPM",
+                "A two-bar build (5.3 s) at ${note(voice)}, the slam on the downbeat of bar 3.",
+                voice, 90, 4, 3, listOf(Hit(2 * barFrames(90), mapOf("TUNE" to 0f, "BUILD" to Scour.buildFor(barSeconds(90, 2)))))),
+            Phrase("${low}_hits_120", "$v · short hits on the bar, 120 BPM",
+                "BUILD 0 (a quarter-second run-up) at ${note(voice)}, a hit on the downbeat of bars 2 and 4 over the full beat.",
+                voice, 120, 4, 1, listOf(1, 3).map { bar -> Hit(bar * barFrames(120), mapOf("TUNE" to 0f, "BUILD" to 0f)) }),
         )
     }
 
-    /** Adds [hit] into [into] from frame [at], growing nothing: [into] is sized for every tail. */
+    /** Adds [hit] into [into] from frame [at]. */
     private fun place(into: FloatArray, hit: FloatArray, at: Int, gain: Float) {
-        for (i in hit.indices) into[at + i] += gain * hit[i]
+        for (i in hit.indices) if (at + i in into.indices) into[at + i] += gain * hit[i]
     }
 
     /** The gain [AuditionLevel.level] gives [samples], asked once so stems can be matched before they are mixed. */
@@ -137,34 +146,36 @@ object ScourAuditionGenerator {
     }
 
     private fun mix(p: Phrase): FloatArray {
-        val notes = p.hits.map { h ->
-            val tune = h.semitones / Scour.TUNE_SEMITONES.toFloat()
-            check(Scour.midiFor(p.voice, tune) == Scour.ROOT_MIDI + h.semitones) { "${p.id}: note ${h.semitones} is off the TUNE grid" }
-            h to Scour.render(p.voice, h.macros + ("TUNE" to tune), h.velocity).samples
+        val bar = barFrames(p.bpm)
+        val eighth = bar / 8
+        val renders = p.hits.map { h ->
+            val start = h.slamFrame - (Scour.buildSeconds(Scour.settled(p.voice, h.macros).getValue("BUILD")) * Dsp.RATE).roundToInt()
+            // A frame or two of rounding may start a build before the phrase; place() drops what falls outside.
+            check(start >= -Dsp.RATE / 100) { "${p.id}: a build starts before the phrase" }
+            h to (start to Scour.render(p.voice, h.macros).samples)
         }
-        val frames = max(p.bars * BAR, notes.maxOf { (h, s) -> h.frame + s.size })
+        val frames = max(p.bars * bar, renders.maxOf { (_, r) -> r.first + r.second.size })
         val scour = FloatArray(frames)
-        for ((h, s) in notes) place(scour, s, h.frame, 1f)
-        val out = scour.copyOf()
-        if (p.drums) {
-            // The drums are levelled once on their own and set under SCOUR's level, so the mix, not the beat, is matched.
-            val kick = Thump.render(ThumpVoice.KICK).samples
-            val snare = Thump.render(ThumpVoice.SNARE).samples
-            val hat = Thump.render(ThumpVoice.HAT_CLOSED).samples
-            val beat = FloatArray(frames)
-            val hats = FloatArray(frames)
-            for (bar in 0 until p.bars) for (step in 0 until 8) {
-                val at = bar * BAR + step * EIGHTH
-                if (step == 0 || step == 4) place(beat, kick, at, 1f)
-                if (step == 2 || step == 6) place(beat, snare, at, 1f)
+        for ((_, r) in renders) place(scour, r.second, r.first, 1f)
+        val kick = Thump.render(ThumpVoice.KICK).samples
+        val snare = Thump.render(ThumpVoice.SNARE).samples
+        val hat = Thump.render(ThumpVoice.HAT_CLOSED).samples
+        val beat = FloatArray(frames)
+        val hats = FloatArray(frames)
+        for (b in 0 until p.bars) {
+            val full = b + 1 >= p.drop
+            for (step in 0 until 8) {
+                val at = b * bar + step * eighth
+                if (step == 0 || (full && step == 4)) place(beat, kick, at, 1f)
+                if (full && (step == 2 || step == 6)) place(beat, snare, at, 1f)
                 place(hats, hat, at, 1f)
             }
-            val s = levelGain(scour)
-            val b = levelGain(beat) * DRUM_SHARE / s
-            val h = levelGain(hats) * HAT_SHARE / s
-            for (i in out.indices) out[i] += b * beat[i] + h * hats[i]
         }
-        return out
+        // The drums are levelled once on their own and set under SCOUR's level, so the mix, not the beat, is matched.
+        val s = levelGain(scour)
+        val kb = levelGain(beat) * DRUM_SHARE / s
+        val hb = levelGain(hats) * HAT_SHARE / s
+        return FloatArray(frames) { scour[it] + kb * beat[it] + hb * hats[it] }
     }
 
     private fun levels(snip: Snip): Map<String, Double> {
@@ -196,19 +207,19 @@ object ScourAuditionGenerator {
             val millis = (System.nanoTime() - began) / 1e6
             require(mixed.samples.all { it.isFinite() }) { "${p.id}: the mix is not finite" }
             val matched = AuditionLevel.level(mixed)
-            val stem = "phrases/${p.id}"
+            val stem = "drops/${p.id}"
             WavWriter.write(File(root, "${stem}_matched.wav"), matched, WavWriter.BitDepth.PCM_24)
             wavs++
-            grouped.getValue("PHRASES").getOrPut(p.name.substringAfter(" · ")) { mutableListOf() } += linkedMapOf(
+            grouped.getValue("DROPS").getOrPut(p.name.substringAfter(" · ")) { mutableListOf() } += linkedMapOf(
                 "id" to p.id,
                 "name" to p.name,
                 "description" to p.description,
                 "voice" to p.voice.name,
                 "kind" to "PHRASE",
-                "tempoBpm" to BPM,
-                "hits" to p.hits.map { h -> mapOf("beat" to h.frame.toDouble() / EIGHTH / 2, "midi" to Scour.ROOT_MIDI + h.semitones, "velocity" to h.velocity) },
+                "tempoBpm" to p.bpm,
+                "hits" to p.hits.map { h -> mapOf("slamBeat" to h.slamFrame.toDouble() / (barFrames(p.bpm) / 4)) },
                 "macros" to Scour.settled(p.voice, p.hits.first().macros),
-                "drums" to p.drums,
+                "drums" to true,
                 "raw" to null,
                 "matched" to "${stem}_matched.wav",
                 "metrics" to linkedMapOf(
@@ -231,7 +242,7 @@ object ScourAuditionGenerator {
             WavWriter.write(File(root, "${stem}_matched.wav"), matched, WavWriter.BitDepth.PCM_24)
             wavs += 2
             val trace = played.trace
-            val close = ((trace.closeSeconds * Scour.INTERNAL_RATE).toInt() / Scour.CTRL).coerceAtMost(trace.smoothed.lastIndex)
+            val slam = (trace.slamFrame / Scour.CTRL).coerceAtMost(trace.smoothed.lastIndex)
             val modes = requireNotNull(played.modeHz)
             val settled = Scour.settled(c.voice, c.macros)
             grouped.getValue(c.section).getOrPut(c.group) { mutableListOf() } += linkedMapOf(
@@ -247,11 +258,12 @@ object ScourAuditionGenerator {
                 "matched" to "${stem}_matched.wav",
                 "metrics" to linkedMapOf(
                     "durationSeconds" to raw.samples.size.toDouble() / Dsp.RATE,
+                    "buildSeconds" to trace.slamSeconds,
                     "raw" to levels(raw),
                     "matched" to levels(matched),
                     "shots" to trace.shotFrames.size,
-                    "coverageAtClose" to trace.coverage[close],
-                    "topModeRisePercent" to 100.0 * (modes.last()[close] / modes.last()[0] - 1),
+                    "coverageAtClose" to trace.coverage[slam],
+                    "topModeRisePercent" to 100.0 * (modes.last()[slam] / modes.last()[0] - 1),
                     "renderMillis" to millis,
                 ),
             )
@@ -260,7 +272,7 @@ object ScourAuditionGenerator {
         val manifest = Json.write(value(linkedMapOf(
             "engine" to "SCOUR",
             "model" to Scour.MODEL_VERSION,
-            "auditionRevision" to "R1.1",
+            "auditionRevision" to "R4",
             "gestures" to all.size,
             "phrases" to phrases().size,
             "wavFiles" to wavs,

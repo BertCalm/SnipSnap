@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -44,10 +45,11 @@ import com.snipsnap.shell.Copy
 import com.snipsnap.shell.KitBuilderModel
 import com.snipsnap.shell.KitDiff
 import com.snipsnap.shell.Layout
+import com.snipsnap.shell.PadBanks
+import com.snipsnap.shell.PadSheet
 import com.snipsnap.shell.Scheme
 import com.snipsnap.shell.Schemes
 import java.io.File
-import kotlin.math.ceil
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -74,16 +76,16 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
  * genuinely-different things (JSON save history vs. deleted pad audio)
  * still have to cohabit one screen regardless of what either is called.
  *
- * Routed as KIT-scoped overlay state in `App`, the same way PAD SHEET is —
- * not an [AppScreen] entry. MenuRow's items are fixed at ten and TAKES+BIN
- * isn't one of them; it's only reachable from the KIT action row, exactly
- * like PAD SHEET is only reachable by long-pressing a pad.
+ * A bench (`Bench.VERSIONS`) over PADS in `App`, not an [AppScreen] entry:
+ * it's only reachable from the KIT action row, exactly like PAD SHEET is only
+ * reachable by long-pressing a pad. It is drawn only for the kit it was
+ * opened for; `App` closes it on arrival if that is no longer the open kit.
  *
  * Opens its own [KitBuilderModel] on [entry]'s folder, same as PAD SHEET,
  * and reports every successful restore back up via [onKitUpdated] so
  * `App`'s copy of the kit stays in step. The kit's engine bank needs no
  * special invalidation here: `App` renders this screen *instead of*
- * `KitScreen` (see `App.kt`'s `AppScreen.KIT` branch), and the kit's
+ * `KitScreen` (see `App.kt`'s `Bench.VERSIONS` branch), and the kit's
  * `PadHost` is not tied to that screen — it stays open while the beat is
  * playing, and closes with its last holder otherwise. Either way a restore
  * reaches it as a fresh `open.kit` through [onKitUpdated], and the host
@@ -115,6 +117,8 @@ private const val EMPTY_BIN_ARM_MS = 3_000L
 @Composable
 fun TakesBinScreen(
     entry: KitShelf.Entry,
+    /** The back chip's words: `Navigation.backChip`, so they name the screen Back lands on. */
+    backLabel: String,
     onBack: () -> Unit,
     onToast: (String) -> Unit,
     onKitUpdated: (com.snipsnap.kit.Kit) -> Unit,
@@ -150,7 +154,10 @@ fun TakesBinScreen(
     ReportBusy(remember(busy, job) { if (busy) Busy(job ?: Copy.WORKING_BUSY) else null })
     var armed by remember(model) { mutableStateOf(false) }
     var takeScans by remember(model) { mutableStateOf<List<TakeScan>>(emptyList()) }
-    var binEntries by remember(model) { mutableStateOf<List<KitBuilderModel.BinEntry>>(emptyList()) }
+    var binHolds by remember(model) { mutableStateOf<List<KitBuilderModel.BinHold>>(emptyList()) }
+    // The kept rows whose pad can give the entry back itself, by entry file:
+    // those rows show no BACK (`BinRowLine`, `PadSheet.hasOwnWayBack`).
+    var ownWayBack by remember(model) { mutableStateOf<Set<File>>(emptySet()) }
     var kitSnapshot by remember(model) { mutableStateOf(entry.kit) }
     // SINCE T3: which take row is open, as (file, mtime) — the same identity
     // `doRestoreTake` checks, for the same reason (see its KDoc): rows are
@@ -186,10 +193,24 @@ fun TakesBinScreen(
      * different archive, or none, at the same `take_NNN.json`. Rare, and
      * the row still says so ("WON'T READ") rather than showing "NO
      * CHANGES" for a file this read never saw.
+     *
+     * THE BIN's rows are the one thing here that is not a pure directory
+     * scan. Which entries a pad keeps ([KitBuilderModel.binHolds]) depends
+     * on the kit as well as the bin, and [m]'s kit is the mount-time one, so
+     * they come from a model opened fresh under the writers' lock: the same
+     * answer the launch sweep would reach from disk now. When that answer
+     * cannot be built (a `kit.json` or a printed pad's saved source that
+     * will not read), every row falls back to its plain countdown from [m]'s
+     * bin listing rather than failing the screen; the sweep deletes nothing
+     * in such a kit, so those files are still there.
+     *
+     * The same fresh kit decides which kept rows hide BACK: a row whose pad
+     * can give the entry back itself ([PadSheet.hasOwnWayBack]). In the
+     * fallback no row is known to be kept, so every row keeps its BACK.
      */
     suspend fun refreshLists(m: KitBuilderModel, kitOverride: com.snipsnap.kit.Kit? = null) {
         val live = kitOverride ?: kitSnapshot
-        val (t, b) = withContext(Dispatchers.IO) {
+        val (t, b, own) = withContext(Dispatchers.IO) {
             val scans = m.takes().map { f ->
                 // mtime read once, here: it is the row's identity check
                 // for `doRestoreTake` (see its KDoc) as well as its text.
@@ -197,10 +218,28 @@ fun TakesBinScreen(
                 val changes = runCatching { KitDiff.changes(KitStore.read(f), live) }.getOrNull()
                 TakeScan(f, mtime, changes)
             }
-            scans to m.binContents()
+            val (holds, ownBack) = KitWrites.mutex.withLock {
+                runCatching {
+                    val fresh = KitBuilderModel.open(m.kitDir)
+                    val held = fresh.binHolds()
+                    val binned = held.map { it.entry.originalName }.toSet()
+                    val undoable = held.filter { h ->
+                        // The pad under any prints: the one binHolds kept the entry for, and
+                        // whose door a printed pad's NONE reaches once the print is off.
+                        val keeper = h.keptFor?.let { fresh.kit.pad(it) }?.let(fresh::unprinted)
+                        keeper != null && PadSheet.hasOwnWayBack(keeper, h.entry.originalName, binned)
+                    }.map { it.entry.file }.toSet()
+                    held to undoable
+                }
+            }.getOrElse { e ->
+                Log.w("TakesBinScreen", "the bin's kept set would not build; plain countdowns instead", e)
+                onTheClock(m.binContents()) to emptySet<File>()
+            }
+            Triple(scans, holds, ownBack)
         }
         takeScans = t
-        binEntries = b
+        binHolds = b
+        ownWayBack = own
         if (kitOverride != null) kitSnapshot = kitOverride
     }
 
@@ -231,7 +270,7 @@ fun TakesBinScreen(
      * [withFreshKit]'s KDoc), never the long-lived [model] — mirrors
      * PadSheetScreen's own Law 5 fix. Unlike PAD SHEET, [model] itself is
      * NOT swapped afterward: this screen keys `busy`/`armed`/`takeScans`/
-     * `binEntries`/`kitSnapshot` on [model]'s identity (`remember(model)`),
+     * `binHolds`/`kitSnapshot` on [model]'s identity (`remember(model)`),
      * and `restoreTake` fully replaces `kit` from the take file's own
      * content regardless of which model instance it runs against — so
      * [model]'s own in-memory `kit` was never load-bearing for this write
@@ -297,9 +336,12 @@ fun TakesBinScreen(
      * can bin several copies of the same `originalName` (each treat-then-
      * rewrite cycle bins the previous version under that same filename), and
      * this row's own [KitBuilderModel.BinEntry] is a specific one of those,
-     * distinguished on screen by its own countdown. The name-keyed overload
+     * distinguished on screen by its own countdown, or, for the newest entry a
+     * pad still keeps, by that pad's KEPT FOR. The name-keyed overload
      * always resolves to the newest, which is not necessarily the row that
-     * was tapped.
+     * was tapped. A row a pad keeps and can undo itself has no BACK at all
+     * (`BinRowLine`, [PadSheet.hasOwnWayBack]): that pad's own undo is its
+     * way back.
      */
     fun doRestoreFromBin(entry: KitBuilderModel.BinEntry) {
         if (busy) return
@@ -380,7 +422,7 @@ fun TakesBinScreen(
         // on in this state).
         BackHandler { onBack() }
         Box(Modifier.fillMaxSize().lcdPanel(scheme).padding(14.dp)) {
-            HeaderChip("◄ KIT", scheme, Modifier.align(Alignment.TopStart).width(64.dp), onLcd = true) { onBack() }
+            HeaderChip(backLabel, scheme, Modifier.align(Alignment.TopStart).widthIn(min = 64.dp), onLcd = true) { onBack() }
             if (loadFailed) {
                 TapeText(Copy.KIT_WONT_OPEN, TapeType.lcdSmall, scheme.lcdInk.tape, Modifier.align(Alignment.Center), maxLines = 3)
             }
@@ -412,27 +454,30 @@ fun TakesBinScreen(
         }
     }
 
-    val binRows = remember(binEntries, kitSnapshot) {
+    val binRows = remember(binHolds, ownWayBack, kitSnapshot) {
         val now = System.currentTimeMillis()
-        binEntries.map { be ->
-            val daysSince = (now - be.binnedAtMillis) / 86_400_000.0
-            // Ceil, not round-to-nearest — "0D LEFT" must mean genuinely
-            // purge-eligible (matches purgeBin's own `< cutoff` check), not
-            // "rounded down from up to ~12h still standing."
-            val daysLeft = (KitBuilderModel.BIN_KEEP_DAYS - daysSince).let { left -> if (left <= 0) 0 else ceil(left).toInt() }
+        binHolds.map { hold ->
+            val be = hold.entry
+            // The count is `BinHold.daysLeft`, the one the pad sheet draws
+            // too: rounded up, so "0D LEFT" means the next sweep takes it.
+            // Null for an entry a pad still needs, whose row names that pad
+            // instead (`keptFor`), because no sweep takes it while it does.
+            val daysLeft = hold.daysLeft(now)
             // "Recoverable from the kit": a currently-assigned pad whose
             // sample (main or a GHOSTS layer) shares this bin entry's
-            // original name. In practice this rarely matches — a file only
-            // reaches the bin once nothing in the live kit still points at
-            // it (`deleteIfUnreferenced`) — so `null` (neutral ink3) is the
-            // common, honest case, not a bug.
+            // original name. Every treatment and rewrite bins the pad's
+            // earlier audio under the name the pad still plays (see
+            // `doRestoreFromBin`), so a treated pad's rows all wear its
+            // colour. `null` (neutral ink3) is audio no live pad plays any
+            // more: an ejected pad, or a file a pad stopped pointing at
+            // (`deleteIfUnreferenced`).
             val matchedPad = kitSnapshot.pads.firstOrNull { p ->
                 p.sampleFile == be.originalName || p.velocityLayers.any { it.sampleFile == be.originalName }
             }
             val classColor = matchedPad?.let { p ->
                 (p.colorHex?.removePrefix("#")?.toIntOrNull(16) ?: Schemes.classColor(p.drumClass)).tape
             }
-            BinRow(be, daysLeft, classColor)
+            BinRow(be, hold.keptFor, daysLeft, classColor, back = be.file !in ownWayBack)
         }
     }
 
@@ -440,12 +485,12 @@ fun TakesBinScreen(
     // EMPTY THE BIN write in flight must not be interrupted by Back any
     // more than by the chip itself.
     // Always registered, no-op while busy — NOT `enabled = !busy`. This screen
-    // is one of App's overlays, so the root handler excludes itself whenever
-    // `takesBinOpen` is set; a disabled handler here would leave ZERO enabled
-    // callbacks mid-write and the dispatcher would fall through to
-    // Activity.finish() — Back would exit the app in the middle of a RESTORE.
-    // Swallowing is safe rather than a trap: MenuRow renders above this screen
-    // the whole time, so a tab is always there to leave by. SplitScreen's
+    // is a bench, so the root handler is enabled under it (it takes a press only
+    // when no screen of its own does); a disabled handler here would let Back
+    // fall through to the root handler's `nav.back()`, which pops VERSIONS out
+    // from under a RESTORE in flight. Swallowing is safe rather than a trap:
+    // the place row renders above this screen the whole time, so a place is
+    // always there to leave by. SplitScreen's
     // `BackHandler { if (!working) onExit() }` is the same shape.
     BackHandler { if (!busy) onBack() }
 
@@ -455,7 +500,7 @@ fun TakesBinScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderChip("◄ KIT", scheme, Modifier.width(64.dp), enabled = !busy, onClick = onBack)
+            HeaderChip(backLabel, scheme, Modifier.widthIn(min = 64.dp), enabled = !busy, onClick = onBack)
             Row(
                 Modifier
                     .weight(1f)
@@ -519,8 +564,10 @@ fun TakesBinScreen(
             // followups) — the old title said only how long, never what,
             // leaving "the bin" to mean whatever a reader assumed (which,
             // sitting right under a TAKES card, was an easy misread as
-            // "your takes, kept 30 days").
-            PillCard("THE BIN — DELETED PAD AUDIO, KEPT 30 DAYS", scheme, BIN_RED_BORDER, BinRedGlow) {
+            // "your takes, kept 30 days"). How long is each row's to say
+            // since 2026-10-31: a countdown, or KEPT FOR the pad that still
+            // needs it, which no 30 days in the title would be true of.
+            PillCard("THE BIN — DELETED PAD AUDIO", scheme, BIN_RED_BORDER, BinRedGlow) {
                 if (binRows.isEmpty()) {
                     TapeText(Copy.BIN_EMPTY_STATE, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                 } else {
@@ -551,7 +598,35 @@ private data class TakeRow(
     val changes: List<KitDiff.Change>?,
 )
 
-private data class BinRow(val entry: KitBuilderModel.BinEntry, val daysLeft: Int, val classColor: Color?)
+/**
+ * One row of THE BIN. [keptFor] is the slot of a pad that still needs the entry
+ * ([KitBuilderModel.BinHold.keptFor]), and [daysLeft] is then null; otherwise
+ * [daysLeft] is the entry's countdown ([KitBuilderModel.BinHold.daysLeft]).
+ */
+private data class BinRow(
+    val entry: KitBuilderModel.BinEntry,
+    val keptFor: Int?,
+    val daysLeft: Int?,
+    val classColor: Color?,
+    /** False on a kept row whose pad can give the entry back itself ([PadSheet.hasOwnWayBack]): no BACK there. */
+    val back: Boolean,
+)
+
+/**
+ * Every entry on its plain clock, [KitBuilderModel.BIN_KEEP_DAYS] from when it
+ * went in: what THE BIN shows when [KitBuilderModel.binHolds] cannot be built
+ * (`refreshLists`). Saturating, as `binHolds`' own clock is, so a forged stamp
+ * near `Long.MAX_VALUE` reads as far off rather than wrapping. PadSheetScreen
+ * carries its own copy, as this file's [withFreshKit] and [HeaderChip] are
+ * file-local copies too.
+ */
+private fun onTheClock(entries: List<KitBuilderModel.BinEntry>): List<KitBuilderModel.BinHold> {
+    val keepMs = (KitBuilderModel.BIN_KEEP_DAYS * 86_400_000).toLong()
+    return entries.map {
+        val purgeAt = if (it.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else it.binnedAtMillis + keepMs
+        KitBuilderModel.BinHold(it, keptFor = null, purgeAtMillis = purgeAt)
+    }
+}
 
 /**
  * The one correct shape for a kit mutation issued by a screen whose own
@@ -681,9 +756,8 @@ private fun TakeRowLine(
 
 @Composable
 private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (KitBuilderModel.BinEntry) -> Unit) {
-    // ≤2 days left renders in `scheme.warn` (the handoff's "≤2 days amber");
-    // everything else stays in the LCD's second colour, same as the artboard.
-    val dayColor = if (row.daysLeft <= 2) scheme.warn.tape else scheme.amber.tape
+    val keptFor = row.keptFor
+    val daysLeft = row.daysLeft
     Row(
         Modifier
             .fillMaxWidth()
@@ -701,18 +775,39 @@ private fun BinRowLine(row: BinRow, scheme: Scheme, busy: Boolean, onRestore: (K
                 .background(row.classColor ?: scheme.lcdInk2, RoundedCornerShape(2.dp)),
         )
         TapeText(row.entry.originalName, TapeType.marker, scheme.lcdInk.tape, Modifier.weight(1f), maxLines = 1)
-        TapeText("${row.daysLeft}D LEFT", TapeType.lcdSmall, dayColor)
-        Box(
-            Modifier
-                .heightIn(min = Layout.MIN_HIT_TARGET.dp)
-                .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
-                // Always clickable, `!busy` forwarded rather than dropped
-                // (accessibility audit finding 12).
-                .tapeClick(label = "BRING BACK ${row.entry.originalName.uppercase()}", enabled = !busy) { onRestore(row.entry) }
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            TapeText("BACK", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+        when {
+            // Kept for a pad: amber, never the warn colour, because nothing
+            // here is about to leave.
+            keptFor != null -> TapeText(Copy.binKeptFor(PadBanks.tag(keptFor)), TapeType.lcdSmall, scheme.amber.tape)
+            // ≤2 days left renders in `scheme.warn` (the handoff's "≤2 days
+            // amber"); everything else stays in the LCD's second colour,
+            // same as the artboard.
+            daysLeft != null -> TapeText("${daysLeft}D LEFT", TapeType.lcdSmall, if (daysLeft <= 2) scheme.warn.tape else scheme.amber.tape)
+        }
+        // No BACK on a kept row whose pad can undo itself (the owner's call,
+        // 2026-10-31; `PadSheet.hasOwnWayBack`): BACK copies the original
+        // over the pad's audio without binning what it replaces and leaves
+        // the recipe, so the card would still show a treatment the sound no
+        // longer has, and the pad's own undo would then refuse. That pad's
+        // NONE (or MUTATE's or OUTSIDE's UNDO) gives the same original back
+        // and takes the recipe off with it; the row names the pad. That
+        // includes a print over such a pad (its NONE removes the print
+        // first) and soft hits added after the treatment (SOFT HITS off,
+        // then NONE). A kept row whose pad has no such door (a SPLICE, a
+        // DE-SAMPLE) keeps BACK: it is that pad's only way back in the app.
+        if (row.back) {
+            Box(
+                Modifier
+                    .heightIn(min = Layout.MIN_HIT_TARGET.dp)
+                    .border(1.dp, scheme.amber.tape, RoundedCornerShape(4.dp))
+                    // Always clickable, `!busy` forwarded rather than dropped
+                    // (accessibility audit finding 12).
+                    .tapeClick(label = "BRING BACK ${row.entry.originalName.uppercase()}", enabled = !busy) { onRestore(row.entry) }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                TapeText("BACK", TapeType.pixelSmall, if (busy) scheme.ink3.tape else scheme.amber.tape)
+            }
         }
     }
 }

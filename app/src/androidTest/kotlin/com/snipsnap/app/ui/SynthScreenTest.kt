@@ -139,19 +139,32 @@ class SynthScreenTest : ComposeScreenTest() {
 
     @Test
     fun expandedEncounterRetainsHoldSourcesAndReleaseThroughScrambleAndNavigation() {
+        assertExpandedEncounterSurvivesEditsAndNavigation(updateSources = false)
+    }
+
+    @Test
+    fun updatedEncounterRetainsHoldSourcesAndReleaseThroughScrambleAndNavigation() {
+        assertExpandedEncounterSurvivesEditsAndNavigation(updateSources = true)
+    }
+
+    private fun assertExpandedEncounterSurvivesEditsAndNavigation(updateSources: Boolean) {
         val source = OhmPatch("HELD FAMILY", Ohm.defaults(3) + ("HOLD" to .6f), midi = 57,
             velocity = .65f, seed = -905, gesture = OhmGesture.GATHER, model = 3,
             options = OhmOptions(exciter = OhmExciter.BOW, elder = .25f, grains = .35f, freeze = .4f),
             releaseSeconds = .8f)
         settings["patch.OHM.STRING"] = source.toJsonText()
         show()
+        if (updateSources) {
+            button("OHM UPDATE SOURCES").performSemanticsAction(SemanticsActions.OnClick) { it() }
+            pump()
+        }
         adjust("ELDER", .7f)
         adjust("COMMUNE", .73f)
         button("SCRAMBLE").performSemanticsAction(SemanticsActions.OnClick) { it() }
         pump()
         val expected = OhmPatch.fromJsonText(settings.getValue("patch.OHM.STRING"))
         compose.runOnIdle {
-            assertEquals(source.model, expected.model)
+            assertEquals(if (updateSources) 4 else source.model, expected.model)
             assertEquals(source.midi, expected.midi)
             assertEquals(source.velocity, expected.velocity)
             assertEquals(source.seed, expected.seed)

@@ -24,6 +24,7 @@ import com.snipsnap.synth.OhmPatch
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
+import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -115,6 +116,7 @@ object Spread {
         is StoopPatch -> patch.midi.toFloat()
         is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
+        is LibrationPatch -> patch.midi.toFloat()
         is OpenSkyPatch -> patch.midi.toFloat()
         is TrefoilPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()

@@ -92,12 +92,14 @@ object Cli {
         |                        --seed signed-64-bit N --model 1|2 --patch recipe.json; NOTE or HOLD)
         |                        (NACRE prototype: PEARL; --midi 28..72 --velocity 0..1; finite duet, HOLD unavailable)
         |                        (FERRY prototype: PASSAGE; --midi 36..72 --velocity 0..1;
-        |                         --patch recipe.json --macros HANDOFF=.5; finite exchange, HOLD unavailable)
+        |                         --model 1|2 --patch recipe.json --macros HANDOFF=.5,MATCH=1;
+        |                         MATCH requires model 2; finite exchange, HOLD unavailable)
         |                        (FILAMENT: provisional THREAD/PULSE/CURL; --midi 36..84 --velocity 0..1)
         |                        (OHM STRING: five finite family encounters; --midi 48..72
-        |                        --velocity 0..1 --seed N; --model 3 --macros HOLD=1;
+        |                        --velocity 0..1 --seed N; --model 3|4 --macros HOLD=1;
         |                        --patch optional-source.patch.json replays captured/bowed/texture choices;
-        |                        --instrument [--release .02..3] exports C3..C5 held keys)
+        |                        --instrument [--release .02..3] exports C3..C5 held keys;
+        |                        new instruments use model 4; saved model 3|4 recipes retain their renderer)
         |                        (WICK: provisional PLUCK/WOOD/BREATH/BUBBLE/FLICKER/RATTLE; --midi 24..84 --velocity 0..1)
         |                        (PLUCK UPRIGHT: --midi 28..52 --velocity 0..1; --macros TUNE/TOUCH/DAMP/WOOD)
         |                        (CONTOUR: --patch recipe.json replays a complete sound;

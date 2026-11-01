@@ -28,7 +28,10 @@ network. An independent quiet root and full-network fundamental cap preserve
 the reference tuning design. Compiled block readouts retain actual state exchange
 while reducing per-sample work. Saved model/note/velocity/exact seed, recipe replay,
 velocity dispatch, provisional CLI recipes and `generateFerryAudition` are available.
-Kotlin listening, production tail termination, MATCH/SPAN/LOSS/BODY, HOLD, further
+The owner approved the aligned Kotlin character on 2026-10-30. Model 2 adds MATCH
+with 0–6 cents of upper-B detuning while retaining every fundamental, the aligned
+output and model-1 recipes. `generateFerryMatchAudition` supplies its separate gate.
+MATCH listening, production tail termination, SPAN/LOSS/BODY, HOLD, further
 voices, factory presets, kits and phone/MPC acceptance remain separate gates.
 See [FERRY.md](FERRY.md) and the [private listening room](https://ferry-first-listen.bertcalm.chatgpt.site).
 
@@ -107,7 +110,9 @@ and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
 replayable. Playback shares the diagnostic DSP core while skipping optional
 capture work, supports cancellation and uses a bounded dry-preview cache.
 The model-3 THREAD/PULSE/CURL keygroups retain actual startup before settled
-sustain, with C3/C4/C5 roots, one velocity layer and host note-off release.
+sustain, with C3/C4/C5 roots, one or three velocity layers and host note-off release.
+Touch captures scale velocity and INJECT while preserving the hard anchor;
+each layer has its own onset, loop and recorded source recipe.
 Physical phone/MPC acceptance and the larger proposed roster remain later
 work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
@@ -178,6 +183,22 @@ rule itself: this roadmap, design specs, and implementation plans may name
 machines when the point is naming the rule that forbids naming them.
 
 ## The engines
+
+### LIBRATION — finite orbital gestures (native integration)
+
+GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
+trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
+NUDGE, SWARM and RESONANCE shape the sound; ROOT, TOUCH and finite LENGTH
+remain saved performance fields. Twelve owner-approved presets, the SYNTH
+picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
+soft/hard velocity layers through both MPC export formats.
+
+A bounded preview cache reuses trajectories and previously rendered audio.
+Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
+phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
+and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
+records the preserved rendering versions, audition generators, measured limits
+and hardware acceptance checks.
 
 ### CREASE — pressure memory in a phase map (native integration)
 
@@ -541,7 +562,12 @@ material; `:shell:generateOhmExpandedHandoff` exports three provisional C3–C5
 instruments. [Extension notes](OHM_EXPANDED.md) record source limits, loop
 evidence, host costs and the listening status.
 
-The model-3 sources and their combination studies remain unheard. Phone
+Model 4 repairs source-memory preparation and provides three focused
+comparisons through `:synth:generateOhmRefinementAudition`. Saved models 1–3
+retain their renderer; EXTEND starts new source studies on model 4, while
+UPDATE SOURCES explicitly upgrades an existing model-3 patch. The owner
+liked the depth of the model-2 answering and shared-body guide stages;
+new source refinements still await a listening verdict. Phone
 response, phone save/reopen and MPC hardware acceptance remain open.
 Separate rendered notes continue to start fresh ensembles.
 
@@ -689,10 +715,15 @@ and velocity, relative TUNE, finite HOLD and settled periodic sustain at HOLD's
 top step. It adds twelve dry factory proposals, a sixteen-pad melodic starter,
 CLI routing and the Android picker. New presets and HOLD still await hearing.
 Native validation and physical phone/MPC checks remain separately recorded in
-[LATTICE.md](LATTICE.md); moving gate geometry and the rest of the original
-engineering specification remain later work. `generateLatticeAudition` retains
-the accepted comparisons and adds R3 native/held examples plus patch and MPC
-starter downloads. The original R1 and accepted R2 evidence stays preserved.
+[LATTICE.md](LATTICE.md). The owner then accepted R4 B's moving pluck on
+2026-10-30: “B sounds cool”. TRACE brings that exact trajectory into saved native
+patches. SPEED changes its timing after the initial attack while leaving pitch
+and resonator damping fixed; TRACE HOLD extends finite excitation without a loop
+or another strike. The existing static voices and starter remain unchanged.
+R5 adds three TRACE factory positions, native speed comparisons and a separate
+MPC kit. The rest of the original engineering specification remains open.
+`generateLatticeAudition` preserves the earlier listening evidence and exports
+the native patches and MPC 3/XPM kits.
 
 ### PRISM — harmonics with different lifetimes
 
@@ -728,6 +759,11 @@ fitted cycle readouts and enough complete cycles for loop classification.
 Existing recipes keep their default finite rendering and JSON shape. A new
 bounded audition compares the actual editor/source results and repeated exports;
 phone response and physical MPC playback remain device checks.
+The [opening instrument](PRISM_OPENING_SUSTAIN.md) uses MAKE INSTRUMENT to keep
+one opening before a continuously moving sustain. Nine minor-third roots,
+explicit internal loop markers and note-off release use the shared keygroup
+writer for the phone and MPC 2/3. It retains the complete authored source and
+motion recipe in a versioned delivery companion.
 
 ### SHOAL — materials animated by moving energy
 
@@ -2630,3 +2666,19 @@ the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
 gate on release; both drum exporters write the corresponding slice-loop and
 sustain settings. Finite notes retain complete one-shot tails. Dedicated
 keyboard multisampling and physical phone/MPC acceptance remain separate.
+
+## ORIGAMI velocity expression
+
+Model-4 ORIGAMI now has an opt-in LEVEL/FOLD velocity selector. Hit strength
+scales the authored fold depth while preserving source spectra, pitch and
+gesture timing. Existing recipes and factory sounds stay LEVEL; full velocity
+retains the accepted folded reference exactly. BLOOM and UNFOLD continue to
+play once and settle before their held loop.
+
+Native held instruments use three touch layers per pitch zone in FOLD mode;
+finite pads reach the same native expression through SOFT HITS after SEND.
+Preview hit selection is temporary and keeps the authored recipe intact.
+The [velocity-expression brief](superpowers/specs/2026-10-28-origami-velocity-expression.md)
+records implementation, cost, verification and the new listening gate. Owner
+acceptance of the expression curve and physical MPC playback remain listening
+and hardware checks.

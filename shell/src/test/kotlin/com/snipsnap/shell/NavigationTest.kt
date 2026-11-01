@@ -203,6 +203,71 @@ class NavigationTest {
     }
 
     @Test
+    fun `Back from a pad tool lands on the pad editor, and the editor then closes to the grid`() {
+        for (tool in listOf(Bench.GRAIN_FIELD, Bench.SPLICE, Bench.STACK)) {
+            val nav = Navigation()
+            nav.go(Place.PROJECT)
+            nav.open(Bench.PAD_SHEET)
+            nav.open(tool)
+            assertEquals("◄ PAD", nav.backChip, "$tool over the editor names the editor")
+
+            assertEquals(
+                Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)),
+                nav.closeBench(),
+                "the chip or system Back from $tool lands on the pad editor, not the grid",
+            )
+            assertEquals("◄ PADS", nav.backChip, "and the editor over the grid names the grid")
+            assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench(), "the editor's own Back lands on the grid")
+            assertEquals(
+                listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)),
+                nav.walkBack(),
+                "and the opening and closing left nothing in the history for a later Back to reopen",
+            )
+        }
+    }
+
+    @Test
+    fun `AUDITION leaves the pad editor in the history, and Back from the stage it lands on is the editor`() {
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        // onAudition arms the comparison and lands on GROOVE, which is BEAT: a stage change, with the editor
+        // as the location the history keeps. The editor is not closed first.
+        nav.goTo(Location(Place.PROJECT, Stage.BEAT))
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), nav.location, "GROOVE shows no bench")
+
+        assertTrue(nav.back())
+        assertEquals(
+            Location(Place.PROJECT, Stage.PADS, listOf(Bench.PAD_SHEET)),
+            nav.location,
+            "system Back from GROOVE is the pad editor",
+        )
+        assertEquals("◄ PADS", nav.backChip)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench(), "and the editor closes to the grid it was opened over")
+    }
+
+    @Test
+    fun `a bench opened again over itself stacks a copy, so what moves the pad editor between pads must not open it`() {
+        // The editor's pad arrows (and the gathering hop) move it from pad to pad with App's
+        // retargetPadSheet, which sets the pad and never calls open. The model has no retarget
+        // to test, because it needs none: this is why. Had the arrows opened the editor each
+        // time, every pad stepped through would be one more PAD_SHEET on the stack and one more
+        // Back to get out. ConventionTest pins that retargetPadSheet never opens a bench.
+        val nav = Navigation()
+        nav.go(Place.PROJECT)
+        nav.open(Bench.PAD_SHEET)
+        nav.open(Bench.PAD_SHEET)
+        assertEquals(listOf(Bench.PAD_SHEET, Bench.PAD_SHEET), nav.location.benches)
+
+        // With the pad arrows retargeting instead, the editor is one opening and one step out.
+        val once = Navigation()
+        once.go(Place.PROJECT)
+        once.open(Bench.PAD_SHEET)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), once.closeBench(), "one Back, not one per pad")
+        assertEquals(listOf(Location(Place.PROJECT, Stage.PADS), Location(Place.SHELF)), once.walkBack())
+    }
+
+    @Test
     fun `opening and closing a bench over and over leaves the history as it was`() {
         val nav = Navigation()
         nav.go(Place.PROJECT)
@@ -410,6 +475,65 @@ class NavigationTest {
         assertTrue(doubles.back())
         assertEquals(Location(Place.SHELF, null, listOf(Bench.DOUBLES)), doubles.location, "Back from the pad lands on the list GO came from")
         assertEquals("◄ SHELF", doubles.backChip)
+    }
+
+    // The kit-bound screens (PR 3c): VERSIONS and PAD CAPTURE over PADS, SONG over BEAT. The app closes one
+    // that no longer fits the open kit by `closeBench` on arrival, which is only a step back if the model
+    // leaves nothing behind.
+
+    @Test
+    fun `VERSIONS opened over PADS returns to PADS by the chip and by Back, and names PADS`() {
+        assertChipAndBackAgree(Location(Place.PROJECT, Stage.PADS), "◄ PADS") {
+            go(Place.PROJECT)
+            open(Bench.VERSIONS)
+        }
+    }
+
+    @Test
+    fun `PAD CAPTURE closed by its chip leaves nothing for Back to find, and names PADS`() {
+        val nav = Navigation().apply { go(Place.PROJECT) }
+        val before = Navigation().apply { go(Place.PROJECT) }.walkBack()
+
+        nav.open(Bench.PAD_CAPTURE)
+        assertEquals("◄ PADS", nav.backChip)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), nav.closeBench())
+
+        assertEquals(before, nav.walkBack(), "PAD CAPTURE was opened and closed, so the history is as if it never was")
+    }
+
+    @Test
+    fun `SONG opened over BEAT survives a place tap, and Back restores it with its chip still naming BEAT`() {
+        val nav = beatWith(Bench.SONG)
+        assertEquals("◄ BEAT", nav.backChip)
+
+        nav.go(Place.SHELF)
+        assertNull(nav.backChip, "a bare place has nothing to go back from")
+        assertTrue(nav.back())
+
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.SONG)), nav.location, "Back restores SONG itself, not the bare BEAT under it")
+        assertEquals("◄ BEAT", nav.backChip)
+    }
+
+    @Test
+    fun `a kit-bound screen restored by Back and closed at once leaves the stage it was over, with no trace`() {
+        // What the app does on arrival at a VERSIONS, PAD CAPTURE or SONG opened for a kit that is not the open one.
+        val songTrip = beatWith(Bench.SONG).apply {
+            go(Place.SHELF)
+            back()
+        }
+        assertEquals(Location(Place.PROJECT, Stage.BEAT, listOf(Bench.SONG)), songTrip.location)
+        assertEquals(Location(Place.PROJECT, Stage.BEAT), songTrip.closeBench())
+        assertEquals(beatWith().walkBack(), songTrip.walkBack(), "SONG left the history as it would be had it never been opened")
+
+        val versionsTrip = Navigation().apply {
+            go(Place.PROJECT)
+            open(Bench.VERSIONS)
+            go(Place.SHELF)
+            back()
+        }
+        assertEquals(Location(Place.PROJECT, Stage.PADS, listOf(Bench.VERSIONS)), versionsTrip.location)
+        assertEquals(Location(Place.PROJECT, Stage.PADS), versionsTrip.closeBench())
+        assertEquals(Navigation().apply { go(Place.PROJECT) }.walkBack(), versionsTrip.walkBack())
     }
 
     @Test

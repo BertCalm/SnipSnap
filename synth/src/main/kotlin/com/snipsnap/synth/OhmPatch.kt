@@ -24,9 +24,9 @@ data class OhmPatch(
         Patches.validateMacros(this, Ohm.macrosFor(model))
         require(midi in 48..72) { "OHM midi out of 48..72: $midi" }
         require(velocity.isFinite() && velocity in 0f..1f) { "OHM velocity out of 0..1: $velocity" }
-        require(model == 3 || options == OhmOptions()) { "OHM source options require model 3" }
+        require(model >= 3 || options == OhmOptions()) { "OHM source options require model 3 or later" }
         require(releaseSeconds.isFinite() && releaseSeconds in .02f..3f) { "OHM release must be in 0.02..3 seconds" }
-        require(model == 3 || releaseSeconds == .3f) { "OHM saved release requires model 3" }
+        require(model >= 3 || releaseSeconds == .3f) { "OHM saved release requires model 3 or later" }
     }
 
     override val engine get() = ENGINE
@@ -42,7 +42,7 @@ data class OhmPatch(
             it["velocity"] = JsonValue.Num(velocity.toDouble())
             it["seed"] = JsonValue.Num(seed.toDouble())
             it["gesture"] = JsonValue.Str(gesture.name)
-            if (model == 3) {
+            if (model >= 3) {
                 it["options"] = options.toJsonValue()
                 it["releaseSeconds"] = JsonValue.Num(releaseSeconds.toDouble())
             }

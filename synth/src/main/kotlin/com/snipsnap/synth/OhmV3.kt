@@ -35,6 +35,8 @@ import kotlin.math.sqrt
  * until the model-3 audition has been heard. Model 3 consistently uses this new source schedule;
  * setting a texture amount to zero never silently switches to another renderer. The accepted
  * old recipes continue through their unchanged model-1/model-2 dispatch and default model 2.
+ * Explicit revision 4 reuses this physical core with revised source-memory preparation;
+ * direct calls to the original public methods continue to select revision 3.
  */
 object OhmV3 {
     const val MODEL_VERSION = 3
@@ -67,17 +69,24 @@ object OhmV3 {
     fun renderRaw(
         macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f,
         seed: Int = 1, gesture: OhmGesture = OhmGesture.STEADY, options: OhmOptions = OhmOptions(),
+    ): Snip = renderRaw(macros, midi, velocity, seed, gesture, options, 3)
+
+    /** The saved renderer selects its source revision; legacy callers retain model 3. */
+    internal fun renderRaw(
+        macros: Map<String, Float>, midi: Int, velocity: Float,
+        seed: Int, gesture: OhmGesture, options: OhmOptions, textureRevision: Int,
     ): Snip {
+        require(textureRevision in 3..4) { "unsupported OHM texture revision $textureRevision" }
         validate(midi, velocity, options)
         val m = settled(macros)
         if (isLoop(m.getValue("HOLD"))) {
-            val held = heldProbe(m, midi, velocity, seed, gesture, options)
+            val held = heldProbe(m, midi, velocity, seed, gesture, options, textureRevision = textureRevision)
             return Snip(held.rawLoop.copyOf(), 1, RATE)
         }
         val seconds = 1.8 + 4.2 * m.getValue("LENGTH") + 3 * m.getValue("HOLD")
         val frames = (seconds * RATE).toInt()
         if (velocity == 0f) return Snip(FloatArray(frames), 1, RATE)
-        val session = Session(m, midi, velocity, seed, gesture, options, null, seconds)
+        val session = Session(m, midi, velocity, seed, gesture, options, null, seconds, textureRevision = textureRevision)
         val raw = FloatArray(frames * OS)
         session.advance(raw)
         val out = condition(raw)
@@ -88,10 +97,15 @@ object OhmV3 {
     fun render(
         macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f,
         seed: Int = 1, gesture: OhmGesture = OhmGesture.STEADY, options: OhmOptions = OhmOptions(),
+    ): Snip = render(macros, midi, velocity, seed, gesture, options, 3)
+
+    internal fun render(
+        macros: Map<String, Float>, midi: Int, velocity: Float,
+        seed: Int, gesture: OhmGesture, options: OhmOptions, textureRevision: Int,
     ): Snip {
         validate(midi, velocity, options)
         val m = settled(macros)
-        val out = renderRaw(m, midi, velocity, seed, gesture, options)
+        val out = renderRaw(m, midi, velocity, seed, gesture, options, textureRevision)
         Dsp.levelTo(out.samples, RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         val gain = velocity.pow(.8f)
         for (i in out.samples.indices) out.samples[i] *= gain
@@ -104,12 +118,24 @@ object OhmV3 {
         cancelled: () -> Boolean = { false },
     ): KeyNote = heldProbe(macros + ("HOLD" to 1f), midi, velocity, seed, gesture, options, cancelled).note
 
+    internal fun renderHeld(
+        macros: Map<String, Float>, midi: Int, velocity: Float,
+        seed: Int, gesture: OhmGesture, options: OhmOptions,
+        cancelled: () -> Boolean, textureRevision: Int,
+    ): KeyNote = heldProbe(macros + ("HOLD" to 1f), midi, velocity, seed, gesture, options, cancelled, textureRevision).note
+
     /** Conditioned attack plus sustain before output leveling, for reproducible audition exports. */
     fun renderHeldRaw(
         macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f,
         seed: Int = 1, gesture: OhmGesture = OhmGesture.STEADY, options: OhmOptions = OhmOptions(),
         cancelled: () -> Boolean = { false },
     ): KeyNote = heldProbe(macros + ("HOLD" to 1f), midi, velocity, seed, gesture, options, cancelled).rawNote
+
+    internal fun renderHeldRaw(
+        macros: Map<String, Float>, midi: Int, velocity: Float,
+        seed: Int, gesture: OhmGesture, options: OhmOptions,
+        cancelled: () -> Boolean, textureRevision: Int,
+    ): KeyNote = heldProbe(macros + ("HOLD" to 1f), midi, velocity, seed, gesture, options, cancelled, textureRevision).rawNote
 
     internal data class HeldProbe(
         val note: KeyNote, val rawNote: KeyNote, val nextCycle: FloatArray, val rawLoop: FloatArray, val rawNextCycle: FloatArray,
@@ -127,7 +153,9 @@ object OhmV3 {
         macros: Map<String, Float> = emptyMap(), midi: Int = 60, velocity: Float = 1f,
         seed: Int = 1, gesture: OhmGesture = OhmGesture.STEADY, options: OhmOptions = OhmOptions(),
         cancelled: () -> Boolean = { false },
+        textureRevision: Int = 3,
     ): HeldProbe {
+        require(textureRevision in 3..4) { "unsupported OHM texture revision $textureRevision" }
         validate(midi, velocity, options)
         stop(cancelled)
         val m = settled(macros)
@@ -138,7 +166,7 @@ object OhmV3 {
         val onsetCycles = if (gesture == OhmGesture.GATHER) 2 else 1
         val maximum = (MAX_SECONDS * RATE / loopFrames).coerceAtLeast(onsetCycles + 4)
         val session = Session(m, midi, velocity, seed, gesture, options, loopFrames,
-            onsetCycles * loopFrames.toDouble() / RATE, cancelled)
+            onsetCycles * loopFrames.toDouble() / RATE, cancelled, textureRevision)
         val cycles = ArrayList<FloatArray>()
         var previous: FloatArray? = null
         var rawError = Double.POSITIVE_INFINITY
@@ -290,6 +318,7 @@ object OhmV3 {
     internal fun foregroundProbe(
         macros: Map<String, Float>, midi: Int = 60, velocity: Float = .8f, seed: Int = 731,
         gesture: OhmGesture = OhmGesture.STEADY, options: OhmOptions = OhmOptions(),
+        textureRevision: Int = 3,
     ): ForegroundProbe {
         validate(midi, velocity, options)
         val m = settled(macros)
@@ -298,7 +327,7 @@ object OhmV3 {
         val count = (seconds * RATE).toInt() * OS
         val output = FloatArray(count)
         val foreground = FloatArray(count)
-        val session = Session(m, midi, velocity, seed, gesture, options, null, seconds)
+        val session = Session(m, midi, velocity, seed, gesture, options, null, seconds, textureRevision = textureRevision)
         session.advance(output, foreground)
         return ForegroundProbe(foreground, IR, session.maxState)
     }
@@ -308,6 +337,7 @@ object OhmV3 {
         val m: Map<String, Float>, midi: Int, val velocity: Float, seed: Int, val gesture: OhmGesture,
         val options: OhmOptions, val loopFrames: Int?, val onsetSeconds: Double,
         val cancelled: () -> Boolean = { false },
+        val textureRevision: Int = 3,
     ) {
         private val held = loopFrames != null
         private val loopOs = (loopFrames ?: 1) * OS
@@ -340,7 +370,8 @@ object OhmV3 {
             Dsp.expMap(touch, root * 6, minOf(root * 45, 14_000f)), .24f - .16f * touch,
             Dsp.seedFor("OHM", 3, midi, seed, "glass"), IR, IR)
         private val capture = options.capture?.samples()
-        private val textures = OhmTextures(options, midi, seed, IR, if (held) loopOs else null)
+        private val textures = OhmTextures(options, midi, seed, IR, if (held) loopOs else null,
+            revision = textureRevision, rootDecaySeconds = decay[0])
         private val texture = FloatArray(2)
         private val reflected = FloatArray(3)
         private val back = FloatArray(3)
@@ -451,7 +482,7 @@ object OhmV3 {
                 maxState = maxOf(maxState, abs(foreground), abs(whistle), abs(crystal))
                 val mixed = foreground + (1 - .80f * agreement) * (.55f * whistle + .68f * crystal) + (.18f + .36f * agreement) * radiation
                 val value = .75f * sourceGain * output.lp(formant.process(cavity.process(mixed)))
-                check(value.isFinite() && maxState < 8f) { "OHM model 3 lost internal headroom" }
+                check(value.isFinite() && maxState < 8f) { "OHM model $textureRevision lost internal headroom" }
                 out[i] = value
                 frame++
             }

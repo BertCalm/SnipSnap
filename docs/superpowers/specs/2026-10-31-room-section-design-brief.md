@@ -1,6 +1,6 @@
 # ROOM: a drum-room rack section. Design brief
 
-**Status:** concept, prototyped in Python (`2026-10-31-room-section-prototype.py`, beside this file). No Kotlin. The prototype's listening gate is open; nothing has been heard.
+**Status:** built in Kotlin (`Room.kt`, a rack section after SPRING). The Python prototype's gate passed on 2026-10-31 ("Heard at the prototype gate" below); the Kotlin gate (`./gradlew :synth:generateRoomAudition`) is open. Prototyped first in `2026-10-31-room-section-prototype.py`, beside this file, which now holds round 2.
 **Source:** the owner picked ROOM from a Luthier gap scan on 2026-10-30. The scan found that the rack's only synthetic space is SPRING, a 1962 Schroeder network. No reference sound was named, so this brief aims at a versatile drum room, tight to medium.
 **Repository truth:** commit `bb19dc0f` (2026-10-30). Grepped and read:
 - `Spring.kt`: four combs, two all-passes, `MAX_TAIL_SECONDS = 1.2`.
@@ -156,3 +156,71 @@ The answers decide whether Kotlin is built and with what changes.
 ## Prompt notes for the next round
 
 A named reference ("the snare on <song> at 0:12", "a tight 90s boom-bap room", "a big 80s hall") would steer SIZE and WALLS more than any meter here. If the gate's SIZE answer asks for smaller or bigger rooms, say which drum it was on.
+
+## Heard at the prototype gate (2026-10-31)
+
+| Question | Owner's answer | What it settles |
+|---|---|---|
+| 1. One click through each: does SPRING ring or flutter? | Neither rings | The meters' flutter in SPRING (0.15 to 0.25 against diffuse 0.04) is not what the ear hears as ringing. ROOM's case does not rest on a SPRING defect. |
+| 2. At the same loudness: which sounds more like a real room? | ROOM, "but spring has a cool sound as well" | ROOM is built. Its case is that it sounds like a room. |
+| 3. SIZE, booth to big: is the range right? | Want bigger rooms | SIZE reaches a hall (round 2) |
+| 4. WALLS, soft against hard: is the difference clear? | Clear | WALLS stays as designed |
+| 5. DISTANCE: does far sound like the mic moved back? | Just more reverb | DISTANCE reworked (round 2) |
+| 6. On the chop: does ROOM help or muddy it? | Helps | ROOM is not drums-only |
+| 7. If ROOM ships, what happens to SPRING? | Keep both | A new section; SPRING and every recipe built on it are untouched |
+
+## Round 2: what the answers changed (Python, then Kotlin)
+
+**DISTANCE was "just more reverb", and the meters agreed.** Round 1's DISTANCE changed one thing, the drum-over-room ratio (12 down to 1 dB). The first-reflection gap barely moved (3.7 to 2.3 ms), the drum's own tone never changed, and the early-to-late balance stayed flat (0.5 to 0.7 dB). Round 2 adds what a mic moving back actually does to the drum:
+- a close mic lifts the bass (proximity: up to +5 dB under 150 Hz at 0.4 m, gone by 2 m);
+- a far mic hears less top (−3 dB above 3.5 kHz per doubling of distance past 0.4 m). That's exaggerated beyond air absorption, as a cue for the drum turning away.
+
+The log walk put round 1's default mic closer (1.1 m at DISTANCE 0.5, against 1.67 m), so the default DISTANCE moves from 0.5 to 0.6 (1.35 m). The default room is a little drier than round 1's. Disclosed for the gate's default-room question.
+
+**Bigger rooms.** SIZE now reaches 28 × 20 × 11 m, up from 14 × 10 × 6. The default moves from 0.4 to 0.3, close to the room heard at the gate (4.9 × 3.8 × 3.3 m then, 5.0 × 4.0 × 3.6 m now). Making SIZE bigger exposed three round-1 faults:
+1. **The mic walked across the floor linearly**, so a hall's default mic stood more than 10 m out. There the floor bounce lands with the drum, and the first reflection came sooner in bigger rooms (3.5 ms down to 0.5 ms). The mic now walks out on a log scale, from 0.4 m to the far corner.
+2. **Sabine's diffuse level falls as a room grows,** so the hall came out drier than the default (drum-over-room +13.8 against +3.8 dB). The late level now follows the decay (energy in proportion to RT60), anchored to round 1's default room so its level stays as heard. Drum-over-room now falls with SIZE, at DISTANCE 0.5: +10.9 dB (booth), +8.9 (SIZE 0.3), +5.5, +3.3, +1.1 dB (hall).
+3. **The network's measured decay ran 0.75 to 0.78 of Sabine's.** `RT_CALIBRATION` 1.3 brings small and middle rooms onto it (Kotlin: 0.377 against 0.375 s, 0.626 against 0.607 s, 0.894 against 0.9 s with hard walls). Halls land at about 0.7 s against their 0.9 s target (disclosed).
+
+The rack's 1-second tail budget still holds. A hall's decay stays under it, so "bigger" comes from later reflections, longer lines and more room in the mix, not from a longer tail. If the owner still wants bigger, the next step is raising `FxChain.MAX_CHAIN_TAIL_SECONDS`, which is the owner's decision.
+
+## As built (Kotlin, 2026-10-31)
+
+`Room.kt`: an `object Room` rack section with SIZE (default 0.3), WALLS (0.5) and DISTANCE (0.6). Every neutral is 0, so a fade takes the room away, and DISTANCE 0 is a hard bypass. `Room.plan` computes everything the knobs decide, once per render:
+- the room, the mic and the 24 jittered taps (jitter from `Dsp.Noise(Dsp.seedFor("ROOM", "walls"))`);
+- the bloom's start, the 16 prime line lengths, their gains, and Jot's coefficients, clamped at 0.9;
+- the direct sound's shelves (`Dsp.Biquad.lowShelf` / `highShelf`).
+
+`Room.process` runs on the signal directly, since the section is linear: the direct sound with its tone, the taps into one-bounce and two-bounce buffers (darkened once and twice by a `Dsp.FixedOnePole` at the wall's corner), and the bloom. The bloom's level comes from its response to one click, measured once per render and scaled to the diffuse level the decay calls for. Channels are peak-matched together. The tail stops 60 dB under the input's peak, with a 10 ms fade, never past `MAX_TAIL_SECONDS` (1.0 s).
+
+**Departures from the prototype**, none heard yet:
+- the jitter values come from `Dsp.Noise`, not NumPy;
+- the 40 Hz and 20 Hz high-passes are one-pole pairs, not Butterworth sections;
+- direct processing replaces convolution.
+
+**`FxChain`:** a `room` row between spring and motion, and an appended `room` field. The order KDoc gains ROOM and a placement paragraph. Its order arrow also gains FORGE, which had been missing since #680.
+
+**Tests.** `RoomTest`, with every bar from a measurement:
+- **Contract:** the macros and their neutrals; the DISTANCE 0 bypass; unknown and non-finite keys; the tail inside the budget, ending faded.
+- **Never grows:** the tail's last 100 ms peak under half its first 100 ms.
+- **SIZE:** the bloom starts later (416, 722, 1273, 2114 samples), the room's share of the energy rises (0.0013, 0.0084, 0.0219, 0.0302), and tails lengthen.
+- **WALLS:** measured RT60 of 0.134, 0.626 and 0.894 s.
+- **Calibration:** the decay lands within 10% of Sabine's in small and middle rooms.
+- **DISTANCE:** the mic moves back, the bass lift falls, the top falls, and the room's share rises. On a hat, the top share in the first 10 ms falls from 0.882 to 0.715.
+- **The clamp:** a soft hall is finite and decays with it, and diverges to NaN without it.
+- **Classes:** a snare stays SNARE and a kick KICK.
+- **Speed:** a snare in a hall renders in 48 ms.
+- **Edges:** silent and empty pads pass through.
+
+Two of these were proven able to fail. Flipping the decay's sign (lines that grow) fails the never-grows test, the clamp test and the calibration test. Raising the clamp to 10 makes the soft hall's network reach NaN.
+
+`FxTest` adds "ROOM sits after SPRING and before MOTION", and the shared contract covers the rest: determinism, finite output within 0.05 of the peak at six random settings, and identical stereo channels.
+
+**The audition:** `RoomAuditionGenerator` (`./gradlew :synth:generateRoomAudition`, 61 clips) with its page, `room-audition.html`, a copy of FORGE's with ROOM's legend and its own answer store.
+
+**Disclosed, not fixed:**
+- Halls decay at about 0.7 s against 0.9.
+- SIZE 0 and soft walls are nearly dry: tails of 0.02 s at SIZE 0 and with WALLS 0.
+- At the same peak, the hall plays 7.0 dB louder over the hit on a snare and 6.4 dB on a clap. The gate's same-loudness section exists for this.
+- ROOM has no character and no chip yet. The gate asks.
+

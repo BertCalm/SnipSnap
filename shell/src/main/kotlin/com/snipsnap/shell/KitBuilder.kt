@@ -1055,11 +1055,12 @@ class KitBuilderModel private constructor(
      * different data with different lifecycles — TAKES is `kit.json`'s own
      * save history, count-capped at [MAX_TAKES] and never time-expired
      * (nothing is ever deleted to create one, see [archiveTake]); THE BIN
-     * is ejected/displaced pad AUDIO, time-capped at [BIN_KEEP_DAYS] days
-     * and independently deletable early ([emptyBin]) — but a take is JSON,
-     * not audio: it captures pad settings and sample FILENAMES, never
-     * sample BYTES. THE BIN is the app's only other record of what a
-     * filename's bytes actually were at a past moment, which is exactly
+     * is ejected/displaced pad AUDIO, kept [BIN_KEEP_DAYS] days unless
+     * a pad still needs it to undo ([binHolds]), and independently
+     * deletable early ([emptyBin]) — but a take is JSON, not audio: it
+     * captures pad settings and sample FILENAMES, never sample BYTES.
+     * THE BIN is the app's only other record of what a filename's
+     * bytes actually were at a past moment, which is exactly
      * what THIS function needs to make "roll back to take T" mean what a
      * user expects — the pad sounding the way it did then, not merely
      * carrying the right slot/name/tune settings while silently pointing
@@ -1204,7 +1205,10 @@ class KitBuilderModel private constructor(
      * file. [padSnapshot], when present, is the whole pad this file was
      * ejected from (via [clear]) — read back from the bin's paired JSON
      * tombstone (see [moveToBin]) — and is what lets [restoreFromBin]
-     * reinstate the pad itself, not just its audio.
+     * reinstate the pad itself, not just its audio. Every eject writes a
+     * tombstone, but only a pad that can come back from this one file (a
+     * single-sample pad that played it, with no chain) reads back as a
+     * [padSnapshot]; a layered or chained pad's reads back as null.
      */
     data class BinEntry(val originalName: String, val binnedAtMillis: Long, val file: File, val padSnapshot: KitPad? = null)
 
@@ -1216,7 +1220,11 @@ class KitBuilderModel private constructor(
      * paired tombstone is read back if present; a corrupt or unparseable
      * one degrades to `padSnapshot = null` rather than breaking the whole
      * listing — the same "degrade honestly, never crash" posture the rest
-     * of this file keeps around torn/partial state (see [takes]).
+     * of this file keeps around torn/partial state (see [takes]). A
+     * tombstone holding a pad this file alone cannot bring back (layers, a
+     * chain, or a different main file) also reads back as null: it still
+     * marks the entry as an eject for [binHolds], which asks whether the
+     * file is there, but BACK restores only the audio.
      */
     fun binContents(): List<BinEntry> =
         File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) && !f.name.endsWith(".json", ignoreCase = true) }
@@ -1225,6 +1233,7 @@ class KitBuilderModel private constructor(
                 val tombstone = File(it.parentFile, "${it.name}.json")
                 val padSnapshot = if (tombstone.isFile) {
                     runCatching { KitStore.padFromJson(Json.parse(tombstone.readText(Charsets.UTF_8))) }.getOrNull()
+                        ?.takeIf { pad -> pad.sampleFile == m.groupValues[2] && pad.velocityLayers.isEmpty() && pad.chain == null }
                 } else {
                     null
                 }
@@ -1272,18 +1281,140 @@ class KitBuilderModel private constructor(
     fun restoreFromBin(originalName: String): File? =
         binContents().firstOrNull { it.originalName == originalName }?.let(::restoreFromBin)
 
-    /** THE BIN KEEPS IT 30 DAYS — this is the keeping-side of that promise. */
+    /**
+     * One [BinEntry] and when the bin lets it go ([binHolds]). [keptFor] is the slot of a pad that
+     * still needs the entry to undo (the lowest, when several do), and [purgeAtMillis] is then null:
+     * the bin keeps it until that need ends. Otherwise [keptFor] is null and [purgeAtMillis] is when
+     * the sweep may take it, [BIN_KEEP_DAYS] after it went in or with its ejected pad's tombstone.
+     */
+    data class BinHold(val entry: BinEntry, val keptFor: Int?, val purgeAtMillis: Long?) {
+        init {
+            require((keptFor == null) != (purgeAtMillis == null)) { "a bin entry is either kept for a pad or on the clock" }
+        }
+
+        /**
+         * Whole days until the sweep may take this entry, rounded up: a fresh entry reads
+         * [BIN_KEEP_DAYS], and 0 means [purgeBin] at [nowMillis] takes it (the last millisecond
+         * before that reads 1, because the sweep's test is strictly "before"). Null while a pad
+         * keeps it. The one countdown both screens draw, so they cannot round it two ways. Clamped
+         * before it narrows to an Int, so a forged stamp the sweep never reaches reads as far off,
+         * not as a wrapped count.
+         */
+        fun daysLeft(nowMillis: Long): Int? {
+            val left = (purgeAtMillis ?: return null) - nowMillis
+            if (left < 0) return 0
+            return (left / DAY_MS + if (left % DAY_MS == 0L) 0 else 1).coerceIn(1L, Int.MAX_VALUE.toLong()).toInt()
+        }
+    }
+
+    /**
+     * Every bin entry, newest first, with when the bin lets it go: the owner's rule of 2026-10-31
+     * (`docs/superpowers/specs/2026-10-31-bin-keeps-what-a-pad-needs-design.md`), and the one answer
+     * [purgeBin] and both screens' countdowns read, so the sweep and the words cannot disagree.
+     *
+     * Every undo door restores the NEWEST entry under a file name ([restoreFromBin] by name), so
+     * what a pad needs is that one entry per file it plays, and only while it [dependsOnBin]. The
+     * pads that can claim one: (a) every live pad that is not printed; (b) for every printed pad,
+     * the pad underneath it ([unprinted]), which REMOVE brings back; (c) for every ejected pad's
+     * tombstone, the pad it holds, or the pad underneath it when that pad is printed, which BACK
+     * (then REMOVE) brings back. (a) and (b) keep the newest entry under each of the claimant's
+     * files ([BinHold.keptFor]). (c) keeps, under each of its pad's files, the newest entry that went
+     * in before the tombstone, for exactly as long as the tombstone stays: it takes the tombstone's
+     * [BinHold.purgeAtMillis] and leaves in the same sweep.
+     *
+     * No entry with a tombstone of its own is ever kept, and the guard comes after "newest", never
+     * before it: when the entry a claimant would read is an eject record, it keeps nothing rather
+     * than falling back to the entry underneath. Every eject writes a tombstone ([moveToBin]) and
+     * every treatment bins without, so such an entry is a record of an ejected pad, and a new pad on
+     * a reused file name (an EVIL TWINS reroll) must not pin a stranger's sound, nor the sound under
+     * it. The guard asks whether the tombstone FILE is there, not whether it parsed. One known limit:
+     * VERSIONS ([restoreTake]) copies an eject record back without consuming it, so a pad it makes
+     * live again can be reading its own eject record, and its original then leaves with that
+     * tombstone. Every other entry keeps the clock: [keepDays] after it went in.
+     *
+     * Builds the whole answer before returning it, and throws when it cannot: a printed pad, live
+     * or ejected, whose saved source will not read is the case that matters, and [purgeBin] then
+     * deletes nothing. An ejected one only stops it while its tombstone stays past [nowMillis]: a
+     * tombstone the sweep at [nowMillis] takes holds nothing past that moment, so a print in it that
+     * will not read is skipped, and cannot stop the sweep that clears it.
+     */
+    fun binHolds(keepDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): List<BinHold> {
+        val entries = binContents()
+        val keepMs = (keepDays * DAY_MS).toLong()
+        // Saturating: a forged stamp near Long.MAX_VALUE stays out of reach, as it always was, rather than wrap.
+        val clock = { e: BinEntry ->
+            if (keepMs > 0 && e.binnedAtMillis > Long.MAX_VALUE - keepMs) Long.MAX_VALUE else e.binnedAtMillis + keepMs
+        }
+        val ejected = entries.filter { tombstoneOf(it.file).isFile }.map { it.file }.toSet()
+        val newest = entries.groupBy { it.originalName }.mapValues { (_, under) -> under.first() }
+        val filesOf = { pad: KitPad -> (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).distinct() }
+
+        val keptFor = HashMap<File, Int>()
+        for (pad in kit.pads.map { unprinted(it) }.filter { dependsOnBin(it) }) {
+            for (name in filesOf(pad)) {
+                val entry = newest[name]?.takeIf { it.file !in ejected } ?: continue
+                keptFor.merge(entry.file, pad.slot, ::minOf)
+            }
+        }
+        val purgeAt = entries.associateTo(HashMap()) { it.file to clock(it) }
+        for (tombstoned in entries) {
+            val snapshot = tombstoned.padSnapshot ?: continue
+            // Leaving at nowMillis anyway, and so would anything it held, so a print in it that will
+            // not read cannot change what this sweep takes: skip it rather than fail closed.
+            val under = if (clock(tombstoned) < nowMillis) runCatching { unprinted(snapshot) }.getOrNull() ?: continue else unprinted(snapshot)
+            val pad = under.takeIf { dependsOnBin(it) } ?: continue
+            for (name in filesOf(pad)) {
+                val original = entries.firstOrNull { it.originalName == name && it.binnedAtMillis < tombstoned.binnedAtMillis }
+                    ?.takeIf { it.file !in ejected } ?: continue
+                purgeAt.merge(original.file, clock(tombstoned), ::maxOf)
+            }
+        }
+        return entries.map { e ->
+            keptFor[e.file]?.let { BinHold(e, keptFor = it, purgeAtMillis = null) }
+                ?: BinHold(e, keptFor = null, purgeAtMillis = purgeAt.getValue(e.file))
+        }
+    }
+
+    /**
+     * [pad] as the bin sees it: a printed pad is the pad REMOVE would bring back
+     * ([PrintedPads.sourcePad]), followed down through a print over a print (an aquarium over a
+     * board) to the pad underneath, whose NONE is the one that reads the bin. Throws when a saved
+     * source will not read, or when the prints loop back on themselves, which only a hand-edited kit
+     * could hold: either way [binHolds] cannot know what that pad needs, and fails closed. Public for
+     * THE BIN's screen, which asks of this pad, not the print over it, whether it can undo itself
+     * ([PadSheet.hasOwnWayBack]): a printed pad's NONE removes the print first.
+     */
+    fun unprinted(pad: KitPad): KitPad {
+        var under = pad
+        val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
+        while (PrintedPads.has(under.recipe)) {
+            require(seen.add(under.recipe!!)) { "pad ${pad.slot}'s prints loop back on themselves" }
+            under = PrintedPads.sourcePad(kitDir, under)
+        }
+        return under
+    }
+
+    /**
+     * The launch sweep (`App.kt`, once per kit): every entry whose [BinHold.purgeAtMillis] is before
+     * [nowMillis] leaves, its tombstone with it, and an original a pad still needs ([binHolds]) stays
+     * however old it is. Fail closed: the whole [binHolds] answer exists before the first delete, so
+     * a kit whose kept set cannot be built throws having deleted nothing. Deleting an original a pad
+     * needs cannot be undone; keeping a file one more launch can. Never saves and never writes
+     * `kit.json`: it decides from the kit [open] just read.
+     */
     fun purgeBin(olderThanDays: Double = BIN_KEEP_DAYS, nowMillis: Long = System.currentTimeMillis()): Int {
-        val cutoff = nowMillis - (olderThanDays * 24 * 60 * 60 * 1000).toLong()
-        val old = binContents().filter { it.binnedAtMillis < cutoff }
-        old.forEach {
-            it.file.delete()
+        val leaving = binHolds(olderThanDays, nowMillis).filter { it.purgeAtMillis != null && it.purgeAtMillis < nowMillis }
+        leaving.forEach {
+            it.entry.file.delete()
             // The tombstone must not outlive its WAV as orphaned litter
             // past the purge horizon.
-            File(it.file.parentFile, "${it.file.name}.json").delete()
+            tombstoneOf(it.entry.file).delete()
         }
-        return old.size
+        return leaving.size
     }
+
+    /** The JSON tombstone [moveToBin] writes beside an ejected pad's bin file. */
+    private fun tombstoneOf(binFile: File): File = File(binFile.parentFile, "${binFile.name}.json")
 
     /**
      * EMPTY THE BIN NOW: everything under [BIN_DIR] gone, not just what
@@ -1385,14 +1516,18 @@ class KitBuilderModel private constructor(
      *
      * [padSnapshot], when given, is the whole [KitPad] this file was
      * ejected from (not merely rewritten) — [clear]'s own call, via
-     * [deleteIfUnreferenced]. When it names THIS file as its own
-     * [KitPad.sampleFile] and the pad is otherwise a plain single-sample
-     * pad (no velocity layers, no chain), a JSON tombstone rides alongside
-     * the WAV so [restoreFromBin] can reinstate the pad itself, not just
-     * its bytes — see that function's KDoc. Deliberately narrow: a
-     * velocity-layered or chained pad is several files pretending to be
-     * one, and reconstructing that correctly from a single restored file
-     * is a materially harder problem than this door needs to solve today.
+     * [deleteIfUnreferenced] — and a JSON tombstone holding it rides
+     * alongside the WAV. Every eject writes one, because [binHolds] reads
+     * it as "a record of an ejected pad, never a live pad's original": a
+     * new pad that reuses the name must not pin it. Only when the pad
+     * names THIS file as its own [KitPad.sampleFile] and is otherwise a
+     * plain single-sample pad (no velocity layers, no chain) does
+     * [binContents] read it back as a [BinEntry.padSnapshot], so
+     * [restoreFromBin] can reinstate the pad itself, not just its bytes —
+     * see that function's KDoc. Deliberately narrow: a velocity-layered or
+     * chained pad is several files pretending to be one, and
+     * reconstructing that correctly from a single restored file is a
+     * materially harder problem than this door needs to solve today.
      * [assign]'s previous-pad-replaced call also routes through
      * [deleteIfUnreferenced] and can pass a snapshot here too — harmless by
      * construction, see [restoreFromBin]'s slot-occupancy guard.
@@ -1409,9 +1544,7 @@ class KitBuilderModel private constructor(
         }
         src.copyTo(dest, overwrite = true)
         src.delete()
-        if (padSnapshot != null && padSnapshot.sampleFile == fileName &&
-            padSnapshot.velocityLayers.isEmpty() && padSnapshot.chain == null
-        ) {
+        if (padSnapshot != null) {
             val tombstone = File(binDir, "${stamp}_$fileName.json")
             AtomicFile.writeText(tombstone, Json.write(KitStore.padToJson(padSnapshot)) + "\n")
         }
@@ -1431,7 +1564,7 @@ class KitBuilderModel private constructor(
         /** Where saves archive their history, inside the kit folder. */
         const val TAKES_DIR = ".takes"
 
-        /** Where deletes wait out their 30 days. */
+        /** Where deletes wait out [BIN_KEEP_DAYS], and the originals a pad still needs wait for as long as it needs them ([binHolds]). */
         const val BIN_DIR = ".bin"
 
         /** The retune's target when the kit has no key. */
@@ -1439,6 +1572,27 @@ class KitBuilderModel private constructor(
 
         const val MAX_TAKES = 32
         const val BIN_KEEP_DAYS = 30.0
+        private const val DAY_MS = 24L * 60 * 60 * 1000
+
+        /**
+         * Whether undoing [pad] reads the bin, so the bin keeps its original ([binHolds]): a
+         * round-robin chain ([Robin.undo] reads `chain` alone), or any recipe but two. A printed
+         * wrapper ([PrintedPads]) keeps its source in its own store. A plain synth render, a
+         * [com.snipsnap.synth.PadRecipe] with a patch and no pedals and no treatment, re-renders
+         * from the patch, and no undo door reads the bin for it — unless DE-SAMPLE made it: the
+         * recipe is the same, but [desamplePad] stamps `desampled` and `snipsnap desample --undo`
+         * brings the capture back out of the bin, so a de-sampled pad counts. A synth send over it
+         * keeps the stamp, so the bin then keeps the render that send replaced, which is what
+         * `--undo` would restore. "Any recipe but these", not a list of recipe readers, so a
+         * treatment added later is kept without anyone adding it here.
+         */
+        internal fun dependsOnBin(pad: KitPad): Boolean {
+            if (pad.chain != null) return true
+            val recipe = pad.recipe ?: return false
+            if (PrintedPads.has(recipe)) return false
+            val parsed = Breed.recipeOf(recipe) ?: return true
+            return parsed.patch == null || parsed.pedals != null || parsed.treatment != null || "desampled" in pad.source
+        }
 
         internal val TAKE_NAME = Regex("take_(\\d{3})\\.json")
         internal val BIN_NAME = Regex("(\\d+)_(.+)")

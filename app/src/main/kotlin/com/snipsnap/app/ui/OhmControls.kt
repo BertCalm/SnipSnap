@@ -46,8 +46,8 @@ import kotlinx.coroutines.launch
 
 /** Legacy encounters change model only through the player's explicit EXTEND action. */
 internal fun extendedOhmPatch(patch: OhmPatch): OhmPatch = if (patch.model >= 3) patch else patch.copy(
-    model = 3,
-    macros = Ohm.defaults(3) + patch.macros,
+    model = Ohm.MODEL_VERSION,
+    macros = Ohm.defaults(Ohm.MODEL_VERSION) + patch.macros,
 )
 
 /**
@@ -130,6 +130,12 @@ internal fun OhmControls(
                 changePatch(extendedOhmPatch(currentPatch))
             }
         } else {
+            if (patch.model == 3) {
+                LabButton("UPDATE SOURCES", scheme, enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(), accessibilityLabel = "OHM UPDATE SOURCES") {
+                    changePatch(currentPatch.copy(model = Ohm.MODEL_VERSION))
+                }
+            }
             TapeText("EXCITER", TapeType.pixelSmall, scheme.ink2.tape)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 for (exciter in OhmExciter.entries) {

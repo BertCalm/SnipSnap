@@ -69,20 +69,20 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (54 starters including STRIKE FX, CIRCUIT,
-THAW, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL and CHAMBER,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (56 starters including STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER and LIBRATION,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 65 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 66 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
 CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS,
 MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM,
-MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL and CHAMBER.
+MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER and LIBRATION.
 
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
@@ -113,7 +113,7 @@ The optional TOUCH LAYERS switch renders soft, medium and firm pressure/timbre
 responses with their own loops. It defaults off and uses roughly three times
 the generation work and audio storage. Live key velocity selects a layer and
 applies gain; key-up retains the selected RELEASE fade.
-CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY and VENT also provide
+CIRCUIT, THAW, NIMBUS, CISTERN, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TRIO, OSPREY, OPENSKY, VENT and LIBRATION also provide
 FRESH TAPE starters. PITCHWHEEL's seven initial presets and dry starter kit
 remain provisional until the owner's first dry listening approval. SPOOL adds
 six original recorded-material voices with 36 presets, a dry 16-pad starter and CLI note/velocity
@@ -155,8 +155,10 @@ chosen note, strike and macros. See [OVEN](../docs/OVEN.md).
 FILAMENT exposes the approved THREAD/PULSE/CURL presets with ROOT and native
 VELOCITY. Previews support cancellation and a bounded dry-audio cache. Model-3
 THREAD, PULSE and CURL also offer MAKE INSTRUMENT: C3/C4/C5 source roots,
-one velocity layer, each voice's real onset before its settled loop and
-note-off release. Older saved models retain their existing pad workflow. Physical phone/MPC
+one or three velocity layers, each capture's real onset before its own settled
+loop and note-off release. TOUCH LAYERS opens ON; OFF keeps the single-layer
+instrument. Soft/mid/hard captures scale the saved velocity and INJECT, with
+the saved recipe as the unchanged hard anchor. Older saved models retain their existing pad workflow. Physical phone/MPC
 acceptance remains outstanding; [FILAMENT](../docs/FILAMENT.md) records the limits.
 
 REGISTERS adds PIPE, MUSETTE and TRANSISTOR, seven controls, nine presets and
@@ -213,6 +215,9 @@ body openings, and a dry pitched starter. The
 earlier bank, body-opening studies and original/revised GLASS comparisons.
 Its MOTION detail panel edits amount/time, chooses a source, and switches from
 the saved finite opening to repeating movement with genuine held loops.
+With REPEAT and looping HOLD, MAKE INSTRUMENT preserves the opening once and
+loops the sustain region while a key is held; its sheet previews the complete
+performance and exports nine sample roots with note-off release.
 ALLOY adds six attack-driven PM voices, thirty-six factory presets and a dry
 sixteen-pad starter kit. The owner heard the initial twelve and authorized six
 presets per voice on the same engine tuning; the additions await listening review.
@@ -811,6 +816,14 @@ logcat tag to grab when something is wrong.
   laptop the zip holds `presets.json` and a manifest ending in a
   `p(ThumpVoice.KICK, "MY KICK", …)` line. Back on an open slip closes
   it and saves nothing.
+- **LIBRATION**: select GATHER, TWINS or DEPARTURE in SYNTH and audition the
+  four presets per voice. Change ROOT, TOUCH and LENGTH as well as the five
+  sound controls. Save under YOURS, leave and return, then SEND TO PAD: the
+  performance fields must return with the sound. FRESH TAPE → LIBRATION
+  builds sixteen finite one-shot pads with native soft/hard velocity zones.
+  Repeated hits should keep their tails and soft strikes should remain soft.
+  [The integration notes](../docs/LIBRATION.md#measuring-on-a-phone) include
+  the opt-in device benchmark and MPC acceptance pass. HOLD remains unavailable.
 - **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,
   Warm Fan and Tenth Bloom. Verify TUNE shows the actual note; CREASE,
   FOLD, TURN, WARP and MOTION change the sound. Save a preset, reload it

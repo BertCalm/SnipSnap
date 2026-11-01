@@ -76,8 +76,8 @@ class OhmControlsTest : ComposeScreenTest() {
         adjust("GRAINS", .4f)
         adjust("GRAIN SIZE", .12f)
         adjust("FREEZE", .5f)
-        val expected = original.copy(model = 3, velocity = .4f,
-            macros = Ohm.defaults(3) + original.macros + ("HOLD" to .6f),
+        val expected = original.copy(model = 4, velocity = .4f,
+            macros = Ohm.defaults(4) + original.macros + ("HOLD" to .6f),
             options = OhmOptions(exciter = OhmExciter.BOW, elder = .7f, grains = .4f, freeze = .5f,
                 fmRatio = 1.75f, fmIndex = 2.2f, grainSeconds = .12f))
         compose.runOnIdle {
@@ -88,6 +88,33 @@ class OhmControlsTest : ComposeScreenTest() {
         pump()
         button("OHM EXCITER BOW").assertIsSelected()
         button("OHM GATHER").assertIsSelected()
+        compose.runOnIdle { assertEquals(expected, patch) }
+    }
+
+    @Test
+    fun existingSourcesUpdateOnlyWhenRequestedAndKeepTheCompletePerformance() {
+        val capture = OhmCapture(FloatArray(11_025) { (.25 * sin(2 * PI * 731 * it / 44_100)).toFloat() }, "OWN HIT")
+        val original = OhmPatch("Existing sources", Ohm.defaults(3) + ("HOLD" to .6f), model = 3,
+            midi = 57, velocity = .65f, seed = -905, gesture = OhmGesture.GATHER,
+            options = OhmOptions(exciter = OhmExciter.CAPTURED, capture = capture,
+                elder = .35f, grains = .4f, freeze = .5f, fmRatio = 1.75f, fmIndex = 2.2f, grainSeconds = .12f),
+            releaseSeconds = .8f)
+        patch = original
+        show()
+        compose.runOnIdle { assertEquals(original, patch) }
+        click("OHM EXCITER BOW")
+        compose.runOnIdle { assertEquals(original.copy(options = original.options.copy(exciter = OhmExciter.BOW)), patch) }
+        click("OHM EXCITER CAPTURED")
+        click("OHM UPDATE SOURCES")
+        val expected = original.copy(model = 4)
+        compose.runOnIdle {
+            assertEquals(expected, patch)
+            patch = OhmPatch.fromJsonText(patch.toJsonText())
+            generation++
+        }
+        pump()
+        button("OHM EXCITER CAPTURED").assertIsSelected()
+        button("OHM UPDATE SOURCES").assertDoesNotExist()
         compose.runOnIdle { assertEquals(expected, patch) }
     }
 
@@ -127,13 +154,14 @@ class OhmControlsTest : ComposeScreenTest() {
                 }, 1, 44_100))
             }
             val entry = KitShelf.Entry(root, Kit("Capture source", listOf(KitPad(1, sample.name, "OWN HIT"))))
-            patch = OhmPatch("Captured source", Ohm.defaults(3), model = 3, midi = 57, seed = -905)
+            patch = OhmPatch("Captured source", Ohm.defaults(4), model = 4, midi = 57, seed = -905)
             show(entry)
             click("OHM EXCITER FROM PAD")
             click("${PadBanks.tag(1)} · OWN HIT")
             waitFor("the captured pad attack") { patch.options.capture != null }
             compose.runOnIdle {
                 assertEquals(OhmExciter.CAPTURED, patch.options.exciter)
+                assertEquals(4, patch.model)
                 assertEquals("OWN HIT", patch.options.capture?.label)
                 assertEquals(57, patch.midi)
                 assertEquals(-905, patch.seed)
