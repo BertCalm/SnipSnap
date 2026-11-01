@@ -142,6 +142,34 @@ class MarkTest {
         assertEquals(flat.amber, accent, "a scheme whose accent equals its ink falls back to amber")
     }
 
+    /** WCAG relative luminance of a packed 0xRRGGBB. */
+    private fun luminance(rgb: Int): Double {
+        fun channel(v: Int): Double { val c = v / 255.0; return if (c <= 0.03928) c / 12.92 else Math.pow((c + 0.055) / 1.055, 2.4) }
+        return 0.2126 * channel(rgb shr 16 and 0xFF) + 0.7152 * channel(rgb shr 8 and 0xFF) + 0.0722 * channel(rgb and 0xFF)
+    }
+
+    private fun contrast(a: Int, b: Int): Double {
+        val (hi, lo) = listOf(luminance(a), luminance(b)).sortedDescending()
+        return (hi + 0.05) / (lo + 0.05)
+    }
+
+    @Test
+    fun `the LCD tones keep two tones that both stand off every scheme's LCD`() {
+        // tones() is for chrome (the title bar); on an LCD ground a light
+        // scheme's chrome ink is as dark as the LCD itself. The spine, the
+        // CLI render and the tiles draw on lcd, so they take lcdTones().
+        for (s in Schemes.ALL) {
+            val (ink, accent) = Mark.lcdTones(s)
+            assertTrue(ink != accent, "${s.id}: two tones")
+            assertTrue(contrast(ink, s.lcd) >= 3.0, "${s.id}: ink ${"%06X".format(ink)} on lcd ${"%06X".format(s.lcd)} = ${contrast(ink, s.lcd)}")
+            assertTrue(contrast(accent, s.lcd) >= 3.0, "${s.id}: accent ${"%06X".format(accent)} on lcd ${"%06X".format(s.lcd)} = ${contrast(accent, s.lcd)}")
+        }
+        val flat = Schemes.DEFAULT.copy(amber = Schemes.DEFAULT.lcdInk)
+        val (ink, accent) = Mark.lcdTones(flat)
+        assertEquals(flat.lcdInk, ink)
+        assertTrue(accent != ink, "an amber equal to the LCD ink falls back to something else")
+    }
+
     @Test
     fun `a mark under eight pixels is refused`() {
         assertFailsWith<IllegalArgumentException> { Mark.draw(RecordingCanvas(), Mark.Variant.SYMBOL, 0f, 0f, 7.9f, 1, 2) }

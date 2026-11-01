@@ -142,7 +142,7 @@ object JCard {
         // The SnipSnap symbol leads the spine, the way a label's logo does,
         // a margin in from the left end and 0.6 of the band tall.
         val mark = markBox(top, h, m)
-        val (ink, accent) = Mark.tones(scheme)
+        val (ink, accent) = Mark.lcdTones(scheme)
         Mark.draw(c, Mark.Variant.SYMBOL, mark.x.toFloat(), mark.y.toFloat(), mark.h.toFloat(), ink, accent)
 
         // Then the catalog number, the way real labels press it, and the

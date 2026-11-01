@@ -30,7 +30,7 @@ object MarkCommand {
         val size = opts.int("--size") ?: DEFAULT_SIZE
         if (size !in SIZES) throw CliError("--size wants ${SIZES.first}..${SIZES.last}, got $size")
         val outDir = File(opts["--out"] ?: ".").apply { mkdirs() }
-        val (ink, accent) = Mark.tones(scheme)
+        val (ink, accent) = Mark.lcdTones(scheme)
 
         out.println("mark: scheme ${scheme.id.displayName}, ${size}px")
         for (variant in Mark.Variant.entries) {

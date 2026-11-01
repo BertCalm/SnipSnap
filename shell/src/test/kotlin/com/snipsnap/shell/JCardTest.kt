@@ -55,13 +55,16 @@ class JCardTest {
         // centred, a margin in from the left end, in the scheme's two tones.
         val m = model("Spined")
         val width = 600
-        val img = JCard.render(m.kit, m.kitDir, width = width, catalog = "SHT-001")
+        // OPENSKY, a light scheme: its chrome ink is as dark as its LCD, so
+        // the spine must take the LCD tones or two pads vanish.
+        val scheme = Schemes.OPENSKY
+        val img = JCard.render(m.kit, m.kitDir, scheme, width = width, catalog = "SHT-001")
         val top = (width * 0.64f).toInt()
         val h = (width * 0.1475f).toInt()
         val margin = (width * 0.05f).toInt()
-        val size = h * 0.6f
-        val (ink, accent) = Mark.tones(Schemes.DEFAULT)
-        val pads = Mark.symbol(margin.toFloat(), top + (h - size) / 2f, size)
+        val box = JCard.markBox(top, h, margin)
+        val (ink, accent) = Mark.lcdTones(scheme)
+        val pads = Mark.symbol(box.x.toFloat(), box.y.toFloat(), box.h.toFloat())
         val expected = listOf(accent, ink, ink, accent)
         pads.forEachIndexed { i, d ->
             assertEquals(expected[i], img.getRGB(d.cx.toInt(), d.cy.toInt()) and 0xFFFFFF, "pad $i at its centre")

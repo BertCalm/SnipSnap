@@ -117,9 +117,23 @@ object Mark {
         }
     }
 
-    /** [ink]/[accent] for a scheme, with the accent replaced by `scheme.amber` when it equals the ink, so the x keeps two tones. */
+    /**
+     * The mark's two tones on a scheme's chrome (the title bar): its ink
+     * and its accent, with the accent replaced by `scheme.amber` when it
+     * equals the ink, so the x keeps two tones.
+     */
     fun tones(scheme: Scheme): Pair<Int, Int> =
         scheme.ink to if (scheme.accent == scheme.ink) scheme.amber else scheme.accent
+
+    /**
+     * The mark's two tones on a scheme's LCD ground (the J-Card, the CLI
+     * render, the tiles): the LCD ink and the amber. On a light scheme the
+     * chrome ink is as dark as the LCD itself, which is why [tones] cannot
+     * serve here; the amber is the one accent every scheme sets to read on
+     * its LCD. Falls back to the chrome accent if an amber equals the ink.
+     */
+    fun lcdTones(scheme: Scheme): Pair<Int, Int> =
+        scheme.lcdInk to if (scheme.amber == scheme.lcdInk) scheme.accent else scheme.amber
 
     /** Two lines of caps with a gap between them fill the box exactly. */
     private fun stackedTypeSize(height: Float): Float =

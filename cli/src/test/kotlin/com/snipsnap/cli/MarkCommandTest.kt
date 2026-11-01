@@ -1,5 +1,7 @@
 package com.snipsnap.cli
 
+import com.snipsnap.shell.Mark
+import com.snipsnap.shell.Schemes
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.PrintStream
@@ -49,7 +51,14 @@ class MarkCommandTest {
         val dir = File(temp, "default")
         val (code, _, stderr) = cli("mark", "--out", dir.path, "--scheme", "opensky")
         assertEquals(0, code, stderr)
-        assertEquals(120 + 60, ImageIO.read(File(dir, "mark_symbol.png")).height)
+        val img = ImageIO.read(File(dir, "mark_symbol.png"))
+        assertEquals(120 + 60, img.height)
+        // A light scheme on its LCD ground: both pads must be there.
+        val (ink, accent) = Mark.lcdTones(Schemes.OPENSKY)
+        val seen = HashSet<Int>()
+        for (y in 0 until img.height) for (x in 0 until img.width) seen += img.getRGB(x, y) and 0xFFFFFF
+        assertTrue(ink in seen, "ink pads on the LCD")
+        assertTrue(accent in seen, "accent pads on the LCD")
     }
 
     @Test
