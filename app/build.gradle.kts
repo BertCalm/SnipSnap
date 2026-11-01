@@ -15,6 +15,9 @@ repositories {
 // Compose instrumentation shares the app's Kotlin runtime. Use the normal
 // unshrunk test shape; verify the optimized listening APK separately.
 val creaseStudyDeviceTests = providers.gradleProperty("creaseStudyDeviceTests").getOrElse("false").toBooleanStrict()
+val creaseStudyEnabled = creaseStudyDeviceTests || providers.gradleProperty("creaseStudyCache").isPresent ||
+    providers.gradleProperty("creaseStudyBuild").getOrElse("false").toBooleanStrict()
+
 
 android {
     namespace = "com.snipsnap.app"
@@ -71,7 +74,7 @@ android {
             applicationIdSuffix = ".brassgrow"
             versionNameSuffix = "-development"
         }
-        create("creaseStudy") {
+        if (creaseStudyEnabled) create("creaseStudy") {
             initWith(getByName("debug"))
             applicationIdSuffix = ".creasestudy"
             versionNameSuffix = "-crease-study"
@@ -95,7 +98,7 @@ android {
         }
     }
 
-    sourceSets.getByName("creaseStudy").assets.srcDir(layout.buildDirectory.dir("generated/creaseStudyAssets"))
+    if (creaseStudyEnabled) sourceSets.getByName("creaseStudy").assets.srcDir(layout.buildDirectory.dir("generated/creaseStudyAssets"))
 
     testBuildType = providers.gradleProperty("snipsnapTestBuildType").getOrElse(if (creaseStudyDeviceTests) "creaseStudy" else "debug")
 

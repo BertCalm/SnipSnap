@@ -7,7 +7,7 @@ without one never sees `:app`: `settings.gradle.kts` leaves it out, which
 is why a cloud session's `./gradlew test` is the nine JVM modules only.
 
 The separately installable Crease C4 study adds five host cache tests under
-`src/testCreaseStudy` (`:app:testCreaseStudyUnitTest`), plus four device tests
+`src/testCreaseStudy` (`:app:testCreaseStudyUnitTest -PcreaseStudyBuild=true`), plus four device tests
 under `src/androidTestCreaseStudy`. Its verified-cache build and physical-device
 limits are documented in [the phone study](../docs/superpowers/specs/2026-11-01-crease-phone-release.md).
 The normal on-device Compose suites live in

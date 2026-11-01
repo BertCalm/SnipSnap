@@ -43,7 +43,9 @@ must use another unseen set. See the preregistered
 The actual compiled Kotlin circuit supplies all audio. Public onset error
 and complete-state fork error are zero; 82 repeated captures are bit-exact.
 The cache is 309 tails / 33,547,698 PCM bytes / 1,692,344 compressed bytes.
-No original circuit equation, voice gain or error threshold changed.
+The held audio and all 178 shared tail captures are bit-exact against the
+earlier owner-approved study. No original circuit equation, voice gain or
+error threshold changed.
 
 Python versus streaming JS: all 1,628 positions pass, largest sample error
 1.1641532182693481e-10. The actual native reader matches the same fixture to
@@ -65,7 +67,7 @@ Repository-wide JVM verification is recorded separately when it completes.
 
 ## Phone landing
 
-`creaseStudy` builds a separate `com.snipsnap.app.creasestudy` APK, Android 10+
+The opt-in `creaseStudy` build creates a separate `com.snipsnap.app.creasestudy` APK, Android 10+
 and arm64 by default. It bundles the verified cache and launches only the
 study activity. No import or kit setup is required. It has no capture/MIDI
 services, camera/microphone grants or main sampler launcher. Standard builds,
@@ -128,8 +130,9 @@ missing/stale receipts cannot silently enable the study. Generated audio stays
 outside Git. Seven build-admission tests also protect failed/stale receipts and
 refuse overlapping inputs or unrelated output files, including under Python
 optimization. Removing the failure or source guard makes its named regression
-fail. Study Kotlin/unit tests compile in CI without the external audio
-input; assembling the APK deliberately requires it.
+fail. Enable study Kotlin/unit tests with `-PcreaseStudyBuild=true`; CI compiles
+them without the external audio input. Supplying a cache or enabling device
+tests also opts in. Normal aggregate builds omit the study; assembling the APK deliberately requires it.
 
 To compile/run the dedicated device suite, select
 `-PcreaseStudyDeviceTests=true`. This uses an unshrunk test APK, matching

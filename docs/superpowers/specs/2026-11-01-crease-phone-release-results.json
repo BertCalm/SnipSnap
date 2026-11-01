@@ -76,7 +76,7 @@
     ],
     "timestamp": "2026-11-01T01:28:16",
     "physicalPhonePlayback": "not tested",
-    "optimizedApk": "separate check pending"
+    "optimizedApk": "separate optimized smoke passed"
   },
   "fullJvmGate": "running separately",
   "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard",
@@ -95,5 +95,13 @@
     "normalAndPythonOptimized": "passed",
     "removedGuardCanaries": 2
   },
-  "normalAndroidDebug": "assembled all four ABIs; device tests compiled"
+  "normalAndroidDebug": "assembled all four ABIs; device tests compiled",
+  "acceptedVoicing": {
+    "result": "passed",
+    "heldBitExact": true,
+    "commonTails": 178,
+    "commonTailsBitExact": true,
+    "scope": "Actual Kotlin floating-point captures compared with the earlier owner-approved sound; added captures refine the approximation"
+  },
+  "normalAndroidAggregate": "passed without a study cache: Debug, Strike FX and Release"
 }
