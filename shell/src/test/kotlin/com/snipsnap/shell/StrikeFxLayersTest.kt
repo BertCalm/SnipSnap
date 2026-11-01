@@ -266,6 +266,7 @@ class StrikeFxLayersTest {
     @Test
     fun `a bred child of a banked pad is one sample and its recipe carries no bank`() {
         val a = fixture("bredA")
+        a.m.update(3) { it.copy(recipe = null) } // the fixture's printed-board stand-in cannot be bred
         a.m.strikeFxLayers(1, 0.42f, 0.9f)
         a.m.strikeFxLayers(2, 0.42f, 0.9f)
         a.m.save()
