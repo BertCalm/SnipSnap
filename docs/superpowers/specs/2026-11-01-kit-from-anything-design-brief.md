@@ -294,7 +294,24 @@ slower by a power of two so C1 and a 1760 Hz siren both sit inside `Pitch.detect
 1200 Hz, with a low-key and a high-siren test; and the CLI bounds the read to the 30 s limit
 before decoding, through `WavReader.readCapped`.
 
-**Still owed, as the brief's rounds list:** the blend with `Desample` and QUARRY (R3), the
-recipe that re-renders a derived pad (R0, shared with QUARRY; today these pads are like
-captured pads, their WAV the truth, with full provenance in `source`), real capture fixtures,
-the pad sheet door (R4), and the listen. Nothing has been heard.
+**R3, the blend (built 2026-11-01).** A pad whose purist render fails its gate is blended:
+the purist stays, never under half, and a partner joins at `BLEND_SHARE` (0.5: `1 − confidence`
+of a failed gate, capped). A drum's partner is `Desample.nearest` on the purist render itself,
+among the voices kindred to the slot's tag, its distance reported and `far` said when it is
+past `Desample.FAR`; a note's partner is a resonator at the note struck by the pad's own head
+(the RING idea from the QUARRY brief, three modes at 1, 2 and 3); the siren's is a band-limited
+pulse read along the same trajectory. Both halves are peak-matched before mixing so the share is
+a share of level, the pad takes the longer length under the LOOP line, and the blend is gated
+again. The provenance carries `made = blend`, `synth`, `synthShare`, `synthDistance`, the purist
+`gate` and `gateDetail` kept on record, and `gateAfterBlend`. An unmeasured pad is not blended:
+nothing is known to be wrong with it. QUARRY is not yet an engine, so the tonal partner is the
+RING bridge the brief's R2 named. Tests: every failed pad and only those are blended, at exactly
+half, drum partners name a THUMP or SKIN voice with a distance; blending never fails more gates
+than the purist did; a RING partner lands the root on a noise-over-180 Hz source; blends are
+deterministic. Measured and kept as a limit: the sine sweep's blended hats still read SNARE to
+the classifier with the sweep's own noise held at half, and the pad says so in
+`gateAfterBlend`; the cap is the rule, and a louder partner would have been a replacement.
+
+**Still owed:** the recipe that re-renders a derived pad (R0, shared with QUARRY; today these
+pads are like captured pads, their WAV the truth, with full provenance in `source`), real
+capture fixtures, the pad sheet door (R4), and the listen. Nothing has been heard.

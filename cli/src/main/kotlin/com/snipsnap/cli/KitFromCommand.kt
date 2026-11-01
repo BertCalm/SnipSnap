@@ -15,8 +15,8 @@ import java.io.PrintStream
  * — KIT FROM ANYTHING: one sound into sixteen pads in a key and a style.
  * Purist: every pad is the source, transformed. The table it prints is the
  * gate every pad was held to and what the gate said; a pad that failed its
- * gate is still in the kit and says so in its provenance, because round
- * three's blend is what acts on that, not silence.
+ * gate is blended with a synth partner at half and says so, in the table
+ * and in its provenance, never silence.
  */
 object KitFromCommand {
 
@@ -66,13 +66,21 @@ object KitFromCommand {
             // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
             out.println("%-4s %-11s %-10s %s".format("A%02d".format(java.util.Locale.ROOT, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail))
         }
+        for (b in result.blends) {
+            out.println(
+                "     %-11s blended with %s at %.2f%s; gate after: %s (%s)".format(java.util.Locale.ROOT,
+                    b.slot.name, b.synth, b.share,
+                    if (b.distance != null) ", distance %.3f%s".format(java.util.Locale.ROOT, b.distance, if (b.far) " (far)" else "") else "",
+                    b.after.gate.name.lowercase(), b.after.detail),
+            )
+        }
         val failed = result.fallbackSet
         val unread = result.unmeasured
         out.println(
             when {
                 failed.isEmpty() && unread.isEmpty() -> "every pad cleared its gate"
-                else -> "${failed.size} pad(s) failed a gate (kept, marked for the blend): ${failed.joinToString { it.slot.name }}" +
-                    if (unread.isNotEmpty()) "; ${unread.size} unmeasured: ${unread.joinToString { it.slot.name }}" else ""
+                else -> "${failed.size} pad(s) failed a gate and were blended, the source never under half: ${failed.joinToString { it.slot.name }}" +
+                    if (unread.isNotEmpty()) "; ${unread.size} unmeasured, left purist: ${unread.joinToString { it.slot.name }}" else ""
             },
         )
         out.println("wrote $dir")

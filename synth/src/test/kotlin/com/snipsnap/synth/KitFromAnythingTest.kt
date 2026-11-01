@@ -205,6 +205,74 @@ class KitFromAnythingTest {
     }
 
     @Test
+    fun `a pad that fails its gate is blended at half with a partner that says its name`() {
+        val r = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        assertTrue(r.fallbackSet.isNotEmpty(), "a pure sine has no noise to quarry; something should fail")
+        assertEquals(r.fallbackSet.map { it.slot }, r.blends.map { it.slot }, "every failed pad is blended, nothing else is")
+        for (b in r.blends) {
+            val pad = r.pads[b.slot.pad - 1]!!
+            assertEquals(KitFromAnything.BLEND_SHARE, b.share, "${b.slot.name} share")
+            assertTrue(b.share <= 0.5f, "the source is never less than half")
+            assertEquals("blend", pad.source["made"], b.slot.name)
+            assertEquals("0.50", pad.source["synthShare"], b.slot.name)
+            assertTrue(pad.source["synth"]!!.isNotBlank(), "${b.slot.name} names its partner")
+            assertEquals(b.synth, pad.source["synth"])
+            assertEquals("fail", pad.source["gate"], "${b.slot.name} keeps the purist verdict on record")
+            assertNotNull(pad.source["gateAfterBlend"], "${b.slot.name} says what the gate said afterwards")
+            assertTrue(pad.snip.peak() > 0.5f && pad.snip.durationSeconds < 1.5f, "${b.slot.name} is a pad")
+            if (b.slot.judged || b.slot == Slot.RIDE || b.slot == Slot.CRASH) {
+                assertNotNull(b.distance, "${b.slot.name}: a drum partner reports its de-sample distance")
+                assertTrue(b.synth.startsWith("THUMP ") || b.synth.startsWith("SKIN "), b.synth)
+            }
+        }
+        for (g in r.gates.filter { it.gate == Gate.PASS }) {
+            assertEquals("purist", r.pads[g.slot.pad - 1]!!.source["made"], "${g.slot.name} passed and stays purist")
+        }
+    }
+
+    @Test
+    fun `a blend never fails more gates than the purist did, and a hat's partner is a hat`() {
+        val r = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        val before = r.gates.count { it.gate == Gate.FAIL }
+        val after = r.finalGates.count { it.gate == Gate.FAIL }
+        assertTrue(after <= before, "blending failed more: $before -> $after")
+        // The cap is the rule: with the sweep's own noise held at half, its blended hats still read
+        // SNARE to the classifier (measured here), and the pad says so in gateAfterBlend rather than
+        // the blend taking more than half to force the verdict. What the rule does promise is the
+        // partner's family.
+        for (b in r.blends.filter { it.slot == Slot.HAT_CLOSED || it.slot == Slot.HAT_OPEN }) {
+            assertTrue(b.synth.contains("HAT"), "${b.slot.name}'s partner is ${b.synth}")
+            assertEquals(b.after.gate.name.lowercase(), r.pads[b.slot.pad - 1]!!.source["gateAfterBlend"])
+        }
+    }
+
+    @Test
+    fun `blends are as deterministic as the rest`() {
+        val a = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        val b = KitFromAnything.assemble(sweep, key, Genre.BOOM_BAP)
+        assertEquals(a.blends.map { it.synth to it.distance }, b.blends.map { it.synth to it.distance })
+        for (i in 0 until 16) assertContentEquals(a.pads[i]!!.snip.samples, b.pads[i]!!.snip.samples, Slot.entries[i].name)
+    }
+
+    @Test
+    fun `a note with no fundamental rings at its note once blended`() {
+        // noise at a 180 Hz body: the Python prototype's snare stand-in, whose forced cycle sang its
+        // tones off the note. Whether or not the purist gate fails here, a RING partner at the note
+        // must land the root when it is asked for.
+        val n = (0.25f * rate).toInt()
+        val noise = Dsp.Noise(Dsp.seedFor("snare-ish"))
+        val src = Snip(FloatArray(n) { i ->
+            val t = i.toFloat() / rate
+            (0.7f * noise.next() * exp(-t / 0.08f) + 0.6f * sin(2.0 * PI * 180 * t).toFloat() * exp(-t / 0.05f))
+        }, 1, rate)
+        val r = KitFromAnything.assemble(src, key, Genre.HOUSE)
+        for (b in r.blends.filter { it.slot.isTone || it.slot.isBass }) {
+            assertTrue(b.synth.startsWith("RING "), b.synth)
+            assertEquals(Gate.PASS, b.after.gate, "${b.slot.name} after the RING blend: ${b.after.detail}")
+        }
+    }
+
+    @Test
     fun `refusals come in words`() {
         val short = Snip(FloatArray((0.02f * rate).toInt()) { 0.5f }, 1, rate)
         val e1 = assertFailsWith<IllegalArgumentException> { KitFromAnything.assemble(short, key, Genre.HOUSE) }

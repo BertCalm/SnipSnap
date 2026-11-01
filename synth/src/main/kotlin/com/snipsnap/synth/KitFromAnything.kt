@@ -56,10 +56,18 @@ import kotlin.math.tanh
  * Every pad is gated as the brief's slot table says: the five slots the
  * classifier has a class for must classify as that class; the ride and crash
  * by centroid and decay; the siren by its pitch trajectory read in order; the
- * bass and tones by their root. A pad that fails its gate is kept (purist) and
- * says so in its provenance (`gate = fail`), which is what the blend rule of
- * round three will act on; a pad the probe cannot read says `unmeasured`,
- * never `fail`.
+ * bass and tones by their root. A pad that fails its gate becomes a **blend**
+ * (the brief's round three): the purist render stays, never less than half,
+ * and a synth partner chosen to sound like it joins at [BLEND_SHARE]. For a
+ * drum that partner is [Desample]'s nearest THUMP or SKIN patch to the purist
+ * render itself, not to the raw source, so the synth kick is the kick this
+ * bark almost was; for a note it is a resonator at the note struck by the
+ * pad's own head (the RING idea from the QUARRY brief); for the siren it is a
+ * band-limited pulse read along the same trajectory. The blended pad is gated
+ * again and its provenance says `made = blend`, which synth joined, at what
+ * share, how far the de-sample match was, and what the gate said before and
+ * after. A pad the probe cannot read says `unmeasured`, never `fail`, and is
+ * not blended: nothing is known to be wrong with it.
  *
  * Everything runs at the output rate, like BODY and RETUNE: this is a
  * capture-side transform, not an oversampled engine. The only oscillator is
@@ -97,6 +105,13 @@ object KitFromAnything {
 
     /** Half-width, in Spectral bins (43 Hz each), of the colour envelope's smoothing: about a kilohertz across. */
     private const val COLOUR_SMOOTH = 12
+
+    /**
+     * The synth partner's share of a blended pad: `1 − confidence` of the purist render against
+     * its gate, capped at 0.5 so the source is never less than half the pad. A failed gate has
+     * confidence 0, so every blend today lands exactly on the cap.
+     */
+    const val BLEND_SHARE = 0.5f
 
     /** The frozen noise's analysis window: 1024 samples at the arrival, Spectral's own frame length. */
     private const val NOISE_WINDOW = 1024
@@ -210,6 +225,20 @@ object KitFromAnything {
 
     data class GateResult(val slot: Slot, val gate: Gate, val detail: String)
 
+    /** What joined a pad that failed its gate, at what share, and what the gate said afterwards. */
+    data class Blend(
+        val slot: Slot,
+        /** "THUMP KICK", "SKIN SNARE", "RING A1", "PULSE siren": the partner, in words. */
+        val synth: String,
+        val share: Float,
+        /** [Desample]'s distance for a drum partner, null for a resonator or a pulse. */
+        val distance: Float?,
+        val after: GateResult,
+    ) {
+        /** Past [Desample.FAR] the nearest patch is a stranger; the pad says so rather than hide it. */
+        val far: Boolean get() = distance != null && distance > Desample.FAR
+    }
+
     /** The source, read once: where it arrives, whether it has a note, its cycle and its colour. */
     class Analysis internal constructor(
         val mono: FloatArray,
@@ -233,11 +262,17 @@ object KitFromAnything {
 
     data class Result(
         val pads: List<ArrangedPad?>,
+        /** Every slot's gate on its PURIST render, before any blend. */
         val gates: List<GateResult>,
         val analysis: Analysis,
+        /** The pads that failed their gate and were blended, one entry each. */
+        val blends: List<Blend> = emptyList(),
     ) {
+        /** The purist renders that failed their gate: every one of these is now a blend. */
         val fallbackSet: List<GateResult> get() = gates.filter { it.gate == Gate.FAIL }
         val unmeasured: List<GateResult> get() = gates.filter { it.gate == Gate.UNMEASURED }
+        /** The gates as they stand after the blends: a blended pad's gate is its re-gate. */
+        val finalGates: List<GateResult> get() = gates.map { g -> blends.firstOrNull { it.slot == g.slot }?.after ?: g }
     }
 
     /**
@@ -250,6 +285,7 @@ object KitFromAnything {
         val s = genre.style
         val pads = ArrayList<ArrangedPad?>(16)
         val gates = ArrayList<GateResult>(16)
+        val blends = ArrayList<Blend>()
         for (slot in Slot.entries) {
             val samples = when (slot) {
                 Slot.KICK -> kick(a, s, seed(a, slot, genre))
@@ -265,32 +301,108 @@ object KitFromAnything {
             // the house tail fade before anything measures or writes the pad: a pad cut at the LOOP
             // line still carries an envelope 30 dB down, which clicks without it
             Dsp.fadeTail(samples, 4f, RATE)
-            val snip = Snip(samples, 1, RATE)
-            val gate = gate(slot, snip, a, s, key)
+            val purist = Snip(samples, 1, RATE)
+            val gate = gate(slot, purist, a, s, key)
             gates += gate
+            val blend = if (gate.gate == Gate.FAIL) blend(slot, purist, a, s, key, genre) else null
+            val snip = blend?.first ?: purist
+            if (blend != null) blends += blend.second
+            val provenance = linkedMapOf(
+                "madeBy" to "KIT FROM ANYTHING v$VERSION",
+                "slot" to slot.name,
+                "genre" to genre.label,
+                "key" to key.label,
+                "sourceHash" to a.hash.toString(),
+                "sourceRead" to when {
+                    a.pitched -> "pitched %.1f Hz".format(java.util.Locale.ROOT, a.hz)
+                    a.periodic -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), a period at %.1f Hz shaped the cycle".format(java.util.Locale.ROOT, a.hz)
+                    else -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), the cycle forced"
+                },
+                "made" to if (blend == null) "purist" else "blend",
+                "gate" to gate.gate.name.lowercase(),
+                "gateDetail" to gate.detail,
+            )
+            if (blend != null) {
+                val b = blend.second
+                provenance["synth"] = b.synth
+                provenance["synthShare"] = "%.2f".format(java.util.Locale.ROOT, b.share)
+                if (b.distance != null) provenance["synthDistance"] = "%.3f".format(java.util.Locale.ROOT, b.distance) + if (b.far) " (far: the nearest patch is a stranger)" else ""
+                provenance["gateAfterBlend"] = b.after.gate.name.lowercase()
+                provenance["gateAfterBlendDetail"] = b.after.detail
+            }
+            if (slot.isBass || slot.isTone) {
+                provenance["rootMidi"] = midiFor(slot, key).toString()
+                provenance["rootNote"] = Scales.nameOf(midiFor(slot, key))
+            }
             pads += ArrangedPad(
                 snip = snip,
                 drumClass = slot.tag,
                 muteGroup = slot.muteGroup,
                 displayName = slot.label,
-                source = linkedMapOf(
-                    "madeBy" to "KIT FROM ANYTHING v$VERSION",
-                    "slot" to slot.name,
-                    "genre" to genre.label,
-                    "key" to key.label,
-                    "sourceHash" to a.hash.toString(),
-                    "sourceRead" to when {
-                        a.pitched -> "pitched %.1f Hz".format(java.util.Locale.ROOT, a.hz)
-                        a.periodic -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), a period at %.1f Hz shaped the cycle".format(java.util.Locale.ROOT, a.hz)
-                        else -> "unpitched (${AutoPlace.nameFor(a.sourceClass)}), the cycle forced"
-                    },
-                    "made" to "purist",
-                    "gate" to gate.gate.name.lowercase(),
-                    "gateDetail" to gate.detail,
-                ) + if (slot.isBass || slot.isTone) mapOf("rootMidi" to midiFor(slot, key).toString(), "rootNote" to Scales.nameOf(midiFor(slot, key))) else emptyMap(),
+                source = provenance,
             )
         }
-        return Result(pads, gates, a)
+        return Result(pads, gates, a, blends)
+    }
+
+    // ---------------------------------------------------------------- the blend (round three)
+
+    /**
+     * The purist render that failed its gate, with its synth partner mixed in at [BLEND_SHARE]:
+     * both peak-matched first, so the share is a share of level and not of whoever rendered
+     * louder; the pad takes the longer of the two lengths, under the LOOP line; the house tail
+     * fade; then the gate again. Returns the blended pad and the record of what joined.
+     */
+    private fun blend(slot: Slot, purist: Snip, a: Analysis, s: Style, key: KeySpec, genre: Genre): Pair<Snip, Blend> {
+        val (partner, synth, distance) = partnerFor(slot, purist, a, s, key, genre)
+        val n = min(max(purist.frameCount, partner.size), (MAX_PAD_SECONDS * RATE).toInt())
+        val p = normalized(purist.samples.copyOf())
+        val q = normalized(partner.copyOf(n))
+        val out = FloatArray(n) { i -> (1 - BLEND_SHARE) * (if (i < p.size) p[i] else 0f) + BLEND_SHARE * q[i] }
+        normalized(out)
+        Dsp.fadeTail(out, 4f, RATE)
+        val snip = Snip(out, 1, RATE)
+        val after = gate(slot, snip, a, s, key)
+        return snip to Blend(slot, synth, BLEND_SHARE, distance, after)
+    }
+
+    /** The partner, its name in words, and the de-sample distance when there is one. */
+    private fun partnerFor(slot: Slot, purist: Snip, a: Analysis, s: Style, key: KeySpec, genre: Genre): Triple<FloatArray, String, Float?> = when {
+        slot.isBass || slot.isTone -> {
+            // the RING idea: a resonator at the note, struck by the pad's own head. The root is a
+            // property of the resonator, so a source whose cycle has no fundamental still lands.
+            val hz = Scales.midiToHz(midiFor(slot, key))
+            val decayMs = if (slot.isBass) s.bassDecayMs else s.toneDecayMs
+            val t60 = decayMs / 1000f * 1.5f
+            val n = frames(max(0.5f, decayMs * 3e-3f))
+            val strike = FloatArray(n)
+            val h = head(a, 30f)
+            for (i in h.indices) if (i < n) strike[i] = h[i]
+            if (h.isEmpty()) strike[0] = 1f
+            val modes = listOf(Modes.Mode(1f, 1f, t60), Modes.Mode(2f, 0.3f, t60 * 0.6f), Modes.Mode(3f, 0.12f, t60 * 0.4f))
+            val ring = normalized(Modes.ring(strike, hz, modes, RATE))
+            Triple(ring, "RING ${Scales.nameOf(midiFor(slot, key))}", null)
+        }
+        slot == Slot.SIREN -> {
+            // a band-limited pulse (the dub siren's own waveform) read along the same trajectory:
+            // the cycle reader mip-maps it per note, so it stays clean at the top of the climb
+            val n = frames(s.sirenSec)
+            val pulse = FloatArray(TABLE) { i -> if (i < TABLE / 2) 1f else -1f }
+            val track = FloatArray(n) { i -> a.baseHz * 2f.pow(sirenSemitones(s, i.toFloat() / n) / 12f) }
+            val x = lp(cycleAt(pulse, track), 6000f)
+            val fadeIn = RATE / 100
+            val fadeOut = RATE / 20
+            for (i in x.indices) x[i] *= min(1f, i / fadeIn.toFloat()) * min(1f, (n - i) / fadeOut.toFloat())
+            Triple(normalized(x), "PULSE siren", null)
+        }
+        else -> {
+            // the nearest drum patch to the PURIST render, searched among the voices kindred to the
+            // slot's tag (a hat comes back as a hat); its distance is reported, far or not
+            val match = Desample.nearest(purist, Desample.voicesFor(slot.tag), "${slot.label} partner")
+            val rendered = match.patch.render()
+            val mono = if (rendered.channels == 1) rendered.samples else Cleanup.toMono(rendered).samples
+            Triple(normalized(mono), "${match.patch.engine} ${match.patch.voiceName}", match.distance)
+        }
     }
 
     fun midiFor(slot: Slot, key: KeySpec): Int =

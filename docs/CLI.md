@@ -933,10 +933,16 @@ tempo written to the kit is the genre's. The table it prints is the
 gate every pad was held to and what the gate measured: the five slots
 the classifier has a class for must classify as that class, the ride
 and crash by centroid and decay, the siren by its pitch trajectory read
-in order, the notes by their root. A pad that fails its gate stays in
-the kit and says so in its provenance (`gate = fail`), because the
-blend of round three is what acts on that, not silence; a pad the
-probe cannot read says `unmeasured`, never `fail`. Design and numbers:
+in order, the notes by their root. A pad that fails its gate is
+*blended*: the purist render stays, never under half, and a partner
+chosen to sound like it joins at half, the nearest THUMP or SKIN patch
+to the purist render for a drum (its de-sample distance printed, "far"
+when it is a stranger), a resonator at the note struck by the pad's own
+head for a bass or tone, a band-limited pulse along the same trajectory
+for the siren. The blend is gated again and the table says what joined
+and what the gate said afterwards; the pad's provenance keeps the purist
+verdict on record beside it. A pad the probe cannot read says
+`unmeasured`, never `fail`, and stays purist. Design and numbers:
 `docs/superpowers/specs/2026-11-01-kit-from-anything-design-brief.md`.
 
 ### `retune <kit-dir> <pad>` — the spectral retune
