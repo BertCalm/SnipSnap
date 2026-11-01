@@ -23,6 +23,37 @@ class DeterminismTest {
         }
     }
 
+    // TIDE, SNAP and GYRE had no canary of their own (docs/ENGINE_STANDARD_SCAN_2026_11.md).
+    // Each renders twice from the same recipe, once through a JSON round trip, and must
+    // match byte for byte: a seed taken from the clock or a shared cache would fail here.
+    @Test fun `TIDE renders the same take and the same recipe byte for byte`() {
+        for (voice in TideVoice.entries) {
+            val wander = Tide.defaults(voice).let { d -> if ("WANDER" in d) d + ("WANDER" to .8f) else d }
+            assertContentEquals(Tide.render(voice, wander, take = 1).samples, Tide.render(voice, wander, take = 1).samples, "$voice take 1")
+            val patch = TidePatch("Canary", voice, wander)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice recipe")
+        }
+    }
+
+    @Test fun `SNAP replays a saved table and a drawn envelope byte for byte`() {
+        val table = IntArray(Snap.TABLE_SIZE) { (it * 37 + 11) % 256 }
+        val envelope = IntArray(Draw.ENVELOPE_SIZE) { if (it == 0) 0 else 255 - it * 255 / Draw.ENVELOPE_SIZE }
+        for (voice in SnapVoice.entries) {
+            val patch = SnapPatch("Canary", voice, Snap.defaults(voice), table, envelope.takeIf { voice == SnapVoice.DRAWN })
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice twice")
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice recipe")
+        }
+    }
+
+    @Test fun `GYRE renders every voice and its HOLD top byte for byte`() {
+        for (voice in GyreVoice.entries) {
+            val patch = GyrePatch("Canary", voice, Gyre.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+        val held = GyrePatch("Held canary", GyreVoice.entries.first(), Gyre.defaults(GyreVoice.entries.first()) + ("HOLD" to 1f))
+        assertContentEquals(held.render().samples, held.render().samples, "HOLD top")
+    }
+
     @Test fun `EROSION native voices replay their saved touch`() {
         for (voice in ErosionVoice.entries) {
             val patch = ErosionPatch("Canary", voice, velocity = .6f)
