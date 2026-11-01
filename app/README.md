@@ -116,7 +116,8 @@ performances. Complete scores survive preset saves, navigation and SEND TO PAD.
 LENGTH changes finite timing; all Otis kit pads play once. Shared pressure applies
 within a score. Render costs and device-validation limits are in [OTIS.md](../docs/OTIS.md).
 
-APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
+APSIS exposes PASSAGE, GRAIN and ANCHOR, with six PASSAGE presets and three
+presets per new voice, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
 retain the saved renderer and seed. HOLD's top step auditions a repeating settled
 cycle until STOP; on a pad it repeats while gated. Finite notes remain one-shots.

@@ -79,6 +79,36 @@ class WickSynthCommandTest {
     }
 
     @Test
+    fun `RATTLE preset body survives independent MIDI and velocity overrides`() {
+        val dir = kotlin.io.path.createTempDirectory("wick-cli-bodies").toFile()
+        try {
+            val presets = WickPresets.forVoice(WickVoice.RATTLE)
+            for (name in listOf("Warm Wire", "Hollow Reed", "Rubbed Glass")) {
+                val presetIndex = presets.indexOfFirst { it.name == name }
+                assertTrue(presetIndex >= 0, "$name is a normal RATTLE preset")
+                val preset = presets[presetIndex]
+                val cases = listOf(
+                    emptyList<String>() to preset,
+                    listOf("--midi", "57") to preset.copy(midi = 57),
+                    listOf("--velocity", "0.4") to preset.copy(velocity = .4f),
+                )
+                for ((flags, expected) in cases) {
+                    assertEquals(0, SynthCommand.run(
+                        listOf("WICK", "RATTLE", "--preset", (presetIndex + 1).toString()) + flags + listOf("--out", dir.path),
+                        PrintStream(ByteArrayOutputStream()),
+                    ))
+                    val wav = dir.listFiles { file -> file.extension == "wav" }!!.single()
+                    val encoded = ByteArrayOutputStream().also { WavWriter.write(it, expected.render()) }.toByteArray()
+                    assertContentEquals(encoded, wav.readBytes(), "$name keeps ${preset.rattleSource} for $flags")
+                    wav.delete()
+                }
+            }
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
+    @Test
     fun `invalid WICK notes velocities and voices are refused before output is created`() {
         val temp = kotlin.io.path.createTempDirectory("wick-cli-invalid").toFile()
         val dir = File(temp, "not-created")

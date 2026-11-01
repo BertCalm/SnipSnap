@@ -116,8 +116,8 @@ class PadSheetTest {
         assertEquals(listOf("SLAP", "WASH", "ROLL", "GATE", "ENSEMBLE", "SECTION"), PadSheet.TIME_SEGMENTS)
         assertEquals(listOf("FLIP", "STOP", "START", "PITCH"), PadSheet.TRANSPORT_SEGMENTS)
         assertEquals(listOf("TUNE", "BODY", "WOBBLE", "ETERNAL"), PadSheet.KEYED_SEGMENTS)
-        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY"), PadSheet.PEDAL_SEGMENTS)
-        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "the card should hold 38 segments")
+        assertEquals(listOf("DRIVE", "SUSTAIN", "WAH", "TOUCH", "ROCK", "FORGE", "DELAY", "ROOM"), PadSheet.PEDAL_SEGMENTS)
+        assertEquals(39, PadSheet.ALL_SEGMENTS.size, "the card should hold 39 segments")
     }
 
     /**
@@ -128,7 +128,7 @@ class PadSheetTest {
      * anything ended up on.
      */
     @Test
-    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven and DELAY thirty-eight`() {
+    fun `the regroup keeps every chip the card already drew, adds its seven, the merge's DUST makes twenty-nine, ENSEMBLE thirty and SECTION thirty-one the pedals' two thirty-three, the wah's three thirty-six, FORGE thirty-seven, DELAY thirty-eight and ROOM thirty-nine`() {
         val expected = setOf(
             // the twenty that existed before the regroup, plus the row-one
             // DUST chip a separate branch merged in later (`readDust`,
@@ -155,9 +155,11 @@ class PadSheetTest {
             "FORGE",
             // DELAY's gate (2026-10-28): on the slate, drawn on the default row and behind MORE
             "DELAY",
+            // ROOM's Kotlin gate (2026-11-01): on the slate, behind MORE
+            "ROOM",
         )
         assertEquals(expected, PadSheet.ALL_SEGMENTS.toSet(), "the card's inventory changed")
-        assertEquals(38, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
+        assertEquals(39, PadSheet.ALL_SEGMENTS.size, "a chip is drawn twice or missing")
     }
 
     @Test
@@ -402,10 +404,11 @@ class PadSheetTest {
     }
 
     /**
-     * THE BIN hides BACK on a kept row only where the pad's own sheet can give that entry back
-     * (the owner's call, 2026-10-31): NONE over a card treatment, MUTATE's or OUTSIDE's UNDO for the
-     * main file. A SPLICE, a DE-SAMPLE or anything else with no door on the sheet keeps BACK,
-     * because BACK is then its only way back in the app.
+     * The pad-sheet half of when THE BIN hides BACK on a kept row (the owner's call, 2026-10-31):
+     * where the pad's own sheet can give that entry back, through NONE over a card treatment or
+     * MUTATE's or OUTSIDE's UNDO for the main file. A SPLICE, a DE-SAMPLE or anything else with no
+     * door on the sheet answers false here, because BACK is then its only way back in the app. Rows
+     * under a print lose BACK by the other half (`KitBuilderModel.filesUnderPrints`, BoardSheetTest).
      */
     @Test
     fun `a pad has its own way back only through a door its sheet really has`() {

@@ -26,7 +26,7 @@ class ApsisKitTest {
         val bank = ApsisKitBank.all()
         assertEquals((1..16).toList(), bank.map { it.slot })
         assertEquals(16, bank.map { it.id }.toSet().size)
-        assertEquals(ApsisPresets.all().map { it.name }.toSet(), bank.map { it.presetName }.toSet())
+        assertEquals(ApsisPresets.forVoice(ApsisVoice.PASSAGE).map { it.name }.toSet(), bank.map { it.presetName }.toSet())
         assertEquals(mapOf(ApsisPadRole.BASS to 4, ApsisPadRole.KEY to 4, ApsisPadRole.CHORD_TONE to 4,
             ApsisPadRole.COLOR to 2, ApsisPadRole.HELD to 2), bank.groupingBy { it.role }.eachCount())
         assertEquals(listOf(36, 39, 43, 46), bank.take(4).map { it.patch.midi })
