@@ -915,6 +915,30 @@ the phone reads, the shelf lists it under INSTRUMENTS, and KEYS plays
 it on the 4×4 — root on A01, chromatic or a scale, octaves either way,
 a looped pad holding while the finger does.
 
+### `kitfrom <wav>` — kit from anything
+
+One sound into sixteen pads in a key and a style. Purist: every pad is
+the source and only the source, transformed. `--key Am` (any spelling
+`chop --key` reads; A minor if unsaid), `--genre house | techno |
+boom-bap` (house if unsaid), `--out <dir>`, `--name <name>`,
+`--overwrite`. The layout is fixed: kick A01, snare A02, closed hat
+A03, open hat A04 (the two hats choke each other and nothing else
+does), clap A05, ride A06, crash A07, siren A08, four bass notes A09 to
+A12 and four tones A13 to A16 at the key's root, third, fifth and
+octave. Three tricks make every drum from any sound: the source read
+faster for the hats, the ride and the crash; its single cycle sung at a
+drum pitch for the kick's body, the snare's body, the siren and every
+note; its arrival whitened into noise for the snare and the clap. The
+tempo written to the kit is the genre's. The table it prints is the
+gate every pad was held to and what the gate measured: the five slots
+the classifier has a class for must classify as that class, the ride
+and crash by centroid and decay, the siren by its pitch trajectory read
+in order, the notes by their root. A pad that fails its gate stays in
+the kit and says so in its provenance (`gate = fail`), because the
+blend of round three is what acts on that, not silence; a pad the
+probe cannot read says `unmeasured`, never `fail`. Design and numbers:
+`docs/superpowers/specs/2026-11-01-kit-from-anything-design-brief.md`.
+
 ### `retune <kit-dir> <pad>` — the spectral retune
 
 Where `--key` on `chop` moves a whole pad by one coarse/fine offset (so
