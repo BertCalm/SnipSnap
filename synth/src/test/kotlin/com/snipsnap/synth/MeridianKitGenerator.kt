@@ -185,9 +185,9 @@ object MeridianKitGenerator {
             Keygroup(low, high, midi, layers)
         }
         val program = KeygroupProgram(instrumentName, keygroups,
-            volumeRelease = MeridianKits.HELD_RELEASE_SECONDS)
+            volumeRelease = MeridianKits.HELD_RELEASE_SECONDS).fullKeyboard()
         OneNote.writePackage(instrumentName, program, stems, folder, overwrite = true)
-        val completedZones = zones.map { zone ->
+        val completedZones = zones.mapIndexed { index, zone ->
             @Suppress("UNCHECKED_CAST")
             val layers = zone.getValue("layers") as List<Map<String, Any?>>
             val completed = layers.map { layer ->
@@ -202,16 +202,18 @@ object MeridianKitGenerator {
                 require(pcmSeam.isFinite() && pcmSeam < Keys.MAX_SEAM_ERROR) { "${sample.name} PCM24 loop did not close: $pcmSeam" }
                 layer + mapOf("sampleSha256" to sha256(sample), "pcm24SeamError" to pcmSeam)
             }
-            zone + ("layers" to completed)
+            val written = program.keygroups[index]
+            zone + mapOf("lowNote" to written.lowNote, "highNote" to written.highNote, "layers" to completed)
         }
         val data = File(folder, Mpc3TrackWriter.trackDataDirName(instrumentName))
         val archive = File(archiveRoot, "SnipSnap-Meridian-$slug.zip")
         val manifest = linkedMapOf<String, Any?>(
             "name" to instrumentName, "preset" to preset.name,
             "model" to preset.model, "seedContext" to preset.seedContext,
-            "lowNote" to HELD_LOW, "highNote" to HELD_HIGH,
-            "noteRange" to "C2-C5 only; notes outside MIDI 36-72 are silent.",
-            "sampling" to "Thirteen native roots at minor thirds; intervening notes transpose by at most one semitone.",
+            "lowNote" to program.keygroups.minOf { it.lowNote }, "highNote" to program.keygroups.maxOf { it.highNote },
+            "nativeLowNote" to HELD_LOW, "nativeHighNote" to HELD_HIGH,
+            "noteRange" to "MIDI 0-127; outside the native C2-C5 band the sampler transposes the outer sources.",
+            "sampling" to "Thirteen native roots at minor thirds; within C2-C5 intervening notes transpose by at most one semitone.",
             "clockAdaptation" to "Fixed alignment. Each native root retains its own measured pitch-compatible swing period.",
             "velocityLayers" to nativeVelocities,
             "programFile" to relative(File(folder, "$instrumentName.xty"), destination),
@@ -245,7 +247,7 @@ object MeridianKitGenerator {
 
             MPC 3: load $instrumentName.xty with its _[TrackData] folder beside it.
             MPC 2: load $instrumentName.xpm from that same _[TrackData] folder.
-            Notes C2-C5 (MIDI 36-72) only; notes outside that range are silent.
+            Native roots cover C2-C5 (MIDI 36-72). The sampler spans MIDI 0-127 by transposing the outer sources.
             Thirteen natively rendered roots at minor thirds, each with physical
             velocity layers .30, .65 and 1.0 across 0-42, 43-84 and 85-127.
             Between roots the sampler transposes by at most one semitone; that
@@ -301,7 +303,7 @@ object MeridianKitGenerator {
         appendLine()
         appendLine("The two separate held keyboard ZIPs preserve genuine sampler loops and physical velocity layers:")
         held.forEach { appendLine("${it.getValue("preset")}: ${it.getValue("archiveFile")}") }
-        appendLine("Each keyboard covers C2-C5 only with thirteen native roots and three native velocity layers.")
+        appendLine("Each keyboard samples thirteen native C2-C5 roots and three native velocity layers; outer-source transposition spans MIDI 0-127.")
         appendLine("Each archive includes native MPC 3 .xty, MPC 2 .xpm, shared WAVs and complete recipes.")
         appendLine("The finite-pad ZIP deliberately excludes those keyboard folders. Download each keyboard separately.")
         appendLine("Hardware load and owner listening approval of this new bank remain open.")

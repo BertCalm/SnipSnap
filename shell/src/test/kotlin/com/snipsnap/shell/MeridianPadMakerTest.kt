@@ -75,6 +75,7 @@ class MeridianPadMakerTest {
         val program = MeridianPadMaker.export(name, spec, notes, destination)
         assertEquals(midis, program.keygroups.map { it.rootNote })
         assertEquals((36..72).toList(), program.keygroups.flatMap { (it.lowNote..it.highNote).toList() })
+        val written = program.fullKeyboard()
         assertEquals(spec.releaseSeconds, program.volumeRelease)
         assertTrue(program.explicitNoteOn, "legacy MPC packages must explicitly obey key release")
         val track = Mpc3Project.read(File(destination, "$name.xty"))
@@ -88,14 +89,18 @@ class MeridianPadMakerTest {
         assertEquals(spec.releaseSeconds, instrument.release)
         assertEquals(midis, instrument.zones.map { it.rootNote })
         assertEquals(39, instrument.sampleFiles.size)
+        assertEquals((0..127).toList(), instrument.zones.flatMap { (it.lowNote..it.highNote).toList() })
         val samples = linkedMapOf<String, FloatArray>()
         for ((zoneIndex, zone) in instrument.zones.withIndex()) {
-            assertEquals(program.keygroups[zoneIndex].lowNote, zone.lowNote)
-            assertEquals(program.keygroups[zoneIndex].highNote, zone.highNote)
-            assertTrue((zone.lowNote..zone.highNote).all { kotlin.math.abs(it - zone.rootNote) <= 1 })
+            assertEquals(written.keygroups[zoneIndex].lowNote, zone.lowNote)
+            assertEquals(written.keygroups[zoneIndex].highNote, zone.highNote)
+            assertTrue((zone.lowNote..zone.highNote).filter { it in 36..72 }
+                .all { kotlin.math.abs(it - zone.rootNote) <= 1 }, "native band uses the nearest minor-third root")
             assertEquals(listOf(0, 43, 85), zone.layers.map { it.velStart })
             assertEquals(listOf(42, 84, 127), zone.layers.map { it.velEnd })
             val native = instruments[zoneIndex].obj()
+            assertEquals(zone.lowNote, native.getValue("lowNote").int())
+            assertEquals(zone.highNote, native.getValue("highNote").int())
             assertEquals(2, native.getValue("triggerMode").int())
             val nativeLayers = native.getValue("layersv").arr().map { it.obj() }
                 .filter { it.getValue("sampleName").str().isNotEmpty() }
@@ -130,8 +135,12 @@ class MeridianPadMakerTest {
             }
         }
         assertTrue("<SliceLoop>1</SliceLoop>" in xpm)
-        assertNull(KeyHit.resolve(instrument, 35, 1f) { samples[it]?.size?.toLong() })
-        assertNull(KeyHit.resolve(instrument, 73, 1f) { samples[it]?.size?.toLong() })
+        assertNull(KeyHit.resolve(instrument, -1, 1f) { samples[it]?.size?.toLong() })
+        assertNull(KeyHit.resolve(instrument, 128, 1f) { samples[it]?.size?.toLong() })
+        for ((midi, root) in listOf(35 to 36, 73 to 72)) {
+            val hit = assertNotNull(KeyHit.resolve(instrument, midi, 1f) { samples[it]?.size?.toLong() })
+            assertEquals(2.0.pow((midi - root) / 12.0), hit.pitchRatio, 1e-12)
+        }
         val neighbor = assertNotNull(KeyHit.resolve(instrument, 61, .65f) { samples[it]?.size?.toLong() })
         assertEquals(2.0.pow(1.0 / 12), neighbor.pitchRatio, 1e-12)
         val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, 44_100, samples), 44_100)

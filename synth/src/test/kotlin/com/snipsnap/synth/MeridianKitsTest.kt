@@ -121,6 +121,10 @@ class MeridianKitsTest {
             assertTrue(heldInstruments.isNotEmpty())
             for (entry in heldInstruments) {
                 val heldInstrument = entry.obj()
+                assertEquals(0, heldInstrument.getValue("lowNote").int())
+                assertEquals(127, heldInstrument.getValue("highNote").int())
+                assertEquals(36, heldInstrument.getValue("nativeLowNote").int())
+                assertEquals(72, heldInstrument.getValue("nativeHighNote").int())
                 val zones = heldInstrument.getValue("zones").arr()
                 assertEquals(13, zones.size, "each held preset needs native minor-third zones from C2 to C5")
                 assertEquals((36..72 step 3).toList(), zones.map { it.obj().getValue("midi").int() })
@@ -132,8 +136,8 @@ class MeridianKitsTest {
                 for ((zoneIndex, zoneValue) in zones.withIndex()) {
                     val zone = zoneValue.obj()
                     val midi = zone.getValue("midi").int()
-                    val lowNote = if (zoneIndex == 0) 36 else midi - 1
-                    val highNote = if (zoneIndex == zones.lastIndex) 72 else midi + 1
+                    val lowNote = if (zoneIndex == 0) 0 else midi - 1
+                    val highNote = if (zoneIndex == zones.lastIndex) 127 else midi + 1
                     assertEquals(lowNote, zone.getValue("lowNote").int())
                     assertEquals(highNote, zone.getValue("highNote").int())
                     val slot = heldSlots[zoneIndex].obj()
