@@ -56,7 +56,7 @@ object Trio {
     const val MAX_MIDI = 84
     const val DEFAULT_MIDI = 60
     const val LEGACY_MODEL_VERSION = 1
-    const val MODEL_VERSION = 6
+    const val MODEL_VERSION = 7
     // Model 3 changes only the companions' articulation and decay. Main-player
     // answers keep the model 2 seed namespace, independent of the latest model.
     private const val DRAMA_SEED_MODEL = 2
@@ -350,10 +350,10 @@ object Trio {
         velocity: Float = 1f, config: TrioConfig = TrioConfig(),
     ): TrioProbe = renderScene(voice, macros, midi, velocity, config)
 
-    /** Audition seam: transforms fresh contact buffers without changing saved sound mappings. */
+    /** Frozen model-6 audition seam for checking the approved contact against later renderers. */
     internal fun renderContactProbe(
         macros: Map<String, Float>, midi: Int = DEFAULT_MIDI, velocity: Float = 1f,
-        config: TrioConfig = TrioConfig(), transform: (TrioCourse, FloatArray) -> FloatArray,
+        config: TrioConfig = TrioConfig(model = 6), transform: (TrioCourse, FloatArray) -> FloatArray,
     ): TrioProbe {
         require(config.model == 6 && (macros["DRAMA"] ?: 0f) > 0f) {
             "TRIO contact diagnostic requires model 6 and positive DRAMA"
@@ -380,11 +380,14 @@ object Trio {
         val score = score(voice, m, midi, velocity, config)
         val span = score.gridSpanSeconds
         val tension = m.getValue("DRAMA")
+        val contactAmount = if (config.model >= 7) TrioContact.amount(m.getValue("TOUCH"), tension) else 0f
         val players = score.actors.associateWith { player(it, root, m.getValue("DAMP"), config, rate, frames) }
         for (course in score.courses) {
             TrioRenderSupport.checkCancelled()
             val original = exciter(course.actor, course.n, course.hz, course.pickHz, course.position, course.seed, rate)
-            val burst = excitationTransform?.invoke(course, original) ?: original
+            // Shape the force before each string; timing, course gains and returned-wave coupling stay fixed.
+            val contact = if (contactAmount > 0f) TrioContact.shape(original, course.hz, rate, contactAmount) else original
+            val burst = excitationTransform?.invoke(course, contact) ?: contact
             players.getValue(course.actor).strings[course.string].excitation.add(course.at, burst, course.gain)
         }
         for (p in players.values) for (part in p.strings) part.excitation.prepare()

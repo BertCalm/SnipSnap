@@ -1,5 +1,13 @@
 # Synth roadmap — generate kits, not just capture them
 
+**TRIO contact profile (2026-11-01).** The owner hears and prefers the upper
+TOUCH contact experiment. New model-7 ensemble patches promote that strike
+color with the original strums, single companion hits and timing. Models 1–6
+replay their saved audio, and all sixteen factory sounds remain exact. The
+approved DRAMA .5/1 references are unchanged; below .5 the source profile eases
+to zero to preserve continuity. Root, velocity, phrase controls and finite
+3.5-second recording remain the existing contract. See [TRIO.md](TRIO.md).
+
 **CONTOUR preset expansion (2026-10-28).** After the owner accepted the wider
 EDGE response, the nine complete original recipes stay intact and 27 new dry
 recipes fill the planned 36: ten basses, eight keys/plucks, eight leads, six

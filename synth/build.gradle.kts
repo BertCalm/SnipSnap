@@ -368,10 +368,10 @@ tasks.register<JavaExec>("generateTrioAudition") {
     args(providers.gradleProperty("trioOutput").orNull ?: "${rootDir}/testkit/trio-audition")
 }
 
-/** A listening-only contact-profile trial over the unchanged TRIO score and engine. */
+/** Compare the approved TRIO contact profile with the preceding saved sound. */
 tasks.register<JavaExec>("generateTrioContactAudition") {
     group = "distribution"
-    description = "Render full-range controls, upper TOUCH contact experiments and quick comparison sweeps."
+    description = "Render TRIO Previous/Approved contact comparisons with native saved recipes."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.TrioContactAuditionGenerator")
     maxHeapSize = "768m"
