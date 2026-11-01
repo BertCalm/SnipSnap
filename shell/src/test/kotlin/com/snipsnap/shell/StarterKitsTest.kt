@@ -90,6 +90,7 @@ import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotEquals
@@ -243,6 +244,20 @@ class StarterKitsTest {
                 val last = model.kit.pads.last()
                 val firstBytes = File(dir, first.sampleFile).readBytes()
                 val lastBytes = File(dir, last.sampleFile).readBytes()
+                // RIME lands native soft layers. Single-hit replay follows
+                // the same explicit clear-layers step as the editing door.
+                for (pad in listOf(first, last)) {
+                    if (pad.velocityLayers.isNotEmpty()) {
+                        val original = File(dir, pad.sampleFile).readBytes()
+                        assertFailsWith<IllegalArgumentException>("${starter.id}: replay must preserve the layered pad") {
+                            RecipeReplay.apply(model, pad.slot, pad.recipe!!, pad.displayName)
+                        }
+                        assertEquals(pad, model.kit.pad(pad.slot), "${starter.id}: refused replay leaves the layers intact")
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()))
+                        assertTrue(model.clearGhostLayers(pad.slot).velocityLayers.isEmpty())
+                        assertTrue(original.contentEquals(File(dir, pad.sampleFile).readBytes()), "clearing layers preserves the main hit")
+                    }
+                }
                 val firstAgain = RecipeReplay.apply(model, last.slot, first.recipe!!, last.displayName)
                 assertEquals(first.recipe, firstAgain.pad.recipe, "${starter.id}: the first pad's recipe survives replay")
                 assertTrue(firstBytes.contentEquals(File(dir, firstAgain.pad.sampleFile).readBytes()), "${starter.id}: the first pad regenerates exactly")
