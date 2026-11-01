@@ -247,9 +247,10 @@ class OneNoteTest {
             listOf(Keygroup(48, 48, 48, listOf(VelocityLayer("Bed_48", 2_000L, 1, 127, 0L)))),
         )
         OneNote.writePackage("Bed", program, mapOf("Bed_48" to snip), temp, overwrite = false, spanKeyboard = false)
+        val dataDir = File(temp, "Bed_[TrackData]")
         val back = InstrumentStore.read(InstrumentStore.sidecar(temp, "Bed"))
         assertEquals(listOf(48 to 48), back.zones.map { it.lowNote to it.highNote })
-        val xpm = File(temp, "Bed_[TrackData]/Bed.xpm").readText()
+        val xpm = File(dataDir, "Bed.xpm").readText()
         assertTrue("<LowNote>48</LowNote>" in xpm)
         assertTrue("<HighNote>48</HighNote>" in xpm)
         assertTrue("<LowNote>0</LowNote>" !in xpm)

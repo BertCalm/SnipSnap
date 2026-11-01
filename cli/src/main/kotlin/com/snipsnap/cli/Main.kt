@@ -54,6 +54,7 @@ object Cli {
         |                        band, arrange + mixdown, inserts - one song
         |                        in, a release folder out; every skip named
         |  classify <wav...>     print what the classifier hears in each file
+        |  kitfrom <wav>         KIT FROM ANYTHING: one sound into sixteen pads in a key and a genre
         |  crate <root>          the whole library as a collection: cached
         |                        pad index + class census (--dupes finds
         |                        same-sound files; --pick KICK [--top N]
@@ -396,6 +397,7 @@ object Cli {
                 "dig" -> DigCommand.run(args.drop(1), out)
                 "beat" -> BeatCommand.run(args.drop(1), out)
                 "classify" -> ClassifyCommand.run(args.drop(1), out)
+                "kitfrom" -> KitFromCommand.run(args.drop(1), out)
                 "similar" -> SimilarCommand.run(args.drop(1), out)
                 "crate" -> CrateCommand.run(args.drop(1), out)
                 "export" -> ExportCommand.run(args.drop(1), out)

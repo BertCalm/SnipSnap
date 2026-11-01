@@ -50,6 +50,16 @@ while selecting model two for the current edit. SEND TO PAD saves that edit.
 | Note | Scanner MIDI note, 36 through 96, independent of the mechanical clock. |
 | Velocity | Initial displacement and force strength, with a velocity-sensitive output level. |
 | Length | A finite rendered duration, from 0.25 to 4 seconds. |
+| Attack | Smooth onset time, from 0 to 1 second. Longer settings let the moving shape develop before it becomes fully present. |
+| Release | Ending fade time, from 0 to 2 seconds, counting backward from the finite sample's end. It also sets the remaining BLOOM force window. |
+
+DAMP now gives gentle values more slider travel. ATTACK and RELEASE expose
+the envelope settings already stored in every complete recipe, with more room
+for short times. MOTION, BEND and BLOOM keep their linear travel; physical
+ranges, saved model responses and all nine presets retain their definitions.
+At MOTION zero the shape is frozen, so DAMP, BEND and BLOOM cannot change it.
+See [Shape the note](SCANNED_CHAIN_CONTROLS.md) for the exact travel curves,
+envelope interactions and reproducible native/RMS-matched control comparisons.
 
 There is no held-note or seamless-loop mode. Every pad plays an ordinary
 rendered sample; MPC export uses the existing one-shot workflow.
