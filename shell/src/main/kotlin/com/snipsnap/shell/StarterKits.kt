@@ -128,6 +128,7 @@ object StarterKits {
             seeded = false,
             key = KeySpec.parse("Cminpent"),
         ) { SynthKits.obbligato() },
+        Starter(
             "accord", "ACCORD",
             "Brushed wood and ringing tines. Sixteen finite pitched performances with shared mechanical timing.",
             seeded = false,
