@@ -4,8 +4,6 @@ import com.snipsnap.synth.Accord
 import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Aerostat
 import com.snipsnap.synth.AerostatPatch
-import com.snipsnap.synth.Accord
-import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.Alloy
 import com.snipsnap.synth.AlloyPatch
 import com.snipsnap.synth.Apsis
@@ -54,8 +52,6 @@ import com.snipsnap.synth.GlintPatch
 import com.snipsnap.synth.Gyre
 import com.snipsnap.synth.GyrePatch
 import com.snipsnap.synth.Keel
-import com.snipsnap.synth.Lorentz
-import com.snipsnap.synth.LorentzPatch
 import com.snipsnap.synth.KeelPatch
 import com.snipsnap.synth.Lacquer
 import com.snipsnap.synth.LacquerPatch
