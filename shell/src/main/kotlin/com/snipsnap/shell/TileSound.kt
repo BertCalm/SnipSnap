@@ -136,10 +136,17 @@ internal class TileSound(val mono: FloatArray, val sampleRate: Int) {
             return TileSound(mono.samples, mono.sampleRate)
         }
 
-        /** Every pad whose WAV reads, in slot order, with its class colour. */
+        /**
+         * Every pad whose WAV reads and holds at least one frame, in slot
+         * order, with its class colour. A WAV with no frames (a capture
+         * killed the instant it started) has nothing to draw, and every
+         * style divides by a length.
+         */
         fun pads(kit: Kit, kitDir: File): List<PadSound> =
             kit.pads.sortedBy { it.slot }.mapNotNull { pad ->
-                read(File(kitDir, pad.sampleFile))?.let { PadSound(pad.slot, it, Schemes.classColor(pad.drumClass)) }
+                read(File(kitDir, pad.sampleFile))
+                    ?.takeIf { it.frames > 0 }
+                    ?.let { PadSound(pad.slot, it, Schemes.classColor(pad.drumClass)) }
             }
 
         /** The slot with the most frames, or null for a kit with no readable pad. */

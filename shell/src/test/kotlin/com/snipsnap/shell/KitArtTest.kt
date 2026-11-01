@@ -299,6 +299,27 @@ class KitArtTest {
     }
 
     @Test
+    fun `a kit of empty WAVs still draws every style`() {
+        // A capture killed the instant it started writes a WAV with no frames; it reads, and must not divide by zero.
+        val dir = File(temp, "zeroframes").apply { mkdirs() }
+        WavWriter.write(File(dir, "A01_Empty_01.wav"), Snip(FloatArray(0), 1, 44_100))
+        WavWriter.write(File(dir, "A02_Empty_01.wav"), Snip(FloatArray(0), 1, 44_100))
+        val kit = Kit(
+            "Hollow",
+            listOf(
+                KitPad(slot = 1, sampleFile = "A01_Empty_01.wav", drumClass = DrumClass.KICK),
+                KitPad(slot = 2, sampleFile = "A02_Empty_01.wav", drumClass = DrumClass.SNARE),
+            ),
+        )
+        KitStore.save(kit, dir)
+        assertEquals(emptyList(), TileSound.pads(kit, dir).map { it.slot }, "a pad with no frames has no sound to draw")
+        for (style in KitArt.Style.entries) {
+            val img = decode(KitArt.png(kit, dir, knobs(style), size = 128))
+            assertEquals(Palettes.VENT.ground, rgb(img, 1, 1), "${style.id}: still a tile")
+        }
+    }
+
+    @Test
     fun `the name keeps a clear gap before the mark`() {
         // The strip styles share a row with the mark; a long name must stop a full margin short of it,
         // the same breathing room the tile keeps at its edges.
