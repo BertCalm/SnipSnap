@@ -274,6 +274,17 @@ tasks.register<JavaExec>("generateOrigamiExpressionAudition") {
     args(providers.gradleProperty("origamiExpressionOutput").orElse(rootDir.resolve("testkit/origami-expression").absolutePath).get())
 }
 
+/** Export continuous LIBRATION keys and play their PCM24 samples through real note-on/note-off. */
+tasks.register<JavaExec>("generateLibrationHoldAudition") {
+    group = "distribution"
+    description = "Render three LIBRATION held instruments, playback comparisons and measured recurrence evidence."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.LibrationHoldAuditionGenerator")
+    workingDir = rootDir
+    args(providers.gradleProperty("librationHoldOutput").orElse("${rootDir}/testkit/libration-sustain").get())
+}
+
 /** One opening before a separately marked sustain region, compared with unchanged PRISM pad renders. */
 tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     group = "distribution"

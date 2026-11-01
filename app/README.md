@@ -878,7 +878,14 @@ logcat tag to grab when something is wrong.
   builds sixteen finite one-shot pads with native soft/hard velocity zones.
   Repeated hits should keep their tails and soft strikes should remain soft.
   [The integration notes](../docs/LIBRATION.md#measuring-on-a-phone) include
-  the opt-in device benchmark and MPC acceptance pass. HOLD remains unavailable.
+  the opt-in device benchmark and finite MPC acceptance pass. The owner accepted
+  finite phone/MPC behavior. For the new held path, choose HOLD, save and return,
+  then SEND: the pad should repeat while held and stop on release. NOTE restores
+  finite playback and its saved LENGTH. MAKE INSTRUMENT keeps the real attack,
+  renders keyboard zones serially, and exposes RELEASE. Cancel a render, make a
+  replacement, hold a key through a loop, then release it. The
+  [held design](../docs/LIBRATION_HOLD.md) records the new version and software evidence;
+  this new transport still needs an owner phone/MPC pass.
 - **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,
   Warm Fan and Tenth Bloom. Verify TUNE shows the actual note; CREASE,
   FOLD, TURN, WARP and MOTION change the sound. Save a preset, reload it

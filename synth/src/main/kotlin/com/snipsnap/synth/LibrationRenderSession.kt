@@ -6,7 +6,7 @@ import java.util.concurrent.CancellationException
 /**
  * A bench-local cache, never a saved part of the instrument. Revisited notes reuse
  * audio; root, touch and resonance edits reuse trajectories. Physics edits get a
- * fresh population. Both paths run the same finite renderer as [LibrationPatch].
+ * fresh population. Finite notes and held loops use the same renderers as [LibrationPatch].
  *
  * Audio has a byte budget; at most two populations survive a slider drag. Release
  * the session with its screen. Calls are serialized so cancelled previews cannot
@@ -33,7 +33,7 @@ class LibrationRenderSession(
 
     private data class AudioKey(
         val voice: LibrationVoice, val macros: Map<String, Float>, val midi: Int,
-        val velocity: Float, val model: Int, val seconds: Double,
+        val velocity: Float, val model: Int, val seconds: Double, val heldModel: Int,
     )
 
     private val populations = LinkedHashMap<Libration.PopulationKey, Libration.Population>(4, .75f, true)
@@ -47,14 +47,17 @@ class LibrationRenderSession(
         val began = System.nanoTime()
         checkCancelled()
         // Snapshot the caller's map: a mutable recipe map must never change a key.
-        val macros = Libration.settled(patch.voice, patch.macros)
-        val key = AudioKey(patch.voice, macros, patch.midi, patch.velocity, patch.model, patch.sourceSeconds)
+        val held = LibrationKeys.isHeld(patch.macros["HOLD"] ?: 0f)
+        val macros = Libration.settled(patch.voice, patch.macros + ("HOLD" to 0f))
+        val seconds = if (held) LibrationKeys.SOURCE_SECONDS else patch.sourceSeconds
+        val key = AudioKey(patch.voice, macros, patch.midi, patch.velocity, patch.model, seconds,
+            if (held) patch.heldModel else 0)
         audio[key]?.let {
             // Snip exposes a mutable FloatArray. A player or processing stage may
             // edit its copy without corrupting the next recall of this sound.
             return Render(it.copy(samples = it.samples.copyOf()), Timing(elapsed(began), 0.0, 0.0, true, false))
         }
-        val options = Libration.Options(seconds = patch.sourceSeconds)
+        val options = Libration.Options(seconds = seconds)
         val populationKey = Libration.populationKey(patch.voice, macros, options, patch.model)
         val cached = populations[populationKey]
         val physicsBegan = System.nanoTime()
@@ -62,7 +65,9 @@ class LibrationRenderSession(
         val physicsMs = if (cached == null) elapsed(physicsBegan) else 0.0
         checkCancelled()
         val audioBegan = System.nanoTime()
-        val result = Libration.probe(patch.voice, macros, patch.midi, patch.velocity, options, population, patch.model).samples
+        val result = if (held) LibrationKeys.padLoop(LibrationHeld.probe(
+            patch.copy(macros = macros + ("HOLD" to 1f)), population, { false }).loop)
+            else Libration.probe(patch.voice, macros, patch.midi, patch.velocity, options, population, patch.model).samples
         val audioMs = elapsed(audioBegan)
         checkCancelled()
         if (maxPopulations > 0) {

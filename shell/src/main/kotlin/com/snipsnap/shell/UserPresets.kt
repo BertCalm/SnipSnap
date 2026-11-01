@@ -533,8 +533,9 @@ object UserPresets {
         }
         val macros = patch.macros.entries.joinToString(", ") { (k, v) -> "\"$k\" to ${v}f" }
         if (patch is LibrationPatch) {
+            val held = if (patch.heldModel != 0) ", heldModel = ${patch.heldModel}" else ""
             return "LibrationPatch(\"$name\", LibrationVoice.${patch.voice}, mapOf($macros), " +
-                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}),"
+                "midi = ${patch.midi}, velocity = ${patch.velocity}f, model = ${patch.model}, sourceSeconds = ${patch.sourceSeconds}$held),"
         }
         if (patch is OnsetPatch) {
             return "OnsetPatch(\"$name\", OnsetVoice.${patch.voiceName}, mapOf($macros), modelVersion = ${patch.modelVersion}),"

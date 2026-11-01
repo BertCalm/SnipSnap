@@ -21,6 +21,7 @@ import com.snipsnap.kit.KitStore
 import com.snipsnap.shell.SynthDrafts
 import com.snipsnap.shell.UserPresets
 import com.snipsnap.synth.Libration
+import com.snipsnap.synth.LibrationKeys
 import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LibrationPresets
 import com.snipsnap.synth.LibrationVoice
@@ -115,7 +116,7 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
                 assertEquals((patch.midi - 36) / 48f, progress("ROOT"), 1e-6f)
             }
         }
-        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertDoesNotExist()
+        compose.onNodeWithContentDescription("MAKE INSTRUMENT").assertExists()
     }
 
     @Test fun root_touch_length_and_macros_survive_return_save_and_send_to_pad() {
@@ -160,5 +161,60 @@ class LibrationSynthScreenTest : ComposeScreenTest() {
         assertEquals("48", pad.source["rootMidi"])
         assertEquals(0, pad.tuneFine)
         assertTrue(pad.oneShot)
+    }
+
+    @Test fun explicit_hold_survives_navigation_scramble_save_and_gated_pad_then_returns_to_note() {
+        val kitDir = folder("libration-held-pad")
+        val kit = Kit("LIBRATION HOLD", emptyList())
+        KitStore.save(kit, kitDir)
+        val factory = LibrationPresets.all().single { it.name == "ROUND KEYS" }
+        val shelf = show(factory, KitShelf.Entry(kitDir, kit))
+        waitFor("finite factory") { stored(factory.voice) == factory }
+        invokeClick("LIBRATION HOLD PLAYBACK")
+        waitFor("explicit held model") { stored(factory.voice)?.let {
+            it.heldModel == LibrationKeys.MODEL_VERSION && it.macros["HOLD"] == 1f
+        } == true }
+        dial("ROOT", .25f)
+        dial("TOUCH", .37f)
+        invokeClick("SCRAMBLE")
+        dial("SWARM", .1f)
+        val held = requireNotNull(stored(factory.voice))
+        assertEquals(48, held.midi)
+        assertEquals(.37f, held.velocity, 0f)
+        assertEquals(factory.sourceSeconds, held.sourceSeconds, 0.0)
+        assertEquals(1f, held.macros.getValue("HOLD"), 0f)
+        compose.runOnIdle { visit += 1 }
+        pump()
+        waitFor("held recipe after return") { stored(factory.voice) == held }
+        invokeClick("SAVE PRESET")
+        compose.onNode(hasSetTextAction()).performTextReplacement("ORBIT HOLD")
+        pump()
+        invokeClick("SAVE")
+        waitFor("saved held preset") { UserPresets.read(shelf).any { it.name == "ORBIT HOLD" } }
+        assertEquals(held.copy(name = "ORBIT HOLD"), UserPresets.read(shelf).single().patch)
+        invokeClick("SEND TO PAD")
+        invokeClick("A01, EMPTY")
+        waitFor("gated loop on A01", 60_000) { KitStore.load(kitDir).pad(1)?.recipe != null }
+        val pad = requireNotNull(KitStore.load(kitDir).pad(1))
+        val landed = PadRecipe.fromJsonValue(requireNotNull(pad.recipe)).patch as LibrationPatch
+        assertEquals(held.copy(name = landed.name), landed)
+        assertTrue(pad.loop)
+        assertFalse(pad.oneShot)
+        assertEquals(0, pad.tuneCoarse)
+        assertEquals(0, pad.tuneFine)
+        invokeClick("LIBRATION NOTE PLAYBACK")
+        waitFor("finite playback retained source") { stored(factory.voice)?.macros?.get("HOLD") == 0f }
+        dial("LENGTH", .2f)
+        invokeClick("SEND TO PAD")
+        invokeClick("A02, EMPTY")
+        waitFor("finite note on A02", 60_000) { KitStore.load(kitDir).pad(2)?.recipe != null }
+        val finite = requireNotNull(KitStore.load(kitDir).pad(2))
+        assertTrue(finite.oneShot)
+        assertFalse(finite.loop)
+        val finitePatch = PadRecipe.fromJsonValue(requireNotNull(finite.recipe)).patch as LibrationPatch
+        assertEquals(held.midi, finitePatch.midi)
+        assertEquals(held.velocity, finitePatch.velocity, 0f)
+        assertEquals(held.heldModel, finitePatch.heldModel)
+        assertEquals(0f, finitePatch.macros.getValue("HOLD"), 0f)
     }
 }
