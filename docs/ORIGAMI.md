@@ -122,7 +122,7 @@ The new gesture has its own version 1, stored only when BLOOM or UNFOLD is
 selected. An omitted gesture means STEADY, preserving existing JSON and audio.
 Models 1–3 keep their original motion and do not accept the new modes. Loading
 a current factory preset makes gestures available without changing an old saved
-recipe. All six factory presets remain STEADY until deliberately edited.
+recipe. The six original reference presets remain STEADY until deliberately edited.
 
 FAN/STILL MAKE INSTRUMENT keeps the complete gesture before the sustain loop.
 The settled body then repeats without restarting the gesture. RELEASE still
@@ -167,7 +167,7 @@ therefore uses more preparation time, storage and sample memory.
 
 Expression is saved as an optional, independent version-1 object. Missing or
 null expression means LEVEL; models 1–3 retain their original sound and reject
-FOLD. The six factories remain LEVEL. The source geometry, gesture and held
+FOLD. The six original references remain LEVEL. The source geometry, gesture and held
 versions stay unchanged.
 
 ```sh
@@ -263,10 +263,12 @@ In SYNTH, select ORIGAMI and choose CRANE, FAN or STILL. The six controls are
 TUNE, CREASE, FOLD, TURN, WARP and MOTION. TUNE spans C3–C5; an explicit note
 in a recalled recipe takes precedence until TUNE is deliberately edited.
 
-The factory roster has two presets per voice: Paper Key, Light Crease,
+The factory roster starts with two reference presets per voice: Paper Key, Light Crease,
 Warm Fan, Soft Fifth, Tenth Bloom and Quiet Paper. Each uses model 4 and an
 explicit seed, velocity and complete control map. The reference preset for
-each voice uses the accepted audition settings; native output uses the normal
+each voice uses the accepted audition settings. Six additional performance presets
+pair BLOOM/UNFOLD with velocity FOLD, bringing the total to four per voice.
+Native output uses the normal
 SnipSnap render gain rather than the web player's matched comparison gain.
 
 SEND adds the sound to a pad or replaces its audio and saves the complete
@@ -280,7 +282,7 @@ reopening SYNTH retains the full edited ORIGAMI recipe in its navigation state,
 even after the preset highlight clears.
 
 The ORIGAMI starter kit contains sixteen dry tonal one-shots: eight CRANE
-notes, the six factory presets and unfolded FAN/STILL references. The kit's
+notes, the six original factory references and unfolded FAN/STILL references. The kit's
 notes use C minor pentatonic. It carries replayable recipes and source roots.
 
 ## Held keys
@@ -319,6 +321,42 @@ snipsnap synth ORIGAMI STILL --patch /path/to/finite-patch.json --instrument --o
 
 CRANE and models 1–3 keep their finite renderer. SEND TO PAD remains a finite
 sound for every voice; MAKE INSTRUMENT supplies held playing through KEYS.
+
+## Performance bank
+
+The six performance presets expose the existing fold gesture and touch response
+as complete factory choices. The first two choices per voice retain their original
+names, controls and audio; choices three and four are the new BLOOM/UNFOLD pair.
+
+| Voice | BLOOM | UNFOLD | Playing use |
+| --- | --- | --- | --- |
+| CRANE | Paper Bloom | Paper Unfold | Struck finite keys. |
+| FAN | Fifth Bloom | Fifth Unfold | Finite notes or held fifth-colored keys. |
+| STILL | Soft Bloom | Soft Unfold | Finite swells or slow held pads. |
+
+All six select VELOCITY FOLD. Try SOFT/MID/FULL, then play short phrases and
+chords to judge the response in context. FAN/STILL keep their once-only gesture
+before the sustain region. On Android, select a factory and use MAKE INSTRUMENT
+to put its layered instrument in MAKE's INSTRUMENTS list.
+
+```sh
+./gradlew --no-daemon :shell:generateOrigamiPerformanceBank
+snipsnap synth ORIGAMI FAN --preset 3 --instrument --release .6 --out /path/to/instruments
+snipsnap synth ORIGAMI STILL --preset 4 --instrument --release .6 --out /path/to/instruments
+```
+
+The generator writes exact recipes, native/matched examples, musical performances
+and four MPC keygroup exports under `testkit/origami-performance-bank`.
+Each keygroup contains nine zones and three velocity layers, with its own loop
+markers and .6-second release. Keep the `.xty` beside its TrackData folder when
+extracting a download. The `.instrument.json` and `.origami-keys.json` companions
+preserve playback and complete authoring metadata. Downloaded keygroups target
+MPC; Android does not currently import those ZIPs, so use the factory maker route.
+
+The existing sixteen-pad starter remains unchanged. The
+[performance-bank brief](superpowers/specs/2026-11-01-origami-performance-bank.md)
+records the choices, compatibility contract and listening questions. The new
+recipes await listening feedback; numerical checks do not establish a preference.
 
 ## Current limits
 
