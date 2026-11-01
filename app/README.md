@@ -104,6 +104,9 @@ the tuned hide, bead and cage voices. BALLAST adds its reviewed bass, wire and g
 model, with the glass voice displayed as TILES; GLINT remains its saved identity
 and old PRISM-labelled patches still load. HOLD reads LOOP at .99 for AEROSTAT
 and BALLAST, and at .5 for TREMOR. All three also have dry FRESH TAPE starters.
+BALLAST also offers MAKE INSTRUMENT: thirteen minor-third zones from C1 to C4,
+one velocity layer, each zone its onset and settling before the HOLD loop, rendered
+one zone at a time.
 CREASE adds three approved phase-map voices and six model-3 presets. Its ROOT
 and VELOCITY controls retain the loaded synthesis model through edits, saving,
 and SPREAD. The dry starter has fourteen finite TONAL pads and two explicit
