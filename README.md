@@ -231,6 +231,13 @@ raw/matched listening comparisons and portable prototype recipes. The
 owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
 this finite renderer from the later phone editor, larger crowd and HOLD stages.
 
+CONFLUENCE VOICES adds nine approved Yaman, kulning and khöömei passages, a
+sixteen-pad starter and a MAKE bench for source/reference/solo/pair/group
+comparisons. The exact source bank and credits travel through native backup,
+merge and Breed. These are finite phrases at their native register; roots and
+keyboard sustain are not inferred. See the [selected-bank notes](docs/CONFLUENCE_SELECTED_BANK.md)
+and [listening comparisons](https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/bank/).
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
@@ -403,7 +410,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 63 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 65 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -997,6 +1004,20 @@ gives way to the rejected ringing tail, and HOLD extends finite effort without
 looping. Its three presets and separate TRACE kit accompany the preserved static
 bank and starter.
 
+ACCORD is a finite pitched ensemble whose fifteen autonomous mechanisms
+exchange reaction through one moving support. BRUSH is the default, alongside
+WOOD and TINE's original Reference, Soft Attack, Bright Edge and Long Ring
+profiles. Six saved starting recipes, native note/touch/seed/passage replay,
+a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
+Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
+ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
+Native numerical checks and three software-emulator functional tests passed
+with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
+passed 8,010 tests with zero failures/errors/skips. Both final Android builds
+passed at that source; the rebuilt development APK has not been device-executed.
+Owner listening and physical phone/MPC acceptance remain open.
+[Usage and limits](docs/ACCORD.md) link the design and frozen references.
+
 TIDAL brings two original source populations through a seeded encounter:
 PAIR gathers and passes, while STREAM exposes evolving ringing material.
 Its approved model-2 source direction, six finite factory presets and dry
@@ -1030,8 +1051,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
-69 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
+70 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1246,7 +1267,7 @@ Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
+LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
 TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,

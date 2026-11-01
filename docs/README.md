@@ -1,5 +1,16 @@
 # Which document to trust
 
+**Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
+BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
+Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)
+separates the approved Python direction, passed focused/output/rate probes,
+final SDK builds and the 8,010-test JVM gate at `00a1f9ff` from the three
+software-emulator functional tests at `fac839f0`. The final rebuilt APK has not
+been device-executed; native listening and phone performance remain open.
+Sustained HOLD remains unsupported. It records the exact ART setup and its
+limits. The complete frozen reference bundle is retained
+under [`reference/accord`](../reference/accord/README.md).
+
 **Rime.** [`RIME.md`](RIME.md) records the preserved finite bank, versioned HOLD,
 attack-plus-loop MPC instruments and phone integration. The remaining three
 voices and expanded library await the original specification.

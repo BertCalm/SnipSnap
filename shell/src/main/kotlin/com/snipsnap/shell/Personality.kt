@@ -2825,6 +2825,7 @@ object Copy {
         Bench.SNAP -> "A PICTURE INTO A SOUND."
         Bench.SURFACE -> "PLAY A TOUCH SURFACE."
         Bench.INSTRUMENTS -> "WHAT YOU MADE, ON 16 PADS."
+        Bench.CONFLUENCE_VOICES -> "RECORDED PASSAGES INTO SMALL VOICE GROUPS."
         else -> ""
     }
     /** IN KEY's row when the kit holds no tonal pad at all. */

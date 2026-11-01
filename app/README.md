@@ -73,14 +73,14 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (63 starters including STRIKE FX, CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (65 starters including CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
 THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, RIME COMPLETE, OTIS and OBBLIGATO,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 69 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 70 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
@@ -110,6 +110,20 @@ response. Saved sounds, including its six original factory recipes, retain
 their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
 response without changing the authored room, controls, ROOT, VELOCITY or seed.
 See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
+ACCORD exposes BRUSH by default, WOOD and TINE, five finite controls, ROOT
+(C2–C5), native TOUCH and LENGTH. TINE offers Reference, Soft Attack,
+Bright Edge and Long Ring without changing the saved mechanical initializer,
+seed or passage start. Preset recall, YOURS, navigation and pad reopening keep
+the complete typed recipe. HOLD is hidden and every delivered pad plays once;
+long-file LOOP classification is not sustained playback. Three unchanged
+functional tests at `fac839f0` passed on a software emulator with the documented
+ART setup. The full nine-module JVM gate at `00a1f9ff` passed 8,010 tests with
+zero failures/errors/skips. Final standard debug/test compilation and the
+optional non-debuggable development build also passed at that source. The
+rebuilt APK has not been device-executed; native listening and physical-device
+acceptance remain separate gates.
+See [ACCORD](../docs/ACCORD.md).
 
 OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
 performances. Complete scores survive preset saves, navigation and SEND TO PAD.

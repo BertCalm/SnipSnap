@@ -1,0 +1,132 @@
+{
+  "status": "Independent Python PCM/source QA; no listening claim",
+  "failures": [],
+  "files": {
+    "reference": {
+      "active_rms": 0.11070362093232501,
+      "peak": 0.527099609375,
+      "dc": -5.457381776446533e-06,
+      "upper_energy_share": 0.12843182773861248,
+      "root_energy_share": 0.7757266424917826,
+      "centroid_hz": 178.2259943748477,
+      "tail_first_900ms_energy": 5.3308949343302624e-05,
+      "tail_500_to_900ms_rms": 0.00015452361647863726,
+      "release_above_minus40db_s": 0.25,
+      "metadata": {
+        "channels": 1,
+        "sample_width": 2,
+        "rate": 44100,
+        "frames": 392490
+      },
+      "active_rms_difference_db": 0.0
+    },
+    "soft_attack": {
+      "active_rms": 0.11068838283053818,
+      "peak": 0.530517578125,
+      "dc": -4.992841863307823e-06,
+      "upper_energy_share": 0.030609664245281307,
+      "root_energy_share": 0.858121848501613,
+      "centroid_hz": 132.05206767285475,
+      "tail_first_900ms_energy": 4.203163421039138e-05,
+      "tail_500_to_900ms_rms": 0.00014185614938991688,
+      "release_above_minus40db_s": 0.24,
+      "metadata": {
+        "channels": 1,
+        "sample_width": 2,
+        "rate": 44100,
+        "frames": 449820
+      },
+      "active_rms_difference_db": -0.0011956752581250571,
+      "shape_vs_approved_active": {
+        "best_fitted_scalar": 0.4132487940072227,
+        "correlation": 0.41330568470554674,
+        "residual_rms": 0.10079199361845131
+      }
+    },
+    "bright_edge": {
+      "active_rms": 0.11068896895141919,
+      "peak": 0.668701171875,
+      "dc": -4.2384846733832425e-06,
+      "upper_energy_share": 0.44926497339074206,
+      "root_energy_share": 0.479514117908393,
+      "centroid_hz": 313.12742510796176,
+      "tail_first_900ms_energy": 4.839659579807804e-05,
+      "tail_500_to_900ms_rms": 0.00011825235047143823,
+      "release_above_minus40db_s": 0.23,
+      "metadata": {
+        "channels": 1,
+        "sample_width": 2,
+        "rate": 44100,
+        "frames": 449820
+      },
+      "active_rms_difference_db": -0.0011496815623289916,
+      "shape_vs_approved_active": {
+        "best_fitted_scalar": 0.9281194554409157,
+        "correlation": 0.9282423114047866,
+        "residual_rms": 0.04117364987339695
+      }
+    },
+    "long_ring": {
+      "active_rms": 0.11068823007870315,
+      "peak": 0.473724365234375,
+      "dc": -2.539942843456827e-06,
+      "upper_energy_share": 0.1330296014565744,
+      "root_energy_share": 0.8336832289885611,
+      "centroid_hz": 181.21111688287334,
+      "tail_first_900ms_energy": 0.0010403246297384877,
+      "tail_500_to_900ms_rms": 0.01156819508248282,
+      "release_above_minus40db_s": 1.16,
+      "metadata": {
+        "channels": 1,
+        "sample_width": 2,
+        "rate": 44100,
+        "frames": 449820
+      },
+      "active_rms_difference_db": -0.001207661940581374,
+      "shape_vs_approved_active": {
+        "best_fitted_scalar": 0.8690437198045062,
+        "correlation": 0.8691645588691935,
+        "residual_rms": 0.054737872719889426
+      }
+    }
+  },
+  "one_axis": {
+    "soft_attack": {
+      "width_increased": true,
+      "all_other_config_unchanged": true
+    },
+    "bright_edge": {
+      "other_fields_unchanged": true,
+      "root_mode_unchanged": true,
+      "upper_frequency_decay_unchanged": true
+    },
+    "long_ring": {
+      "other_fields_unchanged": true,
+      "frequencies_and_gains_unchanged": true,
+      "decay_tripled": true
+    }
+  },
+  "reference": {
+    "file_byte_identical": true,
+    "active_pcm_byte_identical": true
+  },
+  "root_centers": {
+    "hz": 130.8127826502993,
+    "same_frequencies_all_options": true
+  },
+  "mechanics": {
+    "input_array_unmodified": true,
+    "event_count": 528,
+    "bright_and_long_force_identical_to_baseline": true,
+    "no_acoustic_noise_in_any_config": true,
+    "cached_model_seed": 20261022
+  },
+  "contrast_checks": {
+    "soft_upper_energy_lower": true,
+    "bright_upper_energy_ratio": 3.49808128795844,
+    "bright_difference_not_only_scalar": true,
+    "long_tail_first900ms_energy_ratio": 19.515009066093835,
+    "long_decay_duration_larger": true
+  },
+  "limits": "RMS matching is a fixed gain over active8s; it does not establish equal perceived loudness. Reference is8.9s, options10.2s. Release comparison uses their common first900ms after excitation stops. No active-note pitch perfection or listening preference is asserted."
+}

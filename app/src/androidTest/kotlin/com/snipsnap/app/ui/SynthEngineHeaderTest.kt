@@ -154,7 +154,12 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
         tap("NEXT ENGINE")
         isOn("LATTICE")
         tap("NEXT ENGINE")
+        isOn("ACCORD")
+        assertEquals("BRUSH", settings["voice"])
+        tap("NEXT ENGINE")
         isOn("THUMP")
+        tap("PREVIOUS ENGINE")
+        isOn("ACCORD")
         tap("PREVIOUS ENGINE")
         isOn("LATTICE")
         assertEquals("LATTICE", settings["engine"])
@@ -175,7 +180,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
         assertTrue("the list starts closed", !listIsOpen())
         openList()
         assertTrue(listIsOpen())
-        // THUMP is far down an A to Z list of 63, out of the first screenful: find it by name.
+        // THUMP is far down an A to Z list of 70, out of the first screenful: find it by name.
         type("thump")
         assertEquals("the current engine is marked", 1, compose.onAllNodesWithText("● CURRENT", useUnmergedTree = true).fetchSemanticsNodes().size)
         type("onset")

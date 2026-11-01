@@ -296,6 +296,18 @@ tasks.register<JavaExec>("generatePrismOpeningSustainAudition") {
     args(providers.gradleProperty("prismOpeningSustainOutput").orElse("${rootDir}/testkit/prism-opening-sustain-audition").get())
 }
 
+/** The phone's nine approved cultural passages, all five playback modes and the complete portable bank. */
+tasks.register<JavaExec>("generateConfluenceSelectedAudition") {
+    group = "distribution"
+    description = "Render the cultural passage audition through the app workshop and package its unchanged source bank."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.ConfluenceSelectedAuditionGenerator")
+    maxHeapSize = "1g"
+    workingDir = rootDir
+    args(providers.gradleProperty("confluenceSelectedAuditionOutput").orElse("${rootDir}/testkit/confluence-selected-audition").get())
+    providers.gradleProperty("confluenceSelectedAuditionRevision").orNull?.let { args(it) }
+}
+
 /** Three native Rime keyboard instruments, each with nine attack-plus-loop zones. */
 tasks.register<JavaExec>("generateRimeInstruments") {
     group = "distribution"

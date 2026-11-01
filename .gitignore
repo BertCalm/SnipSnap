@@ -38,6 +38,7 @@ testkit/overlap-audition/
 testkit/overlap-audition-r1/
 testkit/confluence-audition/
 testkit/confluence-audition-site/
+testkit/confluence-selected-audition/
 testkit/osprey-audition/
 testkit/osprey-revision-audition/
 testkit/osprey-gentle-audition/
@@ -561,3 +562,11 @@ scripts/__pycache__/
 # Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
 testkit/apsis-populations/
 testkit/obliterate-board/
+
+# Accord's regenerable native audio, numerical sweeps and MPC exports.
+testkit/accord-audition/
+testkit/accord-validation/
+testkit/accord-rate-reference/
+testkit/.accord-kit-work/
+testkit/SnipSnap Accord Kit/
+testkit/SnipSnap-Accord-Kit.zip
