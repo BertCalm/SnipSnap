@@ -1,0 +1,26 @@
+Confluence Selected Passages — selected-passages-v1, version1
+Nine user-approved recorded passages; text content UNKNOWN. No authenticated-performance or new-singer claim.
+Raw canonical WAV files preserve the exact approved regions, native levels, and disclosed downmix/PCM24 quantization.
+Playback references and processed parts additionally use each manifest conditioning record: constant gain plus cosine edge fades; Yaman04 has an explicit100ms release fade.
+Confluence TEXTURE arrangements retain chronology, apply small varispeed duration differences, fixed part timing, shared room and output leveling. No inferred root, pitch correction, PSOLA/formant transformation, HOLD or seamless-loop claim.
+
+Yaman — a solo ālāp
+Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.
+Source: https://freesound.org/people/sankalp/sounds/193920/
+CC-BY-4.0 — https://creativecommons.org/licenses/by/4.0/
+Preparation: Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.
+
+Kulning på kor — herding calls
+Anna Moraeus and Jemt-Kersti Andersson · recorded by Matts Arnberg, Dalarna, 1954. Swedish Performing Arts Agency / Centre for Swedish Folk Music and Jazz Research.
+Source: https://commons.wikimedia.org/wiki/File:Kulning_p%C3%A5_kor_-_SMV_-_SVA_BB_5345_13.wav
+CC0-1.0 — https://creativecommons.org/publicdomain/zero/1.0/
+Preparation: Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.
+
+Khöömei — an overtone demonstration
+Shared by nemaavla. The source page does not name the performer.
+Source: https://freesound.org/people/nemaavla/sounds/240916/
+CC0-1.0 — https://creativecommons.org/publicdomain/zero/1.0/
+Preparation: Exact approved listening-file interval; gapless decoded, arithmetic mono downmix and PCM24 encoding. No stored gain, fades, pitch correction, time stretching or generated singing. MP3 origins remain lossy-source derivatives where identified.
+
+Per-passage approved intervals, original listening-file hashes and exact source preparation are retained in bank.json.
+The source authors and performers do not endorse SnipSnap.

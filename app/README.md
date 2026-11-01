@@ -73,7 +73,7 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (62 starters including STRIKE FX, CIRCUIT,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (63 starters including CONFLUENCE VOICES, STRIKE FX, CIRCUIT,
 THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, OTIS and OBBLIGATO,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture

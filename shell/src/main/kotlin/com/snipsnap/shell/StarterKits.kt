@@ -2,6 +2,7 @@ package com.snipsnap.shell
 
 import com.snipsnap.audio.KeySpec
 import com.snipsnap.kit.ArrangedPad
+import com.snipsnap.kit.ConfluenceBankFiles
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitAssembler
 import com.snipsnap.kit.Names
@@ -39,6 +40,7 @@ import java.io.File
 object StarterKits {
     const val CONFLUENCE_ID = "confluence-wordless"
     const val CONFLUENCE_BANK_DIR = "confluence-voice-bank"
+    const val CONFLUENCE_VOICES_ID = "confluence-voices"
 
     class Starter internal constructor(
         /** Stable machine id. */
@@ -165,6 +167,15 @@ object StarterKits {
             seeded = false,
             prepare = { dir -> ConfluenceVoiceBank.bundled().writePortableBank(File(dir, CONFLUENCE_BANK_DIR), overwrite = true) },
         ) { ConfluenceVoiceBank.bundled().arrangedPads() },
+        Starter(
+            CONFLUENCE_VOICES_ID, "CONFLUENCE VOICES",
+            "Nine selected Yaman, kulning and khöömei passages, with pairs, groups and a short answer.",
+            seeded = false,
+            prepare = { dir ->
+                val bank = ConfluenceSelectedWorkshop.bank
+                bank.writePortableBank(ConfluenceBankFiles.bankDirectory(dir, bank.manifestSha256))
+            },
+        ) { ConfluenceSelectedWorkshop.starterPads() },
         Starter(
             "circuit", "CIRCUIT",
             "Three breaths, moving accents, and canyon answers in C minor pentatonic.",

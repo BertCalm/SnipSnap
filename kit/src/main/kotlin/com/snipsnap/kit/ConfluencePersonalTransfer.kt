@@ -33,8 +33,8 @@ internal object ConfluencePersonalTransfer {
         require(voices.size <= ConfluencePersonalFiles.MAX_VOICES) { "personal voice copy exceeds ${ConfluencePersonalFiles.MAX_VOICES} distinct voices" }
     }
 
-    private fun requireBudget(voices: Collection<Voice>) {
-        require(voices.sumOf { v -> v.files.sumOf { it.second.length() } } <=
+    private fun requireBudget(voices: Collection<Voice>, bankBytes: Long = 0) {
+        require(voices.sumOf { v -> v.files.sumOf { it.second.length() } } + bankBytes <=
             ConfluencePersonalFiles.MAX_KIT_BYTES - ConfluencePersonalFiles.KIT_METADATA_RESERVE_BYTES) {
             "personal voice copy exceeds the native backup byte budget including kit metadata reserve"
         }
@@ -65,7 +65,7 @@ internal object ConfluencePersonalTransfer {
         }
         val existingIds = all.keys.toSet()
         incoming.forEach { add(all, it) }
-        requireBudget(all.values)
+        requireBudget(all.values, ConfluenceBankFiles.physicalFiles(targetDir).sumOf { it.second.length() })
         require(targetDir.isDirectory || targetDir.mkdirs()) { "cannot create personal voice copy destination" }
         require(container.isDirectory || container.mkdirs()) { "cannot create personal voice container" }
         for (voice in incoming.filter { it.id !in existingIds }) {

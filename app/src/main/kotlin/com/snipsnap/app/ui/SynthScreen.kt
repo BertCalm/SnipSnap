@@ -2476,16 +2476,12 @@ fun SynthScreen(
     // ---- SPREAD ----
     // The patch as it stood when SPREAD opened, rendered once: the panel
     // previews and the write lands the same audio its pitch was measured on.
-    var spreadSource by remember { mutableStateOf<SpreadSource?>(null) }
-    var spreadPatch by remember { mutableStateOf<Patch?>(null) }
-    var spreadClass by remember { mutableStateOf(DrumClass.TONAL) }
-    var spreadOpening by remember { mutableStateOf(false) }
-    var spreadBusy by remember { mutableStateOf(false) }
+    val spreadState = remember { SpreadState() }
 
     fun openSpread() {
-        if (spreadOpening || sendBusy || entry == null) return
+        if (spreadState.opening || sendBusy || entry == null) return
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
-        spreadOpening = true
+        spreadState.opening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is MeridianPatch) MeridianSynth.padLanding(patch).drumClass
             else when (patch) {
@@ -2519,30 +2515,30 @@ fun SynthScreen(
                     SpreadSource(rendered, midi, Spread.defaultRoot(midi))
                 }
                 coroutineContext.ensureActive()
-                spreadPatch = patch
-                spreadClass = cls
-                spreadSource = src
+                spreadState.patch = patch
+                spreadState.drumClass = cls
+                spreadState.source = src
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
                 Log.e("SynthScreen", "openSpread: render failed", e)
                 onToast(Copy.RENDER_FAILED)
             } finally {
-                spreadOpening = false
+                spreadState.opening = false
             }
         }
     }
 
     fun spread(options: Spread.Options) {
         val e = entry ?: return
-        val src = spreadSource ?: return
-        val patch = spreadPatch ?: return
-        if (spreadBusy) return
-        spreadBusy = true
+        val src = spreadState.source ?: return
+        val patch = spreadState.patch ?: return
+        if (spreadState.busy) return
+        spreadState.busy = true
         val sound = Spread.Sound(
             name = patch.name,
-            drumClass = spreadClass,
-            colorHex = AutoPlace.colorFor(spreadClass),
+            drumClass = spreadState.drumClass,
+            colorHex = AutoPlace.colorFor(spreadState.drumClass),
             recipe = (if (patch is MeridianPatch) MeridianSynth.padLanding(patch, activeRecipe).recipe
                 else if (patch is OverlapPatch && patch.playback == OverlapPlayback.HELD)
                 OverlapPadMaker.deliveryRecipe(patch) else PadRecipe(patch = patch)).toJsonValue(),
@@ -2565,7 +2561,7 @@ fun SynthScreen(
                     }
                 }
                 if (plan.notes.isNotEmpty()) {
-                    spreadSource = null
+                    spreadState.source = null
                     onKitUpdated(updatedKit)
                 }
                 onToast(Spread.toast(plan))
@@ -2574,7 +2570,7 @@ fun SynthScreen(
                 Log.e("SynthScreen", "spread: failed", ex)
                 onToast(Copy.SPREAD_FAILED)
             } finally {
-                spreadBusy = false
+                spreadState.busy = false
             }
         }
     }
@@ -3578,9 +3574,9 @@ fun SynthScreen(
                 // One sound, a whole bank of notes: its own row, since the
                 // three above already fill theirs at the pixel face.
                 LabButton(
-                    if (spreadOpening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
+                    if (spreadState.opening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
                     scheme,
-                    enabled = kit != null && !sendBusy && !spreadOpening &&
+                    enabled = kit != null && !sendBusy && !spreadState.opening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "SPREAD ACROSS PADS",
@@ -3728,16 +3724,16 @@ fun SynthScreen(
 
         ReopenPadDialog(reopeningPad, reopenablePads, scheme, onPick = ::reopenPad)
 
-        spreadSource?.let { src ->
+        spreadState.source?.let { src ->
             // Self-guarded like the chooser's CANCEL: a write in flight
             // keeps the panel up until it lands.
-            val cancelSpread = { if (!spreadBusy) spreadSource = null }
+            val cancelSpread = { if (!spreadState.busy) spreadState.source = null }
             SpreadOverlay(
                 kit = kit,
                 source = src,
-                colorHex = AutoPlace.colorFor(spreadClass),
+                colorHex = AutoPlace.colorFor(spreadState.drumClass),
                 scheme = scheme,
-                busy = spreadBusy,
+                busy = spreadState.busy,
                 onSpread = ::spread,
                 onCancel = cancelSpread,
             )
@@ -4109,6 +4105,15 @@ private class SynthPresetState {
     var forgetTarget by mutableStateOf<Patch?>(null)
     var binOpen by mutableStateOf(false)
     var binBusy by mutableStateOf(false)
+}
+
+/** SPREAD's source and pending work survive recomposition together, like the other sheets. */
+private class SpreadState {
+    var source by mutableStateOf<SpreadSource?>(null)
+    var patch by mutableStateOf<Patch?>(null)
+    var drumClass by mutableStateOf(DrumClass.TONAL)
+    var opening by mutableStateOf(false)
+    var busy by mutableStateOf(false)
 }
 
 /**

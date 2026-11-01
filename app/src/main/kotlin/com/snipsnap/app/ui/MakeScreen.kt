@@ -81,7 +81,7 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
             TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "OPEN A KIT FOR NEW PADS. MY VOICE CAN KEEP A PERSONAL SOURCE FIRST.",
                 TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
-        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS)) {
+        for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS, Bench.CONFLUENCE_VOICES)) {
             MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
         }
         if (onMyVoice != null) MakeRow("MY VOICE ▸", "A SHORT VOWEL INTO A PERSONAL VOICE. KEPT ON THIS PHONE.", scheme, onMyVoice)
