@@ -11,6 +11,9 @@ import com.snipsnap.kit.ArrangedPad
  * is just a WAV like any other. Every pad carries its [PadRecipe].
  */
 object SynthKits {
+    /** Eight BRUSH scale notes and eight accepted voice/profile/touch contrasts. */
+    fun accord(): List<ArrangedPad> = AccordKits.arranged()
+
     /** The sixteen auditioned finite Otis performances, retaining their complete score recipes. */
     fun otis(): List<ArrangedPad> = OtisPresets.all().map { patch ->
         pad(patch, Otis.drumClassFor(patch)).copy(oneShot = true, displayName = patch.name,

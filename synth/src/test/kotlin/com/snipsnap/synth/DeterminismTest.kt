@@ -31,6 +31,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ACCORD retains its accepted voices profiles and saved mechanical history`() {
+        for (reference in AccordPresets.all()) {
+            val patch = reference.copy(sourceSeconds = Accord.MIN_SOURCE_SECONDS)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, patch.name)
+        }
+    }
+
+    @Test
     fun `OTIS accepted chords retain source state after cold recipe replay`() {
         for (voice in OtisVoice.entries) {
             val patch = OtisPresets.forVoice(voice).first { "CHORD" in it.name }

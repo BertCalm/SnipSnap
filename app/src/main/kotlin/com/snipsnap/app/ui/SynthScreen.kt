@@ -275,6 +275,10 @@ import com.snipsnap.synth.LibrationKeys
 import com.snipsnap.synth.LibrationPatch
 import com.snipsnap.synth.LibrationRenderSession
 import com.snipsnap.synth.LibrationVoice
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
+import com.snipsnap.synth.AccordVoice
+import com.snipsnap.synth.AccordAcousticProfile
 import com.snipsnap.synth.Meridian
 import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.MeridianVoice
@@ -816,7 +820,7 @@ fun SynthScreen(
                                 it.name == settings[presetSettingsKey(e, v)]
                             } as? OrphicaPatch)
                     } else null
-                    val nativeFactory = if (e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
+                    val nativeFactory = if (e == Engine.ACCORD || e == Engine.RIME || e == Engine.FILAMENT || e == Engine.CHAMBER || e == Engine.TREMOR || e == Engine.NACRE || e == Engine.MERIDIAN || e == Engine.OTIS) {
                         factoryPresets(e, v).firstOrNull {
                             it.name == settings[presetSettingsKey(e, v)]
                         }
@@ -831,6 +835,7 @@ fun SynthScreen(
                         ?: if (e == Engine.FILAMENT) seed.seededFilamentPatches[v as FilamentVoice]
                         else if (e == Engine.PLUCK && v == PluckVoice.UPRIGHT)
                             seed.seededDrafts.filterIsInstance<PluckPatch>().firstOrNull { it.voice == PluckVoice.UPRIGHT }
+                        else if (e == Engine.ACCORD) seed.seededDrafts.firstOrNull { it is AccordPatch && it.voice == v }
                         else if (e == Engine.RIME) seed.seededDrafts.filterIsInstance<RimePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.OTIS) seed.seededDrafts.firstOrNull { it is OtisPatch && it.voice == v }
                         else if (e == Engine.TIDAL) seed.seededDrafts.firstOrNull { it is TidalPatch && it.voice == v }
@@ -868,7 +873,7 @@ fun SynthScreen(
                         else -> embouchureRestore.macrosFor(e, v, settings) ?: defaults.mapValues { (name, fallback) ->
                             // Finite voices reserve HOLD: a stale
                             // navigation value must not leave the voice stuck.
-                            if ((e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
+                            if ((e == Engine.ACCORD || e == Engine.CAUSTIC || e == Engine.CHAMBER || e == Engine.NACRE || e == Engine.LIBRATION) && name == "HOLD") fallback
                             else if (e == Engine.TIDAL && name == "HOLD") {
                                 if (settings[macroSettingsKey(e, v, name)]?.toFloatOrNull() == 1f) 1f else 0f
                             } else settings[macroSettingsKey(e, v, name)]?.toFloatOrNull()
@@ -1002,7 +1007,7 @@ fun SynthScreen(
     fun currentDrafts(): List<Patch> = loadedPatchesByVoice.map { (pair, patch) ->
         // Native physical instruments keep complete recipes in the
         // existing draft format, including a last-frame macro edit before navigation.
-        if (patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        if (patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is CausticPatch || patch is NacrePatch || patch is OverlapPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1071,6 +1076,14 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: ScannedChainPatch(name, voice as ScannedChainVoice, controls)
+        }
+        if (engine == Engine.ACCORD) {
+            // A profile/root edit and SAVE can share one frame. Read the live
+            // typed recipe so its profile, initializer and exact seed survive.
+            val current = loadedPatchesByVoice[engine to voice] as? AccordPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: AccordPatch(name, voice as AccordVoice, controls)
         }
         if (engine == Engine.OVERLAP) {
             // Mode, note and release edits can share a frame with SAVE/SEND.
@@ -1296,6 +1309,9 @@ fun SynthScreen(
         // that edited recipe so onDispose can flush it before navigation.
         if (pair !in loadedPatchesByVoice) {
             when (engine) {
+                Engine.ACCORD -> loadedPatchesByVoice[pair] = AccordPatch(
+                    engine.patchDisplayName(voice), voice as AccordVoice, macrosByVoice.getValue(pair),
+                )
                 Engine.OTIS -> loadedPatchesByVoice[pair] = OtisPatch(
                     engine.patchDisplayName(voice), voice as OtisVoice, macrosByVoice.getValue(pair))
                 Engine.FILAMENT -> loadedPatchesByVoice[pair] = FilamentPatch(
@@ -1431,6 +1447,16 @@ fun SynthScreen(
             ("HOLD" to (patch.macros["HOLD"] ?: 0f))
         macrosByVoice[engine to voice] = controls
         for ((name, value) in controls) settings[macroSettingsKey(engine, voice, name)] = value.toString()
+    }
+    fun updateAccordPatch(expectedVoice: AccordVoice, change: (AccordPatch) -> AccordPatch) {
+        if (engine != Engine.ACCORD || voice != expectedVoice) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? AccordPatch ?: return
+        touched = true
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[engine to voice] = change(patch)
+        // Navigation can dispose the screen before its composition effects.
+        SynthDrafts.write(settings, currentDrafts())
     }
     fun updateOverlapPatch(change: (OverlapPatch) -> OverlapPatch) {
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? OverlapPatch ?: return
@@ -1574,6 +1600,7 @@ fun SynthScreen(
                         }
                         if (editable is ShoalPatch) macrosByVoice[pair] = Shoal.defaults(editable.voice) + editable.macros
                         if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
+                        if (editable is AccordPatch) macrosByVoice[pair] = Accord.defaults(editable.voice) + editable.macros
                         if (editable is RimePatch) macrosByVoice[pair] = Rime.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
@@ -1777,7 +1804,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.ACCORD || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -1838,13 +1865,11 @@ fun SynthScreen(
     }
 
     // ---- SEND TO PAD ----
-    var showChooser by remember { mutableStateOf(false) }
-    var sendBusy by remember { mutableStateOf(false) }
+    val padChooser = remember { PadChooserState() }
     // → SURFACE opened the chooser: after the landing, point the kit's
     // surface at the slot and open the SURFACE screen on it. Read at the
     // start of the send, so a chooser opened one way and cancelled cannot
     // leak its intent into the next.
-    var sendToSurface by remember { mutableStateOf(false) }
     val kit = entry?.kit
     val reopeningPad = remember { mutableStateOf(false) }
     val reopenablePads = kit?.pads.orEmpty().filter { pad ->
@@ -1879,10 +1904,10 @@ fun SynthScreen(
 
     fun sendToSlot(slot: Int) {
         val e = entry ?: return
-        if (sendBusy) return
+        if (padChooser.sendBusy) return
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
-        sendBusy = true
-        val toSurface = sendToSurface
+        padChooser.sendBusy = true
+        val toSurface = padChooser.sendToSurface
         appScope.launch {
             try {
                 // The patch's own init validates its macros (Patches.
@@ -1906,6 +1931,7 @@ fun SynthScreen(
                 val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
                 val meridianLanding = (patch as? MeridianPatch)?.let { MeridianSynth.padLanding(it, activeRecipe) }
                 val cls = meridianLanding?.drumClass ?: when (patch) {
+                    is AccordPatch -> Accord.drumClassFor(patch)
                     is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                     is OtisPatch -> Otis.drumClassFor(patch)
                     is OhmPatch -> Ohm.drumClassFor(patch)
@@ -1914,6 +1940,7 @@ fun SynthScreen(
                 // These engines author their pitch. Detection can invent a cent
                 // offset and retune an already equal-tempered note.
                 val authoredMidi = when (patch) {
+                    is AccordPatch -> patch.midi
                     is OtisPatch -> Otis.midiFor(patch)
                     is LibrationPatch -> patch.midi
                     is MeridianPatch -> requireNotNull(meridianLanding).knownRootMidi
@@ -1983,7 +2010,8 @@ fun SynthScreen(
                             // ORIGAMI retains its existing finite-note behavior.
                             val knownTune = when {
                                 patch is ApsisPatch && cls == DrumClass.LOOP -> 0 to 0
-                                (patch is FilamentPatch || patch is ChamberPatch) && reopenedHere -> null
+                                (patch is AccordPatch || patch is FilamentPatch || patch is ChamberPatch) && reopenedHere -> null
+                                patch is AccordPatch && !reopenedHere -> 0 to 0
                                 patch is FilamentPatch && cls == DrumClass.LOOP -> 0 to 0
                                 patch is TidalPatch && !reopenedHere -> 0 to 0
                                 else -> tonalRoot?.let { model.tuningForKnownRoot(it) }
@@ -2001,7 +2029,7 @@ fun SynthScreen(
                                         drumClass = if (meridianLanding != null) deliveredClass else identified.drumClass,
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
                                         tuneFine = knownTune?.second ?: identified.tuneFine,
-                                        oneShot = meridianLanding?.oneShot ?: if (patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
+                                        oneShot = meridianLanding?.oneShot ?: if (patch is AccordPatch || patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
                                         loop = if (meridianLanding != null) false else identified.loop,
                                         source = when {
                                             patch is FilamentPatch && reopenedHere ->
@@ -2030,12 +2058,19 @@ fun SynthScreen(
                         }
                         if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
                         if (patch is LibrationPatch) model.update(slot) { LibrationPad.configure(it, patch, resetHeldTuning = true) }
+                        if (patch is AccordPatch) model.update(slot) {
+                            // LOOP is duration filing; this finite performance
+                            // never acquires a pad loop or a note-off gate.
+                            it.copy(loop = false, oneShot = true,
+                                tuneCoarse = if (reopenedHere) it.tuneCoarse else 0,
+                                tuneFine = if (reopenedHere) it.tuneFine else 0)
+                        }
                         if (patch is RimePatch) model.update(slot) { RimePad.configure(it, patch) }
                         model.save()
                         alreadyThere to model.kit
                     }
                 }
-                showChooser = false
+                padChooser.showChooser = false
                 onKitUpdated(updatedKit)
                 if (toSurface) {
                     // The pad is on disk; now the surface's own sidecar says
@@ -2075,8 +2110,8 @@ fun SynthScreen(
                     onToast(Copy.SEND_FAILED)
                 }
             } finally {
-                sendBusy = false
-                sendToSurface = false
+                padChooser.sendBusy = false
+                padChooser.sendToSurface = false
             }
         }
     }
@@ -2479,12 +2514,13 @@ fun SynthScreen(
     val spreadState = remember { SpreadState() }
 
     fun openSpread() {
-        if (spreadState.opening || sendBusy || entry == null) return
+        if (spreadState.opening || padChooser.sendBusy || entry == null) return
         if (embouchureRestore.waitsForRecipe(engine, voice)) return
         spreadState.opening = true
         val patch = buildCurrentPatch(engine.patchDisplayName(voice))
         val cls = if (patch is MeridianPatch) MeridianSynth.padLanding(patch).drumClass
             else when (patch) {
+                is AccordPatch -> Accord.drumClassFor(patch)
                 is RimePatch -> Rime.drumClassFor(patch.voice, patch.macros, patch.gateSeconds, patch.model)
                 is OtisPatch -> Otis.drumClassFor(patch)
                 is OhmPatch -> Ohm.drumClassFor(patch)
@@ -2873,6 +2909,11 @@ fun SynthScreen(
                                     .copy(velocity = value.coerceIn(0f, 1f))
                         },
                     )
+                }
+
+                if (engine == Engine.ACCORD) {
+                    AccordPerformanceControls(buildCurrentPatch(engine.patchDisplayName(voice)) as AccordPatch,
+                        classColor, scheme, ::updateAccordPatch)
                 }
 
                 if (engine == Engine.LIBRATION) {
@@ -3496,6 +3537,9 @@ fun SynthScreen(
                             engine == Engine.FLOCK ->
                                 Flock.scramble(voice as FlockVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.ACCORD ->
+                                Accord.scramble(voice as AccordVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.TIDAL ->
                                 Tidal.scramble(voice as TidalVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -3540,20 +3584,20 @@ fun SynthScreen(
                         presets.namingPreset = true
                     }
                     LabButton(
-                        if (sendBusy) "…" else "SEND TO PAD ▸",
+                        if (padChooser.sendBusy) "…" else "SEND TO PAD ▸",
                         scheme,
-                        enabled = kit != null && !sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
+                        enabled = kit != null && !padChooser.sendBusy && !embouchureRestore.waitsForRecipe(engine, voice),
                         modifier = Modifier.weight(1f),
                         accessibilityLabel = "SEND TO PAD",
                     ) {
                         if (embouchureRestore.waitsForRecipe(engine, voice)) return@LabButton
-                        showChooser = true
+                        padChooser.showChooser = true
                     }
                 }
                 LabButton(
                     "REOPEN PAD ▸ EDIT ITS RECIPE",
                     scheme,
-                    enabled = reopenablePads.isNotEmpty() && !sendBusy,
+                    enabled = reopenablePads.isNotEmpty() && !padChooser.sendBusy,
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "REOPEN PAD RECIPE",
                 ) {
@@ -3563,9 +3607,9 @@ fun SynthScreen(
                     val slot = source.slot
                     val target = kit?.pad(slot)
                     LabButton(
-                        if (sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
+                        if (padChooser.sendBusy) "…" else "UPDATE PAD ${padTag(slot)}",
                         scheme,
-                        enabled = !sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
+                        enabled = !padChooser.sendBusy && target != null && target.velocityLayers.isEmpty() && target.chain == null,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         sendToSlot(slot)
@@ -3576,7 +3620,7 @@ fun SynthScreen(
                 LabButton(
                     if (spreadState.opening) "…" else "SPREAD ▸ SCALE ACROSS PADS",
                     scheme,
-                    enabled = kit != null && !sendBusy && !spreadState.opening &&
+                    enabled = kit != null && !padChooser.sendBusy && !spreadState.opening &&
                         !embouchureRestore.waitsForRecipe(engine, voice),
                     modifier = Modifier.fillMaxWidth(),
                     accessibilityLabel = "SPREAD ACROSS PADS",
@@ -3589,14 +3633,14 @@ fun SynthScreen(
                 // replay its sweep at every wrap (the spec's SURFACE section).
                 if (engine == Engine.SIREN && Siren.isLoop(macros.getValue("HOLD"))) {
                     LabButton(
-                        if (sendBusy && sendToSurface) "…" else "→ SURFACE ▸",
+                        if (padChooser.sendBusy && padChooser.sendToSurface) "…" else "→ SURFACE ▸",
                         scheme,
-                        enabled = kit != null && !sendBusy,
+                        enabled = kit != null && !padChooser.sendBusy,
                         modifier = Modifier.fillMaxWidth(),
                         accessibilityLabel = "TO SURFACE",
                     ) {
-                        sendToSurface = true
-                        showChooser = true
+                        padChooser.sendToSurface = true
+                        padChooser.showChooser = true
                     }
                 }
                 // RESIN, SIREN, GLINT or OPENSKY HALO, held: the sound as a
@@ -3707,18 +3751,18 @@ fun SynthScreen(
             )
         }
 
-        if (showChooser) {
-            val cancelChooser = { if (!sendBusy) { showChooser = false; sendToSurface = false } }
+        if (padChooser.showChooser) {
+            val cancelChooser = { if (!padChooser.sendBusy) { padChooser.showChooser = false; padChooser.sendToSurface = false } }
             SlotChooserOverlay(
                 kit = kit,
                 previewColor = classColor,
                 scheme = scheme,
-                busy = sendBusy,
+                busy = padChooser.sendBusy,
                 onPick = ::sendToSlot,
                 onCancel = cancelChooser,
             )
             // Innermost: same self-guarded cancel as the overlay's own
-            // CANCEL — a send in flight (sendBusy) makes both no-ops.
+            // CANCEL — a send in flight (padChooser.sendBusy) makes both no-ops.
             SynthOverlayBackHandler(onBack = cancelChooser)
         }
 
@@ -4114,6 +4158,14 @@ private class SpreadState {
     var drumClass by mutableStateOf(DrumClass.TONAL)
     var opening by mutableStateOf(false)
     var busy by mutableStateOf(false)
+}
+
+/** The SEND TO PAD chooser's state in one remembered holder, keeping SynthScreen's register count down. */
+private class PadChooserState {
+    var showChooser by mutableStateOf(false)
+    var sendBusy by mutableStateOf(false)
+    // Surface intent is cleared together with the chooser on cancel or send.
+    var sendToSurface by mutableStateOf(false)
 }
 
 /**
@@ -5185,6 +5237,47 @@ private fun HeldProgress(done: Int, total: Int, fillColor: Color, scheme: Scheme
     }
 }
 
+/** Copy the current typed performance rather than a stale composition snapshot. */
+@Composable
+internal fun AccordPerformanceControls(
+    patch: AccordPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (AccordVoice, (AccordPatch) -> AccordPatch) -> Unit,
+) {
+    MacroSlider("ROOT", (patch.midi - Accord.MIN_MIDI).toFloat() / (Accord.MAX_MIDI - Accord.MIN_MIDI),
+        fill, scheme, readout = Scales.nameOf(patch.midi), onValueChange = { value ->
+            onEdit(patch.voice) { current -> current.copy(midi =
+                (Accord.MIN_MIDI + value * (Accord.MAX_MIDI - Accord.MIN_MIDI))
+                    .roundToInt().coerceIn(Accord.MIN_MIDI, Accord.MAX_MIDI)) }
+        })
+    MacroSlider("TOUCH", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    MacroSlider("LENGTH", kotlin.math.sqrt((patch.sourceSeconds - Accord.MIN_SOURCE_SECONDS) /
+        (Accord.MAX_SOURCE_SECONDS - Accord.MIN_SOURCE_SECONDS)).toFloat(), fill, scheme,
+        readout = "%.2f s".format(Locale.ROOT, patch.sourceSeconds), onValueChange = { value ->
+            val v = value.coerceIn(0f, 1f).toDouble()
+            val seconds = Accord.MIN_SOURCE_SECONDS + (Accord.MAX_SOURCE_SECONDS - Accord.MIN_SOURCE_SECONDS) * v * v
+            onEdit(patch.voice) { it.copy(sourceSeconds = (seconds * 1000).roundToInt() / 1000.0) }
+        })
+    if (patch.voice == AccordVoice.TINE) {
+        TapeText("PROFILE", TapeType.pixelSmall, scheme.ink2.tape)
+        for (row in listOf(AccordAcousticProfile.REFERENCE, AccordAcousticProfile.SOFT_ATTACK,
+            AccordAcousticProfile.BRIGHT_EDGE, AccordAcousticProfile.LONG_RING).chunked(2)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                for (profile in row) {
+                    val title = profile.name.replace('_', ' ')
+                    ActionButton(title, scheme, enabled = true, lit = patch.acousticProfile == profile,
+                        modifier = Modifier.weight(1f).semantics { selected = patch.acousticProfile == profile },
+                        accessibilityLabel = "ACCORD PROFILE $title",
+                    ) { onEdit(patch.voice) { it.copy(acousticProfile = profile) } }
+                }
+            }
+        }
+    }
+    TapeText("PLAYS ONCE · LET THE TAIL RING.", TapeType.lcdSmall, scheme.ink2.tape)
+}
+
 /** Performance and playback controls live outside the already large bench composable. */
 @Composable
 private fun LibrationControls(patch: LibrationPatch, color: Color, scheme: Scheme, onChange: (LibrationPatch) -> Unit) {
@@ -5326,7 +5419,7 @@ private enum class ObbligatoVoice { AIR_REED }
  * a given engine ever comes from.
  */
 private enum class Engine {
-    LATTICE,
+    LATTICE, ACCORD,
     THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME;
     val displayName: String get() = name.replace('_', ' ')
 
@@ -5399,6 +5492,7 @@ private enum class Engine {
         APSIS -> ApsisVoice.entries
         OVEN -> OvenVoice.entries
         LIBRATION -> LibrationVoice.entries
+        ACCORD -> AccordVoice.entries
         ORIGAMI -> OrigamiVoice.entries
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
@@ -5473,6 +5567,7 @@ private enum class Engine {
         APSIS -> Apsis.macrosFor(voice as ApsisVoice)
         OVEN -> Oven.macrosFor(voice as OvenVoice)
         LIBRATION -> Libration.macrosFor(voice as LibrationVoice).filterNot { it.name == "HOLD" }
+        ACCORD -> Accord.macrosFor(voice as AccordVoice).filterNot { it.name == "HOLD" }
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
         MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
@@ -5545,6 +5640,7 @@ private enum class Engine {
         APSIS -> Apsis.defaults(voice as ApsisVoice)
         OVEN -> Oven.defaults(voice as OvenVoice)
         LIBRATION -> Libration.defaults(voice as LibrationVoice)
+        ACCORD -> Accord.defaults(voice as AccordVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
         MERCURY -> Mercury.defaults(voice as MercuryVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
@@ -5619,6 +5715,7 @@ private enum class Engine {
         APSIS -> Apsis.scramble(voice as ApsisVoice, random)
         OVEN -> Oven.scramble(voice as OvenVoice, random)
         LIBRATION -> Libration.scramble(voice as LibrationVoice, random)
+        ACCORD -> Accord.scramble(voice as AccordVoice, random)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice).mapValues { (_, value) ->
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
@@ -5703,6 +5800,7 @@ private enum class Engine {
         APSIS -> Apsis.render(voice as ApsisVoice, macros)
         OVEN -> Oven.render(voice as OvenVoice, macros)
         LIBRATION -> buildPatch(patchDisplayName(voice), voice, macros).render()
+        ACCORD -> Accord.render(voice as AccordVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
@@ -5781,6 +5879,7 @@ private enum class Engine {
         APSIS -> Apsis.drumClassFor(voice as ApsisVoice, macros)
         OVEN -> Oven.drumClassFor(voice as OvenVoice, macros)
         LIBRATION -> LibrationKeys.drumClass(voice as LibrationVoice, macros)
+        ACCORD -> Accord.drumClassFor(voice as AccordVoice, macros)
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
         MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
@@ -5855,6 +5954,7 @@ private enum class Engine {
         OVEN -> OvenPatch(name, voice as OvenVoice, macros)
         LIBRATION -> LibrationPatch(name, voice as LibrationVoice, macros,
             heldModel = if (LibrationKeys.isHeld(macros["HOLD"] ?: 0f)) LibrationKeys.MODEL_VERSION else 0)
+        ACCORD -> AccordPatch(name, voice as AccordVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)

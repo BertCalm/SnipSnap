@@ -3,6 +3,11 @@ package com.snipsnap.shell
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.json.Json
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordAcousticProfile
+import com.snipsnap.synth.AccordInitializer
+import com.snipsnap.synth.AccordPatch
+import com.snipsnap.synth.AccordVoice
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.CisternPatch
 import com.snipsnap.synth.CisternVoice
@@ -309,6 +314,11 @@ class UserPresetsTest {
                 assertEquals("LorentzPatch", (call.receiver as KotlinLiteral.Call).name)
                 val promoted = com.snipsnap.synth.LorentzPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: complete collision model and native touch promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is AccordPatch) {
+                val promoted = accordFromRosterLine(line)
+                assertEquals(preset, promoted, "${preset.name}: complete acoustic profile and performance promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is com.snipsnap.synth.RimePatch) {
@@ -918,6 +928,51 @@ class UserPresetsTest {
         return FilamentPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
     }
 
+    private fun accordFromRosterLine(line: String): AccordPatch {
+        val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+        assertEquals("fromJsonText", call.name)
+        val receiver = call.receiver as KotlinLiteral.Call
+        assertEquals("AccordPatch", receiver.name)
+        assertTrue(receiver.positional.isEmpty() && receiver.named.isEmpty() && call.named.isEmpty())
+        return AccordPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+    }
+
+    @Test
+    fun `Accord promotion retains every acoustic profile and the exact saved performance`() {
+        val profiles = listOf(
+            AccordVoice.BRUSH to AccordAcousticProfile.BASE,
+            AccordVoice.WOOD to AccordAcousticProfile.BASE,
+            AccordVoice.TINE to AccordAcousticProfile.REFERENCE,
+            AccordVoice.TINE to AccordAcousticProfile.SOFT_ATTACK,
+            AccordVoice.TINE to AccordAcousticProfile.BRIGHT_EDGE,
+            AccordVoice.TINE to AccordAcousticProfile.LONG_RING,
+        )
+        for ((index, selection) in profiles.withIndex()) {
+            val (voice, profile) = selection
+            for (seed in listOf(Long.MIN_VALUE, Long.MAX_VALUE)) {
+                val patch = AccordPatch(
+                    name = "PROMOTED \"\$touch\" \\\n\t${voice.name} ${profile.name}",
+                    voice = voice,
+                    macros = Accord.defaults(voice) + mapOf("PACE" to .37123457f, "RAFT" to .8123457f),
+                    midi = 36 + index * 7,
+                    velocity = .27123457f,
+                    seed = seed,
+                    acousticProfile = profile,
+                    initializer = AccordInitializer.PROJECT_SINE_V1,
+                    sourceStartCycles = 2.125 + index * .125,
+                    sourceSeconds = 1.375 + index * .0625,
+                )
+                val promoted = accordFromRosterLine(UserPresets.rosterLine(patch))
+                assertEquals(patch, promoted, "${voice.name}/$profile: every saved field survives promotion")
+                assertEquals(patch.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+                assertEquals(patch.velocity.toRawBits(), promoted.velocity.toRawBits())
+                assertEquals(patch.sourceStartCycles.toRawBits(), promoted.sourceStartCycles.toRawBits())
+                assertEquals(patch.sourceSeconds.toRawBits(), promoted.sourceSeconds.toRawBits())
+                assertEquals("AccordPresets.kt", UserPresets.rosterFile(patch))
+            }
+        }
+    }
+
     private fun otisFromRosterLine(line: String): OtisPatch {
         val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
         assertEquals("fromJsonText", call.name)
@@ -989,7 +1044,14 @@ class UserPresetsTest {
             val table = File("../" + UserPresets.ROSTER_DIR + UserPresets.rosterFile(engine))
             assertTrue(table.isFile, "the table a $engine preset pastes into: $table")
             val text = table.readText(Charsets.UTF_8)
-            if (engine == "ONSET") {
+            if (engine == AccordPatch.ENGINE) {
+                val decoder = AccordPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(AccordPatch::class.java, decoder.returnType,
+                    "ACCORD promotion names its public complete-recipe constructor")
+                assertTrue("AccordPatch(" in text, "ACCORD's table accepts complete typed recipes")
+                val patch = Presets.all().first { it.engine == engine }
+                assertEquals(patch, accordFromRosterLine(UserPresets.rosterLine(patch)))
+            } else if (engine == "ONSET") {
                 // ONSET's promotion writes its constructor directly so the
                 // saved renderer version is explicit, independent of a helper.
                 val patch = Presets.all().first { it.engine == engine }

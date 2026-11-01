@@ -12,6 +12,7 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.Keel
 import com.snipsnap.synth.KeelPatch
@@ -116,6 +117,7 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is AccordPatch -> patch.midi.toFloat()
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is OtisPatch -> Otis.midiFor(patch).toFloat()
         is com.snipsnap.synth.LorentzPatch -> com.snipsnap.synth.Lorentz.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
