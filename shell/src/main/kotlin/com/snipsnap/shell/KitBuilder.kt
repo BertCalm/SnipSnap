@@ -1477,6 +1477,30 @@ class KitBuilderModel private constructor(
     }
 
     /**
+     * Every file name a print's saved source names, at every level under every print THE BIN could
+     * still bring back: each live printed pad, and each ejected one whose tombstone BACK can
+     * reinstate. REMOVE (and the print's own UNDO) restores those files and first checks each one
+     * by hash (`PrintedPadStore.requireRestoreSafe`), so BACK on a bin row under one of these names
+     * would overwrite a file the print then refuses to restore, for good. THE BIN shows no BACK on
+     * such a row (the owner's call, 2026-11-01); once the print is removed, the name leaves this set
+     * and BACK comes back. Throws when a saved source will not read, as [unprinted] does.
+     */
+    fun filesUnderPrints(): Set<String> {
+        val names = HashSet<String>()
+        for (top in kit.pads + binContents().mapNotNull { it.padSnapshot }) {
+            var under = top
+            val seen = HashSet<com.snipsnap.json.JsonValue.Obj>()
+            while (PrintedPads.has(under.recipe)) {
+                require(seen.add(under.recipe!!)) { "pad ${top.slot}'s prints loop back on themselves" }
+                under = PrintedPads.sourcePad(kitDir, under)
+                names += under.sampleFile
+                under.velocityLayers.mapTo(names) { it.sampleFile }
+            }
+        }
+        return names
+    }
+
+    /**
      * The launch sweep (`App.kt`, once per kit): every entry whose [BinHold.purgeAtMillis] is before
      * [nowMillis] leaves, its tombstone with it, and an original a pad still needs ([binHolds]) stays
      * however old it is. Fail closed: the whole [binHolds] answer exists before the first delete, so

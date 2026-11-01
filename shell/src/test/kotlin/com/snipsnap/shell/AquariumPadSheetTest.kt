@@ -332,9 +332,10 @@ class AquariumPadSheetTest {
         val m = model(name = "BinKeptNested", recipe = null)
         val original = bytes(m)
         m.treatPad(1, "crushed")
-        BoardSheet.apply(m, 1, .35f)
+        val board = BoardSheet.apply(m, 1, .35f)
         AquariumPadSheet.apply(m, 1, context(), renderer)
         m.save()
+        assertEquals(setOf(board.sampleFile, "main.wav"), m.filesUnderPrints(), "both levels under the aquarium: the board's file and the treated pad's")
 
         val swept = KitBuilderModel.open(m.kitDir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
         assertEquals(0, swept, "the sweep took the original the board's treated source needs")
