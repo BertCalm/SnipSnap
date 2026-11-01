@@ -142,17 +142,19 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
 
     @Test
     fun theArrowsStepOneEngineEitherWayAndWrap() {
-        show("LATTICE")
-        isOn("LATTICE")
-        // LATTICE is the first engine in the enum and RIME the last (MERIDIAN is second to last).
+        // The ring is the catalogue's order, so the ends are read from it: the next engine
+        // appended moves them, and this test follows instead of breaking.
+        val ring = EngineCatalog.ENTRIES.keys.map { it.replace('_', ' ') }
+        show(ring.first())
+        isOn(ring.first())
         tap("PREVIOUS ENGINE")
-        isOn("RIME")
+        isOn(ring.last())
         tap("PREVIOUS ENGINE")
-        isOn("MERIDIAN")
+        isOn(ring[ring.size - 2])
         tap("NEXT ENGINE")
-        isOn("RIME")
+        isOn(ring.last())
         tap("NEXT ENGINE")
-        isOn("LATTICE")
+        isOn(ring.first())
         tap("NEXT ENGINE")
         isOn("ACCORD")
         assertEquals("BRUSH", settings["voice"])
@@ -279,5 +281,7 @@ class SynthEngineHeaderTest : ComposeScreenTest() {
             tap("NEXT ENGINE")
         }
         assertEquals("every engine was visited once", EngineCatalog.ENTRIES.size, seen.toSet().size)
+        assertEquals("stepping NEXT walks the catalogue in order",
+            EngineCatalog.ENTRIES.keys.map { it.replace('_', ' ') }, seen)
     }
 }
