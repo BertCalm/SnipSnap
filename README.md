@@ -644,6 +644,8 @@ GLASS comparisons; the generator includes the four new factory recipes.
 [Implementation notes](docs/PRISM.md) describe the controls and contracts.
 The [motion studio](docs/PRISM_MOTION_STUDIO.md) adds source selection,
 amount/time editing and opt-in repeating motion in a separate detail panel.
+With REPEAT and looping HOLD, [MAKE INSTRUMENT](docs/PRISM_OPENING_SUSTAIN.md)
+keeps one body opening before a repeating sustain and note-off release.
 
 SHOAL separates resonant bodies from their movement: WOOD, BOWL and WIRE are
 animated by GLASS or RIPPLE energy transport. Velocity changes contact and

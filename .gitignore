@@ -523,3 +523,6 @@ testkit/SnipSnap Scour Kit/
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/
 testkit/obbligato-more-overlap-audition/
+
+# PRISM opening-once / repeating-sustain listening evidence.
+testkit/prism-opening-sustain-audition/
