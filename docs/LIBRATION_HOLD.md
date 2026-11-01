@@ -1,9 +1,9 @@
 # Libration: sustained instrument
 
-Status: implemented and published; the nine-module JVM suite and both Android
-APK builds pass. The owner accepted finite phone/MPC behavior on 2026-10-31
-and authorized this milestone. The new sustain still needs owner listening
-and phone/MPC checks.
+Status: implemented and published. The complete JVM baseline and current
+integration checks pass; their source revisions and scope are recorded below.
+The owner accepted finite phone/MPC behavior on 2026-10-31 and authorized this
+milestone. New HOLD listening and phone/MPC acceptance remain pending.
 Implementation base: `c65d2521f5391f8443182a06bfbfff2eb8360459`.
 
 The characteristic gesture is **strike → gather into a recurring orbit → sustain
@@ -134,7 +134,7 @@ files through `InstrumentEngine`; authored-touch and release comparisons use
 the same source and player. All listening WAVs use one monitor gain of .75.
 
 Across those 27 exported zones, measured from source revision
-`56c401e36596e8004d11b38bf1774555b5862eaa`:
+`7d137063985c7f7dbb6c14cc0afada6508e9172d`:
 
 | Quantity | Maximum |
 |---|---:|
@@ -147,7 +147,7 @@ Across those 27 exported zones, measured from source revision
 | Unconditioned peak | `.34085` |
 | Physical-source relative Jacobi drift | `1.316e-14` |
 
-Serial elapsed time per zone was 1.98..9.54 seconds, median 4.78 seconds on the
+Serial elapsed time per zone was 1.95..10.44 seconds, median 4.09 seconds on the
 cloud JVM. The first zone prepares physics; later zones reuse that population.
 These are fresh audio renders with session reuse, not phone timings or audio
 cache hits. The 4×/16× bright-C6 diagnostic measured normalized spectral-power
@@ -160,6 +160,10 @@ byte-exact ZIP round trips. An independent RIFF/ZIP/WAV audit passed all 27
 zones and 18 clips, and confirmed 361 existing finite WAV/JSON/ZIP files remain
 byte-identical. Chromium checks at 1440 and 390 pixels cover all clips, seeking,
 notes, notes export, instrument download and the retained twelve-preset bank.
+The refreshed handoff retains all eighteen listening WAVs and all 27 native sample WAVs
+byte-for-byte. Independent read-back verifies the authored range and NoteOn
+metadata in all 81 phone/MPC zone descriptors; the three ZIPs round-trip.
+The browser UI and listening media are unchanged.
 
 Rebuild the handoff from a clean committed checkout:
 
@@ -172,18 +176,32 @@ audition folders and their archives remain separate.
 
 ## Build validation (2026-11-01)
 
-The full nine-module JVM command exited zero: 7,505 tests, zero failures and
-errors, 0 skipped. The tested source is
-`efe80df64dc2c3db6cb9661ae4413acc4d25751d`, including the
-default-branch integration `95b53d655e3d29a3d222fdeeb462b49d677ac863`. Gradle
-reused unchanged module results normally. Preset promotion reconstructs
-finite, held and returned-NOTE recipes.
+The complete nine-module JVM command exited zero at
+`efe80df64dc2c3db6cb9661ae4413acc4d25751d`: 7,505 tests, zero failures or errors,
+zero skipped. That baseline includes default revision
+`95b53d655e3d29a3d222fdeeb462b49d677ac863`; Gradle reused unchanged module results.
 
-Both `:app:assembleDebug` and `:app:assembleDebugAndroidTest` completed from
-`efe80df64dc2c3db6cb9661ae4413acc4d25751d` with SDK 35 and JDK 21;
-the app v2 signature verifies. All source inputs still match the build
-snapshot. Device UI tests compiled but were not executed locally; no phone
-timing or new HOLD hardware acceptance is claimed.
+The current integration includes default `7cb8f34507c664ad671b952f93934c0bc53265c5`.
+At `7d137063985c7f7dbb6c14cc0afada6508e9172d`, 198 focused JVM checks across five
+modules pass, covering every Libration test, saved-preset promotion, the
+sample player and shared phone/MPC serialization. The five Libration
+rendering files still match the complete baseline. Full current-head
+[PR CI](https://github.com/BertCalm/SnipSnap/pull/812) remains a separate gate.
+
+The package exporter now explicitly retains the authored clipped range and
+declares NoteOn in legacy XPM as well as native MPC 3. Before opting out of
+the shared exporter's new full-keyboard default, the new read-back test
+failed on the actual 0..127 expansion at root 36. It now checks all three
+descriptors at roots 36, 37, 60, 83 and 84. The package rewrite test also
+reuses the exported file path for its second read.
+
+Both `:app:assembleDebug` and `:app:assembleDebugAndroidTest` pass from the
+current source above with SDK 35 and JDK 21; the app v2 signature verifies.
+The STRIKE FX APK assembles, Crease Study Kotlin compiles, and its five host
+unit tests pass. All six native CTest executables pass with assertions
+enabled. Source inputs still match their build snapshot. Device UI tests
+compiled but were not executed locally; no phone render timing or new HOLD
+hardware acceptance is claimed.
 
 ## Listening and device checks
 
@@ -217,7 +235,8 @@ action. This is a new check, separate from the accepted finite instrument.
   Kotlin focused checks pass actual phase/state/preceding-and-following-cycle
   closure, 4×/16× high-note spectral agreement, JSON guards, cancellation,
   bounded-cache identity, dual-MPC loop metadata and real sample-player release.
-  The full suite passes 7,505 tests; both Android APK builds pass.
+  The complete baseline passes 7,505 tests; current integration passes 198
+  focused JVM checks, both Android APK builds and six native executables.
   On-device UI execution and new HOLD listening remain pending.
 - Proposed: musical usefulness of repeating the readout and the selected
   three-period settling budget outside the measured configuration set.
