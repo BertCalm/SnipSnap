@@ -1228,6 +1228,12 @@ in its own order. On the pad sheet, AMT is staged until KEEP, original/result
 previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
 See [`docs/WIDE.md`](docs/WIDE.md).
 
+**OBLITERATE** adds an octave halo before fuzz, captured fragments and stereo chop.
+Its staged board saves SHIMMER, clock and pattern controls alongside AMT, retains
+the shared original across every velocity zone, and caches completed renders for
+repeated auditions. Existing WIDE/RUSH recipes keep their original version and sound.
+See [`docs/OBLITERATE.md`](docs/OBLITERATE.md) for controls, timing and device profiling.
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
