@@ -1521,7 +1521,13 @@ fun SynthScreen(
                     is OhmPatch -> if (onScreen) updateOhmPerformance { next }
                     is MeridianPatch -> if (onScreen) keepMeridianPatch(next)
                     is TidalPatch -> updateTidalPatch(next.voice) { next }
-                    else -> loadedPatchesByVoice[pair] = next
+                    else -> {
+                        loadedPatchesByVoice[pair] = next
+                        // Written now, not on the next frame: a rebuild of the screen in this
+                        // frame reads the drafts before the old one is disposed, and the slider
+                        // this replaced wrote its edit the same way.
+                        SynthDrafts.write(settings, currentDrafts())
+                    }
                 }
             }
         }
