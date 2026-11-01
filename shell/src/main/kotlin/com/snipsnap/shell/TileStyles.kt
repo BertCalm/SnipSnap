@@ -205,8 +205,16 @@ internal object TileStyles {
         canvas.strokePath(path, size * 0.10f, ArtFill.Solid(palette.field2, 0.18f))
         canvas.strokePath(path, size * 0.05f, ArtFill.Solid(palette.field1, 0.35f))
         canvas.strokePath(path, size * 0.022f, ArtFill.Linear(m, 0f, size - m, 0f, palette.field1, palette.field2))
-        val tracking = 0.18f
-        val (text, fitted) = TileType.fitTrackedText(canvas, label.uppercase(), ArtFont.SPACE_GROTESK_BOLD, zone.w.toFloat(), minOf(size * 0.08f, zone.h * 0.6f), tracking)
+        // Wide tracking is the look, but never at the cost of the name's size: a long name gives up
+        // its tracking before it gives up its height.
+        val maxSize = minOf(size * 0.08f, zone.h * 0.6f)
+        var tracking = 0.18f
+        var fit = TileType.fitTrackedText(canvas, label.uppercase(), ArtFont.SPACE_GROTESK_BOLD, zone.w.toFloat(), maxSize, tracking)
+        if (fit.second < maxSize * 0.75f) {
+            tracking = 0f
+            fit = TileType.fitTrackedText(canvas, label.uppercase(), ArtFont.SPACE_GROTESK_BOLD, zone.w.toFloat(), maxSize, tracking)
+        }
+        val (text, fitted) = fit
         TileType.tracked(canvas, text, ArtFont.SPACE_GROTESK_BOLD, fitted, zone.x.toFloat(), zone.y + zone.h * 0.72f, tracking, palette.ink)
     }
 

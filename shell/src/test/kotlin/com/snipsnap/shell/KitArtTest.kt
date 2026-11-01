@@ -320,6 +320,26 @@ class KitArtTest {
     }
 
     @Test
+    fun `the name is never set too small to read`() {
+        // Every strip style under every mark variant, with a long name, at the export size: the
+        // name's lit rows must span at least 3.5 percent of the tile, which is about four pixels
+        // of cap height once the MPC browser scales the tile to 128.
+        val dir = File(temp, "floor")
+        buildKit(dir)
+        val kit = Kit("DUST_BREAK_DELUXE_TAKE", KitStore.load(dir).pads)
+        KitStore.save(kit, dir)
+        val size = 600
+        val strip = listOf(KitArt.Style.RIBBON, KitArt.Style.WAVEFORM, KitArt.Style.GRID, KitArt.Style.SLICES, KitArt.Style.RINGS)
+        for (variant in Mark.Variant.entries) for (style in strip) {
+            val img = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size))
+            val bare = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size, label = ""))
+            val rows = (0 until size).filter { y -> (0 until size).any { x -> rgb(img, x, y) != rgb(bare, x, y) } }
+            val span = rows.last() - rows.first() + 1
+            assertTrue(span >= size * 0.035, "${style.id}/${variant.id}: the name stands $span px tall, wants ${size * 0.035}")
+        }
+    }
+
+    @Test
     fun `the name keeps a clear gap before the mark`() {
         // The strip styles share a row with the mark; a long name must stop a full margin short of it,
         // the same breathing room the tile keeps at its edges.
@@ -330,11 +350,13 @@ class KitArtTest {
         val size = 600
         val strip = listOf(KitArt.Style.RIBBON, KitArt.Style.WAVEFORM, KitArt.Style.GRID, KitArt.Style.SLICES, KitArt.Style.RINGS)
         for (variant in Mark.Variant.entries) {
-            val (markX, _) = KitArt.markOrigin(probeCanvas(), variant, size)
+            val (markX, markY) = KitArt.markOrigin(probeCanvas(), variant, size)
             for (style in strip) {
                 val img = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size))
                 val bare = decode(KitArt.png(kit, dir, knobs(style, mark = variant), size = size, label = ""))
                 val zone = KitArt.nameZone(probeCanvas(), style, variant, size)
+                // A name on its own row above the mark shares no row with it: no gap to keep.
+                if (zone.y + zone.h <= markY) continue
                 val right = (0 until size).lastOrNull { x ->
                     (zone.y until zone.y + zone.h).any { y -> rgb(img, x, y) != rgb(bare, x, y) }
                 } ?: continue

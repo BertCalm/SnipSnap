@@ -254,7 +254,8 @@ object KitArt {
      * The box the name must stay inside; KitArtTest measures legibility over
      * it. A strip zone ends one margin before where the mark actually starts,
      * measured on [canvas], so every variant gets the same breathing room on
-     * either platform's type.
+     * either platform's type; when that leaves less than half the tile, the
+     * name moves to its own row above the mark rather than shrink to a smudge.
      */
     internal fun nameZone(canvas: ArtCanvas, style: Style, variant: Mark.Variant, size: Int): Box = when (style) {
         Style.BLOOM -> {
@@ -273,7 +274,15 @@ object KitArt {
         else -> {
             val m = margin(size)
             val markX = markOrigin(canvas, variant, size).first
-            Box(m, Math.round(size * 0.80f), maxOf(1, (markX - m).toInt() - m), Math.round(size * 0.14f))
+            val beside = (markX - m).toInt() - m
+            if (beside >= size / 2) {
+                // The name shares the bottom row with the mark, ending a margin before it.
+                Box(m, Math.round(size * 0.80f), beside, Math.round(size * 0.14f))
+            } else {
+                // A wide mark (the one-line lockup) would squeeze the name to a smudge: the name
+                // takes its own full-width row above the mark's, between the field and the mark.
+                Box(m, Math.round(size * 0.775f), size - 2 * m, Math.round(size * 0.115f))
+            }
         }
     }
 
