@@ -5,6 +5,7 @@ from pathlib import Path
 import subprocess
 import wave
 import zipfile
+import sys
 from datetime import datetime, timezone
 import numpy as np
 import matplotlib
@@ -12,7 +13,7 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import playable as b
 
-out=b.ROOT/'testkit/crease-playable-release'
+out=Path(sys.argv[1]).resolve() if len(sys.argv)>1 else b.ROOT/'testkit/crease-playable-release'
 m=json.loads((out/'manifest.json').read_text())
 entries={}
 for clip in m['clips']:
@@ -43,7 +44,7 @@ axes[1].axhline(-.025,color='#687749',ls='--',lw=1)
 axes[1].set_ylabel('Cache − exact');axes[1].set_xlabel('Milliseconds after key-up')
 axes[1].legend(frameon=False,loc='upper right',fontsize=8)
 for ax in axes: ax.grid(alpha=.15);ax.set_xlim(0,30)
-fig.suptitle('Reed Mark C4: a 137 ms tap, delivered PCM16\nA small early waveform mismatch remains')
+fig.suptitle('Reed Mark C4: a 137 ms tap, delivered PCM16\nCached and exact release waveforms')
 for suffix in ['png','pdf']:
     metadata={'CreationDate':datetime(2026,10,31,tzinfo=timezone.utc),
               'ModDate':datetime(2026,10,31,tzinfo=timezone.utc)} if suffix=='pdf' else None

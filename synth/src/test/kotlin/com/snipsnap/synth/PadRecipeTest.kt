@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.Snip
+import com.snipsnap.json.Json
 import com.snipsnap.json.JsonException
 import com.snipsnap.json.JsonValue
 import com.snipsnap.kit.KitAssembler
@@ -8,6 +9,7 @@ import com.snipsnap.kit.KitStore
 import java.io.File
 import kotlin.test.AfterTest
 import kotlin.test.Test
+import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
@@ -35,6 +37,7 @@ class PadRecipeTest {
     }
 
     private fun handBuiltPatches(): List<Patch> = listOf(
+        ErosionPatch("Crater Test", ErosionVoice.CRATER, velocity = .6f),
         OtisPresets.forVoice(OtisVoice.SQUEEZE).first { it.name == "SHARED KEYS" }.copy(name = "Otis replay", midi = 57, velocity = .6f, seed = -31),
         CausticPatch("Saved Alloy", CausticVoice.ALLOY, mapOf("BODY" to .65f, "LENGTH" to 0f), midi = 55, velocity = .42f, model = 1),
         ThumpPatch("Kick Test", ThumpVoice.KICK, mapOf("TUNE" to 0.3f)),
@@ -52,6 +55,7 @@ class PadRecipeTest {
         MercuryPatch("Ping Test", MercuryVoice.PING, mapOf("GLASS" to 0.4f)),
         GyrePatch("Flick Test", GyreVoice.FLICK, mapOf("BODY" to 0.7f)),
         GyrePatch("Drawn Test", GyreVoice.DRAWN, mapOf("TOUCH" to 0.6f, "BODY" to 0.7f)),
+        MeridianPatch("Swing Test", MeridianVoice.SWEEP, mapOf("MEMORY" to .6f), midi = 57, velocity = .6f, seedContext = 41),
         MagnetPatch("Jangle Test", MagnetVoice.JANGLE, mapOf("MUTE" to 0.4f)),
         AerostatPatch("Float Test", AerostatVoice.FLOAT, mapOf("STRIKE" to 0.7f)),
         FlotillaPatch("Wake Test", FlotillaVoice.RIPPLE, mapOf("SURFACE" to 0.4f), midi = 64),
@@ -83,6 +87,8 @@ class PadRecipeTest {
         ChamberPatch("Room Test", ChamberVoice.AQUARIUM, mapOf("DIVIDE" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
         LibrationPatch("Gather Test", LibrationVoice.GATHER, mapOf("SWARM" to .4f), midi = 55, velocity = .6f),
         TidalPatch("Encounter Test", TidalVoice.STREAM, mapOf("TAIL" to .7f), midi = 55, velocity = .6f, seed = Long.MAX_VALUE),
+        // KEEL is rostered, but every factory preset sits on the default root at full velocity; this patch carries a saved note and velocity.
+        KeelPatch("Settle Test", KeelVoice.REDUCE, mapOf("SETTLE" to .3f, "WEIGHT" to .7f), midi = 42, velocity = .6f),
         OhmPatch("Family Test", mapOf("LENGTH" to 0f, "MEDDLING" to .7f, "COMMUNE" to .8f),
             midi = 57, velocity = .6f, seed = -7, gesture = OhmGesture.GATHER),
     )
@@ -353,5 +359,49 @@ class PadRecipeTest {
         val recipe = PadRecipe.fromJsonValue(treated.recipe)
         assertEquals("crushed", recipe.treatment)
         assertEquals(0.4f, recipe.amount)
+    }
+
+    @Test fun `a version 2 recipe reads with no layers and re-saves as version 2 unchanged, a banked one as version 3`() {
+        val v2 = Json.parse("""{"recipe":2,"fx":{"fx":1,"spring":{"SIZE":0.25}},"alias":false}""")
+        val parsed = PadRecipe.fromJsonValue(v2)
+        assertNull(parsed.layers)
+        val again = parsed.toJsonValue()
+        assertEquals(2, again.entries["recipe"]!!.int())
+        val banked = parsed.copy(layers = listOf(LayerRecipe("DRY"), LayerRecipe("ECHO", fx = parsed.fx)))
+        assertEquals(3, banked.toJsonValue().entries["recipe"]!!.int())
+        // FxChain writes its defaulted reverse flag, so raw entries differ; every field must still survive.
+        assertEquals(parsed, PadRecipe.fromJsonValue(again))
+        assertTrue("layers" !in again.entries)
+        assertEquals(false, (again.entries["alias"] as JsonValue.Bool).value)
+    }
+
+    @Test fun `a banked recipe round-trips its layers`() {
+        val bank = listOf(
+            LayerRecipe("DRY"),
+            LayerRecipe("ROOM", FxChain(spring = mapOf("SIZE" to 0.42f, "TONE" to 0.7f, "MIX" to 1f)), 4f),
+            LayerRecipe("ECHO", FxChain(echo = mapOf("TIME" to 0.9f, "REPEAT" to 0.55f, "TONE" to 0.8f, "MIX" to 0.9f)), 4f),
+        )
+        val recipe = PadRecipe(layers = bank)
+        assertEquals(recipe, PadRecipe.fromJsonValue(recipe.toJsonValue()))
+        assertEquals(listOf("DRY", "ROOM", "ECHO"), PadRecipe.fromJsonValue(recipe.toJsonValue()).layers!!.map { it.name })
+    }
+
+    @Test fun `layers alone satisfy the empty-recipe guard`() {
+        PadRecipe(layers = listOf(LayerRecipe("DRY")))
+        assertFailsWith<IllegalArgumentException> { PadRecipe(layers = emptyList()) }
+    }
+
+    @Test fun `an unknown version is still refused`() {
+        assertFailsWith<JsonException> { PadRecipe.fromJsonValue(Json.parse("""{"recipe":4}""")) }
+    }
+
+    @Test fun `processBank returns DRY untouched then one snip per layer`() {
+        val source = Snip(FloatArray(4410) { if (it == 0) 0.8f else 0f }, 1, 44100)
+        val bank = PadRecipe(layers = listOf(LayerRecipe("DRY"), LayerRecipe("ROOM", FxChain(spring = mapOf("SIZE" to 0.42f, "TONE" to 0.7f, "MIX" to 1f)), 4f)))
+        val out = bank.processBank(source)
+        assertEquals(2, out.size)
+        assertContentEquals(source.samples, out[0].samples)
+        assertTrue(out[1].frameCount > source.frameCount)
+        assertTrue(out[1].samples.all { it.isFinite() })
     }
 }

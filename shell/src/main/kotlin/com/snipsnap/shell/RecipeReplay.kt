@@ -6,6 +6,7 @@ import com.snipsnap.synth.AquariumOfflineRenderer
 import com.snipsnap.synth.AquariumRenderRecipe
 import com.snipsnap.synth.PadRecipe
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.xpm.PadNoteMap
 
 /**
@@ -54,6 +55,8 @@ object RecipeReplay {
         data class Dust(val amount: Float, val tape: String) : Plan()
         /** A synth patch: replaying it REPLACES the destination's sound with the patch's own render. */
         data class Patch(val recipe: PadRecipe) : Plan()
+        /** A STRIKE FX bank: replaying it re-renders DRY/ROOM/ECHO from the destination's own sample at [room] and [slap]. */
+        data class StrikeFx(val room: Float, val slap: Float) : Plan()
         /** Round robin: complete, but the deal mixes the seed with the slot — same recipe, new deal. */
         data class RobinDeal(val takes: Int, val seed: Int, val zones: Int?) : Plan()
         /** Refused, in the words the toast says. */
@@ -104,6 +107,15 @@ object RecipeReplay {
                 }
             }
             return Plan.Refused(Copy.REPLAY_NO_DOOR)
+        }
+        if ("layers" in e) {
+            val banked = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
+            if (banked != null && StrikeFxBank.isStrikeFx(banked)) {
+                // Named layers without their dials (hand-edited, or from a later build) is no bank to replay.
+                val room = StrikeFxBank.roomOf(banked)
+                val slap = StrikeFxBank.slapOf(banked)
+                if (room != null && slap != null) return Plan.StrikeFx(room, slap)
+            }
         }
         if ("patch" in e) {
             val parsed = runCatching { PadRecipe.fromJsonValue(recipe) }.getOrNull()
@@ -193,6 +205,7 @@ object RecipeReplay {
                 model.replaceAudio(slot, p.recipe.toJsonValue()) { p.recipe.render() },
                 Copy.replayedPatch(padName),
             )
+            is Plan.StrikeFx -> Done(model.strikeFxLayers(slot, p.room, p.slap), Copy.STRIKE_FX_ON)
             is Plan.RobinDeal -> Done(
                 Robin.apply(model, slot, takes = p.takes, seed = p.seed, zones = p.zones),
                 Copy.replayedRobin(p.takes, padName),
