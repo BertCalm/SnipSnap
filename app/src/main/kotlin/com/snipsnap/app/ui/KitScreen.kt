@@ -458,9 +458,13 @@ fun KitScreen(
     // MIDI learn (the footer's LEARN): a key, pad or button on MIDI MAP or
     // PANIC, through `:shell`'s KitMidi. Learned controls are consumed before
     // MidiPads sees them, so a pad on PANIC no longer plays a pad too.
-    val learnState = rememberMidiLearn(KitMidi.SCREEN) { KitMidi.prefer(it) }
+    val learnState = rememberMidiLearn(KitMidi.SCREEN, kinds = KitMidi::kinds) { KitMidi.prefer(it) }
     var showLearn by remember { mutableStateOf(false) }
-    LaunchedEffect(showLearn) { learnState.showing = showLearn }
+    // The panel shows only while a keyboard is plugged in; when the last one
+    // goes, a learn still waiting is stopped with it, so whatever the next
+    // keyboard sends on connecting cannot be learned unasked.
+    val learnShown = showLearn && midiDevices.isNotEmpty()
+    LaunchedEffect(learnShown) { learnState.showing = learnShown }
 
     val onMidi by rememberUpdatedState<(MidiWire.Event, String?) -> Unit>({ event, device ->
         learnState.heard(event)
@@ -495,7 +499,11 @@ fun KitScreen(
                 }
             }
             // The cable is out: a gated pad it held would ring until PANIC.
-            override fun onDeviceRemoved() = onPanic()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learnState.learn.releaseAll()
+                onPanic()
+            }
         }
     }
 
@@ -520,6 +528,8 @@ fun KitScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learnState.learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)
@@ -1185,7 +1195,7 @@ fun KitScreen(
                     KitLearnChip(showLearn) { showLearn = !showLearn }
                 }
             }
-            if (showLearn && midiDevices.isNotEmpty()) {
+            if (learnShown) {
                 MidiLearnPanel(
                     learnState,
                     KitMidi.TARGETS,

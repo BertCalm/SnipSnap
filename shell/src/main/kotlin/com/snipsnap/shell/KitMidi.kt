@@ -25,6 +25,10 @@ object KitMidi {
     fun prefer(target: String): MidiBinding.Mode? =
         if (target == MAP || target == PANIC) MidiBinding.Mode.TRIGGER else null
 
+    /** Messages that can fire: a bend strip or pressure brushed while MAP or PANIC waits is not learned. */
+    fun kinds(target: String): Set<MidiBinding.Kind>? =
+        if (target == MAP || target == PANIC) setOf(MidiBinding.Kind.NOTE, MidiBinding.Kind.CC, MidiBinding.Kind.PROGRAM) else null
+
     /** What some actions ask of the screen: how many times to step the map, and whether to panic. */
     data class Change(val mapSteps: Int, val panic: Boolean)
 

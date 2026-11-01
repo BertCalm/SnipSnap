@@ -12,7 +12,7 @@ class KitMidiTest {
     private val minilab = "usb:1c75:20b:4:4:abc"
 
     private fun learn(learn: MidiLearn, target: String, event: Event) {
-        learn.arm(target, KitMidi.prefer(target))
+        learn.arm(target, KitMidi.prefer(target), KitMidi.kinds(target))
         learn.handle(event, minilab) { null }
     }
 
@@ -53,6 +53,28 @@ class KitMidiTest {
         val r = learn.handle(Event.Control(0, MidiWire.CC_ALL_NOTES_OFF, 0), minilab) { null }
         assertFalse(r.consumed)
         assertTrue(learn.bindings.isEmpty())
+    }
+
+    @Test fun `bend or pressure brushed while MAP waits is not learned, and MAP keeps waiting`() {
+        val learn = MidiLearn()
+        learn(learn, KitMidi.MAP, Event.NoteOn(9, 44, 1f))
+        learn.handle(Event.NoteOff(9, 44), minilab) { null }
+        learn.arm(KitMidi.MAP, KitMidi.prefer(KitMidi.MAP), KitMidi.kinds(KitMidi.MAP))
+        assertFalse(learn.handle(Event.PitchBend(0, 4000), minilab) { null }.consumed)
+        assertFalse(learn.handle(Event.ChannelPressure(9, 90), minilab) { null }.consumed)
+        assertEquals(KitMidi.MAP, learn.armed, "still waiting for a key, pad or button")
+        assertEquals(MidiBinding.Kind.NOTE, learn.bindings.single().source.kind, "the working pad is kept")
+    }
+
+    @Test fun `a button whose release was lost fires again after releaseAll`() {
+        val learn = MidiLearn()
+        learn(learn, KitMidi.PANIC, Event.Control(0, 23, 127))
+        learn.handle(Event.Control(0, 23, 0), minilab) { null }
+        assertTrue(learn.change(Event.Control(0, 23, 127)).panic)
+        // The cable comes out with the button held: its release never arrives.
+        assertFalse(learn.change(Event.Control(0, 23, 127)).panic, "without releaseAll the next press looks like a repeat")
+        learn.releaseAll()
+        assertTrue(learn.change(Event.Control(0, 23, 127)).panic, "after releaseAll it is a press again")
     }
 
     @Test fun `actions for another screen change nothing here`() {
