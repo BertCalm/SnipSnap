@@ -1,10 +1,9 @@
 package com.snipsnap.synth
 
 /**
- * Six dry current-model listening recipes at one root and strike level. The bank contrasts
- * orbital gestures before pitch or velocity changes: one distant body, a close rush,
- * a ringing population, gathered/staggered arrivals, and a recurring return.
- * The gathered pair differs only in ALIGN, so the timing comparison stays attributable.
+ * Six frozen PASSAGE recipes plus three starters each for GRAIN and ANCHOR.
+ * The new voices begin at the study's native .65 strike level, with a distinct
+ * movement variation and a held version. ANCHOR starts one octave lower.
  */
 object ApsisPresets {
     private fun p(name: String, stretch: Float, distance: Float, bodies: Float, align: Float,
@@ -22,6 +21,27 @@ object ApsisPresets {
         p("Held Return", .75f, .65f, .60f, .65f, .65f, hold = 1f),
     )
 
-    fun forVoice(@Suppress("UNUSED_PARAMETER") voice: ApsisVoice): List<ApsisPatch> = passage
-    fun all(): List<ApsisPatch> = passage
+    private fun population(name: String, voice: ApsisVoice, overrides: Map<String, Float> = emptyMap(),
+        midi: Int = Apsis.DEFAULT_MIDI) = ApsisPatch(name, voice, Apsis.defaults(voice) + overrides,
+            midi = midi, velocity = .65f)
+
+    private val grain = listOf(
+        population("Grain Passage", ApsisVoice.GRAIN),
+        population("Scattered Grains", ApsisVoice.GRAIN, mapOf("STRETCH" to .85f, "ALIGN" to .15f,
+            "BODIES" to .7f, "COUPLE" to .65f)),
+        population("Held Grains", ApsisVoice.GRAIN, mapOf("HOLD" to 1f)),
+    )
+    private val anchor = listOf(
+        population("Anchor Bass", ApsisVoice.ANCHOR, midi = 48),
+        population("Hollow Surge", ApsisVoice.ANCHOR, mapOf("STRETCH" to .8f, "DISTANCE" to .65f,
+            "BODIES" to .2f, "COUPLE" to .65f), midi = 48),
+        population("Held Anchor", ApsisVoice.ANCHOR, mapOf("HOLD" to 1f), midi = 48),
+    )
+
+    fun forVoice(voice: ApsisVoice): List<ApsisPatch> = when (voice) {
+        ApsisVoice.PASSAGE -> passage
+        ApsisVoice.GRAIN -> grain
+        ApsisVoice.ANCHOR -> anchor
+    }
+    fun all(): List<ApsisPatch> = passage + grain + anchor
 }

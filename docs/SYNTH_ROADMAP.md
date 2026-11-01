@@ -2750,7 +2750,11 @@ path. Saved models 1/2 retain their audio. Scoped engine/export checks and
 desktop/mobile audition checks pass; physical MPC playback and the owner's
 musical-bank verdict remain open.
 
-Android integration adds APSIS to SYNTH with PASSAGE and the six presets,
+Android integration adds APSIS to SYNTH with PASSAGE, GRAIN and ANCHOR.
+PASSAGE keeps its six presets and native bank; each new voice has three starters.
+The preferred Python GRAIN/ANCHOR laws now render in Kotlin with model-3 recipes,
+immutable geometry reuse and complete held material state.
+[Port notes](APSIS-POPULATIONS.md) record fidelity and verification. All voices use
 independent ROOT/VELOCITY, all six movement controls, complete recipe restoration,
 SAVE PRESET/YOURS, SPREAD's authored root and SEND TO PAD. Held previews repeat
 the settled cycle until STOP. Held pads carry a saved full-sample loop flag and
