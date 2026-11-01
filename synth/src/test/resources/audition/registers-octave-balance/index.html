@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#201c1b">
+  <link rel="icon" href="data:,">
+  <title>Octave balance · SnipSnap Registers</title>
+  <meta name="description" content="Compare the calmer TRANSISTOR voice with stronger octave registration at matched listening levels.">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><a class="brand" href="../">SNIP<span>/</span>SNAP</a><a href="../?study=sustain&amp;voice=TRANSISTOR#listen">Full listening bench ↗</a></header>
+  <main>
+    <p class="eyebrow">REGISTERS / TRANSISTOR / OCTAVE BALANCE</p>
+    <h1>Bring out the octaves<span>.</span></h1>
+    <p class="intro">Compare the calmer voice with stronger octave registration. The played note, drive and gentle motion stay fixed. Listen for a fuller upper balance, and whether it brings too much brightness.</p>
+    <section class="bench" aria-labelledby="listen-title">
+      <div class="bench-top"><h2 id="listen-title">Same motion. More octave tone.</h2><label for="note">Pitch <select id="note"><option value="48">C3 · low</option><option value="60" selected>C4 · middle</option><option value="72">C5 · high</option></select></label></div>
+      <div class="choices" role="group" aria-label="Play a direction">
+        <button type="button" data-direction="calm" aria-pressed="false" disabled><span class="number">01 / REFERENCE</span><strong>Current balance</strong><span>Calmer ensemble · COLOR .42</span><span class="play-mark" aria-hidden="true">▶</span></button>
+        <button type="button" data-direction="octave" aria-pressed="true" disabled><span class="number">02 / OCTAVE TEST</span><strong>More octave</strong><span>Same gentle motion · COLOR .65</span><span class="play-mark" aria-hidden="true">▶</span></button>
+      </div>
+      <div class="player">
+        <div><p class="eyebrow">MATCHED LISTENING LEVEL</p><h3 id="selected-title">More octave · C4</h3></div>
+        <audio id="audio" controls preload="metadata" aria-label="Selected direction audio"></audio>
+        <p class="hint">Compare Current balance → More octave at the same pitch. Let each note hold for a few seconds before switching.</p>
+        <p id="status" role="status" aria-live="polite">Opening the comparison…</p>
+        <div class="downloads"><a id="wav" download hidden>Download this WAV ↓</a><a id="recipe" download hidden>Download this setting ↓</a></div>
+      </div>
+    </section>
+    <section class="explanation" aria-labelledby="changes-title"><h2 id="changes-title">What changes</h2><div class="notes"><p><strong>Current balance</strong> is the calmer ensemble from the earlier comparison. It keeps the round foundation prominent, with restrained upper octave ranks.</p><p><strong>More octave</strong> raises COLOR to bring those upper ranks forward. That control also opens the tone filter and slightly reduces the round foundation’s share, so judge both richness and brightness.</p></div><p class="footnote">Bank spread, vibrato, drive, keying controls, pitch and velocity match on both sides. All clips include the keyboard attack and repeated sustain at matched listening levels. More octave is a listening candidate.</p></section>
+    <p class="footer"><a href="../ensemble/">Return to the calmer ensemble comparison ↗</a><span>SNIP/SNAP · LISTENING BENCH</span></p>
+  </main>
+</body>
+</html>

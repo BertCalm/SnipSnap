@@ -400,4 +400,48 @@ class PadSheetTest {
             PadSheet.unTreatState(layered, setOf("a1_kick_soft.wav")),
         )
     }
+
+    /**
+     * THE BIN hides BACK on a kept row only where the pad's own sheet can give that entry back
+     * (the owner's call, 2026-10-31): NONE over a card treatment, MUTATE's or OUTSIDE's UNDO for the
+     * main file. A SPLICE, a DE-SAMPLE or anything else with no door on the sheet keeps BACK,
+     * because BACK is then its only way back in the app.
+     */
+    @Test
+    fun `a pad has its own way back only through a door its sheet really has`() {
+        fun obj(json: String) = com.snipsnap.json.Json.parse(json) as JsonValue.Obj
+        val main = "a1_kick.wav"
+        val soft = "a1_kick_soft.wav"
+        val both = setOf(main, soft)
+
+        assertTrue(PadSheet.hasOwnWayBack(treated(ERA), main, both), "an era: NONE")
+        val layered = treated(ERA, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertTrue(PadSheet.hasOwnWayBack(layered, soft, both), "NONE restores every file the pad plays, a layer too")
+        assertFalse(PadSheet.hasOwnWayBack(layered, soft, setOf(soft)), "NONE refuses while the main file is not binned")
+        // Soft hits added after the treatment: NONE refuses until SOFT HITS goes off, then gives the
+        // main file back. Clearing the soft hits drops every layer, so a layer's entry is not given back.
+        val ghosted = treated(ERA, listOf(KitLayer(soft, 1, 40), KitLayer("a1_kick_softer.wav", 41, 80), KitLayer(main, 81, 127)))
+        assertEquals(PadSheet.UnTreat.GHOSTS_POSTDATE, PadSheet.unTreatState(ghosted, both), "test setup: one soft hit never went in")
+        assertTrue(PadSheet.hasOwnWayBack(ghosted, main, both), "soft hits after the treatment: SOFT HITS off, then NONE")
+        assertFalse(PadSheet.hasOwnWayBack(ghosted, soft, both), "SOFT HITS off drops the layers, so NONE never gives a layer back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), main, setOf(soft)), "nothing in the bin under the file, nothing to give back")
+        assertFalse(PadSheet.hasOwnWayBack(treated(ERA), "someone_else.wav", both + "someone_else.wav"), "not one of the pad's files")
+
+        val mutate = obj("""{"mutate":{"mode":"morph","with":["B02"]}}""")
+        assertTrue(MutateSheet.read(mutate) != null, "test setup: a MUTATE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(mutate), main, both), "a MUTATE: its UNDO")
+        val mutatedLayers = treated(mutate, listOf(KitLayer(soft, 1, 63), KitLayer(main, 64, 127)))
+        assertFalse(PadSheet.hasOwnWayBack(mutatedLayers, soft, both), "MUTATE's UNDO restores the main file only, never a layer")
+
+        val outside = obj("""{"outside":{"move":"reamp"}}""")
+        assertTrue(OutsideSheet.read(outside) != null, "test setup: an OUTSIDE the sheet reads")
+        assertTrue(PadSheet.hasOwnWayBack(treated(outside), main, both), "an OUTSIDE: its UNDO")
+
+        val splice = obj("""{"splice":{"crossfaded":true}}""")
+        assertFalse(PadSheet.hasOwnWayBack(treated(splice), main, both), "a SPLICE has no door on the sheet: BACK stays")
+        val patch = obj("""{"recipe":2,"patch":{"engine":"VELVET","voice":"BASS","macros":{}}}""")
+        val desampled = treated(patch).copy(source = mapOf("desampled" to "0.12"))
+        assertFalse(PadSheet.hasOwnWayBack(desampled, main, both), "a DE-SAMPLE has no door on the sheet: BACK stays")
+        assertFalse(PadSheet.hasOwnWayBack(treated(null), main, both), "an untreated pad has nothing to undo")
+    }
 }
