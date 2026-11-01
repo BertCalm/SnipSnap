@@ -4,7 +4,6 @@ __pycache__/
 
 build/
 testkit/crease-playable-release/
-testkit/crease-phone-release/
 # Libration's generated listening audio, MPC packs and source snapshots.
 testkit/libration-audition/
 testkit/libration-audition-r2/
@@ -501,6 +500,10 @@ testkit/obbligato-conversation-audition/
 # Crease's isolated release-state experiment; regenerate from scripts/crease-release/.
 testkit/crease-release-experiment/
 
+# Regenerated Crease phone release cache and validation captures.
+testkit/crease-phone-release/
+testkit/crease-phone-release-r2/
+
 # Rebuildable native CAUSTIC voice comparisons and four-voice kit.
 testkit/caustic-native-voices-audition/
 testkit/caustic-native-voices-kit/
@@ -521,5 +524,3 @@ testkit/SnipSnap Scour Kit/
 # Generated OBBLIGATO player overlap comparison.
 testkit/obbligato-overlap-audition/
 testkit/obbligato-more-overlap-audition/
-
-testkit/crease-phone-release-r2/
