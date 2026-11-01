@@ -125,6 +125,12 @@ object EngineCatalog {
         "RIME" to EngineEntry(listOf(EngineCategory.SYNTH, EngineCategory.KEYS), "Contour bass, bright keys and unfolding ringing textures"),
         "LIBRATION" to EngineEntry(listOf(EngineCategory.KEYS, EngineCategory.BELLS), "Wooden and glassy notes with moving, lingering overtones"),
         "MERIDIAN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.PADS), "Swinging contacts leave wood, wire and glass ringing"),
+        // BORE, ARCO, SCOUR and KEEL reached the picker together (2026-11-01). Classified from each
+        // engine's KDoc, its spec and KEEL.md, not from a listen.
+        "BORE" to EngineEntry(listOf(EngineCategory.WINDS), "Blown flute and saxophone tones with breath and chiff"),
+        "ARCO" to EngineEntry(listOf(EngineCategory.STRINGS), "Bowed cello and erhu notes, from slow swells to stabs"),
+        "SCOUR" to EngineEntry(listOf(EngineCategory.PADS, EngineCategory.BELLS), "Shot-blasted plates that build to a slam, then ring"),
+        "KEEL" to EngineEntry(listOf(EngineCategory.BASS), "Bass notes whose bright attack settles into a heavy body"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

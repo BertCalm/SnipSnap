@@ -237,6 +237,18 @@ import com.snipsnap.synth.MacroSpec
 import com.snipsnap.synth.Mercury
 import com.snipsnap.synth.MercuryPatch
 import com.snipsnap.synth.MercuryVoice
+import com.snipsnap.synth.Bore
+import com.snipsnap.synth.BorePatch
+import com.snipsnap.synth.BoreVoice
+import com.snipsnap.synth.Arco
+import com.snipsnap.synth.ArcoPatch
+import com.snipsnap.synth.ArcoVoice
+import com.snipsnap.synth.Scour
+import com.snipsnap.synth.ScourPatch
+import com.snipsnap.synth.ScourVoice
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.Murk
 import com.snipsnap.synth.MurkPatch
 import com.snipsnap.synth.MurkVoice
@@ -1940,13 +1952,17 @@ fun SynthScreen(
                 val patch = buildCurrentPatch(name)
                 // A SIREN one-shot carries the rack's ECHO in its recipe and
                 // renders through it; a SIREN LOOP lands dry, since the
-                // SURFACE's echo is its own (Siren.landingChain). An unmoved
+                // SURFACE's echo is its own (Siren.landingChain). A BORE one-shot
+                // carries TAPE and a BORE LOOP lands dry (Bore.landingChain), as
+                // SynthKits.bore() lands them. An unmoved
                 // string machine (VELVET / RESIN BRASS) carries its ENSEMBLE the
                 // same way, found from the macros so a moved slider or a
                 // player's own sound under a factory name lands dry
                 // (Presets.landingFor). Every other sound lands with no chain,
                 // exactly as before.
-                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros) else Presets.landingFor(engine.name, voice.name, macros)
+                val fx = if (engine == Engine.SIREN) Siren.landingChain(macros)
+                    else if (engine == Engine.BORE) Bore.landingChain(macros)
+                    else Presets.landingFor(engine.name, voice.name, macros)
                 val meridianLanding = (patch as? MeridianPatch)?.let { MeridianSynth.padLanding(it, activeRecipe) }
                 val cls = meridianLanding?.drumClass ?: when (patch) {
                     is AccordPatch -> Accord.drumClassFor(patch)
@@ -4148,6 +4164,9 @@ private fun macroReadout(
     engine == Engine.SUTURE && name == "HOLD" && Suture.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.SPOOL && name == "HOLD" && Spool.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.REVEL && name == "HOLD" && Revel.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.BORE && name == "HOLD" && Bore.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.ARCO && name == "HOLD" && Arco.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.KEEL && name == "HOLD" && Keel.isLoop(macros.getValue(name)) -> "LOOP"
     else -> null
 }
 
@@ -5204,7 +5223,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -5286,6 +5305,10 @@ private enum class Engine {
         CHAMBER -> ChamberVoice.entries
         MERIDIAN -> MeridianVoice.entries
         NACRE -> NacreVoice.entries
+        BORE -> BoreVoice.entries
+        ARCO -> ArcoVoice.entries
+        SCOUR -> ScourVoice.entries
+        KEEL -> KeelVoice.entries
     }
 
     fun macrosFor(voice: Enum<*>) = when (this) {
@@ -5354,6 +5377,10 @@ private enum class Engine {
         ACCORD -> Accord.macrosFor(voice as AccordVoice).filterNot { it.name == "HOLD" }
         ORIGAMI -> Origami.macrosFor(voice as OrigamiVoice)
         MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
+        BORE -> Bore.macrosFor(voice as BoreVoice)
+        ARCO -> Arco.macrosFor(voice as ArcoVoice)
+        SCOUR -> Scour.macrosFor(voice as ScourVoice)
+        KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
         CHAMBER -> Chamber.macrosFor(voice as ChamberVoice).filter { it.name != "HOLD" }
@@ -5427,6 +5454,10 @@ private enum class Engine {
         ACCORD -> Accord.defaults(voice as AccordVoice)
         ORIGAMI -> Origami.defaults(voice as OrigamiVoice)
         MERCURY -> Mercury.defaults(voice as MercuryVoice)
+        BORE -> Bore.defaults(voice as BoreVoice)
+        ARCO -> Arco.defaults(voice as ArcoVoice)
+        SCOUR -> Scour.defaults(voice as ScourVoice)
+        KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
         CHAMBER -> Chamber.defaults(voice as ChamberVoice)
@@ -5504,6 +5535,10 @@ private enum class Engine {
             (value + (random.nextFloat() - .5f) * .7f).coerceIn(0f, 1f)
         }
         MERCURY -> Mercury.scramble(voice as MercuryVoice, random)
+        BORE -> Bore.scramble(voice as BoreVoice, random)
+        ARCO -> Arco.scramble(voice as ArcoVoice, random)
+        SCOUR -> Scour.scramble(voice as ScourVoice, random)
+        KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
         CHAMBER -> Chamber.scramble(voice as ChamberVoice, random)
@@ -5587,6 +5622,10 @@ private enum class Engine {
         ACCORD -> Accord.render(voice as AccordVoice, macros)
         ORIGAMI -> Origami.render(voice as OrigamiVoice, macros)
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
+        BORE -> Bore.render(voice as BoreVoice, macros)
+        ARCO -> Arco.render(voice as ArcoVoice, macros)
+        SCOUR -> Scour.render(voice as ScourVoice, macros)
+        KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
         CHAMBER -> Chamber.render(voice as ChamberVoice, macros)
@@ -5667,6 +5706,10 @@ private enum class Engine {
         // All ORIGAMI voices are finite pitched notes, including STILL.
         ORIGAMI -> DrumClass.TONAL
         MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
+        BORE -> Bore.drumClassFor(voice as BoreVoice, macros)
+        ARCO -> Arco.drumClassFor(voice as ArcoVoice, macros)
+        SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
+        KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
         CHAMBER -> Chamber.drumClassFor(voice as ChamberVoice, macros)
@@ -5741,6 +5784,10 @@ private enum class Engine {
         ACCORD -> AccordPatch(name, voice as AccordVoice, macros)
         ORIGAMI -> OrigamiPatch(name, voice as OrigamiVoice, macros)
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
+        BORE -> BorePatch(name, voice as BoreVoice, macros)
+        ARCO -> ArcoPatch(name, voice as ArcoVoice, macros)
+        SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
+        KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
         CHAMBER -> ChamberPatch(name, voice as ChamberVoice, macros)
