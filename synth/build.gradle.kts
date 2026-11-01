@@ -649,10 +649,10 @@ tasks.register<JavaExec>("generateObbligatoAudition") {
     args("${rootDir}/testkit/obbligato-audition")
 }
 
-/** Render the accepted model-five duet as sixteen velocity-layered pads for the app and MPC. */
+/** Render the accepted duet as sixteen velocity-layered pads for the app and MPC. */
 tasks.register<JavaExec>("generateObbligatoKit") {
     group = "distribution"
-    description = "Export sixteen model-five OBBLIGATO pads with native velocity layers, MPC 3, an MPC 2 twin, recipes and ZIP."
+    description = "Export sixteen accepted OBBLIGATO pads with native velocity layers, MPC 3, an MPC 2 twin, recipes and ZIP."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.synth.ObbligatoKitGenerator")
     workingDir = projectDir
