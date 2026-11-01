@@ -164,14 +164,15 @@ The starter provides three separate, complete MPC packages:
   43–84 and 85–127. The 78 held WAVs retain their actual second-cycle sustain
   loops, roots and complete saved recipes.
 
-Current exported held keyboards span MIDI 0–127, with native roots at C2–C5
-(MIDI 36–72). Outside those roots, the sampler transposes from the nearest edge
-root. Notes between native roots transpose by at most one semitone, which also
-shifts the sampled swing cadence. Native roots use the fitted engine timing.
-Both program formats reference the same PCM24 mono 44.1 kHz samples. These
-exports use the existing typed drum and keygroup writers; LOOP filing alone
-never enables sustain in a drum pad. Loading the packages on MPC hardware remains
-unverified.
+Held keyboards play MIDI 0–127, with native roots covering C2–C5 (MIDI 36–72).
+Notes between native roots transpose by at most one semitone; notes outside the
+native range transpose the nearest edge root farther. Transposition also shifts
+the sampled swing cadence. Native roots use the fitted engine timing. Manifest
+zone bounds record native capture spans; the top-level playback range is 0–127,
+with separate native-root range fields. Both program formats reference the same
+PCM24 mono 44.1 kHz samples. These exports use the existing typed drum and keygroup
+writers; LOOP filing alone never enables sustain in a drum pad. Loading the
+packages on MPC hardware remains unverified.
 
 Regenerate the packages alone or the complete listening page:
 
@@ -229,12 +230,13 @@ the second-cycle sustain loop. RELEASE controls the existing sample-player
 note-off fade.
 
 The typed keygroup package supplies the phone instrument, MPC 3 program and MPC
-2 twin, including explicit NoteOn playback for MPC 2. Exported zones span MIDI
-0–127; outside the native 36–72 range, playback transposes from the nearest edge
-root. Notes between native roots transpose at most one semitone,
-also shifting the sampled swing cadence. Native roots retain the engine's fitted
-timing. FRESH TAPE → MERIDIAN offers the existing sixteen-pad starter with its
-authored roots and velocities; it does not assign a global kit key.
+2 twin, including explicit NoteOn playback for MPC 2. All three descriptors span
+MIDI 0–127, retaining native roots at MIDI 36–72. Between those roots, neighboring
+notes transpose at most one semitone; outside that range, the nearest edge root
+transposes farther. Transposition also shifts the sampled swing cadence. Native
+roots retain the engine's fitted timing. FRESH TAPE → MERIDIAN offers the existing
+sixteen-pad starter with its authored roots and velocities; it does not assign a
+global kit key.
 
 ### Android render and memory diagnostic
 

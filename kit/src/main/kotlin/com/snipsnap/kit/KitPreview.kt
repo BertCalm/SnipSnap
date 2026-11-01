@@ -60,6 +60,20 @@ object KitPreview {
     }
 
     /**
+     * [notes] played as one take of [lengthPulses], ring-out after it: the
+     * engine [render] uses, for music longer than one clip can hold (a clip
+     * is at most 64 bars). The Arranger renders a run of sections this way,
+     * so a choke reaches across a section boundary as it does on the
+     * hardware: an open hat at the end of one section stops at the next
+     * section's closed hat instead of ringing over it.
+     */
+    fun renderNotes(kit: Kit, kitDir: File, notes: List<Mpc3Note>, lengthPulses: Long, tempoBpm: Float? = null): Snip {
+        require(kit.pads.isNotEmpty()) { "an empty kit has nothing to preview" }
+        require(lengthPulses > 0) { "a take has a length: $lengthPulses pulses" }
+        return mix(kit, kitDir, notes, lengthPulses, tempoBpm)
+    }
+
+    /**
      * The beat as a loop: [clip] played [passes] times through, as one file
      * exactly [passes] lengths of the clip long, so whoever receives it can
      * loop it.

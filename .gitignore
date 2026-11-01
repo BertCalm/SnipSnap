@@ -526,6 +526,11 @@ testkit/.caustic-native-*/
 # Saved playable NACRE revision and musical comparison exports.
 testkit/nacre-playable-audition/
 
+# Rebuildable sixteen-pad NACRE hardware trial and its complete download.
+testkit/SnipSnap Nacre Kit/
+testkit/SnipSnap-Nacre-Kit.zip
+testkit/SnipSnap-Nacre-Kit.zip.sha256
+
 # Regenerable, opt-in OVERLAP held keygroup hardware trial.
 testkit/overlap-held-keygroup/
 # Same-parent temporary staging is also generated output, including custom destinations.
@@ -547,4 +552,6 @@ testkit/erosion-native-audition/
 # Reproducible Rime held instruments and listening evidence.
 testkit/rime-instruments/
 
+# Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
+testkit/apsis-populations/
 testkit/obliterate-board/
