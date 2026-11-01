@@ -1071,6 +1071,14 @@ fun SynthScreen(
             return current?.let { Patches.edited(it, name, controls) }
                 ?: NacrePatch(name, voice as NacreVoice, controls)
         }
+        if (engine == Engine.CHAMBER) {
+            // A response choice can share a frame with note edits, SAVE or SEND.
+            // Read the live complete room so a queued action cannot restore its old response.
+            val current = loadedPatchesByVoice[engine to voice] as? ChamberPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: ChamberPatch(name, voice as ChamberVoice, controls)
+        }
         if (engine == Engine.PRISM) {
             // Detail edits and accessibility events can share a frame with SAVE or HOLD.
             val current = loadedPatchesByVoice[engine to voice] as? PrismPatch
@@ -2664,14 +2672,23 @@ fun SynthScreen(
                 }
 
                 if (engine == Engine.CHAMBER) {
+                    val chamberVoice = voice as ChamberVoice
                     ChamberNoteControls(
                         patch = buildCurrentPatch(loadedPatch?.name ?: engine.patchDisplayName(voice)) as ChamberPatch,
                         fillColor = classColor,
                         scheme = scheme,
-                    ) { edited ->
-                        touched = true
-                        currentPresetByVoice.remove(engine to voice)
-                        loadedPatchesByVoice[engine to voice] = edited
+                    ) { change ->
+                        if (engine == Engine.CHAMBER && voice == chamberVoice) {
+                            val current = buildCurrentPatch(loadedPatchesByVoice[engine to voice]?.name
+                                ?: engine.patchDisplayName(voice)) as ChamberPatch
+                            touched = true
+                            currentPresetByVoice.remove(engine to voice)
+                            settings.remove(presetSettingsKey(engine, voice))
+                            loadedPatchesByVoice[engine to voice] = change(current)
+                            // Navigation can precede the draft effect. Flush the latest
+                            // complete recipes through the same codec used on disposal.
+                            SynthDrafts.write(settings, currentDrafts())
+                        }
                     }
                 }
 
@@ -6254,8 +6271,16 @@ private fun ChamberNoteControls(
     patch: ChamberPatch,
     fillColor: Color,
     scheme: Scheme,
-    onPatchChange: (ChamberPatch) -> Unit,
+    onPatchChange: ((ChamberPatch) -> ChamberPatch) -> Unit,
 ) {
+    if (patch.model < Chamber.REGISTER_MODEL) {
+        TapeText("SAVED RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
+        LabButton("USE WIDER RESPONSE", scheme, enabled = true, modifier = Modifier.fillMaxWidth()) {
+            onPatchChange { it.copy(model = Chamber.REGISTER_MODEL) }
+        }
+    } else {
+        TapeText("WIDER RESPONSE", TapeType.pixelSmall, scheme.ink2.tape)
+    }
     MacroSlider(
         label = "ROOT",
         value = (patch.midi - Chamber.MIDI_MIN).toFloat() / (Chamber.MIDI_MAX - Chamber.MIDI_MIN),
@@ -6263,8 +6288,8 @@ private fun ChamberNoteControls(
         scheme = scheme,
         readout = Scales.nameOf(patch.midi),
         onValueChange = { value ->
-            onPatchChange(patch.copy(midi = (Chamber.MIDI_MIN + value *
-                (Chamber.MIDI_MAX - Chamber.MIDI_MIN)).roundToInt().coerceIn(Chamber.MIDI_MIN, Chamber.MIDI_MAX)))
+            onPatchChange { it.copy(midi = (Chamber.MIDI_MIN + value *
+                (Chamber.MIDI_MAX - Chamber.MIDI_MIN)).roundToInt().coerceIn(Chamber.MIDI_MIN, Chamber.MIDI_MAX)) }
         },
     )
     MacroSlider(
@@ -6272,7 +6297,7 @@ private fun ChamberNoteControls(
         value = patch.velocity,
         fillColor = fillColor,
         scheme = scheme,
-        onValueChange = { onPatchChange(patch.copy(velocity = it.coerceIn(0f, 1f))) },
+        onValueChange = { value -> onPatchChange { it.copy(velocity = value.coerceIn(0f, 1f)) } },
     )
     TapeText(
         "FINITE STRIKE · ROOM TAIL INCLUDED. SPREAD TRANSPOSES THE ROOM TOO.",

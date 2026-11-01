@@ -105,6 +105,12 @@ existing sixteen-pad bank and its authored roots without assigning a global
 kit key. Physical phone timing, listening and MPC loading remain separate checks.
 See [MERIDIAN](../docs/MERIDIAN.md) for the workflow and opt-in Android benchmark.
 
+CHAMBER starts new HYBRID/AQUARIUM sounds with the wider, register-aware
+response. Saved sounds, including its six original factory recipes, retain
+their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
+response without changing the authored room, controls, ROOT, VELOCITY or seed.
+See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
 APSIS exposes PASSAGE, its six factory presets, six movement controls, ROOT
 (C2–C6) and native VELOCITY. Edits, SCRAMBLE, YOURS, navigation and SEND TO PAD
 retain the saved renderer and seed. HOLD's top step auditions a repeating settled

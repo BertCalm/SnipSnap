@@ -157,6 +157,152 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
+    fun fresh_rooms_keep_the_wider_response_through_note_edits_and_recreation() {
+        val settings = mutableMapOf("engine" to "CHAMBER", "voice" to "HYBRID")
+        show(shelf(), settings)
+        for (voice in ChamberVoice.entries) {
+            press(voice.name)
+            compose.onNodeWithText("WIDER RESPONSE").assertExists()
+            compose.onNodeWithContentDescription("USE WIDER RESPONSE").assertDoesNotExist()
+            dial("ROOT", 1f)
+            compose.runOnIdle {
+                val draft = SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single { it.voice == voice }
+                assertEquals(5, draft.model)
+                assertEquals(84, draft.midi)
+                assertEquals(Chamber.defaults(voice), draft.macros)
+                assertEquals(ChamberConfig.forVoice(voice), draft.configuration)
+            }
+        }
+        compose.runOnIdle { generation++ }
+        pump()
+        compose.onNodeWithText("WIDER RESPONSE").assertExists()
+        assertEquals(1f, progress("ROOT"), .00001f)
+        compose.runOnIdle {
+            val drafts = SynthDrafts.read(settings).filterIsInstance<ChamberPatch>()
+            assertEquals(ChamberVoice.entries.toSet(), drafts.map { it.voice }.toSet())
+            assertTrue(drafts.all { it.model == 5 && it.midi == 84 })
+        }
+    }
+
+    @Test
+    fun saved_response_changes_only_by_choice_and_the_whole_wider_room_reaches_a_pad() {
+        val root = shelf()
+        val kitDir = File(root, "kit").apply { mkdirs() }
+        val kit = Kit(name = "WIDER ROOM UI", pads = emptyList())
+        KitStore.save(kit, kitDir)
+        val original = ChamberPatch("Saved resonant room", ChamberVoice.AQUARIUM,
+            Chamber.defaults(ChamberVoice.AQUARIUM) + mapOf("STRIKE" to .29f, "MATERIAL" to 1f),
+            midi = 81, velocity = .53f, seed = Long.MIN_VALUE + 23, model = 3,
+            configuration = ChamberConfig.aquarium().copy(splitHeight = .63f,
+                targets = ChamberConfig.aquarium().targets.copy(floor = .19f),
+                tuningRatios = ChamberConfig.aquarium().tuningRatios.copy(triangle = 3f)))
+        val settings = mutableMapOf("engine" to "CHAMBER", "voice" to "AQUARIUM")
+        SynthDrafts.write(settings, listOf(original))
+        show(root, settings, KitShelf.Entry(kitDir, kit))
+        compose.onNodeWithText("SAVED RESPONSE").assertExists()
+        dial("ROOT", (82 - Chamber.MIDI_MIN) / 48f)
+        val oldEdit = original.copy(midi = 82)
+        compose.runOnIdle {
+            assertEquals(oldEdit, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
+        }
+
+        press("USE WIDER RESPONSE")
+        val wider = oldEdit.copy(model = 5)
+        compose.runOnIdle {
+            assertEquals(wider, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
+        }
+        compose.onNodeWithText("WIDER RESPONSE").assertExists()
+        compose.onNodeWithContentDescription("USE WIDER RESPONSE").assertDoesNotExist()
+        dial("ROOT", 1f)
+        dial("VELOCITY", .62f)
+        val expected = wider.copy(midi = 84, velocity = .62f)
+        press("HYBRID")
+        press("AQUARIUM")
+        compose.runOnIdle { generation++ }
+        pump()
+        compose.onNodeWithText("WIDER RESPONSE").assertExists()
+        compose.runOnIdle {
+            assertEquals(expected, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>()
+                .single { it.voice == ChamberVoice.AQUARIUM })
+        }
+
+        press("SAVE PRESET")
+        compose.onNode(hasSetTextAction()).performTextReplacement("MY WIDER ROOM")
+        pump()
+        press("SAVE")
+        waitFor("saved wider CHAMBER room", timeoutMillis = 30_000) {
+            UserPresets.read(root).any { it.name == "MY WIDER ROOM" }
+        }
+        val saved = UserPresets.read(root).single { it.name == "MY WIDER ROOM" }.patch as ChamberPatch
+        assertEquals(expected.copy(name = "MY WIDER ROOM"), saved)
+        press("SEND TO PAD")
+        press("A01, EMPTY")
+        waitFor("the wider CHAMBER pad", timeoutMillis = 180_000) {
+            KitBuilderModel.open(kitDir).pad(1) != null
+        }
+        val pad = KitBuilderModel.open(kitDir).pad(1)!!
+        val recipe = PadRecipe.fromJsonValue(requireNotNull(pad.recipe))
+        val placed = recipe.patch as ChamberPatch
+        assertEquals(saved.copy(name = placed.name), placed)
+        assertEquals(DrumClass.TONAL, pad.drumClass)
+        assertTrue(pad.oneShot)
+        assertEquals(null, recipe.fx)
+        assertEquals("84", pad.source["rootMidi"])
+        assertTrue(File(kitDir, pad.sampleFile).length() > 44)
+    }
+
+    @Test
+    fun same_frame_note_response_and_save_keep_the_latest_complete_room() {
+        val root = shelf()
+        val original = ChamberPatch("Queued room", ChamberVoice.HYBRID,
+            Chamber.defaults(ChamberVoice.HYBRID) + ("MATERIAL" to 1f),
+            midi = 76, velocity = .41f, seed = Long.MAX_VALUE - 19, model = 3,
+            configuration = ChamberConfig.hybrid().copy(splitHeight = .61f))
+        val settings = mutableMapOf("engine" to "CHAMBER", "voice" to "HYBRID")
+        SynthDrafts.write(settings, listOf(original))
+        show(root, settings)
+        press("SAVE PRESET")
+        compose.onNode(hasSetTextAction()).performTextReplacement("QUEUED WIDER ROOM")
+        pump()
+        val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val velocityEdit = requireNotNull(compose.onNodeWithContentDescription("VELOCITY", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val response = requireNotNull(compose.onNodeWithContentDescription("USE WIDER RESPONSE", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        val save = requireNotNull(compose.onNodeWithContentDescription("SAVE", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        val expected = original.copy(midi = 84, velocity = .63f, model = 5)
+        compose.runOnIdle {
+            // Every callback came from the same old composition. Exercise both
+            // orders around the response choice, then save before any new frame.
+            assertTrue(rootEdit((82 - Chamber.MIDI_MIN) / 48f))
+            assertTrue(response())
+            assertTrue(rootEdit(1f))
+            assertTrue(velocityEdit(.63f))
+            assertEquals(expected, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
+            assertTrue(save())
+        }
+        waitFor("same-frame complete CHAMBER save", timeoutMillis = 30_000) {
+            UserPresets.read(root).any { it.name == "QUEUED WIDER ROOM" }
+        }
+        val saved = UserPresets.read(root).single { it.name == "QUEUED WIDER ROOM" }.patch as ChamberPatch
+        assertEquals(expected.copy(name = "QUEUED WIDER ROOM"), saved)
+
+        val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        compose.runOnIdle {
+            assertTrue(immediateRoot((83 - Chamber.MIDI_MIN) / 48f))
+            generation++
+        }
+        pump()
+        compose.onNodeWithText("WIDER RESPONSE").assertExists()
+        compose.runOnIdle {
+            assertEquals(expected.copy(midi = 83), SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
+        }
+    }
+
+    @Test
     fun a_name_only_yours_restore_adopts_the_complete_saved_room_and_controls() {
         val root = shelf()
         val voice = ChamberVoice.AQUARIUM

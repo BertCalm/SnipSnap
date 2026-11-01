@@ -468,6 +468,33 @@ tasks.register<JavaExec>("generateChamberAudition") {
     providers.gradleProperty("chamberKit").orNull?.let { args("--kit=$it") }
 }
 
+/** Compare accepted CHAMBER endpoints with an explicit wider-range candidate. */
+tasks.register<JavaExec>("generateChamberExtremesAudition") {
+    group = "distribution"
+    description = "Render the CHAMBER current/wider endpoint comparison without changing accepted factory sounds."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberExtremesAuditionGenerator")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberExtremesOutput").orNull ?: "${rootDir}/testkit/chamber-extremes")
+    providers.gradleProperty("chamberExtremesBaseline").orNull?.let { args("--baseline=$it") }
+    if (providers.gradleProperty("chamberExtremesExtendedChecks").orNull == "true") args("--extended-checks")
+}
+
+/** Compare the previous wider response with a register-following candidate. */
+tasks.register<JavaExec>("generateChamberRegisterAudition") {
+    group = "distribution"
+    description = "Render the CHAMBER C4/C5/C6 resonance comparison with portable recipes and numerical checks."
+    maxHeapSize = "1g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.ChamberRegisterStudy")
+    workingDir = projectDir
+    args(providers.gradleProperty("chamberRegisterOutput").orNull ?: "${rootDir}/testkit/chamber-register")
+    args(if (providers.gradleProperty("chamberRegisterExperiment").orNull == "true") "--candidate" else "--audition")
+    providers.gradleProperty("chamberRegisterBaseline").orNull?.let { args("--baseline=$it") }
+    providers.gradleProperty("chamberRegisterPublished").orNull?.let { args("--published=$it") }
+}
+
 /** Sixteen finite CHAMBER pads with exact recipes and both supported MPC formats. */
 tasks.register<JavaExec>("generateChamberKit") {
     group = "distribution"

@@ -133,10 +133,14 @@ fresh settings still run the coupled simulation. This stage is finite only:
 positive HOLD is rejected, and page Repeat replays the finite strike. See [CHAMBER.md](CHAMBER.md)
 for policies and reproduction; [CHAMBER_SPEC.md](CHAMBER_SPEC.md) remains the source
 proposal. The [private audition](https://chamber-snipsnap-audition.bertcalm.chatgpt.site)
-includes a refreshed current-model control/preset study and kit-sample phrases,
+includes the original finite control/preset study and kit-sample phrases,
 with earlier timpani comparisons archived. The owner approved model 2's timbre
 and preferred model 3's 3 dB membrane mix lift. That voicing and saved earlier
-models remain replayable. The wider library, true HOLD, advanced room editor
+models remain replayable. Following the owner's "Much better" verdict on the
+[upper-register comparison](https://chamber-snipsnap-audition.bertcalm.chatgpt.site/register/index.html),
+new sounds use the wider register-aware response. Saved versions and the six
+original factory/kit recipes stay exact; USE WIDER RESPONSE is an explicit
+choice for a loaded sound. The wider library, true HOLD, advanced room editor
 and physical phone/MPC acceptance remain later work.
 
 **Confluence recorded-source proof (2026-10-17).** A finite 1–8-performer
