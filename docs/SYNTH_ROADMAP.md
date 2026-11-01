@@ -71,6 +71,19 @@ still historical references.
 See [CAIRN_TUMBLE.md](CAIRN_TUMBLE.md), the [two-voice foundation](CAIRN.md), and the
 [private three-voice audition](https://cairn-voice-comparison.bertcalm.chatgpt.site/tumble/).
 
+**Keel R1 first-listen prototype (2026-10-24), held keygroup R2 (2026-10-26).** REDUCE and UPRIGHT are two bass
+voices that follow one settle clock: the upper spectrum distils away while the
+note's own body fills in (WEIGHT, rebuilt 2026-10-26). The finite prototype has
+saved note and velocity recipes, a probe table measured beside the Python harness, and
+a listening page whose first screen is one question: does WEIGHT make the note
+heavier? From HOLD .85 a pad is the settled note as a seamless 3 s loop, and
+`KeelPadMaker` builds a nine-zone held keygroup (attack and settle, then that loop) that
+`:shell:generateKeelKeys` exports to the MPC. The phone picker
+follows listening review. See [KEEL.md](KEEL.md)
+and the spec's "As built" section for the deviations. The keygroup's first listen
+(2026-10-27) found UPRIGHT's held keys pumping; its bow is now locked to the string,
+and the bow page (2026-10-28) heard it, with more hair, as no pump at C2 and A2. R3 (2026-10-29) files twelve presets in `Presets`, adds `SynthKits.keel()`, `:synth:generateKeelKit` and a KEEL starter, and puts BELLY to one listening question before any Kotlin; none of it is heard yet. BELLY was heard as its own sound (2026-10-31) and is now KEEL's third voice, with six presets and two pads and a loop in the kit; the Kotlin BELLY is measured against that clip, not heard.
+
 **Tidal finite instrument (2026-10-24).** PAIR and STREAM adapt a softened
 restricted two-center encounter into two original harmonic populations, persistent
 cohorts, surviving cores, and extended ringing strands. The owner approved the
