@@ -44,7 +44,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 
 /** What a seed pad reads as on a chip and on the ART row: the slot, or AUTO for the longest pad. */
-internal fun seedLabel(slot: Int?): String = slot?.let { "A%02d".format(it) } ?: Copy.ART_SEED_AUTO
+internal fun seedLabel(slot: Int?): String = slot?.let { String.format(java.util.Locale.ROOT, "A%02d", it) } ?: Copy.ART_SEED_AUTO
 
 /** The ART row's reading of [knobs]: style · palette · seed pad · mark. */
 internal fun artSummary(knobs: ArtKnobs): String =

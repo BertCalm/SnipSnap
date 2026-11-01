@@ -61,7 +61,7 @@ object ArtCommand {
         outDir.mkdirs()
 
         val kit = KitStore.load(kitDir)
-        val seedLabel = seedPad?.let { "A%02d".format(it) } ?: "auto"
+        val seedLabel = seedPad?.let { String.format(java.util.Locale.ROOT, "A%02d", it) } ?: "auto"
         out.println(
             "kit: ${kit.name} (${kit.pads.size} pads) - palette ${palette.id}, seed pad $seedLabel, mark ${mark.id}, rings seed $seed, ${size}px",
         )
