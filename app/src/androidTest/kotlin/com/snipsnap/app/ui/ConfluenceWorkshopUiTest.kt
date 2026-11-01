@@ -6,7 +6,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
-import androidx.compose.ui.test.onAllNodesWithContentDescription
+import androidx.compose.ui.test.hasAnyAncestor
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.onAllNodes
+import androidx.compose.ui.test.onNode
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performSemanticsAction
@@ -103,7 +107,7 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
         }
 
         clickAction("Low voice: ROUNDED OO")
-        compose.onNodeWithContentDescription("ROOM", useUnmergedTree = true)
+        compose.onNode(gatheringControl("ROOM"), useUnmergedTree = true)
             .performSemanticsAction(SemanticsActions.SetProgress) { setProgress ->
                 assertTrue(setProgress(.70f))
             }
@@ -157,8 +161,12 @@ class ConfluenceWorkshopUiTest : ComposeScreenTest() {
     private fun hasText(text: String): Boolean =
         compose.onAllNodesWithText(text, useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    // STRIKE FX has its own ROOM control above the gathering editor.
+    private fun gatheringControl(label: String) =
+        hasContentDescription(label) and hasAnyAncestor(hasTestTag("confluence-gathering"))
+
     private fun sliderState(label: String): String? =
-        compose.onAllNodesWithContentDescription(label, useUnmergedTree = true)
+        compose.onAllNodes(gatheringControl(label), useUnmergedTree = true)
             .fetchSemanticsNodes().singleOrNull()?.config?.getOrNull(SemanticsProperties.StateDescription)
 
     private fun clickAction(label: String) {
