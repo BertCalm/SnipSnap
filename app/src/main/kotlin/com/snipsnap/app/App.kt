@@ -4556,6 +4556,12 @@ fun App(shelf: KitShelf) {
                                     instrument = inst.instrument,
                                     backLabel = checkNotNull(nav.backChip) { "KEYS is a bench, so it has something to go back to" },
                                     onBack = { openInstrument = null; nav.closeBench() },
+                                    onToast = { dock.say(it) },
+                                    onSaved = { saved ->
+                                        val fresh = inst.copy(instrument = saved)
+                                        if (openInstrument?.sidecar == inst.sidecar) openInstrument = fresh
+                                        instruments = instruments.map { if (it.sidecar == inst.sidecar) fresh else it }
+                                    },
                                 )
                             }
                         }
