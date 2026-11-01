@@ -1550,8 +1550,17 @@ class KitBuilderModel private constructor(
 
     private fun classCount(dc: DrumClass): Int = kit.pads.count { it.drumClass == dc }
 
+    /**
+     * A file stem for a new pad on [slot] that nothing else answers to: no live pad plays it, no
+     * file sits there, and THE BIN holds nothing under it. The bin counts because its undo doors
+     * read by name ([restoreFromBin] by name): a new pad on a binned name would find a stranger's
+     * audio as its own "original", and an EVIL TWINS reroll, which clears bank B and names the new
+     * twins at once, did exactly that until 2026-11-01. Once the bin lets the entry go, the name is
+     * free again. [binHolds]' tombstone guard still covers bins and kits from before that.
+     */
     private fun nextStem(slot: Int, dc: DrumClass): String {
         val base = "%s_%s".format(PadNoteMap.labelForPad(slot), AutoPlace.nameFor(dc))
+        val binned = binnedNames()
         // Bounded, not `while (true)`: the loop only terminates because the
         // formatted counter varies from n to n, an invariant Locale.ROOT
         // restores today but does not itself guarantee. A kit holds 128
@@ -1562,7 +1571,8 @@ class KitBuilderModel private constructor(
         for (n in 1..MAX_STEM_ATTEMPTS) {
             val stem = Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, n))
             val taken = kit.pads.any { it.sampleFile.equals("$stem.wav", ignoreCase = true) } ||
-                File(kitDir, "$stem.wav").exists()
+                File(kitDir, "$stem.wav").exists() ||
+                "$stem.wav".lowercase(Locale.ROOT) in binned
             if (!taken) return stem
         }
         throw IllegalStateException(
@@ -1570,6 +1580,15 @@ class KitBuilderModel private constructor(
                 "(kept producing '${Names.sanitizeStem(String.format(Locale.ROOT, "%s_%02d", base, MAX_STEM_ATTEMPTS))}')",
         )
     }
+
+    /**
+     * Every `originalName` THE BIN holds, lower-cased: [binContents]' names without reading a
+     * tombstone, for [nextStem], which only needs to know a name is spoken for.
+     */
+    private fun binnedNames(): Set<String> =
+        File(kitDir, BIN_DIR).listFiles { f: File -> BIN_NAME.matches(f.name) && !f.name.endsWith(".json", ignoreCase = true) }
+            ?.map { BIN_NAME.find(it.name)!!.groupValues[2].lowercase(Locale.ROOT) }
+            ?.toSet() ?: emptySet()
 
     private fun deleteIfUnreferenced(pad: KitPad) {
         val files = (listOf(pad.sampleFile) + pad.velocityLayers.map { it.sampleFile }).toSet()

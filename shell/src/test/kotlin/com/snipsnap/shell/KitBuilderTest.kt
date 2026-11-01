@@ -9,6 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -1181,6 +1182,44 @@ class KitBuilderTest {
         KitBuilderModel.open(dir).purgeBin(olderThanDays = 0.0, nowMillis = System.currentTimeMillis() + 1000)
 
     /** Re-stamps one bin entry, tombstone and all, for a test where two entries need different ages. */
+    /**
+     * The kit in [dir] as a build from before 2026-11-01 left it, when a new pad could take a name
+     * the bin still held: each slot in [names] is moved onto that name, its file with it. Saved and
+     * reopened, as an old kit arrives. `nextStem` no longer hands such names out, but bins and kits
+     * from before still hold them, and [KitBuilderModel.binHolds]' tombstone guard is for those.
+     */
+    private fun fromBeforeNamesSkippedTheBin(dir: File, names: Map<Int, String>): KitBuilderModel {
+        val kit = KitStore.load(dir)
+        val moved = kit.pads.map { pad ->
+            val name = names[pad.slot] ?: return@map pad
+            assertTrue(File(dir, pad.sampleFile).renameTo(File(dir, name)), "test setup: slot ${pad.slot} takes $name")
+            pad.copy(sampleFile = name)
+        }
+        KitStore.save(kit.copy(pads = moved), dir)
+        return KitBuilderModel.open(dir)
+    }
+
+    @Test
+    fun `a new pad never takes a name the bin still holds, and the name comes free once the bin lets it go`() {
+        val dir = File(temp, "StemPastBin")
+        val m = KitBuilderModel.create("StemPastBin", dir)
+        val first = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        m.clear(1)
+        val second = m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile
+        assertNotEquals(first, second, "the bin still holds the first kick under its name")
+
+        m.remixBankB(seed = 5)
+        val twin = m.pad(17)!!.sampleFile
+        m.remixBankB(seed = 6)
+        assertNotEquals(twin, m.pad(17)!!.sampleFile, "a reroll's new twin passes the old twin's name, which the bin holds")
+        assertTrue(m.binContents().any { it.originalName == twin }, "test setup: the old twin's eject record is in the bin")
+        assertFailsWith<IllegalArgumentException>("the new twin's NONE finds nothing of the old twin's") { m.untreatPad(17) }
+
+        m.emptyBin()
+        m.clear(1)
+        assertEquals(first, m.assign(1, DrumSynth.kick(), DrumClass.KICK).sampleFile, "once the bin lets the first kick go, its name is free again")
+    }
+
     private fun restamp(entry: KitBuilderModel.BinEntry, millis: Long) {
         val bin = entry.file.parentFile
         val tombstone = File(bin, "${entry.file.name}.json")
@@ -1338,8 +1377,8 @@ class KitBuilderTest {
     }
 
     /**
-     * EVIL TWINS rerolled: the old twins are ejected with tombstones, and the new twins take their
-     * file names and carry recipes the rule counts. Only an eject writes a tombstone, so an entry
+     * EVIL TWINS rerolled in a kit from before 2026-11-01: the old twins are ejected with tombstones,
+     * and the new twins took their file names and carry recipes the rule counts. Only an eject writes a tombstone, so an entry
      * with one is a record of an ejected pad, never a live pad's original, and a new pad on the same
      * name must not pin a stranger's sound forever. A torn tombstone still says so: the guard asks
      * whether the file is there, not whether it parses.
@@ -1351,18 +1390,20 @@ class KitBuilderTest {
         m.assign(1, DrumSynth.kick(), DrumClass.KICK)
         m.assign(3, DrumSynth.closedHat(), DrumClass.HAT_CLOSED)
         m.remixBankB(seed = 5)
-        val names = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }.map { it.sampleFile }
+        val old = m.kit.pads.filter { it.slot > 16 }.associate { it.slot to it.sampleFile }
+        val names = old.toSortedMap().values.toList()
         m.remixBankB(seed = 6)
         m.save()
-        val twins = m.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }
-        assertEquals(names, twins.map { it.sampleFile }, "test setup: the reroll reused every name")
+        val reused = fromBeforeNamesSkippedTheBin(dir, old)
+        val twins = reused.kit.pads.filter { it.slot > 16 }.sortedBy { it.slot }
+        assertEquals(names, twins.map { it.sampleFile }, "test setup: the new twins play the old twins' names")
         assertTrue(twins.all { KitBuilderModel.dependsOnBin(it) }, "test setup: the new twins carry recipes the rule counts")
-        val ejected = m.binContents()
+        val ejected = reused.binContents()
         assertEquals(names.sorted(), ejected.map { it.originalName }.sorted())
         assertTrue(ejected.all { it.padSnapshot != null }, "test setup: every entry is an eject record")
         File(ejected.first().file.parentFile, "${ejected.first().file.name}.json").writeText("{ torn")
 
-        assertTrue(m.binHolds().all { it.keptFor == null }, "a stranger's eject record is never kept for a new pad on its name")
+        assertTrue(reused.binHolds().all { it.keptFor == null }, "a stranger's eject record is never kept for a new pad on its name")
         assertEquals(names.size, sweepEverythingOld(dir))
         assertEquals(0, File(dir, KitBuilderModel.BIN_DIR).listFiles()?.size ?: 0, "the eject records left with their tombstones")
     }
@@ -1370,7 +1411,8 @@ class KitBuilderTest {
     /**
      * The guard comes after "newest": a live pad whose newest entry is an eject record keeps
      * nothing, never the entry underneath it. Here the first twin was era'd, so its own original
-     * sits under its eject record, and the reroll's new twin plays the same name.
+     * sits under its eject record, and the reroll's new twin plays the same name (a kit from before
+     * 2026-11-01, when a reroll could hand it out).
      */
     @Test
     fun `a new pad whose newest entry is an eject record keeps nothing, not the entry under it`() {
@@ -1380,14 +1422,14 @@ class KitBuilderTest {
         m.remixBankB(seed = 5)
         val name = m.pad(17)!!.sampleFile
         m.eraPad(17, "tape", 1f) // the first twin's original goes in with no tombstone
-        m.remixBankB(seed = 6) // its eject record goes in on top, and the new twin takes the name
+        m.remixBankB(seed = 6) // its eject record goes in on top
         m.save()
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
-        val (eject, original) = m.binContents().filter { it.originalName == name }
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name)) // and the new twin plays the name
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: the new twin counts")
+        val (eject, original) = reused.binContents().filter { it.originalName == name }
         assertTrue(eject.padSnapshot != null && original.padSnapshot == null, "test setup: the newest is the eject record")
 
-        val hold = m.binHolds().single { it.entry.file == original.file }
+        val hold = reused.binHolds().single { it.entry.file == original.file }
         assertNull(hold.keptFor, "the new twin must not pin the old twin's original")
         assertEquals(eject.binnedAtMillis + 30 * dayMs, hold.purgeAtMillis, "it rides its own eject record's tombstone instead")
     }
@@ -1397,7 +1439,8 @@ class KitBuilderTest {
      * went in before it. When that is an earlier eject record (a reroll's), the tombstone keeps
      * nothing, and an eject record is never stretched by a later one either. The first twin's own
      * original then leaves with the first twin's eject record, and the second twin's NONE refuses
-     * rather than playing the first twin's sound.
+     * rather than playing the first twin's sound. The second twin plays the first's name, as a kit
+     * from before 2026-11-01 could.
      */
     @Test
     fun `a tombstone never reaches past an earlier eject record, and never stretches it`() {
@@ -1407,26 +1450,27 @@ class KitBuilderTest {
         m.remixBankB(seed = 5)
         val name = m.pad(17)!!.sampleFile
         m.treatPad(17, "crushed") // the first twin's own original, no tombstone
-        m.remixBankB(seed = 6) // the first twin's eject record; the second twin takes the name
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        m.clear(17) // the second twin's eject record, its slot left empty for BACK
+        m.remixBankB(seed = 6) // the first twin's eject record
         m.save()
-        val (secondEject, firstEject, firstOriginal) = m.binContents()
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name)) // the second twin plays the name
+        reused.clear(17) // the second twin's eject record, its slot left empty for BACK
+        reused.save()
+        val (secondEject, firstEject, firstOriginal) = reused.binContents()
         assertTrue(secondEject.padSnapshot != null && firstEject.padSnapshot != null && firstOriginal.padSnapshot == null, "test setup")
         val now = System.currentTimeMillis()
         restamp(secondEject, now - dayMs)
         restamp(firstEject, now - 40 * dayMs)
         restamp(firstOriginal, now - 50 * dayMs)
-        val holds = m.binHolds().associateBy { it.entry.binnedAtMillis }
+        val holds = reused.binHolds().associateBy { it.entry.binnedAtMillis }
         assertEquals(now - 10 * dayMs, holds.getValue(now - 40 * dayMs).purgeAtMillis, "the first eject record keeps its own clock")
         assertEquals(now - 10 * dayMs, holds.getValue(now - 50 * dayMs).purgeAtMillis, "the first original rides the first eject record, not the second")
 
         assertEquals(2, KitBuilderModel.open(dir).purgeBin(nowMillis = now), "both go in the same sweep")
-        val left = m.binContents().single()
+        val left = reused.binContents().single()
         assertEquals(now - dayMs, left.binnedAtMillis, "only the second eject record is left")
-        m.restoreFromBin(left) // BACK: the second twin, with its copied recipe
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: BACK brought the second twin back")
-        assertFailsWith<IllegalArgumentException>("NONE refuses rather than playing a stranger's sound") { m.untreatPad(17) }
+        reused.restoreFromBin(left) // BACK: the second twin, with its copied recipe
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: BACK brought the second twin back")
+        assertFailsWith<IllegalArgumentException>("NONE refuses rather than playing a stranger's sound") { reused.untreatPad(17) }
     }
 
     /** An untreated pad's tombstone needs nothing from the bin, so the leftover under it keeps its own 30 days. */
@@ -1451,8 +1495,8 @@ class KitBuilderTest {
 
     /**
      * A GHOSTS-layered twin gets no pad snapshot BACK could reinstate, but its eject is still
-     * marked, so the next twin on the same name keeps nothing of it and its NONE refuses once the
-     * sweep has taken the old twin's audio, rather than playing it.
+     * marked, so the next twin on the same name (a kit from before 2026-11-01) keeps nothing of it
+     * and its NONE refuses once the sweep has taken the old twin's audio, rather than playing it.
      */
     @Test
     fun `a layered pad's eject is marked, so a new pad on its name keeps nothing of it`() {
@@ -1464,14 +1508,14 @@ class KitBuilderTest {
         m.addGhostLayers(17) // a twin keeps its stamp under GHOSTS, so the reroll still takes it
         m.remixBankB(seed = 6)
         m.save()
-        assertEquals(name, m.pad(17)!!.sampleFile, "test setup: the reroll reused the name")
-        assertTrue(KitBuilderModel.dependsOnBin(m.pad(17)!!), "test setup: the new twin counts")
-        val ejected = m.binContents()
+        val reused = fromBeforeNamesSkippedTheBin(dir, mapOf(17 to name))
+        assertTrue(KitBuilderModel.dependsOnBin(reused.pad(17)!!), "test setup: the new twin counts")
+        val ejected = reused.binContents()
         assertTrue(ejected.size >= 2 && ejected.all { it.padSnapshot == null }, "test setup: the layered twin's files, no pad to reinstate")
 
-        assertTrue(m.binHolds().all { it.keptFor == null }, "the new twin keeps nothing of the old one")
+        assertTrue(reused.binHolds().all { it.keptFor == null }, "the new twin keeps nothing of the old one")
         assertEquals(ejected.size, sweepEverythingOld(dir))
-        assertFailsWith<IllegalArgumentException> { m.unEraPad(17) }
+        assertFailsWith<IllegalArgumentException> { reused.unEraPad(17) }
     }
 
     /**
