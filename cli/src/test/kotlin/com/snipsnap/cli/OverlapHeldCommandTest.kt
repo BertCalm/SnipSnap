@@ -40,8 +40,8 @@ class OverlapHeldCommandTest {
             assertEquals(expected, OverlapPatch.fromJsonText(saved.readText()))
             val (sidecar, instrument) = InstrumentStore.list(instrumentDir).single()
             assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
-            assertEquals(0, instrument.zones.first().lowNote)
-            assertEquals(127, instrument.zones.last().highNote)
+            assertEquals(0, instrument.zones.first().lowNote, "the lowest zone runs to the bottom of the keyboard")
+            assertEquals(127, instrument.zones.last().highNote, "the highest zone runs to the top of the keyboard")
             assertEquals(.3f, instrument.release)
             val zone = instrument.zones.single { it.rootNote == 60 }
             val held = OverlapHeld.render(expected)

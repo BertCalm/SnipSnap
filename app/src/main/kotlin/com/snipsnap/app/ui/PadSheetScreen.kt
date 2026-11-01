@@ -4379,6 +4379,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onRoom,
             onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX ROOM",
         )
         StepperSlider(
             label = "SLAP",
@@ -4389,6 +4390,7 @@ private fun StrikeFxSection(
             enabled = !busy,
             onFractionChange = onSlap,
             onFractionCommit = {},
+            accessibilityLabel = "STRIKE FX SLAP",
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             // Named for the section: KEEP alone is also the board's button.
@@ -4448,6 +4450,10 @@ internal fun StepperSlider(
     onFractionChange: (Float) -> Unit,
     onFractionCommit: () -> Unit,
     labelWidth: Dp = 44.dp,
+    // What TalkBack says and what the tests look up. Defaults to the printed label; a
+    // section whose label repeats one already on the sheet qualifies it here, the way
+    // its buttons do, so a screen never carries two controls with the same spoken name.
+    accessibilityLabel: String = label,
 ) {
     // The gesture loop below runs once, keyed on Unit — rememberUpdatedState
     // is what keeps it calling this recomposition's callbacks instead of
@@ -4479,7 +4485,7 @@ internal fun StepperSlider(
                 // adjust gesture a real target, the "ideally adjustable"
                 // half of finding 4, not just its label+state floor.
                 .semantics {
-                    contentDescription = label
+                    contentDescription = accessibilityLabel
                     stateDescription = valueText
                     if (enabled) {
                         progressBarRangeInfo = ProgressBarRangeInfo(fraction.coerceIn(0f, 1f), 0f..1f)
