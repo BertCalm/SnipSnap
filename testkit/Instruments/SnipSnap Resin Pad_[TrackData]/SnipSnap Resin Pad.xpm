@@ -9,6 +9,11 @@
   </Version>
   <Program type="Keygroup">
     <ProgramName>SnipSnap Resin Pad</ProgramName>
+    <Mono>False</Mono>
+    <Program_Polyphony>0</Program_Polyphony>
+    <PortamentoTime>0.000000</PortamentoTime>
+    <PortamentoLegato>False</PortamentoLegato>
+    <PortamentoQuantized>False</PortamentoQuantized>
     <Instruments>
       <Instrument number="0">
         <Volume>1.000000</Volume>
@@ -24,7 +29,7 @@
         <VolumeRelease>1.500000</VolumeRelease>
         <TuneCoarse>0</TuneCoarse>
         <TuneFine>0</TuneFine>
-        <LowNote>36</LowNote>
+        <LowNote>0</LowNote>
         <HighNote>46</HighNote>
         <Layers>
           <Layer number="1">
@@ -1969,7 +1974,7 @@
         <TuneCoarse>0</TuneCoarse>
         <TuneFine>0</TuneFine>
         <LowNote>68</LowNote>
-        <HighNote>78</HighNote>
+        <HighNote>127</HighNote>
         <Layers>
           <Layer number="1">
             <Active>True</Active>
