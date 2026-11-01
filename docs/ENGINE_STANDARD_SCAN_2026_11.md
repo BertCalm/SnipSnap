@@ -11,6 +11,32 @@ or keyword was not found, not that the engine is broken. Shared tests
 (`PresetsTest`, `PatchesTest`, `DeterminismTest`) cover some engines the per-engine
 columns file as missing. Nothing in this document was heard.
 
+## Round one, 2026-11-01
+
+What the first pass over this list closed. The table below is unchanged: it is
+still the scan as first run, so a reader can see what was found.
+
+- **FATHOM:** starter kit, audition page and [docs page](FATHOM.md) added.
+- **VELVET, TONEWHEEL, RESIN:** starter kits added. All four engines' pad class now
+  lives in the engine (`drumClassFor`) rather than only in the SYNTH screen.
+- **First-generation docs and audition pages:** see the round's commits for which
+  engines got a page.
+- **BORE, ARCO, SCOUR, KEEL:** on the SYNTH picker. The screen code was written
+  without an Android SDK; CI's `android-build` is its first compile.
+- **Determinism:** TIDE, SNAP and GYRE have canaries in `DeterminismTest`.
+- **HOLD:** 16 of the 19 flagged engines already had a test proving their loop
+  seam or their refusal; the keyword scan missed them. ORPHICA now has a
+  `Keys.seamError` test against the cycle the process really played before the
+  loop (all four seams measure 0.0, and the test proves the measure can fail).
+  OSPREY and OBBLIGATO now have tests pinning HOLD's top as a longer finite note.
+- **BORE's seam:** its loop closes by a crossfade blend, which `Keys.seamError`
+  cannot judge (`Bore.kt` documents why). Its existing join tests check the step,
+  correlation and dip at the join, and can fail, so they count as row 12's proof.
+- **A merge lesson:** `SynthRoot`'s exhaustive `when` broke the default branch's
+  compile when ACCORD and LORENTZ landed alongside it. The guard did its job, but
+  at merge time. Any change that adds an exhaustive `when` over `Patch` should be
+  merged with the base brought up to date first.
+
 ## Ledger
 
 - **Verified:** every row of the table, by grep, on the commit above.
