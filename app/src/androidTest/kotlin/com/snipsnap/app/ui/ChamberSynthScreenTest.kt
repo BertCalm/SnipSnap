@@ -11,6 +11,7 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performTextReplacement
@@ -18,6 +19,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.snipsnap.app.KitShelf
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
@@ -91,6 +93,32 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         pump()
     }
 
+    /**
+     * The root shows only as the stepper row's readout ("ROOT C#4"), so the test reads it
+     * there and walks it with the ROOT buttons, an octave or a semitone a press.
+     */
+    private fun currentRoot(): Int = (0..127).first {
+        compose.onAllNodesWithText("ROOT ${Scales.nameOf(it)}", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+    }
+
+    private fun rootTo(target: Int) {
+        var presses = 0
+        while (currentRoot() != target) {
+            check(presses++ < 40) { "ROOT never reached $target from ${currentRoot()}" }
+            val gap = target - currentRoot()
+            press(when {
+                gap >= 12 -> "ROOT OCTAVE UP"
+                gap > 0 -> "ROOT UP"
+                gap <= -12 -> "ROOT OCTAVE DOWN"
+                else -> "ROOT DOWN"
+            })
+        }
+    }
+
+    private fun assertRoot(midi: Int) {
+        compose.onNodeWithText("ROOT ${Scales.nameOf(midi)}", useUnmergedTree = true).assertExists()
+    }
+
     private fun progress(label: String): Float = compose
         .onNodeWithContentDescription(label, useUnmergedTree = true).fetchSemanticsNode()
         .config[SemanticsProperties.ProgressBarRangeInfo].current
@@ -142,7 +170,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             for ((macro, value) in Chamber.defaults(voice) + preset.macros) {
                 if (macro != "HOLD") assertEquals(value, progress(macro), .00001f)
             }
-            assertEquals((preset.midi - Chamber.MIDI_MIN) / 48f, progress("ROOT"), .00001f)
+            assertRoot(preset.midi)
             assertEquals(preset.velocity, progress("VELOCITY"), .00001f)
             assertFiniteControls()
         }
@@ -163,7 +191,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
             press(voice.name)
             compose.onNodeWithText("WIDER RESPONSE").assertExists()
             compose.onNodeWithContentDescription("USE WIDER RESPONSE").assertDoesNotExist()
-            dial("ROOT", 1f)
+            rootTo(84)
             compose.runOnIdle {
                 val draft = SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single { it.voice == voice }
                 assertEquals(5, draft.model)
@@ -175,7 +203,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle { generation++ }
         pump()
         compose.onNodeWithText("WIDER RESPONSE").assertExists()
-        assertEquals(1f, progress("ROOT"), .00001f)
+        assertRoot(84)
         compose.runOnIdle {
             val drafts = SynthDrafts.read(settings).filterIsInstance<ChamberPatch>()
             assertEquals(ChamberVoice.entries.toSet(), drafts.map { it.voice }.toSet())
@@ -199,7 +227,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         SynthDrafts.write(settings, listOf(original))
         show(root, settings, KitShelf.Entry(kitDir, kit))
         compose.onNodeWithText("SAVED RESPONSE").assertExists()
-        dial("ROOT", (82 - Chamber.MIDI_MIN) / 48f)
+        rootTo(82)
         val oldEdit = original.copy(midi = 82)
         compose.runOnIdle {
             assertEquals(oldEdit, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
@@ -212,7 +240,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         }
         compose.onNodeWithText("WIDER RESPONSE").assertExists()
         compose.onNodeWithContentDescription("USE WIDER RESPONSE").assertDoesNotExist()
-        dial("ROOT", 1f)
+        rootTo(84)
         dial("VELOCITY", .62f)
         val expected = wider.copy(midi = 84, velocity = .62f)
         press("HYBRID")
@@ -263,8 +291,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         press("SAVE PRESET")
         compose.onNode(hasSetTextAction()).performTextReplacement("QUEUED ROOM")
         pump()
-        val rootEdit = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
-            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val rootUp = requireNotNull(compose.onNodeWithContentDescription("ROOT UP", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
+        val rootOctaveUp = requireNotNull(compose.onNodeWithContentDescription("ROOT OCTAVE UP", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         val velocityEdit = requireNotNull(compose.onNodeWithContentDescription("VELOCITY", useUnmergedTree = true)
             .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
         val response = requireNotNull(compose.onNodeWithContentDescription("USE WIDER RESPONSE", useUnmergedTree = true)
@@ -279,9 +309,9 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         compose.runOnIdle {
             // Every callback came from the same old composition. Exercise both
             // orders around the response choice, then save before any new frame.
-            assertTrue(rootEdit((82 - Chamber.MIDI_MIN) / 48f))
+            assertTrue(rootUp())
             assertTrue(response())
-            assertTrue(rootEdit(1f))
+            assertTrue(rootOctaveUp())
             assertTrue(velocityEdit(.63f))
             assertEquals(expected, SynthDrafts.read(settings).filterIsInstance<ChamberPatch>().single())
             assertTrue(save())
@@ -292,10 +322,10 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         val saved = UserPresets.read(root).single { it.name == "QUEUED ROOM" }.patch as ChamberPatch
         assertEquals(expected.copy(name = "QUEUED ROOM"), saved)
 
-        val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT", useUnmergedTree = true)
-            .fetchSemanticsNode().config[SemanticsActions.SetProgress].action)
+        val immediateRoot = requireNotNull(compose.onNodeWithContentDescription("ROOT DOWN", useUnmergedTree = true)
+            .fetchSemanticsNode().config[SemanticsActions.OnClick].action)
         compose.runOnIdle {
-            assertTrue(immediateRoot((83 - Chamber.MIDI_MIN) / 48f))
+            assertTrue(immediateRoot())
             generation++
         }
         pump()
@@ -328,7 +358,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
                 macro == "HOLD" || progress(macro) == value
             }
         }
-        assertEquals((saved.midi - Chamber.MIDI_MIN) / 48f, progress("ROOT"), .00001f)
+        assertRoot(saved.midi)
         assertEquals(saved.velocity, progress("VELOCITY"), .00001f)
         assertFiniteControls()
         compose.runOnIdle {
@@ -364,7 +394,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         assertEquals(.31f, progress("STRIKE"), .00001f)
         assertEquals(.43f, progress("VELOCITY"), .00001f)
         assertFiniteControls()
-        dial("ROOT", (65 - Chamber.MIDI_MIN) / 48f)
+        rootTo(65)
         dial("VELOCITY", .61f)
         dial("STRIKE", .64f)
         dial("DIVIDE", .77f)
@@ -376,7 +406,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
         press("HYBRID")
         compose.runOnIdle { generation++ }
         pump()
-        assertEquals((65 - Chamber.MIDI_MIN) / 48f, progress("ROOT"), .00001f)
+        assertRoot(65)
         assertEquals(.61f, progress("VELOCITY"), .00001f)
         assertEquals(.64f, progress("STRIKE"), .00001f)
         compose.runOnIdle {

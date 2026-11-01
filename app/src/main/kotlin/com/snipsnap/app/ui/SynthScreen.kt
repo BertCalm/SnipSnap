@@ -1506,7 +1506,13 @@ fun SynthScreen(
         when (control) {
             is SynthRoot.Tune -> updateMacro("TUNE", control.tuneFor(midi))
             is SynthRoot.Field -> {
-                val next = control.at(midi)
+                // [control] came from the composition that drew the button, and its copy of the
+                // patch is that old. A press can land in the same frame as another edit (the
+                // WIDER RESPONSE choice, a velocity change), so the root goes onto the patch
+                // as it is now, not onto that copy, which would put the other edit back.
+                val pair = engine to voice
+                val live = SynthRoot.of(buildCurrentPatch(loadedPatchesByVoice[pair]?.name ?: engine.patchDisplayName(voice))) ?: control
+                val next = live.at(midi)
                 touched = true
                 currentPresetByVoice.remove(engine to voice)
                 when (next) {
