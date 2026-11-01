@@ -61,6 +61,18 @@ internal class PrintedPadStore(private val format: Format) {
         render(original).also(format.validateAudio)
     }
 
+    /** Read-only effect-specific preflight before even an immutable source capture is written. */
+    fun requireSources(model: KitBuilderModel, slot: Int, validate: (Snip) -> Unit) = synchronized(model) {
+        val pad = pad(model, slot)
+        val applied = wrapper(pad.recipe)
+        if (applied == null) {
+            liveInventory(model, pad).files.forEach { validate(checkedAudio(liveFile(model, it.name))) }
+        } else {
+            requireCurrent(model, pad, applied.inventory)
+            loadSnapshot(model, applied.source).inventory.files.forEach { validate(checkedAudio(backupFile(model, it.hash))) }
+        }
+    }
+
     /** Every KEEP re-renders every velocity zone from the immutable baseline. */
     fun apply(
         model: KitBuilderModel,

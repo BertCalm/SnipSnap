@@ -186,7 +186,7 @@ object MeridianKitGenerator {
         }
         val program = KeygroupProgram(instrumentName, keygroups,
             volumeRelease = MeridianKits.HELD_RELEASE_SECONDS)
-        OneNote.writePackage(instrumentName, program, stems, folder, overwrite = true)
+        OneNote.writePackage(instrumentName, program, stems, folder, overwrite = true, spanKeyboard = false)
         val completedZones = zones.map { zone ->
             @Suppress("UNCHECKED_CAST")
             val layers = zone.getValue("layers") as List<Map<String, Any?>>

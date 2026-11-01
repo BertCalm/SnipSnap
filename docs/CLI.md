@@ -1431,3 +1431,7 @@ exports (copy the contents of snipsnap-out/card onto the card):
 
 The groove really is 92 BPM; the kick really does land on A01. Every
 number in that table is the classifier being auditable in public.
+
+### LORENTZ finite collisions
+
+`snipsnap synth LORENTZ FUSE --preset 1 --out <dir>` renders the rounded voice; use `LORENTZ LORENTZ` for the tearing voice. `--all` renders all six anchors for that voice. `--macros` accepts TUNE, CAPACITOR, GAP, IMPACT, WELD and HOLD. `--midi` sets TUNE over MIDI 24..48; it cannot be combined with a TUNE macro override. `--velocity` changes contact and level, and `.patch` sidecars retain every setting for `--patch` replay. HOLD extends a finite decay and does not export a held instrument. Only engine model 3 is currently supported by saved LORENTZ patches.

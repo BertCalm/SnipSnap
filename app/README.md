@@ -73,14 +73,14 @@ M0's exit test was: browse kits on a phone, tap pads, hear WAVs, flip
 schemes in Tape Properties. The player for that test was `SoundPool`
 (`PadPlayer`), since deleted. Every screen that makes a sound goes
 through `PadEngine`. PLAY's exit test passed on a phone on 2026-09-08
-(`docs/BENCH.md` A1). The FRESH TAPE menu (60 starters including STRIKE FX, CIRCUIT,
-THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME and OTIS,
+(`docs/BENCH.md` A1). The FRESH TAPE menu (64 starters including CONFLUENCE VOICES, ACCORD, STRIKE FX, CIRCUIT,
+THAW, SCOUR, NIMBUS, UNDERTOW, CISTERN, UPRIGHT BASS, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, ORIGAMI, FILAMENT, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, FLOCK, OVERLAP, OHM, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, MURMUR SELECTED, SCANNED CHAIN, TREFOIL, TRIO, OSPREY, OSPREY CURATED, OPENSKY, VENT, CAUSTIC, TIDAL, CHAMBER, KEEL, LIBRATION, MERIDIAN, RIME, OTIS and OBBLIGATO,
 from `StarterKits`, rendered by
 the `:synth` engines on-device) makes the shelf useful before a capture
 exists. The ordered hardware list is `docs/BENCH.md`; the notes below
 are the per-feature detail.
 
-The SYNTH source picker has 69 engines: LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET,
+The SYNTH source picker has 70 engines: LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET,
 TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT,
 SIREN, FORK, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY,
 THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM,
@@ -110,6 +110,20 @@ response. Saved sounds, including its six original factory recipes, retain
 their renderer through edits. USE WIDER RESPONSE explicitly adopts the new
 response without changing the authored room, controls, ROOT, VELOCITY or seed.
 See [CHAMBER](../docs/CHAMBER.md) for listening evidence and remaining limits.
+
+ACCORD exposes BRUSH by default, WOOD and TINE, five finite controls, ROOT
+(C2–C5), native TOUCH and LENGTH. TINE offers Reference, Soft Attack,
+Bright Edge and Long Ring without changing the saved mechanical initializer,
+seed or passage start. Preset recall, YOURS, navigation and pad reopening keep
+the complete typed recipe. HOLD is hidden and every delivered pad plays once;
+long-file LOOP classification is not sustained playback. Three unchanged
+functional tests at `fac839f0` passed on a software emulator with the documented
+ART setup. The full nine-module JVM gate at `00a1f9ff` passed 8,010 tests with
+zero failures/errors/skips. Final standard debug/test compilation and the
+optional non-debuggable development build also passed at that source. The
+rebuilt APK has not been device-executed; native listening and physical-device
+acceptance remain separate gates.
+See [ACCORD](../docs/ACCORD.md).
 
 OTIS exposes Organ, Steam, Blues Harp and Squeeze as sixteen editable finite
 performances. Complete scores survive preset saves, navigation and SEND TO PAD.
@@ -174,10 +188,13 @@ recipes survive drafts, saved presets and pad reopening. The sixteen-pad starter
 stays finite. Hardware latency and listening remain acceptance checks.
 See [TIDAL](../docs/TIDAL.md) and [HOLD](../docs/TIDAL_HOLD.md).
 
-ORIGAMI adds the accepted CRANE, FAN and STILL voices, six factory presets,
+ORIGAMI adds the accepted CRANE, FAN and STILL voices, twelve factory presets,
 six controls and a dry sixteen-pad starter. Finite SEND TO PAD recipes preserve
 model, seed, note and velocity; authored root metadata keeps keyed placement
-accurate. HOLD and instrument sustain are deferred. See [ORIGAMI](../docs/ORIGAMI.md).
+accurate. FAN/STILL MAKE INSTRUMENT supplies C3–C5 held keys. Six new performance
+factories pair BLOOM/UNFOLD with velocity FOLD, while the six original references
+and starter remain unchanged. Select a performance factory and MAKE INSTRUMENT
+for native held playing. See [ORIGAMI](../docs/ORIGAMI.md#performance-bank).
 
 OVEN adds GRAND, FELT, FORGED and BLOOM with six macros and the ten approved
 factory recipes. ROOT and VELOCITY set a native rendered strike; the complete
@@ -875,7 +892,14 @@ logcat tag to grab when something is wrong.
   builds sixteen finite one-shot pads with native soft/hard velocity zones.
   Repeated hits should keep their tails and soft strikes should remain soft.
   [The integration notes](../docs/LIBRATION.md#measuring-on-a-phone) include
-  the opt-in device benchmark and MPC acceptance pass. HOLD remains unavailable.
+  the opt-in device benchmark and finite MPC acceptance pass. The owner accepted
+  finite phone/MPC behavior. For the new held path, choose HOLD, save and return,
+  then SEND: the pad should repeat while held and stop on release. NOTE restores
+  finite playback and its saved LENGTH. MAKE INSTRUMENT keeps the real attack,
+  renders keyboard zones serially, and exposes RELEASE. Cancel a render, make a
+  replacement, hold a key through a loop, then release it. The
+  [held design](../docs/LIBRATION_HOLD.md) records the new version and software evidence;
+  this new transport still needs an owner phone/MPC pass.
 - **ORIGAMI**: open SYNTH, select ORIGAMI, and audition Paper Key,
   Warm Fan and Tenth Bloom. Verify TUNE shows the actual note; CREASE,
   FOLD, TURN, WARP and MOTION change the sound. Save a preset, reload it

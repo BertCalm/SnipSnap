@@ -1,0 +1,272 @@
+{
+  "format": "snipsnap-confluence-selection-draft/v1",
+  "schemaVersion": 1,
+  "status": "draft-not-added-to-snipsnap",
+  "coordinateSystem": "seconds-in-exact-listening-file",
+  "boundaryPrecision": "browser-decoded-preview",
+  "exportedAt": "2026-10-27T21:42:58.926Z",
+  "minimumSectionSeconds": 0.25,
+  "sections": [
+    {
+      "id": "66492e79-fea0-4ec6-bde4-bd4d890e3657",
+      "name": "Khöömei 01",
+      "kind": "phrase",
+      "startSeconds": 0,
+      "endSeconds": 11.727087480270626,
+      "browserDurationSeconds": 12.536848,
+      "manifestDurationSeconds": 12.564898,
+      "source": {
+        "id": "khoomei",
+        "title": "Khöömei — an overtone demonstration",
+        "tradition": "THROAT-SINGING TECHNIQUE",
+        "performer": "Shared by nemaavla. The source page does not name the performer.",
+        "sourceUrl": "https://freesound.org/people/nemaavla/sounds/240916/",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 13 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/khoomei-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/khoomei-preview.mp3",
+        "sha256": "0c5e61b4cb8c2bb7559d9cb25742c15e5473d7c11cba35f8f14adf106e816be5",
+        "bytes": 280007
+      },
+      "createdAt": "2026-10-26T09:27:27.847Z",
+      "updatedAt": "2026-10-26T09:27:27.847Z"
+    },
+    {
+      "id": "7b64f8ed-9fc8-4dde-a80e-0eef60043eb9",
+      "name": "Yaman 01",
+      "kind": "phrase",
+      "startSeconds": 2.0577008312285257,
+      "endSeconds": 13.662007117146597,
+      "browserDurationSeconds": 344.591542,
+      "manifestDurationSeconds": 344.633469,
+      "source": {
+        "id": "hindustani-yaman",
+        "title": "Yaman — a solo ālāp",
+        "tradition": "HINDUSTANI SINGING",
+        "performer": "Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.",
+        "sourceUrl": "https://freesound.org/people/sankalp/sounds/193920/",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 5 minutes 45 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/hindustani-yaman-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/hindustani-yaman-preview.mp3",
+        "sha256": "eb1e810fb29b79817ec5f48eccff81f18a4188836ca0b89284703bc8a48ee8a9",
+        "bytes": 7713688
+      },
+      "createdAt": "2026-10-26T09:27:59.981Z",
+      "updatedAt": "2026-10-26T09:27:59.981Z"
+    },
+    {
+      "id": "dae043c3-7be5-4385-b426-34af265881eb",
+      "name": "Yaman 02",
+      "kind": "phrase",
+      "startSeconds": 15.240170144285832,
+      "endSeconds": 25.825155368026014,
+      "browserDurationSeconds": 344.591542,
+      "manifestDurationSeconds": 344.633469,
+      "source": {
+        "id": "hindustani-yaman",
+        "title": "Yaman — a solo ālāp",
+        "tradition": "HINDUSTANI SINGING",
+        "performer": "Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.",
+        "sourceUrl": "https://freesound.org/people/sankalp/sounds/193920/",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 5 minutes 45 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/hindustani-yaman-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/hindustani-yaman-preview.mp3",
+        "sha256": "eb1e810fb29b79817ec5f48eccff81f18a4188836ca0b89284703bc8a48ee8a9",
+        "bytes": 7713688
+      },
+      "createdAt": "2026-10-26T09:28:40.004Z",
+      "updatedAt": "2026-10-26T09:28:40.004Z"
+    },
+    {
+      "id": "a41016cc-82f7-4a91-b76d-d20a764fd6f7",
+      "name": "Yaman 03",
+      "kind": "phrase",
+      "startSeconds": 26.992698789267017,
+      "endSeconds": 38.8506568788858,
+      "browserDurationSeconds": 344.591542,
+      "manifestDurationSeconds": 344.633469,
+      "source": {
+        "id": "hindustani-yaman",
+        "title": "Yaman — a solo ālāp",
+        "tradition": "HINDUSTANI SINGING",
+        "performer": "Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.",
+        "sourceUrl": "https://freesound.org/people/sankalp/sounds/193920/",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 5 minutes 45 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/hindustani-yaman-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/hindustani-yaman-preview.mp3",
+        "sha256": "eb1e810fb29b79817ec5f48eccff81f18a4188836ca0b89284703bc8a48ee8a9",
+        "bytes": 7713688
+      },
+      "createdAt": "2026-10-26T09:28:47.398Z",
+      "updatedAt": "2026-10-26T09:28:47.398Z"
+    },
+    {
+      "id": "28bb24f7-4555-45dd-8a13-4f9f188cfbe8",
+      "name": "Yaman 04",
+      "kind": "phrase",
+      "startSeconds": 169.45462691222184,
+      "endSeconds": 183.47499667661978,
+      "browserDurationSeconds": 344.591542,
+      "manifestDurationSeconds": 344.633469,
+      "source": {
+        "id": "hindustani-yaman",
+        "title": "Yaman — a solo ālāp",
+        "tradition": "HINDUSTANI SINGING",
+        "performer": "Kaustuv Kanti Ganguli · shared by sankalp / CompMusic, recorded at UPF, Barcelona.",
+        "sourceUrl": "https://freesound.org/people/sankalp/sounds/193920/",
+        "license": "CC BY 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 5 minutes 45 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/hindustani-yaman-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/hindustani-yaman-preview.mp3",
+        "sha256": "eb1e810fb29b79817ec5f48eccff81f18a4188836ca0b89284703bc8a48ee8a9",
+        "bytes": 7713688
+      },
+      "createdAt": "2026-10-26T09:29:23.799Z",
+      "updatedAt": "2026-10-26T09:29:23.799Z"
+    },
+    {
+      "id": "9bd95a4d-7b8a-4194-b644-d45a7c10ff2e",
+      "name": "Kulning på kor 01",
+      "kind": "phrase",
+      "startSeconds": 2.6506090413837535,
+      "endSeconds": 9.930242568410504,
+      "browserDurationSeconds": 50.56,
+      "manifestDurationSeconds": 50.56,
+      "source": {
+        "id": "swedish-kulning",
+        "title": "Kulning på kor — herding calls",
+        "tradition": "SWEDISH KULNING",
+        "performer": "Anna Moraeus and Jemt-Kersti Andersson · recorded by Matts Arnberg, Dalarna, 1954. Swedish Performing Arts Agency / Centre for Swedish Folk Music and Jazz Research.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kulning_p%C3%A5_kor_-_SMV_-_SVA_BB_5345_13.wav",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Lossless encoding conversion only. Decoded PCM verified bit-identical to source WAV. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Lossless archival audio (FLAC); decoded samples are identical to the original WAV.",
+        "excerptNote": "Complete 50.56-second archival file. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/swedish-kulning.flac",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/swedish-kulning.flac",
+        "sha256": "18f2f0c0b448203ae56c5a765204b64fd36e589912ffd0ae4c3b6966453dc099",
+        "bytes": 1338885
+      },
+      "createdAt": "2026-10-26T09:30:00.569Z",
+      "updatedAt": "2026-10-26T09:30:00.569Z"
+    },
+    {
+      "id": "5e9083fc-3f85-45ff-8921-158309e68d96",
+      "name": "Kulning på kor 02",
+      "kind": "phrase",
+      "startSeconds": 10.046445517015707,
+      "endSeconds": 14.0282100657518,
+      "browserDurationSeconds": 50.56,
+      "manifestDurationSeconds": 50.56,
+      "source": {
+        "id": "swedish-kulning",
+        "title": "Kulning på kor — herding calls",
+        "tradition": "SWEDISH KULNING",
+        "performer": "Anna Moraeus and Jemt-Kersti Andersson · recorded by Matts Arnberg, Dalarna, 1954. Swedish Performing Arts Agency / Centre for Swedish Folk Music and Jazz Research.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kulning_p%C3%A5_kor_-_SMV_-_SVA_BB_5345_13.wav",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Lossless encoding conversion only. Decoded PCM verified bit-identical to source WAV. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Lossless archival audio (FLAC); decoded samples are identical to the original WAV.",
+        "excerptNote": "Complete 50.56-second archival file. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/swedish-kulning.flac",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/swedish-kulning.flac",
+        "sha256": "18f2f0c0b448203ae56c5a765204b64fd36e589912ffd0ae4c3b6966453dc099",
+        "bytes": 1338885
+      },
+      "createdAt": "2026-10-26T09:30:20.179Z",
+      "updatedAt": "2026-10-26T09:30:20.179Z"
+    },
+    {
+      "id": "ebe472e0-6e9d-4106-b17d-aff5a0a5bfc9",
+      "name": "Kulning på kor 03",
+      "kind": "phrase",
+      "startSeconds": 14.403120909685866,
+      "endSeconds": 19.582276668848166,
+      "browserDurationSeconds": 50.56,
+      "manifestDurationSeconds": 50.56,
+      "source": {
+        "id": "swedish-kulning",
+        "title": "Kulning på kor — herding calls",
+        "tradition": "SWEDISH KULNING",
+        "performer": "Anna Moraeus and Jemt-Kersti Andersson · recorded by Matts Arnberg, Dalarna, 1954. Swedish Performing Arts Agency / Centre for Swedish Folk Music and Jazz Research.",
+        "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kulning_p%C3%A5_kor_-_SMV_-_SVA_BB_5345_13.wav",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Lossless encoding conversion only. Decoded PCM verified bit-identical to source WAV. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Lossless archival audio (FLAC); decoded samples are identical to the original WAV.",
+        "excerptNote": "Complete 50.56-second archival file. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/swedish-kulning.flac",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/swedish-kulning.flac",
+        "sha256": "18f2f0c0b448203ae56c5a765204b64fd36e589912ffd0ae4c3b6966453dc099",
+        "bytes": 1338885
+      },
+      "createdAt": "2026-10-26T09:30:40.321Z",
+      "updatedAt": "2026-10-26T09:30:40.321Z"
+    },
+    {
+      "id": "83dff24e-ba9d-4e29-b13a-74167301ac3b",
+      "name": "Khöömei 02",
+      "kind": "phrase",
+      "startSeconds": 6.448961798999647,
+      "endSeconds": 11.6833725831024,
+      "browserDurationSeconds": 12.546873,
+      "manifestDurationSeconds": 12.564898,
+      "source": {
+        "id": "khoomei",
+        "title": "Khöömei — an overtone demonstration",
+        "tradition": "THROAT-SINGING TECHNIQUE",
+        "performer": "Shared by nemaavla. The source page does not name the performer.",
+        "sourceUrl": "https://freesound.org/people/nemaavla/sounds/240916/",
+        "license": "CC0 1.0",
+        "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+        "modifications": "Unchanged published MP3 preview. No Confluence processing, pitch shift, time stretch, gain adjustment, fades or effects.",
+        "formatNote": "Published HQ MP3 preview from Freesound, copied without further audio processing. Original WAV requires a Freesound login.",
+        "excerptNote": "Complete published preview, about 13 seconds. No additional crop."
+      },
+      "listeningFile": {
+        "url": "assets/khoomei-preview.mp3",
+        "resolvedUrl": "https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/assets/khoomei-preview.mp3",
+        "sha256": "0c5e61b4cb8c2bb7559d9cb25742c15e5473d7c11cba35f8f14adf106e816be5",
+        "bytes": 280007
+      },
+      "createdAt": "2026-10-26T09:31:33.312Z",
+      "updatedAt": "2026-10-26T09:31:33.312Z"
+    }
+  ]
+}

@@ -231,6 +231,13 @@ raw/matched listening comparisons and portable prototype recipes. The
 owner's listening verdict; [implementation notes](docs/CONFLUENCE.md) distinguish
 this finite renderer from the later phone editor, larger crowd and HOLD stages.
 
+CONFLUENCE VOICES adds nine approved Yaman, kulning and khöömei passages, a
+sixteen-pad starter and a MAKE bench for source/reference/solo/pair/group
+comparisons. The exact source bank and credits travel through native backup,
+merge and Breed. These are finite phrases at their native register; roots and
+keyboard sustain are not inferred. See the [selected-bank notes](docs/CONFLUENCE_SELECTED_BANK.md)
+and [listening comparisons](https://confluence-snipsnap-audition.bertcalm.chatgpt.site/voices/bank/).
+
 THUMP, the analog-style drum voice engine — S1 of
 [`docs/SYNTH_ROADMAP.md`](docs/SYNTH_ROADMAP.md), real. Eight voices (kick,
 snare, closed/open hat, clap, tom, cowbell, rim), every macro normalized 0..1
@@ -403,7 +410,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 60 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 64 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -573,8 +580,10 @@ musical audition and MPC 3/XPM kit with `./gradlew :synth:generateTrioMusicalBan
 MURMUR combines four-operator FM with a moving formant bank across BASS, KEY,
 PLUCK, LEAD, CHOIR and METAL. MOUTH, EDGE, BREATH, MOTION, BODY and HOLD shape
 the dry voice; MIDI root (36–96), velocity and the complete model configuration
-remain saved with each patch. Thirty-six dry presets and a sixteen-pad
-C minor pentatonic FRESH TAPE starter are included. Run
+remain saved with each patch. The original bank retains its 36 presets and
+sixteen-pad starter; six
+listening-selected KEY/CHOIR settings and the MURMUR SELECTED starter are also
+available. `./gradlew :synth:generateMurmurSelectedKit` exports the new MPC kit. Run
 `./gradlew :synth:generateMurmurAudition -PmurmurFull` for the dry listening
 matrix and standalone page. [Implementation notes](docs/engines/MURMUR.md)
 describe the approved six-voice sound, settled HOLD loops and the expanded bank's
@@ -682,11 +691,15 @@ glass and departing tonal gestures. GATHER, TWINS and DEPARTURE share REGION,
 WANDER, NUDGE, SWARM and RESONANCE, with independent ROOT, TOUCH and finite LENGTH
 in SYNTH. Twelve approved presets and a sixteen-pad starter preserve complete
 recipes and native soft/hard strikes. A bounded screen cache reuses trajectories
-and revisited audio; fresh rendering remains an offline operation. HOLD and
-sustained loops remain later DSP work. The
+and revisited audio; fresh rendering remains an offline operation. NOTE retains
+the finite sound. Explicit HOLD repeats a phase-fitted orbit, and MAKE INSTRUMENT
+keeps its attack before a verified sustain loop, with key-up amplitude release.
+Held recipes use a separate version; existing finite recipes retain their sound.
+The
 [published audition](https://libration-snipsnap-audition.bertcalm.chatgpt.site)
 retains the musical bank and MPC download.
-[Implementation and device profiling](docs/LIBRATION.md) describe the contracts.
+[Implementation and device profiling](docs/LIBRATION.md) and the
+[held instrument design](docs/LIBRATION_HOLD.md) describe the contracts.
 
 OVEN is a struck keyboard instrument: velocity-sensitive
 stiff strings, restrained paired-string beating, dark fixed body coloration and
@@ -989,6 +1002,20 @@ gives way to the rejected ringing tail, and HOLD extends finite effort without
 looping. Its three presets and separate TRACE kit accompany the preserved static
 bank and starter.
 
+ACCORD is a finite pitched ensemble whose fifteen autonomous mechanisms
+exchange reaction through one moving support. BRUSH is the default, alongside
+WOOD and TINE's original Reference, Soft Attack, Bright Edge and Long Ring
+profiles. Six saved starting recipes, native note/touch/seed/passage replay,
+a dry sixteen-pad one-shot FRESH TAPE starter and a diagnostic audition carry the approved
+Python direction into a native candidate. Nonzero HOLD is refused. SYNTH's
+ROOT, TOUCH, LENGTH and TINE profile controls keep the complete saved recipe.
+Native numerical checks and three software-emulator functional tests passed
+with the documented ART setup. The full nine-module JVM gate at `00a1f9ff`
+passed 8,010 tests with zero failures/errors/skips. Both final Android builds
+passed at that source; the rebuilt development APK has not been device-executed.
+Owner listening and physical phone/MPC acceptance remain open.
+[Usage and limits](docs/ACCORD.md) link the design and frozen references.
+
 TIDAL brings two original source populations through a seeded encounter:
 PAIR gathers and passes, while STREAM exposes evolving ringing material.
 Its approved model-2 source direction, six finite factory presets and dry
@@ -1022,8 +1049,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
-69 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS and GRAINS round out the lineup —
+70 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1228,11 +1255,17 @@ in its own order. On the pad sheet, AMT is staged until KEEP, original/result
 previews preserve stereo, and REMOVE/UNDO retain the original audio and recipe.
 See [`docs/WIDE.md`](docs/WIDE.md).
 
+**OBLITERATE** adds an octave halo before fuzz, captured fragments and stereo chop.
+Its staged board saves SHIMMER, clock and pattern controls alongside AMT, retains
+the shared original across every velocity zone, and caches completed renders for
+repeated auditions. Existing WIDE/RUSH recipes keep their original version and sound.
+See [`docs/OBLITERATE.md`](docs/OBLITERATE.md) for controls, timing and device profiling.
+
 Identity is tested: a kick through the whole default rack still classifies
 KICK.
 
 That writeup is the engines on SYNTH's picker (`Engine` in `SynthScreen`):
-LATTICE, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
+LATTICE, ACCORD, THUMP, SCANNED CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA,
 TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, FLOTILLA, AEROSTAT,
 TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA,
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
@@ -1240,7 +1273,7 @@ SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVE
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
 TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, plus GRAINS, SNAP and DRAW, which sit beside the
 picker. `:synth` also holds engines that picker does not show. BORE, ARCO,
-SCOUR and KEEL have preset rosters, so `snipsnap synth` renders them.
+SCOUR, KEEL and LORENTZ have preset rosters, so `snipsnap synth` renders them.
 
 EROSION has a [native ARC/CRATER proof](docs/EROSION.md), saved touch and a
 regenerable audition. It remains outside the picker and factory presets.
@@ -1324,7 +1357,7 @@ and the [playtest guide](docs/BELLOWS_PLAYTEST.md) describe the remaining
 phone/MPC checks.
 
 ORIGAMI brings three note-relative spectral-folding voices to the SYNTH picker:
-CRANE, FAN and STILL. Six presets and a sixteen-pad starter kit use the accepted
+CRANE, FAN and STILL. Twelve presets and a sixteen-pad starter kit use the accepted
 model-4 sound, with editable TUNE, CREASE, FOLD, TURN, WARP and MOTION controls.
 SEND saves a replayable recipe and authored pitch for kit tuning. Model-4 FAN
 and STILL also offer C3–C5 held instruments through `MAKE INSTRUMENT ▸` to KEYS;
@@ -1335,7 +1368,10 @@ renderer has its own model 1, separate from finite model 4; the six controls
 remain unchanged, with no HOLD macro. Optional BLOOM and UNFOLD gestures move
 once between the source and folded color; MOTION sets their duration. STEADY
 retains existing audio and JSON. The new gesture is saved with its own version,
-and held keys finish it before the sustain loop. See the
+and held keys finish it before the sustain loop. The six performance presets pair
+BLOOM/UNFOLD with velocity FOLD. The reference recipes and starter layout stay unchanged.
+The [performance bank](docs/ORIGAMI.md#performance-bank) includes four ready-made MPC
+keygroups and musical auditions. See the
 [ORIGAMI notes](docs/ORIGAMI.md) for native workflow and listening history.
 Optional `VELOCITY: FOLD` adds hit-dependent folded color without changing pitch
 or gesture timing. The preview offers soft/mid/full touches. MAKE INSTRUMENT

@@ -103,6 +103,8 @@ import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.BoardRecipe
+import com.snipsnap.synth.ObliterateBoard
 import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.synth.Pedals
 import com.snipsnap.synth.AquariumEditor
@@ -333,7 +335,10 @@ fun PadSheetScreen(
         mutableStateOf(boardApplied?.type ?: BoardType.WIDE)
     }
     var pendingBoardAmount by remember(entry.dir, slot, pad.sampleFile, boardApplied?.amount, selectedBoardType) {
-        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.DEFAULT_AMOUNT)
+        mutableFloatStateOf(boardApplied?.takeIf { it.type == selectedBoardType }?.amount ?: BoardSheet.defaultAmount(selectedBoardType))
+    }
+    var pendingObliterate by remember(entry.dir, slot, pad.sampleFile, boardApplied?.obliterate, selectedBoardType) {
+        mutableStateOf(boardApplied?.obliterate ?: ObliterateBoard.Settings())
     }
     var boardUndoAvailable by remember(model, slot, pad.recipe, pad.velocityLayers) { mutableStateOf(false) }
     var boardAction by remember(entry.dir, slot) { mutableStateOf<String?>(null) }
@@ -1388,6 +1393,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToHear = if (original) 0f else pendingBoardAmount
         val typeToHear = selectedBoardType
+        val recipeToHear = BoardRecipe(typeToHear, amountToHear, pendingObliterate.takeIf { typeToHear == BoardType.OBLITERATE })
         applyingSegment = null
         busy = true
         boardAction = if (original) "HEAR ORIGINAL" else "HEAR ${typeToHear.name}"
@@ -1404,7 +1410,7 @@ fun PadSheetScreen(
                             current.recipe == p.recipe && current.velocityLayers == p.velocityLayers) {
                             "This pad changed. Open it again before hearing ${typeToHear.name}"
                         }
-                        BoardSheet.preview(fresh, targetSlot, amountToHear, typeToHear)
+                        BoardSheet.preview(fresh, targetSlot, recipeToHear)
                     }
                 }
                 // The DSP may finish after pad navigation, a model reload or
@@ -1433,6 +1439,7 @@ fun PadSheetScreen(
         val kitDir = m.kitDir
         val amountToKeep = pendingBoardAmount
         val typeToKeep = selectedBoardType
+        val recipeToKeep = BoardRecipe(typeToKeep, amountToKeep, pendingObliterate.takeIf { typeToKeep == BoardType.OBLITERATE })
         val activeName = BoardSheet.read(p.recipe)?.type?.name ?: typeToKeep.name
         val stalePads = pendingMetadataSlots.associateWith { m.kit.pad(it) }
         applyingSegment = null
@@ -1453,7 +1460,7 @@ fun PadSheetScreen(
                         current.recipe == p.recipe && current.velocityLayers == p.velocityLayers
                     ) {
                         when (action) {
-                            "KEEP" -> BoardSheet.apply(f, targetSlot, amountToKeep, typeToKeep)
+                            "KEEP" -> BoardSheet.apply(f, targetSlot, recipeToKeep)
                             "REMOVE" -> BoardSheet.remove(f, targetSlot)
                             "UNDO" -> BoardSheet.undo(f, targetSlot)
                             else -> error("Unknown board action")
@@ -3442,6 +3449,8 @@ fun PadSheetScreen(
             BoardCard(
                 type = selectedBoardType,
                 amount = pendingBoardAmount,
+                obliterate = pendingObliterate,
+                onObliterateChange = { update -> pendingObliterate = update(pendingObliterate) },
                 applied = boardApplied,
                 canUndo = boardUndoAvailable,
                 chainPad = pad.chain != null,
@@ -4694,6 +4703,8 @@ private fun HitLabelCard(
 private fun BoardCard(
     type: BoardType,
     amount: Float,
+    obliterate: ObliterateBoard.Settings,
+    onObliterateChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
     applied: BoardSheet.Applied?,
     canUndo: Boolean,
     chainPad: Boolean,
@@ -4727,7 +4738,11 @@ private fun BoardCard(
             }
         }
         TapeText(
-            if (type == BoardType.WIDE) "WIDE · STEREO CHARACTER" else "RUSH · SWELL & MOTION",
+            when (type) {
+                BoardType.WIDE -> "WIDE · STEREO CHARACTER"
+                BoardType.RUSH -> "RUSH · SWELL & MOTION"
+                BoardType.OBLITERATE -> "OBLITERATE · HALO & DESTRUCTION"
+            },
             TapeType.pixel, scheme.ink.tape, maxLines = 2,
         )
         TapeText(
@@ -4737,6 +4752,7 @@ private fun BoardCard(
                 selectedIsActive -> "${type.name} kept at ${(applied!!.amount * 100).roundToInt()}%"
                 applied != null -> "${applied.type.name} is active. KEEP replaces it from the original."
                 type == BoardType.WIDE -> "Hear a wider sound before keeping it"
+                type == BoardType.OBLITERATE -> "Hear the octave halo, fuzz and chopped fragments before keeping them"
                 else -> "Hear the swell and pitched echoes before keeping it"
             },
             TapeType.pixelSmall,
@@ -4754,6 +4770,9 @@ private fun BoardCard(
             // This card is staged. KEEP is the only amount commit.
             onFractionCommit = {},
         )
+        if (type == BoardType.OBLITERATE) {
+            ObliterateBoardControls(obliterate, onObliterateChange, busy, color, scheme)
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             ActionButton(
                 "HEAR ORIGINAL", scheme, enabled = !busy, dimmed = chainPad,
@@ -4784,6 +4803,55 @@ private fun BoardCard(
             )
         }
     }
+}
+
+@Composable
+private fun ObliterateBoardControls(
+    settings: ObliterateBoard.Settings,
+    onChange: ((ObliterateBoard.Settings) -> ObliterateBoard.Settings) -> Unit,
+    busy: Boolean,
+    color: Color,
+    scheme: Scheme,
+) {
+    var clockOpen by remember { mutableStateOf(false) }
+    StepperSlider(
+        label = "SHIMMER", labelWidth = 76.dp,
+        fraction = (settings.shimmerMix * 2).toFloat(),
+        valueText = "${(settings.shimmerMix * 100).roundToInt()}%",
+        fillColor = color, scheme = scheme, enabled = !busy,
+        onFractionChange = { fraction -> onChange { current -> current.copy(shimmerMix = (fraction * 50).roundToInt() / 100.0) } },
+        onFractionCommit = {},
+    )
+    TapeText("${settings.bpm.roundToInt()} BPM · 1/${settings.division} · ${if (settings.pitched) "OCTAVE" else "ROOM"}",
+        TapeType.pixelSmall, scheme.ink2.tape)
+    ActionButton("CLOCK & PATTERN", scheme, enabled = !busy, lit = clockOpen,
+        onClick = { clockOpen = !clockOpen })
+    if (clockOpen) {
+        StepperSlider(label = "BPM", fraction = ((settings.bpm - 40) / 200).toFloat(),
+            valueText = settings.bpm.roundToInt().toString(), fillColor = color, scheme = scheme,
+            enabled = !busy, onFractionChange = { fraction -> onChange { current -> current.copy(bpm = (40 + fraction * 200).roundToInt().toDouble()) } },
+            onFractionCommit = {})
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (division in listOf(4, 8, 16, 32)) {
+                ActionButton("1/$division", scheme, enabled = !busy, lit = settings.division == division,
+                    accessibilityLabel = "OBLITERATE division 1/$division", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(division = division) } })
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            for (pitched in listOf(true, false)) {
+                val label = if (pitched) "OCTAVE" else "ROOM"
+                ActionButton(label, scheme, enabled = !busy, lit = settings.pitched == pitched,
+                    accessibilityLabel = "OBLITERATE $label", modifier = Modifier.weight(1f),
+                    onClick = { onChange { current -> current.copy(pitched = pitched) } })
+            }
+        }
+        ActionButton("NEW PATTERN", scheme, enabled = !busy,
+            onClick = { onChange { current -> current.copy(seed = (current.seed + 1) and 0xffff_ffffL) } })
+        TapeText("Pattern ${settings.seed}. Changes stay staged until KEEP.", TapeType.pixelSmall, scheme.ink3.tape, maxLines = 2)
+    }
+    TapeText("AMT zero is the original. Below 35%, the whole effect blends in. Inputs up to 9 seconds.",
+        TapeType.pixelSmall, scheme.ink3.tape, maxLines = 3)
 }
 
 @Composable

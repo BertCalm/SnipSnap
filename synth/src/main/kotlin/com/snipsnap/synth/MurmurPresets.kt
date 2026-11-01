@@ -1,10 +1,9 @@
 package com.snipsnap.synth
 
 /**
- * Thirty-six original dry recipes: eight basses, eight keys/plucks, eight leads,
- * six choirs and six metals. The first twelve retain their original order and settings.
- * New recipes await the owner's listening review; saved articulation edits belong to
- * the individual patch and never change a voice's accepted base configuration.
+ * Thirty-six original dry recipes followed by six settings selected in listening.
+ * The original bank retains its order and sound; the added KEY and low CHOIR recipes
+ * use their saved render definition rather than changing existing voice defaults.
  */
 object MurmurPresets {
     private fun p(voice: MurmurVoice, name: String, vararg macros: Pair<String, Float>) =
@@ -133,7 +132,25 @@ object MurmurPresets {
                 trajectory = MurmurTrajectory.CYCLE, referenceSeconds = 2.40)),
     )
 
-    fun forVoice(voice: MurmurVoice): List<MurmurPatch> = presets.filter { it.voice == voice }
+    private val selectedPresets = listOf(0f, .5f, .75f, 1f).map { motion ->
+        MurmurPatch("KEY MOTION $motion", MurmurVoice.KEY,
+            mapOf("MOUTH" to .40f, "EDGE" to .40f, "BREATH" to .12f,
+                "MOTION" to motion, "BODY" to .55f, "HOLD" to 0f),
+            midi = 60, config = Murmur.configurationFor(MurmurVoice.KEY, model = 3))
+    } + listOf(36, 48).map { midi ->
+        MurmurPatch("CHOIR C${midi / 12 - 1} BREATH 0.1", MurmurVoice.CHOIR,
+            mapOf("MOUTH" to .45f, "EDGE" to .20f, "BREATH" to .10f,
+                "MOTION" to .30f, "BODY" to .65f, "HOLD" to 1f),
+            midi = midi, config = Murmur.configurationFor(MurmurVoice.CHOIR, model = 3))
+    }
 
-    fun all(): List<MurmurPatch> = presets
+    /** The published 36-recipe bank, retained for historical auditions and saved kits. */
+    fun original(): List<MurmurPatch> = presets
+
+    /** Four heard KEY settings and the lower-air C2/C3 CHOIR refinement. */
+    fun selected(): List<MurmurPatch> = selectedPresets
+
+    fun forVoice(voice: MurmurVoice): List<MurmurPatch> = all().filter { it.voice == voice }
+
+    fun all(): List<MurmurPatch> = presets + selectedPresets
 }

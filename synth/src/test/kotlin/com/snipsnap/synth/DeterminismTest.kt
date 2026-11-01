@@ -31,6 +31,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `ACCORD retains its accepted voices profiles and saved mechanical history`() {
+        for (reference in AccordPresets.all()) {
+            val patch = reference.copy(sourceSeconds = Accord.MIN_SOURCE_SECONDS)
+            val saved = Patches.fromJsonText(patch.toJsonText())
+            assertContentEquals(patch.render().samples, saved.render().samples, patch.name)
+        }
+    }
+
+    @Test
     fun `OTIS accepted chords retain source state after cold recipe replay`() {
         for (voice in OtisVoice.entries) {
             val patch = OtisPresets.forVoice(voice).first { "CHORD" in it.name }
@@ -38,6 +47,14 @@ class DeterminismTest {
             val original = patch.render()
             Otis.clearCache()
             assertContentEquals(original.samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+        }
+    }
+
+    @Test
+    fun `LORENTZ collision recipes regenerate both voices and finite HOLD exactly`() {
+        for (voice in LorentzVoice.entries) for (hold in listOf(0f, 1f)) {
+            val patch = LorentzPatch("Collision canary", voice, Lorentz.defaults(voice) + ("HOLD" to hold), velocity = .67f)
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
         }
     }
 
@@ -260,6 +277,17 @@ class DeterminismTest {
             val patch = LibrationPatch("Recall canary", voice,
                 Libration.defaults(voice) + mapOf("REGION" to .375f, "SWARM" to .65f),
                 midi = 43, velocity = .35f, sourceSeconds = .37)
+            val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
+            assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
+        }
+    }
+
+    @Test
+    fun `LIBRATION explicit held recipes replay byte identical loops through saved pad recipes`() {
+        for (voice in LibrationVoice.entries) {
+            val patch = LibrationPatch("Held recall canary", voice,
+                Libration.defaults(voice) + mapOf("SWARM" to .1f, "RESONANCE" to .35f, "HOLD" to 1f),
+                midi = 55, velocity = .35f, heldModel = LibrationKeys.MODEL_VERSION)
             val recalled = PadRecipe.fromJsonText(PadRecipe(patch = patch).toJsonText()).patch!!
             assertContentEquals(patch.render().samples, recalled.render().samples, voice.name)
         }

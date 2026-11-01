@@ -1,5 +1,32 @@
 # Synth roadmap — generate kits, not just capture them
 
+**Accord finite native candidate (2026-11-01).** Fifteen autonomous mechanisms
+exchange inertial reaction through a moving support; their individual contacts
+and pressure drive one tuned feedforward acoustic bank. BRUSH is the default,
+with WOOD and TINE Reference, Soft Attack, Bright Edge and Long Ring preserved
+from the approved Python direction. Native model/initializer/profile/note/touch/
+seed/passage recipes, strict JSON and velocity dispatch, six starting recipes,
+a dry sixteen-pad one-shot starter and diagnostic audition are implemented.
+The complete frozen handoff, six Python WAVs and unchanged manifests live in
+`reference/accord/`. The SDK-built picker includes ROOT, TOUCH, LENGTH and TINE
+profiles with complete typed recall. A 360-case probe exposed resonant overload
+and short captured tails; the corrected constant per-performance gain shared
+across velocity and extended unforced release explicitly revise the original
+cross-setting gain policy. The corrected pipeline passed 43 focused tests,
+429 full-length output cases, six deterministic 4×/8× comparisons and calibration
+spot checks; it generated the native audition and kit. Corrected Android
+assembly/instrumentation compilation, six C++ host tests and all three unchanged
+Accord functional device methods passed. The latter used the documented
+non-debuggable, exact-context ART setup on a software emulator; it does not
+establish phone latency or a default-debug instrumentation pass. That Android
+result is scoped to `fac839f0`. The full unfiltered nine-module JVM gate at
+clean `00a1f9ff` passed 8,010 tests, zero failures/errors/skips, in 1h30m58s.
+Final standard debug/test compilation and optional non-debuggable APK assembly
+also passed at `00a1f9ff`; that rebuilt APK has not been device-executed.
+Native listening and physical phone/MPC acceptance remain open.
+Nonzero HOLD is refused. See [ACCORD.md](ACCORD.md) and the
+[design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md).
+
 **EROSION native finite proof (2026-10-31).** The owner accepted the initial
 Python ARC/CRATER audition. The native port preserves its finite discharge and
 collapse laws, adds saved touch, exact event-age sampling, bounded charge
@@ -244,7 +271,7 @@ machines when the point is naming the rule that forbids naming them.
 
 ## The engines
 
-### LIBRATION — finite orbital gestures (native integration)
+### LIBRATION — finite gestures and recurring held keys (native integration)
 
 GATHER, TWINS and DEPARTURE turn precomputed rotating-frame three-body
 trajectories into wooden, glassy and departing tonal notes. REGION, WANDER,
@@ -254,11 +281,14 @@ picker and a sixteen-pad FRESH TAPE starter carry complete recipes and native
 soft/hard velocity layers through both MPC export formats.
 
 A bounded preview cache reuses trajectories and previously rendered audio.
-Fresh audio still takes hundreds of milliseconds on the cloud JVM; physical
-phone profiling and MPC playback remain unverified. HOLD is explicitly refused,
-and sustained instruments remain separate work. [LIBRATION](LIBRATION.md)
-records the preserved rendering versions, audition generators, measured limits
-and hardware acceptance checks.
+The owner accepted finite phone/MPC behavior on 2026-10-31; phone timing remains
+unmeasured. An independently versioned HOLD path periodically traverses the same
+physical descriptors with continuous phase and modal state. MAKE INSTRUMENT
+exports its real onset, verified sustain loop and player amplitude release.
+Generation is serial and cancellable, and fresh renders take seconds on the cloud
+JVM. The new held transport awaits owner listening and phone/MPC checks.
+[LIBRATION](LIBRATION.md) records finite compatibility and acceptance;
+[held keys](LIBRATION_HOLD.md) records the new method, measured limits and remaining work.
 
 ### CREASE — pressure memory in a phase map (native integration)
 
@@ -761,8 +791,13 @@ the standalone listening page; `-PmurmurFull` adds the broad note,
 velocity, macro and interaction matrix. `generateMurmurKit` exports the
 sixteen-pad MPC acceptance kit. HOLD exports settled sustain without the
 initiating onset because the sample API has no attack-plus-loop region.
-The expanded preset bank's listening review, phone/MPC validation and release
-naming remain open.
+The shared roster also appends six listening-selected settings: four C4 KEY
+MOTION cases and lower-breath CHOIR at C2/C3, all with saved render version 3.
+MURMUR SELECTED is a separate FRESH TAPE starter; `generateMurmurSelectedKit`
+exports its sixteen pads as MPC 2 and MPC 3 with editable recipes. Original
+presets, the original starter and historical audition cases remain unchanged.
+The expanded bank's separate listening review, physical phone/MPC validation and
+release naming remain open.
 
 ### REVEL — interlocking skins through moving microphones
 
@@ -3022,3 +3057,6 @@ LENGTH scales a finite performance; this landing does not add periodic HOLD or a
 held-keyboard export. Shared pressure applies within the saved score. Independent
 MPC pads cannot share an offline renderer's state. Cold render cost, cache behavior,
 Android compilation and remaining device validation are recorded in [OTIS.md](OTIS.md).
+## LORENTZ finite collision handoff
+
+LORENTZ ports the accepted third Python listening pass into the JVM synth: falling sweep, finite collision, irreversible capture and a steady sub tail. FUSE and LORENTZ share the root but have distinct contact behavior. IMPACT and GAP retain their widened audible ranges; HOLD is a finite decay extension. Saved model/velocity, factory anchors, CLI controls, raw reference probes, a dry sixteen-pad kit and Kotlin audition tasks are wired in. Classification uses actual PCM rather than forcing every hit into KICK. Android picker integration remains deferred to an SDK-backed session. See [LORENTZ](engines/LORENTZ.md) for source provenance, validation and the As built record.
