@@ -70,7 +70,9 @@ Native and whole-take matched audio are separate. Matching must preserve the
 relative levels of notes within a performance. Long STILL takes cross at least
 three actual loop wraps before note-off; the manifest records their positions.
 
-The held banks use the existing .6-second release and C3–C5 sampling map.
+The held banks use the existing .6-second release and nine C3–C5 sampled roots.
+The shared export policy stretches the outer playback zones to MIDI 0–127;
+that uses edge-sample transposition rather than adding rendered roots.
 Each preserves the production `.xty`, sibling TrackData directory, `.xpm`,
 27 PCM24 WAVs, playback sidecar and complete `.origami-keys.json` authoring recipe.
 Downloads target MPC. On Android, select the factory and use MAKE INSTRUMENT;

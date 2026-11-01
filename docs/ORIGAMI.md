@@ -294,8 +294,10 @@ PREVIEW plays middle C for three seconds followed by the chosen release.
 The six sound controls stay the same; the instrument sheet adds no attack
 control because the sample retains the voice's authored onset.
 
-Each instrument has nine sampled roots, three semitones apart, covering
-C3–C5 only. The played zone overrides the source recipe's TUNE and explicit
+Each instrument has nine sampled roots, three semitones apart, from C3–C5.
+The shared exporter extends the first and last zones to MIDI 0 and 127, so
+keys beyond the sampled register transpose its nearest edge sample. The audition
+and root checks cover the sampled C3–C5 register. The played zone overrides the source recipe's TUNE and explicit
 MIDI; its seed, velocity and spectral settings remain intact. Keyboard velocity
 adds the normal player gain. The mono 44.1 kHz samples carry an attack followed
 by a periodic sustain region. Phone metadata, WAV sampler markers and both
