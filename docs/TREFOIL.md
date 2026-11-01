@@ -7,8 +7,10 @@ feedforward sympathetic trace. WEAVE, HOLLOW, WIRE, TANGLE and TRACE share the
 same structure and equal excitation budgets. Every bank has its own root mode;
 there is no fourth anchor. Output is dry mono, 4x internal / 44.1 kHz delivery.
 
-HOLD, a validated PAIR departure family, bank/hardware listening and on-device
-performance remain later work. Model-two presets and phone registration are
+Finite bank and hardware listening were accepted by the owner on 2026-11-01.
+Instrumented on-device performance and a validated PAIR departure family remain
+later work. A separate [Python HOLD proof](../experiments/trefoil-hold/README.md)
+is ready for listening; production HOLD remains refused. Model-two presets and phone registration are
 implemented in the playable-bank round below. COMPLETE means only that a finite simulation
 horizon was reached. No trajectory is claimed to escape forever.
 
@@ -266,8 +268,9 @@ SnipSnap preview velocity law. Matched demo WAVs add only a saved scalar gain.
 ## Release handoff and hardware audition
 
 Owner feedback on the published playable bank was positive on 2026-10-26.
-This is listening feedback on the browser bank, not evidence of a phone or MPC
-hardware pass. The integration now includes the current SnipSnap picker and
+On 2026-11-01 Josh reported, "Hardware is fine proceed as recommended."
+This records owner hardware acceptance; device models, firmware and instrumented
+timings were not supplied. The integration includes the current SnipSnap picker and
 starter catalog, with the authored root retained when sending a sound to a pad.
 The finite acoustic renderer and all twelve preset recipes are unchanged.
 
@@ -295,7 +298,7 @@ short tap. HOLD is a separate future design.
    that the hardware mix is identical.
 
 Record the MPC model, firmware, MPC 2/3 import path, affected pad/velocity and
-whether each issue also occurs in the browser. Physical MPC import, velocity
-transitions, polyphony and release endings remain pending until that check.
+whether each issue also occurs in the browser. Owner hardware acceptance is now
+recorded; the checklist remains available for reproducing any later issue.
 On the phone, separately check ROOT/VELOCITY/CONTACT editing, navigation,
 YOURS and SEND TO PAD; compiler checks do not establish device responsiveness.

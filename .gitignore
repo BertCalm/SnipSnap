@@ -447,6 +447,9 @@ testkit/scanned-chain-listen.html
 testkit/trefoil-audition/
 testkit/trefoil-model-two-audition/
 testkit/trefoil-playable-bank/
+testkit/trefoil-held-proof/
+experiments/trefoil-hold/__pycache__/
+.venv-trefoil-hold/
 
 # Contour's reproducible held-instrument bank and listening assets.
 testkit/contour-starter/
