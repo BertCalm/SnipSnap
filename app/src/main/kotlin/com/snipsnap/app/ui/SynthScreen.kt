@@ -1588,7 +1588,8 @@ fun SynthScreen(
         val heard = if (engine == Engine.ORPHICA || engine == Engine.OPENSKY) target else Cleanup.toMono(target)
         val v = TapeVoice(heard.samples, heard.sampleRate, channels = heard.channels)
         voicePlayer = v
-        v.start(0, loop = previewLoop ?: if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
+        v.start(0, loop = previewLoop ?: if (allowLoop && engine == Engine.PRISM) prismMotionStudio.loopFor(target)
+            else if (allowLoop && ((engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f)) ||
             (engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f))))
             0 until heard.frameCount else null)
     }
@@ -1628,7 +1629,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (loadedPatch != null || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (loadedPatch != null || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -1664,13 +1665,15 @@ fun SynthScreen(
                 // Default with the render: six sines a frame is not main-thread work.
                 // A reopened pad auditions its saved processing, while the
                 // native OPENSKY renderer above keeps its cancellation hook.
-                if (activeRecipe != null) activeRecipe.process(dry)
+                val finished = if (activeRecipe != null) activeRecipe.process(dry)
                 else Presets.landingFor(engine.name, voice.name, macros)?.process(dry) ?: dry
+                if (patch is PrismPatch) prismAuditionPlayback(patch, finished) else HeldPreviewPlayback(finished)
             },
             publish = { rendered ->
                 if (engine != Engine.PRISM || !prismMotionStudio.ownsPreview) {
-                    snip = rendered
-                    if (touched) audition(rendered, allowLoop = true)
+                    if (engine == Engine.PRISM) prismMotionStudio.rememberPlayback(rendered)
+                    snip = rendered.snip
+                    if (touched) audition(rendered.snip, allowLoop = true)
                 }
             },
             onFailure = { failure ->
@@ -3249,7 +3252,11 @@ fun SynthScreen(
                                 ?: engine.patchDisplayName(voice)) as PrismPatch else null
                         },
                         onEdit = ::editPrismMotion,
-                        onPreview = { target -> snip = target; audition(target, allowLoop = false) },
+                        onPreview = { target ->
+                            prismMotionStudio.rememberPlayback(target)
+                            snip = target.snip
+                            audition(target.snip, allowLoop = false, previewLoop = target.loop)
+                        },
                         onStopPreview = { pause -> if (pause) touched = false; voicePlayer?.stop() },
                         onBeforeEdit = ::closeHeld,
                     )
@@ -3487,10 +3494,14 @@ fun SynthScreen(
 
             if (flockHeldPreview != null) {
                 FlockHeldAudition(flockHeldPreview, classColor, scheme)
-            } else if (engine == Engine.APSIS) {
-                ApsisAuditionControls(classColor, scheme,
+            } else if (engine == Engine.APSIS || (engine == Engine.PRISM && Prism.isLoop(macros["HOLD"] ?: 0f))) {
+                RepeatingAuditionControls(classColor, scheme,
                     onAudition = { touched = true; snip?.let { audition(it, allowLoop = true) } },
-                    onStop = { touched = false; voicePlayer?.stop(); voicePlayer = null },
+                    onStop = {
+                        touched = false
+                        if (engine == Engine.PRISM) prismMotionStudio.cancelPreview()
+                        voicePlayer?.stop(); voicePlayer = null
+                    },
                 )
             } else {
                 Box(
@@ -3693,9 +3704,9 @@ private fun rememberFilamentPreviews(): FilamentPreviewCache {
     return previews
 }
 
-/** Separate transport controls for the repeating Apsis preview. */
+/** Separate transport controls for repeating synth previews. */
 @Composable
-private fun ApsisAuditionControls(
+private fun RepeatingAuditionControls(
     classColor: Color,
     scheme: Scheme,
     onAudition: () -> Unit,
