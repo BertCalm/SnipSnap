@@ -175,7 +175,7 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
     fun a_drawn_starting_shape_commits_without_resetting_the_current_recipe() {
         val original = fixture(ScannedChainVoice.PLUCK)
         show(original)
-        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "ROOT", "VELOCITY", "LENGTH")) {
+        for (label in listOf("FACTORY", "DRAW", "FROM PAD ▸", "VELOCITY", "LENGTH")) {
             assertReadsInFull(label)
         }
 
@@ -226,15 +226,13 @@ class ScannedShapeControlsTest : ComposeScreenTest() {
         val original = fixture(voice).copy(shape = custom)
         show(original)
 
-        adjust("ROOT", 65f)
-        assertEquals(original.copy(midi = 65), currentPatch)
-
+        // ROOT is the SYNTH screen's shared stepper row now, not part of this panel.
         adjust("VELOCITY", .64f)
-        assertEquals(original.copy(midi = 65, velocity = .64f), currentPatch)
+        assertEquals(original.copy(velocity = .64f), currentPatch)
 
         adjust("LENGTH", 2.5f)
-        assertEquals(original.copy(midi = 65, velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
-        assertEquals(3, changeCount)
+        assertEquals(original.copy(velocity = .64f, config = original.config.copy(seconds = 2.5f)), currentPatch)
+        assertEquals(2, changeCount)
     }
 
     @Test

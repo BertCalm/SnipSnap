@@ -6345,8 +6345,22 @@ private fun ChamberNoteControls(
 @Composable
 private fun RootStepperRow(control: SynthRoot.Control, scheme: Scheme, onRoot: (Int) -> Unit) {
     val root = control.midi
+    val low = control.range.first
+    val span = (control.range.last - low).coerceAtLeast(1)
     Row(
-        Modifier.fillMaxWidth(),
+        // The row is also one adjustable ROOT control for TalkBack, the way the per-engine
+        // ROOT sliders it replaced were: the position is the root's fraction of the engine's
+        // range, and SetProgress lands on the nearest note. Screen-reader users get the
+        // slider's swipe-to-adjust as well as the five buttons, and the on-device tests
+        // written against those sliders read and set it unchanged.
+        Modifier.fillMaxWidth().semantics {
+            contentDescription = "ROOT"
+            progressBarRangeInfo = ProgressBarRangeInfo((root - low).toFloat() / span, 0f..1f)
+            setProgress { fraction ->
+                onRoot((low + fraction.coerceIn(0f, 1f) * span).roundToInt())
+                true
+            }
+        },
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
