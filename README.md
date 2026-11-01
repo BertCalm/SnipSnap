@@ -277,8 +277,9 @@ opens and relaxes related routes, and CURL lets its upper colour bloom.
 Twelve approved dry presets, the phone SYNTH picker and a sixteen-pad starter
 share the same saved recipes. ROOT and native VELOCITY sit alongside INJECT,
 BEND, LENGTH, BUNDLE, COLLECT and HOLD. Earlier saved models retain their sound;
-held pads contain sustain cycles. Each model-3 voice also makes a three-root
-C3–C5 instrument that keeps its attack and sustains until note-off. Optional
+held pads contain sustain cycles. Each model-3 voice also makes a five-root
+C2–C6 instrument that keeps its attack and sustains until note-off, with the
+original three-root C3–C5 range available. Optional
 soft/mid/hard touch layers change the actual excitation colour and routed response;
 the single-layer option and hard capture retain the existing sound. The [private audition](https://filament-snipsnap-audition.bertcalm.chatgpt.site)
 and [implementation notes](docs/FILAMENT.md) document the sound and its limits.

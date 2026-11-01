@@ -2004,7 +2004,7 @@ fun SynthScreen(
         Engine.FILAMENT -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as FilamentPatch
             if (FilamentPadMaker.supports(patch)) HeldSpec.Filament(FilamentPadMaker.spec(
-                patch, heldSheet.holdRelease, heldSheet.holdFilamentTouchLayers,
+                patch, heldSheet.holdRelease, heldSheet.holdFilamentTouchLayers, heldSheet.holdFilamentWideKeys,
             )) else null
         }
         else -> null
@@ -3583,6 +3583,8 @@ fun SynthScreen(
                     instrumentNote = spec.instrumentNote,
                     touchLayers = spec.touchLayers,
                     touchLayersNote = spec.touchLayersNote,
+                    wideKeys = spec.wideKeys,
+                    keyRangeLabel = spec.keyRangeLabel,
                     done = heldSheet.holdDone,
                     total = heldSheet.holdTotal,
                     previewing = heldSheet.holdPreviewing,
@@ -3605,6 +3607,7 @@ fun SynthScreen(
                         else if (engine == Engine.FILAMENT) heldSheet.holdFilamentTouchLayers = it
                         else heldSheet.holdTouchLayers = it
                     },
+                    onWideKeys = { heldSheet.holdFilamentWideKeys = it },
                     onPreview = ::previewHeld,
                     onMake = ::makeHeld,
                     onCancel = ::closeHeld,
@@ -3884,6 +3887,7 @@ private class HeldSheetState {
     // FLOCK opens with physical touch enabled without changing CREASE's existing choice.
     var holdFlockTouchLayers by mutableStateOf(true)
     var holdFilamentTouchLayers by mutableStateOf(true)
+    var holdFilamentWideKeys by mutableStateOf(true)
     // Completed zones (or touch samples), of [holdTotal]; -1 when idle.
     var holdDone by mutableStateOf(-1)
     var holdTotal by mutableStateOf(0)
@@ -4396,6 +4400,8 @@ private sealed interface HeldSpec {
     val releaseFraction: Float? get() = null
     val touchLayers: Boolean? get() = null
     val touchLayersNote: String? get() = null
+    val wideKeys: Boolean? get() = null
+    val keyRangeLabel: String? get() = null
     /** Layered makers count touch samples; other makers retain their existing zone count. */
     val progressPerZone: Int get() = 1
 
@@ -4563,12 +4569,14 @@ private sealed interface HeldSpec {
         override val hasAttack get() = false
         override val progressPerZone get() = spec.layerCount
         override val touchLayers get() = spec.touchLayers
+        override val wideKeys get() = spec.wideKeys
+        override val keyRangeLabel get() = "${spec.rangeLabel} · ${zoneMidis.size * spec.layerCount} SAMPLES"
         override val touchLayersNote get() =
             "ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE."
         override val knobLabel get() = "RELEASE ${FilamentPadMaker.secondsLabel(spec.releaseSeconds)}"
         override val instrumentNote get() = if (spec.touchLayers)
-            "C3–C5 · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE; LET GO TO FADE."
-        else "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
+            "${spec.rangeLabel} · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE AT C4; LET GO TO FADE."
+        else "${spec.rangeLabel} · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE."
         override fun renderZone(midi: Int, cancelled: () -> Boolean) = FilamentPadMaker.renderLayers(spec, midi, cancelled)
         override fun preview(cancelled: () -> Boolean) = FilamentPadMaker.preview(spec, cancelled)
         override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
@@ -4599,6 +4607,8 @@ private fun HeldInstrumentSheet(
     instrumentNote: String?,
     touchLayers: Boolean?,
     touchLayersNote: String?,
+    wideKeys: Boolean?,
+    keyRangeLabel: String?,
     done: Int,
     total: Int,
     previewing: Boolean,
@@ -4608,6 +4618,7 @@ private fun HeldInstrumentSheet(
     onAttack: (Float) -> Unit,
     onRelease: (Float) -> Unit,
     onTouchLayers: (Boolean) -> Unit,
+    onWideKeys: (Boolean) -> Unit,
     onPreview: () -> Unit,
     onMake: () -> Unit,
     onCancel: () -> Unit,
@@ -4649,6 +4660,15 @@ private fun HeldInstrumentSheet(
                 if (hasAttack) MacroSlider("ATTACK", attack, fillColor, scheme, onAttack)
                 MacroSlider("RELEASE", release, fillColor, scheme, onRelease)
                 TapeText(knobLabel, TapeType.pixelSmall, scheme.ink2.tape)
+                if (wideKeys != null) {
+                    ActionButton(
+                        "KEY RANGE $keyRangeLabel", scheme,
+                        enabled = !busy,
+                        lit = wideKeys,
+                        accessibilityLabel = "KEY RANGE",
+                        modifier = Modifier.fillMaxWidth().semantics { selected = wideKeys },
+                    ) { onWideKeys(!wideKeys) }
+                }
                 if (touchLayers != null) {
                     ActionButton(
                         "TOUCH LAYERS ${if (touchLayers) "ON" else "OFF"}", scheme,

@@ -29,7 +29,7 @@ object FilamentKeysAuditionGenerator {
 
     @JvmStatic
     fun main(args: Array<String>) {
-        require(args.size <= 3) { "Supply an optional output directory, THREAD/PULSE/CURL/ALL and a touch-layers boolean." }
+        require(args.size <= 4) { "Supply an optional output directory, THREAD/PULSE/CURL/ALL, a touch-layers boolean and a wide-keys boolean." }
         val repository = generateSequence(File(System.getProperty("user.dir")).canonicalFile) { it.parentFile }
             .first { File(it, "settings.gradle.kts").isFile && File(it, ".git").exists() }
         // Capture source state before creating generated files, including a custom output path.
@@ -37,21 +37,24 @@ object FilamentKeysAuditionGenerator {
         val sourceDirty = git(repository, "status", "--porcelain").isNotEmpty()
         val selection = args.getOrNull(1) ?: "THREAD"
         val touchLayers = args.getOrNull(2)?.toBooleanStrict() ?: false
+        val wideKeys = args.getOrNull(3)?.toBooleanStrict() ?: false
+        val rangeTag = if (wideKeys) "-wide" else ""
         val touchTag = if (touchLayers) "-touch" else ""
         val voices = if (selection == "ALL") FilamentVoice.entries.toList() else listOf(FilamentVoice.valueOf(selection))
         val directory = if (selection == "ALL") "held" else selection.lowercase(Locale.ROOT)
-        val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-$directory$touchTag-keys").path).canonicalFile
+        val output = File(args.firstOrNull() ?: File(repository, "testkit/filament-$directory$rangeTag$touchTag-keys").path).canonicalFile
         require(!output.exists() || output.listFiles()?.isEmpty() == true) { "Use a fresh output directory: $output" }
         check(output.mkdirs() || output.isDirectory)
         val bundles = voices.map { voice ->
             val destination = if (voices.size == 1) output else File(output, voice.name.lowercase(Locale.ROOT))
-            generate(destination, voice, sourceCommit, sourceDirty, touchLayers)
+            generate(destination, voice, sourceCommit, sourceDirty, touchLayers, wideKeys)
         }
         if (voices.size > 1) {
             val manifest = File(output, "manifest.json").apply { writeText(Json.write(json(linkedMapOf(
                 "engine" to "FILAMENT", "model" to 3, "sourceCommit" to sourceCommit,
                 "workingTreeDirty" to sourceDirty, "nativeRootCount" to bundles.sumOf { InstrumentStore.list(it).single().second.zones.size },
                 "nativeSampleCount" to bundles.sumOf { InstrumentStore.list(it).single().second.sampleFiles.size },
+                "wideKeys" to wideKeys,
                 "velocityLayersPerRoot" to if (touchLayers) FilamentTouchKeys.TOUCHES.size else 1,
                 "instruments" to bundles.map { bundle -> linkedMapOf(
                     "directory" to bundle.name, "manifest" to "${bundle.name}/manifest.json",
@@ -61,25 +64,26 @@ object FilamentKeysAuditionGenerator {
                 "ownerListeningAcceptance" to false,
             ))) + "\n") }
             val readme = File(output, "README.txt").apply { writeText(
-                "FILAMENT HELD INSTRUMENTS\n\nTHREAD, PULSE and CURL each have native C3/C4/C5 roots, ${if (touchLayers) "three velocity layers" else "one velocity layer"}, real onset and marked sustain.\n" +
+                "FILAMENT HELD INSTRUMENTS\n\nTHREAD, PULSE and CURL each have native ${rootNames(wideKeys)} roots, ${if (touchLayers) "three velocity layers" else "one velocity layer"}, real onset and marked sustain.\n" +
                 "Each program folder includes MPC 3/MPC 2 files, its complete source recipe, native WAVs and an exported-file playback demo.\n" +
                 "The demos hold every root/layer through its first wrap, then release. Their reference-player gain is ${InstrumentEngine.VOICE_LEVEL}; native WAVs remove source velocity gain once for host playback.\n" +
                 "Use each program folder's README and manifest for loading instructions, frame markers and hashes.\n" +
                 "Physical phone/MPC acceptance and owner listening acceptance remain open.\n",
             ) }
-            archive(output, "filament-held$touchTag-keys.zip", bundles, listOf(manifest, readme), "manifest.json")
+            archive(output, "filament-held$rangeTag$touchTag-keys.zip", bundles, listOf(manifest, readme), "manifest.json")
         }
     }
 
-    private fun generate(output: File, voice: FilamentVoice, sourceCommit: String, sourceDirty: Boolean, touchLayers: Boolean): File {
+    private fun generate(output: File, voice: FilamentVoice, sourceCommit: String, sourceDirty: Boolean, touchLayers: Boolean, wideKeys: Boolean): File {
         check(output.mkdirs() || output.isDirectory)
         val lower = voice.name.lowercase(Locale.ROOT)
+        val rangeTag = if (wideKeys) "-wide" else ""
         val touchTag = if (touchLayers) "-touch" else ""
-        val name = "Filament ${lower.replaceFirstChar { it.uppercaseChar() }} ${if (touchLayers) "Touch " else ""}Keys"
+        val name = "Filament ${lower.replaceFirstChar { it.uppercaseChar() }} ${if (wideKeys) "Wide " else ""}${if (touchLayers) "Touch " else ""}Keys"
         val bundle = File(output, name).apply { check(mkdirs()) }
         val patch = FilamentPresets.forVoice(voice).first()
         require(patch.model == 3 && patch.velocity == 1f)
-        val spec = FilamentPadMaker.Spec(patch, touchLayers = touchLayers)
+        val spec = FilamentPadMaker.Spec(patch, touchLayers = touchLayers, wideKeys = wideKeys)
         val roots = FilamentPadMaker.zoneMidis(spec)
         val observedRenderMs = mutableListOf<Double>()
         val notes = roots.map { midi ->
@@ -96,15 +100,25 @@ object FilamentKeysAuditionGenerator {
         val sourceFile = File(data, FilamentPadMaker.PATCH_FILE)
         require(FilamentPatch.fromJsonText(sourceFile.readText()) == patch)
         val captureRecipe = File(data, FilamentPadMaker.TOUCH_FILE)
-        if (touchLayers) {
+        if (touchLayers || wideKeys) {
             val recipe = Json.parse(captureRecipe.readText()).obj()
+            require(recipe.getValue("version").int() == if (wideKeys) 2 else 1)
+            val strengths = if (touchLayers) FilamentTouchKeys.TOUCHES else listOf(1f)
             require(recipe.getValue("touchVersion").int() == FilamentTouchKeys.RENDER_VERSION)
-            require(recipe.getValue("excitationVelocities").arr().map { it.num() } == FilamentTouchKeys.TOUCHES.map { (patch.velocity * it).toDouble() })
-            for ((rootIndex, row) in recipe.getValue("sourcesByRoot").arr().withIndex()) {
+            require(recipe.getValue("excitationVelocities").arr().map { it.num() } == strengths.map { (patch.velocity * it).toDouble() })
+            if (wideKeys) require(recipe.getValue("zones").arr().map { it.obj().let { row ->
+                listOf(row.getValue("rootMidi").int(), row.getValue("lowMidi").int(), row.getValue("highMidi").int())
+            } } == program.keygroups.map { listOf(it.rootNote, it.lowNote, it.highNote) })
+            val sources = recipe.getValue("sourcesByRoot").arr()
+            require(sources.map { it.obj().getValue("midi").int() } == roots)
+            for ((rootIndex, row) in sources.withIndex()) {
                 val saved = row.obj()
                 require(saved.getValue("midi").int() == roots[rootIndex])
-                saved.getValue("layers").arr().forEachIndexed { index, value ->
-                    require(FilamentPatch.fromJsonValue(value) == FilamentTouchKeys.sourcePatch(patch, roots[rootIndex], FilamentTouchKeys.TOUCHES[index]))
+                val layers = saved.getValue("layers").arr()
+                require(layers.size == strengths.size)
+                layers.forEachIndexed { index, value ->
+                    require(FilamentPatch.fromJsonValue(value) == if (touchLayers) FilamentTouchKeys.sourcePatch(patch, roots[rootIndex], strengths[index])
+                        else patch.copy(midi = roots[rootIndex], macros = patch.macros + ("HOLD" to 1f)))
                 }
             }
         } else require(!captureRecipe.exists())
@@ -190,15 +204,15 @@ object FilamentKeysAuditionGenerator {
                 "releasedToSilence" to true,
             )
         }
-        val demoFile = WavWriter.write(File(bundle, "$lower-held$touchTag-demo.wav"), Snip(demo, 2, RATE))
+        val demoFile = WavWriter.write(File(bundle, "$lower-held$rangeTag$touchTag-demo.wav"), Snip(demo, 2, RATE))
         val manifest = linkedMapOf<String, Any?>(
             "engine" to "FILAMENT", "voice" to voice.name, "model" to patch.model,
             "generatedAt" to Instant.now().toString(), "sourceCommit" to sourceCommit,
-            "workingTreeDirty" to sourceDirty,
+            "workingTreeDirty" to sourceDirty, "wideKeys" to wideKeys,
             "sourcePatch" to patch.toJsonValue(), "sourcePatchFile" to relative(bundle, sourceFile),
             "sourcePatchSha256" to sha(sourceFile), "programReleaseSeconds" to instrument.release,
             "nativeRootCount" to roots.size, "nativeSampleCount" to rows.size, "velocityLayersPerRoot" to spec.layerCount,
-            "captureRecipeFile" to if (touchLayers) relative(bundle, captureRecipe) else null,
+            "captureRecipeFile" to if (touchLayers || wideKeys) relative(bundle, captureRecipe) else null,
             "zones" to rows, "mpc3File" to relative(bundle, nativeTrack),
             "mpc2File" to relative(bundle, compatibility), "phoneSidecar" to relative(bundle, sidecar),
             "demo" to linkedMapOf(
@@ -217,9 +231,9 @@ object FilamentKeysAuditionGenerator {
             ),
         )
         File(bundle, "manifest.json").writeText(Json.write(json(manifest)) + "\n")
-        File(bundle, "README.txt").writeText(readme(instrument.release, patch.name, name, lower, touchLayers))
+        File(bundle, "README.txt").writeText(readme(instrument.release, patch.name, name, lower, touchLayers, wideKeys))
         check(bundle.walkTopDown().count { it.isFile && it.extension == "wav" } == roots.size * spec.layerCount + 1)
-        archive(output, "filament-$lower$touchTag-keys.zip", listOf(bundle), emptyList(), "$name/manifest.json")
+        archive(output, "filament-$lower$rangeTag$touchTag-keys.zip", listOf(bundle), emptyList(), "$name/manifest.json")
         println("${roots.size * spec.layerCount} native $voice attack/sustain captures and one exported-file playback demo; physical phone/MPC acceptance remains open.")
         return bundle
     }
@@ -250,16 +264,16 @@ object FilamentKeysAuditionGenerator {
         println("${archive.path}: ${archive.length()} bytes, SHA-256 ${sha(archive)}")
     }
 
-    private fun readme(release: Float, preset: String, name: String, lower: String, touchLayers: Boolean): String = """
+    private fun readme(release: Float, preset: String, name: String, lower: String, touchLayers: Boolean, wideKeys: Boolean): String = """
         ${name.uppercase(Locale.ROOT)}
 
-        $preset, saved model 3, native C3/C4/C5, hard-source velocity 1.
+        $preset, saved model 3, native ${rootNames(wideKeys)}, hard-source velocity 1.
         The mono PCM24 WAVs in the TrackData folder retain the real attack
         and a marked sustain loop. Each root has ${if (touchLayers) "three independent velocity layers" else "one full-range velocity layer"}.
         ${if (touchLayers) "Soft/mid/hard scale source velocity and INJECT by .35/.65/1. MIDI windows are 1-42, 43-84 and 85-127. Each layer keeps its own source recipe and loop; the hard capture is unchanged." else "The source recipe selects timbre; playback velocity supplies gain."}
         Program release is $release seconds after note-off. Source settings are
         preserved in filament.patch.json beside the WAVs.
-        ${if (touchLayers) "filament.instrument.recipe.json records every derived held-key source and the capture version." else ""}
+        ${if (touchLayers || wideKeys) "filament.instrument.recipe.json records every derived held-key source and the capture version." else ""}
 
         Load the .xty and its adjacent TrackData folder for MPC 3. The .xpm twin
         inside TrackData is the MPC 2 program. Keep the files together. The phone
@@ -267,7 +281,7 @@ object FilamentKeysAuditionGenerator {
         Ordinary WAV players play
         through the marked sustain once and stop; they do not hold the key.
 
-        $lower-held${if (touchLayers) "-touch" else ""}-demo.wav plays C3, C4 and C5${if (touchLayers) " at all three touch strengths" else ""} from the exported files using
+        $lower-held${if (wideKeys) "-wide" else ""}${if (touchLayers) "-touch" else ""}-demo.wav plays ${rootNames(wideKeys)}${if (touchLayers) " at all three touch strengths" else ""} from the exported files using
         SnipSnap's reference instrument player. Every note passes the end of its
         source file, wraps in sustain and then releases. This stereo demo includes
         the player's fixed voice gain and each press's note velocity. Native WAVs
@@ -279,6 +293,8 @@ object FilamentKeysAuditionGenerator {
         playback are checked. Physical phone playback, MPC hardware import and
         the owner's listening acceptance remain unverified.
     """.trimIndent() + "\n"
+
+    private fun rootNames(wideKeys: Boolean) = if (wideKeys) "C2/C3/C4/C5/C6" else "C3/C4/C5"
 
     private fun rms(samples: FloatArray, start: Int, end: Int): Double =
         sqrt((start until end).sumOf { samples[it].toDouble() * samples[it] } / (end - start))

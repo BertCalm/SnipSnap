@@ -291,3 +291,34 @@ Why it is built this way:
 - The hard anchor and single-layer option preserve the accepted material.
 - Each strength keeps its own real onset and converged sustain rather than borrowing a hard loop.
 - Versioned delivery metadata explains the derived captures without changing saved patch JSON.
+
+## As built: wider playable keyboard (2026-11-01)
+
+The existing model-3 THREAD/PULSE/CURL held network now supports native C2–C6
+captures. The phone opens with five octave roots and offers the original
+three-root C3–C5 range independently of TOUCH LAYERS. A wide touch instrument
+has 15 samples, keeping the previous nine middle captures and adding six
+native edge captures. Saved models, ordinary rendering, excitation and the
+approved factory recipes are unchanged.
+
+Zones meet at root midpoints and cover MIDI 36–84 without gaps or overlap.
+The host still owns playback velocity gain and whole-note release. The halo
+does not gain an independent post-note-off tail in this round. Five captures
+per strength replace three; the render remains serial and cancellable, and
+C4 preview cost is unchanged. The legacy range remains the generator default.
+
+Wide delivery recipes use version 2 and record the actual program zones and
+all derived sources, including single-layer programs. Compact metadata keeps
+its existing shape. The wider family generator writes 45 native samples and
+three exported-file performances that visit every root and strength.
+
+The edge-register and package checks, measured limits and listening status are
+recorded in [FILAMENT.md](../../FILAMENT.md). Physical phone/MPC acceptance,
+owner listening acceptance, further voices and independent halo release remain open.
+
+Why it is built this way:
+
+- Added native roots let the bass and upper register develop through the existing network.
+- Keeping middle captures avoids replacing accepted performances.
+- An optional compact range keeps smaller instruments economical.
+- Separate source and delivery recipes preserve saved-patch replay.

@@ -3,7 +3,7 @@ package com.snipsnap.synth
 import kotlin.math.pow
 
 /**
- * Playable model-three FILAMENT instruments: THREAD, PULSE and CURL at C3–C5.
+ * Playable model-three FILAMENT instruments: THREAD, PULSE and CURL at C2–C6.
  *
  * The same periodic excitation starts from a quiet network and continues until the real
  * delay, halo and activity states settle. The returned [KeyNote] retains that onset and
@@ -16,8 +16,8 @@ import kotlin.math.pow
  * It retains velocity's effects on launch, articulation and the reactive junction.
  */
 object FilamentKeys {
-    const val MIN_MIDI = 48
-    const val MAX_MIDI = 72
+    const val MIN_MIDI = Filament.MIN_MIDI
+    const val MAX_MIDI = Filament.MAX_MIDI
     private val supportedVoices = setOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
 
     /** Keep the phone, package maker and same-network renderer on one audited capability. */

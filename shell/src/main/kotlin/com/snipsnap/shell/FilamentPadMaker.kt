@@ -21,7 +21,7 @@ import java.io.File
 import java.util.concurrent.CancellationException
 
 /**
- * Model-3 THREAD, PULSE and CURL: three native roots and a real onset before sustain.
+ * Model-3 THREAD, PULSE and CURL: native octave roots and a real onset before sustain.
  * The source patch retains its velocity-dependent timbre; the instrument host supplies velocity
  * gain and note-off release. Optional touch layers capture three real source strengths.
  */
@@ -33,8 +33,9 @@ object FilamentPadMaker {
     val RELEASE = Knob("RELEASE", RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS, .6f, exponential = true)
 
     data class Spec(val patch: FilamentPatch, val releaseSeconds: Float = RELEASE.default,
-                    val touchLayers: Boolean = false) {
+                    val touchLayers: Boolean = false, val wideKeys: Boolean = false) {
         val layerCount: Int get() = if (touchLayers) FilamentTouchKeys.TOUCHES.size else 1
+        val rangeLabel: String get() = if (wideKeys) "C2–C6" else "C3–C5"
         init {
             require(supports(patch)) { "FILAMENT keys require a supported model-3 recipe" }
             require(releaseSeconds.isFinite() && releaseSeconds in RELEASE_MIN_SECONDS..RELEASE_MAX_SECONDS) {
@@ -45,13 +46,14 @@ object FilamentPadMaker {
 
     fun supports(patch: FilamentPatch): Boolean = FilamentKeys.supports(patch)
 
-    fun spec(patch: FilamentPatch, releaseFraction: Float, touchLayers: Boolean = false): Spec =
-        Spec(patch, RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS), touchLayers)
+    fun spec(patch: FilamentPatch, releaseFraction: Float, touchLayers: Boolean = false,
+             wideKeys: Boolean = false): Spec =
+        Spec(patch, RELEASE.value(releaseFraction).coerceIn(RELEASE_MIN_SECONDS, RELEASE_MAX_SECONDS), touchLayers, wideKeys)
 
     fun secondsLabel(seconds: Float): String = "%.2f s".format(java.util.Locale.ROOT, seconds)
 
-    /** C3, C4 and C5 are rendered at their native pitches; the saved root does not transpose them. */
-    fun zoneMidis(spec: Spec): List<Int> = listOf(48, 60, 72)
+    /** Native roots preserve the middle captures; wider coverage adds C2 and C6. */
+    fun zoneMidis(spec: Spec): List<Int> = if (spec.wideKeys) listOf(36, 48, 60, 72, 84) else listOf(48, 60, 72)
 
     /** Rendering can be cancelled before the caller starts its non-cancellable package write. */
     fun renderZone(spec: Spec, midi: Int, cancelled: () -> Boolean = { false }): KeyNote {
@@ -67,7 +69,7 @@ object FilamentPadMaker {
     }
 
     /**
-     * Tile C3–C5 at the root midpoints. One host-controlled layer spans the full MIDI velocity
+     * Tile the selected range at root midpoints. One host-controlled layer spans the full MIDI velocity
      * range, so its captured source velocity selects timbre without applying dynamic gain twice.
      */
     fun assemble(name: String, spec: Spec, notes: List<KeyNote>): Pair<KeygroupProgram, Map<String, Snip>> {
@@ -131,33 +133,46 @@ object FilamentPadMaker {
         // Release remains a program property, already recorded in the instrument sidecar.
         val dataDir = File(destRoot, Mpc3TrackWriter.trackDataDirName(name))
         AtomicFile.writeText(File(dataDir, PATCH_FILE), spec.patch.toJsonText())
-        if (spec.touchLayers) AtomicFile.writeText(File(dataDir, TOUCH_FILE), touchRecipe(spec))
+        if (spec.touchLayers || spec.wideKeys) AtomicFile.writeText(File(dataDir, TOUCH_FILE), instrumentRecipe(spec, program))
         return program
     }
 
     /** Capture settings are delivery metadata, separate from the unchanged source-patch schema. */
-    private fun touchRecipe(spec: Spec): String = Json.write(JsonValue.Obj(linkedMapOf(
-        "version" to JsonValue.Num(1.0),
-        "sourcePatch" to JsonValue.Str(PATCH_FILE),
-        "renderer" to JsonValue.Str("FilamentKeys.layer"),
-        "touchVersion" to JsonValue.Num(FilamentTouchKeys.RENDER_VERSION.toDouble()),
-        "touchLayers" to JsonValue.Bool(true),
-        "releaseSeconds" to JsonValue.Num(spec.releaseSeconds.toDouble()),
-        "strengths" to JsonValue.Arr(FilamentTouchKeys.TOUCHES.map { JsonValue.Num(it.toDouble()) }),
-        "excitationVelocities" to JsonValue.Arr(FilamentTouchKeys.TOUCHES.map { JsonValue.Num((spec.patch.velocity * it).toDouble()) }),
-        "sourcesByRoot" to JsonValue.Arr(zoneMidis(spec).map { midi ->
-            JsonValue.Obj(linkedMapOf(
-                "midi" to JsonValue.Num(midi.toDouble()),
-                "layers" to JsonValue.Arr(FilamentTouchKeys.TOUCHES.map { touch ->
-                    FilamentTouchKeys.sourcePatch(spec.patch, midi, touch).toJsonValue()
-                }),
-            ))
-        }),
-        "velocityWindows" to JsonValue.Arr(FilamentTouchKeys.VELOCITY_WINDOWS.map {
-            JsonValue.Obj(linkedMapOf("start" to JsonValue.Num(it.first.toDouble()), "end" to JsonValue.Num(it.last.toDouble())))
-        }),
-        "gainRule" to JsonValue.Str("Remove each capture's velocity^.72 once; the host supplies note-velocity gain. No loudness matching."),
-    )))
+    private fun instrumentRecipe(spec: Spec, program: KeygroupProgram): String {
+        val strengths = if (spec.touchLayers) FilamentTouchKeys.TOUCHES else listOf(1f)
+        val windows = if (spec.touchLayers) FilamentTouchKeys.VELOCITY_WINDOWS else listOf(1..127)
+        val fields = linkedMapOf(
+            "version" to JsonValue.Num(if (spec.wideKeys) 2.0 else 1.0),
+            "sourcePatch" to JsonValue.Str(PATCH_FILE),
+            "renderer" to JsonValue.Str("FilamentKeys.layer"),
+            "touchVersion" to JsonValue.Num(FilamentTouchKeys.RENDER_VERSION.toDouble()),
+            "touchLayers" to JsonValue.Bool(spec.touchLayers),
+            "releaseSeconds" to JsonValue.Num(spec.releaseSeconds.toDouble()),
+            "strengths" to JsonValue.Arr(strengths.map { JsonValue.Num(it.toDouble()) }),
+            "excitationVelocities" to JsonValue.Arr(strengths.map { JsonValue.Num((spec.patch.velocity * it).toDouble()) }),
+            "sourcesByRoot" to JsonValue.Arr(zoneMidis(spec).map { midi ->
+                JsonValue.Obj(linkedMapOf(
+                    "midi" to JsonValue.Num(midi.toDouble()),
+                    "layers" to JsonValue.Arr(strengths.map { touch ->
+                        (if (spec.touchLayers) FilamentTouchKeys.sourcePatch(spec.patch, midi, touch)
+                        else spec.patch.copy(midi = midi, macros = spec.patch.macros + ("HOLD" to 1f))).toJsonValue()
+                    }),
+                ))
+            }),
+            "velocityWindows" to JsonValue.Arr(windows.map {
+                JsonValue.Obj(linkedMapOf("start" to JsonValue.Num(it.first.toDouble()), "end" to JsonValue.Num(it.last.toDouble())))
+            }),
+            "gainRule" to JsonValue.Str("Remove each capture's velocity^.72 once; the host supplies note-velocity gain. No loudness matching."),
+        )
+        // Version 1 compact touch recipes retain their existing shape. Wide recipes record
+        // the actual program zones, avoiding a second copy of the midpoint zoning rule.
+        if (spec.wideKeys) fields["zones"] = JsonValue.Arr(program.keygroups.map { zone ->
+            JsonValue.Obj(linkedMapOf("rootMidi" to JsonValue.Num(zone.rootNote.toDouble()),
+                "lowMidi" to JsonValue.Num(zone.lowNote.toDouble()),
+                "highMidi" to JsonValue.Num(zone.highNote.toDouble())))
+        })
+        return Json.write(JsonValue.Obj(fields))
+    }
 
     /** Standalone preview retains native velocity gain; exported layers let the host own it. */
     fun preview(spec: Spec, cancelled: () -> Boolean = { false }): Snip {

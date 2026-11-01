@@ -72,7 +72,8 @@ the cache. Cache hits improve repeated previews; a newly edited patch still
 requires synthesis. Benchmark cold edits separately from cache hits.
 
 Model-3 THREAD, PULSE and CURL expose MAKE INSTRUMENT. Each renders native C3,
-C4 and C5 roots covering MIDI 48–72, with one or three velocity layers. It retains
+C4 and C5 roots covering MIDI 48–72, or adds native C2/C6 for MIDI 36–84,
+with one or three velocity layers. The phone defaults to the wider range. It retains
 the actual zero-state onset of the periodically driven network and marks
 its settled final cycle for repetition. Independently advanced preceding
 and following cycles check recurrence. It does not splice a finite pluck
@@ -220,8 +221,72 @@ only prototype's first THREAD pair was about 0.001, which motivated explicitly
 coupling touch to the existing INJECT control.
 
 Physical phone playback, MPC hardware import and owner listening acceptance of
-these new touch instruments remain open. Wider zoning and independent halo
-release remain later work.
+these new touch instruments remain open. Independent halo release remains later work.
+
+## Wider playable keyboard (2026-11-01)
+
+KEY RANGE in the phone's MAKE INSTRUMENT sheet opens at C2–C6 (MIDI 36–84).
+Five native roots, C2/C3/C4/C5/C6, cover the range at octave midpoints:
+36–42, 43–54, 55–66, 67–78 and 79–84. Tap KEY RANGE for the original
+C3–C5 instrument. This choice and TOUCH LAYERS are independent and stay
+outside saved synth patches. The sheet shows the resulting 15, 5, 9 or 3
+sample count. PREVIEW still plays C4, at all three strengths when touch is on;
+it does not render the entire keyboard before playing.
+
+The wider keyboard adds independently synthesized bass and upper-register
+sources. It uses the same excitation, geometry, onset, convergence rule and
+velocity-gain compensation. Existing C3/C4/C5 captures, saved models and the
+twelve factory recipes keep their previous PCM. Within the instrument's range,
+the sampler transposes by at most six semitones from a native root. Transposition
+also shifts the recorded halo and timing; these remain sampled performances.
+
+A wide instrument needs five captures per strength instead of three. With
+three touch layers that is 15 samples per voice and 45 for the family. The
+capture count increases by 5/3; actual elapsed time and file sizes depend on
+register, recipe and convergence. Rendering stays serial and cancellable.
+The generator records elapsed time per complete root, including its layers.
+Desktop timings do not establish phone latency.
+
+Wide programs include version-2 `filament.instrument.recipe.json`, for both
+single and three-layer captures. It records the actual exported zone boundaries
+and every exact held-key source. Compact touch programs keep their version-1
+recipe shape; compact single-layer programs still omit the derived recipe.
+Explicit replacement removes the old TrackData before writing the new shape.
+
+Generate the wide three-layer family into a fresh directory:
+
+```sh
+./gradlew :shell:generateFilamentKeysAudition -PfilamentKeysVoice=ALL -PfilamentKeysTouchLayers=true -PfilamentKeysWideKeys=true
+```
+
+`testkit/filament-held-wide-touch-keys/` contains the three programs,
+45 native PCM24 WAVs, three 15-event exported-file demos, source recipes and
+individual/combined ZIPs. Each demo plays every native root and touch through
+its actual file end, a sustain wrap and release. The new property defaults to
+false, preserving the historical generator's range, paths and audio.
+
+The Kotlin edge-register probe checks all three voices at C2 and C6 with all
+three touch strengths, saved velocity 0.72 and explicit LATE geometry. It checks
+pitch within 25 cents, fundamental tone share above 0.025, actual quiet startup,
+finite bounded output and independently synthesized neighboring cycles after
+PCM16/PCM24 encoding. Export tests exercise all 49 MIDI notes at all six velocity
+window boundaries and play native C2/C4/C6 through two wraps and note-off.
+The focused Kotlin run completed all 18 voice/root/touch captures. Measured
+pitch error ranged from −0.089 to +1.723 cents, tone share from 0.4555 to 0.8944,
+and all captures converged in four attempts. Maximum state recurrence error was
+7.38e-13 and full-cycle error 3.57e-18 before PCM encoding; both encoded-neighbor
+checks also passed. These numbers describe the named fixtures, not every macro
+corner. The elapsed probe includes diagnostic and public captures plus encoding,
+so it is not a single-render latency benchmark. These are automated checks, not
+an owner listening verdict. Physical phone playback, MPC hardware import and
+bass/upper-register listening acceptance remain open.
+
+Why it is built this way:
+
+- Native edge captures retain the register's own onset, path response and halo.
+- Keeping the middle captures preserves the accepted touch material.
+- The compact option limits capture time and storage when a smaller keyboard is enough.
+- Program-zone metadata makes the wider mapping replayable without changing source-patch JSON.
 
 ## Revised voice character
 

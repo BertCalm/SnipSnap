@@ -107,11 +107,12 @@ and sixteen-pad starter. Saved root, velocity, geometry and models 1–3 remain
 replayable. Playback shares the diagnostic DSP core while skipping optional
 capture work, supports cancellation and uses a bounded dry-preview cache.
 The model-3 THREAD/PULSE/CURL keygroups retain actual startup before settled
-sustain, with C3/C4/C5 roots, one or three velocity layers and host note-off release.
+sustain, with five native C2–C6 roots or the original three-root C3–C5 range,
+one or three velocity layers and host note-off release.
 Touch captures scale velocity and INJECT while preserving the hard anchor;
 each layer has its own onset, loop and recorded source recipe.
-Physical phone/MPC acceptance and the larger proposed roster remain later
-work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
+The phone defaults to the wider keyboard and three touch layers. Physical
+phone/MPC acceptance and the larger proposed roster remain later work. See [FILAMENT.md](FILAMENT.md) for reproduction, measured limits and
 the private listening page.
 
 **Caustic finite instrument and character expansion (2026-10-28).** The owner

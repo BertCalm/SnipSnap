@@ -300,8 +300,8 @@ class FilamentScreenTest : ComposeScreenTest() {
     fun current_curl_makes_a_three_root_instrument_with_its_attack_and_saved_source() = makeInstrument(FilamentVoice.CURL)
 
     @Test
-    fun curl_makes_three_real_touch_layers_at_each_root_without_rewriting_its_source() =
-        makeInstrument(FilamentVoice.CURL, touchLayers = true)
+    fun curl_makes_three_real_touch_layers_at_five_native_roots_without_rewriting_its_source() =
+        makeInstrument(FilamentVoice.CURL, touchLayers = true, wideKeys = true)
 
     @Test
     fun touch_choice_opens_enabled_for_each_voice_and_reopens_without_changing_the_recipe() {
@@ -316,17 +316,28 @@ class FilamentScreenTest : ComposeScreenTest() {
             activate(voice.name)
             val before = currentPatch(voice)
             activate("MAKE INSTRUMENT")
+            button("KEY RANGE").assertIsSelected()
+            assertReadsInFull("KEY RANGE C2–C6 · 15 SAMPLES")
             button("TOUCH LAYERS").assertIsSelected()
             assertReadsInFull("TOUCH LAYERS ON")
             compose.onNodeWithText("ON: SOFT, MID AND HARD TOUCH CHANGE THE ATTACK AND TONE. VELOCITY SETS THE HARD TOUCH. THREE SAMPLES PER NOTE; ABOUT 3× THE TIME AND STORAGE.").assertExists()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsNotSelected()
             assertReadsInFull("TOUCH LAYERS OFF")
+            assertReadsInFull("KEY RANGE C2–C6 · 5 SAMPLES")
+            activate("KEY RANGE")
+            button("KEY RANGE").assertIsNotSelected()
+            assertReadsInFull("KEY RANGE C3–C5 · 3 SAMPLES")
             closeInstrumentSheet()
             activate("MAKE INSTRUMENT")
+            button("KEY RANGE").assertIsNotSelected()
             button("TOUCH LAYERS").assertIsNotSelected()
             activate("TOUCH LAYERS")
             button("TOUCH LAYERS").assertIsSelected()
+            assertReadsInFull("KEY RANGE C3–C5 · 9 SAMPLES")
+            activate("KEY RANGE")
+            button("KEY RANGE").assertIsSelected()
+            assertReadsInFull("KEY RANGE C2–C6 · 15 SAMPLES")
             closeInstrumentSheet()
             assertEquals(before, currentPatch(voice))
         }
@@ -340,7 +351,7 @@ class FilamentScreenTest : ComposeScreenTest() {
         pump(16)
     }
 
-    private fun makeInstrument(voice: FilamentVoice, touchLayers: Boolean = false) {
+    private fun makeInstrument(voice: FilamentVoice, touchLayers: Boolean = false, wideKeys: Boolean = false) {
         val root = shelfRoot()
         val source = FilamentPresets.forVoice(voice).first().copy(
             midi = 57, velocity = .7f,
@@ -350,28 +361,33 @@ class FilamentScreenTest : ComposeScreenTest() {
         settings["recipe.FILAMENT.${source.voiceName}"] = source.toJsonText()
         show(root)
         activate("MAKE INSTRUMENT")
+        button("KEY RANGE").assertIsSelected()
+        if (!wideKeys) activate("KEY RANGE")
         button("TOUCH LAYERS").assertIsSelected()
         if (!touchLayers) activate("TOUCH LAYERS")
         slider("RELEASE").assertExists()
         slider("ATTACK").assertDoesNotExist()
+        val range = if (wideKeys) "C2–C6" else "C3–C5"
         compose.onNodeWithText(if (touchLayers)
-            "C3–C5 · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE; LET GO TO FADE."
-        else "C3–C5 · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
+            "$range · SOFT, MID AND HARD TOUCH KEEP THEIR OWN ATTACK AND SUSTAIN. PREVIEW PLAYS ALL THREE AT C4; LET GO TO FADE."
+        else "$range · KEEPS THE ATTACK. HOLD A KEY TO SUSTAIN; LET GO TO FADE.").assertExists()
         dial("RELEASE", 1f)
         compose.onNodeWithText("RELEASE 1.50 s").assertExists()
         activate("MAKE")
         val instruments = File(root, KitShelf.INSTRUMENTS_DIR)
-        waitForInstrument("$voice ${if (touchLayers) "nine touch captures" else "three roots"}",
-            timeoutMillis = if (touchLayers) 420_000 else 180_000) {
+        waitForInstrument("$voice $range ${if (touchLayers) "touch captures" else "single layers"}",
+            timeoutMillis = if (touchLayers && wideKeys) 720_000 else if (touchLayers) 420_000 else 180_000) {
             instruments.isDirectory && instruments.walkTopDown().any {
-                it.name == if (touchLayers) FilamentPadMaker.TOUCH_FILE else FilamentPadMaker.PATCH_FILE
+                it.name == if (touchLayers || wideKeys) FilamentPadMaker.TOUCH_FILE else FilamentPadMaker.PATCH_FILE
             }
         }
         val (_, instrument) = InstrumentStore.list(instruments).single()
-        assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+        assertEquals(if (wideKeys) listOf(36, 48, 60, 72, 84) else listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+        assertEquals((if (wideKeys) 36..84 else 48..72).toList(),
+            instrument.zones.flatMap { (it.lowNote..it.highNote).toList() })
         assertEquals(1.5f, instrument.release, 0f)
         assertTrue(instrument.zones.all { it.loopStartFrame > 0 })
-        assertEquals(if (touchLayers) 9 else 3, instrument.sampleFiles.size)
+        assertEquals((if (wideKeys) 5 else 3) * (if (touchLayers) 3 else 1), instrument.sampleFiles.size)
         for (zone in instrument.zones) {
             assertEquals(if (touchLayers) listOf(1..42, 43..84, 85..127) else listOf(1..127),
                 zone.playableLayers.map { it.velStart..it.velEnd })

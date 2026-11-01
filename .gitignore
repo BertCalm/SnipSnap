@@ -19,6 +19,14 @@ testkit/filament-thread-touch-keys/
 testkit/filament-pulse-touch-keys/
 testkit/filament-curl-touch-keys/
 testkit/filament-held-touch-keys/
+testkit/filament-thread-wide-keys/
+testkit/filament-pulse-wide-keys/
+testkit/filament-curl-wide-keys/
+testkit/filament-held-wide-keys/
+testkit/filament-thread-wide-touch-keys/
+testkit/filament-pulse-wide-touch-keys/
+testkit/filament-curl-wide-touch-keys/
+testkit/filament-held-wide-touch-keys/
 testkit/crease-audition/
 testkit/crease-audition-r2/
 testkit/crease-keys-audition/

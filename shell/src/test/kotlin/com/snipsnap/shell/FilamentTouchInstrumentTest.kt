@@ -21,6 +21,7 @@ import java.util.concurrent.CancellationException
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.io.path.createTempDirectory
 import kotlin.math.abs
+import kotlin.math.pow
 import kotlin.test.Test
 import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
@@ -31,7 +32,7 @@ import kotlin.test.assertTrue
 /** Actual voice/root captures cross the package boundary once, then exercise native and reference players. */
 class FilamentTouchInstrumentTest {
     private class Example(val patch: FilamentPatch) {
-        val spec = FilamentPadMaker.Spec(patch, .37f, touchLayers = true)
+        val spec = FilamentPadMaker.Spec(patch, .37f, touchLayers = true, wideKeys = true)
         val notes by lazy { FilamentPadMaker.zoneMidis(spec).map { FilamentPadMaker.renderLayers(spec, it) } }
     }
 
@@ -43,7 +44,7 @@ class FilamentTouchInstrumentTest {
     }
 
     @Test
-    fun `twenty seven native samples retain velocity windows own loops PCM and source recipes in both MPC generations`() {
+    fun `forty five native samples retain velocity windows own loops PCM and source recipes in both MPC generations`() {
         withDirectory { root ->
             for (example in examples) {
                 val patch = example.patch
@@ -51,21 +52,28 @@ class FilamentTouchInstrumentTest {
                 val program = FilamentPadMaker.exportLayers(patch.name, example.spec, example.notes, folder)
                 val data = File(folder, "${patch.name}_[TrackData]")
                 val (sidecar, instrument) = InstrumentStore.list(folder).single()
-                assertEquals(9, instrument.sampleFiles.size)
-                assertEquals(listOf(48, 60, 72), instrument.zones.map { it.rootNote })
+                assertEquals(15, instrument.sampleFiles.size)
+                assertEquals(listOf(36, 48, 60, 72, 84), instrument.zones.map { it.rootNote })
+                assertEquals(listOf(36..42, 43..54, 55..66, 67..78, 79..84), instrument.zones.map { it.lowNote..it.highNote })
                 assertEquals(.37f, instrument.release)
                 assertEquals(patch, FilamentPatch.fromJsonText(File(data, FilamentPadMaker.PATCH_FILE).readText()))
                 val recipe = Json.parse(File(data, FilamentPadMaker.TOUCH_FILE).readText()).obj()
-                assertEquals(1, recipe.getValue("version").int())
+                assertEquals(2, recipe.getValue("version").int())
+                assertEquals(instrument.zones.map { listOf(it.rootNote, it.lowNote, it.highNote) },
+                    recipe.getValue("zones").arr().map { row -> row.obj().let {
+                        listOf(it.getValue("rootMidi").int(), it.getValue("lowMidi").int(), it.getValue("highMidi").int())
+                    } })
                 assertEquals(FilamentPadMaker.PATCH_FILE, recipe.getValue("sourcePatch").str())
                 assertEquals("FilamentKeys.layer", recipe.getValue("renderer").str())
                 assertEquals(FilamentTouchKeys.RENDER_VERSION, recipe.getValue("touchVersion").int())
                 assertTrue(recipe.getValue("touchLayers").bool())
                 assertEquals(FilamentTouchKeys.TOUCHES.map { (patch.velocity * it).toDouble() },
                     recipe.getValue("excitationVelocities").arr().map { it.num() })
-                for ((rootIndex, row) in recipe.getValue("sourcesByRoot").arr().withIndex()) {
+                val sources = recipe.getValue("sourcesByRoot").arr()
+                assertEquals(listOf(36, 48, 60, 72, 84), sources.map { it.obj().getValue("midi").int() })
+                for ((rootIndex, row) in sources.withIndex()) {
                     val source = row.obj()
-                    val midi = listOf(48, 60, 72)[rootIndex]
+                    val midi = listOf(36, 48, 60, 72, 84)[rootIndex]
                     assertEquals(midi, source.getValue("midi").int())
                     assertEquals(FilamentTouchKeys.TOUCHES.map { FilamentTouchKeys.sourcePatch(patch, midi, it) },
                         source.getValue("layers").arr().map { FilamentPatch.fromJsonValue(it) })
@@ -75,11 +83,17 @@ class FilamentTouchInstrumentTest {
                     .getValue("instruments").arr()
                 val xml = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(File(data, "${patch.name}.xpm"))
                 val compatibility = xml.getElementsByTagName("Instrument")
-                assertEquals(3, compatibility.length)
+                assertEquals(5, compatibility.length)
                 for ((rootIndex, zone) in instrument.zones.withIndex()) {
                     assertEquals(3, zone.playableLayers.size)
-                    val nativeLayers = native[rootIndex].obj().getValue("layersv").arr().map { it.obj() }
-                    val xmlLayers = (compatibility.item(rootIndex) as Element).getElementsByTagName("Layer")
+                    val nativeGroup = native[rootIndex].obj()
+                    assertEquals(zone.lowNote, nativeGroup.getValue("lowNote").int())
+                    assertEquals(zone.highNote, nativeGroup.getValue("highNote").int())
+                    val nativeLayers = nativeGroup.getValue("layersv").arr().map { it.obj() }
+                    val xmlGroup = compatibility.item(rootIndex) as Element
+                    assertEquals(zone.lowNote, text(xmlGroup, "LowNote").toInt())
+                    assertEquals(zone.highNote, text(xmlGroup, "HighNote").toInt())
+                    val xmlLayers = xmlGroup.getElementsByTagName("Layer")
                     for ((index, layer) in zone.playableLayers.withIndex()) {
                         val note = example.notes[rootIndex][index]
                         val window = FilamentTouchKeys.VELOCITY_WINDOWS[index]
@@ -93,12 +107,14 @@ class FilamentTouchInstrumentTest {
                         assertContentEquals(expected.toByteArray(), wav.readBytes(), "${patch.voice} root${zone.rootNote} layer$index PCM24")
                         val stem = program.keygroups[rootIndex].layers[index].sampleName
                         val n = nativeLayers.single { it.getValue("sampleName").str() == stem }
+                        assertEquals(zone.rootNote, n.getValue("rootNote").int())
                         assertEquals(window.first, n.getValue("velocityStart").int())
                         assertEquals(window.last, n.getValue("velocityEnd").int())
                         assertEquals(layer.loopStartFrame, n.getValue("sliceInfo").obj().getValue("LoopStart").long())
                         assertEquals(layer.frameCount, n.getValue("sliceInfo").obj().getValue("End").long())
                         val x = (0 until xmlLayers.length).map { xmlLayers.item(it) as Element }
                             .single { text(it, "SampleName") == stem }
+                        assertEquals(zone.rootNote, text(x, "RootNote").toInt())
                         assertEquals(window.first, text(x, "VelStart").toInt())
                         assertEquals(window.last, text(x, "VelEnd").toInt())
                         assertEquals(layer.loopStartFrame, text(x, "SliceLoopStart").toLong())
@@ -118,15 +134,28 @@ class FilamentTouchInstrumentTest {
                 FilamentPadMaker.exportLayers(patch.name, example.spec, example.notes, folder)
                 val (sidecar, instrument) = InstrumentStore.list(folder).single()
                 val samples = instrument.sampleFiles.associateWith { WavReader.read(File(sidecar.parentFile, it)).samples }
-                for ((velocity, index) in listOf(1 to 0, 42 to 0, 43 to 1, 84 to 1, 85 to 2, 127 to 2)) {
+                // Every note and switch point must select exactly one exported zone/layer,
+                // including the semitones on both sides of all four midpoint joins.
+                for (midi in 36..84) for ((velocity, index) in velocityEdges) {
+                    val zone = instrument.zones.single { midi in it.lowNote..it.highNote }
+                    val layer = zone.playableLayers[index]
+                    val hit = requireNotNull(KeyHit.resolve(instrument, midi, velocity / 127f) { samples[it]?.size?.toLong() })
+                    assertEquals(layer.sample, hit.sampleFile, "${patch.voice} MIDI$midi velocity$velocity")
+                    assertEquals(2.0.pow((midi - zone.rootNote) / 12.0), hit.pitchRatio)
+                    assertEquals(layer.loopStartFrame, hit.loopStartFrame)
+                    assertEquals(velocity / 127f * InstrumentEngine.VOICE_LEVEL, hit.gain)
+                }
+                for (midi in listOf(35, 85)) assertEquals(null,
+                    KeyHit.resolve(instrument, midi, 1f) { samples[it]?.size?.toLong() })
+                for (midi in listOf(36, 60, 84)) for ((velocity, index) in velocityEdges) {
                     val touch = velocity / 127f
-                    val layer = instrument.zones[1].playableLayers[index]
-                    val hit = requireNotNull(KeyHit.resolve(instrument, 60, touch) { samples[it]?.size?.toLong() })
+                    val layer = instrument.zones.single { it.rootNote == midi }.playableLayers[index]
+                    val hit = requireNotNull(KeyHit.resolve(instrument, midi, touch) { samples[it]?.size?.toLong() })
                     assertEquals(layer.sample, hit.sampleFile)
                     assertEquals(layer.loopStartFrame, hit.loopStartFrame)
                     assertEquals(touch * InstrumentEngine.VOICE_LEVEL, hit.gain)
                     val player = InstrumentEngine(InstrumentEngine.Loaded(instrument, 44_100, samples), 44_100)
-                    assertTrue(player.noteOn(60, touch))
+                    assertTrue(player.noteOn(midi, touch))
                     val source = samples.getValue(layer.sample)
                     val start = layer.loopStartFrame.toInt()
                     val period = source.size - start
@@ -142,7 +171,7 @@ class FilamentTouchInstrumentTest {
                     }
                     assertTrue(error < 2e-6, "${patch.voice} velocity$velocity wrong source, loop or gain: $error")
                     assertTrue(postWrapPeak > 1e-6, "${patch.voice} velocity$velocity stopped at the file's end")
-                    player.noteOff(60)
+                    player.noteOff(midi)
                     val tail = render(player, ((instrument.release + .1f) * 44_100).toInt())
                     assertTrue(tail.takeLast(882).all { it == 0f })
                     assertTrue(player.activeNotes.isEmpty())
@@ -171,13 +200,28 @@ class FilamentTouchInstrumentTest {
     }
 
     @Test
-    fun `an explicit single layer replacement drops obsolete touch metadata and keeps the source schema`() {
+    fun `wide single layer replacement keeps exact sources and compact replacement removes derived metadata`() {
         withDirectory { root ->
             val spec = examples.first().spec
             FilamentPadMaker.exportLayers("REPLACE", spec, fixtures(), root)
             val data = File(root, "REPLACE_[TrackData]")
             assertTrue(File(data, FilamentPadMaker.TOUCH_FILE).isFile)
-            FilamentPadMaker.export("REPLACE", spec.copy(touchLayers = false), fixtures().map { it.last() }, root, overwrite = true)
+            val single = spec.copy(touchLayers = false)
+            FilamentPadMaker.export("REPLACE", single, fixtures().map { it.last() }, root, overwrite = true)
+            val recipe = Json.parse(File(data, FilamentPadMaker.TOUCH_FILE).readText()).obj()
+            assertEquals(2, recipe.getValue("version").int())
+            assertFalse(recipe.getValue("touchLayers").bool())
+            assertEquals(listOf(1.0), recipe.getValue("strengths").arr().map { it.num() })
+            assertEquals(5, recipe.getValue("sourcesByRoot").arr().size)
+            recipe.getValue("sourcesByRoot").arr().forEach { row ->
+                val source = row.obj()
+                val midi = source.getValue("midi").int()
+                assertEquals(listOf(spec.patch.copy(midi = midi, macros = spec.patch.macros + ("HOLD" to 1f))),
+                    source.getValue("layers").arr().map { FilamentPatch.fromJsonValue(it) })
+            }
+            assertEquals(5, InstrumentStore.list(root).single().second.sampleFiles.size)
+            val compact = single.copy(wideKeys = false)
+            FilamentPadMaker.export("REPLACE", compact, fixtures().take(3).map { it.last() }, root, overwrite = true)
             assertFalse(File(data, FilamentPadMaker.TOUCH_FILE).exists())
             assertEquals(spec.patch, FilamentPatch.fromJsonText(File(data, FilamentPadMaker.PATCH_FILE).readText()))
             assertEquals(3, InstrumentStore.list(root).single().second.sampleFiles.size)
@@ -202,7 +246,22 @@ class FilamentTouchInstrumentTest {
         assertEquals(before, example.patch.toJsonText())
     }
 
-    private fun fixtures(): List<List<KeyNote>> = List(3) { root -> List(3) { layer ->
+    @Test
+    fun `compact touch packages retain their original three root recipe schema`() {
+        withDirectory { root ->
+            val spec = examples.first().spec.copy(wideKeys = false)
+            FilamentPadMaker.exportLayers("COMPACT", spec, fixtures().take(3), root)
+            val recipe = Json.parse(File(root, "COMPACT_[TrackData]/${FilamentPadMaker.TOUCH_FILE}").readText()).obj()
+            assertEquals(1, recipe.getValue("version").int())
+            assertFalse("zones" in recipe)
+            assertEquals(listOf(48, 60, 72), recipe.getValue("sourcesByRoot").arr().map { it.obj().getValue("midi").int() })
+            assertEquals(9, InstrumentStore.list(root).single().second.sampleFiles.size)
+        }
+    }
+
+    private val velocityEdges get() = listOf(1 to 0, 42 to 0, 43 to 1, 84 to 1, 85 to 2, 127 to 2)
+
+    private fun fixtures(): List<List<KeyNote>> = List(5) { root -> List(3) { layer ->
         KeyNote(Snip(FloatArray(128 + root + layer * 16) { .03f * (layer + 1) }, 1, 44_100), 32L + layer * 3)
     } }
 
