@@ -81,6 +81,8 @@ import com.snipsnap.kit.Severity
 import java.util.Locale
 import com.snipsnap.app.CardWriter
 import com.snipsnap.app.PREFS
+import com.snipsnap.shell.ArtKnobs
+import com.snipsnap.shell.ArtSidecar
 import com.snipsnap.shell.Copy
 import com.snipsnap.shell.LandingNote
 import com.snipsnap.shell.DubStamp
@@ -302,8 +304,10 @@ fun ExportScreen(
                         ExportWizardModel(
                             kit,
                             entry.dir,
-                            artRenderer = { k, d, s -> AndroidKitArt.png(k, d, s, assets = context.assets) },
+                            artRenderer = { k, d, knobs -> AndroidKitArt.png(k, d, knobs, assets = context.assets) },
                             jCardRenderer = { k, d, c -> AndroidJCard.png(k, d, catalog = c, assets = context.assets) },
+                            // The kit's own art.json, else the defaults for the scheme on screen.
+                            artKnobs = ArtSidecar.read(entry.dir) ?: ArtKnobs.default(scheme),
                         ),
                     )
                 }.getOrNull()
@@ -367,6 +371,10 @@ private fun ExportContent(
 
     /** The format list, open or shut. Shut on arrival: the row says what is picked. */
     var formatPickerOpen by remember(model) { mutableStateOf(false) }
+
+    /** The art picker's sheet, and the knobs it opened on (so closing on a change can say so). */
+    var artPickerOpen by remember(model) { mutableStateOf(false) }
+    var knobsAtOpen by remember(model) { mutableStateOf<ArtKnobs?>(null) }
 
     /**
      * A dub locks the row (`enabled = !busy`), and a locked row cannot be
@@ -887,6 +895,37 @@ private fun ExportContent(
                             revision++
                         },
                     )
+                    ArtRow(
+                        knobs = model.artKnobs ?: ArtKnobs.default(scheme),
+                        enabled = !session.busy,
+                        scheme = scheme,
+                        onOpen = {
+                            knobsAtOpen = model.artKnobs
+                            artPickerOpen = true
+                        },
+                    )
+                    if (artPickerOpen) {
+                        ArtPickerSheet(
+                            kit = kit,
+                            kitDir = session.dir,
+                            knobs = model.artKnobs ?: ArtKnobs.default(scheme),
+                            onKnobs = { picked ->
+                                model.artKnobs = picked
+                                revision++
+                                // Saved as it is picked, under the lock every kit write takes, so the
+                                // next export (here, on the CLI, after a restart) draws the same tile.
+                                appScope.launch {
+                                    offMain {
+                                        KitWrites.mutex.withLock { runCatching { ArtSidecar.write(session.dir, picked) } }
+                                    }
+                                }
+                            },
+                            onDismiss = {
+                                artPickerOpen = false
+                                if (model.artKnobs != knobsAtOpen) onToast(Copy.ART_SET)
+                            },
+                        )
+                    }
                     DubProgressCard(model, filesShown, session.busy, scheme)
                 }
                 PrimaryAction(

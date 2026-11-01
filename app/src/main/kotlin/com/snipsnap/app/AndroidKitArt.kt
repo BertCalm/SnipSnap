@@ -51,20 +51,34 @@ object AndroidKitArt {
         label: String = kit.name,
         assets: AssetManager,
     ): ByteArray {
-        // ARGB_8888: KitArt.draw's own first call is a full-canvas
-        // fillRect (the LCD background), so the bitmap starts fully
-        // opaque regardless of config - ARGB_8888 is just the config
-        // every other bitmap path in :app already uses.
-        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val bitmap = bitmap(kit, kitDir, knobs, size, label, assets)
         try {
-            val canvas = Canvas(bitmap)
-            KitArt.draw(AndroidCanvas(canvas, assets), kit, kitDir, knobs, size, label)
             val out = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
             return out.toByteArray()
         } finally {
             bitmap.recycle()
         }
+    }
+
+    /**
+     * The tile as a [Bitmap], for the art picker's previews: what [png]
+     * encodes, without the round trip through PNG bytes. The caller owns
+     * (and recycles, or hands to Compose) the bitmap.
+     */
+    fun bitmap(
+        kit: Kit,
+        kitDir: File,
+        knobs: ArtKnobs,
+        size: Int = KitArt.DEFAULT_SIZE,
+        label: String = kit.name,
+        assets: AssetManager,
+    ): Bitmap {
+        // ARGB_8888: KitArt.draw's own first call is a full-canvas fillRect
+        // (the palette's ground), so the bitmap starts fully opaque.
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        KitArt.draw(AndroidCanvas(Canvas(bitmap), assets), kit, kitDir, knobs, size, label)
+        return bitmap
     }
 
     /**
