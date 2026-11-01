@@ -81,9 +81,11 @@ class DeterminismTest {
 
     @Test
     fun `OBBLIGATO retains its saved duet note seed and renderer across renders`() {
-        val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
-            midi = 67, velocity = .6f, seed = 17, model = 5)
-        assertContentEquals(patch.render().samples, patch.render().samples)
+        for (model in listOf(Obbligato.LEGACY_MODEL, Obbligato.MODEL)) {
+            val patch = ObbligatoPatch("Duet canary", Obbligato.defaults() + ("BOND" to (3f / 7f)),
+                midi = 67, velocity = .6f, seed = 17, model = model)
+            assertContentEquals(patch.render().samples, patch.render().samples)
+        }
     }
 
     @Test
