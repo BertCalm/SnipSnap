@@ -356,12 +356,14 @@ class PadRecipeTest {
         assertEquals(0.4f, recipe.amount)
     }
 
-    @Test fun `a version 2 recipe reads with no layers and re-saves as version 3 unchanged otherwise`() {
+    @Test fun `a version 2 recipe reads with no layers and re-saves as version 2 unchanged, a banked one as version 3`() {
         val v2 = Json.parse("""{"recipe":2,"fx":{"fx":1,"spring":{"SIZE":0.25}},"alias":false}""")
         val parsed = PadRecipe.fromJsonValue(v2)
         assertNull(parsed.layers)
         val again = parsed.toJsonValue()
-        assertEquals(3, again.entries["recipe"]!!.int())
+        assertEquals(2, again.entries["recipe"]!!.int())
+        val banked = parsed.copy(layers = listOf(LayerRecipe("DRY"), LayerRecipe("ECHO", fx = parsed.fx)))
+        assertEquals(3, banked.toJsonValue().entries["recipe"]!!.int())
         // FxChain writes its defaulted reverse flag, so raw entries differ; every field must still survive.
         assertEquals(parsed, PadRecipe.fromJsonValue(again))
         assertTrue("layers" !in again.entries)

@@ -128,7 +128,7 @@ data class PadRecipe(
 
     fun toJsonValue(): JsonValue.Obj {
         val obj = LinkedHashMap<String, JsonValue>()
-        obj["recipe"] = JsonValue.Num(VERSION.toDouble())
+        obj["recipe"] = JsonValue.Num((if (layers == null) MIN_READABLE_VERSION else VERSION).toDouble())
         patch?.let { obj["patch"] = it.toJsonValue() }
         fx?.let { obj["fx"] = it.toJsonValue() }
         treatment?.let { obj["treatment"] = JsonValue.Str(it) }
@@ -151,9 +151,14 @@ data class PadRecipe(
          * migration path for a v1 recipe, by design (see the doc's own
          * "take the clean break now" recommendation). `testkit/`'s 369
          * WAVs were regenerated alongside this bump. Version 3 added [layers]
-         * and is a pure superset: version 2 files still read.
+         * and is a pure superset: version 2 files still read. Only a banked
+         * recipe is written as 3; every unbanked one stays version 2, byte for
+         * byte, so older installs keep reading it.
          */
         const val VERSION = 3
+
+        /** The oldest recipe version [fromJsonValue] still reads (and unbanked recipes still write). */
+        const val MIN_READABLE_VERSION = 2
 
         /**
          * The [alias] default: true where grit is deliberately the point
@@ -168,7 +173,7 @@ data class PadRecipe(
         fun fromJsonValue(value: JsonValue): PadRecipe {
             val obj = value.obj()
             val version = obj["recipe"]?.int() ?: throw JsonException("not a pad recipe: no recipe version")
-            if (version != 2 && version != VERSION) throw JsonException("unsupported recipe version $version")
+            if (version != MIN_READABLE_VERSION && version != VERSION) throw JsonException("unsupported recipe version $version")
             val patch = obj["patch"]?.let { Patches.fromJsonValue(it) }
             val fx = obj["fx"]?.let { FxChain.fromJsonValue(it) }
             return PadRecipe(
