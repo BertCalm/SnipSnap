@@ -551,6 +551,10 @@ testkit/prism-opening-sustain-audition/
 testkit/erosion-native-audition/
 # Reproducible Rime held instruments and listening evidence.
 testkit/rime-instruments/
+# Reproducible LORENTZ Kotlin listening and MPC export artifacts.
+testkit/lorentz-audition/
+testkit/lorentz-kit/
+scripts/__pycache__/
 
 # Reproducible Kotlin GRAIN/ANCHOR audio and internal-float evidence.
 testkit/apsis-populations/

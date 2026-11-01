@@ -2751,3 +2751,24 @@ tasks.register<JavaExec>("generateRimeHoldAudition") {
     maxHeapSize = "768m"
     args(providers.gradleProperty("rimeOutput").orNull ?: "${rootDir}/testkit/rime-audition")
 }
+
+/** The approved collision source through the actual JVM output stage. */
+tasks.register<JavaExec>("generateLorentzAudition") {
+    group = "distribution"
+    description = "Render 26 LORENTZ Kotlin WAVs, replayable patches and collision/timing metrics."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LorentzAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args("${rootDir}/testkit/lorentz-audition")
+}
+
+tasks.register<JavaExec>("generateLorentzKit") {
+    group = "distribution"
+    description = "Export sixteen LORENTZ dry pads, editable recipes and MPC 3/MPC 2 programs."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.LorentzKitGenerator")
+    workingDir = projectDir
+    maxHeapSize = "512m"
+    args("${rootDir}/testkit/lorentz-kit")
+}
