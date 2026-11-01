@@ -12,6 +12,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -96,11 +97,13 @@ import com.snipsnap.kit.OneNote
 import com.snipsnap.kit.PadFromAnything
 import com.snipsnap.shell.Audition
 import com.snipsnap.shell.BoardSheet
+import com.snipsnap.shell.Breed
 import com.snipsnap.shell.Busy
 import com.snipsnap.shell.BusyLatch
 import com.snipsnap.shell.AquariumPadSheet
 import com.snipsnap.shell.PrintedPads
 import com.snipsnap.synth.BoardType
+import com.snipsnap.synth.StrikeFxBank
 import com.snipsnap.synth.Pedals
 import com.snipsnap.synth.AquariumEditor
 import com.snipsnap.synth.AquariumOfflineRenderer
@@ -416,6 +419,16 @@ fun PadSheetScreen(
     // always releases the previous one. Mono is duplicated to LR; a board's
     // stereo reaches the same output without a mono fold.
     var voice by remember(model, slot) { mutableStateOf<MixVoice?>(null) }
+    // STRIKE FX: the two knobs start from the pad's kept bank, else the defaults;
+    // nothing renders on knob movement, only AUDITION and KEEP read them. The
+    // audition job plays DRY, ROOM, ECHO a second apart and is cancelled with the
+    // voice it feeds. `confirmStrikeReplace` is the dialog that asks before a
+    // bank and soft hits replace one another.
+    val strikeRecipe = Breed.recipeOf(pad)
+    var strikeRoom by remember(model, slot) { mutableStateOf(strikeRecipe?.let(StrikeFxBank::roomOf) ?: StrikeFxBank.DEFAULT_ROOM) }
+    var strikeSlap by remember(model, slot) { mutableStateOf(strikeRecipe?.let(StrikeFxBank::slapOf) ?: StrikeFxBank.DEFAULT_SLAP) }
+    var strikeAuditionJob by remember(model, slot) { mutableStateOf<Job?>(null) }
+    var confirmStrikeReplace by remember(model, slot) { mutableStateOf<StrikeReplace?>(null) }
     var aquariumAuditionActive by remember(model, slot) { mutableStateOf(false) }
     // This request survives a successful model swap, but explicit edits,
     // closing the panel and backgrounding revoke it before a late decode.
@@ -463,7 +476,7 @@ fun PadSheetScreen(
     }
     // A backgrounded gathering preview must not begin later merely because the app returned.
     var gatheringPreviewGeneration by remember(model) { mutableIntStateOf(0) }
-    DisposableEffect(model, slot) { onDispose { voice?.release() } }
+    DisposableEffect(model, slot) { onDispose { strikeAuditionJob?.cancel(); voice?.release() } }
     // Backgrounding mid-audition must stop the voice, not wait for this
     // composable to next leave composition (see ChopScreen's own fix).
     // Keyed on `model` too: `voice` is `remember(model)`-keyed, so an
@@ -474,6 +487,7 @@ fun PadSheetScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 gatheringPreviewGeneration++
+                strikeAuditionJob?.cancel()
                 stopAquariumPreview()
                 aquariumStatus = null
                 voice?.release()
@@ -1677,9 +1691,91 @@ fun PadSheetScreen(
             onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
             return
         }
+        if (p.velocityLayers.isNotEmpty() && StrikeFxBank.isStrikeFx(Breed.recipeOf(p))) {
+            confirmStrikeReplace = StrikeReplace.SOFT_HITS
+            return
+        }
         val enabling = p.velocityLayers.isEmpty()
         commitPadEditNow("SOFT HITS", onSuccess = { if (enabling) onToast(Copy.GHOSTS_ON) }) { mm ->
             if (enabling) mm.addGhostLayers(slot) else mm.clearGhostLayers(slot)
+        }
+    }
+
+    /**
+     * STRIKE FX, AUDITION: the three layers KEEP would write, heard one a
+     * second apart and written nowhere. The render is off the main thread,
+     * under the kit lock like every other read of the folder.
+     */
+    fun onStrikeAudition() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
+            return
+        }
+        val targetSlot = slot
+        val room = strikeRoom
+        val slap = strikeSlap
+        val level = p.level
+        strikeAuditionJob?.cancel()
+        strikeAuditionJob = appScope.launch {
+            try {
+                val layers = offMain { KitWrites.mutex.withLock { m.strikeFxAudition(targetSlot, room, slap) } }
+                for (layer in layers) {
+                    audition(layer, level)
+                    delay(1000)
+                }
+            } catch (e: Exception) {
+                if (e is CancellationException) throw e
+                if (e is IllegalArgumentException && e.message != null) onToast(e.message!!) else failure("STRIKE FX", e)
+            }
+        }
+    }
+
+    fun keepStrikeFx() {
+        val room = strikeRoom
+        val slap = strikeSlap
+        strikeAuditionJob?.cancel()
+        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_ON) }) { mm ->
+            mm.strikeFxLayers(slot, room, slap)
+        }
+    }
+
+    fun onStrikeKeep() {
+        if (busy) return
+        val m = model ?: return
+        val p = m.kit.pad(slot) ?: return
+        if (PrintedPads.has(p.recipe)) {
+            onToast(Copy.boardRemoveBeforeSoftHits(PrintedPads.label(p.recipe)))
+            return
+        }
+        if (p.velocityLayers.isNotEmpty() && !StrikeFxBank.isStrikeFx(Breed.recipeOf(p))) {
+            confirmStrikeReplace = StrikeReplace.STRIKE_FX
+            return
+        }
+        keepStrikeFx()
+    }
+
+    fun onStrikeClear() {
+        strikeAuditionJob?.cancel()
+        commitPadEditNow("STRIKE FX", onSuccess = { onToast(Copy.STRIKE_FX_OFF) }) { mm ->
+            mm.clearStrikeFxLayers(slot)
+        }
+    }
+
+    /** The dialog's KEEP: the bank replaces the soft hits, or the soft hits replace the bank. */
+    fun confirmStrikeReplacement(kind: StrikeReplace) {
+        confirmStrikeReplace = null
+        when (kind) {
+            StrikeReplace.STRIKE_FX -> keepStrikeFx()
+            StrikeReplace.SOFT_HITS -> {
+                strikeAuditionJob?.cancel()
+                commitPadEditNow("SOFT HITS", onSuccess = { onToast(Copy.GHOSTS_ON) }) { mm ->
+                    mm.clearStrikeFxLayers(slot)
+                    mm.addGhostLayers(slot)
+                }
+            }
         }
     }
 
@@ -3150,6 +3246,15 @@ fun PadSheetScreen(
         return
     }
 
+    confirmStrikeReplace?.let { kind ->
+        // Drawn instead of the sheet, as SpreadOverlay above is; Back and the
+        // scrim cancel, only KEEP writes.
+        val cancelReplace = { confirmStrikeReplace = null }
+        ReplaceLayersConfirmDialog(onCancel = cancelReplace, onConfirm = { confirmStrikeReplacement(kind) })
+        BackHandler(onBack = cancelReplace)
+        return
+    }
+
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PadSheetHeader(
             slot = slot,
@@ -3254,6 +3359,21 @@ fun PadSheetScreen(
                     onToggle = ::onGhostsToggle,
                 )
             }
+
+            StrikeFxSection(
+                pad = pad,
+                room = strikeRoom,
+                slap = strikeSlap,
+                busy = busy,
+                kept = StrikeFxBank.isStrikeFx(Breed.recipeOf(pad)),
+                onRoom = { strikeRoom = it },
+                onSlap = { strikeSlap = it },
+                onAudition = ::onStrikeAudition,
+                onKeep = ::onStrikeKeep,
+                onClear = ::onStrikeClear,
+                scheme = scheme,
+                classColor = classColor,
+            )
 
             GroupBox(
                 legend = PadSheetBoxes.Box.TREATMENT.legend,
@@ -4202,6 +4322,101 @@ private fun WaveformLcd(snip: Snip?, drumClass: DrumClass, color: Color, scheme:
                     topLeft = Offset(i * (barWidth + barGap), halfH - h),
                     size = Size(barWidth, h * 2f),
                 )
+            }
+        }
+    }
+}
+
+
+// ---------- strike fx ----------
+
+/** Which way the confirm dialog is asked: STRIKE FX over soft hits, or soft hits over a STRIKE FX bank. */
+private enum class StrikeReplace { STRIKE_FX, SOFT_HITS }
+
+/**
+ * STRIKE FX: ROOM and SLAP are the macro values themselves, shown to two
+ * decimals. Nothing renders on a knob move; AUDITION plays the three layers
+ * without writing, KEEP writes them, and CLEAR (only on a kept bank) puts the
+ * one sample back.
+ */
+@Composable
+private fun StrikeFxSection(
+    pad: KitPad,
+    room: Float,
+    slap: Float,
+    busy: Boolean,
+    kept: Boolean,
+    onRoom: (Float) -> Unit,
+    onSlap: (Float) -> Unit,
+    onAudition: () -> Unit,
+    onKeep: () -> Unit,
+    onClear: () -> Unit,
+    scheme: Scheme,
+    classColor: Color,
+) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            TapeText("STRIKE FX", TapeType.pixelSmall, scheme.ink2.tape)
+            if (kept) {
+                TapeText(pad.velocityLayers.mapNotNull { it.displayName }.joinToString(" · "), TapeType.pixelSmall, scheme.ink2.tape, Modifier.weight(1f))
+            }
+        }
+        StepperSlider(
+            label = "ROOM",
+            fraction = room,
+            valueText = "%.2f".format(java.util.Locale.ROOT, room),
+            fillColor = classColor,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onRoom,
+            onFractionCommit = {},
+        )
+        StepperSlider(
+            label = "SLAP",
+            fraction = slap,
+            valueText = "%.2f".format(java.util.Locale.ROOT, slap),
+            fillColor = classColor,
+            scheme = scheme,
+            enabled = !busy,
+            onFractionChange = onSlap,
+            onFractionCommit = {},
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Named for the section: KEEP alone is also the board's button.
+            ActionButton("AUDITION", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX AUDITION", modifier = Modifier.weight(1f), onClick = onAudition)
+            ActionButton("KEEP", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX KEEP", modifier = Modifier.weight(1f), onClick = onKeep)
+            if (kept) {
+                ActionButton("CLEAR", scheme, enabled = !busy, accessibilityLabel = "STRIKE FX CLEAR", modifier = Modifier.weight(1f), onClick = onClear)
+            }
+        }
+    }
+}
+
+/** Asks before STRIKE FX and a pad's soft hits replace one another; modelled on `KitsScreen`'s KitDeleteConfirmDialog. */
+@Composable
+private fun ReplaceLayersConfirmDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
+    val scheme = LocalScheme.current
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.55f))
+            .tapeClick(label = "CANCEL", onClick = onCancel),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(24.dp)
+                .raisedBevel(scheme)
+                // Swallows the tap so it does not fall through to the scrim's CANCEL.
+                .pointerInput(Unit) { detectTapGestures { } }
+                .padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TapeText(Copy.STRIKE_FX_REPLACES_LAYERS, TapeType.lcdSmall, scheme.ink.tape, maxLines = 3)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                ActionButton("CANCEL", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onCancel)
+                ActionButton("KEEP", scheme, enabled = true, modifier = Modifier.weight(1f), onClick = onConfirm)
             }
         }
     }
