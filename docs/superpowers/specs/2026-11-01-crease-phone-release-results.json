@@ -1,0 +1,62 @@
+{
+  "scope": "Actual Kotlin captures, Python/JS/native PCM transport; no physical device playback",
+  "baseline": "9c10026772232018674a233d4e5108876631faf7",
+  "captureCommit": "907a6638699363afc2179df594d8a293ef822b86",
+  "captureDirty": false,
+  "passed": true,
+  "cases": 1628,
+  "freshHoldouts": 907,
+  "thresholds": {
+    "normalizedErrorRms": 0.031623,
+    "peakError": 0.025,
+    "harmonicTv": 0.02,
+    "keyUpStepError": 0.001,
+    "pcmBytes": 33554432,
+    "compressedBytes": 12582912
+  },
+  "candidate": {
+    "positionsPerPeriod": 32,
+    "tailCount": 309,
+    "pcmBytes": 33547698,
+    "maxNormalizedErrorRms": 0.008489533958450503,
+    "maxPeakError": 0.022190715784519033,
+    "maxHarmonicTv": 0.0001214818651760039,
+    "failedCases": 0,
+    "passed": true,
+    "compressedBytes": 1692344
+  },
+  "publicPrefixError": 0.0,
+  "forkStateError": 0.0,
+  "deterministicRepeats": 82,
+  "maxJsPythonSampleError": 1.1641532182693481e-10,
+  "native": {
+    "result": "passed",
+    "cases": 1628,
+    "output48kCases": 24,
+    "maxNativePythonSampleError": 1.16415e-10,
+    "callbackAllocations": 0,
+    "callbackFrees": 0,
+    "scope": "Actual native reader and JNI on host; no physical phone timing",
+    "pcmSha256": "b47e935c4890e0c6ce06134584f133ab826dd3c5b9fc8b6f134b581a6c3d5ff4",
+    "nativeSources": {
+      "app/src/main/cpp/crease/CreaseStudyEngine.cpp": "076d038720122969d4e714ac2e05cf2ffdf1a27c6821cf2f5849682cbd7599af",
+      "app/src/main/cpp/crease/CreaseStudyEngine.h": "90b806b6c1e1149e15b777a4ea63eca1c64f9f7bfeb7fecefa61d171ed7728a6",
+      "app/src/main/cpp/crease/CreaseStudyJni.cpp": "5cce92cca9959c54bce81eda341e2fed88331065ecfe9d8adc0dc31a3c0ec213",
+      "app/src/main/cpp/crease/CreaseStudyReader.h": "6e6112846bd5edd11ffc96a1b75a848d8e893bfbd8b265c42b753a08791c23b9",
+      "app/src/main/cpp/OboeOutput.h": "d89801ac176f21a318130d7a73f4b21d58a59ea3907689cc41646182176ff9c3"
+    },
+    "executableSha256": "ca81f1e726739ed1b758f35bb37450d8e834baf2e4484957d76dd4c714e7ba53",
+    "reference48kSha256": "db628bf9aeb6f0d4d7300d4cfeabcada91a8dcdb6a3a74193b5facb1f6909e5c",
+    "pythonFixtureSha256": "5d18cbed179154eb804107e5e5e2f478cdced5a0981353dd81264327da6db9d2"
+  },
+  "androidCacheTests": {
+    "tests": 5,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0
+  },
+  "androidAssembly": "passed",
+  "deviceTests": "4 compiled, not executed",
+  "fullJvmGate": "running separately",
+  "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard"
+}
