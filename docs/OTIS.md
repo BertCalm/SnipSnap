@@ -6,7 +6,7 @@ shared pressure or cabinet responds → the body moves → a finite release clos
 The owner accepted the stronger pipe and harmonica direction and preferred Shared;
 the restored Squeeze chord draw was accepted on 2026-10-30.
 
-Repository basis: `a5caac7fd6c8a2e6d09ec740c60fb995c6bef368`. The frozen research
+Initial port basis: `a5caac7fd6c8a2e6d09ec740c60fb995c6bef368`. The frozen research
 sources and listening ledger live in [OTIS_PROTOTYPE.md](OTIS_PROTOTYPE.md). This
 landing uses the accepted organ revision, Steam/Harp character revision, and restored
 Squeeze draw. The old TONEWHEEL, BELLOWS and REGISTERS patches remain on their own
@@ -146,6 +146,24 @@ sidecar preserves the complete score and source details after every override.
   not a new-setting benchmark. JVM timing and compilation do not
   establish phone latency, device playback, or MPC hardware behavior. Selected
   harmonic-fold probes are not a complete alias certificate.
+
+## Integration verification (2026-11-01)
+
+Application source `7848b8af1` passed the complete nine-module JVM gate: **7,547
+tests, zero failures, errors or skips**, using Temurin 17. The earlier full synth
+run passed all 4,104 synth tests; Gradle retained that successful result while
+rechecking the corrected host paths. The final full command exited successfully.
+
+A separate checkout of the same application source built `:app:assembleDebug`,
+`:app:assembleStrikeFx` and `:app:compileDebugAndroidTestKotlin`. Both APK signatures
+verify. Device tests were compiled, not run. Phone playback, phone latency and MPC
+hardware listening remain checks for the owner.
+
+The sixteen-pad export was independently checked for complete recipes, one-shot
+flags, mono 44.1 kHz PCM24, matching frame counts, identical production/export PCM
+and manifest checksums. SPREAD tests use a contradictory detected tone to verify the
+saved score root, cover voicing bounds, and reopen a short custom-score bank with
+its correct duration class and full recipe.
 
 ## Why it is built this way
 
