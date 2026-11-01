@@ -149,6 +149,10 @@ class JCardTest {
 
         override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float =
             error("the J-card measures no type")
+
+        override fun fillPath(path: ArtPath, fill: ArtFill) = error("the J-card fills no paths")
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill) = error("the J-card strokes no paths")
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill) = error("the J-card fills no circles")
     }
 
     @Test

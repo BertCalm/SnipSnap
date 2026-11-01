@@ -39,6 +39,10 @@ class MarkTest {
             texts += TextCall(text, x, baselineY, anchor, colorRgb, measure.textWidth(text, font, sizePx))
         }
         override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float = measure.textWidth(text, font, sizePx)
+
+        override fun fillPath(path: ArtPath, fill: ArtFill) = error("the mark fills no paths")
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill) = error("the mark strokes no paths")
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill) = error("the mark fills no circles")
     }
 
     private fun png(variant: Mark.Variant, height: Float, ink: Int, accent: Int): ByteArray {

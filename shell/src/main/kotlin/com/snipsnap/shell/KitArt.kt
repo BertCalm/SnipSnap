@@ -3,12 +3,16 @@ package com.snipsnap.shell
 import com.snipsnap.audio.Cleanup
 import com.snipsnap.audio.WavReader
 import com.snipsnap.kit.Kit
+import java.awt.AlphaComposite
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Font
+import java.awt.GradientPaint
 import java.awt.Graphics2D
+import java.awt.RadialGradientPaint
 import java.awt.RenderingHints
 import java.awt.geom.Arc2D
+import java.awt.geom.Ellipse2D
 import java.awt.geom.Path2D
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
@@ -47,6 +51,15 @@ interface ArtCanvas {
 
     /** The advance width [drawText] would cover for [text] at [sizePx]. */
     fun textWidth(text: String, font: ArtFont, sizePx: Float): Float
+
+    /** Fill [path] (closed as drawn; an open path is closed for the fill) with [fill]. */
+    fun fillPath(path: ArtPath, fill: ArtFill)
+
+    /** Stroke [path] [strokeWidth] wide with round caps and joins, painted with [fill]. */
+    fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill)
+
+    /** Fill the circle of radius [r] about ([cx], [cy]) with [fill]. */
+    fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill)
 }
 
 /**
@@ -227,6 +240,51 @@ object KitArt {
 
         override fun textWidth(text: String, font: ArtFont, sizePx: Float): Float =
             g.getFontMetrics(AwtFonts.font(font, sizePx)).stringWidth(text).toFloat()
+
+        override fun fillPath(path: ArtPath, fill: ArtFill) = painted(fill) { g.fill(awtPath(path)) }
+
+        override fun strokePath(path: ArtPath, strokeWidth: Float, fill: ArtFill) = painted(fill) {
+            g.stroke = BasicStroke(strokeWidth, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND)
+            g.draw(awtPath(path))
+        }
+
+        override fun fillCircle(cx: Float, cy: Float, r: Float, fill: ArtFill) = painted(fill) {
+            g.fill(Ellipse2D.Float(cx - r, cy - r, 2 * r, 2 * r))
+        }
+
+        /** Sets the paint and the alpha composite for one call and puts both back after. */
+        private inline fun painted(fill: ArtFill, draw: () -> Unit) {
+            val paintBefore = g.paint
+            val compositeBefore = g.composite
+            g.paint = when (fill) {
+                is ArtFill.Solid -> Color(fill.rgb)
+                is ArtFill.Linear -> GradientPaint(fill.x0, fill.y0, Color(fill.rgb0), fill.x1, fill.y1, Color(fill.rgb1))
+                is ArtFill.Radial -> RadialGradientPaint(
+                    fill.cx, fill.cy, fill.r,
+                    floatArrayOf(0f, 1f), arrayOf(Color(fill.inner), Color(fill.outer)),
+                )
+            }
+            if (fill.alpha < 1f) g.composite = AlphaComposite.getInstance(AlphaComposite.SRC_OVER, fill.alpha.coerceIn(0f, 1f))
+            try {
+                draw()
+            } finally {
+                g.paint = paintBefore
+                g.composite = compositeBefore
+            }
+        }
+
+        private fun awtPath(path: ArtPath): Path2D.Float {
+            val p = Path2D.Float()
+            for (s in path.segments) {
+                when (s) {
+                    is ArtPath.Segment.Move -> p.moveTo(s.x, s.y)
+                    is ArtPath.Segment.Line -> p.lineTo(s.x, s.y)
+                    is ArtPath.Segment.Quad -> p.quadTo(s.cx, s.cy, s.x, s.y)
+                    ArtPath.Segment.Close -> p.closePath()
+                }
+            }
+            return p
+        }
     }
 
     // ---- styles ------------------------------------------------------------
