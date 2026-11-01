@@ -13,6 +13,8 @@ import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
@@ -115,6 +117,7 @@ object Spread {
         is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
+        is KeelPatch -> Keel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()

@@ -243,6 +243,17 @@ tasks.register<JavaExec>("generateFilamentKeysAudition") {
 }
 
 /** Compare unchanged BELLOWS native notes with the real exported sample program and release preview. */
+/** KEEL held: four keygroup instruments through the production exporter, with held and walking previews (spec section 17, R2). */
+tasks.register<JavaExec>("generateKeelKeys") {
+    group = "distribution"
+    description = "Export KEEL's two voices at their defaults and at WEIGHT 1 as nine-zone held keygroups, with previews, under testkit/keel-keys/."
+    maxHeapSize = "2g"
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.KeelKeysGenerator")
+    workingDir = projectDir
+    args("${rootDir}/testkit/keel-keys")
+}
+
 tasks.register<JavaExec>("generateBellowsPlaybackAudition") {
     group = "distribution"
     description = "Render BELLOWS native/program A/B and release previews through exported WAVs and the JVM player."
