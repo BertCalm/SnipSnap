@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,11 +58,12 @@ import com.snipsnap.shell.Scheme
  * says what to do first.
  */
 @Composable
-fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean) {
+fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? = null) {
     val scheme = LocalScheme.current
     Column(
         Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(4.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -75,18 +78,19 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean) {
             TapeText(Copy.MAKE_HEADER, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
         }
         if (!hasKit) {
-            TapeText(Copy.ADD_KIT_FIRST, TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 2)
+            TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "OPEN A KIT FOR NEW PADS. MY VOICE CAN KEEP A PERSONAL SOURCE FIRST.",
+                TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
         }
         for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.INSTRUMENTS)) {
-            MakeRow(bench, sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
+            MakeRow("${bench.label} ▸", sub = Copy.makeSub(bench), scheme = scheme, onOpen = { onOpen(bench) })
         }
+        if (onMyVoice != null) MakeRow("MY VOICE ▸", "A SHORT VOWEL INTO A PERSONAL VOICE. KEPT ON THIS PHONE.", scheme, onMyVoice)
     }
 }
 
 /** One MAKE row: the lab's name and arrow, and under it what the word means. */
 @Composable
-private fun MakeRow(bench: Bench, sub: String, scheme: Scheme, onOpen: () -> Unit) {
-    val name = "${bench.label} ▸"
+private fun MakeRow(name: String, sub: String, scheme: Scheme, onOpen: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()

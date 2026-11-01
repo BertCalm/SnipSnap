@@ -77,7 +77,12 @@ object BellowsPadMaker {
         return program
     }
 
-    /** A separate tonic-only program cannot repitch its bed when another melody note is played. */
+    /**
+     * A separate tonic-only program cannot repitch its bed when another melody note is played.
+     *
+     * The bed is exactly one key, so it is written without spanning the keyboard: see
+     * `synth/src/main/kotlin/com/snipsnap/synth/BellowsKeys.kt:17-19` ("never map the bed across the melody range").
+     */
     fun exportTonicBed(name: String, spec: Spec, note: KeyNote, destRoot: File, tonicMidi: Int = 48,
                        overwrite: Boolean = false): KeygroupProgram {
         require(Names.isMpcSafe(name)) { "instrument name isn't MPC-safe: '$name'" }
@@ -87,7 +92,7 @@ object BellowsPadMaker {
         val program = KeygroupProgram(name, listOf(Keygroup(tonicMidi, tonicMidi, tonicMidi,
             listOf(VelocityLayer(stem, note.snip.frameCount.toLong(), 1, 127, note.loopStartFrame)))),
             volumeRelease = spec.releaseSeconds)
-        OneNote.writePackage(name, program, mapOf(stem to note.snip), destRoot, overwrite)
+        OneNote.writePackage(name, program, mapOf(stem to note.snip), destRoot, overwrite, spanKeyboard = false)
         return program
     }
 

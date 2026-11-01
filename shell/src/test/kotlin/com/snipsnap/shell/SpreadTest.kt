@@ -7,6 +7,10 @@ import com.snipsnap.audio.Scale
 import com.snipsnap.audio.Scales
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.OpenSky
+import com.snipsnap.synth.Accord
+import com.snipsnap.synth.AccordPatch
+import com.snipsnap.synth.AccordVoice
+import com.snipsnap.synth.AccordAcousticProfile
 import com.snipsnap.synth.Chamber
 import com.snipsnap.synth.ChamberPatch
 import com.snipsnap.synth.ChamberVoice
@@ -15,6 +19,9 @@ import com.snipsnap.synth.CausticVoice
 import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.OpenSkyVoice
 import com.snipsnap.synth.Pitchwheel
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
+import com.snipsnap.synth.KeelVoice
 import com.snipsnap.synth.PitchwheelPatch
 import com.snipsnap.synth.PitchwheelVoice
 import com.snipsnap.synth.PluckPatch
@@ -48,6 +55,21 @@ class SpreadTest {
     private fun kit(name: String) = KitBuilderModel.create(name, File(temp, name))
 
     @Test
+    fun `Accord spreads retain the saved root across acoustic profiles instead of detecting the ringing partials`() {
+        val misleading = tone(220.0)
+        assertEquals(57f, assertNotNull(Spread.detect(misleading)), .2f)
+        for (voice in AccordVoice.entries) {
+            val profiles = if (voice == AccordVoice.TINE)
+                AccordAcousticProfile.entries.filter { it != AccordAcousticProfile.BASE }
+            else listOf(AccordAcousticProfile.BASE)
+            for (profile in profiles) for (midi in listOf(Accord.MIN_MIDI, 48, Accord.MAX_MIDI)) {
+                val patch = AccordPatch("Saved ensemble root", voice, midi = midi, acousticProfile = profile)
+                assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "$voice/$profile must retain MIDI $midi")
+            }
+        }
+    }
+
+    @Test
     fun `Chamber spreads keep the authored root across voices models and surface balances`() {
         // A loud A3 contradicts the saved note. Upper bar and triangle modes,
         // or sympathetic room pitches, must not retune the four-source root.
@@ -73,6 +95,21 @@ class SpreadTest {
                 midi = midi, velocity = .35f, model = 1)
             assertEquals(midi.toFloat(), Spread.detect(misleading, patch), "$voice BODY $body must retain MIDI $midi")
         }
+    }
+
+    @Test
+    fun `keel spreads use the saved root and relative tune, under the detector's floor too`() {
+        // KEEL's C1 (32.7 Hz) and D#1 (38.9 Hz) lie under Pitch.detect's 40 Hz floor, so the recipe has to say.
+        val snip = tone(220.0)
+        for (voice in KeelVoice.entries) {
+            for (midi in listOf(24, 36, 48)) {
+                for (tune in listOf(0f, .5f, 1f)) {
+                    val patch = KeelPatch("Keel", voice, mapOf("TUNE" to tune), midi = midi)
+                    assertEquals(Keel.midiFor(voice, tune, midi).toFloat(), Spread.detect(snip, patch), "$voice root $midi, TUNE $tune")
+                }
+            }
+        }
+        assertEquals(24f, Spread.detect(snip, KeelPatch("Low", KeelVoice.REDUCE, mapOf("TUNE" to 0f), midi = 36)))
     }
 
     @Test

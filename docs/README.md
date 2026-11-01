@@ -7,6 +7,9 @@ separates the approved Python direction from pending native tests, listening,
 phone performance and HOLD. The complete frozen reference bundle is retained
 under [`reference/accord`](../reference/accord/README.md).
 
+**Rime.** [`RIME.md`](RIME.md) records the preserved finite bank, versioned HOLD,
+attack-plus-loop MPC instruments and phone integration. The remaining three
+voices and expanded library await the original specification.
 **Tidal HOLD.** [`TIDAL_HOLD.md`](TIDAL_HOLD.md) records the reconstructed aftermath, attack-plus-sustain keys, independent closure evidence and listening limits.
 
 **Upright bass.** [`UPRIGHT.md`](UPRIGHT.md) records PLUCK's finite UPRIGHT

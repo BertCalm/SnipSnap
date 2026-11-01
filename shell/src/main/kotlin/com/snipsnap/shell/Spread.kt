@@ -12,12 +12,16 @@ import com.snipsnap.kit.KitPad
 import com.snipsnap.synth.Ballast
 import com.snipsnap.synth.ApsisPatch
 import com.snipsnap.synth.BallastPatch
+import com.snipsnap.synth.AccordPatch
 import com.snipsnap.synth.ChamberPatch
+import com.snipsnap.synth.Keel
+import com.snipsnap.synth.KeelPatch
 import com.snipsnap.synth.CreasePatch
 import com.snipsnap.synth.Lattice
 import com.snipsnap.synth.LatticePatch
 import com.snipsnap.synth.CausticPatch
 import com.snipsnap.synth.FlockPatch
+import com.snipsnap.synth.MeridianPatch
 import com.snipsnap.synth.TrefoilPatch
 import com.snipsnap.synth.ObbligatoPatch
 import com.snipsnap.synth.OhmPatch
@@ -25,6 +29,8 @@ import com.snipsnap.synth.OpenSkyPatch
 import com.snipsnap.synth.Origami
 import com.snipsnap.synth.OrigamiPatch
 import com.snipsnap.synth.LibrationPatch
+import com.snipsnap.synth.OverlapPatch
+import com.snipsnap.synth.OverlapPlayback
 import com.snipsnap.synth.Patch
 import com.snipsnap.synth.Pitchwheel
 import com.snipsnap.synth.PitchwheelPatch
@@ -109,14 +115,18 @@ object Spread {
      * Pitchwheel's root plus TUNE can also exceed the detector's frequency range.
      */
     fun detect(snip: Snip, patch: Patch): Float? = when (patch) {
+        is AccordPatch -> patch.midi.toFloat()
+        is MeridianPatch -> MeridianSynth.rootMidi(patch).toFloat()
         is ApsisPatch -> patch.midi.toFloat()
         is BallastPatch -> Ballast.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f).toFloat()
+        is KeelPatch -> Keel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is PitchwheelPatch -> Pitchwheel.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is LatticePatch -> Lattice.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f, patch.midi).toFloat()
         is StoopPatch -> patch.midi.toFloat()
         is TidalPatch -> patch.midi.toFloat()
         is FlockPatch -> patch.midi.toFloat()
         is LibrationPatch -> patch.midi.toFloat()
+        is OverlapPatch -> if (patch.playback == OverlapPlayback.HELD) patch.midi.toFloat() else detect(snip)
         is OpenSkyPatch -> patch.midi.toFloat()
         is TrefoilPatch -> patch.midi.toFloat()
         is OhmPatch -> patch.midi.toFloat()
