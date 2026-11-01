@@ -2,7 +2,7 @@
 
 Status: implemented phrase-bank stage; validation and listening results are recorded below. This is a source bank and preset family for the existing Confluence renderer. It is not a new synthesis engine or a completed keyboard instrument.
 
-Repository baseline: `a41184d8ae63af8d05fb4e80deccf0ce5cc01f86` (My Voice PR #755, including the current frame navigation). Contracts checked: `ConfluenceRecipe`, `ConfluenceVoice`, `ConfluenceSelectedBank`, `ConfluenceSelectedWorkshop`, native kit backup and XPN source metadata.
+Initial repository inspection: `a41184d8ae63af8d05fb4e80deccf0ce5cc01f86` (My Voice PR #755). Integration base: default branch `7cb8f3450`, including the merged My Voice work and current instrument updates. Contracts checked: `ConfluenceRecipe`, `ConfluenceVoice`, `ConfluenceSelectedBank`, `ConfluenceSelectedWorkshop`, native kit backup and XPN source metadata.
 
 The characteristic gesture is **recorded passage → independent entrances → small timing differences → shared room → silence**.
 
@@ -94,3 +94,5 @@ Focused validation passed: 10 synth bank tests, 7 kit portability tests, and 68 
 ## As built
 
 The source manifest fingerprints the nine original WAVs, both legal texts and source notice. No changes were made to the legacy Confluence renderer, wordless bank or Assembly APIs. The current default branch also restores full PRISM macro drafts before default controls; the independently identified startup regression was resolved upstream while this bank was being built. Its existing device regression tests remain intact.
+
+Two inherited integration regressions were corrected without changing their assertions: the narrow-keygroup rewrite test now declares its own package directory, and OVERLAP export explicitly preserves its authored native zone range instead of accepting OneNote's full-keyboard default.
