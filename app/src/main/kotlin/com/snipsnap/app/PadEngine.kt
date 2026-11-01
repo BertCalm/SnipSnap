@@ -64,6 +64,9 @@ class PadEngine(preferredSampleRate: Int) {
     // Stops the command ring refused; only touched under @Synchronized.
     private val pendingStops = ArrayDeque<Pair<Int, Float>>()
     private var pendingAllOff: Float? = null
+    // The master gain the ring last refused, retried with the stops: the last
+    // turn of a knob must land, or the kit stays at a level nobody set.
+    private var pendingMaster: Float? = null
     private var keptWarned = false
     private var aquariumWanted = AquariumPerformanceSettings()
     private var aquariumBpm = 0.0
@@ -467,6 +470,25 @@ class PadEngine(preferredSampleRate: Int) {
     }
 
     /**
+     * The whole kit's volume, 0..1 (already through the screen's volume
+     * law), gliding over a fader's glide: every voice, sounding or started
+     * later, and the beat's too while it plays through this engine. It
+     * belongs to the engine, so it survives a kit reload. A value the ring
+     * refuses is kept and retried from [drainEnded].
+     */
+    @Synchronized
+    fun setMasterGain(gain: Float) {
+        require(gain.isFinite() && gain in 0f..1f)
+        if (!open) return
+        if (NativePads.setMasterGain(handle, gain, FADER_GLIDE_MS)) {
+            pendingMaster = null
+        } else {
+            noteKept()
+            pendingMaster = gain
+        }
+    }
+
+    /**
      * Stop one voice with a short fade: a choke, a steal, a gate's release.
      *
      * The command ring drops on full by design, which is right for a fader
@@ -530,6 +552,7 @@ class PadEngine(preferredSampleRate: Int) {
             if (!NativePads.stopVoice(handle, voiceId, stopFade)) return
             pendingStops.removeFirst()
         }
+        pendingMaster?.let { if (NativePads.setMasterGain(handle, it, FADER_GLIDE_MS)) pendingMaster = null }
         flushAquarium()
     }
 
@@ -680,6 +703,14 @@ class PadEngine(preferredSampleRate: Int) {
 
         /** A choke is a short fade, not a cut: long enough to spare the click, short enough to read as a cut. */
         const val CHOKE_FADE_MS = 5f
+
+        /**
+         * The bend's glide. A keyboard sends bend as a stream of steps, one
+         * every few milliseconds while the wheel moves; gliding each step
+         * over 8 ms smooths the stream into one movement (no zipper) while
+         * staying under the lag a player hears between hand and pitch.
+         */
+        const val BEND_GLIDE_MS = 8f
         const val PANIC_FADE_MS = 20f
 
         /** The count-in click's fixed level — a cue meant to sit under the kit, not a mixed-in sound. */

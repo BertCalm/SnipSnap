@@ -559,6 +559,30 @@ Java_com_snipsnap_app_NativePads_setVoiceGain(
     pads(handle)->pushCommand(c);
 }
 
+/**
+ * The bend: every voice of this engine reads at its own speed times
+ * [ratio], gliding there over [glideMs]. False when the ring was full and
+ * it was dropped; the caller keeps the value and sends it again.
+ */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_setPitch(JNIEnv*, jobject, jlong handle, jdouble ratio, jfloat glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetPitch;
+    c.pitch = ratio;
+    c.fadeMs = glideMs;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
+/** The whole mix times [gain] (0..1), gliding over [glideMs]; false when dropped, as setPitch. */
+JNIEXPORT jboolean JNICALL
+Java_com_snipsnap_app_NativePads_setMasterGain(JNIEnv*, jobject, jlong handle, jfloat gain, jfloat glideMs) {
+    PadCommand c;
+    c.type = PadCommand::Type::SetMaster;
+    c.gainL = gain;
+    c.fadeMs = glideMs;
+    return pads(handle)->pushCommand(c) ? JNI_TRUE : JNI_FALSE;
+}
+
 /** False when the command ring was full and the stop was dropped; the caller keeps it and retries. */
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_stopVoice(JNIEnv*, jobject, jlong handle, jint voiceId, jfloat fadeMs) {

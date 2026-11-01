@@ -46,6 +46,10 @@ class InstrumentPlayer(context: Context) {
     /** The player's master gain, 1 = the instrument as made; see [setVolume]. */
     private var volume = 1f
 
+    /** The bend asked for, and whether the engine has it; see [setBend]. */
+    private var bend = 1.0
+    private var bendSent = true
+
     /**
      * Load the instrument the sidecar describes: every zone's WAV read
      * once (a file that will not read leaves its zone silent) and handed
@@ -122,6 +126,26 @@ class InstrumentPlayer(context: Context) {
         for ((id, v) in voices) NativePads.setVoiceGain(handle, id, v.gain * gain, v.gain * gain, PadEngine.FADER_GLIDE_MS)
     }
 
+    /**
+     * Bend every voice, held, releasing or started later, to its own speed
+     * times [ratio] (1 at rest), gliding over [PadEngine.BEND_GLIDE_MS] so
+     * a wheel's stream of steps is one movement. A value the ring refuses
+     * is kept and sent with the next bend or note: the wheel's return to
+     * rest must land.
+     */
+    @Synchronized
+    fun setBend(ratio: Double) {
+        require(ratio.isFinite() && ratio > 0.0)
+        bend = ratio
+        bendSent = false
+        sendBend()
+    }
+
+    private fun sendBend() {
+        if (!open || bendSent) return
+        bendSent = NativePads.setPitch(handle, bend, PadEngine.BEND_GLIDE_MS)
+    }
+
     /** Start [note] at [velocity] 0..1; false when no zone covers it, nothing loaded, or no stream. */
     @Synchronized
     fun noteOn(note: Int, velocity: Float = 1f): Boolean {
@@ -132,6 +156,7 @@ class InstrumentPlayer(context: Context) {
         if (!running || NativePads.needsRestart(handle)) running = NativePads.start(handle)
         if (!running) return false
         reap()
+        sendBend()
         val inst = instrument ?: return false
         val hit = KeyHit.resolve(inst, note, velocity.coerceIn(0f, 1f)) { framesOf[it] } ?: return false
         val sample = sampleIndex[hit.sampleFile] ?: return false
