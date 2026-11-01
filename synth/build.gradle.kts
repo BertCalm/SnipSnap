@@ -1662,6 +1662,17 @@ tasks.register<JavaExec>("generateResinAudition") {
     args("${rootDir}/testkit/resin-audition")
 }
 
+/** Time one knob-turn re-render per voice of every engine; writes testkit/render-times/. See RenderTimingScan. */
+tasks.register<JavaExec>("scanRenderTimes") {
+    group = "verification"
+    description = "Measure each engine voice's knob-turn render time under testkit/render-times/."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.RenderTimingScan")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(listOf("${rootDir}/testkit/render-times") + (providers.gradleProperty("engines").orNull?.split(",") ?: emptyList()))
+}
+
 tasks.register<JavaExec>("generateForkKit") {
     group = "distribution"
     description = "Render the FORK modal electric piano acceptance kit under testkit/."
