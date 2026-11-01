@@ -136,12 +136,14 @@ internal fun PrismMotionPanel(
     onEdit: (PrismVoice, (PrismPatch) -> PrismPatch) -> Unit,
     onPreview: (Snip) -> Unit,
     onStopPreview: (Boolean) -> Unit,
+    onBeforeEdit: () -> Unit = {},
 ) {
     val scope = rememberCoroutineScope()
     val readPatch by rememberUpdatedState(currentPatch)
     val editPatch by rememberUpdatedState(onEdit)
     val hear by rememberUpdatedState(onPreview)
     val stop by rememberUpdatedState(onStopPreview)
+    val beforeEdit by rememberUpdatedState(onBeforeEdit)
     var expanded by remember(patch.voice) { mutableStateOf(false) }
     var pickingSource by remember(patch.voice) { mutableStateOf(false) }
     val baseline = studio.baseline(patch)
@@ -158,12 +160,14 @@ internal fun PrismMotionPanel(
     DisposableEffect(Unit) { onDispose { studio.cancel(); stop(false) } }
 
     fun edit(transform: (PrismPatch) -> PrismPatch) {
+        beforeEdit()
         studio.cancelPreview()
         stop(false)
         editPatch(patch.voice, transform)
     }
 
     fun selectSource(choice: PrismMotionSources.Source) {
+        beforeEdit()
         val starting = readPatch()?.takeIf { it.voice == patch.voice } ?: return
         val generation = studio.startSource()
         stop(false)

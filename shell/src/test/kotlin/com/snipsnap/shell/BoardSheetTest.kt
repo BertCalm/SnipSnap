@@ -155,6 +155,14 @@ class BoardSheetTest {
             assertEquals(0, swept, "layered=$layered: the sweep took an original the board's era'd source needs")
             assertEquals(files.sorted(), m.binHolds().map { it.entry.originalName }.sorted(), "layered=$layered: one entry per file the source plays")
             assertTrue(m.binHolds().all { it.keptFor == 1 }, "layered=$layered: every one kept for the printed pad's slot")
+            // THE BIN asks the pad under the print whether it can undo itself, and it can: the
+            // printed pad's NONE removes the board, then NONE again reads these entries. So no BACK.
+            val binned = m.binHolds().map { it.entry.originalName }.toSet()
+            val under = m.unprinted(m.pad(1)!!)
+            for (f in files) {
+                assertTrue(PadSheet.hasOwnWayBack(under, f, binned), "layered=$layered: under the board, NONE gives $f back")
+                assertFalse(PadSheet.hasOwnWayBack(m.pad(1)!!, f, binned), "layered=$layered: the print itself plays none of $f")
+            }
             val removed = BoardSheet.remove(m, 1)
             assertEquals("main.wav", removed.sampleFile)
             assertTrue(PadSheet.read(removed.recipe) != null, "test setup: REMOVE brought the era back")
