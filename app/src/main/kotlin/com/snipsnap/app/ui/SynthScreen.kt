@@ -5650,7 +5650,7 @@ private enum class Engine {
         TONEWHEEL -> (voice as TonewheelVoice).drumClass
         OTIS -> Otis.drumClassFor(voice as OtisVoice, macros)
         REGISTERS -> Registers.drumClassFor(voice as RegistersVoice, macros)
-        FATHOM -> (voice as FathomVoice).drumClass
+        FATHOM -> Fathom.drumClassFor(voice as FathomVoice, macros)
         RESIN -> (voice as ResinVoice).drumClass
         TIDE -> (voice as TideVoice).drumClass
         GLINT -> (voice as GlintVoice).drumClass
@@ -5892,12 +5892,6 @@ private val TinesVoice.drumClass: DrumClass
 private val VelvetVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val PluckVoice.drumClass: DrumClass get() = DrumClass.TONAL
 private val TonewheelVoice.drumClass: DrumClass get() = DrumClass.TONAL
-
-private val FathomVoice.drumClass: DrumClass
-    get() = when (this) {
-        FathomVoice.DEEP, FathomVoice.GRIND -> DrumClass.KICK
-        FathomVoice.GLASS -> DrumClass.PERC
-    }
 
 // RESIN's three voices are pitched notes through a filter — the same
 // "tonal-pitched voices -> TONAL" fallback VELVET/VOX/PLUCK/TONEWHEEL
