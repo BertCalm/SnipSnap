@@ -204,7 +204,7 @@ fun KeysScreen(
     // pads on OCT − and OCT +. The rules are `:shell`'s KeysMidi and
     // MidiLearn; a control learned here is consumed, so it no longer plays
     // a note, and anything not learned reaches MidiKeys as before.
-    val learnState = rememberMidiLearn(KeysMidi.SCREEN, prefer = KeysMidi::prefer)
+    val learnState = rememberMidiLearn(KeysMidi.SCREEN, kinds = KeysMidi::kinds, prefer = KeysMidi::prefer)
     val learn = learnState.learn
     var showLearn by remember { mutableStateOf(false) }
     LaunchedEffect(showLearn) { learnState.showing = showLearn }
@@ -233,7 +233,11 @@ fun KeysScreen(
             }
             override fun onDevicesChanged(devices: List<MidiDeviceId>) { midiDevices = devices }
             // The cable is out: its note-offs will never come.
-            override fun onDeviceRemoved() = midiKeys.allOff()
+            override fun onDeviceRemoved() {
+                // A button held as the cable came out never sends its release.
+                learn.releaseAll()
+                midiKeys.allOff()
+            }
         }
     }
 
@@ -267,6 +271,8 @@ fun KeysScreen(
                     AudioFocus.release(audioVoice)
                     midi.close()
                     midiDevices = emptyList()
+                    // Releases sent while the input is closed are never heard.
+                    learn.releaseAll()
                 }
                 Lifecycle.Event.ON_START -> {
                     AudioFocus.acquire(audioVoice)
