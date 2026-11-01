@@ -12,6 +12,10 @@ repositories {
     mavenCentral()
 }
 
+// Compose instrumentation shares the app's Kotlin runtime. Use the normal
+// unshrunk test shape; verify the optimized listening APK separately.
+val creaseStudyDeviceTests = providers.gradleProperty("creaseStudyDeviceTests").getOrElse("false").toBooleanStrict()
+
 android {
     namespace = "com.snipsnap.app"
     compileSdk = 35
@@ -71,8 +75,8 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".creasestudy"
             versionNameSuffix = "-crease-study"
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = !creaseStudyDeviceTests
+            isShrinkResources = !creaseStudyDeviceTests
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "crease-study-rules.pro")
             matchingFallbacks += listOf("debug")
             ndk { abiFilters += providers.gradleProperty("creaseStudyAbi").getOrElse("arm64-v8a") }
@@ -93,7 +97,7 @@ android {
 
     sourceSets.getByName("creaseStudy").assets.srcDir(layout.buildDirectory.dir("generated/creaseStudyAssets"))
 
-    testBuildType = providers.gradleProperty("snipsnapTestBuildType").getOrElse("debug")
+    testBuildType = providers.gradleProperty("snipsnapTestBuildType").getOrElse(if (creaseStudyDeviceTests) "creaseStudy" else "debug")
 
     testOptions {
         // A UI test waits for the screen to settle; system animations would
@@ -172,7 +176,9 @@ val prepareCreaseStudyCache by tasks.registering(Exec::class) {
     inputs.property("cachePath", source.getOrElse("missing"))
     inputs.files(rootProject.file("scripts/crease-release/prepare_phone.py"), rootProject.file("scripts/crease-release/verify_phone.py"))
     inputs.files(fileTree("src/main/cpp/crease"), file("src/main/cpp/OboeOutput.h"))
-    if (source.isPresent) inputs.dir(source)
+    if (source.isPresent) inputs.files(fileTree(source.get()) {
+        include("manifest.json", "report.json", "reader-verification.json", "native-verification.json", "*.cpcb")
+    })
     outputs.dir(output)
     doFirst {
         require(source.isPresent) { "Set -PcreaseStudyCache=/absolute/path/to/the/verified/study" }

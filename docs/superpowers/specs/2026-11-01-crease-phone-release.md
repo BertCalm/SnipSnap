@@ -12,6 +12,17 @@ as recommended.” Preserve Reed Mark C4, model 3, saved velocity .8, circuit,
 macros, common gain 1.2239602314709794 and the accepted reader/fade. This is
 one sound and one key, not a new engine or a full keygroup implementation.
 
+## Review decision
+
+- **Fix now:** the measured transient errors and a build gate that could bind
+  current sources to a stale native executable. The second capture layout and
+  build-before-verification close these without changing the voice.
+- **Try next:** this one-C4 native study, followed by owner listening on a phone.
+- **Big idea:** a cheaper representation before attempting a keyboard bank;
+  the current one-note PCM budget is nearly full.
+- **Disclosed:** numerical/host and emulator evidence cannot establish physical
+  phone latency, speaker quality or MPC release-trigger support.
+
 ## Result and evidence
 
 | Cache | Release comparisons | PCM | Largest peak error | Outcome |
@@ -44,9 +55,12 @@ These are host observations, not measurements of a phone's audio driver.
 
 Five Android host unit tests cover predictor orders 0–2, signed wraparound,
 hash corruption, truncation, expansion limits, malformed dimensions, padding,
-paths and refusal of failed experiments. Four device tests compile for real
-touch, keyboard ownership, accessibility preview and background/resume. They
-have not run on hardware or an emulator here. Normal device tests also compile.
+paths and refusal of failed experiments. Four device tests pass on an Android 10 software emulator for real touch
+(including a second-finger Stop), keyboard ownership, the accessibility action
+and background/resume. A separate optimized-APK check passes native cache/stream
+startup, actual pointer hold/release, ending choice and background cleanup.
+These are emulator observations, not physical phone timing. The normal debug
+app assembles across its four native ABIs and its device tests compile.
 Repository-wide JVM verification is recorded separately when it completes.
 
 ## Phone landing
@@ -111,11 +125,16 @@ python3 scripts/crease-release/verify_phone.py testkit/crease-phone-release-r2
 `prepare_phone.py` refuses failed candidates, a receipt for a different cache,
 or native sources changed after verification. It checks actual source hashes;
 missing/stale receipts cannot silently enable the study. Generated audio stays
-outside Git. Study Kotlin/unit tests compile in CI without the external audio
+outside Git. Seven build-admission tests also protect failed/stale receipts and
+refuse overlapping inputs or unrelated output files, including under Python
+optimization. Removing the failure or source guard makes its named regression
+fail. Study Kotlin/unit tests compile in CI without the external audio
 input; assembling the APK deliberately requires it.
 
 To compile/run the dedicated device suite, select
-`-PsnipsnapTestBuildType=creaseStudy`. Run only
+`-PcreaseStudyDeviceTests=true`. This uses an unshrunk test APK, matching
+normal Compose instrumentation: the test runner shares the app's Kotlin
+runtime. The optimized listening APK is checked separately. Run only
 `com.snipsnap.app.CreaseStudyActivityTest` in that variant; the normal sampler
 activity is intentionally absent. An x86_64 emulator build additionally uses
 `-PcreaseStudyAbi=x86_64`. This session supplies the arm64 listening APK.

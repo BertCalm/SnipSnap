@@ -37,6 +37,8 @@
     "callbackAllocations": 0,
     "callbackFrees": 0,
     "scope": "Actual native reader and JNI on host; no physical phone timing",
+    "receiptVersion": 2,
+    "builtFromCurrentCheckout": true,
     "pcmSha256": "b47e935c4890e0c6ce06134584f133ab826dd3c5b9fc8b6f134b581a6c3d5ff4",
     "nativeSources": {
       "app/src/main/cpp/crease/CreaseStudyEngine.cpp": "076d038720122969d4e714ac2e05cf2ffdf1a27c6821cf2f5849682cbd7599af",
@@ -56,7 +58,42 @@
     "skips": 0
   },
   "androidAssembly": "passed",
-  "deviceTests": "4 compiled, not executed",
+  "deviceTests": {
+    "result": "passed",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skips": 0,
+    "platform": "Android 10 / API 29 software emulator",
+    "abi": "x86_64",
+    "viewportDp": "360x800",
+    "build": "unshrunk creaseStudy instrumentation; actual native library and bundled PCM",
+    "cases": [
+      "aLateKeyboardLiftDoesNotReleaseTheNewKey",
+      "accessibilityClickHasAFinitePreview",
+      "backgroundAndResumeNeverRestoreAHeldGesture",
+      "touchReleaseAndStopResetTheGesture"
+    ],
+    "timestamp": "2026-11-01T01:28:16",
+    "physicalPhonePlayback": "not tested",
+    "optimizedApk": "separate check pending"
+  },
   "fullJvmGate": "running separately",
-  "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard"
+  "ownerListening": "Previous sound accepted 2026-11-01; new APK not yet heard",
+  "optimizedApk": {
+    "result": "passed",
+    "build": "R8 optimized, x86_64, Android 10 software emulator",
+    "apkSha256": "b66dfc9e4e2248d5a809920d2f793b1199e0292b65e21be42405cd5ff1fc8984",
+    "nativeCacheAndStreamReady": true,
+    "actualTouchHoldAndRelease": true,
+    "endingChoice": true,
+    "backgroundNeverRestoresHeldNote": true,
+    "physicalPhonePlayback": "not tested"
+  },
+  "buildAdmissionTests": {
+    "tests": 7,
+    "normalAndPythonOptimized": "passed",
+    "removedGuardCanaries": 2
+  },
+  "normalAndroidDebug": "assembled all four ABIs; device tests compiled"
 }

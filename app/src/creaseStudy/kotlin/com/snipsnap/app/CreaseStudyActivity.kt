@@ -6,6 +6,7 @@ import android.os.Looper
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -20,6 +21,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.onClick
@@ -60,6 +63,8 @@ class CreaseStudyActivity : ComponentActivity(), AudioVoice {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent { MaterialTheme {
+            val keyFocus=remember { FocusRequester() }
+            LaunchedEffect(ready) { if(ready) keyFocus.requestFocus() }
             Column(Modifier.fillMaxSize().background(Color(0xff101b20)).verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(18.dp)) {
                 Text("SnipSnap · Crease",color=Color.White,fontSize=28.sp)
                 Text("Reed Mark C4 · phone study",color=Color(0xffa9c7c3))
@@ -70,13 +75,14 @@ class CreaseStudyActivity : ComponentActivity(), AudioVoice {
                 }
                 // Pointer cancellation always reaches finally. Accessibility uses a
                 // finite preview, rather than leaving a latched note behind.
-                Box(Modifier.testTag("crease-study-key").fillMaxWidth().height(220.dp).background(if(held) Color(0xff176d64) else Color(0xff26454c))
-                    .semantics { role=Role.Button; onClick("Play C4 preview") {
+                Box(Modifier.testTag("crease-study-key").focusRequester(keyFocus).focusable(enabled=ready).fillMaxWidth().height(220.dp).background(if(held) Color(0xff176d64) else Color(0xff26454c))
+                    .semantics(mergeDescendants=true) { role=Role.Button; onClick("Play C4 preview") {
                         val token=press(); main.postDelayed({release(token)},600); token!=0L
                     } }
                     .pointerInput(ready,unfold) {
                         awaitEachGesture {
                             val down=awaitFirstDown(requireUnconsumed=false)
+                            keyFocus.requestFocus()
                             val token=press()
                             try { do { val event=awaitPointerEvent(); event.changes.forEach { it.consume() } } while(event.changes.any { it.id==down.id && it.pressed }) }
                             finally { release(token) }
@@ -86,7 +92,7 @@ class CreaseStudyActivity : ComponentActivity(), AudioVoice {
                 }
                 Button(onClick={silence()},enabled=ready) { Text("Stop") }
                 if(!ready) Button(onClick={openAudio()}) { Text("Retry audio") }
-                Text("Release your finger to hear the tail. Space or Enter also holds C4.\n\nOne accepted sound, fixed velocity. This study uses cached PCM, with no live synthesis solver. Headphones recommended.",color=Color(0xffa9c7c3))
+                Text("Release your finger to hear the tail. Focus C4, then hold Space or Enter.\n\nBoth endings share a volume fade. Unfold also lets the waveform recover. One pitch and one touch level. Headphones recommended.",color=Color(0xffa9c7c3))
             }
         } }
         main.post(monitor)
