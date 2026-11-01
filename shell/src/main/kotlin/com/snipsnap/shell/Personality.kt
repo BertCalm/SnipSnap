@@ -1505,6 +1505,13 @@ object Copy {
 
     // ---- PAD SHEET ----
     const val GHOSTS_ON ="GHOST LAYERS ON. QUIET HITS GO SOFT, NOT JUST QUIETER."
+    const val STRIKE_FX_ON = "STRIKE FX ON. BOTTOM DRY, MIDDLE ROOM, TOP ECHO."
+    const val STRIKE_FX_OFF = "STRIKE FX OFF. ONE SAMPLE AGAIN."
+    const val STRIKE_FX_KEEPS_HISTORY = "THIS PAD KEEPS AN ERA, MUTATE OR SPLICE HISTORY. REMOVE IT BEFORE STRIKE FX."
+    /** KEEP on a pad with soft hits asks first: what goes, and where it waits. The dialog's KEEP is the question; the soft files go to the bin after the write. */
+    const val STRIKE_FX_REPLACES_LAYERS = "STRIKE FX REPLACES THIS PAD'S SOFT HITS. THEY WAIT IN THE BIN FOR ${Reversal.DAYS} DAYS."
+    /** SOFT HITS on a banked pad asks first: the bank's ROOM and ECHO renders go, the DRY hit is the pad again, and a KEEP rebuilds the bank. */
+    const val SOFT_HITS_REPLACE_STRIKE_FX = "SOFT HITS REPLACE THIS PAD'S STRIKE FX BANK. THE DRY HIT STAYS AS THE PAD. KEEP STRIKE FX AGAIN TO REBUILD IT."
     fun treated(segment: String, pad: String): String = "$segment ON $pad. ORIGINAL SLEEPS IN THE BIN."
     /**
      * The same landing when `PadSheet.unTreatState` was NOT_BINNED: the
@@ -2883,6 +2890,10 @@ object Copy {
     const val KIT_LOADING_BUSY = "LOADING THE KIT…"
     /** The dock's line while KEYS reads the instrument's zones off disk into its player; until it ends a key plays nothing. */
     const val KEYS_LOADING_BUSY = "LOADING THE KEYS…"
+    /** The dock's line while KEYS rewrites an instrument's three descriptors for a new voice mode (no sample is touched). */
+    const val KEYS_VOICE_BUSY = "SAVING THE VOICE MODE…"
+    /** The toast when KEYS could not rewrite the instrument's descriptors; the button goes back to the mode it had. */
+    const val KEYS_VOICE_FAILED = "COULDN'T SAVE THE VOICE MODE."
     /** The dock's line while SURFACE reads a pad's WAV into one of its source slots (the first pad or any of the other three). */
     const val SURFACE_LOADING_BUSY = "LOADING THE PAD…"
     /**

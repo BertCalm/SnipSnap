@@ -344,6 +344,19 @@ object Breed {
         model.update(pad.slot) { imported }
     }
 
+    /**
+     * A placed child is one sample, so a STRIKE FX bank the parent's recipe
+     * names does not come with it: the recipe is rewritten without `layers`.
+     * A recipe that was only the bank leaves nothing, and non-PadRecipe JSON
+     * is not ours to touch.
+     */
+    private fun withoutBank(recipe: JsonValue.Obj?): JsonValue.Obj? {
+        if (recipe == null || "layers" !in recipe.entries) return recipe
+        val parsed = try { PadRecipe.fromJsonValue(recipe) } catch (e: JsonException) { return recipe }
+        if (parsed.layers == null) return recipe
+        return try { parsed.copy(layers = null).toJsonValue() } catch (e: IllegalArgumentException) { null }
+    }
+
     private fun place(model: KitBuilderModel, pad: KitPad, snip: Snip, recipe: JsonValue.Obj?, stamp: Map<String, String>) {
         model.assign(pad.slot, snip, pad.drumClass, pad.displayName)
         model.update(pad.slot) {
@@ -356,7 +369,7 @@ object Breed {
                 muteGroup = pad.muteGroup,
                 oneShot = pad.oneShot,
                 loop = pad.loop,
-                recipe = recipe,
+                recipe = withoutBank(recipe),
                 source = pad.source + stamp,
             )
         }

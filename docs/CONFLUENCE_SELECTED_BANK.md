@@ -93,4 +93,4 @@ Focused validation passed: 10 synth bank tests, 7 kit portability tests, and 68 
 
 ## As built
 
-The source manifest fingerprints the nine original WAVs, both legal texts and source notice. No changes were made to the legacy Confluence renderer, wordless bank or Assembly APIs. One inherited PRISM startup bug is fixed alongside this work: the full saved PRISM macro draft now takes precedence over stale/default controls, matching the sibling instrument restore paths. Its existing three device regression tests remain intact.
+The source manifest fingerprints the nine original WAVs, both legal texts and source notice. No changes were made to the legacy Confluence renderer, wordless bank or Assembly APIs. The current default branch also restores full PRISM macro drafts before default controls; the independently identified startup regression was resolved upstream while this bank was being built. Its existing device regression tests remain intact.

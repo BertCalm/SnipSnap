@@ -27,9 +27,25 @@ Sample transposition between those roots changes playback speed and colour-cycle
 rate, as with the existing sampled keygroups.
 
 The existing pad and main-audition routes retain their settled-sustain contract.
+Main AUDITION and the MOTION panel's MOVING preview repeat an unprocessed HOLD
+render until stopped. SOURCE, STATIC and OPEN previews remain finite. A reopened
+pad with processing keeps its complete finite preview and effect tail; that
+processed file is not assumed to be periodic.
 The new instrument follows the established separation used by other held
 instruments: a keygroup carries the opening and an explicit internal loop start.
 It does not reinterpret a whole-file drum-pad loop as an internal sustain loop.
+
+The [browser audition](https://prism-motion-snipsnap-audition.bertcalm.chatgpt.site/opening-sustain/)
+plays the opening once and repeats between the saved sample markers until
+RELEASE. The release gain ramps while that sustain keeps looping. Instrument
+comparisons use their saved release; pure HOLD references use a labeled
+0.6-second preview release. The eight-loop option releases after the opening
+and eight sustain regions. OPEN keeps its rendered finite decay.
+
+Downloaded WAVs retain their loop markers and unchanged sustain samples.
+Playing one as a plain audio file can end abruptly: the repeated sustain and
+note-off envelope belong to the sampler or audition player, not a fade baked
+into the loop. MAKE's CANCEL and lifecycle cleanup still stop immediately.
 
 | Control | Instrument behavior |
 | --- | --- |
