@@ -461,6 +461,7 @@ testkit/apsis-audition/
 testkit/apsis-audition-v2/
 testkit/apsis-musical/
 testkit/apsis-voices/
+testkit/apsis-attack-memory/
 scripts/__pycache__/
 
 # Owner-preferred Murmur production recipes and their regenerated proof audio.

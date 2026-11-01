@@ -114,7 +114,8 @@ def profile(voice, hz, rate):
 
 @njit(cache=True)
 def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
-              bodies, couple, velocity, source_end, seed, state, free=False):
+              bodies, couple, velocity, source_end, seed, state, free=False,
+              encounters=None, encounter_diagnostics=None, reset_on_attack=False):
     """Exact damped rotations then orthogonal velocity exchanges, with bounded input.
 
     state includes modal coordinates, contact ages/flags and a bounded reservoir.
@@ -136,6 +137,7 @@ def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
     center_gain = (.7, .45, 1.1, .6, .45, .45)[idx]
     exchange_rate = (12., 12., 12., 60., 48., 48.)[idx]
     center_upper1, center_upper2 = (.8, 1.1) if idx == 4 else (.18, .12)
+    encounter_index = np.zeros(6, dtype=np.int64)
     for frame in range(frames):
         t = frame * dt
         source = 1. if source_end < 0 else min(1., max(0., (source_end - t) / .25))
@@ -166,7 +168,24 @@ def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
             broad = fields[row, body, 2] * (1 - fraction) + fields[row + 1, body, 2] * fraction
             grains = fields[row, body, 3] * (1 - fraction) + fields[row + 1, body, 3] * fraction
             active = contact > .2
-            if active and was_contact[body] == 0:
+            articulated = encounters is not None and idx in (2, 3)
+            if articulated:
+                event = encounter_index[body]
+                if event < encounters.shape[1] and encounters[body, event, 0] <= t:
+                    ages[body] = t - encounters[body, event, 0]
+                    state[72 + body] = encounters[body, event, 1]
+                    state[78 + body] = encounters[body, event, 2]
+                    if encounter_diagnostics is not None:
+                        energy = 0.
+                        for j in range(27):
+                            energy += .5 * (x[j] * x[j] + v[j] * v[j])
+                        encounter_diagnostics[body, event, 0] = energy
+                    if reset_on_attack:
+                        # Counterfactual probe only: exposes the sound lost by retrigger resets.
+                        x[:] = 0.
+                        v[:] = 0.
+                    encounter_index[body] += 1
+            elif active and was_contact[body] == 0:
                 ages[body] = 0.
             was_contact[body] = 1. if active else 0.
             age = ages[body]
@@ -175,6 +194,19 @@ def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
             target = 1 - broad
             pressure[body] += (target - pressure[body]) * (1 - math.exp(-dt / (.32 if target > pressure[body] else .035)))
             amp = velocity * participation / allocation * source
+            hardness = velocity
+            if articulated:
+                if idx == 3:
+                    slew = 1 - math.exp(-dt / .004)
+                    state[84 + body] += slew * (state[72 + body] - state[84 + body])
+                    state[90 + body] += slew * (state[78 + body] - state[90 + body])
+                    amp *= state[84 + body]
+                    hardness = velocity * (.25 + .75 * state[90 + body])
+                    packet = (1 - math.exp(-age / .008)) * math.exp(-age / (.10 + .24 * (1 - hardness)))
+                    broad = broad ** (1.8 - .9 * hardness) * packet
+                else:
+                    amp *= state[72 + body]
+                    hardness = velocity * (.25 + .75 * state[78 + body])
             hit = (1 - math.exp(-age / .0015)) * math.exp(-age / (.018 + .018 * (1 - velocity)))
             if idx == 0:
                 force = near * (contact * root + .16 * broad * math.sin(2 * phase))
@@ -183,13 +215,13 @@ def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
                 force = hit * (root + .45 * math.sin(2 * phase) + (.1 + .4 * velocity) * math.sin(3 * phase))
                 material = hit * noise * .4
             elif idx == 2:
-                mallet_width = (.08 + .12 * (1 - velocity)) / hz
+                mallet_width = (.08 + .12 * (1 - hardness)) / hz
                 mallet = .5 * (1 - math.cos(2 * math.pi * age / mallet_width)) if age < mallet_width else 0.
                 force = mallet * 4.
-                material = force * (.3 + velocity)
+                material = force * (.3 + hardness)
             elif idx == 3:
                 force = broad * near ** .3 * (.55 * root + .2 * math.sin(2 * phase) + .45 * noise)
-                material = broad * noise * (2 + 4 * velocity)
+                material = broad * noise * (2 + 4 * hardness)
             elif idx == 4:
                 force = near * grains * (.30 * root + noise * (1 + velocity))
                 material = near * grains * noise * (12 + 12 * velocity)
@@ -211,9 +243,9 @@ def run_cycle(fields, frames, rate, idx, hz, co, si, rho, radiation,
             elif idx == 2:
                 upper1, upper2, upper3 = material, material * .8, material * .6
             elif idx == 3:
-                upper1 = broad * math.sin(omega[base + 1] * frame) * (1 + velocity) + material
-                upper2 = broad * math.sin(omega[base + 2] * frame) * (.7 + velocity) + material * .8
-                upper3 = broad * math.sin(omega[base + 3] * frame) * (.4 + velocity) + material * .5
+                upper1 = broad * math.sin(omega[base + 1] * frame) * (1 + hardness) + material
+                upper2 = broad * math.sin(omega[base + 2] * frame) * (.7 + hardness) + material * .8
+                upper3 = broad * math.sin(omega[base + 3] * frame) * (.4 + hardness) + material * .5
                 force *= .5
             elif idx == 4:
                 upper1, upper2, upper3 = material, material * .8, material * .5
