@@ -62,7 +62,9 @@ object KitFromCommand {
         )
         out.println("%-4s %-11s %-10s %s".format("pad", "slot", "gate", "what the gate measured"))
         for (g in result.gates) {
-            out.println("%-4s %-11s %-10s %s".format("A%02d".format(g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail))
+            // Locale.ROOT on the pad number: %d follows the default locale, and on an ar-EG or fa-IR
+            // device the pad would print in Eastern-Arabic digits (the house law, FormatLocaleTest)
+            out.println("%-4s %-11s %-10s %s".format("A%02d".format(java.util.Locale.ROOT, g.slot.pad), g.slot.name, g.gate.name.lowercase(), g.detail))
         }
         val failed = result.fallbackSet
         val unread = result.unmeasured
